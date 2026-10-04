@@ -1,4 +1,5 @@
 import 'workspace_editor.dart';
+import 'workspace_editor_form.dart';
 import 'sked_task_session.dart';
 
 import 'package:flutter/services.dart';
@@ -282,62 +283,104 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
               UiCommandBusyIndicator(busy: _actionInProgress),
               const SizedBox(height: 8),
             ],
-            _ResponsiveFormRow(
-              desktopSingleColumn: true,
-              flexes: const [2, 1],
-              children: [
-                TextField(
-                  controller: _nameController,
-                  enabled: !_blocked,
-                  decoration: InputDecoration(
-                    labelText: l10n.courseName,
-                    prefixIcon: const Icon(Icons.book_outlined),
+            if (desktop)
+              _buildDesktopFields(l10n)
+            else ...[
+              _ResponsiveFormRow(
+                flexes: const [2, 1],
+                children: [
+                  TextField(
+                    controller: _nameController,
+                    enabled: !_blocked,
+                    decoration: InputDecoration(
+                      labelText: l10n.courseName,
+                      prefixIcon: const Icon(Icons.book_outlined),
+                    ),
                   ),
-                ),
-                TextField(
-                  controller: _locationController,
-                  enabled: !_blocked,
-                  decoration: InputDecoration(
-                    labelText: l10n.location,
-                    prefixIcon: const Icon(Icons.location_on_outlined),
+                  TextField(
+                    controller: _locationController,
+                    enabled: !_blocked,
+                    decoration: InputDecoration(
+                      labelText: l10n.location,
+                      prefixIcon: const Icon(Icons.location_on_outlined),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _EditorSection(
-              desktopExpanded: true,
-              icon: Icons.event_note_outlined,
-              title: '${l10n.dayOfWeek} · ${l10n.time}',
-              subtitle: linkedPeriods.isEmpty
-                  ? l10n.linkedPeriodsUnmatched
-                  : linkedPeriodsLabel,
-              initiallyExpanded: _scheduleSectionExpanded,
-              onExpansionChanged: (expanded) =>
-                  setState(() => _scheduleSectionExpanded = expanded),
-              enabled: !_blocked,
-              child: _buildScheduleFields(l10n),
-            ),
-            const SizedBox(height: 8),
-            _EditorSection(
-              key: const ValueKey('course-details-section'),
-              controller: _detailsExpansion,
-              icon: Icons.notes_outlined,
-              title: l10n.more,
-              subtitle: _detailsSectionExpanded
-                  ? null
-                  : '${l10n.courseSystemReminder} · ${_reminderSummary(l10n)}',
-              initiallyExpanded: _detailsSectionExpanded,
-              onExpansionChanged: (expanded) =>
-                  setState(() => _detailsSectionExpanded = expanded),
-              enabled: !_blocked,
-              child: _buildDetailsFields(l10n),
-            ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _EditorSection(
+                icon: Icons.event_note_outlined,
+                title: '${l10n.dayOfWeek} · ${l10n.time}',
+                subtitle: linkedPeriods.isEmpty
+                    ? l10n.linkedPeriodsUnmatched
+                    : linkedPeriodsLabel,
+                initiallyExpanded: _scheduleSectionExpanded,
+                onExpansionChanged: (expanded) =>
+                    setState(() => _scheduleSectionExpanded = expanded),
+                enabled: !_blocked,
+                child: _buildScheduleFields(l10n),
+              ),
+              const SizedBox(height: 8),
+              _EditorSection(
+                key: const ValueKey('course-details-section'),
+                controller: _detailsExpansion,
+                icon: Icons.notes_outlined,
+                title: l10n.more,
+                subtitle: _detailsSectionExpanded
+                    ? null
+                    : '${l10n.courseSystemReminder} · ${_reminderSummary(l10n)}',
+                initiallyExpanded: _detailsSectionExpanded,
+                onExpansionChanged: (expanded) =>
+                    setState(() => _detailsSectionExpanded = expanded),
+                enabled: !_blocked,
+                child: _buildDetailsFields(l10n),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  Widget _buildDesktopFields(AppLocalizations l10n) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      TextField(
+        key: const ValueKey('course-desktop-title'),
+        controller: _nameController,
+        enabled: !_blocked,
+        style: Theme.of(context).textTheme.titleLarge,
+        decoration: workspaceEditorInputDecoration(
+          context,
+          l10n.courseName,
+          headline: true,
+        ),
+      ),
+      const SizedBox(height: 12),
+      WorkspaceEditorField(
+        label: l10n.location,
+        child: TextField(
+          controller: _locationController,
+          enabled: !_blocked,
+          decoration: workspaceEditorInputDecoration(context, l10n.location),
+        ),
+      ),
+      WorkspaceEditorFormSection(child: _buildScheduleFields(l10n)),
+      WorkspaceEditorFormSection(
+        child: _EditorSection(
+          key: const ValueKey('course-details-section'),
+          controller: _detailsExpansion,
+          icon: Icons.notes_outlined,
+          title: l10n.more,
+          initiallyExpanded: _detailsSectionExpanded,
+          onExpansionChanged: (expanded) =>
+              setState(() => _detailsSectionExpanded = expanded),
+          enabled: !_blocked,
+          child: _buildDetailsFields(l10n),
+        ),
+      ),
+    ],
+  );
 
   Widget _buildScheduleFields(AppLocalizations l10n) {
     final localeCode = app_locale.localeCodeFromLocale(
@@ -351,6 +394,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           children: [
             _SelectionTile(
               key: _weekdayAnchor,
+              compactLabel: true,
               title: l10n.dayOfWeek,
               subtitle: formatDayOfWeekLabel(
                 _selectedDayOfWeek,
@@ -362,6 +406,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
             ),
             _SelectionTile(
               key: _weeksAnchor,
+              compactLabel: true,
               title: l10n.semesterWeeks,
               subtitle: formatSemesterWeeksLabel(
                 _selectedSemesterWeeks,
@@ -417,6 +462,51 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   };
 
   Widget _buildDetailsFields(AppLocalizations l10n) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      Widget input(
+        String label,
+        TextEditingController controller, {
+        int maxLines = 1,
+        TextInputType? keyboardType,
+        String? hint,
+      }) => WorkspaceEditorField(
+        label: label,
+        child: TextField(
+          controller: controller,
+          enabled: !_blocked,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          decoration: workspaceEditorInputDecoration(
+            context,
+            label,
+            hintText: hint,
+          ),
+        ),
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          input(l10n.teacherName, _teacherController),
+          const SizedBox(height: 8),
+          input(
+            l10n.credits,
+            _creditController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          const SizedBox(height: 8),
+          input(l10n.remarks, _remarksController, maxLines: 2),
+          const SizedBox(height: 8),
+          input(
+            l10n.customFields,
+            _customFieldsController,
+            maxLines: 2,
+            hint: l10n.customFieldsHint,
+          ),
+          const SizedBox(height: 12),
+          _buildReminderField(l10n),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -465,25 +555,29 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           maxLines: 3,
         ),
         const SizedBox(height: 16),
-        CourseSystemReminderField(
-          key: const ValueKey('course-reminder-section'),
-          behavior: _reminderBehavior,
-          minutesController: _reminderMinutesController,
-          minutesFocusNode: _reminderMinutesFocus,
-          minutesError: _reminderMinutesInvalid
-              ? l10n.courseReminderInvalidMinutes
-              : null,
-          onMinutesChanged: (_) =>
-              setState(() => _reminderMinutesInvalid = false),
-          enabled: !_blocked,
-          onChanged: (value) => setState(() {
-            _reminderBehavior = value;
-            _reminderMinutesInvalid = false;
-          }),
-        ),
+        _buildReminderField(l10n),
       ],
     );
   }
+
+  Widget _buildReminderField(AppLocalizations l10n) =>
+      CourseSystemReminderField(
+        key: const ValueKey('course-reminder-section'),
+        compactEditor: WorkspaceEditorScope.maybeOf(context)?.enabled == true,
+        behavior: _reminderBehavior,
+        minutesController: _reminderMinutesController,
+        minutesFocusNode: _reminderMinutesFocus,
+        minutesError: _reminderMinutesInvalid
+            ? l10n.courseReminderInvalidMinutes
+            : null,
+        onMinutesChanged: (_) =>
+            setState(() => _reminderMinutesInvalid = false),
+        enabled: !_blocked,
+        onChanged: (value) => setState(() {
+          _reminderBehavior = value;
+          _reminderMinutesInvalid = false;
+        }),
+      );
 
   List<int> get _matchedPeriods => matchPeriodsForTimeRange(
     widget.periodTimes,
@@ -1398,13 +1492,11 @@ class _ResponsiveFormRow extends StatelessWidget {
   const _ResponsiveFormRow({
     required this.children,
     this.flexes,
-    this.desktopSingleColumn = false,
     this.breakpoint = 480,
   });
 
   static const double _spacing = 12;
 
-  final bool desktopSingleColumn;
   final List<Widget> children;
   final List<int>? flexes;
   final double breakpoint;
@@ -1412,10 +1504,7 @@ class _ResponsiveFormRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorFieldsRow(
-        minimumWidth: desktopSingleColumn ? double.infinity : 160,
-        children: children,
-      );
+      return WorkspaceEditorFieldsRow(minimumWidth: 240, children: children);
     }
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1456,7 +1545,6 @@ class _EditorSection extends StatelessWidget {
   const _EditorSection({
     super.key,
     this.controller,
-    this.desktopExpanded = false,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -1466,7 +1554,6 @@ class _EditorSection extends StatelessWidget {
     this.subtitle,
   });
 
-  final bool desktopExpanded;
   final ExpansibleController? controller;
   final IconData icon;
   final String title;
@@ -1479,7 +1566,6 @@ class _EditorSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
-    if (desktop && desktopExpanded) return child;
     final shape = desktop
         ? const RoundedRectangleBorder()
         : skedShapeSchemeOf(context).field;
@@ -1515,6 +1601,7 @@ class _EditorSection extends StatelessWidget {
 
 class _SelectionTile extends StatelessWidget {
   const _SelectionTile({
+    this.compactLabel = false,
     super.key,
     required this.title,
     required this.subtitle,
@@ -1523,6 +1610,7 @@ class _SelectionTile extends StatelessWidget {
     required this.onTap,
   });
 
+  final bool compactLabel;
   final String title;
   final String subtitle;
   final IconData icon;
@@ -1532,10 +1620,15 @@ class _SelectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorSelection(
+      return WorkspaceEditorField(
         label: title,
-        value: subtitle,
-        onTap: enabled ? onTap : null,
+        labelWidth: compactLabel ? 76 : 104,
+        minimumControlWidth: 132,
+        child: WorkspaceEditorValue(
+          label: title,
+          value: subtitle,
+          onPressed: enabled ? onTap : null,
+        ),
       );
     }
     final theme = Theme.of(context);
@@ -1648,29 +1741,47 @@ class _CourseTimeRange extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorFieldsRow(
-        children: [
-          Builder(
-            builder: (anchor) => WorkspaceEditorSelection(
-              key: const ValueKey('course-start-time-action'),
-              label: startLabel,
-              value: startValue,
-              onTap: enabled && onPickStart != null
-                  ? () => onPickStart!(anchor)
-                  : null,
+      return WorkspaceEditorField(
+        label: AppLocalizations.of(context).time,
+        labelWidth: 104,
+        child: Row(
+          children: [
+            Expanded(
+              child: Builder(
+                builder: (anchor) => Tooltip(
+                  message: startLabel,
+                  child: WorkspaceEditorValue(
+                    key: const ValueKey('course-start-time-action'),
+                    label: startLabel,
+                    value: startValue,
+                    onPressed: enabled && onPickStart != null
+                        ? () => onPickStart!(anchor)
+                        : null,
+                  ),
+                ),
+              ),
             ),
-          ),
-          Builder(
-            builder: (anchor) => WorkspaceEditorSelection(
-              key: const ValueKey('course-end-time-action'),
-              label: endLabel,
-              value: endValue,
-              onTap: enabled && onPickEnd != null
-                  ? () => onPickEnd!(anchor)
-                  : null,
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text('–'),
             ),
-          ),
-        ],
+            Expanded(
+              child: Builder(
+                builder: (anchor) => Tooltip(
+                  message: endLabel,
+                  child: WorkspaceEditorValue(
+                    key: const ValueKey('course-end-time-action'),
+                    label: endLabel,
+                    value: endValue,
+                    onPressed: enabled && onPickEnd != null
+                        ? () => onPickEnd!(anchor)
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
     final colors = Theme.of(context).colorScheme;

@@ -1,4 +1,5 @@
 import 'workspace_editor.dart';
+import 'workspace_editor_form.dart';
 import 'sked_task_session.dart';
 import 'sked_time_picker.dart';
 
@@ -526,59 +527,23 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: InputDecoration(
-                          labelText: l10n.eventTitle,
-                          prefixIcon: const Icon(Icons.title),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.eventTitleRequired;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 8),
                       if (desktop)
-                        WorkspaceEditorFieldsRow(
-                          children: [
-                            TextFormField(
-                              controller: _locationController,
-                              decoration: InputDecoration(
-                                labelText: l10n.place,
-                                prefixIcon: const Icon(
-                                  Icons.location_on_outlined,
-                                ),
-                              ),
-                            ),
-                            if (_showCalendarPicker)
-                              SkedDropdownMenu<String>(
-                                initialSelection: _calendarId,
-                                label: Text(l10n.calendar),
-                                leadingIcon: const Icon(
-                                  Icons.calendar_month_outlined,
-                                ),
-                                expandedInsets: EdgeInsets.zero,
-                                dropdownMenuEntries: [
-                                  for (final calendar in _calendarOptions)
-                                    DropdownMenuEntry(
-                                      value: calendar.id,
-                                      label: calendar.name,
-                                      labelWidget: _CalendarDropdownItem(
-                                        calendar: calendar,
-                                      ),
-                                    ),
-                                ],
-                                onSelected: (value) {
-                                  if (value != null) {
-                                    setState(() => _calendarId = value);
-                                  }
-                                },
-                              ),
-                          ],
-                        )
+                        _buildDesktopFields(l10n)
                       else ...[
+                        TextFormField(
+                          controller: _titleController,
+                          decoration: InputDecoration(
+                            labelText: l10n.eventTitle,
+                            prefixIcon: const Icon(Icons.title),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return l10n.eventTitleRequired;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 8),
                         TextFormField(
                           controller: _locationController,
                           decoration: InputDecoration(
@@ -588,240 +553,55 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                         ),
                         if (_showCalendarPicker) ...[
                           const SizedBox(height: 8),
-                          SkedDropdownMenu<String>(
-                            initialSelection: _calendarId,
-                            label: Text(l10n.calendar),
-                            leadingIcon: const Icon(
-                              Icons.calendar_month_outlined,
-                            ),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: [
-                              for (final calendar in _calendarOptions)
-                                DropdownMenuEntry(
-                                  value: calendar.id,
-                                  label: calendar.name,
-                                  labelWidget: _CalendarDropdownItem(
-                                    calendar: calendar,
-                                  ),
-                                ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) {
-                                setState(() => _calendarId = value);
-                              }
-                            },
-                          ),
+                          _buildCalendarField(l10n),
                         ],
+                        const SizedBox(height: 8),
+                        _EditorSection(
+                          controller: _timeExpansion,
+                          icon: Icons.schedule_outlined,
+                          title: '${l10n.eventDate} · ${l10n.eventTime}',
+                          initiallyExpanded: _timeSectionExpanded,
+                          onExpansionChanged: (expanded) =>
+                              setState(() => _timeSectionExpanded = expanded),
+                          enabled: !_blocked,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildAllDayField(l10n),
+                              _buildTimeRange(l10n),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _EditorSection(
+                          icon: Icons.tune_outlined,
+                          title: '${l10n.eventRecurrence} · ${l10n.reminder}',
+                          initiallyExpanded: _optionsSectionExpanded,
+                          onExpansionChanged: (expanded) => setState(
+                            () => _optionsSectionExpanded = expanded,
+                          ),
+                          enabled: !_blocked,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildRecurrenceField(l10n),
+                              const SizedBox(height: 8),
+                              _buildReminderField(l10n),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _EditorSection(
+                          icon: Icons.more_horiz,
+                          title: '${l10n.eventNotes} · ${l10n.eventColor}',
+                          initiallyExpanded: _detailsSectionExpanded,
+                          onExpansionChanged: (expanded) => setState(
+                            () => _detailsSectionExpanded = expanded,
+                          ),
+                          enabled: !_blocked,
+                          child: _buildDetailsFields(l10n),
+                        ),
                       ],
-                      const SizedBox(height: 8),
-                      _EditorSection(
-                        controller: _timeExpansion,
-                        desktopExpanded: true,
-                        icon: Icons.schedule_outlined,
-                        title: '${l10n.eventDate} · ${l10n.eventTime}',
-                        initiallyExpanded: _timeSectionExpanded,
-                        onExpansionChanged: (expanded) =>
-                            setState(() => _timeSectionExpanded = expanded),
-                        enabled: !_blocked,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _EventSwitchRow(
-                              icon: Icons.event_available_outlined,
-                              title: l10n.allDay,
-                              value: _isAllDay,
-                              onChanged: (value) => setState(() {
-                                _isAllDay = value;
-                                if (value && _endDate.isBefore(_startDate)) {
-                                  _endDate = _startDate;
-                                }
-                              }),
-                            ),
-                            _DateTimeRange(
-                              start: _DateTimeRow(
-                                icon: Icons.play_arrow_outlined,
-                                label: l10n.eventStartTime,
-                                date: _startDate,
-                                time: _startTime,
-                                showTime: !_isAllDay,
-                                onPickDate: (_pickerOpen || _hasPopped)
-                                    ? null
-                                    : (anchorContext) async {
-                                        final picked = await _runPicker(
-                                          () => _pickDate(
-                                            context,
-                                            _startDate,
-                                            anchorContext: anchorContext,
-                                          ),
-                                        );
-                                        if (!mounted || picked == null) {
-                                          return;
-                                        }
-                                        setState(() {
-                                          _startDate = picked;
-                                          if (_endDate.isBefore(_startDate)) {
-                                            _endDate = _startDate;
-                                          }
-                                          if (_untilDate?.isBefore(
-                                                _startDate,
-                                              ) ??
-                                              false) {
-                                            _untilDate = _startDate;
-                                          }
-                                        });
-                                      },
-                                onPickTime: (_pickerOpen || _hasPopped)
-                                    ? null
-                                    : (anchorContext) async {
-                                        final picked = await _runPicker(
-                                          () => _pickTime(
-                                            context,
-                                            _startTime,
-                                            anchorContext,
-                                          ),
-                                        );
-                                        if (!mounted || picked == null) {
-                                          return;
-                                        }
-                                        setState(() => _startTime = picked);
-                                      },
-                              ),
-                              end: _DateTimeRow(
-                                errorKey: _timeErrorKey,
-                                errorText: _hasInvalidTimeRange
-                                    ? l10n.endTimeMustBeLater
-                                    : null,
-                                icon: Icons.stop_outlined,
-                                label: l10n.eventEndTime,
-                                date: _endDate,
-                                time: _endTime,
-                                showTime: !_isAllDay,
-                                onPickDate: (_pickerOpen || _hasPopped)
-                                    ? null
-                                    : (anchorContext) async {
-                                        final picked = await _runPicker(
-                                          () => _pickDate(
-                                            context,
-                                            _endDate,
-                                            anchorContext: anchorContext,
-                                          ),
-                                        );
-                                        if (!mounted || picked == null) {
-                                          return;
-                                        }
-                                        setState(() => _endDate = picked);
-                                      },
-                                onPickTime: (_pickerOpen || _hasPopped)
-                                    ? null
-                                    : (anchorContext) async {
-                                        final picked = await _runPicker(
-                                          () => _pickTime(
-                                            context,
-                                            _endTime,
-                                            anchorContext,
-                                          ),
-                                        );
-                                        if (!mounted || picked == null) {
-                                          return;
-                                        }
-                                        setState(() => _endTime = picked);
-                                      },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _EditorSection(
-                        icon: Icons.tune_outlined,
-                        title: '${l10n.eventRecurrence} · ${l10n.reminder}',
-                        desktopExpanded: true,
-                        initiallyExpanded: _optionsSectionExpanded,
-                        onExpansionChanged: (expanded) =>
-                            setState(() => _optionsSectionExpanded = expanded),
-                        enabled: !_blocked,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _EventOptionField(
-                              key: const ValueKey('event-recurrence-field'),
-                              icon: Icons.repeat,
-                              label: l10n.eventRecurrence,
-                              value: _recurrenceSummary(
-                                recurrence: _recurrence,
-                                interval: _interval,
-                                unit: _customUnit,
-                                untilDate: _untilDate,
-                                repeatCount: _repeatCount,
-                                l10n: l10n,
-                              ),
-                              onTap: _blocked
-                                  ? null
-                                  : (anchor) => unawaited(
-                                      _openRecurrenceDialog(anchor),
-                                    ),
-                            ),
-                            const SizedBox(height: 8),
-                            _EventOptionField(
-                              key: const ValueKey('event-reminder-field'),
-                              icon: Icons.notifications_outlined,
-                              label: l10n.reminder,
-                              value: _reminderSummary(_reminders, l10n),
-                              onTap: _blocked
-                                  ? null
-                                  : (anchor) =>
-                                        unawaited(_openReminderDialog(anchor)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _EditorSection(
-                        icon: Icons.more_horiz,
-                        title: desktop
-                            ? l10n.more
-                            : '${l10n.eventNotes} · ${l10n.eventColor}',
-                        initiallyExpanded: _detailsSectionExpanded,
-                        onExpansionChanged: (expanded) =>
-                            setState(() => _detailsSectionExpanded = expanded),
-                        enabled: !_blocked,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            TextFormField(
-                              controller: _notesController,
-                              decoration: InputDecoration(
-                                labelText: l10n.eventNotes,
-                                prefixIcon: const Icon(Icons.notes_outlined),
-                              ),
-                              minLines: 2,
-                              maxLines: 4,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.eventColor,
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            const SizedBox(height: 4),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final colorValue in _colorOptions)
-                                  _ColorOption(
-                                    colorValue: colorValue,
-                                    selected: _colorValue == colorValue,
-                                    onTap: () => setState(() {
-                                      _colorValue = _colorValue == colorValue
-                                          ? null
-                                          : colorValue;
-                                    }),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -830,6 +610,264 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDesktopFields(AppLocalizations l10n) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      TextFormField(
+        key: const ValueKey('event-desktop-title'),
+        controller: _titleController,
+        style: Theme.of(context).textTheme.titleLarge,
+        decoration: workspaceEditorInputDecoration(
+          context,
+          l10n.eventTitle,
+          headline: true,
+        ),
+        validator: (value) => value == null || value.trim().isEmpty
+            ? l10n.eventTitleRequired
+            : null,
+      ),
+      const SizedBox(height: 12),
+      WorkspaceEditorFieldsRow(
+        minimumWidth: 240,
+        children: [
+          WorkspaceEditorField(
+            label: l10n.place,
+            labelWidth: 64,
+            minimumControlWidth: 152,
+            child: TextFormField(
+              controller: _locationController,
+              decoration: workspaceEditorInputDecoration(context, l10n.place),
+            ),
+          ),
+          if (_showCalendarPicker)
+            WorkspaceEditorField(
+              label: l10n.calendar,
+              labelWidth: 64,
+              minimumControlWidth: 152,
+              child: _buildCalendarField(l10n),
+            ),
+        ],
+      ),
+      WorkspaceEditorFormSection(
+        title: l10n.eventTime,
+        action: _buildAllDayField(l10n),
+        child: _buildTimeRange(l10n),
+      ),
+      WorkspaceEditorFormSection(
+        child: Column(
+          children: [
+            _buildRecurrenceField(l10n),
+            const SizedBox(height: 8),
+            _buildReminderField(l10n),
+          ],
+        ),
+      ),
+      WorkspaceEditorFormSection(
+        child: _EditorSection(
+          icon: Icons.more_horiz,
+          title: l10n.more,
+          initiallyExpanded: _detailsSectionExpanded,
+          onExpansionChanged: (expanded) =>
+              setState(() => _detailsSectionExpanded = expanded),
+          enabled: !_blocked,
+          child: _buildDetailsFields(l10n),
+        ),
+      ),
+    ],
+  );
+
+  Widget _buildTimeRange(AppLocalizations l10n) => _DateTimeRange(
+    start: _DateTimeRow(
+      icon: Icons.play_arrow_outlined,
+      label: l10n.eventStartTime,
+      date: _startDate,
+      time: _startTime,
+      showTime: !_isAllDay,
+      onPickDate: (_pickerOpen || _hasPopped)
+          ? null
+          : (anchorContext) async {
+              final picked = await _runPicker(
+                () => _pickDate(
+                  context,
+                  _startDate,
+                  anchorContext: anchorContext,
+                ),
+              );
+              if (!mounted || picked == null) {
+                return;
+              }
+              setState(() {
+                _startDate = picked;
+                if (_endDate.isBefore(_startDate)) {
+                  _endDate = _startDate;
+                }
+                if (_untilDate?.isBefore(_startDate) ?? false) {
+                  _untilDate = _startDate;
+                }
+              });
+            },
+      onPickTime: (_pickerOpen || _hasPopped)
+          ? null
+          : (anchorContext) async {
+              final picked = await _runPicker(
+                () => _pickTime(context, _startTime, anchorContext),
+              );
+              if (!mounted || picked == null) {
+                return;
+              }
+              setState(() => _startTime = picked);
+            },
+    ),
+    end: _DateTimeRow(
+      errorKey: _timeErrorKey,
+      errorText: _hasInvalidTimeRange ? l10n.endTimeMustBeLater : null,
+      icon: Icons.stop_outlined,
+      label: l10n.eventEndTime,
+      date: _endDate,
+      time: _endTime,
+      showTime: !_isAllDay,
+      onPickDate: (_pickerOpen || _hasPopped)
+          ? null
+          : (anchorContext) async {
+              final picked = await _runPicker(
+                () =>
+                    _pickDate(context, _endDate, anchorContext: anchorContext),
+              );
+              if (!mounted || picked == null) {
+                return;
+              }
+              setState(() => _endDate = picked);
+            },
+      onPickTime: (_pickerOpen || _hasPopped)
+          ? null
+          : (anchorContext) async {
+              final picked = await _runPicker(
+                () => _pickTime(context, _endTime, anchorContext),
+              );
+              if (!mounted || picked == null) {
+                return;
+              }
+              setState(() => _endTime = picked);
+            },
+    ),
+  );
+
+  Widget _buildRecurrenceField(AppLocalizations l10n) => _EventOptionField(
+    key: const ValueKey('event-recurrence-field'),
+    icon: Icons.repeat,
+    label: l10n.eventRecurrence,
+    value: _recurrenceSummary(
+      recurrence: _recurrence,
+      interval: _interval,
+      unit: _customUnit,
+      untilDate: _untilDate,
+      repeatCount: _repeatCount,
+      l10n: l10n,
+    ),
+    onTap: _blocked
+        ? null
+        : (anchor) => unawaited(_openRecurrenceDialog(anchor)),
+  );
+
+  Widget _buildReminderField(AppLocalizations l10n) => _EventOptionField(
+    key: const ValueKey('event-reminder-field'),
+    icon: Icons.notifications_outlined,
+    label: l10n.reminder,
+    value: _reminderSummary(_reminders, l10n),
+    onTap: _blocked ? null : (anchor) => unawaited(_openReminderDialog(anchor)),
+  );
+
+  Widget _buildAllDayField(AppLocalizations l10n) => _EventSwitchRow(
+    icon: Icons.event_available_outlined,
+    title: l10n.allDay,
+    value: _isAllDay,
+    onChanged: (value) => setState(() {
+      _isAllDay = value;
+      if (value && _endDate.isBefore(_startDate)) {
+        _endDate = _startDate;
+      }
+    }),
+  );
+
+  Widget _buildCalendarField(AppLocalizations l10n) {
+    final picker = SkedDropdownMenu<String>(
+      initialSelection: _calendarId,
+      label: WorkspaceEditorScope.maybeOf(context)?.enabled == true
+          ? null
+          : Text(l10n.calendar),
+      leadingIcon: WorkspaceEditorScope.maybeOf(context)?.enabled == true
+          ? null
+          : const Icon(Icons.calendar_month_outlined),
+      expandedInsets: EdgeInsets.zero,
+      dropdownMenuEntries: [
+        for (final calendar in _calendarOptions)
+          DropdownMenuEntry(
+            value: calendar.id,
+            label: calendar.name,
+            labelWidget: _CalendarDropdownItem(calendar: calendar),
+          ),
+      ],
+      onSelected: (value) {
+        if (value != null) {
+          setState(() => _calendarId = value);
+        }
+      },
+    );
+    return WorkspaceEditorScope.maybeOf(context)?.enabled == true
+        ? Semantics(label: l10n.calendar, child: picker)
+        : picker;
+  }
+
+  Widget _buildDetailsFields(AppLocalizations l10n) {
+    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+    final theme = Theme.of(context);
+    final notes = TextFormField(
+      controller: _notesController,
+      decoration: desktop
+          ? workspaceEditorInputDecoration(context, l10n.eventNotes)
+          : InputDecoration(
+              labelText: l10n.eventNotes,
+              prefixIcon: const Icon(Icons.notes_outlined),
+            ),
+      minLines: 2,
+      maxLines: 4,
+    );
+    final palette = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final colorValue in _colorOptions)
+          _ColorOption(
+            colorValue: colorValue,
+            selected: _colorValue == colorValue,
+            onTap: () => setState(() {
+              _colorValue = _colorValue == colorValue ? null : colorValue;
+            }),
+          ),
+      ],
+    );
+    if (desktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          WorkspaceEditorField(label: l10n.eventNotes, child: notes),
+          const SizedBox(height: 12),
+          WorkspaceEditorField(label: l10n.eventColor, child: palette),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        notes,
+        const SizedBox(height: 8),
+        Text(l10n.eventColor, style: theme.textTheme.labelLarge),
+        const SizedBox(height: 4),
+        palette,
+      ],
     );
   }
 
@@ -944,7 +982,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
 class _EditorSection extends StatelessWidget {
   const _EditorSection({
     this.controller,
-    this.desktopExpanded = false,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -953,7 +990,6 @@ class _EditorSection extends StatelessWidget {
     required this.child,
   });
 
-  final bool desktopExpanded;
   final IconData icon;
   final String title;
   final bool initiallyExpanded;
@@ -965,7 +1001,6 @@ class _EditorSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
-    if (desktop && desktopExpanded) return child;
     final shape = desktop
         ? const RoundedRectangleBorder()
         : skedShapeSchemeOf(context).field;
@@ -1015,10 +1050,15 @@ class _EventOptionField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorSelection(
+      return WorkspaceEditorField(
         label: label,
-        value: value,
-        onTap: onTap == null ? null : () => onTap!(context),
+        child: Builder(
+          builder: (anchor) => WorkspaceEditorValue(
+            label: label,
+            value: value,
+            onPressed: onTap == null ? null : () => onTap!(anchor),
+          ),
+        ),
       );
     }
     final theme = Theme.of(context);
@@ -1669,10 +1709,7 @@ class _DateTimeRange extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorFieldsRow(
-        minimumWidth: 240,
-        children: [start, end],
-      );
+      return Column(children: [start, const SizedBox(height: 8), end]);
     }
     final colors = Theme.of(context).colorScheme;
     return Padding(
@@ -1730,37 +1767,25 @@ class _DateTimeRow extends StatelessWidget {
     final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      final style = TextButton.styleFrom(
-        minimumSize: const Size(0, 36),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        foregroundColor: colors.onSurface,
-      );
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+      return WorkspaceEditorField(
+        label: label,
+        minimumControlWidth: 280,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
+            WorkspaceEditorFieldsRow(
+              minimumWidth: 156,
               children: [
                 Builder(
                   builder: (anchor) => Tooltip(
                     message: l10n.pickDate,
-                    child: TextButton.icon(
-                      style: style,
+                    child: WorkspaceEditorValue(
+                      label: '$label · ${l10n.pickDate}',
+                      value: _fmtDate(date),
+                      icon: Icons.calendar_today_outlined,
                       onPressed: onPickDate == null
                           ? null
                           : () => onPickDate!(anchor),
-                      icon: const Icon(Icons.calendar_today_outlined, size: 18),
-                      label: Text(_fmtDate(date)),
                     ),
                   ),
                 ),
@@ -1768,13 +1793,12 @@ class _DateTimeRow extends StatelessWidget {
                   Builder(
                     builder: (anchor) => Tooltip(
                       message: l10n.pickTime,
-                      child: TextButton.icon(
-                        style: style,
+                      child: WorkspaceEditorValue(
+                        label: '$label · ${l10n.pickTime}',
+                        value: time.format(context),
                         onPressed: onPickTime == null
                             ? null
                             : () => onPickTime!(anchor),
-                        icon: const Icon(Icons.access_time, size: 18),
-                        label: Text(time.format(context)),
                       ),
                     ),
                   ),
@@ -1939,9 +1963,14 @@ class _EventSwitchRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(child: Text(title)),
-          Switch(value: value, onChanged: onChanged),
+          Text(title),
+          const SizedBox(width: 8),
+          Semantics(
+            label: title,
+            child: Switch(value: value, onChanged: onChanged),
+          ),
         ],
       );
     }

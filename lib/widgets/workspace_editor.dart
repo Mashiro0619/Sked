@@ -210,6 +210,7 @@ class WorkspaceEditorFieldsRow extends StatelessWidget {
       return Wrap(
         spacing: 12,
         runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           for (var i = 0; i < children.length; i++)
             SizedBox(key: ValueKey(i), width: width, child: children[i]),
@@ -217,58 +218,4 @@ class WorkspaceEditorFieldsRow extends StatelessWidget {
       );
     },
   );
-}
-
-class WorkspaceEditorSelection extends StatelessWidget {
-  const WorkspaceEditorSelection({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-  final String label, value;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: label,
-      value: value,
-      enabled: onTap != null,
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          minimumSize: const Size(0, 36),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          foregroundColor: colors.onSurface,
-          alignment: AlignmentDirectional.centerStart,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        ),
-        child: ExcludeSemantics(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: Theme.of(context).textTheme.labelMedium
-                          ?.copyWith(color: colors.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(value, style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, size: 18),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

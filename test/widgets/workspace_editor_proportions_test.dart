@@ -12,7 +12,7 @@ void main() {
     for (final locale in ['en', 'zh']) {
       for (final scale in [1.0, 1.5]) {
         testWidgets(
-          'wider editor reduces wrapping without replacing draft: $mode/$locale/$scale',
+          'editor field layout reflows without replacing draft: $mode/$locale/$scale',
           (t) async {
             t.view.devicePixelRatio = 1;
             t.view.physicalSize = const Size(1600, 1100);
@@ -71,7 +71,11 @@ void main() {
               matching: find.byTooltip(l.pickDate),
             );
             if (mode == AppMode.general && scale == 1) {
-              expect(t.getTopLeft(dates.first).dy, t.getTopLeft(dates.last).dy);
+              expect(t.getTopLeft(dates.first).dx, t.getTopLeft(dates.last).dx);
+              expect(
+                t.getTopLeft(dates.first).dy,
+                lessThan(t.getTopLeft(dates.last).dy),
+              );
             }
             await t.drag(
               find.byKey(const ValueKey('workspace-detail-resize')),
@@ -81,10 +85,6 @@ void main() {
             final narrow = t.getRect(surface);
             expect(narrow.width, closeTo(480, .01));
             expect(wide.height, lessThanOrEqualTo(narrow.height));
-            if (mode == AppMode.general && scale == 1 ||
-                mode == AppMode.student && scale == 1.5) {
-              expect(wide.height, lessThan(narrow.height - 20));
-            }
             if (mode == AppMode.general && scale == 1) {
               expect(
                 t.getTopLeft(dates.last).dy,

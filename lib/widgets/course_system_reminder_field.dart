@@ -10,6 +10,7 @@ import '../services/agenda_coordinator.dart';
 import '../services/agenda_notification_service.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_dropdown_menu.dart';
+import 'workspace_editor_form.dart';
 
 /// Course-specific overrides of the system notification default. The controls
 /// only edit the parent draft; permission reads never schedule notifications.
@@ -20,6 +21,7 @@ class CourseSystemReminderField extends StatefulWidget {
     required this.minutesController,
     required this.onChanged,
     this.enabled = true,
+    this.compactEditor = false,
     this.notificationService,
     this.minutesFocusNode,
     this.minutesError,
@@ -29,6 +31,7 @@ class CourseSystemReminderField extends StatefulWidget {
   final TextEditingController minutesController;
   final ValueChanged<CourseReminderBehavior> onChanged;
   final bool enabled;
+  final bool compactEditor;
   final AgendaNotificationService? notificationService;
   final FocusNode? minutesFocusNode;
   final String? minutesError;
@@ -132,37 +135,63 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
       if (_exact == false) l.notificationExactAlarmRequired,
       if (_battery == false) l.notificationBatteryOptimizationRequired,
     ];
+    final minutesInput = TextField(
+      key: const ValueKey('course-reminder-custom-minutes'),
+      controller: widget.minutesController,
+      focusNode: widget.minutesFocusNode,
+      onChanged: widget.onMinutesChanged,
+      enabled: widget.enabled,
+      keyboardType: const TextInputType.numberWithOptions(),
+      decoration: widget.compactEditor
+          ? workspaceEditorInputDecoration(
+              context,
+              l.courseReminderMinutesLabel,
+            ).copyWith(errorText: widget.minutesError)
+          : InputDecoration(
+              labelText: l.courseReminderMinutesLabel,
+              errorText: widget.minutesError,
+            ),
+    );
+    final modePicker = SkedDropdownMenu<CourseReminderBehavior>(
+      key: const ValueKey('course-reminder-behavior'),
+      initialSelection: widget.behavior,
+      label: widget.compactEditor ? null : Text(l.courseSystemReminder),
+      enabled: widget.enabled,
+      workspace: AppMode.student,
+      expandedInsets: EdgeInsets.zero,
+      dropdownMenuEntries: [
+        DropdownMenuEntry(
+          value: CourseReminderBehavior.inherit,
+          label: inherited,
+        ),
+        DropdownMenuEntry(
+          value: CourseReminderBehavior.disabled,
+          label: l.notificationReminderOff,
+        ),
+        DropdownMenuEntry(
+          value: CourseReminderBehavior.custom,
+          label: l.recurrenceCustom,
+        ),
+      ],
+      onSelected: (value) {
+        if (value != null) widget.onChanged(value);
+      },
+    );
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (WorkbenchChromeMetrics.of(context).desktop ||
             WorkbenchChromeMetrics.compactTouch(context))
-          SkedDropdownMenu<CourseReminderBehavior>(
-            key: const ValueKey('course-reminder-behavior'),
-            initialSelection: widget.behavior,
-            label: Text(l.courseSystemReminder),
-            enabled: widget.enabled,
-            workspace: AppMode.student,
-            expandedInsets: EdgeInsets.zero,
-            dropdownMenuEntries: [
-              DropdownMenuEntry(
-                value: CourseReminderBehavior.inherit,
-                label: inherited,
-              ),
-              DropdownMenuEntry(
-                value: CourseReminderBehavior.disabled,
-                label: l.notificationReminderOff,
-              ),
-              DropdownMenuEntry(
-                value: CourseReminderBehavior.custom,
-                label: l.recurrenceCustom,
-              ),
-            ],
-            onSelected: (value) {
-              if (value != null) widget.onChanged(value);
-            },
-          )
+          (widget.compactEditor
+              ? WorkspaceEditorField(
+                  label: l.courseSystemReminder,
+                  child: Semantics(
+                    label: l.courseSystemReminder,
+                    child: modePicker,
+                  ),
+                )
+              : modePicker)
         else
           DropdownButtonFormField<CourseReminderBehavior>(
             key: const ValueKey('course-reminder-behavior'),
@@ -195,18 +224,12 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
           ),
         if (widget.behavior == CourseReminderBehavior.custom) ...[
           const SizedBox(height: 12),
-          TextField(
-            key: const ValueKey('course-reminder-custom-minutes'),
-            controller: widget.minutesController,
-            focusNode: widget.minutesFocusNode,
-            onChanged: widget.onMinutesChanged,
-            enabled: widget.enabled,
-            keyboardType: const TextInputType.numberWithOptions(),
-            decoration: InputDecoration(
-              labelText: l.courseReminderMinutesLabel,
-              errorText: widget.minutesError,
-            ),
-          ),
+          (widget.compactEditor
+              ? WorkspaceEditorField(
+                  label: l.courseReminderMinutesLabel,
+                  child: minutesInput,
+                )
+              : minutesInput),
         ],
         const SizedBox(height: 8),
         if (_loading)

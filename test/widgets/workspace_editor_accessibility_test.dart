@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/workspace_editor_form.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -11,7 +12,7 @@ void main() {
   for (final mode in AppMode.values) {
     for (final scale in [1.0, 1.5, 2.0]) {
       testWidgets(
-        'desktop more fields reserve space for floating labels: $mode/$scale',
+        'desktop more fields keep external labels and input state: $mode/$scale',
         (t) async {
           t.view.devicePixelRatio = 1;
           t.view.physicalSize = const Size(1600, 1100);
@@ -39,11 +40,6 @@ void main() {
             of: editor,
             matching: find.byType(ExpansionTile),
           );
-          final tile = t.widget<ExpansionTile>(more);
-          expect(
-            tile.childrenPadding!.resolve(TextDirection.ltr).top,
-            greaterThanOrEqualTo(8 * scale),
-          );
           await t.ensureVisible(more);
           await t.tap(find.descendant(of: more, matching: find.text('More')));
           await t.pumpAndSettle();
@@ -53,6 +49,18 @@ void main() {
             matching: find.byWidgetPredicate(
               (w) => w is TextField && w.decoration?.labelText == label,
             ),
+          );
+          expect(
+            find.ancestor(
+              of: input,
+              matching: find.byType(WorkspaceEditorField),
+            ),
+            findsOneWidget,
+          );
+          expect(t.widget<TextField>(input).decoration!.prefixIcon, isNull);
+          expect(
+            t.widget<TextField>(input).decoration!.floatingLabelBehavior,
+            FloatingLabelBehavior.never,
           );
           await t.ensureVisible(input);
           await t.enterText(input, 'Existing value');
