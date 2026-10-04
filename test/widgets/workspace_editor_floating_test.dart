@@ -11,6 +11,52 @@ import '../support/workspace_harness.dart';
 Finder key(String value) => find.byKey(ValueKey(value));
 void main() {
   testWidgets(
+    'desktop course reveals schedule directly and preserves text across field wrapping',
+    (t) async {
+      t.view.devicePixelRatio = 1;
+      t.view.physicalSize = const Size(1440, 1000);
+      addTearDown(t.view.reset);
+      final p = await workspaceProvider(mode: AppMode.student);
+      addTearDown(p.dispose);
+      await t.pumpWidget(WorkspaceHarness(provider: p));
+      await t.pumpAndSettle();
+      await t.tap(key('student-add-course'));
+      await t.pumpAndSettle();
+      final editor = find.byType(CourseEditorSheet);
+      expect(
+        find.descendant(of: editor, matching: find.byType(ExpansionTile)),
+        findsOneWidget,
+      );
+      expect(key('course-start-time-action').hitTestable(), findsOneWidget);
+      expect(key('course-end-time-action').hitTestable(), findsOneWidget);
+      await t.tap(find.descendant(of: editor, matching: find.text('More')));
+      await t.pumpAndSettle();
+      final teacher = find.descendant(
+        of: editor,
+        matching: find.byWidgetPredicate(
+          (w) => w is TextField && w.decoration?.labelText == 'Teacher',
+        ),
+      );
+      await t.ensureVisible(teacher);
+      await t.pumpAndSettle();
+      await t.enterText(teacher, 'Teacher draft');
+      await t.pumpAndSettle();
+      final element = t.element(teacher);
+      final input = t.widget<TextField>(teacher).controller!;
+      input.selection = const TextSelection(baseOffset: 0, extentOffset: 7);
+      await t.drag(key('workspace-detail-resize'), const Offset(-120, 0));
+      await t.pumpAndSettle();
+      expect(t.element(teacher), same(element));
+      expect(input.text, 'Teacher draft');
+      expect(input.selection.extentOffset, 7);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+      await t.pumpAndSettle();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
     'inline desktop time validation does not invoke a detached expansion controller',
     (t) async {
       final p = await workspaceProvider(mode: AppMode.general);

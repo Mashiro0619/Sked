@@ -1,3 +1,4 @@
+import 'workspace_editor.dart';
 import 'sked_task_session.dart';
 
 import 'package:flutter/services.dart';
@@ -92,11 +93,19 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   final _reminderMinutesFocus = FocusNode();
   bool _reminderMinutesInvalid = false;
 
+  bool _desktopInitialized = false;
   SkedTaskSession? _editorSession;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _editorSession ??= SkedTaskSessionScope.maybeOf(context)?.session;
+    if (!_desktopInitialized &&
+        WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      _desktopInitialized = true;
+      if (_reminderBehavior != CourseReminderBehavior.inherit) {
+        _detailsSectionExpanded = true;
+      }
+    }
   }
 
   @override
@@ -212,6 +221,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
 
   @override
   Widget build(BuildContext context) {
+    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
     final l10n = AppLocalizations.of(context);
     final linkedPeriods = _selectedPeriods;
     final linkedPeriodsLabel = _formatPeriodsLabel(linkedPeriods, l10n);
@@ -266,9 +276,14 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            UiCommandBusyIndicator(busy: _actionInProgress),
-            const SizedBox(height: 8),
+            if (desktop) ...[
+              if (_actionInProgress) const UiCommandBusyIndicator(busy: true),
+            ] else ...[
+              UiCommandBusyIndicator(busy: _actionInProgress),
+              const SizedBox(height: 8),
+            ],
             _ResponsiveFormRow(
+              desktopSingleColumn: true,
               flexes: const [2, 1],
               children: [
                 TextField(
@@ -291,6 +306,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
             ),
             const SizedBox(height: 12),
             _EditorSection(
+              desktopExpanded: true,
               icon: Icons.event_note_outlined,
               title: '${l10n.dayOfWeek} · ${l10n.time}',
               subtitle: linkedPeriods.isEmpty
@@ -1382,17 +1398,25 @@ class _ResponsiveFormRow extends StatelessWidget {
   const _ResponsiveFormRow({
     required this.children,
     this.flexes,
+    this.desktopSingleColumn = false,
     this.breakpoint = 480,
   });
 
   static const double _spacing = 12;
 
+  final bool desktopSingleColumn;
   final List<Widget> children;
   final List<int>? flexes;
   final double breakpoint;
 
   @override
   Widget build(BuildContext context) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      return WorkspaceEditorFieldsRow(
+        minimumWidth: desktopSingleColumn ? double.infinity : 160,
+        children: children,
+      );
+    }
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < breakpoint) {
@@ -1432,6 +1456,7 @@ class _EditorSection extends StatelessWidget {
   const _EditorSection({
     super.key,
     this.controller,
+    this.desktopExpanded = false,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -1441,6 +1466,7 @@ class _EditorSection extends StatelessWidget {
     this.subtitle,
   });
 
+  final bool desktopExpanded;
   final ExpansibleController? controller;
   final IconData icon;
   final String title;
@@ -1452,7 +1478,11 @@ class _EditorSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shape = skedShapeSchemeOf(context).field;
+    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+    if (desktop && desktopExpanded) return child;
+    final shape = desktop
+        ? const RoundedRectangleBorder()
+        : skedShapeSchemeOf(context).field;
     return Material(
       color: Colors.transparent,
       shape: shape,
@@ -1463,11 +1493,16 @@ class _EditorSection extends StatelessWidget {
         maintainState: true,
         enabled: enabled,
         onExpansionChanged: enabled ? onExpansionChanged : null,
-        leading: Icon(icon),
+        leading: desktop ? null : Icon(icon),
+        minTileHeight: desktop ? 36 : null,
         title: Text(title),
         subtitle: subtitle == null ? null : Text(subtitle!),
-        tilePadding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
-        childrenPadding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
+        tilePadding: desktop
+            ? EdgeInsets.zero
+            : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
+        childrenPadding: desktop
+            ? EdgeInsets.zero
+            : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
         shape: shape,
         collapsedShape: shape,
         backgroundColor: Colors.transparent,
@@ -1496,6 +1531,13 @@ class _SelectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      return WorkspaceEditorSelection(
+        label: title,
+        value: subtitle,
+        onTap: enabled ? onTap : null,
+      );
+    }
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final contentColor = enabled
@@ -1605,6 +1647,32 @@ class _CourseTimeRange extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      return WorkspaceEditorFieldsRow(
+        children: [
+          Builder(
+            builder: (anchor) => WorkspaceEditorSelection(
+              key: const ValueKey('course-start-time-action'),
+              label: startLabel,
+              value: startValue,
+              onTap: enabled && onPickStart != null
+                  ? () => onPickStart!(anchor)
+                  : null,
+            ),
+          ),
+          Builder(
+            builder: (anchor) => WorkspaceEditorSelection(
+              key: const ValueKey('course-end-time-action'),
+              label: endLabel,
+              value: endValue,
+              onTap: enabled && onPickEnd != null
+                  ? () => onPickEnd!(anchor)
+                  : null,
+            ),
+          ),
+        ],
+      );
+    }
     final colors = Theme.of(context).colorScheme;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
