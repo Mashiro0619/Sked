@@ -986,7 +986,7 @@ class _EditorSection extends StatelessWidget {
             ? EdgeInsets.zero
             : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
         childrenPadding: desktop
-            ? EdgeInsets.zero
+            ? EdgeInsets.only(top: MediaQuery.textScalerOf(context).scale(8))
             : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
         shape: shape,
         collapsedShape: shape,
