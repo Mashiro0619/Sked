@@ -381,7 +381,6 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       ),
       WorkspaceEditorFormSection(child: _buildScheduleFields(l10n)),
       WorkspaceEditorFormSection(
-        divider: true,
         child: _EditorSection(
           key: const ValueKey('course-details-section'),
           controller: _detailsExpansion,

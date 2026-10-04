@@ -23,6 +23,7 @@ class SkedPanelHeader extends StatelessWidget {
     this.actionGap = 0,
     this.closeGap = 0,
     this.bottomGap = 8,
+    this.verticalAlignment = CrossAxisAlignment.start,
   });
   final Widget title;
   final Widget? subtitle, action, bottom, toolbar;
@@ -31,6 +32,7 @@ class SkedPanelHeader extends StatelessWidget {
   final bool showClose, closeEnabled, inlineAction;
   final Key? dragKey, closeKey;
   final double actionGap, closeGap, bottomGap;
+  final CrossAxisAlignment verticalAlignment;
   @override
   Widget build(BuildContext context) {
     final heading = subtitle == null
@@ -45,7 +47,7 @@ class SkedPanelHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: verticalAlignment,
           children: [
             Expanded(
               child: onDrag == null

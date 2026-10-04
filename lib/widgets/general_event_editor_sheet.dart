@@ -1,5 +1,6 @@
 import 'workspace_editor.dart';
 import 'workspace_editor_form.dart';
+import 'workspace_editor_time_rows.dart';
 import 'sked_task_session.dart';
 import 'sked_time_picker.dart';
 
@@ -660,22 +661,14 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
           if (_showCalendarPicker) _buildCalendarField(l10n),
         ],
       ),
+      WorkspaceEditorFormSection(child: _buildTimeRange(l10n)),
       WorkspaceEditorFormSection(
-        title: l10n.eventTime,
-        action: _buildAllDayField(l10n),
-        child: _buildTimeRange(l10n),
-      ),
-      WorkspaceEditorFormSection(
-        child: Column(
-          children: [
-            _buildRecurrenceField(l10n),
-            const SizedBox(height: 8),
-            _buildReminderField(l10n),
-          ],
+        child: WorkspaceEditorFieldsRow(
+          minimumWidth: 240,
+          children: [_buildRecurrenceField(l10n), _buildReminderField(l10n)],
         ),
       ),
       WorkspaceEditorFormSection(
-        divider: true,
         child: _EditorSection(
           icon: Icons.more_horiz,
           title: l10n.more,
@@ -690,6 +683,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   );
 
   Widget _buildTimeRange(AppLocalizations l10n) => _DateTimeRange(
+    allDay: _buildAllDayField(l10n),
     start: _DateTimeRow(
       icon: Icons.play_arrow_outlined,
       label: l10n.eventStartTime,
@@ -1064,6 +1058,8 @@ class _EventOptionField extends StatelessWidget {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return WorkspaceEditorField(
         label: label,
+        labelWidth: 88,
+        minimumControlWidth: 112,
         child: Builder(
           builder: (anchor) => WorkspaceEditorValue(
             label: label,
@@ -1713,15 +1709,46 @@ double _eventDialogContentMaxHeight(MediaQueryData mediaQuery) {
 }
 
 class _DateTimeRange extends StatelessWidget {
-  const _DateTimeRange({required this.start, required this.end});
+  const _DateTimeRange({
+    required this.start,
+    required this.end,
+    required this.allDay,
+  });
 
-  final Widget start;
-  final Widget end;
+  final _DateTimeRow start, end;
+  final Widget allDay;
 
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return Column(children: [start, const SizedBox(height: 8), end]);
+      final theme = Theme.of(context);
+      Widget label(String text) => Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
+      return WorkspaceEditorTimeRows(
+        showTime: start.showTime,
+        textDirection: Directionality.of(context),
+        labelWidth: MediaQuery.textScalerOf(context).scale(96),
+        startLabel: label(start.label),
+        endLabel: label(end.label),
+        startDate: start.desktopDate(context),
+        startTime: start.desktopTime(context),
+        endDate: end.desktopDate(context),
+        endTime: end.desktopTime(context),
+        allDay: allDay,
+        error: end.errorText == null
+            ? null
+            : Text(
+                end.errorText!,
+                key: end.errorKey,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+      );
     }
     final colors = Theme.of(context).colorScheme;
     return Padding(
@@ -1773,61 +1800,35 @@ class _DateTimeRow extends StatelessWidget {
   final ValueChanged<BuildContext>? onPickDate;
   final ValueChanged<BuildContext>? onPickTime;
 
+  Widget desktopDate(BuildContext context) => Builder(
+    builder: (anchor) => Tooltip(
+      message: AppLocalizations.of(context).pickDate,
+      child: WorkspaceEditorValue(
+        label: '$label · ${AppLocalizations.of(context).pickDate}',
+        tonal: true,
+        value: _fmtDate(date),
+        icon: Icons.calendar_today_outlined,
+        onPressed: onPickDate == null ? null : () => onPickDate!(anchor),
+      ),
+    ),
+  );
+  Widget desktopTime(BuildContext context) => Builder(
+    builder: (anchor) => Tooltip(
+      message: AppLocalizations.of(context).pickTime,
+      child: WorkspaceEditorValue(
+        label: '$label · ${AppLocalizations.of(context).pickTime}',
+        tonal: true,
+        value: time.format(context),
+        onPressed: onPickTime == null ? null : () => onPickTime!(anchor),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorField(
-        label: label,
-        minimumControlWidth: 280,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            WorkspaceEditorFieldsRow(
-              minimumWidth: 156,
-              children: [
-                Builder(
-                  builder: (anchor) => Tooltip(
-                    message: l10n.pickDate,
-                    child: WorkspaceEditorValue(
-                      label: '$label · ${l10n.pickDate}',
-                      tonal: true,
-                      value: _fmtDate(date),
-                      icon: Icons.calendar_today_outlined,
-                      onPressed: onPickDate == null
-                          ? null
-                          : () => onPickDate!(anchor),
-                    ),
-                  ),
-                ),
-                if (showTime)
-                  Builder(
-                    builder: (anchor) => Tooltip(
-                      message: l10n.pickTime,
-                      child: WorkspaceEditorValue(
-                        label: '$label · ${l10n.pickTime}',
-                        tonal: true,
-                        value: time.format(context),
-                        onPressed: onPickTime == null
-                            ? null
-                            : () => onPickTime!(anchor),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (errorText != null)
-              Text(
-                errorText!,
-                key: errorKey,
-                style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
-              ),
-          ],
-        ),
-      );
-    }
     final value = showTime
         ? '${_fmtDate(date)} ${time.format(context)}'
         : _fmtDate(date);

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'sked_floating_surface.dart';
 import 'sked_panel_header.dart';
+import 'workbench_chrome_metrics.dart';
 
 /// Captured before a menu or details route closes; never looks up a dead context.
 class WorkspaceEditorConfiguration {
@@ -85,28 +86,44 @@ class WorkspaceEditorScaffold extends StatelessWidget {
                 constraints: BoxConstraints(maxHeight: bounds.maxHeight * .3),
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-                    child: SkedPanelHeader(
-                      title: DefaultTextStyle.merge(
-                        style: Theme.of(context).textTheme.titleMedium!
-                            .copyWith(fontWeight: FontWeight.w600),
-                        child: title,
+                    padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 32),
+                      child: SkedPanelHeader(
+                        verticalAlignment: CrossAxisAlignment.center,
+                        title: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: WorkbenchChromeMetrics.of(context)
+                                .iconTarget,
+                          ),
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            heightFactor: 1,
+                            child: DefaultTextStyle.merge(
+                              style: Theme.of(context).textTheme.titleMedium!
+                                  .copyWith(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              child: title,
+                            ),
+                          ),
+                        ),
+                        onDrag: scope.floating ? scope.onDrag : null,
+                        dragKey: const ValueKey('workspace-editor-drag'),
+                        onClose: onClose,
+                        closeEnabled: closeEnabled,
+                        closeKey: const ValueKey('workspace-editor-close'),
                       ),
-                      onDrag: scope.floating ? scope.onDrag : null,
-                      dragKey: const ValueKey('workspace-editor-drag'),
-                      onClose: onClose,
-                      closeEnabled: closeEnabled,
-                      closeKey: const ValueKey('workspace-editor-close'),
                     ),
                   ),
                 ),
               ),
-              const Divider(height: 1),
               Flexible(
                 fit: scope.floating ? FlexFit.loose : FlexFit.tight,
                 child: SingleChildScrollView(
                   key: const PageStorageKey('workspace-editor-body'),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: child,
                 ),
               ),
@@ -115,7 +132,10 @@ class WorkspaceEditorScaffold extends StatelessWidget {
                 constraints: BoxConstraints(maxHeight: bounds.maxHeight * .35),
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final trailing = Wrap(

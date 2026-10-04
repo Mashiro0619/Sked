@@ -12,6 +12,7 @@ import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/workspace_editor_time_rows.dart';
 
 import '../test/support/workspace_harness.dart';
 
@@ -129,6 +130,26 @@ void main() {
               }
             }
 
+            if (mode == AppMode.general && scale == 1) {
+              final rows = find.byType(WorkspaceEditorTimeRows);
+              final strings = AppLocalizations.of(t.element(rows));
+              final dates = find.descendant(
+                of: rows,
+                matching: find.byTooltip(strings.pickDate),
+              );
+              final toggle = find.descendant(
+                of: rows,
+                matching: find.byType(Switch),
+              );
+              expect(
+                t.getCenter(toggle).dy,
+                closeTo(t.getCenter(dates.first).dy, .1),
+              );
+              expect(
+                t.getTopLeft(dates.first).dx,
+                closeTo(t.getTopLeft(dates.last).dx, .1),
+              );
+            }
             await capture('floating');
             if (scale == 1) {
               await p.updateWorkspacePanelDisplayMode(

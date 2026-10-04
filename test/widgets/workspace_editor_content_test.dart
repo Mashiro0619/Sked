@@ -5,6 +5,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
+import 'package:sked/widgets/workspace_editor_time_rows.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -55,8 +56,11 @@ void main() {
                 ),
               )
               .toList();
-          expect(sections.where((section) => section.divider), hasLength(1));
-          expect(sections.last.divider, isTrue);
+          expect(sections.where((section) => section.divider), isEmpty);
+          expect(
+            find.descendant(of: editor, matching: find.byType(Divider)),
+            findsOneWidget,
+          );
           expect(
             input.decoration!.floatingLabelBehavior,
             FloatingLabelBehavior.never,
@@ -93,9 +97,9 @@ void main() {
               (w) => w is WorkspaceEditorField && w.label == label,
             ),
           );
-          final dateField = field(
-            mode == AppMode.general ? l.eventStartTime : l.time,
-          );
+          final dateField = mode == AppMode.general
+              ? find.byType(WorkspaceEditorTimeRows)
+              : field(l.time);
           expect(dateField, findsOneWidget);
           final label = find.descendant(
             of: dateField,
@@ -103,12 +107,21 @@ void main() {
               mode == AppMode.general ? l.eventStartTime : l.time,
             ),
           );
-          final control = find
-              .descendant(
-                of: dateField,
-                matching: find.byKey(const ValueKey('editor-field-control')),
-              )
-              .first;
+          final control = mode == AppMode.general
+              ? find
+                    .descendant(
+                      of: dateField,
+                      matching: find.byTooltip(l.pickDate),
+                    )
+                    .first
+              : find
+                    .descendant(
+                      of: dateField,
+                      matching: find.byKey(
+                        const ValueKey('editor-field-control'),
+                      ),
+                    )
+                    .first;
           expect(t.getCenter(label).dy, closeTo(t.getCenter(control).dy, 1));
           expect(t.getRect(control).left, greaterThan(t.getRect(label).right));
           await t.enterText(title, 'Rebuilt editor draft');

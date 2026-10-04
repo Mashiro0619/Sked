@@ -358,6 +358,11 @@ void main() {
         await t.tapAt(t.getCenter(toggle));
         await t.pumpAndSettle();
         expect(scrim, findsNothing);
+        // The protected caption consumes toolbar clicks without treating them
+        // as a request to dismiss the editor. Canvas clicks still use the guard.
+        expect(find.byType(AlertDialog), findsNothing);
+        await t.tapAt(const Offset(620, 850));
+        await t.pumpAndSettle();
         expect(find.byType(AlertDialog), findsOneWidget);
         await t.tap(find.widgetWithText(TextButton, 'Cancel').last);
         await t.pumpAndSettle();
