@@ -558,13 +558,13 @@ void main() {
   );
 
   testWidgets(
-    'a fresh install excludes prereleases and an explicit opt-in survives reload',
+    'a fresh install includes prereleases and an explicit opt-out survives reload',
     (tester) async {
       final storage = _MemoryTimetableStorage(null);
       final provider = await _createProvider(null, storage: storage);
       addTearDown(provider.dispose);
-      expect(provider.includePrereleaseUpdates, isFalse);
-      expect(storage.data!.includePrereleaseUpdates, isFalse);
+      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(storage.data!.includePrereleaseUpdates, isTrue);
       await _pumpSettingsPage(
         tester,
         provider,
@@ -574,16 +574,16 @@ void main() {
         const ValueKey('settings-include-prerelease-updates'),
       );
       await tester.ensureVisible(toggle);
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
-      expect(storage.data!.toJson()['includePrereleaseUpdates'], isTrue);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
+      expect(storage.data!.toJson()['includePrereleaseUpdates'], isFalse);
       final reloaded = await _createProvider(
         AppData.decodeStorageSnapshot(storage.data!.encode()),
       );
       addTearDown(reloaded.dispose);
-      expect(reloaded.includePrereleaseUpdates, isTrue);
+      expect(reloaded.includePrereleaseUpdates, isFalse);
     },
   );
 
@@ -645,9 +645,9 @@ void main() {
       await tester.ensureVisible(toggle);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(provider.includePrereleaseUpdates, isFalse);
-      expect(storage.data!.includePrereleaseUpdates, isFalse);
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
+      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(storage.data!.includePrereleaseUpdates, isTrue);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
       final l10n = AppLocalizations.of(tester.element(toggle));
       expect(find.text(l10n.saveFailedRetry), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -675,11 +675,11 @@ void main() {
       await tester.tap(toggle);
       await tester.pump();
       expect(tester.widget<SettingsSwitchTile>(toggle).onChanged, isNull);
-      expect(storage.data!.includePrereleaseUpdates, isFalse);
+      expect(storage.data!.includePrereleaseUpdates, isTrue);
       expect(storage.saveCount, writesBefore + 1);
       storage.completePendingSave();
       await tester.pumpAndSettle();
-      expect(storage.data!.includePrereleaseUpdates, isTrue);
+      expect(storage.data!.includePrereleaseUpdates, isFalse);
       expect(tester.widget<SettingsSwitchTile>(toggle).onChanged, isNotNull);
     },
   );
@@ -748,7 +748,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(toggle);
           await tester.pumpAndSettle();
-          expect(provider.includePrereleaseUpdates, isTrue);
+          expect(provider.includePrereleaseUpdates, isFalse);
           expect(tester.takeException(), isNull);
         },
       );

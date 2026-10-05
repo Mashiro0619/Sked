@@ -4,13 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
 
 void main() {
-  test('new app data uses stable updates by default', () {
+  test('new app data receives prerelease updates by default', () {
     final data = buildInitialAppData(buildDefaultPeriodTimes());
-    expect(data.includePrereleaseUpdates, isFalse);
-    expect(data.toJson()['includePrereleaseUpdates'], isFalse);
+    expect(data.includePrereleaseUpdates, isTrue);
+    expect(data.toJson()['includePrereleaseUpdates'], isTrue);
     expect(
       AppData.decodeStorageSnapshot(data.encode()).includePrereleaseUpdates,
-      isFalse,
+      isTrue,
     );
   });
 

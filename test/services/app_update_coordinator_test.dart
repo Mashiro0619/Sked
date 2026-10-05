@@ -161,7 +161,7 @@ void main() {
   testWidgets(
     'switching preferences away and back cannot revive an old shared request',
     (tester) async {
-      final provider = await _createProvider();
+      final provider = await _createProvider(includePrereleases: false);
       addTearDown(provider.dispose);
       final context = await _pumpHarness(tester, provider);
       final service = _QueuedUpdateService();
@@ -275,7 +275,7 @@ void main() {
   });
 
   for (final source in UpdateCheckSource.values) {
-    testWidgets('$source excludes prereleases by default for new app data', (
+    testWidgets('$source includes prereleases by default for new app data', (
       tester,
     ) async {
       final provider = await _createProvider();
@@ -289,9 +289,9 @@ void main() {
         source: source,
         updateService: service,
       );
-      expect(provider.includePrereleaseUpdates, isFalse);
+      expect(provider.includePrereleaseUpdates, isTrue);
       await tester.pump();
-      expect(service.requestedPrereleases, isFalse);
+      expect(service.requestedPrereleases, isTrue);
       service.pending.complete(_updateResult(hasUpdate: false));
       await check;
       await tester.pumpAndSettle();

@@ -18,7 +18,7 @@ change the feed, installed version, saved preferences or backup format.
 ## User-visible behavior
 
 Settings → About → **Receive prerelease updates** is an app-wide, saved preference.
-New installations default to **off**, regardless of whether the installed app is
+New installations default to **on**, regardless of whether the installed app is
 a stable, Alpha, Beta, or RC release. Existing saved choices are preserved.
 
 Older versions omitted this field when it was off, so an existing snapshot
