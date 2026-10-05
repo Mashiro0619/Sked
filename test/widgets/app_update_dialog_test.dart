@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
+import 'package:sked/widgets/sked_panel_header.dart';
+import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -25,6 +28,8 @@ Future<BuildContext> pumpDialog(
   bool startup = false,
   double scale = 1,
   String locale = 'en',
+  TargetPlatform platform = TargetPlatform.android,
+  TextDirection direction = TextDirection.ltr,
   UpdateDistribution distribution = const UpdateDistribution(
     UpdateChannel.github,
   ),
@@ -37,12 +42,13 @@ Future<BuildContext> pumpDialog(
   await tester.pumpWidget(
     MaterialApp(
       locale: Locale(locale),
+      theme: ThemeData(platform: platform),
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(scale)),
-        child: child!,
+        child: Directionality(textDirection: direction, child: child!),
       ),
       home: Scaffold(
         body: Builder(
@@ -219,6 +225,136 @@ void main() {
       );
     },
   );
+
+  for (final platform in [
+    TargetPlatform.windows,
+    TargetPlatform.macOS,
+    TargetPlatform.linux,
+  ]) {
+    testWidgets('desktop $platform uses compact chrome and separated actions', (
+      tester,
+    ) async {
+      await pumpDialog(
+        tester,
+        platform: platform,
+        startup: true,
+        initial: const UpdateCheckResult(
+          localVersion: '1.0',
+          remoteVersion: '2.0',
+          releaseUrl: 'https://example.com/release',
+          updateContent: 'Notes',
+          hasUpdate: true,
+        ),
+      );
+      expect(find.byType(SkedFloatingSurface), findsOneWidget);
+      expect(find.byType(SkedPanelHeader), findsOneWidget);
+      expect(
+        tester.widget<SkedPanelHeader>(find.byType(SkedPanelHeader)).onDrag,
+        isNull,
+      );
+      expect(find.byType(Divider), findsOneWidget);
+      expect(
+        tester.getCenter(find.text('2.0')).dy,
+        closeTo(tester.getCenter(find.text('Current version 1.0')).dy, 1),
+      );
+      final ignore = tester.getRect(find.text('Ignore this version'));
+      final later = tester.getRect(find.text('Later'));
+      expect(ignore.right, lessThan(later.left));
+      final button = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Github'),
+      );
+      final shape = button.style!.shape!.resolve({})! as RoundedRectangleBorder;
+      expect(shape.borderRadius, BorderRadius.circular(6));
+      expect(
+        tester.getSize(find.widgetWithText(FilledButton, 'Github')).height,
+        greaterThanOrEqualTo(36),
+      );
+      await tester.tap(find.byKey(const ValueKey('app-update-close')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppUpdateDialog), findsNothing);
+    });
+  }
+
+  testWidgets(
+    'touch dialog retains its layout and does not gain desktop chrome',
+    (tester) async {
+      await pumpDialog(tester);
+      expect(find.byType(SkedFloatingSurface), findsNothing);
+      expect(find.byType(SkedPanelHeader), findsNothing);
+      expect(find.byKey(const ValueKey('app-update-close')), findsNothing);
+      expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'desktop close, Escape and outside clicks respect pending launch; failure can retry',
+    (tester) async {
+      final pending = Completer<bool>();
+      var calls = 0;
+      await pumpDialog(
+        tester,
+        platform: TargetPlatform.windows,
+        distribution: UpdateDistribution(
+          UpdateChannel.github,
+          urlLauncher: (_, _) {
+            calls++;
+            return pending.future;
+          },
+        ),
+      );
+      await tester.tap(find.text('Github'));
+      await tester.pump();
+      final close = find.byKey(const ValueKey('app-update-close'));
+      expect(tester.widget<IconButton>(close).onPressed, isNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.tapAt(const Offset(4, 4));
+      await tester.pump();
+      expect(find.byType(AppUpdateDialog), findsOneWidget);
+      expect(calls, 1);
+      pending.complete(false);
+      await tester.pumpAndSettle();
+      expect(find.text('Unable to open the update link'), findsOneWidget);
+      expect(tester.widget<IconButton>(close).onPressed, isNotNull);
+      await tester.tap(close);
+      await tester.pumpAndSettle();
+      expect(find.byType(AppUpdateDialog), findsNothing);
+    },
+  );
+
+  for (final locale in ['zh', 'en']) {
+    for (final scale in [1.0, 1.5, 2.0]) {
+      for (final direction in TextDirection.values) {
+        testWidgets('desktop small window $locale $scale $direction', (
+          tester,
+        ) async {
+          tester.view.physicalSize = const Size(480, 320);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          await pumpDialog(
+            tester,
+            platform: TargetPlatform.windows,
+            scale: scale,
+            locale: locale,
+            direction: direction,
+            startup: true,
+            distribution: const UpdateDistribution(
+              UpdateChannel.microsoftStore,
+            ),
+          );
+          expect(tester.takeException(), isNull);
+          final close = find.byKey(const ValueKey('app-update-close'));
+          expect(close.hitTestable(), findsOneWidget);
+          await tester.ensureVisible(
+            find.text('Microsoft Store').evaluate().isNotEmpty
+                ? find.text('Microsoft Store')
+                : find.text('微软商店'),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  }
 
   for (final locale in ['en', 'zh']) {
     for (final scale in [1.0, 1.5, 2.0]) {

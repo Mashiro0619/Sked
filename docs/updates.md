@@ -136,3 +136,13 @@ their blockers; checking eligibility never closes tasks or invokes exit guards.
 Matching manual and automatic requests share the network result, and manual
 checks own presentation. Data replacement or a prerelease-preference change
 invalidates old requests, even if the preference is subsequently changed back.
+
+### Desktop presentation
+
+Desktop update dialogs use the shared 8 dp surface and a compact 15 dp title
+with an explicit close button. Version metadata wraps horizontally above the
+notes; the body has a visible scrollbar. A single divider separates the footer,
+with Ignore on the leading side and compact 36 dp minimum-height actions on the
+trailing side. Narrow windows and large text wrap rather than shrink labels.
+The close button, Escape and outside clicks still respect pending operations.
+The dialog stays centered and modal, not draggable; touch presentation is unchanged.
