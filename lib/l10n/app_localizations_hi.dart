@@ -3218,5 +3218,29 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get storePrereleaseNotice =>
-      'This option does not enroll you in a store testing track.';
+      'Receiving prerelease update notices does not enroll you in a store testing track.';
+
+  @override
+  String get updateFoundTitle => 'New version available';
+
+  @override
+  String get updateNoNotes => 'No release notes were provided.';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateRetry => 'Retry';
+
+  @override
+  String get updatePrerelease => 'Prerelease';
+
+  @override
+  String get updateNetworkFailure =>
+      'Unable to check for updates. Check your connection and try again.';
+
+  @override
+  String updateNoNewerVersion(String version) {
+    return 'No newer version found (current: $version)';
+  }
 }

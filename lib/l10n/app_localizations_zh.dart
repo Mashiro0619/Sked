@@ -3027,7 +3027,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storeUpdateDelay => '商店版本可能稍晚提供更新，具体以商店页面为准。';
 
   @override
-  String get storePrereleaseNotice => '开启此选项不等于加入商店测试渠道。';
+  String get storePrereleaseNotice => '接收预发布更新不会自动加入商店测试渠道。';
+
+  @override
+  String get updateFoundTitle => '发现新版本';
+
+  @override
+  String get updateNoNotes => '此版本未提供更新说明。';
+
+  @override
+  String get updateLater => '稍后';
+
+  @override
+  String get updateRetry => '重试';
+
+  @override
+  String get updatePrerelease => '预发布';
+
+  @override
+  String get updateNetworkFailure => '暂时无法检查更新，请检查网络后重试。';
+
+  @override
+  String updateNoNewerVersion(String version) {
+    return '未发现更新版本（当前：$version）';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).

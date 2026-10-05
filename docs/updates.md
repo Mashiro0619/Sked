@@ -108,3 +108,16 @@ The existing `tag_name`, URL, and notes aliases still work. Optional
 channel rules. A legacy single-release feed containing only a prerelease does
 not offer an update to stable-channel users. It must publish a release array if
 those users should also receive an available stable release.
+
+## Update dialog
+
+Update notices remain centered modal dialogs: 560 dp preferred reading width,
+up to 640 dp for large text, bounded by the window. Release notes scroll separately
+from version information and actions; short notes do not expand the dialog.
+Markdown is selectable, images render as alt text, and external note links allow
+only HTTPS. Store actions never silently switch to a GitHub installer.
+
+Manual checks offer Cancel and the channel action. Startup notices additionally
+offer Later and Ignore this version; failures never offer Ignore. Retrying a
+failed check stays in the same dialog. Link-launch and preference-save failures
+retain the dialog with an inline error. Async completion closes only its own route.

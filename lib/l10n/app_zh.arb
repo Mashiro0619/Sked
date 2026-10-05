@@ -2217,5 +2217,12 @@
   "categoryColorSlot": "主题颜色 {number}",
   "microsoftStoreUpdateButton": "微软商店",
   "storeUpdateDelay": "商店版本可能稍晚提供更新，具体以商店页面为准。",
-  "storePrereleaseNotice": "开启此选项不等于加入商店测试渠道。"
+  "storePrereleaseNotice": "接收预发布更新不会自动加入商店测试渠道。",
+  "updateFoundTitle": "发现新版本",
+  "updateNoNotes": "此版本未提供更新说明。",
+  "updateLater": "稍后",
+  "updateRetry": "重试",
+  "updatePrerelease": "预发布",
+  "updateNetworkFailure": "暂时无法检查更新，请检查网络后重试。",
+  "updateNoNewerVersion": "未发现更新版本（当前：{version}）"
 }

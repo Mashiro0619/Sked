@@ -5769,8 +5769,50 @@ abstract class AppLocalizations {
   /// No description provided for @storePrereleaseNotice.
   ///
   /// In en, this message translates to:
-  /// **'This option does not enroll you in a store testing track.'**
+  /// **'Receiving prerelease update notices does not enroll you in a store testing track.'**
   String get storePrereleaseNotice;
+
+  /// No description provided for @updateFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New version available'**
+  String get updateFoundTitle;
+
+  /// No description provided for @updateNoNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'No release notes were provided.'**
+  String get updateNoNotes;
+
+  /// No description provided for @updateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateLater;
+
+  /// No description provided for @updateRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get updateRetry;
+
+  /// No description provided for @updatePrerelease.
+  ///
+  /// In en, this message translates to:
+  /// **'Prerelease'**
+  String get updatePrerelease;
+
+  /// No description provided for @updateNetworkFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to check for updates. Check your connection and try again.'**
+  String get updateNetworkFailure;
+
+  /// No description provided for @updateNoNewerVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'No newer version found (current: {version})'**
+  String updateNoNewerVersion(String version);
 }
 
 class _AppLocalizationsDelegate

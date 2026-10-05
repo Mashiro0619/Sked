@@ -25,3 +25,10 @@ Imported data and school-site configuration
 ------------------------------------------
 
 School-site JSON files, timetable JSON files, period templates, and timetable page source submitted for parsing are user-provided data, not bundled third-party assets. They are handled according to the app's privacy policy and are not covered by this notice file unless the user adds separate third-party materials on their own.
+
+Release-note rendering
+----------------------
+
+flutter_markdown_plus (BSD-3-Clause): https://github.com/foresightmobile/flutter_markdown_plus
+markdown (BSD-3-Clause): https://github.com/dart-lang/markdown
+Full package license texts are included in Flutter’s bundled license registry and the in-app license page.

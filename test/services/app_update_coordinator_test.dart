@@ -12,6 +12,7 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/update_service.dart';
 import 'package:sked/services/update_distribution.dart';
+import 'package:sked/widgets/app_update_dialog.dart';
 import 'package:sked/services/microsoft_store_update_service.dart';
 
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
@@ -54,6 +55,13 @@ class _PendingUpdateService extends UpdateService {
     requestedPrereleases = includePrereleases;
     return pending.future;
   }
+}
+
+class _FailingUpdateService extends UpdateService {
+  @override
+  Future<UpdateCheckResult> checkForUpdates({
+    bool includePrereleases = false,
+  }) async => throw StateError('offline');
 }
 
 UpdateCheckResult _updateResult({required bool hasUpdate}) {
@@ -115,6 +123,26 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_urlLauncherChannel, null);
   });
+
+  testWidgets(
+    'automatic network failure is silent and preserves the known badge',
+    (tester) async {
+      final provider = await _createProvider(availableVersion: '1.1.0');
+      addTearDown(provider.dispose);
+      final context = await _pumpHarness(tester, provider);
+      await AppUpdateCoordinator.checkForUpdates(
+        context,
+        provider: provider,
+        source: UpdateCheckSource.startup,
+        distribution: const UpdateDistribution(UpdateChannel.github),
+        updateService: _FailingUpdateService(),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(AppUpdateDialog), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(provider.availableUpdateVersion, '1.1.0');
+    },
+  );
 
   for (final source in UpdateCheckSource.values) {
     testWidgets('$source excludes prereleases by default for new app data', (
@@ -201,7 +229,7 @@ void main() {
         await check;
         await tester.pumpAndSettle();
         expect(provider.availableUpdateVersion, isNull);
-        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.byType(AppUpdateDialog), findsNothing);
         expect(find.byType(SnackBar), findsNothing);
       },
     );
@@ -229,9 +257,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(AppUpdateDialog), findsOneWidget);
     expect(provider.availableUpdateVersion, '2.0.0');
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.text('Later'));
     await tester.pumpAndSettle();
     await check;
     expect(provider.ignoredUpdateVersion, '2.0.0-rc.1');
@@ -301,7 +329,10 @@ void main() {
     await tester.pump();
 
     expect(provider.availableUpdateVersion, isNull);
-    expect(find.text('Already on the latest version (1.0.0)'), findsOneWidget);
+    expect(
+      find.text('No newer version found (current: 1.0.0)'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('startup check suppresses a version that is already ignored', (
@@ -321,7 +352,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.availableUpdateVersion, '1.1.0');
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(AppUpdateDialog), findsNothing);
   });
 
   testWidgets('startup update dialog persists the ignored version', (
@@ -365,8 +396,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Github'));
     await tester.pumpAndSettle();
-    await check;
-
     expect(find.text('Unable to open the update link'), findsOneWidget);
+    expect(find.byType(AppUpdateDialog), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await check;
   });
 }

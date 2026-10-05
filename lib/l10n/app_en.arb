@@ -2234,5 +2234,13 @@
   "@categoryColorSlot": {"placeholders": {"number": {"type": "int"}}},
   "microsoftStoreUpdateButton": "Microsoft Store",
   "storeUpdateDelay": "Store updates may arrive later. Availability is determined by the store page.",
-  "storePrereleaseNotice": "This option does not enroll you in a store testing track."
+  "storePrereleaseNotice": "Receiving prerelease update notices does not enroll you in a store testing track.",
+  "updateFoundTitle": "New version available",
+  "updateNoNotes": "No release notes were provided.",
+  "updateLater": "Later",
+  "updateRetry": "Retry",
+  "updatePrerelease": "Prerelease",
+  "updateNetworkFailure": "Unable to check for updates. Check your connection and try again.",
+  "updateNoNewerVersion": "No newer version found (current: {version})",
+  "@updateNoNewerVersion": {"placeholders": {"version": {"type": "String"}}}
 }

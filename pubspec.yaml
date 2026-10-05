@@ -41,6 +41,7 @@ dependencies:
   cupertino_ui: ^1.0.2
   sked_android_productivity_plugin:
     path: packages/android_productivity_plugin
+  flutter_markdown_plus: 1.0.12
 
 dev_dependencies:
   flutter_test:
