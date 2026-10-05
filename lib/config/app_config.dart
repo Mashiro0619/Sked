@@ -7,6 +7,10 @@ class AppConfig {
     'SKED_MICROSOFT_STORE_ID',
   );
 
+  static const distributionChannel = String.fromEnvironment(
+    'SKED_DISTRIBUTION_CHANNEL',
+  );
+
   static const updateVersionUrl = String.fromEnvironment(
     'SKED_UPDATE_VERSION_URL',
     defaultValue: '',

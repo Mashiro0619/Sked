@@ -2214,5 +2214,8 @@
   "categoryThemePalette": "主题配色",
   "categoryCustomColor": "自定义",
   "colorHexInvalid": "请输入六位十六进制颜色。",
-  "categoryColorSlot": "主题颜色 {number}"
+  "categoryColorSlot": "主题颜色 {number}",
+  "microsoftStoreUpdateButton": "微软商店",
+  "storeUpdateDelay": "商店版本可能稍晚提供更新，具体以商店页面为准。",
+  "storePrereleaseNotice": "开启此选项不等于加入商店测试渠道。"
 }

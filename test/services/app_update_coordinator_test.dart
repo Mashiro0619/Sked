@@ -11,6 +11,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/update_service.dart';
+import 'package:sked/services/update_distribution.dart';
 import 'package:sked/services/microsoft_store_update_service.dart';
 
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
@@ -116,7 +117,7 @@ void main() {
   });
 
   for (final source in UpdateCheckSource.values) {
-    testWidgets('$source includes prereleases by default for new app data', (
+    testWidgets('$source excludes prereleases by default for new app data', (
       tester,
     ) async {
       final provider = await _createProvider();
@@ -124,13 +125,15 @@ void main() {
       final context = await _pumpHarness(tester, provider);
       final service = _PendingUpdateService();
       final check = AppUpdateCoordinator.checkForUpdates(
+        distribution: const UpdateDistribution(UpdateChannel.github),
         context,
         provider: provider,
         source: source,
         updateService: service,
       );
-      expect(provider.includePrereleaseUpdates, isTrue);
-      expect(service.requestedPrereleases, isTrue);
+      expect(provider.includePrereleaseUpdates, isFalse);
+      await tester.pump();
+      expect(service.requestedPrereleases, isFalse);
       service.pending.complete(_updateResult(hasUpdate: false));
       await check;
       await tester.pumpAndSettle();
@@ -147,11 +150,13 @@ void main() {
           final context = await _pumpHarness(tester, provider);
           final service = _PendingUpdateService();
           final check = AppUpdateCoordinator.checkForUpdates(
+            distribution: const UpdateDistribution(UpdateChannel.github),
             context,
             provider: provider,
             source: source,
             updateService: service,
           );
+          await tester.pump();
           expect(service.requestedPrereleases, includePrereleases);
           service.pending.complete(_updateResult(hasUpdate: false));
           await check;
@@ -171,6 +176,7 @@ void main() {
         final context = await _pumpHarness(tester, provider);
         final service = _PendingUpdateService();
         final check = AppUpdateCoordinator.checkForUpdates(
+          distribution: const UpdateDistribution(UpdateChannel.github),
           context,
           provider: provider,
           source: UpdateCheckSource.manual,
@@ -208,6 +214,7 @@ void main() {
     addTearDown(provider.dispose);
     final context = await _pumpHarness(tester, provider);
     final check = AppUpdateCoordinator.checkForUpdates(
+      distribution: const UpdateDistribution(UpdateChannel.github),
       context,
       provider: provider,
       source: UpdateCheckSource.startup,
@@ -232,17 +239,24 @@ void main() {
 
   for (final source in UpdateCheckSource.values) {
     testWidgets(
-      'Store $source bypasses GitHub and preserves imported channel preferences',
+      'Store $source checks GitHub and opens only its store on activation',
       (tester) async {
-        final provider = await _createProvider(
-          availableVersion: '9.0.0-alpha.1',
-          includePrereleases: true,
-        );
+        final provider = await _createProvider(includePrereleases: true);
         addTearDown(provider.dispose);
         final context = await _pumpHarness(tester, provider);
         final github = _PendingUpdateService();
         final opened = <Uri>[];
-        await AppUpdateCoordinator.checkForUpdates(
+        final check = AppUpdateCoordinator.checkForUpdates(
+          distribution: UpdateDistribution(
+            UpdateChannel.microsoftStore,
+            storeService: MicrosoftStoreUpdateService(
+              productId: '9NWRR6ZP6K6T',
+              urlLauncher: (uri, _) async {
+                opened.add(uri);
+                return true;
+              },
+            ),
+          ),
           context,
           provider: provider,
           source: source,
@@ -255,40 +269,20 @@ void main() {
             },
           ),
         );
+        await tester.pump();
+        expect(github.requestedPrereleases, isTrue);
+        github.pending.complete(_updateResult(hasUpdate: true));
         await tester.pumpAndSettle();
-        expect(github.requestedPrereleases, isNull);
-        expect(opened.length, source == UpdateCheckSource.manual ? 1 : 0);
-        expect(provider.includePrereleaseUpdates, isTrue);
-        expect(provider.availableUpdateVersion, '9.0.0-alpha.1');
-        expect(find.byType(AlertDialog), findsNothing);
-        expect(find.byType(SnackBar), findsNothing);
+        expect(opened, isEmpty);
+        expect(find.text('Microsoft Store'), findsOneWidget);
+        expect(provider.availableUpdateVersion, '1.1.0');
+        await tester.tap(find.text('Microsoft Store'));
+        await tester.pumpAndSettle();
+        await check;
+        expect(opened.single.scheme, 'ms-windows-store');
       },
     );
   }
-
-  testWidgets(
-    'Store launch failure reports an error, not a GitHub update dialog',
-    (tester) async {
-      final provider = await _createProvider();
-      addTearDown(provider.dispose);
-      final context = await _pumpHarness(tester, provider);
-      final github = _PendingUpdateService();
-      await AppUpdateCoordinator.checkForUpdates(
-        context,
-        provider: provider,
-        source: UpdateCheckSource.manual,
-        updateService: github,
-        storeUpdateService: MicrosoftStoreUpdateService(
-          productId: '9NWRR6ZP6K6T',
-          urlLauncher: (_, _) async => false,
-        ),
-      );
-      await tester.pump();
-      expect(github.requestedPrereleases, isNull);
-      expect(find.text('Unable to open the update link'), findsOneWidget);
-      expect(find.byType(AlertDialog), findsNothing);
-    },
-  );
 
   testWidgets('manual latest result clears stale state and reports success', (
     tester,
@@ -298,6 +292,7 @@ void main() {
     final context = await _pumpHarness(tester, provider);
 
     await AppUpdateCoordinator.checkForUpdates(
+      distribution: const UpdateDistribution(UpdateChannel.github),
       context,
       provider: provider,
       source: UpdateCheckSource.manual,
@@ -317,6 +312,7 @@ void main() {
     final context = await _pumpHarness(tester, provider);
 
     await AppUpdateCoordinator.checkForUpdates(
+      distribution: const UpdateDistribution(UpdateChannel.github),
       context,
       provider: provider,
       source: UpdateCheckSource.startup,
@@ -336,6 +332,7 @@ void main() {
     final context = await _pumpHarness(tester, provider);
 
     final check = AppUpdateCoordinator.checkForUpdates(
+      distribution: const UpdateDistribution(UpdateChannel.github),
       context,
       provider: provider,
       source: UpdateCheckSource.startup,
@@ -359,13 +356,14 @@ void main() {
     final context = await _pumpHarness(tester, provider);
 
     final check = AppUpdateCoordinator.checkForUpdates(
+      distribution: const UpdateDistribution(UpdateChannel.github),
       context,
       provider: provider,
       source: UpdateCheckSource.manual,
       updateService: _FixedUpdateService(_updateResult(hasUpdate: true)),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('GitHub repository'));
+    await tester.tap(find.text('Github'));
     await tester.pumpAndSettle();
     await check;
 

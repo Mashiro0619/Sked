@@ -2231,5 +2231,8 @@
   "categoryCustomColor": "Custom",
   "colorHexInvalid": "Enter a six-digit hex color.",
   "categoryColorSlot": "Theme color {number}",
-  "@categoryColorSlot": {"placeholders": {"number": {"type": "int"}}}
+  "@categoryColorSlot": {"placeholders": {"number": {"type": "int"}}},
+  "microsoftStoreUpdateButton": "Microsoft Store",
+  "storeUpdateDelay": "Store updates may arrive later. Availability is determined by the store page.",
+  "storePrereleaseNotice": "This option does not enroll you in a store testing track."
 }

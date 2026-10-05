@@ -1783,7 +1783,7 @@ class AppData {
     Map<String, int>? colorfulUiColorValues,
     String? privacyPolicyAcceptedVersion,
     String? privacyPolicyAcceptedAtIso,
-    bool includePrereleaseUpdates = true,
+    bool includePrereleaseUpdates = false,
     String? ignoredUpdateVersion,
     String? availableUpdateVersion,
   }) {
@@ -1856,7 +1856,7 @@ class AppData {
     this.notificationSettings = const NotificationSettings(),
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
-    this.includePrereleaseUpdates = true,
+    this.includePrereleaseUpdates = false,
     this.ignoredUpdateVersion,
     this.availableUpdateVersion,
   });

@@ -5753,6 +5753,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Theme color {number}'**
   String categoryColorSlot(int number);
+
+  /// No description provided for @microsoftStoreUpdateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Microsoft Store'**
+  String get microsoftStoreUpdateButton;
+
+  /// No description provided for @storeUpdateDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Store updates may arrive later. Availability is determined by the store page.'**
+  String get storeUpdateDelay;
+
+  /// No description provided for @storePrereleaseNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This option does not enroll you in a store testing track.'**
+  String get storePrereleaseNotice;
 }
 
 class _AppLocalizationsDelegate

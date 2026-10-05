@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
+import 'package:sked/services/update_distribution.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -265,6 +267,12 @@ Future<void> _pumpSettingsPage(
               dataClearCoordinator: dataClearCoordinator,
               urlLauncher: urlLauncher,
               storeUpdateService: storeUpdateService,
+              updateDistribution: storeUpdateService.isEnabled
+                  ? UpdateDistribution(
+                      UpdateChannel.microsoftStore,
+                      storeService: storeUpdateService,
+                    )
+                  : null,
               initialDestination: destination,
             ),
           ),
@@ -550,13 +558,13 @@ void main() {
   );
 
   testWidgets(
-    'a fresh install enables prereleases and an explicit opt-out survives reload',
+    'a fresh install excludes prereleases and an explicit opt-in survives reload',
     (tester) async {
       final storage = _MemoryTimetableStorage(null);
       final provider = await _createProvider(null, storage: storage);
       addTearDown(provider.dispose);
-      expect(provider.includePrereleaseUpdates, isTrue);
-      expect(storage.data!.includePrereleaseUpdates, isTrue);
+      expect(provider.includePrereleaseUpdates, isFalse);
+      expect(storage.data!.includePrereleaseUpdates, isFalse);
       await _pumpSettingsPage(
         tester,
         provider,
@@ -566,16 +574,16 @@ void main() {
         const ValueKey('settings-include-prerelease-updates'),
       );
       await tester.ensureVisible(toggle);
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
-      expect(storage.data!.toJson()['includePrereleaseUpdates'], isFalse);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
+      expect(storage.data!.toJson()['includePrereleaseUpdates'], isTrue);
       final reloaded = await _createProvider(
         AppData.decodeStorageSnapshot(storage.data!.encode()),
       );
       addTearDown(reloaded.dispose);
-      expect(reloaded.includePrereleaseUpdates, isFalse);
+      expect(reloaded.includePrereleaseUpdates, isTrue);
     },
   );
 
@@ -637,9 +645,9 @@ void main() {
       await tester.ensureVisible(toggle);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(provider.includePrereleaseUpdates, isTrue);
-      expect(storage.data!.includePrereleaseUpdates, isTrue);
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
+      expect(provider.includePrereleaseUpdates, isFalse);
+      expect(storage.data!.includePrereleaseUpdates, isFalse);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
       final l10n = AppLocalizations.of(tester.element(toggle));
       expect(find.text(l10n.saveFailedRetry), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -667,11 +675,11 @@ void main() {
       await tester.tap(toggle);
       await tester.pump();
       expect(tester.widget<SettingsSwitchTile>(toggle).onChanged, isNull);
-      expect(storage.data!.includePrereleaseUpdates, isTrue);
+      expect(storage.data!.includePrereleaseUpdates, isFalse);
       expect(storage.saveCount, writesBefore + 1);
       storage.completePendingSave();
       await tester.pumpAndSettle();
-      expect(storage.data!.includePrereleaseUpdates, isFalse);
+      expect(storage.data!.includePrereleaseUpdates, isTrue);
       expect(tester.widget<SettingsSwitchTile>(toggle).onChanged, isNotNull);
     },
   );
@@ -740,7 +748,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(toggle);
           await tester.pumpAndSettle();
-          expect(provider.includePrereleaseUpdates, isFalse);
+          expect(provider.includePrereleaseUpdates, isTrue);
           expect(tester.takeException(), isNull);
         },
       );
@@ -748,89 +756,56 @@ void main() {
   }
 
   testWidgets(
-    'Store settings hide GitHub prereleases and stale update badges',
+    'Store settings share update badges and the prerelease preference',
     (tester) async {
       final data = _buildStudentData().copyWith(
         availableUpdateVersion: '9.0.0-rc.1',
         includePrereleaseUpdates: true,
       );
-      final storage = _MemoryTimetableStorage(data);
-      final provider = await _createProvider(data, storage: storage);
+      final provider = await _createProvider(data);
       addTearDown(provider.dispose);
-      final opened = <Uri>[];
       await _pumpSettingsPage(
         tester,
         provider,
         destination: SettingsDestination.about,
-        storeUpdateService: MicrosoftStoreUpdateService(
+        storeUpdateService: const MicrosoftStoreUpdateService(
           productId: '9NWRR6ZP6K6T',
-          urlLauncher: (uri, _) async {
-            opened.add(uri);
-            return true;
-          },
         ),
       );
       expect(
         find.byKey(const ValueKey('settings-include-prerelease-updates')),
-        findsNothing,
-      );
-      expect(
-        find.textContaining('Updates are managed by Microsoft Store'),
         findsOneWidget,
       );
-      expect(find.textContaining('Update available'), findsNothing);
-      final update = find.byKey(const ValueKey('settings-check-for-updates'));
-      await tester.ensureVisible(update);
-      await tester.tap(update);
-      await tester.pumpAndSettle();
-      expect(
-        opened.single.toString(),
-        'ms-windows-store://pdp/?ProductId=9NWRR6ZP6K6T',
-      );
-      expect(storage.saveCount, 0);
+      expect(find.textContaining('does not enroll'), findsOneWidget);
+      expect(find.textContaining('Update available'), findsOneWidget);
       expect(provider.includePrereleaseUpdates, isTrue);
       expect(provider.availableUpdateVersion, '9.0.0-rc.1');
-      expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets(
-    'Store identity remains in use when navigating from the settings overview',
-    (tester) async {
-      final provider = await _createProvider(_buildStudentData());
-      addTearDown(provider.dispose);
-      final opened = <Uri>[];
-      await _pumpSettingsPage(
-        tester,
-        provider,
-        storeUpdateService: MicrosoftStoreUpdateService(
-          productId: '9NWRR6ZP6K6T',
-          urlLauncher: (uri, _) async {
-            opened.add(uri);
-            return true;
-          },
-        ),
-      );
-      final about = find.byKey(const ValueKey('settings-about'));
-      await tester.ensureVisible(about);
-      await tester.tap(about);
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('settings-include-prerelease-updates')),
-        findsNothing,
-      );
-      final update = find
-          .byKey(const ValueKey('settings-check-for-updates'))
-          .hitTestable();
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('settings-check-for-updates')).last,
-      );
-      await tester.tap(update.last);
-      await tester.pumpAndSettle();
-      expect(opened.single.host, 'pdp');
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('Store identity survives navigation from the settings overview', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildStudentData());
+    addTearDown(provider.dispose);
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      storeUpdateService: const MicrosoftStoreUpdateService(
+        productId: '9NWRR6ZP6K6T',
+      ),
+    );
+    final about = find.byKey(const ValueKey('settings-about'));
+    await tester.ensureVisible(about);
+    await tester.pumpAndSettle();
+    await tester.tap(about);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('settings-check-for-updates')).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('does not enroll'), findsOneWidget);
+  });
 
   testWidgets('background package info failure is contained', (tester) async {
     final provider = await _createProvider(_buildStudentData());

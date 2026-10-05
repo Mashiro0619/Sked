@@ -1,10 +1,10 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../widgets/expressive_dialog.dart';
 import 'update_service.dart';
+import 'update_distribution.dart';
 import 'microsoft_store_update_service.dart';
 
 enum UpdateCheckSource { manual, startup }
@@ -19,24 +19,18 @@ class AppUpdateCoordinator {
     required TimetableProvider provider,
     required UpdateCheckSource source,
     UpdateService updateService = _updateService,
+    UpdateDistribution? distribution,
     MicrosoftStoreUpdateService storeUpdateService =
         const MicrosoftStoreUpdateService(),
   }) async {
     if (!provider.canWrite) return;
-    if (storeUpdateService.isEnabled) {
-      // Store installs follow Store availability/flights, not GitHub SemVer.
-      // In particular, startup must neither open a window nor contact GitHub.
-      if (source == UpdateCheckSource.manual) {
-        final opened = await storeUpdateService.openProductPage();
-        if (!opened && context.mounted) {
-          _showMessage(context, AppLocalizations.of(context).openUpdatesFailed);
-        }
-      }
-      return;
-    }
     final includePrereleases = provider.includePrereleaseUpdates;
     bool isCurrentChannel() =>
         provider.includePrereleaseUpdates == includePrereleases;
+    final resolvedDistribution =
+        distribution ??
+        await UpdateDistribution.resolve(storeService: storeUpdateService);
+    if (!context.mounted || !provider.canWrite || !isCurrentChannel()) return;
     final l10n = AppLocalizations.of(context);
     final showIgnoreButton = source == UpdateCheckSource.startup;
     try {
@@ -69,6 +63,7 @@ class AppUpdateCoordinator {
         context,
         result,
         showIgnoreButton: showIgnoreButton,
+        distribution: resolvedDistribution,
       );
       if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
         return;
@@ -78,6 +73,7 @@ class AppUpdateCoordinator {
         provider: provider,
         action: action,
         showIgnoreButton: showIgnoreButton,
+        distribution: resolvedDistribution,
         remoteVersion: result.remoteVersion,
         releaseUrl: result.releaseUrl,
       );
@@ -88,6 +84,7 @@ class AppUpdateCoordinator {
       final action = await _showUpdateCheckFailedDialog(
         context,
         showIgnoreButton: showIgnoreButton,
+        distribution: resolvedDistribution,
       );
       if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
         return;
@@ -97,6 +94,7 @@ class AppUpdateCoordinator {
         provider: provider,
         action: action,
         showIgnoreButton: showIgnoreButton,
+        distribution: resolvedDistribution,
         releaseUrl: includePrereleases
             ? UpdateService.releasesUrl
             : UpdateService.latestReleaseUrl,
@@ -108,6 +106,7 @@ class AppUpdateCoordinator {
     BuildContext context,
     UpdateCheckResult result, {
     required bool showIgnoreButton,
+    required UpdateDistribution distribution,
   }) {
     final l10n = AppLocalizations.of(context);
     final updateContent = result.updateContent.trim();
@@ -131,6 +130,10 @@ class AppUpdateCoordinator {
                 Text('${l10n.currentVersionLabel} ${result.localVersion}'),
                 const SizedBox(height: 8),
                 Text('${l10n.latestVersionLabel} ${result.remoteVersion}'),
+                if (distribution.isStore) ...[
+                  const SizedBox(height: 8),
+                  Text(l10n.storeUpdateDelay),
+                ],
                 if (updateContent.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -151,6 +154,7 @@ class AppUpdateCoordinator {
                 context,
                 pop: popWith,
                 showIgnoreButton: showIgnoreButton,
+                distribution: distribution,
               ),
             ),
           ],
@@ -162,6 +166,7 @@ class AppUpdateCoordinator {
   static Future<_UpdateAction?> _showUpdateCheckFailedDialog(
     BuildContext context, {
     required bool showIgnoreButton,
+    required UpdateDistribution distribution,
   }) {
     final l10n = AppLocalizations.of(context);
     return showExpressiveDialog<_UpdateAction>(
@@ -185,6 +190,7 @@ class AppUpdateCoordinator {
                 context,
                 pop: popWith,
                 showIgnoreButton: showIgnoreButton,
+                distribution: distribution,
               ),
             ),
           ],
@@ -197,6 +203,7 @@ class AppUpdateCoordinator {
     BuildContext context, {
     required void Function(_UpdateAction action) pop,
     required bool showIgnoreButton,
+    required UpdateDistribution distribution,
   }) {
     final l10n = AppLocalizations.of(context);
     return [
@@ -211,7 +218,7 @@ class AppUpdateCoordinator {
         ),
       FilledButton(
         onPressed: () => pop(_UpdateAction.github),
-        child: Text(l10n.githubRepository),
+        child: Text(distribution.label(l10n)),
       ),
     ];
   }
@@ -221,15 +228,18 @@ class AppUpdateCoordinator {
     required TimetableProvider provider,
     required _UpdateAction? action,
     required bool showIgnoreButton,
+    required UpdateDistribution distribution,
     String? remoteVersion,
     String? releaseUrl,
   }) async {
     switch (action) {
       case _UpdateAction.github:
-        await _openExternalPage(
-          context,
+        final opened = await distribution.open(
           releaseUrl ?? UpdateService.latestReleaseUrl,
         );
+        if (!opened && context.mounted) {
+          _showMessage(context, AppLocalizations.of(context).openUpdatesFailed);
+        }
         return;
       case _UpdateAction.ignore:
         if (showIgnoreButton &&
@@ -241,17 +251,6 @@ class AppUpdateCoordinator {
       case _UpdateAction.cancel:
       case null:
         return;
-    }
-  }
-
-  static Future<void> _openExternalPage(
-    BuildContext context,
-    String url,
-  ) async {
-    final uri = Uri.parse(url);
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      _showMessage(context, AppLocalizations.of(context).openUpdatesFailed);
     }
   }
 

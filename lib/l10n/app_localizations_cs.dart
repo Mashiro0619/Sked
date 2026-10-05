@@ -3216,4 +3216,15 @@ class AppLocalizationsCs extends AppLocalizations {
   String categoryColorSlot(int number) {
     return 'Theme color $number';
   }
+
+  @override
+  String get microsoftStoreUpdateButton => 'Microsoft Store';
+
+  @override
+  String get storeUpdateDelay =>
+      'Store updates may arrive later. Availability is determined by the store page.';
+
+  @override
+  String get storePrereleaseNotice =>
+      'This option does not enroll you in a store testing track.';
 }

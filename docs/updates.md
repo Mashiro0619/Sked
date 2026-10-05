@@ -2,17 +2,23 @@
 
 ## Distribution channels
 
-Microsoft Store builds use Store-managed updates instead of the GitHub/custom
-feed below. Their update action opens the configured Store product; startup is
-quiet and the GitHub prerelease switch is hidden. Store availability and package
-flights are configured in Partner Center, not by this switch. See
-[Microsoft Store publishing](microsoft-store.md) for the separate identity and
-package-version mapping.
+All distributions check the same GitHub Releases API (or configured custom feed).
+The update button opens **Google Play**, **微软商店 / Microsoft Store**, or **Github**
+according to installation metadata. Store availability may lag behind GitHub;
+opening a product page does not assert that a package is already available.
+Store protocol failures fall back only to the same store's HTTPS page.
 
-## User-visible behavior (non-Store builds)
+Google Play bundles use `--dart-define=SKED_DISTRIBUTION_CHANNEL=google-play`.
+Ordinary APK builds omit this flag; Android also recognizes the installer
+`com.android.vending`. Explicit `github` builds use direct release links.
+Windows Store builds retain `SKED_MICROSOFT_STORE_ID`; `microsoft-store`
+is also accepted as a platform-specific distribution channel. Flags do not
+change the feed, installed version, saved preferences or backup format.
+
+## User-visible behavior
 
 Settings → About → **Receive prerelease updates** is an app-wide, saved preference.
-New installations default to **on**, regardless of whether the installed app is
+New installations default to **off**, regardless of whether the installed app is
 a stable, Alpha, Beta, or RC release. Existing saved choices are preserved.
 
 Older versions omitted this field when it was off, so an existing snapshot
@@ -21,6 +27,7 @@ opt-out. New saves always write the boolean explicitly, including **false**, so
 disabling the setting survives reloads and backup roundtrips.
 
 - **Off:** offer only stable releases.
+- Store builds show the same preference; enabling it does not enroll in store testing tracks.
 - **On:** include stable and prerelease releases and choose the highest eligible
   SemVer version. This does not force a downgrade to a prerelease.
 - Draft releases are never offered. A release counts as a prerelease if its

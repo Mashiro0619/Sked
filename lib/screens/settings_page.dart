@@ -29,6 +29,7 @@ import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
+import '../services/update_distribution.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
@@ -94,6 +95,7 @@ class SettingsPage extends StatefulWidget {
     this.packageInfoLoader,
     this.dataClearCoordinator,
     this.urlLauncher,
+    this.updateDistribution,
     this.storeUpdateService = const MicrosoftStoreUpdateService(),
     this.notificationService,
     this.initialDestination,
@@ -106,6 +108,7 @@ class SettingsPage extends StatefulWidget {
   final AppDataClearCoordinator? dataClearCoordinator;
   final SettingsUrlLauncher? urlLauncher;
   final MicrosoftStoreUpdateService storeUpdateService;
+  final UpdateDistribution? updateDistribution;
   final AgendaNotificationService? notificationService;
   final SettingsDestination? initialDestination;
   final AppMode? initialWorkspace;
@@ -129,6 +132,19 @@ class _SettingsPageState extends State<SettingsPage>
   static const _dataTransferController = SettingsDataTransferController();
 
   String _currentVersion = '';
+  UpdateDistribution? _updateDistribution;
+
+  Future<void> _loadUpdateDistribution() async {
+    final distribution =
+        widget.updateDistribution ??
+        await UpdateDistribution.resolve(
+          storeService: widget.storeUpdateService,
+          packageInfoLoader: widget.packageInfoLoader,
+          urlLauncher: widget.urlLauncher,
+        );
+    if (mounted) setState(() => _updateDistribution = distribution);
+  }
+
   final Set<_SettingsFlow> _openFlows = <_SettingsFlow>{};
   bool _clearingAppData = false;
 
@@ -153,6 +169,7 @@ class _SettingsPageState extends State<SettingsPage>
     super.initState();
     _appearanceWorkspace = widget.initialWorkspace;
     unawaited(_loadCurrentVersion());
+    unawaited(_loadUpdateDistribution());
   }
 
   @override
@@ -198,6 +215,7 @@ class _SettingsPageState extends State<SettingsPage>
                       dataClearCoordinator: widget.dataClearCoordinator,
                       urlLauncher: widget.urlLauncher,
                       storeUpdateService: widget.storeUpdateService,
+                      updateDistribution: widget.updateDistribution,
                       notificationService: widget.notificationService,
                     ),
                   ),
@@ -655,23 +673,23 @@ class _SettingsPageState extends State<SettingsPage>
         onLongPressHint: l10n.developerModeLongPressHint,
         onTapHint: l10n.checkForUpdates,
       ),
-      if (!widget.storeUpdateService.isEnabled)
-        SettingsSwitchTile(
-          key: const ValueKey('settings-include-prerelease-updates'),
-          value: provider.includePrereleaseUpdates,
-          icon: Icons.science_outlined,
-          title: l10n.includePrereleaseUpdates,
-          subtitle: l10n.includePrereleaseUpdatesDesc,
-          onChanged: updateEntryBusy || !provider.canWrite
-              ? null
-              : (value) => unawaited(
-                  runUiCommand(
-                    debugLabel: 'Updating prerelease update preference',
-                    command: () =>
-                        provider.updateIncludePrereleaseUpdates(value),
-                  ),
+      SettingsSwitchTile(
+        key: const ValueKey('settings-include-prerelease-updates'),
+        value: provider.includePrereleaseUpdates,
+        icon: Icons.science_outlined,
+        title: l10n.includePrereleaseUpdates,
+        subtitle: _updateDistribution?.isStore == true
+            ? '${l10n.includePrereleaseUpdatesDesc} ${l10n.storePrereleaseNotice}'
+            : l10n.includePrereleaseUpdatesDesc,
+        onChanged: updateEntryBusy || !provider.canWrite
+            ? null
+            : (value) => unawaited(
+                runUiCommand(
+                  debugLabel: 'Updating prerelease update preference',
+                  command: () => provider.updateIncludePrereleaseUpdates(value),
                 ),
-        ),
+              ),
+      ),
     ];
   }
 
@@ -737,9 +755,6 @@ class _SettingsPageState extends State<SettingsPage>
     final versionLabel = _currentVersion.isEmpty
         ? l10n.currentVersionLabel
         : '${l10n.currentVersionLabel} $_currentVersion';
-    if (widget.storeUpdateService.isEnabled) {
-      return '$versionLabel · ${l10n.microsoftStoreUpdates}';
-    }
     final availableUpdateVersion = provider.availableUpdateVersion;
     if (availableUpdateVersion == null ||
         availableUpdateVersion.isEmpty ||
@@ -768,8 +783,6 @@ class _SettingsPageState extends State<SettingsPage>
       return;
     }
     setState(() => _currentVersion = currentVersion);
-    // Ignore GitHub badges restored from a backup without rewriting that data.
-    if (widget.storeUpdateService.isEnabled) return;
     final provider = context.read<TimetableProvider>();
     final availableUpdateVersion = provider.availableUpdateVersion;
     if (availableUpdateVersion == null || availableUpdateVersion.isEmpty) {
@@ -829,6 +842,7 @@ class _SettingsPageState extends State<SettingsPage>
         provider: context.read<TimetableProvider>(),
         source: UpdateCheckSource.manual,
         storeUpdateService: widget.storeUpdateService,
+        distribution: _updateDistribution,
       );
     });
   }

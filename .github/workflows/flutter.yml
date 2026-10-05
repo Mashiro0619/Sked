@@ -219,7 +219,7 @@ jobs:
       # Keep tooling preparation enabled: --no-pub can retain the debug
       # registrant even though release excludes dev-only integration_test.
       - name: Build Android App Bundle release
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=SKED_DISTRIBUTION_CHANNEL=google-play
 
       - name: Generate release Android security artifacts
         id: android-security-artifacts

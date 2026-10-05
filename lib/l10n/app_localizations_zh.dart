@@ -3019,6 +3019,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String categoryColorSlot(int number) {
     return '主题颜色 $number';
   }
+
+  @override
+  String get microsoftStoreUpdateButton => '微软商店';
+
+  @override
+  String get storeUpdateDelay => '商店版本可能稍晚提供更新，具体以商店页面为准。';
+
+  @override
+  String get storePrereleaseNotice => '开启此选项不等于加入商店测试渠道。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
