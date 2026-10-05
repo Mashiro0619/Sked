@@ -121,3 +121,18 @@ Manual checks offer Cancel and the channel action. Startup notices additionally
 offer Later and Ignore this version; failures never offer Ignore. Retrying a
 failed check stays in the same dialog. Link-launch and preference-save failures
 retain the dialog with an inline error. Async completion closes only its own route.
+
+## Startup checks
+
+After local data, privacy consent and onboarding are ready, each application
+session performs one automatic check. No update, ignored versions and network
+failures are silent. A result arriving during another task or while the app is
+unfocused updates only the Settings badge; it is not queued for a later popup.
+Startup reminders have priority over update notices.
+
+Root navigation, workspace panes and independent reminder/agenda details register
+read-only blockers through UpdatePromptScope. Hidden or disposed hosts release
+their blockers; checking eligibility never closes tasks or invokes exit guards.
+Matching manual and automatic requests share the network result, and manual
+checks own presentation. Data replacement or a prerelease-preference change
+invalidates old requests, even if the preference is subsequently changed back.

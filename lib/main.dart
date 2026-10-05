@@ -1,3 +1,5 @@
+import 'widgets/update_prompt_scope.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -341,6 +343,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late AgendaCoordinator _agendaCoordinator;
   final _developerUi = DeveloperUiPreferences();
   final _windowModals = DesktopWindowModalObserver();
+  final _updatePrompts = UpdatePromptController();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
@@ -426,6 +429,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _agendaCoordinator.dispose();
     _developerUi.dispose();
     _windowModals.dispose();
+    _updatePrompts.dispose();
     _flushPendingUiStateSaves(widget.provider);
     super.dispose();
   }
@@ -452,7 +456,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               child: MaterialApp(
                 debugShowCheckedModeBanner: false,
                 navigatorKey: _navigatorKey,
-                navigatorObservers: [_windowModals],
+                navigatorObservers: [_windowModals, _updatePrompts.observer],
                 onGenerateTitle: (context) =>
                     AppLocalizations.of(context).appTitle,
                 locale: appLocaleFromCode(snapshot.localeCode),
@@ -462,7 +466,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   context,
                   DesktopWindowHost(
                     modalObserver: _windowModals,
-                    child: child!,
+                    child: UpdatePromptScope(
+                      controller: _updatePrompts,
+                      child: child!,
+                    ),
                   ),
                 ),
                 themeMode: themeModeFromValue(snapshot.themeMode),

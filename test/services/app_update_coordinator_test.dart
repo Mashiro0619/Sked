@@ -15,6 +15,8 @@ import 'package:sked/services/update_distribution.dart';
 import 'package:sked/widgets/app_update_dialog.dart';
 import 'package:sked/services/microsoft_store_update_service.dart';
 
+import '../support/workspace_harness.dart';
+
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
 class _MemoryStorage implements TimetableStorage {
@@ -49,11 +51,23 @@ class _FixedUpdateService extends UpdateService {
 class _PendingUpdateService extends UpdateService {
   final pending = Completer<UpdateCheckResult>();
   bool? requestedPrereleases;
+  int calls = 0;
 
   @override
   Future<UpdateCheckResult> checkForUpdates({bool includePrereleases = false}) {
+    calls++;
     requestedPrereleases = includePrereleases;
     return pending.future;
+  }
+}
+
+class _QueuedUpdateService extends UpdateService {
+  final pending = <Completer<UpdateCheckResult>>[];
+  @override
+  Future<UpdateCheckResult> checkForUpdates({bool includePrereleases = false}) {
+    final request = Completer<UpdateCheckResult>();
+    pending.add(request);
+    return request.future;
   }
 }
 
@@ -143,6 +157,122 @@ void main() {
       expect(provider.availableUpdateVersion, '1.1.0');
     },
   );
+
+  testWidgets(
+    'switching preferences away and back cannot revive an old shared request',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final context = await _pumpHarness(tester, provider);
+      final service = _QueuedUpdateService();
+      Future<void> run() => AppUpdateCoordinator.checkForUpdates(
+        context,
+        provider: provider,
+        source: UpdateCheckSource.manual,
+        updateService: service,
+        distribution: const UpdateDistribution(UpdateChannel.github),
+      );
+      final old = run();
+      await provider.updateIncludePrereleaseUpdates(true);
+      await provider.updateIncludePrereleaseUpdates(false);
+      final current = run();
+      expect(service.pending, hasLength(2));
+      service.pending.last.complete(_updateResult(hasUpdate: false));
+      await current;
+      service.pending.first.complete(_updateResult(hasUpdate: true));
+      await old;
+      await tester.pumpAndSettle();
+      expect(provider.availableUpdateVersion, isNull);
+      expect(find.byType(AppUpdateDialog), findsNothing);
+    },
+  );
+
+  for (final manualFirst in [false, true]) {
+    testWidgets(
+      'startup and manual checks share a request and manual owns presentation ($manualFirst)',
+      (tester) async {
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final context = await _pumpHarness(tester, provider);
+        final service = _PendingUpdateService();
+        Future<void> run(UpdateCheckSource source) =>
+            AppUpdateCoordinator.checkForUpdates(
+              context,
+              provider: provider,
+              source: source,
+              updateService: service,
+              distribution: const UpdateDistribution(UpdateChannel.github),
+            );
+        final first = run(
+          manualFirst ? UpdateCheckSource.manual : UpdateCheckSource.startup,
+        );
+        final second = run(
+          manualFirst ? UpdateCheckSource.startup : UpdateCheckSource.manual,
+        );
+        expect(service.calls, 1);
+        service.pending.complete(_updateResult(hasUpdate: true));
+        await tester.pumpAndSettle();
+        expect(find.byType(AppUpdateDialog), findsOneWidget);
+        expect(find.text('Ignore this version'), findsNothing);
+        final third = run(UpdateCheckSource.manual);
+        await tester.pumpAndSettle();
+        expect(service.calls, 1);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        await Future.wait([first, second, third]);
+      },
+    );
+  }
+
+  testWidgets(
+    'busy startup response only updates the badge and is never queued',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final context = await _pumpHarness(tester, provider);
+      final service = _PendingUpdateService();
+      var busy = true;
+      final task = AppUpdateCoordinator.checkForUpdates(
+        context,
+        provider: provider,
+        source: UpdateCheckSource.startup,
+        updateService: service,
+        distribution: const UpdateDistribution(UpdateChannel.github),
+        canShowStartupPrompt: () => !busy,
+      );
+      service.pending.complete(_updateResult(hasUpdate: true));
+      await task;
+      await tester.pumpAndSettle();
+      expect(provider.availableUpdateVersion, '1.1.0');
+      expect(find.byType(AppUpdateDialog), findsNothing);
+      busy = false;
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.byType(AppUpdateDialog), findsNothing);
+    },
+  );
+
+  testWidgets('data replacement rejects the old result', (tester) async {
+    final provider = await workspaceProvider();
+    addTearDown(provider.dispose);
+    final context = await _pumpHarness(tester, provider);
+    final service = _PendingUpdateService();
+    final task = AppUpdateCoordinator.checkForUpdates(
+      context,
+      provider: provider,
+      source: UpdateCheckSource.manual,
+      updateService: service,
+      distribution: const UpdateDistribution(UpdateChannel.github),
+    );
+    await provider.importAppDataJson(
+      await provider.exportAppDataJson(),
+      mode: AppImportMode.replaceAll,
+    );
+    service.pending.complete(_updateResult(hasUpdate: true));
+    await task;
+    await tester.pumpAndSettle();
+    expect(provider.availableUpdateVersion, isNull);
+    expect(find.byType(AppUpdateDialog), findsNothing);
+  });
 
   for (final source in UpdateCheckSource.values) {
     testWidgets('$source excludes prereleases by default for new app data', (

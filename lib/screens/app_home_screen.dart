@@ -1,3 +1,8 @@
+import '../services/app_update_coordinator.dart';
+import '../services/update_service.dart';
+import '../services/update_distribution.dart';
+import '../widgets/update_prompt_scope.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -24,9 +29,13 @@ class AppHomeScreen extends StatefulWidget {
   const AppHomeScreen({
     super.key,
     this.recoveryExportService = const ExportService(),
+    this.updateService = const UpdateService(),
+    this.updateDistribution,
   });
 
   final ExportService recoveryExportService;
+  final UpdateService updateService;
+  final UpdateDistribution? updateDistribution;
 
   @override
   State<AppHomeScreen> createState() => _AppHomeScreenState();
@@ -60,6 +69,44 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   void dispose() {
     _lastProvider?.removeListener(_onProviderReady);
     super.dispose();
+  }
+
+  bool _updateCheckScheduled = false;
+  void _scheduleStartupUpdate(TimetableProvider provider) {
+    final prompts = UpdatePromptScope.maybeOf(context);
+    if (prompts == null || _updateCheckScheduled) return;
+    _updateCheckScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateCheckScheduled = false;
+      if (!mounted ||
+          !provider.canWrite ||
+          !provider.isLoaded ||
+          !provider.hasAcceptedCurrentPrivacyPolicy ||
+          _shouldShowFirstLaunchOnboarding(provider) ||
+          _firstLaunchPendingMode != null ||
+          _isShowingPrivacyConsentDialog ||
+          _isHandlingRecovery ||
+          _isClearingRoutesForRecovery) {
+        return;
+      }
+      final owner = ModalRoute.of(context);
+      unawaited(
+        prompts.startOnce(
+          () => AppUpdateCoordinator.checkForUpdates(
+            context,
+            provider: provider,
+            source: UpdateCheckSource.startup,
+            updateService: widget.updateService,
+            distribution: widget.updateDistribution,
+            canShowStartupPrompt: () =>
+                mounted &&
+                owner?.isCurrent != false &&
+                !_settingsPageOpen &&
+                prompts.canPrompt,
+          ),
+        ),
+      );
+    });
   }
 
   void _onProviderReady() {
@@ -117,6 +164,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         await _showPrivacyConsentDialog(provider);
       } finally {
         _isShowingPrivacyConsentDialog = false;
+        if (mounted) _scheduleStartupUpdate(provider);
       }
     });
   }
@@ -555,6 +603,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         final showOnboarding =
             _firstLaunchPendingMode != null ||
             snapshot.showFirstLaunchOnboarding;
+        if (!showOnboarding && snapshot.hasAcceptedCurrentPrivacyPolicy) {
+          _scheduleStartupUpdate(provider);
+        }
         return ExpressiveSwitcher(
           child: showOnboarding
               ? _FirstLaunchOnboardingScreen(

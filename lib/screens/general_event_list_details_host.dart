@@ -755,7 +755,17 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   );
 
   @override
-  Widget build(BuildContext context) => OverlayPortal(
+  Widget build(BuildContext context) => UpdatePromptBlocker(
+    blocked: () =>
+        mounted &&
+        _foreground &&
+        _validData &&
+        widget.isOwnerActive() &&
+        session.mode != ReminderDetailMode.hidden,
+    child: _buildPortal(context),
+  );
+
+  Widget _buildPortal(BuildContext context) => OverlayPortal(
     overlayLocation: OverlayChildLocation.rootOverlay,
     controller: _portal,
     overlayChildBuilder: _overlay,

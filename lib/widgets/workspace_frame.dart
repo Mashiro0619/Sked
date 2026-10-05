@@ -1,3 +1,4 @@
+import 'update_prompt_scope.dart';
 import '../theme/sked_surface.dart';
 import '../theme/sked_expressive_theme.dart';
 
@@ -944,7 +945,21 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
+  Widget build(BuildContext context) {
+    final visible = WorkspaceVisibilityScope.maybeOf(context) != false;
+    return UpdatePromptBlocker(
+      blocked: () =>
+          mounted &&
+          visible &&
+          widget.active &&
+          (widget.controller.isOpen ||
+              _assistant.isOpen ||
+              _resourceDrawerOpen),
+      child: _buildFrame(context),
+    );
+  }
+
+  Widget _buildFrame(BuildContext context) => SafeArea(
     child: AnimatedBuilder(
       animation: Listenable.merge([widget.controller, _assistant]),
       builder: (context, _) => LayoutBuilder(
