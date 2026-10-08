@@ -40,7 +40,7 @@ Sked is a Flutter app for student timetables and everyday schedules. Courses are
 
 ### Tablet / Desktop
 
-> **Screenshot update pending:** The large-screen screenshots below were captured on September 29, 2026 and have not yet been updated to the latest version. Floating panels, category management and some pickers may differ from the current app. These are Windows-rendered views, not Android tablet device captures. See [screenshot notes](docs/screenshots/README.md).
+> The large-screen screenshots were updated on October 9, 2026 and show the current timetable, calendar, settings and editors. They use the native Windows Flutter renderer and are not Android tablet device captures. See [screenshot notes](docs/screenshots/README.md).
 
 <p align="center">
   <a href="docs/screenshots/en/student-week-desktop.jpg"><img src="docs/screenshots/en/student-week-desktop.jpg" width="400" alt="Timetable week view" title="Timetable week view"></a>
