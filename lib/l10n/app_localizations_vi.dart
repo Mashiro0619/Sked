@@ -10,7 +10,7 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
-  String get appTitle => 'Bạn học';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -40,7 +40,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get editTimetable => 'Chỉnh sửa lịch trình';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle => 'Chỉnh sửa kết quả phân tích';
 
   @override
   String get schoolImportParsePageTitle => 'Phân tích thời khóa biểu';
@@ -67,23 +67,23 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Thu gọn phản hồi thô';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Mở rộng cảnh báo nhập';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'Thu gọn cảnh báo nhập';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Một số môn học kéo dài đến tuần $week.';
   }
 
   @override
   String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+      'Thay thế thời khóa biểu hiện tại?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Thời khóa biểu được nhập sẽ thay thế thời khóa biểu hiện tại.';
 
   @override
   String get createTimetable => 'Thời gian mới';
@@ -95,13 +95,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get timetable => 'Thời gian';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Lịch';
 
   @override
   String get timetableName => 'Tên lịch trình';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Vui lòng nhập tên thời khóa biểu';
 
   @override
   String get totalWeeks => 'Tổng số tuần';
@@ -236,28 +236,28 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsTitle => 'Cài đặt';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Thời khóa biểu';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Lịch chung';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Giao diện';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Ứng dụng';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Không gian làm việc';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Giao diện và ngôn ngữ';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Dữ liệu và bảo mật';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Giới thiệu Sked';
 
   @override
   String get noTimetableSettings => 'Hiện tại không có lịch trình cho cài đặt.';
@@ -320,29 +320,28 @@ class AppLocalizationsVi extends AppLocalizations {
       'Kiểm soát xem các đường lưới ngang và dọc có thể nhìn thấy trong lịch trình hay không.';
 
   @override
-  String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+  String get timetableHorizontalLayoutSection => 'Bố cục ngang và cử chỉ';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Điều chỉnh bộ chọn ngày vừa màn hình';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Hiển thị đủ bảy ngày trên màn hình khi có thể. Tắt để dùng chiều rộng cố định và cuộn ngang.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Điều chỉnh các cột tuần vừa màn hình';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Hiển thị đủ bảy cột thời khóa biểu trên màn hình khi có thể. Tắt để dùng chiều rộng cố định và cuộn ngang.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Vuốt để đổi tuần';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Vuốt sang trái hoặc phải để đổi tuần. Khi dùng chiều rộng cố định, hãy cuộn đến mép rồi kéo tiếp.';
 
   @override
   String get liveCourseOutlineColor => 'Màu sắc phác thảo khóa học';
@@ -385,7 +384,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get liveCourseOutlineWidth => 'Chiều rộng phác thảo';
 
   @override
-  String get outlineWidthUnit => 'phim';
+  String get outlineWidthUnit => 'px';
 
   @override
   String get language => 'Ngôn ngữ';
@@ -580,7 +579,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get officialWebsite => 'Trang web chính thức';
 
   @override
-  String get googlePlay => 'Chơi Google';
+  String get googlePlay => 'Google Play';
 
   @override
   String get cloudDrive => 'Động cơ đám mây';
@@ -596,23 +595,23 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Không thể lấy phiên bản mới nhất từ GitHub. Bạn vẫn có thể mở trang GitHub Releases bên dưới.';
 
   @override
   String get githubRepository => 'Kho lưu trữ GitHub';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Xem Sked trên Google Play';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Không thể mở Google Play';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Tặng Sked một sao trên GitHub!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Mở kho mã nguồn của dự án và tặng Sked một sao';
 
   @override
   String get openGithubFailed => 'Không thể mở liên kết kho GitHub';
@@ -781,18 +780,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get saveFailedRetry => 'Lưu thất bại. Vui lòng thử lại sau.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Thay đổi chưa được lưu';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Không thể lưu những thay đổi mới nhất về giờ học. Bạn có thể thử lại, tiếp tục chỉnh sửa hoặc bỏ các thay đổi.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Một số giờ học không hợp lệ. Hãy sửa trước khi lưu, hoặc bỏ các thay đổi và thoát.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Bỏ thay đổi và thoát';
 
   @override
   String get appInstanceBlockedTitle => 'Sked đang mở';
@@ -944,7 +943,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'Trên các nền tảng cài đặt ứng dụng, Sked lưu dữ liệu thời khóa biểu, lịch chung, các cài đặt liên quan và cấu hình trang web trường học có thể chỉnh sửa trong thư mục hỗ trợ ứng dụng của hệ điều hành; bản chạy trên trình duyệt dùng bộ nhớ của trình duyệt. Các tệp do phiên bản trước ghi vào thư mục Tài liệu của người dùng vẫn được giữ nguyên, nhưng không được tự động đọc hoặc di chuyển. Để giữ lại dữ liệu đó, hãy xuất bản sao lưu toàn bộ ứng dụng từ phiên bản cũ trước khi nâng cấp, rồi khôi phục sau đó. Cài đặt AI API được lưu cục bộ; khóa API tùy chỉnh được lưu qua lớp lưu trữ an toàn của nền tảng nếu có. Bản sao lưu toàn bộ ứng dụng không chứa khóa API tùy chỉnh. Ứng dụng không tự động tải dữ liệu cục bộ này lên máy chủ do nhà phát triển kiểm soát.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Nhập khẩu và xuất khẩu';
@@ -1039,71 +1038,72 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolSitesImported => 'Các trang web trường học nhập khẩu';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Kiểm tra dữ liệu nhập trang web trường học';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return '$validCount trang web hợp lệ, $invalidCount mục không hợp lệ.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Tệp chứa danh sách trang web trường học trống.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Mục $position không hợp lệ và sẽ bị bỏ qua.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Hợp nhất';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Thay thế';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Thay thế các trang web trường học hiện tại?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'Thao tác này sẽ xóa $currentCount trang web hiện tại và lưu $importedCount trang web được nhập. Không thể hoàn tác.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Dữ liệu trang web trường học cần được khôi phục';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked không thể đọc tệp trang web trường học hoặc bản sao lưu của tệp. Các bản sao được bảo vệ đã được tạo trước khi chặn ghi dữ liệu.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Không thể truy cập nơi lưu trang web trường học';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Hiện Sked không thể truy cập nơi lưu trang web trường học. Hãy kiểm tra quyền truy cập bộ nhớ hoặc tình trạng thiết bị rồi thử lại. Dữ liệu trang web hiện tại sẽ không bị ghi đè.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Các tệp khôi phục hoặc vị trí lưu trữ bị ảnh hưởng được liệt kê bên dưới. Hãy giữ nguyên các tệp cho đến khi khôi phục xong danh sách trang web.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Bắt đầu không có trang web trường học';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Bắt đầu với danh sách trang web trường học trống?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Các bản sao được bảo vệ sẽ được giữ lại, nhưng Sked sẽ tạo một tệp trang web trường học mới và trống. Chỉ tiếp tục nếu bạn không muốn thử khôi phục lại trước.';
 
   @override
   String get schoolSitesEmpty => 'Chưa có cấu hình trang web của trường.';
@@ -1231,7 +1231,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Cấu hình trình phân tích tùy chỉnh chưa đầy đủ. Hãy điền URL cơ sở, khóa API và mô hình trước.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1352,7 +1352,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Khóa API tùy chỉnh được lưu qua lớp lưu trữ an toàn của nền tảng nếu có. Chỉ dùng thông tin xác thực của trình phân tích tùy chỉnh và các điểm cuối HTTP trên thiết bị, trình duyệt và mạng mà bạn tin cậy.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1367,29 +1367,29 @@ class AppLocalizationsVi extends AppLocalizations {
       'Cấu hình parser tùy chỉnh không hoàn chỉnh. Điền vào URL cơ sở, khóa API và mô hình trước.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Xóa dữ liệu';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Xóa vĩnh viễn toàn bộ dữ liệu Sked cục bộ và thoát ứng dụng';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Xóa toàn bộ dữ liệu Sked?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'Thao tác này sẽ xóa vĩnh viễn thời khóa biểu, lịch, cài đặt, trang web trường học, bản sao lưu cục bộ, bản sao khôi phục và khóa AI API, sau đó thoát Sked. Các tệp bạn đã xuất ra nơi khác sẽ không bị xóa. Không thể hoàn tác.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Xóa dữ liệu và thoát';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Không thể xóa toàn bộ dữ liệu cục bộ. Sked sẽ vẫn mở để bạn có thể thử lại.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Dữ liệu cục bộ đã được xóa, nhưng Sked không thể thoát. Hãy đóng ứng dụng thủ công trước khi sử dụng lại.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1557,10 +1557,10 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Lịch chung';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Thời khóa biểu';
 
   @override
   String get firstLaunchTitle => 'Chọn chế độ bắt đầu';
@@ -1594,167 +1594,166 @@ class AppLocalizationsVi extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Chuyển chế độ';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'Lịch chung sắp ra mắt';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Chuyển sang thời khóa biểu';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Lịch của tôi';
 
   @override
   String get today => 'Hôm nay';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Thêm sự kiện';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Chỉnh sửa sự kiện';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Tiêu đề';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Vui lòng nhập tiêu đề';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Giờ bắt đầu';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Giờ kết thúc';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Ngày';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Thời gian';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Ghi chú';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Màu';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Lặp lại';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Không lặp lại';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Hằng tuần';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Ngày kết thúc';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Không có ngày kết thúc';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Đặt';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Thay đổi';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Lặp lại hằng tuần';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'Đến $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Chuyển sang lịch chung';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Cài đặt hiển thị chung';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Chế độ xem, thanh công cụ, định dạng ngày và thêm nhanh';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap => 'Đóng cửa sổ bật lên khi chạm bên ngoài';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Hiển thị đường lưới';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Nhập và xuất danh mục';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Nhập hoặc chia sẻ danh mục lịch';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Nhập danh mục';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'Đọc danh mục từ tệp JSON';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Chia sẻ danh mục';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Chia sẻ danh mục dưới dạng tệp JSON';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Lưu danh mục';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Lưu danh mục dưới dạng tệp JSON';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Chọn danh mục để xuất';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Chọn danh mục để nhập';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Sự kiện: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Đã nhập $count danh mục';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Thêm dữ liệu nhập thành danh mục mới hay thay thế danh mục hiện có?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Thêm thành danh mục mới';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+      'Vui lòng chọn ít nhất một danh mục.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => 'Không có danh mục để xuất.';
 
   @override
-  String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+  String get noSchedulesInImportMessage => 'Tệp nhập không chứa danh mục nào.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Chỉ chọn một danh mục được nhập để thay thế.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Danh mục đích đã chọn không khả dụng.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Danh mục';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Danh mục';
 
   @override
   String get viewWeek => 'Tuần';
@@ -1763,218 +1762,218 @@ class AppLocalizationsVi extends AppLocalizations {
   String get viewDay => 'Ngày';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Danh sách';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Tháng';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return '$count danh mục';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Không có danh mục hiển thị';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Chọn danh mục cần thay thế';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Thay thế danh mục';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Xóa sự kiện';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'Sự kiện này sẽ bị xóa vĩnh viễn.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Xóa sự kiện lặp lại';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Đã nhân bản sự kiện';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Tìm sự kiện';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Xóa tìm kiếm';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Lọc theo màu';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Tất cả màu';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Sắp tới $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Quá hạn $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Cả ngày';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Thu gọn sự kiện cả ngày';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Mở rộng sự kiện cả ngày';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return '$count sự kiện cả ngày';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count sự kiện khác';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Không có sự kiện phù hợp';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Không có sự kiện sắp tới';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Thêm danh mục';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Danh mục mới';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Ẩn danh mục';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Hiển thị danh mục';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Đổi tên';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Đổi tên danh mục';
 
   @override
-  String get name => 'Name';
+  String get name => 'Tên';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Xóa danh mục';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Xóa “$name”?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Xóa lần này';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Xóa lần này và các lần sau';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Xóa toàn bộ chuỗi';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Nhân bản';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Lặp lại hằng ngày';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Lặp lại hằng tháng';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Lặp lại mỗi $interval $unit';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count lần';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Hằng ngày';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Hằng tháng';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Tùy chỉnh';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Mỗi';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Đơn vị';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'Ngày';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'Tuần';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'Tháng';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Số lần lặp';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Không giới hạn';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Nhập một số dương';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Xóa ngày kết thúc';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Chọn ngày';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Chọn giờ';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Lời nhắc trong ứng dụng';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'Khi bắt đầu';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return 'Trước $minutes phút';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => 'Trước 1 giờ';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => 'Trước 1 ngày';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Đánh dấu đã xử lý';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Khôi phục lời nhắc trong ứng dụng';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Đã đánh dấu lời nhắc trong ứng dụng là đã xử lý';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Đã khôi phục lời nhắc trong ứng dụng';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Sắp tới';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Quá hạn';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Vừa tuần với màn hình';
@@ -1984,23 +1983,23 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hiển thị cả tuần trong bố cục nhỏ gọn. Tắt để cuộn ngang. Phạm vi tùy chỉnh trên 7 ngày vẫn cuộn ngang.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Hiển thị cuối tuần';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Giờ bắt đầu';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Giờ kết thúc';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Mật độ lưới thời gian';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Chiều cao mỗi giờ';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Điều chỉnh tỷ lệ dọc của chế độ xem ngày và tuần mà không thay đổi khoảng lưới 15, 30 hoặc 60 phút.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2008,318 +2007,319 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Nhập tệp JSON';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Dán JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Nhập danh mục từ JSON đã sao chép';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Nhập tệp ICS';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => 'Đọc sự kiện từ tệp lịch .ics';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Dán ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => 'Nhập sự kiện từ văn bản lịch đã sao chép';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Sao chép JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Sao chép danh mục đã chọn dưới dạng văn bản JSON';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Chia sẻ ICS';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Chia sẻ danh mục đã chọn dưới dạng .ics';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Lưu ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Lưu danh mục đã chọn dưới dạng .ics';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Sao chép ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Sao chép danh mục đã chọn dưới dạng văn bản ICS';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Nhập ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'Nội dung ICS';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'Dán nội dung BEGIN:VCALENDAR vào đây';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Tìm thấy $count sự kiện. Thêm thành danh mục mới hay thay thế danh mục hiện có?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Đã nhập $count danh mục với $warningCount cảnh báo';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Đã bỏ qua một sự kiện thiếu giờ bắt đầu.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Đã bỏ qua một sự kiện có định dạng giờ bắt đầu không được hỗ trợ.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Đã điều chỉnh một sự kiện có giờ kết thúc không muộn hơn giờ bắt đầu.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Các trường ICS không được hỗ trợ đã được thêm vào ghi chú: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Đã bỏ qua tần suất lặp không được hỗ trợ: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs => 'Chọn danh mục để sao chép thành ICS';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs => 'Chọn danh mục để xuất thành ICS';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Xuất văn bản ICS';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Xuất văn bản JSON';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Dữ liệu ứng dụng đã được khôi phục từ bản sao lưu trước đó vì không tải được tệp chính.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Cả tệp dữ liệu chính và bản sao lưu đều bị hỏng. Ứng dụng hiện khởi chạy với dữ liệu mới.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Dữ liệu của bạn cần được khôi phục';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked không thể đọc tệp dữ liệu chính hoặc bản sao lưu của tệp. Các bản sao được bảo vệ đã được tạo trước khi chặn ghi dữ liệu.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'Không thể truy cập bộ nhớ';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Hiện Sked không thể truy cập bộ nhớ cục bộ. Hãy kiểm tra quyền truy cập bộ nhớ hoặc tình trạng thiết bị rồi thử lại. Dữ liệu hiện có sẽ không bị ghi đè.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Cập nhật Sked để mở dữ liệu này';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Dữ liệu này được tạo bằng phiên bản Sked mới hơn. Hãy cập nhật ứng dụng trước khi thử lại. Để bảo vệ dữ liệu, bạn không thể bắt đầu với dữ liệu mới trong trạng thái này.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Thử lại';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Các tệp khôi phục hoặc vị trí lưu trữ bị ảnh hưởng được liệt kê bên dưới. Hãy giữ nguyên các tệp cho đến khi khôi phục xong dữ liệu.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction => 'Xem tệp và vị trí khôi phục';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Bắt đầu với dữ liệu mới';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Bắt đầu với dữ liệu mới?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Các bản sao được bảo vệ sẽ được giữ lại, nhưng Sked sẽ tạo tệp dữ liệu cục bộ mới. Chỉ tiếp tục nếu bạn không muốn thử khôi phục lại trước.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Tháng trước';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Tháng sau';
 
   @override
   String timeGridMinutes(int minutes) {
-    return '$minutes min';
+    return '$minutes phút';
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'Đang diễn ra';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Xóa môn học';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Xóa môn học này?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Hiển thị âm lịch';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return 'Ngày $day, $count sự kiện';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Chế độ xem mặc định';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'Khi khởi động';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Nút chuyển chế độ xem';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Không gian làm việc hiện tại';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'Ẩn điều hướng không gian làm việc';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Ẩn điều hướng không gian làm việc. Bạn vẫn có thể chuyển bằng menu trên màn hình chính.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Định dạng nhãn ngày';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized =>
+      'Theo ngôn ngữ (tháng 7 năm 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Dấu gạch chéo (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Bố cục thanh công cụ';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Điều hướng trên thanh công cụ';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Xử lý mục bị ẩn';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Ẩn hoàn toàn';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Chuyển vào Thêm';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'Sắp xếp các mục trên thanh công cụ';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Hiển thị mục trên thanh công cụ';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Bộ chọn thời khóa biểu';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Bộ chọn tuần';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Bộ chuyển chế độ xem';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Bộ chọn danh mục';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Bộ chọn ngày';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Phân bổ không gian thanh công cụ';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Phân bổ tự động';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Cân bằng';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Ưu tiên danh mục';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Ưu tiên ngày';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Luân phiên các chế độ xem';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Mở trình đơn chế độ xem';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Chuyển chế độ xem';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Chọn chế độ xem';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint => 'Nhấn giữ để về hôm nay';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Hiển thị lịch';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Lưới thời gian';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Hành vi cửa sổ bật lên';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Thao tác nhanh';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => 'Hiển thị nút nổi thêm môn học';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Hiển thị hoặc ẩn nút nổi thêm môn học ở góc dưới bên phải thời khóa biểu.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => 'Hiển thị nút nổi thêm sự kiện';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Hiển thị hoặc ẩn nút nổi thêm sự kiện ở góc dưới bên phải lịch.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse => 'Nhấn giữ ô trống để thêm môn học';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Nhấn giữ vùng trống trong lưới thời khóa biểu để thêm môn học.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent => 'Nhấn giữ ô trống để thêm sự kiện';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'Trong chế độ xem ngày hoặc tuần, nhấn giữ vùng trống trên lưới thời gian để thêm sự kiện.';
 
   @override
   String get developerModeTitle => 'Chế độ nhà phát triển';
@@ -2353,130 +2353,130 @@ class AppLocalizationsVi extends AppLocalizations {
       'Nhấn giữ 3 giây để mở chế độ nhà phát triển';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Chẩn đoán thông báo';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Kiểm tra trạng thái gửi trên Android, tạo lại kế hoạch lời nhắc hiện có và gửi thông báo thử nghiệm an toàn qua dịch vụ thông báo thông thường của Sked.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Chẩn đoán thông báo chỉ khả dụng trên Android.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Chẩn đoán thông báo sẽ khả dụng khi bộ điều phối lịch khởi động.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Làm mới chẩn đoán';
 
   @override
-  String get developerNotificationSystemStatus =>
-      'System notification permission';
+  String get developerNotificationSystemStatus => 'Quyền thông báo hệ thống';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Đã cho phép';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Đã chặn';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Báo thức chính xác';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Đã cho phép';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Chưa cho phép';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Kế hoạch thông báo lịch';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Phạm vi bao phủ lời nhắc';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Tất cả lời nhắc đã biết có điểm kết thúc đã được lên lịch trực tiếp';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Lời nhắc lặp lại được gia hạn dài hạn theo khả năng của hệ thống';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Đã đầy số lượng báo thức trực tiếp; lời nhắc sau đó được gia hạn theo khả năng của hệ thống';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Chưa đáp ứng điều kiện gửi đúng giờ';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Lần đồng bộ lời nhắc gần nhất thất bại';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '$scheduled báo thức trực tiếp / giới hạn $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return 'Đã lên lịch $scheduled, dự kiến $planned';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Lỗi gần nhất: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Tạo lại kế hoạch thông báo';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Đã tạo lại kế hoạch thông báo.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Kênh thử nghiệm';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Lời nhắc môn học';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Lời nhắc sự kiện';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'Gửi thử ngay';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Lên lịch thử nền sau 30 giây';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Đã gửi thông báo thử nghiệm tức thì.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Đã lên lịch thử nghiệm nền sau 30 giây.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch => 'Công tắc lời nhắc của ứng dụng';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Đã bật lời nhắc thông thường';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Đã tắt lời nhắc thông thường; vẫn có thể chạy thử nghiệm dành cho nhà phát triển';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Múi giờ địa phương';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2485,22 +2485,22 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Chưa được tạo. Chạy thử nghiệm dành cho nhà phát triển sẽ tạo kênh này.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Đã bật';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Đã chặn';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Mức độ quan trọng: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Không có thông tin mức độ quan trọng';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2509,54 +2509,56 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '$pending đang chờ / $active đang hiển thị';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Hệ thống hiển thị gần nhất lúc $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Chưa ghi nhận lần tính lại nào.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => 'Lời nhắc thực tế tiếp theo';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'Không có lời nhắc trong tương lai trong kế hoạch hiện tại';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Lần bảo trì tiếp theo';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal =>
+      'Lần gia hạn theo khả năng tiếp theo';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Chưa lên lịch';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Cắt bớt kế hoạch';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return '$count mục bị bỏ qua do giới hạn kế hoạch';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => 'Lần tính lại gần nhất';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Lần đồng bộ lời nhắc gần nhất';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery => 'Khôi phục lời nhắc trễ';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return '$count lời nhắc đã được khôi phục sau thời điểm ban đầu';
   }
 
   @override
@@ -2570,118 +2572,120 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Tiền cảnh';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Nền';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Tính lại toàn bộ';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Bảo trì';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Khôi phục';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => 'Chạy khôi phục lời nhắc';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Đã khôi phục xong lời nhắc';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Thành công';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Đã bỏ qua';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Bị chặn cho đến khi đáp ứng đủ điều kiện gửi đúng giờ';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Thất bại';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Giới hạn chạy nền của nhà sản xuất';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Giới hạn chạy nền của nhà sản xuất có thể ảnh hưởng đến việc gửi.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => 'Khởi động nền của nhà sản xuất';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Nhà sản xuất $vendor; có lối vào trang cài đặt của nhà sản xuất. Android không thể cung cấp trạng thái cấp quyền này.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Nhà sản xuất $vendor; sử dụng trang thông tin ứng dụng thay thế. Android không thể cung cấp trạng thái cấp quyền này.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Không có lối vào trang cài đặt chạy nền của nhà sản xuất.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Đích mở gần nhất: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'cài đặt của nhà sản xuất';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'thông tin ứng dụng';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'không có';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Điều kiện khôi phục sau khi khởi động lại';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Khôi phục bắt đầu sau lần mở khóa đầu tiên; ứng dụng bị buộc dừng không thể tự khởi động.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Không thể thử nghiệm trong khi đang kiểm tra trạng thái thông báo.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Không thể thử nghiệm vì thông báo hệ thống bị chặn.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Không thể thử nghiệm vì kênh thông báo đã chọn bị chặn.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Do cài đặt thông báo Windows quản lý';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Không áp dụng trên Windows';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity => 'Danh tính gói Windows';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'Có danh tính MSIX; có thể hủy thông báo đang hiển thị';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Cài đặt bản MSIX để hủy thông báo đang hiển thị một cách đáng tin cậy';
 
   @override
   String get collapseWorkspaceNavigation =>
@@ -2736,157 +2740,159 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Lời nhắc và thông báo';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Phạm vi bao phủ lời nhắc';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Sự kiện lặp lại không có ngày kết thúc dùng cơ chế gia hạn nền để duy trì lời nhắc lâu dài.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android có thể lên lịch trực tiếp tối đa $capacity lời nhắc; hệ thống sẽ cố gắng gia hạn trước các lời nhắc về sau.';
   }
 
   @override
-  String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+  String get notificationSettingsEnabled => 'Bật lời nhắc và thông báo';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Chỉ lên lịch cho các mục có lời nhắc. Đặt lời nhắc mặc định bên dưới cho các môn học dùng cài đặt mặc định.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Lời nhắc phụ thuộc vào quyền hệ thống và hoạt động nền. Tắt máy, đổi giờ hoặc giới hạn hệ thống có thể gây chậm trễ.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Đã bật';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Đã tắt';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Lời nhắc mặc định';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder =>
+      'Lời nhắc mặc định cho môn học';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'Lời nhắc mặc định cho sự kiện';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Không nhắc';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return 'Trước $minutes phút';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Quyền thông báo';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Hệ thống đã cho phép';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Hệ thống đã chặn';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Đang kiểm tra quyền…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Yêu cầu quyền';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings => 'Mở cài đặt hệ thống';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Không thể đọc quyền thông báo. Hãy thử lại.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Quyền báo thức chính xác';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Hệ thống đã cho phép';
 
   @override
-  String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+  String get notificationExactAlarmRequired => 'Cần thiết để nhắc đúng giờ';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Cho phép báo thức chính xác';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Tối ưu hóa pin';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Đã được miễn tối ưu hóa pin trên Android';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Lời nhắc chính xác cần được miễn tối ưu hóa pin trên Android';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Mở cài đặt tối ưu hóa pin';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Khởi động nền của nhà sản xuất';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Cho phép tự khởi động hoặc chạy nền để khôi phục lời nhắc sau khi khởi động lại.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Mở trang thông tin ứng dụng Sked và cho phép chạy nền. Android không thể xác minh cài đặt này của nhà sản xuất.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Không tìm thấy trang cài đặt của nhà sản xuất. Hãy kiểm tra thông tin ứng dụng Sked thủ công.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Mở cài đặt chạy nền của nhà sản xuất';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Không thể mở cài đặt chạy nền của nhà sản xuất. Hãy kiểm tra thông tin ứng dụng Sked thủ công.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles =>
+      'Hiển thị tiêu đề trên màn hình khóa';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Khi tắt, chi tiết thông báo sẽ được ẩn trên màn hình khóa.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Tiện ích màn hình chính';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Làm mới tiện ích Sked và xem cách thêm tiện ích từ trình khởi chạy.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Thêm tiện ích Sked';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'Trên màn hình chính của thiết bị, nhấn giữ một vùng trống, chọn Tiện ích rồi thêm tiện ích Sked. Tiện ích hiển thị các môn học hoặc sự kiện sắp tới.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Làm mới tiện ích';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Đã làm mới tiện ích';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Nền tảng này không cung cấp thông báo gốc.';
 
   @override
   String get workspaceFeatures => 'Quản lý tính năng';
@@ -2955,67 +2961,66 @@ class AppLocalizationsVi extends AppLocalizations {
       'Bản sao lưu đầy đủ bao gồm dữ liệu và lựa chọn không gian làm việc được bật.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · Xem trước bố cục';
 
   @override
-  String get assistantSelectionContext =>
-      'Uses the current selection as context';
+  String get assistantSelectionContext => 'Dùng mục đang chọn làm ngữ cảnh';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Bản nháp tin nhắn';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Chỉ xem trước bố cục. Không gửi hoặc thay đổi bất cứ nội dung nào.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Đổi kích thước bảng';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Thu nhỏ';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Phóng to';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Khôi phục cửa sổ';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Đóng cửa sổ';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Lời nhắc hệ thống';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Dùng mặc định ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Lời nhắc hệ thống đang tắt trong cài đặt thông báo. Bạn vẫn có thể lưu tùy chọn lời nhắc cho môn học này.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Chưa đặt lời nhắc mặc định cho môn học. Chọn lời nhắc tùy chỉnh tại đây hoặc đặt mặc định trong cài đặt thông báo.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Tùy chọn này được lưu cùng môn học. Việc gửi phụ thuộc vào quyền thông báo hệ thống và giới hạn chạy nền.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Chưa kiểm tra trạng thái thông báo hệ thống. Hãy kiểm tra cài đặt thông báo trước khi dựa vào lời nhắc.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Số phút trước giờ học';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Xuất';
 
   @override
   String get datePickerSelectWeek => 'Chọn tuần';
@@ -3045,100 +3050,108 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String dateRangeCustomDays(int days) {
-    return 'Tùy chỉnh · $days ngày';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days ngày',
+      one: '1 ngày',
+    );
+    return 'Tùy chỉnh · $_temp0';
   }
 
   @override
   String get timePickerWheelMode => 'Chọn bằng bánh xe cuộn';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Dùng mặc định';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Nhập số phút là số nguyên lớn hơn hoặc bằng không.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth =>
+      'Chiều rộng cột của chế độ xem tùy chỉnh';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Tự động';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Chiều rộng tối thiểu';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'Chiều rộng tối thiểu mỗi ngày';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Tất cả ngày dùng cùng chiều rộng tối thiểu. Các cột lấp đầy không gian sẵn có hoặc cuộn ngang. Chỉ ảnh hưởng đến chế độ xem tùy chỉnh.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Giao diện và ngôn ngữ';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Màu sắc và đường viền';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Không có sự kiện trong ngày này';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Tổng quan';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Giao diện cho';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Chế độ màu';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Tùy chọn lời nhắc';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Lời nhắc mặc định, quyền và độ tin cậy';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Không gian làm việc và điều hướng';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Chính sách riêng tư và xóa dữ liệu cục bộ';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count tiết',
+      one: '1 tiết',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Tiết';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Thời lượng';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Giờ nghỉ';
 
   @override
   String periodTimesMinutesShort(int minutes) {
-    return '$minutes min';
+    return '$minutes phút';
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Đang chờ lưu…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Chưa lưu · Lưu thất bại';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Chưa lưu · Hãy sửa các giờ được đánh dấu';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3174,45 +3187,45 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Tắt hiển thị Cài đặt hoặc Không gian làm việc trên thanh công cụ sẽ chuyển mục đó vào Thêm, vẫn giữ lối truy cập. Không thể ẩn Thêm khi trình đơn còn chứa thao tác thiết yếu. Chuyển không gian làm việc chỉ xuất hiện khi thanh điều hướng dưới bị ẩn và có nhiều không gian làm việc được bật.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Đã kết thúc';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Đóng sau 10 giây. Tương tác để giữ bảng mở.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Mở riêng';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Quản lý danh mục';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Đã ẩn';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Hiển thị trên lịch';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Ẩn khỏi lịch';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Đổi màu danh mục';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Bảng màu giao diện';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Tùy chỉnh';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => 'Nhập mã màu thập lục phân gồm sáu ký tự.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Màu giao diện $number';
   }
 
   @override
@@ -3220,34 +3233,34 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Bản cập nhật trên cửa hàng có thể đến muộn hơn. Kiểm tra tính khả dụng trên trang cửa hàng.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Nhận thông báo bản phát hành thử không tự động đăng ký bạn vào kênh thử nghiệm của cửa hàng.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Có phiên bản mới';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Không có ghi chú phát hành.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Để sau';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Thử lại';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Bản phát hành thử';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Không thể kiểm tra cập nhật. Hãy kiểm tra kết nối và thử lại.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Không tìm thấy phiên bản mới hơn (hiện tại: $version)';
   }
 
   @override

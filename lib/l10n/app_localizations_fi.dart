@@ -10,7 +10,7 @@ class AppLocalizationsFi extends AppLocalizations {
   AppLocalizationsFi([String locale = 'fi']) : super(locale);
 
   @override
-  String get appTitle => 'Luokkakaveri';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -24,23 +24,23 @@ class AppLocalizationsFi extends AppLocalizations {
   String get settings => 'Asetukset';
 
   @override
-  String get multiTimetableSwitch => 'Vaihda aikataulut';
+  String get multiTimetableSwitch => 'Vaihda lukujärjestystä';
 
   @override
   String currentTimetableWeeks(int weeks) {
-    return 'Nykyinen aikataulu · $weeks viikkoja';
+    return 'Nykyinen lukujärjestys · $weeks viikkoa';
   }
 
   @override
   String tapToSwitchWeeks(int weeks) {
-    return 'Napauta vaihtaa · $weeks viikkoja';
+    return 'Vaihda napauttamalla · $weeks viikkoa';
   }
 
   @override
-  String get editTimetable => 'Muokkaa aikataulua';
+  String get editTimetable => 'Muokkaa lukujärjestystä';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle => 'Muokkaa jäsennettyä tulosta';
 
   @override
   String get schoolImportParsePageTitle => 'Jäsennä lukujärjestys';
@@ -67,41 +67,41 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Supista raakavastaus';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Laajenna tuonnin varoitukset';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'Supista tuonnin varoitukset';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Osa kursseista jatkuu viikolle $week asti.';
   }
 
   @override
   String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+      'Korvataanko nykyinen lukujärjestys?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Tuotu lukujärjestys korvaa nykyisen lukujärjestyksen.';
 
   @override
-  String get createTimetable => 'Uusi aikataulu';
+  String get createTimetable => 'Uusi lukujärjestys';
 
   @override
   String get jumpToWeek => 'Hyppää viikkoon';
 
   @override
-  String get timetable => 'Aikataulu';
+  String get timetable => 'Lukujärjestys';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Aikataulu';
 
   @override
-  String get timetableName => 'Aikataulun nimi';
+  String get timetableName => 'Lukujärjestyksen nimi';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Anna lukujärjestykselle nimi';
 
   @override
   String get totalWeeks => 'Viikot yhteensä';
@@ -116,7 +116,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get save => 'Tallenna';
 
   @override
-  String get deleteTimetableTitle => 'Poista aikataulu';
+  String get deleteTimetableTitle => 'Poista lukujärjestys';
 
   @override
   String deleteTimetableMessage(Object name) {
@@ -236,28 +236,28 @@ class AppLocalizationsFi extends AppLocalizations {
   String get settingsTitle => 'Asetukset';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Lukujärjestys';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Yleinen aikataulu';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Ulkoasu';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Sovellus';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Työtila';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Ulkoasu ja kieli';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Tiedot ja tietoturva';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Tietoja Skedistä';
 
   @override
   String get noTimetableSettings =>
@@ -321,29 +321,28 @@ class AppLocalizationsFi extends AppLocalizations {
       'Hallitse, näkyvätkö aikataulussa vaakasuora- ja pystysuora-verkkovinjat.';
 
   @override
-  String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+  String get timetableHorizontalLayoutSection => 'Vaaka-asettelu ja eleet';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Sovita päivävalitsin näytölle';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Näyttää kaikki seitsemän päivää näytöllä, jos mahdollista. Poista käytöstä, jos haluat kiinteän leveyden ja vierityksen.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Sovita viikon sarakkeet näytölle';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Näyttää kaikki seitsemän lukujärjestyksen saraketta näytöllä, jos mahdollista. Poista käytöstä, jos haluat kiinteän leveyden ja vierityksen.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Vaihda viikkoa pyyhkäisemällä';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Siirry toiseen viikkoon pyyhkäisemällä vasemmalle tai oikealle. Kiinteää leveyttä käytettäessä vieritä ensin reunaan ja vedä sen yli.';
 
   @override
   String get liveCourseOutlineColor => 'Kurssin luonteen väri';
@@ -384,7 +383,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get liveCourseOutlineWidth => 'Viivan leveys';
 
   @override
-  String get outlineWidthUnit => 'PX:n';
+  String get outlineWidthUnit => 'px';
 
   @override
   String get language => 'Kieli';
@@ -579,7 +578,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get officialWebsite => 'Virallinen verkkosivusto';
 
   @override
-  String get googlePlay => 'Google Playn';
+  String get googlePlay => 'Google Play';
 
   @override
   String get cloudDrive => 'Pilviasema';
@@ -595,23 +594,23 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Uusimman version hakeminen GitHubista epäonnistui. Voit silti avata GitHubin julkaisusivun alta.';
 
   @override
   String get githubRepository => 'GitHub-varasto';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Näytä Sked Google Playssa';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Google Playn avaaminen epäonnistui';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Anna Skedille tähti GitHubissa!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Avaa projektin tietovarasto ja anna Skedille tähti';
 
   @override
   String get openGithubFailed => 'GitHub-arkiston linkkiä ei voi avata';
@@ -783,18 +782,18 @@ class AppLocalizationsFi extends AppLocalizations {
       'Tallennus epäonnistui. Yritä uudelleen myöhemmin.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Muutoksia ei ole tallennettu';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Oppituntien aikojen viimeisimpiä muutoksia ei voitu tallentaa. Voit yrittää uudelleen, jatkaa muokkausta tai hylätä muutokset.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Osa oppituntien ajoista on virheellisiä. Korjaa ne ennen tallentamista tai hylkää muutokset ja poistu.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Hylkää muutokset ja poistu';
 
   @override
   String get appInstanceBlockedTitle => 'Sked on jo avoinna';
@@ -945,7 +944,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'Skedin laitesovellus tallentaa lukujärjestykset, yleiset aikataulut, niihin liittyvät asetukset ja muokattavat oppilaitosten sivustoasetukset käyttöjärjestelmän sovellustukihakemistoon. Selainversio käyttää selaimen tallennustilaa. Aiempien versioiden käyttäjän Tiedostot-kansioon tallentamat tiedostot säilyvät, mutta niitä ei lueta tai siirretä automaattisesti. Säilytä nämä tiedot viemällä vanhasta versiosta sovelluksen täydellinen varmuuskopio ennen päivitystä ja palauttamalla se päivityksen jälkeen. AI API -asetukset tallennetaan paikallisesti. Mukautettu API-avain tallennetaan alustan suojattuun tallennustilaan, kun se on käytettävissä. Sovelluksen täydelliset varmuuskopiot eivät sisällä mukautettua API-avainta. Sovellus ei lähetä näitä paikallisia tietoja automaattisesti kehittäjän hallinnoimalle palvelimelle.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Tuonti ja vienti';
@@ -1039,71 +1038,72 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolSitesImported => 'Koulun sivustot tuodaan';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Tarkista oppilaitossivustojen tuonti';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return '$validCount kelvollista sivustoa, $invalidCount virheellistä merkintää.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Tiedosto sisältää tyhjän oppilaitossivustojen luettelon.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Merkintä $position on virheellinen ja ohitetaan.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Yhdistä';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Korvaa';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Korvataanko nykyiset oppilaitossivustot?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'Tämä poistaa $currentCount nykyistä sivustoa ja tallentaa $importedCount tuotua sivustoa. Tätä ei voi kumota.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Oppilaitossivustojen tiedot on palautettava';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked ei voinut lukea oppilaitossivustojen tiedostoa tai sen varmuuskopiota. Suojatut kopiot luotiin ennen kirjoittamisen estämistä.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Oppilaitossivustojen tallennustila ei ole käytettävissä';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Sked ei pääse oppilaitossivustojen tallennustilaan juuri nyt. Tarkista tallennustilan käyttöoikeus tai laitteen saatavuus ja yritä uudelleen. Nykyisiä sivustotietoja ei korvata.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Palautustiedostot tai kyseiset tallennussijainnit luetellaan alla. Älä muuta tiedostoja ennen sivustoluettelon palauttamista.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Aloita ilman oppilaitossivustoja';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Aloitetaanko tyhjällä oppilaitossivustojen luettelolla?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Suojatut kopiot säilytetään, mutta Sked luo uuden tyhjän oppilaitossivustojen tiedoston. Jatka vain, jos et halua ensin yrittää palautusta uudelleen.';
 
   @override
   String get schoolSitesEmpty => 'Ei koulun sivuston määritystä vielä.';
@@ -1232,7 +1232,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Mukautetun jäsentimen asetukset ovat puutteelliset. Täytä ensin perus-URL, API-avain ja malli.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1353,7 +1353,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Mukautettu API-avain tallennetaan alustan suojattuun tallennustilaan, kun se on käytettävissä. Käytä mukautetun jäsentimen tunnuksia ja HTTP-päätepisteitä vain luotettavissa laitteissa, selaimissa ja verkoissa.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1368,29 +1368,29 @@ class AppLocalizationsFi extends AppLocalizations {
       'Mukautettu analysoinnin konfigurointi on epätäydellinen. Täytä ensin perus-URL, API-avain ja malli.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Tyhjennä tiedot';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Poista kaikki paikalliset Skedin tiedot pysyvästi ja sulje sovellus';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Tyhjennetäänkö kaikki Skedin tiedot?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'Tämä poistaa pysyvästi lukujärjestykset, aikataulut, asetukset, oppilaitossivustot, paikalliset varmuuskopiot, palautuskopiot ja AI API -avaimen sekä sulkee Skedin. Muualle vietyjä tiedostoja ei poisteta. Tätä ei voi kumota.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Tyhjennä tiedot ja poistu';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Kaikkien paikallisten tietojen tyhjentäminen epäonnistui. Sked pysyy avoinna, jotta voit yrittää uudelleen.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Paikalliset tiedot tyhjennettiin, mutta Skediä ei voitu sulkea. Sulje sovellus käsin ennen kuin käytät sitä uudelleen.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1507,7 +1507,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get weekdayShortSunday => 'Aurinko';
 
   @override
-  String get monthJanuary => 'tammikuuta';
+  String get monthJanuary => 'tammikuu';
 
   @override
   String get monthFebruary => 'helmikuu';
@@ -1516,28 +1516,28 @@ class AppLocalizationsFi extends AppLocalizations {
   String get monthMarch => 'maaliskuu';
 
   @override
-  String get monthApril => 'huhtikuuta';
+  String get monthApril => 'huhtikuu';
 
   @override
   String get monthMay => 'toukokuu';
 
   @override
-  String get monthJune => 'kesäkuuta';
+  String get monthJune => 'kesäkuu';
 
   @override
-  String get monthJuly => 'heinäkuuta';
+  String get monthJuly => 'heinäkuu';
 
   @override
-  String get monthAugust => 'elokuuta';
+  String get monthAugust => 'elokuu';
 
   @override
   String get monthSeptember => 'syyskuu';
 
   @override
-  String get monthOctober => 'lokakuuta';
+  String get monthOctober => 'lokakuu';
 
   @override
-  String get monthNovember => 'marraskuuta';
+  String get monthNovember => 'marraskuu';
 
   @override
   String get monthDecember => 'joulukuu';
@@ -1556,10 +1556,10 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Yleinen aikataulu';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Lukujärjestys';
 
   @override
   String get firstLaunchTitle => 'Valitse aloitustila';
@@ -1593,167 +1593,168 @@ class AppLocalizationsFi extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Vaihda tilaa';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'Yleinen aikataulu on tulossa pian';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Siirry lukujärjestykseen';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Oma aikataulu';
 
   @override
   String get today => 'Tänään';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Lisää tapahtuma';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Muokkaa tapahtumaa';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Otsikko';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Anna otsikko';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Alkuaika';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Loppuaika';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Päivämäärä';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Aika';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Muistiinpanot';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Väri';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Toisto';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Ei toistoa';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Viikoittain';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Päättymispäivä';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Ei päättymispäivää';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Aseta';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Muuta';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Toistuu viikoittain';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return '$date asti';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Siirry yleiseen aikatauluun';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Aikataulun näyttöasetukset';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Näkymät, työkalurivi, päivämäärämuoto ja pikalisäys';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap =>
+      'Sulje ponnahdusikkuna napauttamalla sen ulkopuolelle';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Näytä ruudukon viivat';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Kategorioiden tuonti ja vienti';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Tuo tai jaa aikataulun kategorioita';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Tuo kategoriat';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'Lue kategoriat JSON-tiedostosta';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Jaa kategoriat';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Jaa kategoriat JSON-tiedostona';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Tallenna kategoriat';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Tallenna kategoriat JSON-tiedostona';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Valitse vietävät kategoriat';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Valitse tuotavat kategoriat';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Tapahtumia: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Tuotiin $count kategoriaa';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Lisätäänkö tuonti uutena kategoriana vai korvataanko olemassa oleva kategoria?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Lisää uutena kategoriana';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+      'Valitse vähintään yksi kategoria.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => 'Vietäviä kategorioita ei ole.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Tuontitiedosto ei sisällä kategorioita.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Valitse korvaamista varten täsmälleen yksi tuotu kategoria.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Korvattavaksi valittu kategoria ei ole käytettävissä.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Kategoriat';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Kategoria';
 
   @override
   String get viewWeek => 'Viikko';
@@ -1762,218 +1763,218 @@ class AppLocalizationsFi extends AppLocalizations {
   String get viewDay => 'Päivä';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Luettelo';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Kuukausi';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return '$count kategoriaa';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Ei näkyviä kategorioita';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Valitse korvattava kategoria';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Korvaa kategoria';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Poista tapahtuma';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'Tämä tapahtuma poistetaan pysyvästi.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Poista toistuva tapahtuma';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Tapahtuma kopioitiin';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Hae tapahtumia';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Tyhjennä haku';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Suodata värin mukaan';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Kaikki värit';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Tulevia: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Myöhässä: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Koko päivä';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Supista koko päivän tapahtumat';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Laajenna koko päivän tapahtumat';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return '$count koko päivän tapahtumaa';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count muuta';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Ei vastaavia tapahtumia';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Ei tulevia tapahtumia';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Lisää kategoria';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Uusi kategoria';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Piilota kategoria';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Näytä kategoria';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Nimeä uudelleen';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Nimeä kategoria uudelleen';
 
   @override
-  String get name => 'Name';
+  String get name => 'Nimi';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Poista kategoria';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Poistetaanko ”$name”?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Poista tämä esiintymä';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Poista tämä ja seuraavat';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Poista koko sarja';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Luo kopio';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Toistuu päivittäin';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Toistuu kuukausittain';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Toistuu $interval $unit välein';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count kertaa';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Päivittäin';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Kuukausittain';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Mukautettu';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Joka';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Yksikkö';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'päivän';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'viikon';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'kuukauden';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Toistojen määrä';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Ei rajoitusta';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Anna positiivinen luku';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Poista päättymispäivä';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Valitse päivämäärä';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Valitse aika';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Sovelluksen sisäinen muistutus';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'Alkaessa';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes min ennen';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1 tunti ennen';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1 päivä ennen';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Merkitse käsitellyksi';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Palauta sovelluksen sisäinen muistutus';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Sovelluksen sisäinen muistutus merkittiin käsitellyksi';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Sovelluksen sisäinen muistutus palautettiin';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Tulossa';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Myöhässä';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Sovita viikkonäkymä näytölle';
@@ -1983,23 +1984,23 @@ class AppLocalizationsFi extends AppLocalizations {
       'Näytä koko viikko tiiviissä asettelussa. Poista käytöstä vierittääksesi vaakasuunnassa. Yli 7 päivän mukautetut jaksot ovat edelleen vieritettäviä.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Näytä viikonloput';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Alkutunti';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Lopputunti';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Aikaruudukon tiheys';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Tuntirivin korkeus';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Säätää päivä- ja viikkonäkymän pystysuuntaista mittakaavaa muuttamatta ruudukon 15, 30 tai 60 minuutin väliä.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2007,159 +2008,163 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Tuo JSON-tiedosto';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Liitä JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Tuo kategoriat kopioidusta JSON-tekstistä';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Tuo ICS-tiedosto';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => 'Lue tapahtumat .ics-kalenteritiedostosta';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Liitä ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => 'Tuo tapahtumat kopioidusta kalenteritekstistä';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Kopioi JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Kopioi valitut kategoriat JSON-tekstinä';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Jaa ICS';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Jaa valitut kalenterit .ics-tiedostona';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Tallenna ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Tallenna valitut kalenterit .ics-tiedostona';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Kopioi ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Kopioi valitut kalenterit ICS-tekstinä';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Tuo ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'ICS-sisältö';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'Liitä BEGIN:VCALENDAR-sisältö tähän';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Löytyi $count tapahtumaa. Lisätäänkö ne uutena kategoriana vai korvataanko olemassa oleva kategoria?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Tuotiin $count kategoriaa. Varoituksia: $warningCount';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Tapahtuma ohitettiin, koska siltä puuttui alkuaika.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Tapahtuma ohitettiin, koska sen alkuaikaa ei tueta.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Muokattiin tapahtumaa, jonka loppuaika ei ollut alkuajan jälkeen.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'ICS-kentät, joita ei tueta, lisättiin muistiinpanoihin: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Ohitettiin toistoväli, jota ei tueta: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'Valitse ICS-muodossa kopioitavat kalenterit';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'Valitse ICS-muodossa vietävät kalenterit';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Vie ICS-teksti';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Vie JSON-teksti';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Sovelluksen tiedot palautettiin edellisestä varmuuskopiosta, koska päätiedostoa ei voitu ladata.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Sekä päätiedosto että sen varmuuskopio ovat vaurioituneet. Sovellus käyttää nyt uusia tietoja.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Tietosi on palautettava';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked ei voinut lukea päätiedostoa tai sen varmuuskopiota. Suojatut kopiot luotiin ennen kirjoittamisen estämistä.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'Tallennustila ei ole käytettävissä';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Sked ei pääse paikalliseen tallennustilaan juuri nyt. Tarkista tallennustilan käyttöoikeus tai laitteen saatavuus ja yritä uudelleen. Nykyisiä tietoja ei korvata.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Päivitä Sked näiden tietojen avaamiseksi';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Nämä tiedot on luotu Skedin uudemmalla versiolla. Päivitä sovellus ennen kuin yrität uudelleen. Uusilla tiedoilla aloittaminen on estetty tietojen suojaamiseksi.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Yritä uudelleen';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Palautustiedostot tai kyseiset tallennussijainnit luetellaan alla. Älä muuta tiedostoja ennen tietojesi palauttamista.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'Näytä palautustiedostot ja sijainnit';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Aloita uusilla tiedoilla';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle =>
+      'Aloitetaanko uusilla tiedoilla?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Suojatut kopiot säilytetään, mutta Sked luo uuden paikallisen tietotiedoston. Jatka vain, jos et halua ensin yrittää palautusta uudelleen.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Edellinen kuukausi';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Seuraava kuukausi';
 
   @override
   String timeGridMinutes(int minutes) {
@@ -2167,158 +2172,161 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'Käynnissä';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Poista kurssi';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Poistetaanko tämä kurssi?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Näytä kuukalenteri';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, $count tapahtumaa';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Oletusnäkymä';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'Käynnistettäessä';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Näkymän vaihtopainike';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Aktiivinen työtila';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'Piilota työtilojen navigointi';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Piilota työtilojen navigointi. Voit edelleen vaihtaa työtilaa päänäkymän työtilavalikosta.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Päivämääräotsikon muoto';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Paikallinen (heinäkuu 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Vinoviiva (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Työkalupalkin asettelu';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Työkalupalkin navigointi';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Piilotetut kohteet';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Piilota kokonaan';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Siirrä Lisää-valikkoon';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'Järjestä työkalupalkin kohteet';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Näytä työkalupalkin kohde';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Lukujärjestyksen valitsin';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Viikon valitsin';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Näkymän vaihto';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Kategorian valitsin';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Päivämäärän valitsin';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Työkalupalkin tilanjako';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Automaattinen jako';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Tasainen jako';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Kategoria etusijalla';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Päivämäärä etusijalla';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Kierrä näkymiä';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Avaa näkymävalikko';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Vaihda näkymää';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Valitse näkymä';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint =>
+      'Siirry tähän päivään painamalla pitkään';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Aikataulun näyttö';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Aikaruudukko';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Ponnahdusikkunan toiminta';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Pikatoiminnot';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => 'Näytä kelluva kurssin lisäyspainike';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Näytä tai piilota kelluva kurssin lisäyspainike lukujärjestyksen oikeassa alakulmassa.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => 'Näytä kelluva tapahtuman lisäyspainike';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Näytä tai piilota kelluva tapahtuman lisäyspainike aikataulun oikeassa alakulmassa.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'Lisää kurssi painamalla tyhjää ruudukkoa pitkään';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Lisää kurssi painamalla pitkään lukujärjestyksen ruudukon tyhjää aluetta.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Lisää tapahtuma painamalla tyhjää ruudukkoa pitkään';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'Lisää tapahtuma painamalla päivä- tai viikkonäkymässä pitkään aikaruudukon tyhjää aluetta.';
 
   @override
   String get developerModeTitle => 'Kehittäjätila';
@@ -2352,130 +2360,130 @@ class AppLocalizationsFi extends AppLocalizations {
       'Avaa kehittäjätila painamalla 3 sekunnin ajan';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Ilmoitusten diagnostiikka';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Tarkista Androidin ilmoitusten toimitustila, luo nykyinen muistutussuunnitelma uudelleen ja lähetä turvallisia testi-ilmoituksia Skedin tavallisen ilmoituspalvelun kautta.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Ilmoitusten diagnostiikka on käytettävissä vain Androidissa.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Ilmoitusten diagnostiikka on käytettävissä, kun aikataulun koordinaattori on käynnistynyt.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Päivitä diagnostiikka';
 
   @override
-  String get developerNotificationSystemStatus =>
-      'System notification permission';
+  String get developerNotificationSystemStatus => 'Järjestelmän ilmoituslupa';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Sallittu';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Estetty';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Tarkat hälytykset';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Sallittu';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Ei sallittu';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Aikataulun ilmoitussuunnitelma';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Muistutusten kattavuus';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Kaikki tiedossa olevat muistutukset, joiden toistomäärä on rajallinen, on ajastettu suoraan';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Toistuvien muistutusten ajastusta pyritään uusimaan pitkäaikaisen kattavuuden säilyttämiseksi';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Suoran ajastuksen raja on täynnä. Myöhempien muistutusten ajastusta pyritään uusimaan';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Tarkan toimituksen vaatimukset eivät täyty';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Viimeisin muistutusten synkronointi epäonnistui';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '$scheduled suoraan ajastettua hälytystä / raja $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '$scheduled ajastettu, $planned suunniteltu';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Viimeisin virhe: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Luo ilmoitussuunnitelma uudelleen';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Ilmoitussuunnitelma luotiin uudelleen.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Testikanava';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Kurssien muistutukset';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Aikataulun muistutukset';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'Lähetä testi-ilmoitus heti';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Ajasta taustatesti 30 sekunnin päähän';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Välitön testi-ilmoitus lähetettiin.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Taustatesti ajastettiin 30 sekunnin päähän.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch => 'Sovelluksen muistutuskytkin';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Tavalliset muistutukset ovat käytössä';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Tavalliset muistutukset on poistettu käytöstä. Kehittäjätestit voidaan silti suorittaa';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Paikallinen aikavyöhyke';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2484,22 +2492,22 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Ei vielä luotu. Kehittäjätesti luo sen.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Käytössä';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Estetty';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Tärkeys: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Tärkeys ei ole saatavilla';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2508,54 +2516,59 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '$pending odottaa / $active aktiivista';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Järjestelmä näytti viimeksi: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Uudelleenlaskentaa ei ole vielä kirjattu.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder =>
+      'Seuraava tavallinen muistutus';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'Nykyisessä suunnitelmassa ei ole tulevia muistutuksia';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Seuraava ylläpito';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal =>
+      'Seuraava ajastuksen uusimisyritys';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Ei ajastettu';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Suunnitelman rajaus';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return 'Suunnitelman rajan vuoksi jätettiin pois $count';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation =>
+      'Viimeisin uudelleenlaskenta';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Viimeisin muistutusten synkronointi';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Myöhästyneiden muistutusten palautus';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return '$count muistutusta palautettiin ja toimitettiin alkuperäisen ajankohdan jälkeen';
   }
 
   @override
@@ -2569,118 +2582,122 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Etuala';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Tausta';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Täysi uudelleenlaskenta';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Ylläpito';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Palautus';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery =>
+      'Suorita muistutusten palautus';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Muistutusten palautus valmistui';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Onnistui';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Ohitettu';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Ajastaminen on estetty, kunnes kaikki tarkan toimituksen ehdot täyttyvät';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Epäonnistui';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Valmistajan taustarajoitukset';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Valmistajan taustarajoitukset voivat vaikuttaa toimitukseen.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => 'Valmistajan taustakäynnistys';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Valmistaja: $vendor. Valmistajan asetuksiin on saatavilla linkki. Android ei pysty näyttämään tämän luvan tilaa.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Valmistaja: $vendor. Käytetään sovelluksen tietosivua. Android ei pysty näyttämään tämän luvan tilaa.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Valmistajan tausta-asetuksiin ei ole saatavilla linkkiä.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Viimeksi avattu kohde: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'valmistajan asetukset';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'sovelluksen tiedot';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'ei mitään';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Uudelleenkäynnistyksen jälkeisen palautuksen rajoitukset';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Palautus alkaa ensimmäisen lukituksen avauksen jälkeen. Pakotetusti pysäytetty sovellus ei voi käynnistyä itsestään.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Testit eivät ole käytettävissä ilmoitusten tilan tarkistuksen aikana.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Testit eivät ole käytettävissä, koska järjestelmän ilmoitukset on estetty.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Testit eivät ole käytettävissä, koska valittu ilmoituskanava on estetty.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Hallitaan Windowsin ilmoitusasetuksissa';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Ei koske Windowsia';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity =>
+      'Windows-paketin identiteetti';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'MSIX-identiteetti on käytettävissä. Näkyvät ilmoitukset voidaan poistaa';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Asenna MSIX-versio, jotta näkyvät ilmoitukset voidaan poistaa luotettavasti';
 
   @override
   String get collapseWorkspaceNavigation => 'Tiivistä työtilan navigointi';
@@ -2733,157 +2750,158 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Muistutukset ja ilmoitukset';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Muistutusten kattavuus';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Ilman päättymispäivää toistuvien tapahtumien ajastusta uusitaan taustalla pitkäaikaisen kattavuuden säilyttämiseksi.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android voi ajastaa suoraan enintään $capacity muistutusta. Myöhempien muistutusten ajastusta pyritään uusimaan etukäteen.';
   }
 
   @override
   String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+      'Ota muistutukset ja ilmoitukset käyttöön';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Ilmoitukset ajastetaan vain kohteille, joille on asetettu muistutus. Määritä alla oletusmuistutus kursseille, jotka käyttävät sitä.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Muistutukset riippuvat järjestelmän oikeuksista ja taustatoiminnoista. Sammutus, ajan muutokset tai järjestelmän rajoitukset voivat viivästyttää niitä.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Käytössä';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Pois käytöstä';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Oletusmuistutukset';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder => 'Kurssien oletusmuistutus';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder => 'Aikataulun oletusmuistutus';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Ei muistutusta';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes minuuttia ennen';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Ilmoituslupa';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Järjestelmä on sallinut';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Järjestelmä on estänyt';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Tarkistetaan lupaa…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Pyydä lupaa';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings => 'Avaa järjestelmäasetukset';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Ilmoituslupaa ei voitu lukea. Yritä uudelleen.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Tarkkojen hälytysten lupa';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Järjestelmä on sallinut';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'Tarvitaan muistutusten tarkkaan ajoitukseen';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Salli tarkat hälytykset';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Akun optimointi';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Poikkeus Androidin akun optimoinnista on sallittu';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Tarkat muistutukset edellyttävät poikkeusta Androidin akun optimoinnista';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Avaa akun optimointiasetukset';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Valmistajan taustakäynnistys';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Salli automaattinen käynnistys tai taustalla toimiminen, jotta muistutukset voidaan palauttaa uudelleenkäynnistyksen jälkeen.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Avaa Skedin sovellustiedot ja salli taustalla toimiminen. Android ei voi tarkistaa tätä valmistajan asetusta.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Valmistajan asetussivua ei löytynyt. Tarkista Skedin sovellustiedot käsin.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Avaa valmistajan tausta-asetukset';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Valmistajan tausta-asetuksia ei voitu avata. Tarkista Skedin sovellustiedot käsin.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles => 'Näytä otsikot lukitusnäytöllä';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Kun asetus on pois käytöstä, ilmoitusten yksityiskohdat piilotetaan lukitusnäytöllä.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Aloitusnäytön widgetit';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Päivitä Skedin widgetit ja katso, miten voit lisätä widgetin aloitusnäytölle.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Lisää Sked-widget';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'Paina laitteen aloitusnäytön tyhjää aluetta pitkään, valitse Widgetit ja lisää Sked-widget. Widget näyttää seuraavat kurssisi tai tapahtumasi.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Päivitä widgetit';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Widgetit päivitettiin';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Tämä alusta ei tue järjestelmäilmoituksia.';
 
   @override
   String get workspaceFeatures => 'Toimintojen hallinta';
@@ -2952,67 +2970,67 @@ class AppLocalizationsFi extends AppLocalizations {
       'Täysi varmuuskopio sisältää tiedot ja käytössä olevien työtilojen valinnan.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · Asettelun esikatselu';
 
   @override
   String get assistantSelectionContext =>
-      'Uses the current selection as context';
+      'Käyttää nykyistä valintaa kontekstina';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Viestiluonnos';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Vain asettelun esikatselu. Mitään ei lähetetä tai muuteta.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Muuta paneelin kokoa';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Pienennä';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Suurenna';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Palauta ikkuna';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Sulje ikkuna';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Järjestelmämuistutus';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Käytä oletusta ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Järjestelmämuistutukset on poistettu käytöstä ilmoitusasetuksissa. Tämän kurssin asetus voidaan silti tallentaa.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Kurssien oletusmuistutusta ei ole asetettu. Valitse tässä mukautettu muistutus tai määritä oletus ilmoitusasetuksissa.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Tämä asetus tallennetaan kurssin mukana. Toimitus riippuu järjestelmän ilmoitusluvista ja taustarajoituksista.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Järjestelmän ilmoitusten tilaa ei ole tarkistettu. Tarkista ilmoitusasetukset ennen kuin luotat muistutuksiin.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Minuuttia ennen oppituntia';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Vie';
 
   @override
   String get datePickerSelectWeek => 'Valitse viikko';
@@ -3055,78 +3073,80 @@ class AppLocalizationsFi extends AppLocalizations {
   String get timePickerWheelMode => 'Valitse vierityspyörillä';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Käytä oletusta';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Anna minuuttimääräksi kokonaisluku, joka on nolla tai suurempi.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'Mukautetun näkymän sarakeleveys';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Automaattinen';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Vähimmäisleveys';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum =>
+      'Päiväsarakkeen vähimmäisleveys';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Kaikilla päivämäärillä on sama vähimmäisleveys. Sarakkeet täyttävät käytettävissä olevan tilan tai niitä voi vierittää sivusuunnassa. Vaikuttaa vain mukautettuun näkymään.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Ulkoasu ja kieli';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Värit ja ääriviivat';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Ei tapahtumia tänä päivänä';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Yleiskatsaus';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Teeman kohde';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Väritila';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Muistutusasetukset';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Oletusmuistutukset, luvat ja luotettavuus';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Työtilat ja navigointi';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Tietosuojakäytäntö ja paikallisten tietojen tyhjennys';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count oppituntia',
+      one: '1 oppitunti',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Oppitunti';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Kesto';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Välitunti';
 
   @override
   String periodTimesMinutesShort(int minutes) {
@@ -3134,14 +3154,14 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Odotetaan tallennusta…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Tallentamatta · Tallennus epäonnistui';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Tallentamatta · Korjaa korostetut ajat';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3177,45 +3197,45 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Asetukset- tai Työtila-kohteen poistaminen käytöstä työkalupalkissa siirtää sen Lisää-valikkoon poistamisen sijaan. Lisää-valikkoa ei voi piilottaa, kun se sisältää välttämättömiä toimintoja. Työtilan vaihto näkyy vain, kun alanavigointi on piilotettu ja käytössä on useita työtiloja.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Päättynyt';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Sulkeutuu 10 sekunnin kuluttua. Käytä paneelia pitääksesi sen avoinna.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Avaa erikseen';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Hallitse kategorioita';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Piilotettu';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Näytä kalenterissa';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Piilota kalenterista';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Vaihda kategorian väriä';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Teeman väripaletti';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Mukautettu';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => 'Anna kuusimerkkinen heksadesimaalivärikoodi.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Teeman väri $number';
   }
 
   @override
@@ -3223,34 +3243,34 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Kaupan päivitykset voivat viivästyä. Saatavuus määräytyy kaupan sivun mukaan.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Esiversioiden päivitysilmoitusten vastaanottaminen ei liitä sinua kaupan testiohjelmaan.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Uusi versio on saatavilla';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Julkaisutietoja ei ole annettu.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Myöhemmin';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Yritä uudelleen';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Esiversio';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Päivitysten tarkistaminen epäonnistui. Tarkista yhteys ja yritä uudelleen.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Uudempaa versiota ei löytynyt (nykyinen: $version)';
   }
 
   @override

@@ -10,7 +10,7 @@ class AppLocalizationsSl extends AppLocalizations {
   AppLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
-  String get appTitle => 'Učitelj';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -40,7 +40,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get editTimetable => 'Uredi urnik';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle => 'Uredi rezultat razčlenjevanja';
 
   @override
   String get schoolImportParsePageTitle => 'Razčleni urnik';
@@ -67,23 +67,22 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Strni surov odgovor';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Razširi opozorila o uvozu';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'Skrči opozorila o uvozu';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Nekateri predmeti potekajo do vključno $week. tedna.';
   }
 
   @override
-  String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+  String get replaceCurrentTimetableConfirmTitle => 'Zamenjam trenutni urnik?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Uvoženi urnik bo zamenjal trenutnega.';
 
   @override
   String get createTimetable => 'Nov časovni razpored';
@@ -95,13 +94,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get timetable => 'Časovni razpored';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Urnik';
 
   @override
   String get timetableName => 'Ime urnika';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Vnesite ime urnika';
 
   @override
   String get totalWeeks => 'Skupaj tedni';
@@ -236,28 +235,28 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsTitle => 'Nastavitve';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Urnik pouka';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Splošni urnik';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Videz';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Aplikacija';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Delovni prostor';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Videz in jezik';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Podatki in varnost';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'O aplikaciji Sked';
 
   @override
   String get noTimetableSettings =>
@@ -322,28 +321,28 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+      'Vodoravna postavitev in poteze';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Prilagodi izbirnik dni zaslonu';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Če je mogoče, prikaže vseh sedem dni na zaslonu. Izklopite za nespremenljivo širino in vodoravno pomikanje.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Prilagodi tedenske stolpce zaslonu';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Če je mogoče, prikaže vseh sedem stolpcev urnika na zaslonu. Izklopite za nespremenljivo širino in vodoravno pomikanje.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Podrsnite za menjavo tedna';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Podrsnite levo ali desno za menjavo tedna. Pri nespremenljivi širini se najprej pomaknite do roba in nato povlecite naprej.';
 
   @override
   String get liveCourseOutlineColor => 'Barva orisa tečaja';
@@ -594,23 +593,24 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Najnovejše različice ni bilo mogoče pridobiti iz GitHuba. Še vedno lahko odprete spodnjo stran GitHub Releases.';
 
   @override
   String get githubRepository => 'Skladišče GitHub';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc =>
+      'Ogled aplikacije Sked v trgovini Google Play';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Trgovine Google Play ni mogoče odpreti';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Podelite Skedu zvezdico na GitHubu!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Odprite repozitorij projekta in podelite Skedu zvezdico';
 
   @override
   String get openGithubFailed =>
@@ -782,18 +782,18 @@ class AppLocalizationsSl extends AppLocalizations {
       'Shranjevanje ni uspelo. Prosim, poskusite kasneje znova.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Spremembe niso shranjene';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Zadnjih sprememb časov šolskih ur ni bilo mogoče shraniti. Lahko poskusite znova, nadaljujete urejanje ali zavržete spremembe.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Nekateri časi šolskih ur niso veljavni. Pred shranjevanjem jih popravite ali zavrzite spremembe in zapustite stran.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Zavrzi in zapusti';
 
   @override
   String get appInstanceBlockedTitle => 'Sked je že odprt';
@@ -943,7 +943,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'Na izvornih platformah Sked shranjuje urnike pouka, splošne urnike, povezane nastavitve in nastavitve šolskih spletišč, ki jih je mogoče urejati, v imenik operacijskega sistema za podatke aplikacij. Različice za brskalnik uporabljajo shrambo brskalnika. Datoteke, ki so jih starejše različice zapisale v uporabnikov imenik Dokumenti, ostanejo tam, vendar se ne preberejo ali prenesejo samodejno. Če želite te podatke obdržati, pred nadgradnjo iz stare različice izvozite popolno varnostno kopijo aplikacije in jo po nadgradnji obnovite. Nastavitve za API umetne inteligence so shranjene lokalno. Lastni ključ API se shrani prek varne shrambe platforme, kadar je ta na voljo. Popolne varnostne kopije aplikacije ne vsebujejo lastnega ključa API. Aplikacija teh lokalnih podatkov ne nalaga samodejno na strežnik, ki ga nadzoruje razvijalec.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Uvoz in izvoz';
@@ -1037,71 +1037,71 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolSitesImported => 'Uvožena šolska mesta';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle => 'Pregled uvoza šolskih spletišč';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return 'Veljavna spletišča: $validCount; neveljavni vnosi: $invalidCount.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Datoteka vsebuje prazen seznam šolskih spletišč.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Vnos $position ni veljaven in bo preskočen.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Združi';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Zamenjaj';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Zamenjam trenutna šolska spletišča?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'S tem odstranite vsa trenutna spletišča ($currentCount) in shranite uvožena spletišča ($importedCount). Tega dejanja ni mogoče razveljaviti.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Podatke šolskih spletišč je treba obnoviti';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked ni mogel prebrati datoteke šolskih spletišč ali njene varnostne kopije. Pred blokiranjem zapisovanja so bile ustvarjene zaščitene kopije.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Shramba šolskih spletišč ni na voljo';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Sked trenutno ne more dostopati do shrambe šolskih spletišč. Preverite dostop do shrambe ali razpoložljivost naprave in poskusite znova. Trenutni podatki spletišč ne bodo prepisani.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Spodaj so navedene datoteke za obnovitev ali prizadeta mesta shranjevanja. Datotek ne spreminjajte, dokler seznam spletišč ni obnovljen.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Začni brez šolskih spletišč';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Začnem s praznim seznamom šolskih spletišč?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Zaščitene kopije bodo ohranjene, Sked pa bo ustvaril novo prazno datoteko šolskih spletišč. Nadaljujte le, če najprej ne želite znova poskusiti obnovitve.';
 
   @override
   String get schoolSitesEmpty => 'Šolska lokacija še ni konfiguracije.';
@@ -1230,7 +1230,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Nastavitve lastnega razčlenjevalnika niso popolne. Najprej vnesite osnovni URL, ključ API in model.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1350,7 +1350,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Lastni ključ API se shrani prek varne shrambe platforme, kadar je ta na voljo. Lastne poverilnice razčlenjevalnika in končne točke HTTP uporabljajte le v napravah, brskalnikih in omrežjih, ki jim zaupate.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1365,29 +1365,29 @@ class AppLocalizationsSl extends AppLocalizations {
       'Nastavitev razčlenjevalnika po meri je nepopolna. Najprej izpolnite osnovni URL, API ključ in model.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Počisti podatke';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Trajno izbriši vse lokalne podatke Skeda in zapri aplikacijo';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Počistim vse podatke Skeda?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'S tem trajno izbrišete urnike pouka, dogodke, nastavitve, šolska spletišča, lokalne varnostne kopije, obnovitvene kopije in ključ API umetne inteligence, nato pa se Sked zapre. Datoteke, ki ste jih izvozili drugam, ne bodo izbrisane. Tega dejanja ni mogoče razveljaviti.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Počisti podatke in zapri';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Vseh lokalnih podatkov ni bilo mogoče počistiti. Sked bo ostal odprt, da lahko poskusite znova.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Lokalni podatki so bili počiščeni, vendar se Sked ni mogel zapreti. Pred ponovno uporabo aplikacijo zaprite ročno.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1500,28 +1500,28 @@ class AppLocalizationsSl extends AppLocalizations {
   String get weekdayShortFriday => 'pet';
 
   @override
-  String get weekdayShortSaturday => 'Sat';
+  String get weekdayShortSaturday => 'sob';
 
   @override
   String get weekdayShortSunday => 'Sonce';
 
   @override
-  String get monthJanuary => 'Jan';
+  String get monthJanuary => 'jan';
 
   @override
   String get monthFebruary => 'februar';
 
   @override
-  String get monthMarch => 'Mar';
+  String get monthMarch => 'mar';
 
   @override
-  String get monthApril => 'Apr';
+  String get monthApril => 'apr';
 
   @override
   String get monthMay => 'Maj';
 
   @override
-  String get monthJune => 'Jun';
+  String get monthJune => 'jun';
 
   @override
   String get monthJuly => 'jul';
@@ -1536,7 +1536,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get monthOctober => 'okt.';
 
   @override
-  String get monthNovember => 'Nov';
+  String get monthNovember => 'nov';
 
   @override
   String get monthDecember => 'Dec.';
@@ -1555,10 +1555,10 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Splošni urnik';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Urnik pouka';
 
   @override
   String get firstLaunchTitle => 'Izberite začetni način';
@@ -1592,167 +1592,169 @@ class AppLocalizationsSl extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Preklopi način';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'Splošni urnik bo kmalu na voljo';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Preklopi na urnik pouka';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Moj urnik';
 
   @override
   String get today => 'Danes';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Dodaj dogodek';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Uredi dogodek';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Naslov';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Vnesite naslov';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Čas začetka';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Čas konca';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Datum';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Čas';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Opombe';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Barva';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Ponavljanje';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Se ne ponavlja';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Tedensko';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Končni datum';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Brez končnega datuma';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Nastavi';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Spremeni';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Se ponavlja tedensko';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'Do $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Preklopi na splošni urnik';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Splošne nastavitve prikaza';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Pogledi, orodna vrstica, oblika datuma in hitro dodajanje';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap =>
+      'Zapri pojavno okno ob dotiku zunaj njega';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Prikaži mrežne črte';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Uvoz in izvoz kategorij';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Uvozite ali delite kategorije urnika';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Uvozi kategorije';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc =>
+      'Preberi kategorije iz datoteke JSON';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Deli kategorije';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Deli kategorije kot datoteko JSON';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Shrani kategorije';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Shrani kategorije kot datoteko JSON';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Izberite kategorije za izvoz';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Izberite kategorije za uvoz';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Dogodki: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Uvožene kategorije: $count';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Želite uvoz dodati kot novo kategorijo ali zamenjati obstoječo kategorijo?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Dodaj kot novo kategorijo';
 
   @override
-  String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+  String get selectAtLeastOneScheduleMessage => 'Izberite vsaj eno kategorijo.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage =>
+      'Na voljo ni nobene kategorije za izvoz.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Uvozna datoteka ne vsebuje kategorij.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Za zamenjavo izberite natanko eno uvoženo kategorijo.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Izbrana ciljna kategorija ni na voljo.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Kategorije';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Kategorija';
 
   @override
   String get viewWeek => 'Teden';
@@ -1761,218 +1763,218 @@ class AppLocalizationsSl extends AppLocalizations {
   String get viewDay => 'Dan';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Seznam';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Mesec';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return 'Kategorije: $count';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Ni vidnih kategorij';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Izberite kategorijo za zamenjavo';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Zamenjaj kategorijo';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Izbriši dogodek';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'Ta dogodek bo trajno izbrisan.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Izbriši ponavljajoči se dogodek';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Dogodek je podvojen';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Poišči dogodke';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Počisti iskanje';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Filtriraj po barvi';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Vse barve';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Prihajajoči: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Pretekli: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Ves dan';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Skrči celodnevne dogodke';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Razširi celodnevne dogodke';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return 'Celodnevni dogodki: $count';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+ še $count';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Ni ustreznih dogodkov';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Ni prihajajočih dogodkov';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Dodaj kategorijo';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Nova kategorija';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Skrij kategorijo';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Prikaži kategorijo';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Preimenuj';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Preimenuj kategorijo';
 
   @override
-  String get name => 'Name';
+  String get name => 'Ime';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Izbriši kategorijo';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Izbrišem »$name«?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Izbriši to ponovitev';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Izbriši to in prihodnje ponovitve';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Izbriši celotno zaporedje';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Podvoji';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Se ponavlja dnevno';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Se ponavlja mesečno';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Se ponavlja v razmiku $interval $unit';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return 'Število ponovitev: $count';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Dnevno';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Mesečno';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Po meri';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Razmik';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Enota';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'Dni';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'Tednov';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'Mesecev';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Število ponovitev';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Brez omejitve';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Vnesite pozitivno število';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Odstrani končni datum';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Izberite datum';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Izberite čas';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Opomnik v aplikaciji';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'Ob začetku';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes min prej';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1 uro prej';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1 dan prej';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Označi kot obravnavano';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Obnovi opomnik v aplikaciji';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Opomnik v aplikaciji je označen kot obravnavan';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Opomnik v aplikaciji je obnovljen';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Prihajajoče';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Preteklo';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Prilagodi teden zaslonu';
@@ -1982,23 +1984,23 @@ class AppLocalizationsSl extends AppLocalizations {
       'Prikaži celoten teden v strnjenih postavitvah. Izklopi za vodoravno pomikanje. Obsegi po meri nad 7 dni ostanejo pomični.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Prikaži konce tedna';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Začetna ura';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Končna ura';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Gostota časovne mreže';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Višina urne vrstice';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Prilagodi navpično merilo dnevnega in tedenskega pogleda, ne da bi spremenila 15-, 30- ali 60-minutni razmik mreže.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2006,159 +2008,162 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Uvozi datoteko JSON';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Prilepi JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Uvozi kategorije iz kopiranega besedila JSON';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Uvozi datoteko ICS';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => 'Preberi dogodke iz koledarske datoteke .ics';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Prilepi ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc =>
+      'Uvozi dogodke iz kopiranega koledarskega besedila';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Kopiraj JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Kopiraj izbrane kategorije kot besedilo JSON';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Deli ICS';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Deli izbrane kategorije kot .ics';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Shrani ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Shrani izbrane kategorije kot .ics';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Kopiraj ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Kopiraj izbrane kategorije kot besedilo ICS';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Uvozi ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'Vsebina ICS';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'Sem prilepite vsebino BEGIN:VCALENDAR';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Najdeni dogodki: $count. Jih želite dodati kot novo kategorijo ali zamenjati obstoječo kategorijo?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Uvožene kategorije: $count; opozorila: $warningCount';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Dogodek brez časa začetka je bil preskočen.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Dogodek z nepodprto obliko časa začetka je bil preskočen.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Čas dogodka je bil popravljen, ker konec ni bil poznejši od začetka.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Nepodprta polja ICS so bila dodana v opombe: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Nepodprta pogostost ponavljanja je bila prezrta: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'Izberite kategorije za kopiranje v ICS';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs => 'Izberite kategorije za izvoz v ICS';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Izvozi besedilo ICS';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Izvozi besedilo JSON';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Podatki aplikacije so bili obnovljeni iz prejšnje varnostne kopije, ker glavne datoteke ni bilo mogoče naložiti.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Glavna podatkovna datoteka in njena varnostna kopija sta poškodovani. Aplikacija je zdaj zagnana z novimi podatki.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Vaše podatke je treba obnoviti';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked ni mogel prebrati glavne podatkovne datoteke ali njene varnostne kopije. Pred blokiranjem zapisovanja so bile ustvarjene zaščitene kopije.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'Shramba ni na voljo';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Sked trenutno ne more dostopati do lokalne shrambe. Preverite dostop do shrambe ali razpoložljivost naprave in poskusite znova. Obstoječi podatki ne bodo prepisani.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Za odpiranje teh podatkov posodobite Sked';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Ti podatki so bili ustvarjeni z novejšo različico Skeda. Pred ponovnim poskusom posodobite aplikacijo. Za zaščito podatkov je začetek z novimi podatki onemogočen.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Poskusi znova';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Spodaj so navedene datoteke za obnovitev ali prizadeta mesta shranjevanja. Datotek ne spreminjajte, dokler vaši podatki niso obnovljeni.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'Prikaži datoteke in mesta za obnovitev';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Začni z novimi podatki';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Začnem z novimi podatki?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Zaščitene kopije bodo ohranjene, Sked pa bo ustvaril novo lokalno podatkovno datoteko. Nadaljujte le, če najprej ne želite znova poskusiti obnovitve.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Prejšnji mesec';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Naslednji mesec';
 
   @override
   String timeGridMinutes(int minutes) {
@@ -2166,158 +2171,164 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'V teku';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Izbriši predmet';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Izbrišem ta predmet?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Prikaži lunin koledar';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day., dogodki: $count';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Privzeti pogled';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'Ob zagonu';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Gumb za menjavo pogleda';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Aktivni delovni prostor';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation =>
+      'Skrij navigacijo delovnih prostorov';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Skrijte navigacijo delovnih prostorov. Še vedno jih lahko zamenjate v meniju na glavnem zaslonu.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Oblika datumskih oznak';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Krajevna oblika (julij 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Poševnica (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Postavitev orodne vrstice';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Navigacija orodne vrstice';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Skriti elementi';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Povsem skrij';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Premakni v Več';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder =>
+      'Spremeni vrstni red elementov orodne vrstice';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Prikaži element orodne vrstice';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Izbirnik urnika';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Izbirnik tedna';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Izbirnik pogleda';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Izbirnik kategorije';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Izbirnik datuma';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy =>
+      'Razporeditev prostora v orodni vrstici';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Samodejna razporeditev';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Uravnoteženo';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Prednost kategorije';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Prednost datuma';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Kroži med pogledi';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Odpri meni pogledov';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Preklopi pogled';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Izberite pogled';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint => 'Pridržite za vrnitev na danes';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Prikaz urnika';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Časovna mreža';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Vedenje pojavnih oken';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Hitra dejanja';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab =>
+      'Prikaži plavajoči gumb za dodajanje predmetov';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Prikaže ali skrije plavajoči gumb za dodajanje predmetov v spodnjem desnem kotu urnika pouka.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => 'Prikaži plavajoči gumb za dodajanje dogodkov';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Prikaže ali skrije plavajoči gumb za dodajanje dogodkov v spodnjem desnem kotu urnika.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'Pridržite prazno mrežo za dodajanje predmetov';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Pridržite prazno območje mreže urnika pouka, da dodate predmet.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Pridržite prazno mrežo za dodajanje dogodkov';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'V dnevnem ali tedenskem pogledu pridržite prazno območje časovne mreže, da dodate dogodek.';
 
   @override
   String get developerModeTitle => 'Način za razvijalce';
@@ -2350,130 +2361,132 @@ class AppLocalizationsSl extends AppLocalizations {
       'Za odprtje načina za razvijalce pridržite 3 sekunde';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Diagnostika obvestil';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Preverite stanje dostave v Androidu, znova sestavite obstoječi načrt opomnikov in pošljite varna preizkusna obvestila prek običajne storitve obvestil Skeda.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Diagnostika obvestil je na voljo samo v Androidu.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Diagnostika obvestil bo na voljo, ko se zažene koordinator urnika.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Osveži diagnostiko';
 
   @override
   String get developerNotificationSystemStatus =>
-      'System notification permission';
+      'Sistemsko dovoljenje za obvestila';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Dovoljeno';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Blokirano';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Natančni alarmi';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Dovoljeno';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Ni dovoljeno';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Načrt obvestil urnika';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Pokritost z opomniki';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Vsi znani opomniki z določenim koncem so neposredno razporejeni';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Ponavljajoči se opomniki se dolgoročno obnavljajo po najboljših zmožnostih';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Zmogljivost neposrednih alarmov je zapolnjena; poznejši opomniki se obnavljajo po najboljših zmožnostih';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Pogoji za natančno dostavo niso izpolnjeni';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Zadnja sinhronizacija opomnikov ni uspela';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return 'Neposredni alarmi: $scheduled / zmogljivost: $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return 'Razporejeni: $scheduled, načrtovani: $planned';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Zadnja napaka: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Znova sestavi načrt obvestil';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Načrt obvestil je znova sestavljen.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Preizkusni kanal';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Opomniki za predmete';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Opomniki za dogodke';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest =>
+      'Takoj pošlji preizkusno obvestilo';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Načrtuj preizkus v ozadju čez 30 sekund';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Takojšnje preizkusno obvestilo je poslano.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Preizkus v ozadju je načrtovan čez 30 sekund.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch => 'Stikalo opomnikov aplikacije';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Omogočeno za običajne opomnike';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Onemogočeno za običajne opomnike; razvijalske preizkuse je še vedno mogoče zagnati';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Krajevni časovni pas';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2482,22 +2495,22 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Še ni ustvarjen. Ustvarjen bo ob razvijalskem preizkusu.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Omogočeno';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Blokirano';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Pomembnost: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Pomembnost ni na voljo';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2506,54 +2519,58 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return 'Čakajoča: $pending / aktivna: $active';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Zadnji sistemski prikaz: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Ponovni izračun še ni zabeležen.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => 'Naslednji pravi opomnik';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'V trenutnem načrtu ni prihodnjih opomnikov';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Naslednje vzdrževanje';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal =>
+      'Naslednja obnova po najboljših zmožnostih';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Ni načrtovano';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Omejitev načrta';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return 'Izpuščeno zaradi omejitve načrta: $count';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation =>
+      'Zadnji ponovni izračun';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Zadnja sinhronizacija opomnikov';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Obnovitev zakasnelih opomnikov';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return 'Opomniki, obnovljeni po prvotnem času: $count';
   }
 
   @override
@@ -2567,118 +2584,122 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Ospredje';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Ozadje';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Celoten ponovni izračun';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Vzdrževanje';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Obnovitev';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => 'Zaženi obnovitev opomnikov';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Obnovitev opomnikov je končana';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Uspelo';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Preskočeno';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Blokirano, dokler niso izpolnjeni vsi pogoji za natančno dostavo';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Ni uspelo';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Omejitve ozadja proizvajalca';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Omejitve delovanja v ozadju, ki jih določi proizvajalec, lahko vplivajo na dostavo.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart =>
+      'Zagon v ozadju pri proizvajalcu';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Proizvajalec: $vendor; na voljo je stran z nastavitvami proizvajalca. Android ne more prikazati stanja tega dovoljenja.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Proizvajalec: $vendor; uporabljena bo nadomestna stran s podatki o aplikaciji. Android ne more prikazati stanja tega dovoljenja.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Stran z nastavitvami ozadja proizvajalca ni na voljo.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Nazadnje odprto mesto: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'nastavitve proizvajalca';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'podatki o aplikaciji';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'nič';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Pogoji obnovitve po ponovnem zagonu';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Obnovitev se začne po prvem odklepanju. Prisilno ustavljena aplikacija se ne more sama zagnati.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Med preverjanjem stanja obvestil preizkusi niso na voljo.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Preizkusi niso na voljo, ker so sistemska obvestila blokirana.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Preizkusi niso na voljo, ker je izbrani kanal obvestil blokiran.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Upravljajo nastavitve obvestil sistema Windows';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Ne velja za Windows';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity =>
+      'Identiteta paketa Windows';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'Identiteta MSIX je na voljo; prikazana obvestila je mogoče odstraniti';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Za zanesljivo odstranjevanje prikazanih obvestil namestite različico MSIX';
 
   @override
   String get collapseWorkspaceNavigation =>
@@ -2733,157 +2754,160 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Opomniki in obvestila';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Pokritost z opomniki';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Ponavljajoči se dogodki brez končnega datuma uporabljajo obnavljanje v ozadju za dolgoročno pokritost.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android lahko neposredno razporedi do $capacity opomnikov; poznejši opomniki se poskušajo obnoviti vnaprej.';
   }
 
   @override
-  String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+  String get notificationSettingsEnabled => 'Omogoči opomnike in obvestila';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Razporedi samo elemente z nastavljenim opomnikom. Spodaj nastavite privzeti opomnik za predmete, ki ga podedujejo.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Opomniki so odvisni od sistemskih dovoljenj in delovanja v ozadju. Izklop, spremembe časa ali sistemske omejitve jih lahko zakasnijo.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Omogočeno';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Onemogočeno';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Privzeti opomniki';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder =>
+      'Privzeti opomnik za predmete';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'Privzeti opomnik za dogodke';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Brez opomnika';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes min prej';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Dovoljenje za obvestila';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Sistem dovoljuje';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Sistem blokira';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Preverjanje dovoljenja …';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Zahtevaj dovoljenje';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings => 'Odpri sistemske nastavitve';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Dovoljenja za obvestila ni bilo mogoče prebrati. Poskusite znova.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Dovoljenje za natančne alarme';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Sistem dovoljuje';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'Potrebno za natančen čas opomnikov';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Dovoli natančne alarme';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Optimizacija baterije';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Dodano med izjeme optimizacije baterije v Androidu';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Natančni opomniki zahtevajo izjemo pri optimizaciji baterije v Androidu';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Odpri nastavitve optimizacije baterije';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Zagon v ozadju pri proizvajalcu';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Dovolite samodejni zagon ali delovanje v ozadju, da se lahko opomniki obnovijo po ponovnem zagonu.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Odprite podatke o aplikaciji Sked in dovolite delovanje v ozadju. Android te nastavitve proizvajalca ne more preveriti.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Stran z nastavitvami proizvajalca ni bila najdena. Ročno preverite podatke o aplikaciji Sked.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Odpri nastavitve ozadja proizvajalca';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Nastavitev ozadja proizvajalca ni bilo mogoče odpreti. Ročno preverite podatke o aplikaciji Sked.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles =>
+      'Prikaži naslove na zaklenjenem zaslonu';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Ko je možnost izklopljena, so podrobnosti obvestil na zaklenjenem zaslonu skrite.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Pripomočki na začetnem zaslonu';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Osvežite pripomočke Skeda in preverite, kako jih dodate iz zaganjalnika.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Dodaj pripomoček Sked';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'V zaganjalniku naprave pridržite prazno območje, izberite Pripomočki in dodajte pripomoček Sked. Pripomoček prikazuje naslednje predmete ali dogodke.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Osveži pripomočke';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Pripomočki so osveženi';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Ta platforma ne podpira izvornih obvestil.';
 
   @override
   String get workspaceFeatures => 'Upravljanje funkcij';
@@ -2952,67 +2976,66 @@ class AppLocalizationsSl extends AppLocalizations {
       'Celotna varnostna kopija vključuje podatke in izbor vklopljenih delovnih prostorov.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'UI · Predogled postavitve';
 
   @override
-  String get assistantSelectionContext =>
-      'Uses the current selection as context';
+  String get assistantSelectionContext => 'Trenutni izbor uporabi kot kontekst';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Osnutek sporočila';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Samo predogled postavitve. Nič ne bo poslano ali spremenjeno.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Spremeni velikost podokna';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Pomanjšaj';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Povečaj';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Obnovi okno';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Zapri okno';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Sistemski opomnik';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Uporabi privzeto ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Sistemski opomniki so izklopljeni v nastavitvah obvestil. Nastavitev opomnika za ta predmet lahko vseeno shranite.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Privzeti opomnik za predmete ni nastavljen. Tukaj izberite opomnik po meri ali nastavite privzetega v nastavitvah obvestil.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Ta nastavitev se shrani s predmetom. Dostava je odvisna od sistemskih dovoljenj za obvestila in omejitev ozadja.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Stanje sistemskih obvestil še ni bilo preverjeno. Preden se zanesete na opomnike, preverite nastavitve obvestil.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Minute pred začetkom pouka';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Izvozi';
 
   @override
   String get datePickerSelectWeek => 'Izberi teden';
@@ -3056,78 +3079,80 @@ class AppLocalizationsSl extends AppLocalizations {
   String get timePickerWheelMode => 'Izberi z drsnimi kolesci';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Uporabi privzeto';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Vnesite celo število minut, ki je večje ali enako nič.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'Širina stolpcev v pogledu po meri';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Samodejno';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Najmanjša širina';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum =>
+      'Najmanjša širina posameznega dne';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Vsi datumi imajo enako najmanjšo širino. Stolpci zapolnijo razpoložljivi prostor ali omogočijo vodoravno pomikanje. Vpliva samo na pogled po meri.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Videz in jezik';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Barve in obrisi';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Ta dan ni dogodkov';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Pregled';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Tema za';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Barvni način';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Nastavitve opomnikov';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Privzeti opomniki, dovoljenja in zanesljivost';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Delovni prostori in navigacija';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Pravilnik o zasebnosti in čiščenje lokalnih podatkov';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: 'Število šolskih ur: $count',
+      one: '1 šolska ura',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Šolska ura';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Trajanje';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Odmor';
 
   @override
   String periodTimesMinutesShort(int minutes) {
@@ -3135,14 +3160,14 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Čakanje na shranjevanje …';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Ni shranjeno · Shranjevanje ni uspelo';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Ni shranjeno · Popravite označene čase';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3177,45 +3202,45 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Ko izklopite prikaz Nastavitev ali Delovnega prostora v orodni vrstici, se premakneta v meni Več in ostaneta dostopna. Menija Več ni mogoče skriti, dokler vsebuje nujna dejanja. Preklop delovnega prostora se prikaže samo, ko je spodnja navigacija skrita in je omogočenih več delovnih prostorov.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Končano';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Zapre se po 10 sekundah. Z uporabo podokna ga obdržite odprtega.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Odpri ločeno';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Upravljanje kategorij';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Skrito';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Prikaži na koledarju';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Skrij s koledarja';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Spremeni barvo kategorije';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Paleta teme';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Po meri';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => 'Vnesite šestmestno šestnajstiško barvno kodo.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Barva teme $number';
   }
 
   @override
@@ -3223,34 +3248,34 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Posodobitve v trgovini so lahko na voljo pozneje. Razpoložljivost preverite na strani trgovine.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Prejemanje obvestil o predizdajah vas ne vključi samodejno v preizkusni program trgovine.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Na voljo je nova različica';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Opombe ob izdaji niso na voljo.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Pozneje';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Poskusi znova';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Predizdaja';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Posodobitev ni mogoče preveriti. Preverite povezavo in poskusite znova.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Novejša različica ni bila najdena (trenutna: $version)';
   }
 
   @override

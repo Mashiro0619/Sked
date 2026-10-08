@@ -6077,6 +6077,38 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get microsoftStoreUpdateButton => '微軟商店';
+
+  @override
+  String get storeUpdateDelay => '商店版本可能稍後才提供更新，請以商店頁面為準。';
+
+  @override
+  String get storePrereleaseNotice => '接收預先發行更新通知不會自動加入商店測試管道。';
+
+  @override
+  String get updateFoundTitle => '發現新版本';
+
+  @override
+  String get updateNoNotes => '此版本未提供更新說明。';
+
+  @override
+  String get updateLater => '稍後';
+
+  @override
+  String get updateRetry => '重試';
+
+  @override
+  String get updatePrerelease => '預先發行';
+
+  @override
+  String get updateNetworkFailure => '暫時無法檢查更新，請確認網路連線後重試。';
+
+  @override
+  String updateNoNewerVersion(String version) {
+    return '未發現更新版本（目前：$version）';
+  }
+
+  @override
   String get backupRestoreInProgressTitle => '正在還原備份…';
 
   @override

@@ -10,7 +10,7 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
-  String get appTitle => 'क्लासमेट';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -40,7 +40,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get editTimetable => 'टाइमटेबल संपादित करें';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle =>
+      'पार्स किया गया परिणाम संपादित करें';
 
   @override
   String get schoolImportParsePageTitle => 'टाइमटेबल पार्स करें';
@@ -68,23 +69,22 @@ class AppLocalizationsHi extends AppLocalizations {
       'कच्ची प्रतिक्रिया संक्षिप्त करें';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'आयात चेतावनियाँ खोलें';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'आयात चेतावनियाँ समेटें';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'कुछ कोर्स $weekवें सप्ताह तक चलते हैं।';
   }
 
   @override
-  String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+  String get replaceCurrentTimetableConfirmTitle => 'मौजूदा टाइमटेबल बदलें?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'आयात किया गया टाइमटेबल मौजूदा टाइमटेबल की जगह लेगा।';
 
   @override
   String get createTimetable => 'नया टाइमटेबल';
@@ -96,13 +96,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String get timetable => 'टाइमटेबल';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'शेड्यूल';
 
   @override
   String get timetableName => 'टाइमटेबल का नाम';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'टाइमटेबल का नाम आवश्यक है';
 
   @override
   String get totalWeeks => 'कुल सप्ताह';
@@ -237,28 +237,28 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsTitle => 'सेटिंग्स';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'टाइमटेबल';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'सामान्य शेड्यूल';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'दिखावट';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'ऐप';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'कार्यस्थान';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'दिखावट और भाषा';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'डेटा और सुरक्षा';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Sked के बारे में';
 
   @override
   String get noTimetableSettings =>
@@ -322,29 +322,28 @@ class AppLocalizationsHi extends AppLocalizations {
       'नियंत्रित करें कि टाइमटेबल में क्षैतिज और ऊर्ध्वाधर ग्रिड लाइनें दिखें या नहीं।';
 
   @override
-  String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+  String get timetableHorizontalLayoutSection => 'क्षैतिज लेआउट और जेस्चर';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'दिन चयनकर्ता को स्क्रीन में समाएँ';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'जहाँ संभव हो, सभी सात दिन स्क्रीन पर दिखाएँ; निश्चित चौड़ाई और स्क्रॉलिंग के लिए इसे बंद करें।';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'सप्ताह के कॉलम स्क्रीन में समाएँ';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'जहाँ संभव हो, टाइमटेबल के सभी सात कॉलम स्क्रीन पर दिखाएँ; निश्चित चौड़ाई और स्क्रॉलिंग के लिए इसे बंद करें।';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'स्वाइप करके सप्ताह बदलें';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'दूसरे सप्ताह पर जाने के लिए बाएँ या दाएँ स्वाइप करें। निश्चित चौड़ाई होने पर पहले किनारे से आगे खींचें।';
 
   @override
   String get liveCourseOutlineColor => 'कोर्स आउटलाइन रंग';
@@ -596,23 +595,23 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'GitHub से नवीनतम संस्करण नहीं मिला। आप नीचे GitHub Releases खोल सकते हैं।';
 
   @override
   String get githubRepository => 'GitHub रिपॉज़िटरी';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Google Play पर Sked देखें';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Google Play नहीं खुल सका';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'GitHub पर Sked को स्टार दें!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'प्रोजेक्ट रिपॉज़िटरी खोलें और Sked को स्टार दें';
 
   @override
   String get openGithubFailed => 'GitHub रिपॉज़िटरी लिंक खोलने में असमर्थ';
@@ -782,18 +781,18 @@ class AppLocalizationsHi extends AppLocalizations {
       'सहेजना विफल हुआ। कृपया बाद में फिर कोशिश करें।';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'बदलाव सहेजे नहीं गए';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'पीरियड के समय में किए गए नवीनतम बदलाव सहेजे नहीं जा सके। आप फिर कोशिश कर सकते हैं, संपादन जारी रख सकते हैं या बदलाव छोड़ सकते हैं।';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'कुछ पीरियड के समय अमान्य हैं। सहेजने से पहले उन्हें ठीक करें या बदलाव छोड़कर बाहर निकलें।';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'बदलाव छोड़ें और बाहर निकलें';
 
   @override
   String get appInstanceBlockedTitle => 'Sked पहले से खुला है';
@@ -945,7 +944,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'मूल प्लेटफ़ॉर्म पर Sked टाइमटेबल डेटा, सामान्य शेड्यूल, संबंधित सेटिंग्स और संपादन योग्य स्कूल-साइट कॉन्फ़िगरेशन को ऑपरेटिंग सिस्टम के ऐप्लिकेशन-सपोर्ट फ़ोल्डर में रखता है; ब्राउज़र संस्करण ब्राउज़र स्टोरेज का उपयोग करते हैं। पुराने संस्करणों द्वारा उपयोगकर्ता के Documents फ़ोल्डर में लिखी गई फ़ाइलें वहीं रहती हैं, लेकिन उन्हें अपने आप पढ़ा या माइग्रेट नहीं किया जाता। उस डेटा को बनाए रखने के लिए, अपग्रेड से पहले पुराने संस्करण से पूरा ऐप बैकअप निर्यात करें और बाद में उसे पुनर्स्थापित करें। AI API सेटिंग्स स्थानीय रूप से सहेजी जाती हैं; उपलब्ध होने पर कस्टम API कुंजी प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखी जाती है। पूरे ऐप बैकअप में कस्टम API कुंजी शामिल नहीं होती। ऐप यह स्थानीय डेटा अपने आप डेवलपर-नियंत्रित सर्वर पर अपलोड नहीं करता।';
 
   @override
   String get privacyPolicyImportExportTitle => 'आयात और निर्यात';
@@ -1039,71 +1038,71 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolSitesImported => 'स्कूल साइटें आयात की गईं';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle => 'स्कूल-साइट आयात की समीक्षा करें';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return '$validCount मान्य साइटें, $invalidCount अमान्य प्रविष्टियाँ।';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'फ़ाइल में स्कूल-साइटों की सूची खाली है।';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'प्रविष्टि $position अमान्य है और छोड़ दी जाएगी।';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'मिलाएँ';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'बदलें';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'मौजूदा स्कूल साइटें बदलें?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'इससे $currentCount मौजूदा साइटें हटेंगी और $importedCount आयात की गई साइटें सहेजी जाएँगी। इसे पूर्ववत नहीं किया जा सकता।';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'स्कूल-साइट डेटा को पुनर्प्राप्त करना होगा';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked स्कूल-साइट फ़ाइल या उसका बैकअप नहीं पढ़ सका। लिखना रोकने से पहले सुरक्षित प्रतियाँ बनाई गईं।';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'स्कूल-साइट स्टोरेज उपलब्ध नहीं है';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Sked अभी स्कूल-साइट स्टोरेज तक नहीं पहुँच सकता। स्टोरेज की पहुँच या डिवाइस की उपलब्धता जाँचने के बाद फिर कोशिश करें। मौजूदा साइट डेटा अधिलेखित नहीं होगा।';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'पुनर्प्राप्ति फ़ाइलें या प्रभावित स्टोरेज स्थान नीचे दिए गए हैं। साइट सूची पुनर्प्राप्त होने तक फ़ाइलें न बदलें।';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'बिना स्कूल साइटों के शुरू करें';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'स्कूल-साइटों की खाली सूची से शुरू करें?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'सुरक्षित प्रतियाँ रखी जाएँगी, लेकिन Sked एक नई खाली स्कूल-साइट फ़ाइल बनाएगा। तभी जारी रखें जब आप पहले पुनर्प्राप्ति की कोशिश नहीं करना चाहते।';
 
   @override
   String get schoolSitesEmpty => 'अभी तक कोई स्कूल साइट कॉन्फ़िगरेशन नहीं है।';
@@ -1228,7 +1227,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'कस्टम पार्सर का कॉन्फ़िगरेशन अधूरा है। पहले बेस URL, API कुंजी और मॉडल भरें।';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1314,14 +1313,14 @@ class AppLocalizationsHi extends AppLocalizations {
       'डिफ़ॉल्ट प्रॉम्प्ट रीसेट करें';
 
   @override
-  String get schoolImportParserBaseUrl => 'Base URL';
+  String get schoolImportParserBaseUrl => 'बेस URL';
 
   @override
   String get schoolImportParserBaseUrlInvalid =>
       'Base URL होस्ट वाली HTTP या HTTPS URL होनी चाहिए.';
 
   @override
-  String get schoolImportParserApiKey => 'API key';
+  String get schoolImportParserApiKey => 'API कुंजी';
 
   @override
   String get schoolImportParserModel => 'मॉडल';
@@ -1348,7 +1347,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'उपलब्ध होने पर कस्टम API कुंजी प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखी जाती है। कस्टम पार्सर के क्रेडेंशियल और HTTP एंडपॉइंट केवल विश्वसनीय डिवाइस, ब्राउज़र और नेटवर्क पर उपयोग करें।';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1363,29 +1362,29 @@ class AppLocalizationsHi extends AppLocalizations {
       'कस्टम पार्सर कॉन्फ़िगरेशन अधूरी है। पहले Base URL, API key और मॉडल भरें।';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'डेटा मिटाएँ';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Sked का सारा स्थानीय डेटा स्थायी रूप से मिटाएँ और ऐप से बाहर निकलें';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Sked का सारा डेटा मिटाएँ?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'इससे टाइमटेबल, शेड्यूल, सेटिंग्स, स्कूल साइटें, स्थानीय बैकअप, पुनर्प्राप्ति प्रतियाँ और AI API कुंजी स्थायी रूप से मिट जाएँगे, फिर Sked बंद हो जाएगा। अन्य स्थानों पर निर्यात की गई फ़ाइलें नहीं मिटेंगी। इसे पूर्ववत नहीं किया जा सकता।';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'डेटा मिटाएँ और बाहर निकलें';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'सारा स्थानीय डेटा नहीं मिट सका। दोबारा कोशिश करने के लिए Sked खुला रहेगा।';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'आपका स्थानीय डेटा मिट गया, लेकिन Sked बंद नहीं हो सका। दोबारा उपयोग करने से पहले ऐप को स्वयं बंद करें।';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1553,10 +1552,10 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'सामान्य शेड्यूल';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'छात्र टाइमटेबल';
 
   @override
   String get firstLaunchTitle => 'अपना प्रारंभिक मोड चुनें';
@@ -1590,167 +1589,168 @@ class AppLocalizationsHi extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => ' पढ़ ली है और उससे सहमत हैं।';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'मोड बदलें';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'सामान्य शेड्यूल जल्द आ रहा है';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'छात्र टाइमटेबल पर जाएँ';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'मेरा शेड्यूल';
 
   @override
   String get today => 'आज';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'इवेंट जोड़ें';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'इवेंट संपादित करें';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'शीर्षक';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'शीर्षक आवश्यक है';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'शुरू होने का समय';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'समाप्त होने का समय';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'तारीख';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'समय';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'नोट्स';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'रंग';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'दोहराएँ';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'नहीं दोहराता';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'हर सप्ताह';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'समाप्ति की तारीख';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'कोई समाप्ति तारीख नहीं';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'तय करें';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'बदलें';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'हर सप्ताह दोहराता है';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return '$date तक';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'सामान्य शेड्यूल पर जाएँ';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'सामान्य प्रदर्शन सेटिंग्स';
 
   @override
   String get generalDisplaySettingsDesc =>
       'दृश्य, टूलबार, तारीख प्रारूप और तुरंत जोड़ना';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap => 'बाहर टैप करने पर पॉपअप बंद करें';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'ग्रिड की रेखाएँ दिखाएँ';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'श्रेणियों का आयात और निर्यात';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'शेड्यूल की श्रेणियाँ आयात या साझा करें';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'श्रेणियाँ आयात करें';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'JSON फ़ाइल से श्रेणियाँ पढ़ें';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'श्रेणियाँ साझा करें';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc =>
+      'श्रेणियाँ JSON फ़ाइल के रूप में साझा करें';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'श्रेणियाँ सहेजें';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc =>
+      'श्रेणियाँ JSON फ़ाइल के रूप में सहेजें';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'निर्यात करने के लिए श्रेणियाँ चुनें';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'आयात करने के लिए श्रेणियाँ चुनें';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'इवेंट: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'आयात की गई श्रेणियाँ: $count';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'आयात को नई श्रेणी के रूप में जोड़ें या मौजूदा श्रेणी बदलें?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'नई श्रेणी के रूप में जोड़ें';
 
   @override
-  String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+  String get selectAtLeastOneScheduleMessage => 'कम से कम एक श्रेणी चुनें।';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage =>
+      'निर्यात करने के लिए कोई श्रेणी नहीं है।';
 
   @override
-  String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+  String get noSchedulesInImportMessage => 'आयात फ़ाइल में कोई श्रेणी नहीं है।';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'बदलने के लिए आयात की गई केवल एक श्रेणी चुनें।';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'बदलने के लिए चुनी गई श्रेणी उपलब्ध नहीं है।';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'श्रेणियाँ';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'श्रेणी';
 
   @override
   String get viewWeek => 'सप्ताह';
@@ -1759,218 +1759,218 @@ class AppLocalizationsHi extends AppLocalizations {
   String get viewDay => 'दिन';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'सूची';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'महीना';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return '$count श्रेणियाँ';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'कोई श्रेणी दिखाई नहीं दे रही';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'बदलने के लिए श्रेणी चुनें';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'श्रेणी बदलें';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'इवेंट हटाएँ';
 
   @override
   String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+      'यह इवेंट स्थायी रूप से हटा दिया जाएगा।';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'दोहराया जाने वाला इवेंट हटाएँ';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'इवेंट की प्रतिलिपि बनाई गई';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'इवेंट खोजें';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'खोज साफ़ करें';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'रंग के अनुसार फ़िल्टर करें';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'सभी रंग';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'आगामी: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'बीते हुए: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'पूरे दिन';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'पूरे दिन के इवेंट समेटें';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'पूरे दिन के इवेंट खोलें';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return 'पूरे दिन के $count इवेंट';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count और';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'कोई मेल खाता इवेंट नहीं';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'कोई आगामी इवेंट नहीं';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'श्रेणी जोड़ें';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'नई श्रेणी';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'श्रेणी छिपाएँ';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'श्रेणी दिखाएँ';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'नाम बदलें';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'श्रेणी का नाम बदलें';
 
   @override
-  String get name => 'Name';
+  String get name => 'नाम';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'श्रेणी हटाएँ';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return '\"$name\" हटाएँ?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'केवल यह आवृत्ति हटाएँ';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'इसे और बाद की आवृत्तियाँ हटाएँ';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'पूरी शृंखला हटाएँ';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'प्रतिलिपि बनाएँ';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'हर दिन दोहराता है';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'हर महीने दोहराता है';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'हर $interval $unit में दोहराता है';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count बार';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'हर दिन';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'हर महीने';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'कस्टम';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'हर';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'इकाई';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'दिन';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'सप्ताह';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'महीने';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'दोहराव की संख्या';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'कोई सीमा नहीं';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'धनात्मक संख्या दर्ज करें';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'समाप्ति की तारीख हटाएँ';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'तारीख चुनें';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'समय चुनें';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'ऐप के भीतर रिमाइंडर';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'शुरू होने पर';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes मिनट पहले';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1 घंटा पहले';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1 दिन पहले';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'निपटाया गया चिह्नित करें';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'ऐप के भीतर रिमाइंडर बहाल करें';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled => 'ऐप का रिमाइंडर निपटाया गया चिह्नित किया';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'ऐप का रिमाइंडर बहाल किया गया';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'आगामी';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'समय बीत गया';
 
   @override
   String get generalFitWeekColumnsToWidth =>
@@ -1981,23 +1981,23 @@ class AppLocalizationsHi extends AppLocalizations {
       'कॉम्पैक्ट लेआउट में पूरा सप्ताह दिखाएँ। क्षैतिज स्क्रॉलिंग के लिए बंद करें। 7 दिनों से अधिक की कस्टम अवधियों में स्क्रॉलिंग जारी रहती है।';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'सप्ताहांत दिखाएँ';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'शुरू होने का घंटा';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'समाप्त होने का घंटा';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'समय ग्रिड का घनत्व';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'घंटे की पंक्ति की ऊँचाई';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'दिन और सप्ताह के दृश्यों का ऊर्ध्वाधर पैमाना बदलता है, लेकिन 15, 30 या 60 मिनट का ग्रिड अंतराल नहीं बदलता।';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2005,318 +2005,324 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'JSON फ़ाइल आयात करें';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'JSON चिपकाएँ';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'कॉपी किए गए JSON से श्रेणियाँ आयात करें';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'ICS फ़ाइल आयात करें';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => '.ics कैलेंडर फ़ाइल से इवेंट पढ़ें';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'ICS चिपकाएँ';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => 'कॉपी किए गए कैलेंडर टेक्स्ट से इवेंट आयात करें';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'JSON कॉपी करें';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc =>
+      'चुनी गई श्रेणियाँ JSON टेक्स्ट के रूप में कॉपी करें';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'ICS साझा करें';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'चुने गए कैलेंडर .ics के रूप में साझा करें';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'ICS सहेजें';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'चुने गए कैलेंडर .ics के रूप में सहेजें';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'ICS कॉपी करें';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'चुने गए कैलेंडर ICS टेक्स्ट के रूप में कॉपी करें';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'ICS आयात करें';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'ICS सामग्री';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'BEGIN:VCALENDAR सामग्री यहाँ चिपकाएँ';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return '$count इवेंट मिले। उन्हें नई श्रेणी में जोड़ें या मौजूदा श्रेणी बदलें?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return '$count श्रेणियाँ आयात की गईं, $warningCount चेतावनियाँ';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'शुरू होने के समय के बिना एक इवेंट छोड़ दिया गया।';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'असमर्थित शुरू होने के समय वाला एक इवेंट छोड़ दिया गया।';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'एक इवेंट का समाप्ति समय ठीक किया गया क्योंकि वह शुरू होने के समय के बाद नहीं था।';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'असमर्थित ICS फ़ील्ड नोट्स में जोड़े गए: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'असमर्थित दोहराव आवृत्ति अनदेखी की गई: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'ICS के रूप में कॉपी करने के लिए कैलेंडर चुनें';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'ICS के रूप में निर्यात करने के लिए कैलेंडर चुनें';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'ICS टेक्स्ट निर्यात करें';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'JSON टेक्स्ट निर्यात करें';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'मुख्य फ़ाइल लोड नहीं हुई, इसलिए ऐप का डेटा पिछले बैकअप से पुनर्स्थापित किया गया।';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'मुख्य डेटा फ़ाइल और उसका बैकअप दोनों खराब हैं। ऐप अब नई प्रारंभिक स्थिति का उपयोग कर रहा है।';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'आपके डेटा को पुनर्प्राप्त करना होगा';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked मुख्य डेटा फ़ाइल या उसका बैकअप नहीं पढ़ सका। लिखना रोकने से पहले सुरक्षित प्रतियाँ बनाई गईं।';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'स्टोरेज उपलब्ध नहीं है';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Sked अभी स्थानीय स्टोरेज तक नहीं पहुँच सकता। स्टोरेज की पहुँच या डिवाइस की उपलब्धता जाँचने के बाद फिर कोशिश करें। मौजूदा डेटा अधिलेखित नहीं होगा।';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'यह डेटा खोलने के लिए Sked अपडेट करें';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'यह डेटा Sked के नए संस्करण से बनाया गया है। दोबारा कोशिश करने से पहले ऐप अपडेट करें। डेटा की सुरक्षा के लिए नए सिरे से शुरू करना बंद है।';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'फिर कोशिश करें';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'पुनर्प्राप्ति फ़ाइलें या प्रभावित स्टोरेज स्थान नीचे दिए गए हैं। डेटा पुनर्प्राप्त होने तक फ़ाइलें न बदलें।';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'पुनर्प्राप्ति फ़ाइलें और स्थान दिखाएँ';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'नए डेटा से शुरू करें';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'नए डेटा से शुरू करें?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'सुरक्षित प्रतियाँ रखी जाएँगी, लेकिन Sked एक नई स्थानीय डेटा फ़ाइल बनाएगा। तभी जारी रखें जब आप पहले पुनर्प्राप्ति की कोशिश नहीं करना चाहते।';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'पिछला महीना';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'अगला महीना';
 
   @override
   String timeGridMinutes(int minutes) {
-    return '$minutes min';
+    return '$minutes मिनट';
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'चल रहा है';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'कोर्स हटाएँ';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'यह कोर्स हटाएँ?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'चंद्र कैलेंडर दिखाएँ';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, $count इवेंट';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'डिफ़ॉल्ट दृश्य';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'शुरू करते समय';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'दृश्य बदलने का बटन';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'सक्रिय कार्यस्थान';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'कार्यस्थान नेविगेशन छिपाएँ';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'कार्यस्थल नेविगेशन छिपाएँ। मुख्य स्क्रीन के कार्यस्थल मेन्यू से अब भी बदला जा सकता है।';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'तारीख के लेबल का प्रारूप';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'स्थानीयकृत (जुल॰ 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'स्लैश (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'टूलबार का लेआउट';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'टूलबार नेविगेशन';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'छिपे हुए आइटम';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'पूरी तरह छिपाएँ';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'अधिक में ले जाएँ';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'टूलबार के आइटम का क्रम बदलें';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'टूलबार का आइटम दिखाएँ';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'टाइमटेबल चयनकर्ता';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'सप्ताह चयनकर्ता';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'दृश्य बदलने वाला';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'श्रेणी चयनकर्ता';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'तारीख चयनकर्ता';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'टूलबार की जगह का आवंटन';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'स्वचालित आवंटन';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'संतुलित';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'श्रेणी को प्राथमिकता';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'तारीख को प्राथमिकता';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'दृश्यों को क्रम से बदलें';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'दृश्य मेनू खोलें';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'दृश्य बदलें';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'दृश्य चुनें';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint => 'आज पर जाने के लिए देर तक दबाएँ';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'शेड्यूल का प्रदर्शन';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'समय ग्रिड';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'पॉपअप का व्यवहार';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'त्वरित कार्रवाइयाँ';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => 'कोर्स जोड़ने का फ़्लोटिंग बटन दिखाएँ';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'टाइमटेबल के निचले दाएँ कोने में कोर्स जोड़ने का फ़्लोटिंग बटन दिखाएँ या छिपाएँ।';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => 'इवेंट जोड़ने का फ़्लोटिंग बटन दिखाएँ';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'शेड्यूल के निचले दाएँ कोने में इवेंट जोड़ने का फ़्लोटिंग बटन दिखाएँ या छिपाएँ।';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'कोर्स जोड़ने के लिए खाली ग्रिड देर तक दबाएँ';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'कोर्स जोड़ने के लिए टाइमटेबल ग्रिड के खाली हिस्से को देर तक दबाएँ।';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'इवेंट जोड़ने के लिए खाली ग्रिड देर तक दबाएँ';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'दिन या सप्ताह के दृश्य में इवेंट जोड़ने के लिए समय ग्रिड के खाली हिस्से को देर तक दबाएँ।';
 
   @override
   String get developerModeTitle => 'डेवलपर मोड';
@@ -2350,130 +2356,129 @@ class AppLocalizationsHi extends AppLocalizations {
       'डेवलपर मोड खोलने के लिए 3 सेकंड तक दबाकर रखें';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'सूचना निदान';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Android पर सूचनाओं की डिलीवरी की स्थिति जाँचें, मौजूदा रिमाइंडर योजना फिर बनाएँ और Sked की सामान्य सूचना सेवा से सुरक्षित परीक्षण सूचनाएँ भेजें।';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'सूचना निदान केवल Android पर उपलब्ध है।';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'सूचना निदान एजेंडा समन्वयक शुरू होने पर उपलब्ध होगा।';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'निदान रीफ़्रेश करें';
 
   @override
-  String get developerNotificationSystemStatus =>
-      'System notification permission';
+  String get developerNotificationSystemStatus => 'सिस्टम में सूचना की अनुमति';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'अनुमति है';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'ब्लॉक किया गया';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'सटीक अलार्म';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'अनुमति है';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'अनुमति नहीं है';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'शेड्यूल की सूचना योजना';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'कवरेज';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'सभी ज्ञात सीमित रिमाइंडर सीधे तय कर दिए गए हैं';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'दोहराए जाने वाले रिमाइंडर लंबे समय की कवरेज के लिए यथासंभव फिर तय किए जाते हैं';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'सीधे तय किए जाने वाले अलार्म की क्षमता भर गई है; बाद के रिमाइंडर यथासंभव फिर तय किए जाएँगे';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'सटीक डिलीवरी की शर्तें पूरी नहीं हुईं';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'पिछला रिमाइंडर सिंक विफल हुआ';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '$scheduled सीधे तय अलार्म / क्षमता $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '$scheduled तय, $planned योजनाबद्ध';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'पिछली त्रुटि: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance => 'सूचना योजना फिर बनाएँ';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'सूचना योजना फिर बनाई गई।';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'परीक्षण चैनल';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'कोर्स रिमाइंडर';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'शेड्यूल रिमाइंडर';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'अभी परीक्षण सूचना भेजें';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      '30 सेकंड बाद पृष्ठभूमि परीक्षण तय करें';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'तुरंत परीक्षण सूचना भेजी गई।';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'पृष्ठभूमि परीक्षण 30 सेकंड बाद के लिए तय किया गया।';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch => 'ऐप का रिमाइंडर स्विच';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'सामान्य रिमाइंडर चालू हैं';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'सामान्य रिमाइंडर बंद हैं; डेवलपर परीक्षण फिर भी चल सकते हैं';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'स्थानीय समय क्षेत्र';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2482,22 +2487,22 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'अभी बनाया नहीं गया। डेवलपर परीक्षण इसे बना देगा।';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'चालू';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'ब्लॉक किया गया';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'महत्त्व: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'महत्त्व उपलब्ध नहीं है';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2506,54 +2511,55 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '$pending लंबित / $active सक्रिय';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'सिस्टम द्वारा पिछली बार दिखाया गया: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'अभी कोई पुनर्गणना दर्ज नहीं हुई।';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => 'अगला वास्तविक रिमाइंडर';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'मौजूदा योजना में कोई आगामी रिमाइंडर नहीं है';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'अगला रखरखाव';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal => 'अगला यथासंभव पुनर्निर्धारण';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'तय नहीं किया गया';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'योजना में कटौती';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return 'योजना की सीमा के कारण $count छोड़े गए';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => 'पिछली पुनर्गणना';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization => 'पिछला रिमाइंडर सिंक';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'देर से रिमाइंडर की पुनर्प्राप्ति';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return '$count रिमाइंडर उनके मूल समय के बाद बहाल कर भेजे गए';
   }
 
   @override
@@ -2567,118 +2573,120 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'अग्रभूमि';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'पृष्ठभूमि';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'पूर्ण पुनर्गणना';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'रखरखाव';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'पुनर्प्राप्ति';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => 'रिमाइंडर पुनर्प्राप्त करें';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'रिमाइंडर की पुनर्प्राप्ति पूरी हुई';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'सफल';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'छोड़ा गया';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'सटीक डिलीवरी की सभी शर्तें पूरी होने तक ब्लॉक है';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'विफल';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'निर्माता के पृष्ठभूमि प्रतिबंध';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'निर्माता के पृष्ठभूमि प्रतिबंध डिलीवरी को प्रभावित कर सकते हैं।';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => 'निर्माता का पृष्ठभूमि प्रारंभ';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'निर्माता $vendor; निर्माता की सेटिंग्स का विकल्प उपलब्ध है। Android इसकी अनुमति की स्थिति नहीं बता सकता।';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'निर्माता $vendor; विकल्प के रूप में ऐप का विवरण खोला जाएगा। Android इसकी अनुमति की स्थिति नहीं बता सकता।';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'निर्माता की पृष्ठभूमि सेटिंग्स का कोई विकल्प उपलब्ध नहीं है।';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'पिछली बार खोला गया स्थान: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'निर्माता की सेटिंग्स';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'ऐप का विवरण';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'कोई नहीं';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'पुनरारंभ के बाद पुनर्प्राप्ति की सीमाएँ';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'पहली बार अनलॉक करने के बाद पुनर्प्राप्ति शुरू होती है; ज़बरन रोका गया ऐप अपने आप शुरू नहीं हो सकता।';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'सूचना की स्थिति जाँचे जाने के दौरान परीक्षण उपलब्ध नहीं हैं।';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'सिस्टम सूचनाएँ ब्लॉक हैं, इसलिए परीक्षण उपलब्ध नहीं हैं।';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'चुना गया सूचना चैनल ब्लॉक है, इसलिए परीक्षण उपलब्ध नहीं हैं।';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Windows की सूचना सेटिंग्स से प्रबंधित';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Windows पर लागू नहीं';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity => 'Windows पैकेज की पहचान';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'MSIX पहचान उपलब्ध है; सक्रिय सूचना कार्ड हटाए जा सकते हैं';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'सक्रिय सूचना कार्ड भरोसेमंद ढंग से हटाने के लिए MSIX संस्करण इंस्टॉल करें';
 
   @override
   String get collapseWorkspaceNavigation =>
@@ -2731,157 +2739,158 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'रिमाइंडर और सूचनाएँ';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'रिमाइंडर कवरेज';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'बिना समाप्ति तारीख वाले दोहराए जाने वाले शेड्यूल लंबे समय की कवरेज के लिए पृष्ठभूमि में फिर तय किए जाते हैं।';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android सीधे अधिकतम $capacity रिमाइंडर तय कर सकता है; बाद के रिमाइंडर पहले से फिर तय करने की कोशिश की जाती है।';
   }
 
   @override
-  String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+  String get notificationSettingsEnabled => 'रिमाइंडर और सूचनाएँ चालू करें';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'सूचनाएँ केवल उन आइटम के लिए तय होती हैं जिनमें रिमाइंडर है। डिफ़ॉल्ट अपनाने वाले कोर्स के लिए नीचे कोर्स का डिफ़ॉल्ट रिमाइंडर तय करें।';
 
   @override
   String get notificationPrecisionLimitations =>
       'रिमाइंडर सिस्टम अनुमतियों और बैकग्राउंड संचालन पर निर्भर हैं। डिवाइस बंद होने, समय बदलने या सिस्टम प्रतिबंधों से देरी हो सकती है।';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'चालू';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'बंद';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'डिफ़ॉल्ट रिमाइंडर';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder => 'कोर्स का डिफ़ॉल्ट रिमाइंडर';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'शेड्यूल का डिफ़ॉल्ट रिमाइंडर';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'कोई रिमाइंडर नहीं';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes मिनट पहले';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'सूचना की अनुमति';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'सिस्टम ने अनुमति दी है';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'सिस्टम ने ब्लॉक किया है';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'अनुमति जाँची जा रही है…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'अनुमति माँगें';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings => 'सिस्टम सेटिंग्स खोलें';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'सूचना की अनुमति नहीं पढ़ी जा सकी। फिर कोशिश करें।';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'सटीक अलार्म की अनुमति';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'सिस्टम ने अनुमति दी है';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'सटीक समय पर रिमाइंडर के लिए आवश्यक';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'सटीक अलार्म की अनुमति दें';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'बैटरी ऑप्टिमाइज़ेशन';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Android के बैटरी ऑप्टिमाइज़ेशन से छूट मिली है';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'सटीक रिमाइंडर के लिए Android के बैटरी ऑप्टिमाइज़ेशन से छूट आवश्यक है';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'बैटरी ऑप्टिमाइज़ेशन सेटिंग्स खोलें';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'निर्माता का पृष्ठभूमि प्रारंभ';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'अपने आप शुरू होने या पृष्ठभूमि में चलने की अनुमति दें ताकि पुनरारंभ के बाद रिमाइंडर बहाल हो सकें।';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Sked के ऐप विवरण खोलें और पृष्ठभूमि में चलने की अनुमति दें। Android निर्माता की इस सेटिंग को जाँच नहीं सकता।';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'निर्माता की सेटिंग्स का पृष्ठ नहीं मिला। Sked के ऐप विवरण स्वयं जाँचें।';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'निर्माता की पृष्ठभूमि सेटिंग्स खोलें';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'निर्माता की पृष्ठभूमि सेटिंग्स नहीं खुल सकीं। Sked के ऐप विवरण स्वयं जाँचें।';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles => 'लॉक स्क्रीन पर शीर्षक दिखाएँ';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'बंद होने पर सूचना का विवरण लॉक स्क्रीन पर निजी रहता है।';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'होम स्क्रीन विजेट';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Sked विजेट रीफ़्रेश करें और लॉन्चर से जोड़ने का तरीका जानें।';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Sked विजेट जोड़ें';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'डिवाइस के होम स्क्रीन पर खाली जगह को देर तक दबाएँ, विजेट चुनें और Sked विजेट जोड़ें। विजेट आपके अगले कोर्स या इवेंट दिखाता है।';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'विजेट रीफ़्रेश करें';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'विजेट रीफ़्रेश किए गए';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'यह प्लेटफ़ॉर्म मूल सूचनाएँ उपलब्ध नहीं कराता।';
 
   @override
   String get workspaceFeatures => 'सुविधा प्रबंधन';
@@ -2950,67 +2959,67 @@ class AppLocalizationsHi extends AppLocalizations {
       'पूरे बैकअप में डेटा और चालू कार्यक्षेत्रों का चयन शामिल होता है।';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · लेआउट पूर्वावलोकन';
 
   @override
   String get assistantSelectionContext =>
-      'Uses the current selection as context';
+      'मौजूदा चयन को संदर्भ के रूप में उपयोग करता है';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'संदेश का मसौदा';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'केवल लेआउट का पूर्वावलोकन है। कुछ भी भेजा या बदला नहीं जाएगा।';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'पैनल का आकार बदलें';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'छोटा करें';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'बड़ा करें';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'विंडो का आकार बहाल करें';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'विंडो बंद करें';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'सिस्टम रिमाइंडर';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'डिफ़ॉल्ट उपयोग करें ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'सूचना सेटिंग्स में सिस्टम रिमाइंडर बंद हैं। इस कोर्स की पसंद फिर भी सहेजी जा सकती है।';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'कोर्स का कोई डिफ़ॉल्ट रिमाइंडर तय नहीं है। यहाँ कस्टम रिमाइंडर चुनें या सूचना सेटिंग्स में डिफ़ॉल्ट तय करें।';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'यह पसंद कोर्स के साथ सहेजी जाती है। डिलीवरी सिस्टम की सूचना अनुमतियों और पृष्ठभूमि प्रतिबंधों पर निर्भर करती है।';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'सिस्टम की सूचना स्थिति अभी नहीं जाँची गई है। रिमाइंडर पर निर्भर होने से पहले सूचना सेटिंग्स की समीक्षा करें।';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'कक्षा से कितने मिनट पहले';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'निर्यात करें';
 
   @override
   String get datePickerSelectWeek => 'सप्ताह चुनें';
@@ -3046,93 +3055,93 @@ class AppLocalizationsHi extends AppLocalizations {
   String get timePickerWheelMode => 'स्क्रॉल व्हील से चुनें';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'डिफ़ॉल्ट उपयोग करें';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'मिनटों की पूर्ण संख्या दर्ज करें, शून्य या उससे अधिक।';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'कस्टम दृश्य में कॉलम की चौड़ाई';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'स्वचालित';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'न्यूनतम चौड़ाई';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'हर दिन की न्यूनतम चौड़ाई';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'सभी तारीखों की यही न्यूनतम चौड़ाई होगी। कॉलम उपलब्ध जगह भरते हैं या क्षैतिज स्क्रॉल होते हैं। केवल कस्टम दृश्य पर लागू होता है।';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'दिखावट और भाषा';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'रंग और रूपरेखाएँ';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'इस दिन कोई इवेंट नहीं है';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'अवलोकन';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'इसके लिए थीम';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'रंग मोड';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'रिमाइंडर की पसंद';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'डिफ़ॉल्ट रिमाइंडर, अनुमतियाँ और भरोसेमंद संचालन';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'कार्यस्थान और नेविगेशन';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary => 'गोपनीयता नीति और स्थानीय डेटा मिटाना';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count पीरियड',
+      one: '1 पीरियड',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'पीरियड';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'अवधि';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'विराम';
 
   @override
   String periodTimesMinutesShort(int minutes) {
-    return '$minutes min';
+    return '$minutes मिनट';
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'सहेजने की प्रतीक्षा में…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'सहेजा नहीं गया · सहेजना विफल हुआ';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'सहेजा नहीं गया · चिह्नित समय ठीक करें';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3168,45 +3177,45 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'टूलबार में सेटिंग्स या कार्यस्थान बंद करने पर वह हटने के बजाय अधिक में चला जाता है। ज़रूरी कार्रवाइयाँ होने तक अधिक छिपाया नहीं जा सकता। कार्यस्थान बदलने का विकल्प तभी दिखता है जब नीचे का नेविगेशन छिपा हो और कई कार्यस्थान चालू हों।';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'समाप्त';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      '10 सेकंड बाद बंद होगा। खुला रखने के लिए पैनल का उपयोग करें।';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'अलग से खोलें';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'श्रेणियाँ प्रबंधित करें';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'छिपा हुआ';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'कैलेंडर में दिखाएँ';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'कैलेंडर से छिपाएँ';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'श्रेणी का रंग बदलें';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'थीम के रंग';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'कस्टम';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => 'छह अंकों का हेक्स रंग कोड दर्ज करें।';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'थीम का रंग $number';
   }
 
   @override
@@ -3214,34 +3223,34 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'स्टोर के अपडेट बाद में आ सकते हैं। उपलब्धता के लिए स्टोर पृष्ठ देखें।';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'पूर्व-रिलीज़ अपडेट की सूचनाएँ पाने से आप स्टोर के परीक्षण कार्यक्रम में शामिल नहीं होते।';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'नया संस्करण उपलब्ध है';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'कोई रिलीज़ नोट्स नहीं दिए गए हैं।';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'बाद में';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'फिर कोशिश करें';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'पूर्व-रिलीज़';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'अपडेट की जाँच नहीं हो सकी। अपना कनेक्शन जाँचें और फिर कोशिश करें।';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'कोई नया संस्करण नहीं मिला (मौजूदा: $version)';
   }
 
   @override

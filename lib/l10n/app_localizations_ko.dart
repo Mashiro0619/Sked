@@ -67,23 +67,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => '원시 응답 접기';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => '가져오기 경고 펼치기';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => '가져오기 경고 접기';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return '일부 수업은 $week주차까지 계속됩니다.';
   }
 
   @override
-  String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+  String get replaceCurrentTimetableConfirmTitle => '현재 시간표를 바꿀까요?';
 
   @override
-  String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+  String get replaceCurrentTimetableConfirmMessage => '가져온 시간표로 현재 시간표를 바꿉니다.';
 
   @override
   String get createTimetable => '새 시간표';
@@ -95,13 +93,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get timetable => '시간표';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => '일정';
 
   @override
   String get timetableName => '시간표 이름';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => '시간표 이름을 입력하세요';
 
   @override
   String get totalWeeks => '전체 주차';
@@ -234,28 +232,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsTitle => '설정';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => '시간표';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => '일반 일정';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => '화면 모양';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => '앱';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => '작업 공간';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => '화면 모양 및 언어';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => '데이터 및 보안';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Sked 정보';
 
   @override
   String get noTimetableSettings => '설정할 수 있는 시간표가 현재 없습니다.';
@@ -315,29 +313,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get showTimetableGridLinesHint => '시간표에서 가로 및 세로 격자선을 표시할지 설정합니다.';
 
   @override
-  String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+  String get timetableHorizontalLayoutSection => '가로 배치 및 제스처';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => '요일 선택기를 화면 너비에 맞추기';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      '가능하면 7일을 모두 화면 안에 표시합니다. 끄면 고정 너비로 표시하고 스크롤할 수 있습니다.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => '시간표 열을 화면 너비에 맞추기';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      '가능하면 7일의 시간표 열을 모두 화면 안에 표시합니다. 끄면 고정 너비로 표시하고 스크롤할 수 있습니다.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => '스와이프로 주 바꾸기';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      '좌우로 스와이프하여 다른 주로 이동합니다. 고정 너비를 사용할 때는 먼저 끝까지 스크롤하세요.';
 
   @override
   String get liveCourseOutlineColor => '수업 윤곽선 색상';
@@ -580,23 +577,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'GitHub에서 최신 버전을 가져오지 못했습니다. 아래에서 GitHub Releases를 직접 열 수 있습니다.';
 
   @override
   String get githubRepository => 'GitHub 저장소';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Google Play에서 Sked 보기';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Google Play를 열 수 없습니다';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'GitHub에서 Sked에 스타를 남겨 주세요!';
 
   @override
-  String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+  String get starSkedOnGithubDesc => '프로젝트 저장소를 열고 Sked에 스타 남기기';
 
   @override
   String get openGithubFailed => 'GitHub 저장소 링크를 열 수 없습니다';
@@ -760,18 +756,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get saveFailedRetry => '저장에 실패했습니다. 나중에 다시 시도하세요.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => '변경 사항이 저장되지 않았습니다';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      '최근 교시 시간 변경 사항을 저장하지 못했습니다. 다시 시도하거나, 계속 편집하거나, 변경 사항을 버릴 수 있습니다.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      '일부 교시 시간이 올바르지 않습니다. 수정한 뒤 저장하거나, 변경 사항을 버리고 나가세요.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => '변경 사항을 버리고 나가기';
 
   @override
   String get appInstanceBlockedTitle => 'Sked가 이미 열려 있습니다';
@@ -918,7 +914,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      '네이티브 플랫폼에서 Sked는 시간표 데이터, 일반 일정, 관련 설정, 편집 가능한 학교 사이트 설정을 운영체제의 앱 지원 디렉터리에 저장합니다. 브라우저 버전은 브라우저 저장소를 사용합니다. 이전 버전이 사용자 문서 폴더에 저장한 파일은 그대로 남지만 자동으로 읽거나 이전하지 않습니다. 해당 데이터를 유지하려면 업데이트 전에 이전 버전에서 앱 전체 백업을 내보낸 뒤 업데이트 후 복원하세요. AI API 설정은 로컬에 저장되며, 사용자 지정 API 키는 지원되는 경우 플랫폼의 보안 저장소를 통해 저장됩니다. 앱 전체 백업에는 사용자 지정 API 키가 포함되지 않습니다. 앱은 이 로컬 데이터를 개발자가 관리하는 서버로 자동 업로드하지 않습니다.';
 
   @override
   String get privacyPolicyImportExportTitle => '가져오기 및 내보내기';
@@ -1010,71 +1006,66 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolSitesImported => '학교 사이트를 가져왔습니다';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle => '학교 사이트 가져오기 검토';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return '유효한 사이트 $validCount개, 잘못된 항목 $invalidCount개입니다.';
   }
 
   @override
-  String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+  String get schoolSitesImportEmptyPreview => '파일의 학교 사이트 목록이 비어 있습니다.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return '$position번 항목이 올바르지 않아 건너뜁니다.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => '합치기';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => '바꾸기';
 
   @override
-  String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+  String get schoolSitesImportReplaceConfirmTitle => '현재 학교 사이트를 바꿀까요?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return '현재 사이트 $currentCount개를 삭제하고 가져온 사이트 $importedCount개를 저장합니다. 이 작업은 되돌릴 수 없습니다.';
   }
 
   @override
-  String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+  String get schoolSitesRecoveryCorruptTitle => '학교 사이트 데이터를 복구해야 합니다';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      '학교 사이트 파일과 백업을 읽지 못했습니다. 쓰기를 차단하기 전에 보호용 사본을 만들었습니다.';
 
   @override
-  String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+  String get schoolSitesRecoveryIoFailureTitle => '학교 사이트 저장소를 사용할 수 없습니다';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      '현재 학교 사이트 저장소에 접근할 수 없습니다. 저장소 접근 권한이나 기기 상태를 확인한 뒤 다시 시도하세요. 현재 사이트 데이터는 덮어쓰지 않습니다.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      '복구 파일이나 영향을 받은 저장 위치가 아래에 표시됩니다. 사이트 목록을 복구할 때까지 파일을 변경하지 마세요.';
 
   @override
-  String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+  String get schoolSitesRecoveryStartFreshAction => '학교 사이트 없이 새로 시작';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      '빈 학교 사이트 목록으로 시작할까요?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      '보호용 사본은 유지하지만 새 학교 사이트 파일을 빈 상태로 만듭니다. 먼저 복구를 다시 시도하지 않아도 되는 경우에만 계속하세요.';
 
   @override
   String get schoolSitesEmpty => '아직 학교 사이트 설정이 없습니다.';
@@ -1198,7 +1189,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      '사용자 지정 분석기 설정이 완전하지 않습니다. 먼저 기본 URL, API 키, 모델을 입력하세요.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1281,14 +1272,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolImportParserResetDefaultPrompt => '기본 프롬프트로 재설정';
 
   @override
-  String get schoolImportParserBaseUrl => 'Base URL';
+  String get schoolImportParserBaseUrl => '기본 URL';
 
   @override
   String get schoolImportParserBaseUrlInvalid =>
       'Base URL은 호스트가 포함된 HTTP 또는 HTTPS URL이어야 합니다.';
 
   @override
-  String get schoolImportParserApiKey => 'API key';
+  String get schoolImportParserApiKey => 'API 키';
 
   @override
   String get schoolImportParserModel => '모델';
@@ -1313,7 +1304,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      '사용자 지정 API 키는 지원되는 경우 플랫폼의 보안 저장소를 통해 저장됩니다. 사용자 지정 분석기의 인증 정보와 HTTP 연결 주소는 신뢰할 수 있는 기기, 브라우저, 네트워크에서만 사용하세요.';
 
   @override
   String get schoolImportHttpConfirmationTitle => '암호화되지 않은 HTTP 엔드포인트를 사용할까요?';
@@ -1327,29 +1318,28 @@ class AppLocalizationsKo extends AppLocalizations {
       '사용자 지정 파서 설정이 완전하지 않습니다. 먼저 Base URL, API key, 모델을 입력하세요.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => '데이터 지우기';
 
   @override
-  String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+  String get clearAppDataDesc => '모든 로컬 Sked 데이터를 영구 삭제하고 앱 종료';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Sked 데이터를 모두 지울까요?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      '시간표, 일정, 설정, 학교 사이트, 로컬 백업, 복구 사본, AI API 키를 영구 삭제한 다음 Sked를 종료합니다. 다른 곳으로 내보낸 파일은 삭제하지 않습니다. 이 작업은 되돌릴 수 없습니다.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => '데이터를 지우고 종료';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      '모든 로컬 데이터를 지우지 못했습니다. 다시 시도할 수 있도록 Sked를 열어 둡니다.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      '로컬 데이터는 지웠지만 Sked를 종료하지 못했습니다. 다시 사용하기 전에 앱을 직접 닫아 주세요.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1512,10 +1502,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => '일반 일정';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => '학생 시간표';
 
   @override
   String get firstLaunchTitle => '시작 모드 선택';
@@ -1546,166 +1536,161 @@ class AppLocalizationsKo extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '을 읽고 동의한 것으로 간주됩니다.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => '모드 전환';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => '일반 일정 기능이 곧 제공됩니다';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => '학생 시간표로 전환';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => '내 일정';
 
   @override
   String get today => '오늘';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => '일정 추가';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => '일정 편집';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => '제목';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => '제목을 입력하세요';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => '시작 시간';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => '종료 시간';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => '날짜';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => '시간';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => '메모';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => '색상';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => '반복';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => '반복 안 함';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => '매주';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => '종료일';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => '종료일 없음';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => '설정';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => '변경';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => '매주 반복';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return '$date까지';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => '일반 일정으로 전환';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => '일반 일정 표시 설정';
 
   @override
   String get generalDisplaySettingsDesc => '보기, 도구 모음, 날짜 형식 및 빠른 추가';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap => '바깥을 누르면 팝업 닫기';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => '격자선 표시';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => '카테고리 가져오기 및 내보내기';
 
   @override
-  String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+  String get generalScheduleImportExportDesc => '일정 카테고리 가져오기 또는 공유';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => '카테고리 가져오기';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'JSON 파일에서 카테고리 읽기';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => '카테고리 공유';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => '카테고리를 JSON 파일로 공유';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => '카테고리 저장';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => '카테고리를 JSON 파일로 저장';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => '내보낼 카테고리 선택';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => '가져올 카테고리 선택';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return '일정: $count개';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return '카테고리 $count개를 가져왔습니다';
   }
 
   @override
-  String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+  String get replaceActiveSchedulePrompt => '새 카테고리로 추가할까요, 아니면 기존 카테고리를 바꿀까요?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => '새 카테고리로 추가';
 
   @override
-  String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+  String get selectAtLeastOneScheduleMessage => '카테고리를 하나 이상 선택하세요.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => '내보낼 카테고리가 없습니다.';
 
   @override
-  String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+  String get noSchedulesInImportMessage => '가져올 파일에 카테고리가 없습니다.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      '바꾸기에 사용할 카테고리를 가져온 항목에서 하나만 선택하세요.';
 
   @override
-  String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+  String get noActiveScheduleToReplaceMessage => '선택한 교체 대상 카테고리를 사용할 수 없습니다.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => '카테고리';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => '카테고리';
 
   @override
   String get viewWeek => '주';
@@ -1714,218 +1699,217 @@ class AppLocalizationsKo extends AppLocalizations {
   String get viewDay => '일';
 
   @override
-  String get viewList => 'List';
+  String get viewList => '목록';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => '월';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return '카테고리 $count개';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => '표시 중인 카테고리가 없습니다';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => '바꿀 카테고리 선택';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => '카테고리 바꾸기';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => '일정 삭제';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => '이 일정이 영구 삭제됩니다.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => '반복 일정 삭제';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => '일정을 복제했습니다';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => '일정 검색';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => '검색 지우기';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => '색상으로 필터링';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => '모든 색상';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return '예정된 일정 $count개';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return '종료 시간이 지난 일정 $count개';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => '종일';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => '종일 일정 접기';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => '종일 일정 펼치기';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return '종일 일정 $count개';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count개 더';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => '일치하는 일정이 없습니다';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => '예정된 일정이 없습니다';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => '카테고리 추가';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => '새 카테고리';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => '카테고리 숨기기';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => '카테고리 표시';
 
   @override
-  String get rename => 'Rename';
+  String get rename => '이름 바꾸기';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => '카테고리 이름 바꾸기';
 
   @override
-  String get name => 'Name';
+  String get name => '이름';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => '카테고리 삭제';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return '\"$name\"을(를) 삭제할까요?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => '이번 일정만 삭제';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => '이번 및 이후 일정 삭제';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => '전체 반복 일정 삭제';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => '복제';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => '매일 반복';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => '매월 반복';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return '$interval $unit마다 반복';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count회';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => '매일';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => '매월';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => '사용자 지정';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => '간격';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => '단위';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => '일';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => '주';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => '개월';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => '반복 횟수';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => '제한 없음';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => '양수를 입력하세요';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => '종료일 지우기';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => '날짜 선택';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => '시간 선택';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => '앱 내 알림';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => '시작 시';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes분 전';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1시간 전';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1일 전';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => '확인 완료로 표시';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => '앱 내 알림 복원';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled => '앱 내 알림을 확인 완료로 표시했습니다';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => '앱 내 알림을 복원했습니다';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => '예정됨';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => '종료 시간 지남';
 
   @override
   String get generalFitWeekColumnsToWidth => '주 보기를 화면에 맞추기';
@@ -1935,23 +1919,23 @@ class AppLocalizationsKo extends AppLocalizations {
       '작은 화면에서 한 주 전체를 표시합니다. 끄면 가로로 스크롤합니다. 7일을 초과하는 사용자 지정 범위는 계속 가로로 스크롤됩니다.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => '주말 표시';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => '표시 시작 시간';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => '표시 종료 시간';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => '시간 격자 간격';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => '시간당 행 높이';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      '15분, 30분, 60분의 격자 간격은 그대로 두고 일간 및 주간 보기의 세로 크기를 조절합니다.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -1959,318 +1943,311 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'JSON 파일 가져오기';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'JSON 붙여넣기';
 
   @override
-  String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+  String get importGeneralSchedulesJsonTextDesc => '복사한 JSON에서 카테고리 가져오기';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'ICS 파일 가져오기';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => '.ics 캘린더 파일에서 일정 읽기';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'ICS 붙여넣기';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => '복사한 캘린더 텍스트에서 일정 가져오기';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'JSON 복사';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => '선택한 카테고리를 JSON 텍스트로 복사';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'ICS 공유';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => '선택한 캘린더를 .ics로 공유';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'ICS 저장';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => '선택한 캘린더를 .ics로 저장';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'ICS 복사';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => '선택한 캘린더를 ICS 텍스트로 복사';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'ICS 가져오기';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'ICS 내용';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => '여기에 BEGIN:VCALENDAR로 시작하는 내용을 붙여넣으세요';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return '일정 $count개를 찾았습니다. 새 카테고리로 추가할까요, 아니면 기존 카테고리를 바꿀까요?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return '카테고리 $count개를 가져왔으며 경고가 $warningCount개 있습니다';
   }
 
   @override
-  String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+  String get importWarningSkippedMissingStart => '시작 시간이 없는 일정을 건너뛰었습니다.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      '지원하지 않는 시작 시간을 가진 일정을 건너뛰었습니다.';
 
   @override
-  String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+  String get importWarningAdjustedEnd => '시작 시간보다 늦지 않은 종료 시간을 조정했습니다.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return '지원하지 않는 ICS 필드를 메모에 추가했습니다: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return '지원하지 않는 반복 주기를 무시했습니다: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs => 'ICS로 복사할 캘린더 선택';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs => 'ICS로 내보낼 캘린더 선택';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'ICS 텍스트 내보내기';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'JSON 텍스트 내보내기';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      '기본 파일을 불러오지 못해 이전 백업에서 앱 데이터를 복원했습니다.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      '기본 데이터 파일과 백업이 모두 손상되었습니다. 앱이 새 상태로 실행됩니다.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => '데이터를 복구해야 합니다';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      '기본 데이터 파일과 백업을 읽지 못했습니다. 쓰기를 차단하기 전에 보호용 사본을 만들었습니다.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => '저장소를 사용할 수 없습니다';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      '현재 로컬 저장소에 접근할 수 없습니다. 저장소 접근 권한이나 기기 상태를 확인한 뒤 다시 시도하세요. 기존 데이터는 덮어쓰지 않습니다.';
 
   @override
-  String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+  String get dataRecoveryUnsupportedVersionTitle => '이 데이터를 열려면 Sked를 업데이트하세요';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      '이 데이터는 더 최신 버전의 Sked에서 만들었습니다. 앱을 업데이트한 뒤 다시 시도하세요. 데이터를 보호하기 위해 새로 시작하기는 비활성화되어 있습니다.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => '다시 시도';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      '복구 파일이나 영향을 받은 저장 위치가 아래에 표시됩니다. 데이터를 복구할 때까지 파일을 변경하지 마세요.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction => '복구 파일 및 위치 보기';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => '새 데이터로 시작';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => '새 데이터로 시작할까요?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      '보호용 사본은 유지하지만 새 로컬 데이터 파일을 만듭니다. 먼저 복구를 다시 시도하지 않아도 되는 경우에만 계속하세요.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => '이전 달';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => '다음 달';
 
   @override
   String timeGridMinutes(int minutes) {
-    return '$minutes min';
+    return '$minutes분';
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => '진행 중';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => '수업 삭제';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => '이 수업을 삭제할까요?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => '음력 표시';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day일, 일정 $count개';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => '기본 보기';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => '시작 시';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => '보기 전환 버튼';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => '사용 중인 작업 공간';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => '작업 공간 탐색 숨기기';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       '작업 공간 탐색을 숨깁니다. 기본 화면의 작업 공간 메뉴에서 전환할 수 있습니다.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => '날짜 표시 형식';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => '지역 형식 (2026년 7월)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => '슬래시 구분 (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => '도구 모음 배치';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => '도구 모음 탐색';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => '숨긴 항목 처리';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => '완전히 숨기기';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => '더보기로 이동';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => '도구 모음 항목 순서 변경';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => '도구 모음 항목 표시';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => '시간표 선택기';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => '주 선택기';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => '보기 전환';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => '카테고리 선택기';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => '날짜 선택기';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => '도구 모음 공간 배분';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => '자동 배분';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => '균형 있게';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => '카테고리 우선';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => '날짜 우선';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => '보기를 순서대로 전환';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => '보기 메뉴 열기';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => '보기 전환';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => '보기 선택';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint => '길게 눌러 오늘로 이동';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => '일정 표시';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => '시간 격자';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => '팝업 동작';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => '빠른 작업';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => '떠 있는 수업 추가 버튼 표시';
 
   @override
-  String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+  String get showAddCourseFabHint => '시간표 오른쪽 아래에 있는 수업 추가 버튼을 표시하거나 숨깁니다.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => '떠 있는 일정 추가 버튼 표시';
 
   @override
-  String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+  String get showAddEventFabHint => '일정 오른쪽 아래에 있는 일정 추가 버튼을 표시하거나 숨깁니다.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse => '빈 격자를 길게 눌러 수업 추가';
 
   @override
-  String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+  String get enableLongPressAddCourseHint => '시간표 격자의 빈 곳을 길게 눌러 수업을 추가합니다.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent => '빈 격자를 길게 눌러 일정 추가';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      '일간 또는 주간 보기의 시간 격자에서 빈 곳을 길게 눌러 일정을 추가합니다.';
 
   @override
   String get developerModeTitle => '개발자 모드';
@@ -2302,130 +2279,124 @@ class AppLocalizationsKo extends AppLocalizations {
   String get developerModeLongPressHint => '개발자 모드를 열려면 3초 동안 길게 누르세요';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => '알림 진단';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Android 알림 전달 상태를 확인하고, 기존 알림 계획을 다시 만들고, Sked의 일반 알림 서비스를 통해 안전한 테스트 알림을 보냅니다.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      '알림 진단은 Android에서만 사용할 수 있습니다.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      '일정 알림 관리가 시작된 후 알림 진단을 사용할 수 있습니다.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => '진단 새로고침';
 
   @override
-  String get developerNotificationSystemStatus =>
-      'System notification permission';
+  String get developerNotificationSystemStatus => '시스템 알림 권한';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => '허용됨';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => '차단됨';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => '정확한 알람';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => '허용됨';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => '허용되지 않음';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => '일정 알림 계획';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => '알림 예약 현황';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      '알려진 모든 유한 횟수 알림이 직접 예약되었습니다';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      '반복 알림은 가능한 범위에서 장기 재예약을 시도합니다';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      '직접 예약 한도에 도달했습니다. 이후 알림은 가능한 범위에서 재예약을 시도합니다';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      '정확한 전달에 필요한 조건을 충족하지 못했습니다';
 
   @override
-  String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+  String get developerNotificationCoverageFailed => '최근 알림 동기화에 실패했습니다';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '직접 예약 $scheduled개 / 한도 $capacity개';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '예약됨 $scheduled개, 계획됨 $planned개';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return '마지막 오류: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance => '알림 계획 다시 만들기';
 
   @override
-  String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+  String get developerNotificationMaintenanceComplete => '알림 계획을 다시 만들었습니다.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => '테스트 채널';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => '수업 알림';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => '일정 알림';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => '즉시 테스트 알림 보내기';
 
   @override
-  String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+  String get developerNotificationThirtySecondTest => '30초 후 백그라운드 테스트 예약';
 
   @override
-  String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+  String get developerNotificationImmediateQueued => '즉시 테스트 알림을 보냈습니다.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      '30초 후 백그라운드 테스트를 예약했습니다.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch => '앱 알림 스위치';
 
   @override
-  String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+  String get developerNotificationAppSwitchEnabled => '일반 알림이 활성화되었습니다';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      '일반 알림이 비활성화되었습니다. 개발자 테스트는 실행할 수 있습니다';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => '현지 시간대';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2434,22 +2405,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      '아직 생성되지 않았습니다. 개발자 테스트를 실행하면 생성됩니다.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => '활성화됨';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => '차단됨';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return '중요도: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      '중요도를 확인할 수 없음';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2458,54 +2429,52 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '대기 중 $pending개 / 표시 중 $active개';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return '네이티브 알림 마지막 표시: $time';
   }
 
   @override
-  String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+  String get developerNotificationNoDiagnostic => '아직 재조정 기록이 없습니다.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => '다음 실제 알림';
 
   @override
-  String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+  String get developerNotificationNoPendingReminder => '현재 계획에 예정된 알림이 없습니다';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => '다음 유지 관리';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal => '다음 재예약 시도';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => '예약되지 않음';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => '계획 한도에 따른 생략';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return '계획 한도로 인해 $count개 생략됨';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => '최근 재조정';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization => '최근 알림 동기화';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery => '늦은 알림 복구';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return '원래 시각이 지난 알림 $count개를 복구하여 전달했습니다';
   }
 
   @override
@@ -2519,118 +2488,115 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => '포그라운드';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => '백그라운드';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative => '전체 재계산';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => '유지 관리';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => '복구';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => '알림 복구 실행';
 
   @override
-  String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+  String get developerNotificationRecoveryComplete => '알림 복구가 완료되었습니다';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => '성공';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => '건너뜀';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      '정확한 전달 조건을 모두 충족할 때까지 차단됨';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => '실패';
 
   @override
-  String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+  String get developerNotificationBackgroundLimits => '제조사 백그라운드 제한';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      '제조사의 백그라운드 제한이 알림 전달에 영향을 줄 수 있습니다.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => '제조사 백그라운드 시작';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return '제조사: $vendor. 제조사 설정을 열 수 있습니다. Android에서는 해당 허용 상태를 확인할 수 없습니다.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return '제조사: $vendor. 대신 앱 상세 정보를 엽니다. Android에서는 해당 허용 상태를 확인할 수 없습니다.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      '열 수 있는 제조사 백그라운드 설정이 없습니다.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return '마지막으로 연 대상: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor => '제조사 설정';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      '앱 상세 정보';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => '없음';
 
   @override
-  String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+  String get developerNotificationRebootBoundaryTitle => '재부팅 후 복구 조건';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      '처음 잠금을 해제한 뒤 복구가 시작됩니다. 강제 종료된 앱은 스스로 시작할 수 없습니다.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      '알림 상태를 확인하는 동안에는 테스트할 수 없습니다.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      '시스템 알림이 차단되어 테스트할 수 없습니다.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      '선택한 알림 채널이 차단되어 테스트할 수 없습니다.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Windows 알림 설정에서 관리됨';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Windows에서는 해당 없음';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity => 'Windows 패키지 ID';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'MSIX ID가 있어 표시 중인 알림을 취소할 수 있습니다';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      '표시 중인 알림을 확실히 취소하려면 MSIX 버전을 설치하세요';
 
   @override
   String get collapseWorkspaceNavigation => '작업 공간 탐색 접기';
@@ -2682,157 +2648,152 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => '미리 알림 및 알림';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => '알림 예약 현황';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      '종료일이 없는 반복 일정은 백그라운드에서 재예약하여 장기적으로 알림을 유지합니다.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android는 알림을 최대 $capacity개까지 직접 예약할 수 있습니다. 이후 알림은 미리 재예약을 시도합니다.';
   }
 
   @override
-  String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+  String get notificationSettingsEnabled => '미리 알림 및 알림 사용';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      '미리 알림이 설정된 항목만 예약합니다. 기본값을 사용하는 수업은 아래에서 수업 기본 알림을 설정하세요.';
 
   @override
   String get notificationPrecisionLimitations =>
       '알림은 시스템 권한과 백그라운드 실행에 영향을 받습니다. 전원 종료, 시간 변경 또는 시스템 제한으로 지연될 수 있습니다.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => '활성화됨';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => '비활성화됨';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => '기본 미리 알림';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder => '수업 기본 미리 알림';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder => '일정 기본 미리 알림';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => '알림 없음';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes분 전';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => '알림 권한';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => '시스템에서 허용됨';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => '시스템에서 차단됨';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => '권한 확인 중…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => '권한 요청';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings => '시스템 설정 열기';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      '알림 권한을 확인하지 못했습니다. 다시 시도하세요.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => '정확한 알람 권한';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => '시스템에서 허용됨';
 
   @override
-  String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+  String get notificationExactAlarmRequired => '정확한 시각의 알림에 필요합니다';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => '정확한 알람 허용';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => '배터리 최적화';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Android 배터리 최적화 제외 목록에 등록됨';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      '정확한 알림을 받으려면 Android 배터리 최적화 제외 목록에 등록해야 합니다';
 
   @override
-  String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+  String get notificationBatteryOptimizationRequest => '배터리 최적화 설정 열기';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => '제조사 백그라운드 시작';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      '재부팅 후 알림을 복구할 수 있도록 자동 시작 또는 백그라운드 실행을 허용하세요.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Sked 앱 상세 정보에서 백그라운드 실행을 허용하세요. Android에서는 이 제조사 설정을 확인할 수 없습니다.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      '제조사 설정 페이지를 찾지 못했습니다. Sked 앱 상세 정보를 직접 확인하세요.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest => '제조사 백그라운드 설정 열기';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      '제조사 백그라운드 설정을 열지 못했습니다. Sked 앱 상세 정보를 직접 확인하세요.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles => '잠금 화면에 제목 표시';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      '끄면 잠금 화면에 알림의 자세한 내용을 표시하지 않습니다.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => '홈 화면 위젯';
 
   @override
-  String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+  String get notificationWidgetsDesc => 'Sked 위젯을 새로고침하고 런처에서 추가하는 방법을 확인하세요.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Sked 위젯 추가';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      '기기의 홈 화면에서 빈 곳을 길게 누른 뒤 위젯을 선택하고 Sked 위젯을 추가하세요. 위젯은 다음 수업이나 일정을 보여 줍니다.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => '위젯 새로고침';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => '위젯을 새로고침했습니다';
 
   @override
-  String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+  String get notificationPlatformUnsupported => '이 플랫폼은 네이티브 알림을 제공하지 않습니다.';
 
   @override
   String get workspaceFeatures => '기능 관리';
@@ -2897,67 +2858,65 @@ class AppLocalizationsKo extends AppLocalizations {
   String get backupWorkspaceSelection => '전체 백업에는 데이터와 활성화된 작업 공간 설정이 포함됩니다.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · 레이아웃 미리보기';
 
   @override
-  String get assistantSelectionContext =>
-      'Uses the current selection as context';
+  String get assistantSelectionContext => '현재 선택한 항목을 맥락으로 사용합니다';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => '메시지 초안';
 
   @override
-  String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+  String get assistantPreviewNoSend => '레이아웃 미리보기 전용입니다. 전송하거나 변경하지 않습니다.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => '패널 크기 조절';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => '최소화';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => '최대화';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => '이전 창 크기로 복원';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => '창 닫기';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => '시스템 알림';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return '기본값 사용 ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      '알림 설정에서 시스템 알림이 꺼져 있습니다. 이 수업의 알림 설정은 저장할 수 있습니다.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      '수업 기본 알림이 설정되지 않았습니다. 여기서 직접 선택하거나 알림 설정에서 기본값을 설정하세요.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      '이 설정은 수업과 함께 저장됩니다. 실제 전달 여부는 시스템 알림 권한과 백그라운드 제한에 따라 달라집니다.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      '시스템 알림 상태를 아직 확인하지 않았습니다. 알림에 의존하기 전에 알림 설정을 검토하세요.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => '수업 시작 몇 분 전';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => '내보내기';
 
   @override
   String get datePickerSelectWeek => '주 선택';
@@ -2985,100 +2944,103 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String dateRangeCustomDays(int days) {
-    return '사용자 지정 · $days일';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days일',
+      one: '1일',
+    );
+    return '사용자 지정 · $_temp0';
   }
 
   @override
   String get timePickerWheelMode => '휠로 선택';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => '기본값 사용';
 
   @override
-  String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+  String get courseReminderInvalidMinutes => '0 이상의 정수로 분 수를 입력하세요.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => '사용자 지정 보기 열 너비';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => '자동';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => '최소 너비';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => '날짜별 최소 너비';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      '모든 날짜에 같은 최소 너비를 적용합니다. 공간이 있으면 열을 고르게 채우고 부족하면 가로로 스크롤합니다. 사용자 지정 보기에만 적용됩니다.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => '화면 모양 및 언어';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => '색상 및 윤곽선';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => '이 날짜에는 일정이 없습니다';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => '개요';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => '테마 적용 대상';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => '색상 모드';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => '알림 설정';
 
   @override
-  String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+  String get settingsNotificationPreferencesSummary => '기본 미리 알림, 권한 및 안정성';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => '작업 공간 및 탐색';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary => '개인정보 처리방침 및 로컬 데이터 삭제';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count교시',
+      one: '1교시',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => '교시';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => '시간 길이';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => '쉬는 시간';
 
   @override
   String periodTimesMinutesShort(int minutes) {
-    return '$minutes min';
+    return '$minutes분';
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => '저장 대기 중…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => '저장되지 않음 · 저장 실패';
 
   @override
-  String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+  String get periodTimesInvalidStatus => '저장되지 않음 · 강조된 시간을 수정하세요';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3113,45 +3075,44 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      '도구 모음에서 설정이나 작업 공간을 끄면 삭제되지 않고 더보기로 이동합니다. 필수 작업이 들어 있는 동안에는 더보기를 숨길 수 없습니다. 작업 공간 전환은 하단 탐색이 숨겨져 있고 여러 작업 공간이 활성화된 경우에만 표시됩니다.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => '종료됨';
 
   @override
-  String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+  String get reminderAutoCloseHint => '10초 후 닫힙니다. 패널을 조작하면 열린 상태로 유지됩니다.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => '독립적으로 열기';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => '카테고리 관리';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => '숨김';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => '캘린더에 표시';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => '캘린더에서 숨기기';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => '카테고리 색상 변경';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => '테마 팔레트';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => '사용자 지정';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => '6자리 16진수 색상 코드를 입력하세요.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return '테마 색상 $number';
   }
 
   @override
@@ -3159,34 +3120,33 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      '스토어 업데이트가 늦게 제공될 수 있습니다. 제공 여부는 스토어 페이지에서 확인하세요.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      '시험판 업데이트 알림을 받아도 스토어 테스트 프로그램에 자동으로 등록되지는 않습니다.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => '새 버전이 있습니다';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => '제공된 릴리스 정보가 없습니다.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => '나중에';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => '다시 시도';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => '시험판';
 
   @override
-  String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+  String get updateNetworkFailure => '업데이트를 확인하지 못했습니다. 연결을 확인하고 다시 시도하세요.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return '새 버전이 없습니다 (현재: $version)';
   }
 
   @override

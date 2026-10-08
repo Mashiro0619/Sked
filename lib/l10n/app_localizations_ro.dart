@@ -10,7 +10,7 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
-  String get appTitle => 'Colegul de clasă';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -40,7 +40,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get editTimetable => 'Editați orarul';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle => 'Editează rezultatul analizat';
 
   @override
   String get schoolImportParsePageTitle => 'Analizează orarul';
@@ -67,23 +67,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Restrânge răspunsul brut';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Extinde avertismentele de import';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings =>
+      'Restrânge avertismentele de import';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Unele cursuri continuă până în săptămâna $week.';
   }
 
   @override
   String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+      'Înlocuiești orarul curent?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Orarul importat va înlocui orarul curent.';
 
   @override
   String get createTimetable => 'Orar nou';
@@ -95,13 +96,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get timetable => 'Orarul';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Program';
 
   @override
   String get timetableName => 'Numele orarului';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Numele orarului este obligatoriu';
 
   @override
   String get totalWeeks => 'Total săptămâni';
@@ -236,28 +237,28 @@ class AppLocalizationsRo extends AppLocalizations {
   String get settingsTitle => 'Setări';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Orar';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Program general';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Aspect';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Aplicație';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Spațiu de lucru';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Aspect și limbă';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Date și securitate';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Despre Sked';
 
   @override
   String get noTimetableSettings =>
@@ -321,29 +322,29 @@ class AppLocalizationsRo extends AppLocalizations {
       'Controlați dacă liniile de rețea orizontale și verticale sunt vizibile în orar.';
 
   @override
-  String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+  String get timetableHorizontalLayoutSection => 'Aspect orizontal și gesturi';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Încadrează selectorul de zile pe ecran';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Afișează toate cele șapte zile pe ecran când este posibil; dezactivează pentru lățime fixă și derulare.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth =>
+      'Încadrează coloanele săptămânii pe ecran';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Afișează toate cele șapte coloane ale orarului pe ecran când este posibil; dezactivează pentru lățime fixă și derulare.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Schimbă săptămânile prin glisare';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Glisează la stânga sau la dreapta pentru altă săptămână. La lățime fixă, trage mai întâi dincolo de margine.';
 
   @override
   String get liveCourseOutlineColor => 'Culoarea conturului cursului';
@@ -384,7 +385,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get liveCourseOutlineWidth => 'Lățimea conturului';
 
   @override
-  String get outlineWidthUnit => 'pe px';
+  String get outlineWidthUnit => 'px';
 
   @override
   String get language => 'Limbă';
@@ -445,7 +446,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get themeColorCourseText => 'Textul cursului';
 
   @override
-  String get themeColorCourseTextAuto => 'Auto';
+  String get themeColorCourseTextAuto => 'Automat';
 
   @override
   String get themeColorCourseTextCustom => 'Culoare personalizată';
@@ -579,7 +580,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get officialWebsite => 'Site-ul oficial';
 
   @override
-  String get googlePlay => 'pe Google Play';
+  String get googlePlay => 'Google Play';
 
   @override
   String get cloudDrive => 'Drive în cloud';
@@ -595,23 +596,23 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Nu s-a putut obține cea mai recentă versiune de pe GitHub. Poți deschide GitHub Releases mai jos.';
 
   @override
   String get githubRepository => 'Repozitoriul GitHub';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Vezi Sked pe Google Play';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Nu s-a putut deschide Google Play';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Oferă o stea pentru Sked pe GitHub!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Deschide depozitul proiectului și oferă o stea pentru Sked';
 
   @override
   String get openGithubFailed =>
@@ -695,7 +696,7 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get importAction => 'Import';
+  String get importAction => 'Importă';
 
   @override
   String get importTimetableDialogTitle => 'Import orar';
@@ -786,18 +787,18 @@ class AppLocalizationsRo extends AppLocalizations {
       'Salvarea a eșuat. Vă rugăm să încercați din nou mai târziu.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Modificări nesalvate';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Ultimele modificări ale orelor de curs nu au putut fi salvate. Poți reîncerca, continua editarea sau renunța la ele.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Unele ore de curs nu sunt valide. Corectează-le înainte de salvare sau renunță la modificări și ieși.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Renunță și ieși';
 
   @override
   String get appInstanceBlockedTitle => 'Sked este deja deschis';
@@ -952,7 +953,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'Pe platformele native, Sked stochează datele orarului, programele generale, setările asociate și configurația editabilă a site-urilor școlare în directorul de suport al aplicațiilor din sistemul de operare; versiunile pentru browser folosesc stocarea browserului. Fișierele scrise de versiunile anterioare în directorul Documente al utilizatorului rămân acolo, dar nu sunt citite sau migrate automat. Pentru a păstra acele date, exportă o copie de siguranță completă din versiunea veche înainte de actualizare, apoi restaureaz-o. Setările API AI sunt stocate local; cheia API personalizată este stocată prin mecanismul securizat al platformei, când acesta este disponibil. Copiile de siguranță complete nu includ cheia API personalizată. Aplicația nu încarcă automat aceste date locale pe un server controlat de dezvoltator.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import și export';
@@ -1046,71 +1047,72 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolSitesImported => 'Site-uri școlare importate';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Verifică importul site-urilor școlare';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return '$validCount site-uri valide, $invalidCount intrări nevalide.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Fișierul conține o listă goală de site-uri școlare.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Intrarea $position nu este validă și va fi omisă.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Combină';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Înlocuiește';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Înlocuiești site-urile școlare curente?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'Se elimină $currentCount site-uri curente și se salvează $importedCount site-uri importate. Acțiunea nu poate fi anulată.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Datele site-urilor școlare necesită recuperare';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked nu a putut citi fișierul site-urilor școlare sau copia sa de siguranță. Au fost create copii protejate înainte de blocarea scrierii.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Stocarea site-urilor școlare nu este disponibilă';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Sked nu poate accesa momentan stocarea site-urilor școlare. Verifică accesul la stocare sau disponibilitatea dispozitivului, apoi reîncearcă. Datele curente nu vor fi suprascrise.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Fișierele de recuperare sau locațiile de stocare afectate sunt enumerate mai jos. Păstrează fișierele neschimbate până la recuperarea listei de site-uri.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Începe fără site-uri școlare';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Începi cu o listă goală de site-uri școlare?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Copiile protejate vor fi păstrate, dar Sked va crea un fișier nou și gol pentru site-urile școlare. Continuă doar dacă nu dorești să reîncerci mai întâi recuperarea.';
 
   @override
   String get schoolSitesEmpty =>
@@ -1239,7 +1241,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Configurația analizorului personalizat este incompletă. Completează mai întâi URL-ul de bază, cheia API și modelul.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1360,7 +1362,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Cheia API personalizată este stocată prin mecanismul securizat al platformei, când acesta este disponibil. Folosește acreditări pentru analizorul personalizat și adrese HTTP doar pe dispozitive, în browsere și în rețele de încredere.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1375,29 +1377,29 @@ class AppLocalizationsRo extends AppLocalizations {
       'Configurarea parserului personalizat este incompletă. Completați mai întâi URL-ul de bază, cheia API și modelul.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Șterge datele';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Șterge definitiv toate datele locale Sked și închide aplicația';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Ștergi toate datele Sked?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'Această acțiune șterge definitiv orarele, programele, setările, site-urile școlare, copiile de siguranță locale, copiile de recuperare și cheia API AI, apoi închide Sked. Fișierele exportate în alte locații nu sunt șterse. Acțiunea nu poate fi anulată.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Șterge datele și ieși';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Nu s-au putut șterge toate datele locale. Sked va rămâne deschis pentru a putea reîncerca.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Datele locale au fost șterse, dar Sked nu s-a putut închide. Închide manual aplicația înainte de a o folosi din nou.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1566,10 +1568,10 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Program general';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Orar școlar';
 
   @override
   String get firstLaunchTitle => 'Alege modul de pornire';
@@ -1603,167 +1605,170 @@ class AppLocalizationsRo extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Schimbă modul';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon =>
+      'Programul general va fi disponibil în curând';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Treci la orarul școlar';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Programul meu';
 
   @override
   String get today => 'Astăzi';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Adaugă eveniment';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Editează evenimentul';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Titlu';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Titlul este obligatoriu';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Ora de început';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Ora de sfârșit';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Dată';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Oră';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Note';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Culoare';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Repetare';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Nu se repetă';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Săptămânal';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Data de sfârșit';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Fără dată de sfârșit';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Setează';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Schimbă';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Se repetă săptămânal';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'Până la $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Treci la programul general';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Setări generale de afișare';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Vizualizări, bară de instrumente, formatul datei și adăugare rapidă';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap =>
+      'Închide fereastra la atingerea în exterior';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Afișează liniile grilei';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Import și export de categorii';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Importă sau distribuie categoriile programului';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Importă categorii';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc =>
+      'Citește categorii dintr-un fișier JSON';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Distribuie categorii';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Distribuie categorii ca fișier JSON';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Salvează categorii';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Salvează categorii ca fișier JSON';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Selectează categoriile de exportat';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Selectează categoriile de importat';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Evenimente: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Categorii importate: $count';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Adaugi importul ca o categorie nouă sau înlocuiești una existentă?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Adaugă drept categorie nouă';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+      'Selectează cel puțin o categorie.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => 'Nu există categorii de exportat.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Fișierul de import nu conține categorii.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Selectează exact o categorie importată pentru înlocuire.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Categoria selectată pentru înlocuire nu este disponibilă.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Categorii';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Categorie';
 
   @override
   String get viewWeek => 'Săptămână';
@@ -1772,218 +1777,220 @@ class AppLocalizationsRo extends AppLocalizations {
   String get viewDay => 'Zi';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Listă';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Lună';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return 'Categorii: $count';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Nicio categorie vizibilă';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Alege categoria de înlocuit';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Înlocuiește categoria';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Șterge evenimentul';
 
   @override
   String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+      'Acest eveniment va fi șters definitiv.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Șterge evenimentul recurent';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Eveniment duplicat';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Caută evenimente';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Golește căutarea';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Filtrează după culoare';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Toate culorile';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Viitoare: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Întârziate: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Toată ziua';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline =>
+      'Restrânge evenimentele de o zi întreagă';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Extinde evenimentele de o zi întreagă';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return 'Evenimente de o zi întreagă: $count';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count în plus';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Niciun eveniment potrivit';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Niciun eveniment viitor';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Adaugă categorie';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Categorie nouă';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Ascunde categoria';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Afișează categoria';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Redenumește';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Redenumește categoria';
 
   @override
-  String get name => 'Name';
+  String get name => 'Nume';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Șterge categoria';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Ștergi „$name”?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Șterge această apariție';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences =>
+      'Șterge această apariție și următoarele';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Șterge întreaga serie';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Duplică';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Se repetă zilnic';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Se repetă lunar';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Interval ($unit): $interval';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return 'Repetări: $count';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Zilnic';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Lunar';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Personalizat';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'La fiecare';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Unitate';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'zile';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'săptămâni';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'luni';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Număr de repetări';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Fără limită';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Introdu un număr pozitiv';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Șterge data de sfârșit';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Alege data';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Alege ora';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Memento în aplicație';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'La început';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return 'Cu $minutes min înainte';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => 'Cu 1 oră înainte';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => 'Cu 1 zi înainte';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Marchează ca tratat';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Restabilește mementoul în aplicație';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled => 'Memento în aplicație marcat ca tratat';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Memento în aplicație restabilit';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Viitor';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Întârziat';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Potrivește săptămâna pe ecran';
@@ -1993,23 +2000,23 @@ class AppLocalizationsRo extends AppLocalizations {
       'Afișează întreaga săptămână în aspectele compacte. Dezactivează pentru derulare orizontală. Intervalele personalizate de peste 7 zile rămân derulabile.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Afișează weekendurile';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Ora de început';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Ora de sfârșit';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Densitatea grilei de timp';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Înălțimea rândului unei ore';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Ajustează scara verticală a vizualizărilor de zi și săptămână fără a schimba intervalul grilei de 15, 30 sau 60 de minute.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2017,159 +2024,163 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Importă fișier JSON';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Lipește JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Importă categorii din JSON copiat';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Importă fișier ICS';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc =>
+      'Citește evenimente dintr-un fișier de calendar .ics';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Lipește ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => 'Importă evenimente din textul de calendar copiat';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Copiază JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Copiază categoriile selectate ca text JSON';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Distribuie ICS';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Distribuie calendarele selectate ca .ics';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Salvează ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Salvează calendarele selectate ca .ics';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Copiază ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Copiază calendarele selectate ca text ICS';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Importă ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'Conținut ICS';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'Lipește aici conținutul BEGIN:VCALENDAR';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Evenimente găsite: $count. Le adaugi într-o categorie nouă sau înlocuiești una existentă?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Categorii importate: $count; avertismente: $warningCount';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'S-a omis un eveniment fără oră de început.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'S-a omis un eveniment cu oră de început neacceptată.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'S-a ajustat un eveniment al cărui sfârșit nu era după început.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Câmpurile ICS neacceptate au fost adăugate la note: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'S-a ignorat frecvența de repetare neacceptată: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'Selectează calendarele de copiat ca ICS';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'Selectează calendarele de exportat ca ICS';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Exportă text ICS';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Exportă text JSON';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Datele aplicației au fost restaurate din copia de siguranță anterioară, deoarece fișierul principal nu s-a putut încărca.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Atât fișierul principal de date, cât și copia sa de siguranță sunt deteriorate. Aplicația folosește acum o stare inițială nouă.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Datele tale necesită recuperare';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked nu a putut citi fișierul principal de date sau copia sa de siguranță. Au fost create copii protejate înainte de blocarea scrierii.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'Stocarea nu este disponibilă';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Sked nu poate accesa momentan stocarea locală. Verifică accesul la stocare sau disponibilitatea dispozitivului, apoi reîncearcă. Datele existente nu vor fi suprascrise.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Actualizează Sked pentru a deschide aceste date';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Aceste date au fost create de o versiune mai nouă de Sked. Actualizează aplicația înainte de a reîncerca. Pornirea de la zero este dezactivată pentru a proteja datele.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Reîncearcă';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Fișierele de recuperare sau locațiile de stocare afectate sunt enumerate mai jos. Păstrează fișierele neschimbate până la recuperarea datelor.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'Afișează fișierele și locațiile de recuperare';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Începe cu date noi';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Începi cu date noi?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Copiile protejate vor fi păstrate, dar Sked va crea un fișier local de date nou. Continuă doar dacă nu dorești să reîncerci mai întâi recuperarea.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Luna precedentă';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Luna următoare';
 
   @override
   String timeGridMinutes(int minutes) {
@@ -2177,158 +2188,165 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'În desfășurare';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Șterge cursul';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Ștergi acest curs?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Afișează calendarul lunar';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, evenimente: $count';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Vizualizare implicită';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'La pornire';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Buton de schimbare a vizualizării';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Spațiu de lucru activ';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation =>
+      'Ascunde navigarea spațiilor de lucru';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Ascunde navigarea spațiilor de lucru. Le poți schimba în continuare din meniul ecranului principal.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Formatul etichetei de dată';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Localizat (iul. 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Cu bară oblică (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Aspectul barei de instrumente';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Navigarea barei de instrumente';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Elemente ascunse';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Ascunde complet';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Mută în Mai multe';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'Reordonează elementele barei';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Afișează elementul barei';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Selector de orar';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Selector de săptămână';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Comutator de vizualizare';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Selector de categorie';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Selector de dată';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Alocarea spațiului barei';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Alocare automată';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Echilibrat';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority =>
+      'Prioritate pentru categorie';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Prioritate pentru dată';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Parcurge vizualizările';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Deschide meniul de vizualizare';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Schimbă vizualizarea';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Alege vizualizarea';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint =>
+      'Apasă lung pentru a merge la ziua de azi';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Afișarea programului';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Grilă de timp';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Comportamentul ferestrei pop-up';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Acțiuni rapide';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab =>
+      'Afișează butonul flotant de adăugare a cursurilor';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Afișează sau ascunde butonul flotant de adăugare a cursurilor din colțul din dreapta jos al orarului.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab =>
+      'Afișează butonul flotant de adăugare a evenimentelor';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Afișează sau ascunde butonul flotant de adăugare a evenimentelor din colțul din dreapta jos al programului.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'Apasă lung pe grila goală pentru a adăuga cursuri';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Apasă lung pe o zonă goală a grilei orarului pentru a adăuga un curs.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Apasă lung pe grila goală pentru a adăuga evenimente';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'În vizualizarea de zi sau săptămână, apasă lung pe o zonă goală a grilei de timp pentru a adăuga un eveniment.';
 
   @override
   String get developerModeTitle => 'Mod pentru dezvoltatori';
@@ -2362,130 +2380,132 @@ class AppLocalizationsRo extends AppLocalizations {
       'Țineți apăsat timp de 3 secunde pentru a deschide modul pentru dezvoltatori';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Diagnosticarea notificărilor';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Verifică starea livrării pe Android, reconstruiește planul existent de mementouri și trimite notificări de test sigure prin serviciul obișnuit de notificări Sked.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Diagnosticarea notificărilor este disponibilă doar pe Android.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Diagnosticarea notificărilor este disponibilă după pornirea coordonatorului agendei.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Reîmprospătează diagnosticul';
 
   @override
   String get developerNotificationSystemStatus =>
-      'System notification permission';
+      'Permisiunea de notificare a sistemului';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Permisă';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Blocată';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Alarme exacte';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Permise';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Nepermise';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Planul de notificări al agendei';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Acoperire';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Toate mementourile cunoscute cu număr finit de repetări sunt programate direct';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Mementourile recurente sunt reînnoite în limita posibilităților pentru acoperire pe termen lung';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Capacitatea alarmelor directe este plină; mementourile ulterioare sunt reînnoite în limita posibilităților';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Condițiile pentru livrare precisă nu sunt îndeplinite';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Ultima sincronizare a mementourilor a eșuat';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '$scheduled alarme directe / capacitate $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '$scheduled programate, $planned planificate';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Ultima eroare: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Reconstruiește planul de notificări';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Planul de notificări a fost reconstruit.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Canal de test';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Mementouri pentru cursuri';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Mementouri pentru program';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'Trimite un test imediat';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Programează un test în fundal peste 30 de secunde';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Notificarea de test imediat a fost trimisă.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Testul în fundal a fost programat peste 30 de secunde.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch =>
+      'Comutatorul mementourilor din aplicație';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Activat pentru mementouri obișnuite';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Dezactivat pentru mementouri obișnuite; testele pentru dezvoltatori pot rula în continuare';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Fus orar local';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2494,22 +2514,22 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Nu a fost creat încă. Un test pentru dezvoltatori îl va crea.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Activat';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Blocat';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Importanță: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Importanța nu este disponibilă';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2518,54 +2538,57 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '$pending în așteptare / $active active';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Ultima afișare nativă: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Nu s-a înregistrat încă nicio recalculare.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => 'Următorul memento real';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'Niciun memento viitor în planul curent';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Următoarea întreținere';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal =>
+      'Următoarea încercare de reînnoire';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Neprogramată';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Trunchierea planului';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return '$count omise din cauza limitei planului';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => 'Ultima recalculare';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Ultima sincronizare a mementourilor';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Recuperarea mementourilor întârziate';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return '$count mementouri au fost recuperate după ora inițială';
   }
 
   @override
@@ -2579,118 +2602,123 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Prim-plan';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Fundal';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Recalculare completă';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Întreținere';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Recuperare';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery =>
+      'Rulează recuperarea mementourilor';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Recuperarea mementourilor s-a încheiat';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Reușită';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Omisă';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Blocată până la îndeplinirea tuturor condițiilor de livrare precisă';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Eșuată';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Restricții de fundal ale producătorului';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Restricțiile de fundal ale producătorului pot afecta livrarea.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart =>
+      'Pornire în fundal a producătorului';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Producător: $vendor; este disponibilă o intrare către setările producătorului. Android nu poate afișa starea permisiunii.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Producător: $vendor; se folosesc detaliile aplicației ca alternativă. Android nu poate afișa starea permisiunii.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Nu este disponibilă nicio intrare către setările de fundal ale producătorului.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Ultima destinație deschisă: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'setările producătorului';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'detaliile aplicației';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'niciuna';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Limitele recuperării după repornire';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Recuperarea începe după prima deblocare; o aplicație oprită forțat nu se poate porni singură.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Testele nu sunt disponibile în timpul verificării stării notificărilor.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Testele nu sunt disponibile deoarece notificările de sistem sunt blocate.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Testele nu sunt disponibile deoarece canalul de notificare selectat este blocat.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Gestionată de setările de notificare Windows';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Nu se aplică pe Windows';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity =>
+      'Identitatea pachetului Windows';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'Identitate MSIX disponibilă; cardurile active pot fi eliminate';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Instalează versiunea MSIX pentru a elimina fiabil cardurile active';
 
   @override
   String get collapseWorkspaceNavigation =>
@@ -2745,157 +2773,162 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Mementouri și notificări';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Acoperirea mementourilor';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Programele recurente fără dată de sfârșit folosesc reînnoirea în fundal pentru acoperire pe termen lung.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android poate păstra direct cel mult $capacity mementouri; cele ulterioare sunt reînnoite din timp, în limita posibilităților.';
   }
 
   @override
   String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+      'Activează mementourile și notificările';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Programează notificări doar pentru elementele cu memento. Setează mai jos un memento implicit pentru cursurile care îl moștenesc.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Mementourile depind de permisiuni și de rularea în fundal. Oprirea, schimbarea orei sau restricțiile sistemului le pot întârzia.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Activate';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Dezactivate';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Mementouri implicite';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder =>
+      'Memento implicit pentru cursuri';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'Memento implicit pentru program';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Fără memento';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return 'Cu $minutes min înainte';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Permisiune de notificare';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Permisă de sistem';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Blocată de sistem';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Se verifică permisiunea…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Solicită permisiunea';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings =>
+      'Deschide setările sistemului';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Nu s-a putut citi permisiunea de notificare. Reîncearcă.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Permisiune pentru alarme exacte';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Permisă de sistem';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'Necesară pentru ore precise ale mementourilor';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Permite alarme exacte';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Optimizarea bateriei';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Exceptat de la optimizarea bateriei Android';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Mementourile precise necesită exceptarea de la optimizarea bateriei Android';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Deschide setările de optimizare a bateriei';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Pornire în fundal a producătorului';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Permite pornirea automată sau rularea în fundal pentru a restaura mementourile după repornire.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Deschide detaliile aplicației Sked și permite rularea în fundal. Android nu poate verifica această setare a producătorului.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Nu s-a găsit o pagină de setări a producătorului. Verifică manual detaliile aplicației Sked.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Deschide setările de fundal ale producătorului';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Nu s-au putut deschide setările de fundal ale producătorului. Verifică manual detaliile aplicației Sked.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles =>
+      'Afișează titlurile pe ecranul de blocare';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Când este dezactivat, detaliile notificărilor rămân private pe ecranul de blocare.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Widgeturi pe ecranul de pornire';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Reîmprospătează widgeturile Sked și află cum să adaugi unul din lansator.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Adaugă un widget Sked';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'În lansatorul dispozitivului, apasă lung pe o zonă goală, alege Widgeturi și adaugă un widget Sked. Widgetul arată următoarele cursuri sau evenimente.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Reîmprospătează widgeturile';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Widgeturi reîmprospătate';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Această platformă nu oferă notificări native.';
 
   @override
   String get workspaceFeatures => 'Gestionarea funcțiilor';
@@ -2964,67 +2997,67 @@ class AppLocalizationsRo extends AppLocalizations {
       'Copia de siguranță completă include datele și selecția spațiilor de lucru activate.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · Previzualizare aspect';
 
   @override
   String get assistantSelectionContext =>
-      'Uses the current selection as context';
+      'Folosește selecția curentă drept context';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Ciornă de mesaj';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Doar o previzualizare a aspectului. Nimic nu va fi trimis sau modificat.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Redimensionează panoul';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Minimizează';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Maximizează';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Restabilește fereastra';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Închide fereastra';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Memento de sistem';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Folosește valoarea implicită ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Mementourile de sistem sunt dezactivate în setările de notificare. Preferința acestui curs poate fi totuși salvată.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Nu este setat niciun memento implicit pentru cursuri. Alege aici un memento personalizat sau setează unul implicit în setările de notificare.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Această preferință este salvată împreună cu cursul. Livrarea depinde de permisiunile de notificare ale sistemului și de restricțiile de fundal.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Starea notificărilor de sistem nu a fost verificată. Verifică setările de notificare înainte de a te baza pe mementouri.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Minute înainte de curs';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Exportă';
 
   @override
   String get datePickerSelectWeek => 'Selectează săptămâna';
@@ -3067,78 +3100,80 @@ class AppLocalizationsRo extends AppLocalizations {
   String get timePickerWheelMode => 'Selectează cu rotițele';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Folosește valoarea implicită';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Introdu un număr întreg de minute, zero sau mai mare.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth =>
+      'Lățimea coloanelor în vizualizarea personalizată';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Automată';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Lățime minimă';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'Lățime minimă pe zi';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Toate datele folosesc aceeași lățime minimă. Coloanele umplu spațiul disponibil sau se derulează lateral. Afectează doar vizualizarea personalizată.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Aspect și limbă';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Culori și contururi';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Niciun eveniment în această zi';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Prezentare generală';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Temă pentru';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Mod de culoare';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Preferințe pentru mementouri';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Mementouri implicite, permisiuni și fiabilitate';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Spații de lucru și navigare';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Politica de confidențialitate și ștergerea datelor locale';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: 'Ore: $count',
+      one: 'Ore: 1',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Oră de curs';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Durată';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Pauză';
 
   @override
   String periodTimesMinutesShort(int minutes) {
@@ -3146,14 +3181,14 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Se așteaptă salvarea…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Nesalvat · Salvarea a eșuat';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Nesalvat · Corectează orele evidențiate';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3189,45 +3224,46 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Dezactivarea Setărilor sau a Spațiului de lucru din bară le mută în Mai multe. Mai multe nu poate fi ascuns cât timp conține acțiuni esențiale. Schimbarea spațiului de lucru apare doar când navigarea de jos este ascunsă și sunt activate mai multe spații de lucru.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Încheiat';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Se închide după 10 secunde. Interacționează cu panoul pentru a-l păstra deschis.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Deschide separat';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Gestionează categoriile';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Ascunsă';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Afișează în calendar';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Ascunde din calendar';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Schimbă culoarea categoriei';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Paleta temei';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Personalizată';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid =>
+      'Introdu un cod de culoare hexazecimal din șase caractere.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Culoarea temei $number';
   }
 
   @override
@@ -3235,34 +3271,34 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Actualizările din magazin pot apărea mai târziu. Disponibilitatea este indicată pe pagina magazinului.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Primirea notificărilor despre versiuni preliminare nu te înscrie într-un program de testare al magazinului.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Versiune nouă disponibilă';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Nu au fost furnizate note de versiune.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Mai târziu';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Reîncearcă';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Versiune preliminară';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Nu s-au putut verifica actualizările. Verifică conexiunea și reîncearcă.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Nu s-a găsit o versiune mai nouă (curentă: $version)';
   }
 
   @override

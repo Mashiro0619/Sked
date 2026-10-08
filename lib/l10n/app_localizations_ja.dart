@@ -67,23 +67,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => '生の応答を折りたたむ';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'インポートの警告を展開';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'インポートの警告を折りたたむ';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return '第$week週まで続く授業があります。';
   }
 
   @override
-  String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+  String get replaceCurrentTimetableConfirmTitle => '現在の時間割を置き換えますか？';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'インポートした時間割で現在の時間割を置き換えます。';
 
   @override
   String get createTimetable => '新しい時間割';
@@ -95,13 +94,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get timetable => '時間割';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'スケジュール';
 
   @override
   String get timetableName => '時間割名';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => '時間割名を入力してください';
 
   @override
   String get totalWeeks => '総週数';
@@ -234,28 +233,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTitle => '設定';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => '時間割';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'スケジュール';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => '外観';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'アプリ';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'ワークスペース';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => '外観と言語';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'データとセキュリティ';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Sked について';
 
   @override
   String get noTimetableSettings => '設定できる時間割が現在ありません。';
@@ -312,29 +311,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get showTimetableGridLinesHint => '時間割の横線・縦線を表示するかどうかを設定します。';
 
   @override
-  String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+  String get timetableHorizontalLayoutSection => '横方向の表示とジェスチャー';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => '曜日選択を画面幅に合わせる';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      '可能な限り7日分を画面内に表示します。オフにすると固定幅になり、スクロールで移動できます。';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => '時間割の列を画面幅に合わせる';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      '可能な限り7日分の列を画面内に表示します。オフにすると固定幅になり、スクロールで移動できます。';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'スワイプで週を切り替える';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      '左右にスワイプすると前後の週に移動します。固定幅の場合は、まず端までスクロールしてください。';
 
   @override
   String get liveCourseOutlineColor => '授業の枠線色';
@@ -579,23 +577,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'GitHub から最新バージョンを取得できませんでした。下のボタンから GitHub Releases を開くことはできます。';
 
   @override
   String get githubRepository => 'GitHubリポジトリ';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Google Play で Sked を表示';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Google Play を開けませんでした';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'GitHub で Sked にスターを！';
 
   @override
-  String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+  String get starSkedOnGithubDesc => 'リポジトリを開いて Sked にスターを付ける';
 
   @override
   String get openGithubFailed => 'GitHubリポジトリのリンクを開けませんでした';
@@ -759,18 +756,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get saveFailedRetry => '保存に失敗しました。後でもう一度お試しください。';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => '変更は保存されていません';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      '時限の時刻の変更を保存できませんでした。再試行、編集の続行、または変更の破棄を選べます。';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      '無効な時限の時刻があります。修正して保存するか、変更を破棄して終了してください。';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => '変更を破棄して終了';
 
   @override
   String get appInstanceBlockedTitle => 'Sked はすでに開いています';
@@ -917,7 +914,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'ネイティブ版の Sked は、時間割、スケジュール、関連設定、編集可能な学校サイト設定を OS のアプリ用サポートディレクトリに保存します。ブラウザー版はブラウザーのストレージを使用します。旧バージョンがユーザーのドキュメントフォルダーに保存したファイルは残りますが、自動で読み込んだり移行したりはしません。そのデータを引き継ぐには、更新前に旧バージョンからアプリ全体のバックアップをエクスポートし、更新後に復元してください。AI API 設定は端末内に保存され、カスタム API キーは利用可能な場合、プラットフォームの安全なストレージに保存されます。アプリ全体のバックアップにカスタム API キーは含まれません。これらのローカルデータが開発者の管理するサーバーへ自動的に送信されることはありません。';
 
   @override
   String get privacyPolicyImportExportTitle => 'インポートとエクスポート';
@@ -1009,71 +1006,65 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolSitesImported => '学校サイトをインポートしました';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle => '学校サイトのインポートを確認';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return '有効なサイト $validCount 件、無効な項目 $invalidCount 件。';
   }
 
   @override
-  String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+  String get schoolSitesImportEmptyPreview => 'ファイル内の学校サイト一覧は空です。';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return '項目 $position は無効なためスキップします。';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => '統合';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => '置き換え';
 
   @override
-  String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+  String get schoolSitesImportReplaceConfirmTitle => '現在の学校サイトを置き換えますか？';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return '現在の $currentCount 件のサイトを削除し、インポートした $importedCount 件を保存します。この操作は取り消せません。';
   }
 
   @override
-  String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+  String get schoolSitesRecoveryCorruptTitle => '学校サイトのデータの復旧が必要です';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      '学校サイトのファイルとバックアップを読み込めませんでした。書き込みを停止する前に保護用コピーを作成しました。';
 
   @override
-  String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+  String get schoolSitesRecoveryIoFailureTitle => '学校サイトのストレージを利用できません';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      '現在、学校サイトのストレージにアクセスできません。ストレージへのアクセス権や端末の状態を確認してから再試行してください。現在のサイトデータは上書きしません。';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      '復旧用ファイルや影響を受けた保存場所を以下に表示します。サイト一覧が復旧するまで、これらのファイルを変更しないでください。';
 
   @override
-  String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+  String get schoolSitesRecoveryStartFreshAction => '学校サイトを空にして開始';
 
   @override
-  String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+  String get schoolSitesRecoveryStartFreshConfirmTitle => '学校サイト一覧を空にして開始しますか？';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      '保護用コピーを残したまま、新しい空の学校サイトファイルを作成します。先に復旧を再試行する必要がない場合のみ続行してください。';
 
   @override
   String get schoolSitesEmpty => '学校サイト設定はまだありません。';
@@ -1197,7 +1188,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'カスタム解析サービスの設定が不完全です。まずベース URL、API キー、モデルを入力してください。';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1280,14 +1271,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolImportParserResetDefaultPrompt => '既定のプロンプトに戻す';
 
   @override
-  String get schoolImportParserBaseUrl => 'Base URL';
+  String get schoolImportParserBaseUrl => 'ベース URL';
 
   @override
   String get schoolImportParserBaseUrlInvalid =>
       'Base URL はホストを含む HTTP または HTTPS の URL にしてください。';
 
   @override
-  String get schoolImportParserApiKey => 'API key';
+  String get schoolImportParserApiKey => 'API キー';
 
   @override
   String get schoolImportParserModel => 'モデル';
@@ -1312,7 +1303,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'カスタム API キーは、利用可能な場合、プラットフォームの安全なストレージに保存されます。カスタム解析サービスの認証情報や HTTP 接続先は、信頼できる端末、ブラウザー、ネットワークでのみ使用してください。';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1327,29 +1318,28 @@ class AppLocalizationsJa extends AppLocalizations {
       'カスタムパーサー設定が未完了です。先に Base URL、API key、モデルを入力してください。';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'データを消去';
 
   @override
-  String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+  String get clearAppDataDesc => '端末内の Sked データをすべて完全に削除してアプリを終了';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Sked のデータをすべて消去しますか？';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      '時間割、スケジュール、設定、学校サイト、ローカルバックアップ、復旧用コピー、AI API キーを完全に削除し、Sked を終了します。別の場所にエクスポートしたファイルは削除しません。この操作は取り消せません。';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'データを消去して終了';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'ローカルデータをすべて消去できませんでした。再試行できるように Sked は開いたままになります。';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'ローカルデータは消去しましたが、Sked を終了できませんでした。再び使用する前にアプリを手動で終了してください。';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1512,10 +1502,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'スケジュール';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => '授業時間割';
 
   @override
   String get firstLaunchTitle => '開始モードを選択';
@@ -1545,166 +1535,162 @@ class AppLocalizationsJa extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => 'を読み、同意したものとみなされます。';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'モードを切り替え';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'スケジュール機能は近日公開です';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => '授業時間割に切り替え';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => '自分のスケジュール';
 
   @override
   String get today => '今日';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => '予定を追加';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => '予定を編集';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'タイトル';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'タイトルを入力してください';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => '開始時刻';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => '終了時刻';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => '日付';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => '時刻';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'メモ';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => '色';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => '繰り返し';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => '繰り返さない';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => '毎週';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => '終了日';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => '終了日なし';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => '設定';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => '変更';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => '毎週繰り返す';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return '$date まで';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'スケジュールに切り替え';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'スケジュールの表示設定';
 
   @override
   String get generalDisplaySettingsDesc => '表示形式、ツールバー、日付形式、クイック追加';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap => '外側をタップしてポップアップを閉じる';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'グリッド線を表示';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'カテゴリのインポートとエクスポート';
 
   @override
-  String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+  String get generalScheduleImportExportDesc => 'スケジュールのカテゴリをインポートまたは共有';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'カテゴリをインポート';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'JSON ファイルからカテゴリを読み込む';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'カテゴリを共有';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'カテゴリを JSON ファイルとして共有';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'カテゴリを保存';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'カテゴリを JSON ファイルとして保存';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'エクスポートするカテゴリを選択';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'インポートするカテゴリを選択';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return '予定：$count 件';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return '$count 件のカテゴリをインポートしました';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      '新しいカテゴリとして追加しますか？それとも既存のカテゴリを置き換えますか？';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => '新しいカテゴリとして追加';
 
   @override
-  String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+  String get selectAtLeastOneScheduleMessage => 'カテゴリを1つ以上選択してください。';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => 'エクスポートできるカテゴリがありません。';
 
   @override
-  String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+  String get noSchedulesInImportMessage => 'インポートファイルにカテゴリがありません。';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      '置き換えに使用するカテゴリをインポート内容から1つだけ選択してください。';
 
   @override
-  String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+  String get noActiveScheduleToReplaceMessage => '置き換え先のカテゴリを利用できません。';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'カテゴリ';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'カテゴリ';
 
   @override
   String get viewWeek => '週';
@@ -1713,218 +1699,217 @@ class AppLocalizationsJa extends AppLocalizations {
   String get viewDay => '日';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'リスト';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => '月';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return '$count 件のカテゴリ';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => '表示中のカテゴリはありません';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => '置き換えるカテゴリを選択';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'カテゴリを置き換え';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => '予定を削除';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'この予定は完全に削除されます。';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => '繰り返し予定を削除';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => '予定を複製しました';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => '予定を検索';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => '検索をクリア';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => '色で絞り込む';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'すべての色';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return '今後の予定 $count 件';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return '終了時刻を過ぎた予定 $count 件';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => '終日';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => '終日予定を折りたたむ';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => '終日予定を展開';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return '終日予定 $count 件';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return 'ほか $count 件';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => '一致する予定はありません';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => '今後の予定はありません';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'カテゴリを追加';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => '新しいカテゴリ';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'カテゴリを非表示';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'カテゴリを表示';
 
   @override
-  String get rename => 'Rename';
+  String get rename => '名前を変更';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'カテゴリ名を変更';
 
   @override
-  String get name => 'Name';
+  String get name => '名前';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'カテゴリを削除';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return '「$name」を削除しますか？';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => '今回のみ削除';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => '今回以降を削除';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => '繰り返し全体を削除';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => '複製';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => '毎日繰り返す';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => '毎月繰り返す';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return '$interval $unitごとに繰り返す';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count 回';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => '毎日';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => '毎月';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'カスタム';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => '間隔';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => '単位';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => '日';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => '週';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'か月';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => '繰り返し回数';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => '無制限';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => '正の数を入力してください';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => '終了日をクリア';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => '日付を選択';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => '時刻を選択';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'アプリ内リマインダー';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => '開始時';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes 分前';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1時間前';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1日前';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => '確認済みにする';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'アプリ内リマインダーを戻す';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled => 'アプリ内リマインダーを確認済みにしました';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'アプリ内リマインダーを戻しました';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => '開始前';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => '終了時刻経過';
 
   @override
   String get generalFitWeekColumnsToWidth => '週表示を画面に合わせる';
@@ -1934,23 +1919,23 @@ class AppLocalizationsJa extends AppLocalizations {
       'コンパクトなレイアウトで週全体を表示します。オフにすると横スクロールになります。7日を超えるカスタム範囲は引き続き横スクロールできます。';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => '週末を表示';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => '表示開始時刻';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => '表示終了時刻';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => '時間グリッドの間隔';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => '1時間の行の高さ';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      '15分・30分・60分のグリッド間隔を変えずに、日表示と週表示の縦方向の倍率を調整します。';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -1958,318 +1943,310 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'JSON ファイルをインポート';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'JSON を貼り付け';
 
   @override
-  String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+  String get importGeneralSchedulesJsonTextDesc => 'コピーした JSON からカテゴリをインポート';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'ICS ファイルをインポート';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => '.ics カレンダーファイルから予定を読み込む';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'ICS を貼り付け';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => 'コピーしたカレンダーテキストから予定をインポート';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'JSON をコピー';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => '選択したカテゴリを JSON テキストとしてコピー';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'ICS を共有';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => '選択したカレンダーを .ics として共有';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'ICS を保存';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => '選択したカレンダーを .ics として保存';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'ICS をコピー';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => '選択したカレンダーを ICS テキストとしてコピー';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'ICS をインポート';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'ICS の内容';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'BEGIN:VCALENDAR から始まる内容を貼り付けてください';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return '$count 件の予定が見つかりました。新しいカテゴリとして追加しますか？それとも既存のカテゴリを置き換えますか？';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return '$count 件のカテゴリをインポートしました。警告：$warningCount 件';
   }
 
   @override
-  String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+  String get importWarningSkippedMissingStart => '開始時刻のない予定をスキップしました。';
 
   @override
-  String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+  String get importWarningSkippedUnsupportedStart => '未対応の開始時刻を含む予定をスキップしました。';
 
   @override
-  String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+  String get importWarningAdjustedEnd => '開始時刻より後になっていない終了時刻を調整しました。';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return '未対応の ICS フィールドをメモに追加しました：$fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return '未対応の繰り返し頻度を無視しました：$frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs => 'ICS としてコピーするカレンダーを選択';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs => 'ICS としてエクスポートするカレンダーを選択';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'ICS テキストをエクスポート';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'JSON テキストをエクスポート';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'メインファイルを読み込めなかったため、前回のバックアップからアプリのデータを復元しました。';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'メインデータファイルとバックアップの両方が破損しています。現在、アプリは初期状態で動作しています。';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'データの復旧が必要です';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'メインデータファイルとバックアップを読み込めませんでした。書き込みを停止する前に保護用コピーを作成しました。';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'ストレージを利用できません';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      '現在、ローカルストレージにアクセスできません。ストレージへのアクセス権や端末の状態を確認してから再試行してください。既存のデータは上書きしません。';
 
   @override
-  String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+  String get dataRecoveryUnsupportedVersionTitle => 'このデータを開くには Sked を更新してください';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'このデータは新しいバージョンの Sked で作成されました。アプリを更新してから再試行してください。データを保護するため、新規データでの開始は無効になっています。';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => '再試行';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      '復旧用ファイルや影響を受けた保存場所を以下に表示します。データが復旧するまで、これらのファイルを変更しないでください。';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction => '復旧用ファイルと保存場所を表示';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => '新しいデータで開始';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => '新しいデータで開始しますか？';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      '保護用コピーを残したまま、新しいローカルデータファイルを作成します。先に復旧を再試行する必要がない場合のみ続行してください。';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => '前の月';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => '次の月';
 
   @override
   String timeGridMinutes(int minutes) {
-    return '$minutes min';
+    return '$minutes 分';
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => '進行中';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => '授業を削除';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'この授業を削除しますか？';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => '旧暦を表示';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day日、予定 $count 件';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => '既定の表示';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => '起動時';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => '表示切り替えボタン';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => '使用中のワークスペース';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'ワークスペースのナビゲーションを隠す';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'ワークスペースのナビゲーションを非表示にします。メイン画面のワークスペースメニューで切り替えられます。';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => '日付ラベルの形式';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => '地域の形式（2026年7月）';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'スラッシュ区切り（2026/7）';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'ツールバーの配置';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'ツールバーのナビゲーション';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => '非表示の項目';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => '完全に非表示';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => '「その他」に移動';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'ツールバーの項目を並べ替え';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'ツールバーの項目を表示';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => '時間割の選択';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => '週の選択';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => '表示の切り替え';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'カテゴリの選択';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => '日付の選択';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'ツールバーの幅の配分';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => '自動配分';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => '均等';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'カテゴリを優先';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => '日付を優先';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => '表示を順に切り替え';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => '表示メニューを開く';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => '表示を切り替え';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => '表示を選択';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint => '長押しで今日に移動';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'スケジュールの表示';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => '時間グリッド';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'ポップアップの動作';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'クイック操作';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => '授業追加のフローティングボタンを表示';
 
   @override
-  String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+  String get showAddCourseFabHint => '時間割の右下にある授業追加ボタンの表示を切り替えます。';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => '予定追加のフローティングボタンを表示';
 
   @override
-  String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+  String get showAddEventFabHint => 'スケジュールの右下にある予定追加ボタンの表示を切り替えます。';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse => '空白のグリッドを長押しして授業を追加';
 
   @override
-  String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+  String get enableLongPressAddCourseHint => '時間割の空白部分を長押しすると授業を追加できます。';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent => '空白のグリッドを長押しして予定を追加';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      '日表示または週表示の時間グリッドの空白部分を長押しすると予定を追加できます。';
 
   @override
   String get developerModeTitle => '開発者モード';
@@ -2300,130 +2277,122 @@ class AppLocalizationsJa extends AppLocalizations {
   String get developerModeLongPressHint => '3 秒間長押しすると開発者モードが開きます';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => '通知の診断';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Android の通知配信状態の確認、既存のリマインダー計画の再構築、Sked の通常の通知サービスを使った安全なテスト通知の送信を行います。';
 
   @override
-  String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+  String get developerNotificationUnsupported => '通知の診断は Android でのみ利用できます。';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      '予定の通知管理が開始すると、通知の診断を利用できます。';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => '診断情報を更新';
 
   @override
-  String get developerNotificationSystemStatus =>
-      'System notification permission';
+  String get developerNotificationSystemStatus => 'システムの通知権限';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => '許可済み';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'ブロック済み';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => '正確なアラーム';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => '許可済み';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => '許可されていません';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => '予定の通知計画';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'リマインダーの予約状況';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      '回数が有限の既知のリマインダーはすべて直接予約済みです';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      '繰り返しのリマインダーは可能な限り継続して再予約します';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      '直接予約の上限に達しました。以降のリマインダーは可能な限り再予約します';
 
   @override
-  String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+  String get developerNotificationCoverageBlocked => '正確に配信するための条件を満たしていません';
 
   @override
-  String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+  String get developerNotificationCoverageFailed => '直近のリマインダー同期に失敗しました';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '直接予約 $scheduled 件／上限 $capacity 件';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '予約済み $scheduled 件、計画済み $planned 件';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return '前回のエラー：$message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance => '通知計画を再構築';
 
   @override
-  String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+  String get developerNotificationMaintenanceComplete => '通知計画を再構築しました。';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'テストチャンネル';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => '授業のリマインダー';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => '予定のリマインダー';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => '今すぐテスト通知を送信';
 
   @override
-  String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+  String get developerNotificationThirtySecondTest => '30秒後のバックグラウンドテストを予約';
 
   @override
-  String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+  String get developerNotificationImmediateQueued => '即時テスト通知を送信しました。';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      '30秒後のバックグラウンドテストを予約しました。';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch => 'アプリのリマインダースイッチ';
 
   @override
-  String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+  String get developerNotificationAppSwitchEnabled => '通常のリマインダーは有効です';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      '通常のリマインダーは無効です。開発者向けテストは実行できます';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'ローカルタイムゾーン';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2432,22 +2401,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'まだ作成されていません。開発者向けテストを実行すると作成されます。';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => '有効';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'ブロック済み';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return '重要度：$importance';
   }
 
   @override
-  String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+  String get developerNotificationChannelImportanceUnavailable => '重要度を取得できません';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2456,54 +2424,52 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '待機中 $pending 件／表示中 $active 件';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'ネイティブ側の最終表示：$time';
   }
 
   @override
-  String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+  String get developerNotificationNoDiagnostic => '再調整の記録はまだありません。';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => '次の通常のリマインダー';
 
   @override
-  String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+  String get developerNotificationNoPendingReminder => '現在の計画に今後のリマインダーはありません';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => '次回のメンテナンス';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal => '次回の再予約試行';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => '未予約';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => '計画の上限による省略';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return '計画の上限により $count 件を省略';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => '直近の再調整';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization => '直近のリマインダー同期';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery => '時刻を過ぎたリマインダーの復旧';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return '予定時刻を過ぎた $count 件のリマインダーを復旧して配信しました';
   }
 
   @override
@@ -2517,118 +2483,113 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'フォアグラウンド';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'バックグラウンド';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative => '全体の再計算';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'メンテナンス';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => '復旧';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => 'リマインダーを復旧';
 
   @override
-  String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+  String get developerNotificationRecoveryComplete => 'リマインダーの復旧が完了しました';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => '成功';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'スキップ済み';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      '正確な配信に必要な条件をすべて満たすまで予約しません';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => '失敗';
 
   @override
-  String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+  String get developerNotificationBackgroundLimits => 'メーカーによるバックグラウンド制限';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'メーカーのバックグラウンド制限が配信に影響する場合があります。';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => 'メーカー独自のバックグラウンド起動';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'メーカー：$vendor。メーカー設定へのリンクがあります。Android ではその許可状態を取得できません。';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'メーカー：$vendor。代わりにアプリの詳細画面を使用します。Android ではその許可状態を取得できません。';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'メーカー独自のバックグラウンド設定を開く方法がありません。';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return '最後に開いた画面：$target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor => 'メーカー設定';
 
   @override
-  String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+  String get developerNotificationAutostartTargetApplicationDetails => 'アプリの詳細';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'なし';
 
   @override
-  String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+  String get developerNotificationRebootBoundaryTitle => '再起動後の復旧の制約';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      '復旧は最初のロック解除後に始まります。強制停止されたアプリは自動起動できません。';
 
   @override
-  String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+  String get developerNotificationTestChecking => '通知の状態を確認中のため、テストは利用できません。';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'システムの通知がブロックされているため、テストは利用できません。';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      '選択した通知チャンネルがブロックされているため、テストは利用できません。';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Windows の通知設定で管理されます';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Windows では対象外です';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity => 'Windows パッケージ ID';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'MSIX パッケージ ID を確認済みです。表示中の通知を取り消せます';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      '表示中の通知を確実に取り消すには MSIX 版をインストールしてください';
 
   @override
   String get collapseWorkspaceNavigation => 'ワークスペースナビゲーションを折りたたむ';
@@ -2679,157 +2640,151 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'リマインダーと通知';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'リマインダーの予約状況';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      '終了日を指定していない繰り返し予定は、バックグラウンドで再予約して長期的な通知を維持します。';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android が直接予約できるリマインダーは最大 $capacity 件です。それ以降の通知は事前に再予約を試みます。';
   }
 
   @override
-  String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+  String get notificationSettingsEnabled => 'リマインダーと通知を有効にする';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'リマインダーを設定した項目のみ通知を予約します。既定値を使う授業については、以下で授業の既定のリマインダーを設定してください。';
 
   @override
   String get notificationPrecisionLimitations =>
       '通知はシステム権限とバックグラウンド実行に依存します。電源オフ、時刻の変更、システム制限により遅れる場合があります。';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => '有効';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => '無効';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => '既定のリマインダー';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder => '授業の既定のリマインダー';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder => '予定の既定のリマインダー';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => '通知しない';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes 分前';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => '通知の権限';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'システムで許可済み';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'システムでブロック済み';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => '権限を確認中…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => '権限をリクエスト';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings => 'システム設定を開く';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      '通知の権限を確認できませんでした。再試行してください。';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => '正確なアラームの権限';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'システムで許可済み';
 
   @override
-  String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+  String get notificationExactAlarmRequired => '正確な時刻に通知するために必要です';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => '正確なアラームを許可';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'バッテリーの最適化';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Android のバッテリー最適化の対象外に設定済み';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      '正確な通知には Android のバッテリー最適化の対象外に設定する必要があります';
 
   @override
-  String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+  String get notificationBatteryOptimizationRequest => 'バッテリー最適化の設定を開く';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'メーカー独自のバックグラウンド起動';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      '再起動後にリマインダーを復旧できるよう、自動起動またはバックグラウンド動作を許可してください。';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Sked のアプリ詳細画面でバックグラウンド動作を許可してください。このメーカー独自の設定は Android から確認できません。';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'メーカーの設定画面が見つかりません。Sked のアプリ詳細画面を手動で確認してください。';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest => 'メーカーのバックグラウンド設定を開く';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'メーカーのバックグラウンド設定を開けませんでした。Sked のアプリ詳細画面を手動で確認してください。';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles => 'ロック画面にタイトルを表示';
 
   @override
-  String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+  String get notificationLockScreenTitlesHint => 'オフにすると、ロック画面に通知の詳細を表示しません。';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'ホーム画面ウィジェット';
 
   @override
-  String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+  String get notificationWidgetsDesc => 'Sked ウィジェットを更新し、ホーム画面への追加方法を確認します。';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Sked ウィジェットを追加';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      '端末のホーム画面の空白部分を長押しし、「ウィジェット」から Sked ウィジェットを追加してください。今後の授業や予定を表示できます。';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'ウィジェットを更新';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'ウィジェットを更新しました';
 
   @override
-  String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+  String get notificationPlatformUnsupported => 'このプラットフォームはネイティブ通知を提供していません。';
 
   @override
   String get workspaceFeatures => '機能管理';
@@ -2894,67 +2849,65 @@ class AppLocalizationsJa extends AppLocalizations {
   String get backupWorkspaceSelection => '完全バックアップにはデータとワークスペースの有効状態が含まれます。';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · レイアウトのプレビュー';
 
   @override
-  String get assistantSelectionContext =>
-      'Uses the current selection as context';
+  String get assistantSelectionContext => '現在の選択内容をコンテキストとして使用します';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'メッセージの下書き';
 
   @override
-  String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+  String get assistantPreviewNoSend => 'レイアウトのプレビューのみです。送信や変更は行いません。';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'パネルのサイズを変更';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => '最小化';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => '最大化';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => '元のサイズに戻す';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'ウィンドウを閉じる';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'システムリマインダー';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return '既定値を使用（$reminder）';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      '通知設定でシステムリマインダーが無効になっています。この授業の設定は保存できます。';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      '授業の既定のリマインダーが未設定です。ここで個別に設定するか、通知設定で既定値を設定してください。';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'この設定は授業と一緒に保存されます。実際の配信は、システムの通知権限やバックグラウンド制限に左右されます。';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'システムの通知状態は未確認です。リマインダーを利用する前に通知設定を確認してください。';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => '授業開始の何分前に通知するか';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'エクスポート';
 
   @override
   String get datePickerSelectWeek => '週を選択';
@@ -2983,100 +2936,103 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String dateRangeCustomDays(int days) {
-    return 'カスタム · $days日';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days 日',
+      one: '1 日',
+    );
+    return 'カスタム · $_temp0';
   }
 
   @override
   String get timePickerWheelMode => 'ホイールで選択';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => '既定値を使用';
 
   @override
-  String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+  String get courseReminderInvalidMinutes => '0以上の整数で分数を入力してください。';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'カスタム表示の列幅';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => '自動';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => '最小幅';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => '1日あたりの最小幅';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'すべての日付で同じ最小幅を使用します。空き領域を均等に埋め、収まらない場合は横スクロールになります。カスタム表示にのみ適用されます。';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => '外観と言語';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => '色と輪郭';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'この日の予定はありません';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => '概要';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'テーマの適用先';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'カラーモード';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'リマインダー設定';
 
   @override
-  String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+  String get settingsNotificationPreferencesSummary => '既定の通知時刻、権限、配信の信頼性';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'ワークスペースとナビゲーション';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary => 'プライバシーポリシーとローカルデータの消去';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count 時限',
+      one: '1 時限',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => '時限';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => '長さ';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => '休憩';
 
   @override
   String periodTimesMinutesShort(int minutes) {
-    return '$minutes min';
+    return '$minutes 分';
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => '保存待ち…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => '未保存 · 保存に失敗しました';
 
   @override
-  String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+  String get periodTimesInvalidStatus => '未保存 · 強調表示された時刻を修正してください';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3111,80 +3067,77 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'ツールバーの「設定」または「ワークスペース」をオフにすると、削除せずに「その他」へ移動します。必須の操作が入っている間は「その他」を隠せません。ワークスペースの切り替えは、下部ナビゲーションが非表示で、複数のワークスペースが有効な場合にのみ表示されます。';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => '終了済み';
 
   @override
-  String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+  String get reminderAutoCloseHint => '10秒後に閉じます。操作すると開いたままになります。';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => '独立して開く';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'カテゴリを管理';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => '非表示';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'カレンダーに表示';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'カレンダーで非表示';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'カテゴリの色を変更';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'テーマの配色';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'カスタム';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => '6桁の16進数で色を入力してください。';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'テーマの色 $number';
   }
 
   @override
   String get microsoftStoreUpdateButton => 'Microsoft Store';
 
   @override
-  String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+  String get storeUpdateDelay => 'ストアへの更新の反映が遅れる場合があります。提供状況はストアのページで確認してください。';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'プレビュー版の更新通知を受け取っても、ストアのテストプログラムには登録されません。';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => '新しいバージョンがあります';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'このバージョンの更新内容は提供されていません。';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => '後で';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => '再試行';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'プレビュー版';
 
   @override
-  String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+  String get updateNetworkFailure => '更新を確認できませんでした。接続を確認して再試行してください。';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return '新しいバージョンは見つかりませんでした（現在：$version）';
   }
 
   @override

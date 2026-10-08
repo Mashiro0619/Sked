@@ -67,23 +67,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Свернуть исходный ответ';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Развернуть предупреждения импорта';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'Свернуть предупреждения импорта';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Некоторые предметы продолжаются до $week-й недели.';
   }
 
   @override
   String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+      'Заменить текущее расписание?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Импортированное расписание заменит текущее.';
 
   @override
   String get createTimetable => 'Новое расписание';
@@ -95,13 +95,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get timetable => 'Расписание';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Календарь';
 
   @override
   String get timetableName => 'Название расписания';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Укажите название расписания';
 
   @override
   String get totalWeeks => 'Всего недель';
@@ -236,28 +236,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTitle => 'Настройки';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Расписание';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Календарь';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Оформление';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Приложение';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Рабочая область';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Оформление и язык';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Данные и безопасность';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'О Sked';
 
   @override
   String get noTimetableSettings =>
@@ -323,28 +323,28 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+      'Горизонтальная компоновка и жесты';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Вместить выбор дня на экране';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'По возможности показывает все семь дней на экране. Отключите для фиксированной ширины и прокрутки.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Вместить столбцы недели на экране';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'По возможности показывает все семь столбцов расписания на экране. Отключите для фиксированной ширины и прокрутки.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Переключать недели смахиванием';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Смахните влево или вправо для перехода к другой неделе. При фиксированной ширине сначала протяните содержимое за край.';
 
   @override
   String get liveCourseOutlineColor => 'Цвет обводки занятия';
@@ -598,23 +598,23 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Не удалось получить последнюю версию с GitHub. Вы можете открыть GitHub Releases ниже.';
 
   @override
   String get githubRepository => 'Репозиторий GitHub';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Посмотреть Sked в Google Play';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Не удалось открыть Google Play';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Поставьте Sked звезду на GitHub!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Откройте репозиторий проекта и поставьте Sked звезду';
 
   @override
   String get openGithubFailed =>
@@ -787,18 +787,18 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось сохранить. Пожалуйста, попробуйте позже.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Изменения не сохранены';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Не удалось сохранить последние изменения времени занятий. Повторите попытку, продолжите редактирование или отмените изменения.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Некоторые интервалы занятий некорректны. Исправьте их перед сохранением или отмените изменения и выйдите.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Отменить изменения и выйти';
 
   @override
   String get appInstanceBlockedTitle => 'Sked уже открыт';
@@ -950,7 +950,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'На нативных платформах Sked хранит расписания занятий, календари, связанные настройки и редактируемую конфигурацию сайтов учебных заведений в системном каталоге данных приложения; браузерные версии используют хранилище браузера. Файлы, записанные предыдущими версиями в папку «Документы» пользователя, остаются на месте, но не читаются и не переносятся автоматически. Чтобы сохранить эти данные, перед обновлением экспортируйте полную резервную копию приложения из старой версии, а затем восстановите её. Настройки API ИИ хранятся локально; пользовательский API-ключ сохраняется в защищённом хранилище платформы, если оно доступно. Полные резервные копии приложения не содержат пользовательский API-ключ. Приложение не загружает эти локальные данные автоматически на сервер, управляемый разработчиком.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Импорт и экспорт';
@@ -1044,71 +1044,72 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolSitesImported => 'Школьные сайты импортированы';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Проверка импорта сайтов учебных заведений';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return 'Допустимых сайтов: $validCount, некорректных записей: $invalidCount.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Файл содержит пустой список сайтов учебных заведений.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Запись $position некорректна и будет пропущена.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Объединить';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Заменить';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Заменить текущие сайты учебных заведений?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'Будут удалены текущие сайты ($currentCount) и сохранены импортированные ($importedCount). Это действие нельзя отменить.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Данные сайтов учебных заведений требуют восстановления';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked не удалось прочитать файл сайтов учебных заведений или его резервную копию. Перед блокировкой записи были созданы защищённые копии.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Хранилище сайтов учебных заведений недоступно';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Сейчас Sked не может получить доступ к хранилищу сайтов учебных заведений. Проверьте доступ к хранилищу и доступность устройства, затем повторите попытку. Текущие данные сайтов не будут перезаписаны.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Ниже перечислены файлы восстановления или затронутые расположения хранилища. Не изменяйте файлы до восстановления списка сайтов.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Начать без сайтов учебных заведений';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Начать с пустого списка сайтов учебных заведений?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Защищённые копии сохранятся, но Sked создаст новый пустой файл сайтов учебных заведений. Продолжайте, только если не хотите сначала повторить восстановление.';
 
   @override
   String get schoolSitesEmpty =>
@@ -1238,7 +1239,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Настройка пользовательского парсера не завершена. Сначала укажите базовый URL, API-ключ и модель.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1328,14 +1329,14 @@ class AppLocalizationsRu extends AppLocalizations {
       'Сбросить подсказку по умолчанию';
 
   @override
-  String get schoolImportParserBaseUrl => 'Base URL';
+  String get schoolImportParserBaseUrl => 'Базовый URL';
 
   @override
   String get schoolImportParserBaseUrlInvalid =>
       'Base URL должен быть HTTP- или HTTPS-адресом с хостом.';
 
   @override
-  String get schoolImportParserApiKey => 'API key';
+  String get schoolImportParserApiKey => 'API-ключ';
 
   @override
   String get schoolImportParserModel => 'Модель';
@@ -1361,7 +1362,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Пользовательский API-ключ сохраняется в защищённом хранилище платформы, если оно доступно. Используйте учётные данные пользовательского парсера и HTTP-адреса только на доверенных устройствах, в доверенных браузерах и сетях.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1376,29 +1377,29 @@ class AppLocalizationsRu extends AppLocalizations {
       'Конфигурация пользовательского парсера неполная. Сначала заполните Base URL, API key и модель.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Очистить данные';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Удалить все локальные данные Sked без возможности восстановления и выйти из приложения';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Очистить все данные Sked?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'Будут безвозвратно удалены расписания, календари, настройки, сайты учебных заведений, локальные резервные копии, копии восстановления и API-ключ ИИ, после чего Sked закроется. Файлы, экспортированные в другие места, не будут удалены. Это действие нельзя отменить.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Очистить данные и выйти';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Не удалось очистить все локальные данные. Sked останется открытым, чтобы вы могли повторить попытку.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Локальные данные очищены, но Sked не удалось закрыть. Закройте приложение вручную перед дальнейшим использованием.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1567,10 +1568,10 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Календарь';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Учебное расписание';
 
   @override
   String get firstLaunchTitle => 'Выберите начальный режим';
@@ -1604,167 +1605,168 @@ class AppLocalizationsRu extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Переключить режим';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'Календарь скоро появится';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Перейти к учебному расписанию';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Мой календарь';
 
   @override
   String get today => 'Сегодня';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Добавить событие';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Редактировать событие';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Название';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Укажите название';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Время начала';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Время окончания';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Дата';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Время';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Заметки';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Цвет';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Повтор';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Не повторяется';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Еженедельно';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Дата окончания';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Без даты окончания';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Установить';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Изменить';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Повторяется еженедельно';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'До $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Перейти к календарю';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Общие настройки отображения';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Режимы просмотра, панель инструментов, формат даты и быстрое добавление';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap => 'Закрывать окно по нажатию снаружи';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Показывать линии сетки';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Импорт и экспорт категорий';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Импортировать или отправить категории календаря';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Импортировать категории';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'Загрузить категории из файла JSON';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Отправить категории';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc =>
+      'Отправить категории в виде файла JSON';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Сохранить категории';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Сохранить категории в файл JSON';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Выберите категории для экспорта';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Выберите категории для импорта';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Событий: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Импортировано категорий: $count';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Добавить импорт как новую категорию или заменить существующую?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Добавить как новую категорию';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+      'Выберите хотя бы одну категорию.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => 'Нет категорий для экспорта.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Файл импорта не содержит категорий.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Для замены выберите ровно одну импортированную категорию.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Выбранная для замены категория недоступна.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Категории';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Категория';
 
   @override
   String get viewWeek => 'Неделя';
@@ -1773,218 +1775,219 @@ class AppLocalizationsRu extends AppLocalizations {
   String get viewDay => 'День';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Список';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Месяц';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return 'Категорий: $count';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Нет видимых категорий';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Выберите категорию для замены';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Заменить категорию';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Удалить событие';
 
   @override
   String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+      'Это событие будет удалено без возможности восстановления.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Удалить повторяющееся событие';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Событие продублировано';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Поиск событий';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Очистить поиск';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Фильтр по цвету';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Все цвета';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Предстоящих: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Просроченных: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Весь день';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Свернуть события на весь день';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Развернуть события на весь день';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return 'Событий на весь день: $count';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return 'Ещё $count';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Нет подходящих событий';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Нет предстоящих событий';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Добавить категорию';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Новая категория';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Скрыть категорию';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Показать категорию';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Переименовать';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Переименовать категорию';
 
   @override
-  String get name => 'Name';
+  String get name => 'Название';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Удалить категорию';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Удалить «$name»?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Удалить только это событие';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Удалить это и последующие';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Удалить всю серию';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Дублировать';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Повторяется ежедневно';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Повторяется ежемесячно';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Интервал повтора: $interval $unit';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return 'Повторений: $count';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Ежедневно';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Ежемесячно';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Настроить';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Каждые';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Единица';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'дн.';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'нед.';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'мес.';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Количество повторений';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Без ограничений';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Введите положительное число';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Очистить дату окончания';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Выбрать дату';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Выбрать время';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Напоминание в приложении';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'В момент начала';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return 'За $minutes мин';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => 'За 1 час';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => 'За 1 день';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Отметить обработанным';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Восстановить напоминание в приложении';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Напоминание в приложении отмечено обработанным';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Напоминание в приложении восстановлено';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Предстоит';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Просрочено';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Вместить неделю на экране';
@@ -1994,23 +1997,23 @@ class AppLocalizationsRu extends AppLocalizations {
       'Показывать всю неделю в компактном режиме. Отключите для горизонтальной прокрутки. Произвольные диапазоны свыше 7 дней по-прежнему прокручиваются.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Показывать выходные';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Начальный час';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Конечный час';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Плотность сетки времени';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Высота строки часа';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Меняет вертикальный масштаб дневного и недельного видов, не изменяя шаг сетки в 15, 30 или 60 минут.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2018,318 +2021,327 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Импортировать файл JSON';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Вставить JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Импортировать категории из скопированного JSON';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Импортировать файл ICS';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => 'Загрузить события из файла календаря .ics';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Вставить ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc =>
+      'Импортировать события из скопированного текста календаря';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Копировать JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Копировать выбранные категории как текст JSON';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Отправить ICS';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Отправить выбранные календари в формате .ics';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Сохранить ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Сохранить выбранные календари в формате .ics';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Копировать ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Копировать выбранные календари как текст ICS';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Импортировать ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'Содержимое ICS';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'Вставьте сюда содержимое BEGIN:VCALENDAR';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Найдено событий: $count. Добавить их в новую категорию или заменить существующую?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Импортировано категорий: $count; предупреждений: $warningCount';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Пропущено событие без времени начала.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Пропущено событие с неподдерживаемым временем начала.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Исправлено время окончания события, которое не было позже времени начала.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Неподдерживаемые поля ICS добавлены в заметки: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Неподдерживаемая частота повторения проигнорирована: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'Выберите календари для копирования в ICS';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'Выберите календари для экспорта в ICS';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Экспортировать текст ICS';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Экспортировать текст JSON';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Данные приложения восстановлены из предыдущей резервной копии, поскольку основной файл не удалось загрузить.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Основной файл данных и его резервная копия повреждены. Приложение использует новое исходное состояние.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Ваши данные требуют восстановления';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked не удалось прочитать основной файл данных или его резервную копию. Перед блокировкой записи были созданы защищённые копии.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'Хранилище недоступно';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Сейчас Sked не может получить доступ к локальному хранилищу. Проверьте доступ к хранилищу и доступность устройства, затем повторите попытку. Существующие данные не будут перезаписаны.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Обновите Sked, чтобы открыть эти данные';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Эти данные созданы более новой версией Sked. Обновите приложение перед повторной попыткой. Начать заново нельзя, чтобы защитить данные.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Повторить';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Ниже перечислены файлы восстановления или затронутые расположения хранилища. Не изменяйте файлы до восстановления данных.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'Показать файлы и расположения восстановления';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Начать с новыми данными';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Начать с новыми данными?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Защищённые копии сохранятся, но Sked создаст новый локальный файл данных. Продолжайте, только если не хотите сначала повторить восстановление.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Предыдущий месяц';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Следующий месяц';
 
   @override
   String timeGridMinutes(int minutes) {
-    return '$minutes min';
+    return '$minutes мин';
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'Идёт сейчас';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Удалить предмет';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Удалить этот предмет?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Показывать лунный календарь';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, событий: $count';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Вид по умолчанию';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'При запуске';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Кнопка переключения вида';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Активная рабочая область';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'Скрыть навигацию рабочих областей';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Скрыть навигацию по рабочим пространствам. Переключаться можно через меню на главном экране.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Формат подписи даты';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Локальный (июл. 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Через косую черту (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Компоновка панели инструментов';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Навигация панели инструментов';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Скрытые элементы';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Скрыть полностью';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Переместить в «Ещё»';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'Изменить порядок элементов панели';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Показывать элемент панели';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Выбор расписания';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Выбор недели';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Переключение вида';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Выбор категории';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Выбор даты';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Распределение места на панели';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Автоматическое распределение';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Сбалансированное';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Приоритет категории';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Приоритет даты';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Переключать виды по кругу';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Открывать меню видов';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Переключить вид';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Выбрать вид';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint =>
+      'Удерживайте для перехода к сегодняшнему дню';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Отображение календаря';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Сетка времени';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Поведение всплывающего окна';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Быстрые действия';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab =>
+      'Показывать плавающую кнопку добавления предмета';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Показать или скрыть плавающую кнопку добавления предмета в правом нижнем углу расписания.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab =>
+      'Показывать плавающую кнопку добавления события';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Показать или скрыть плавающую кнопку добавления события в правом нижнем углу календаря.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'Добавлять предметы удержанием пустой ячейки';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Чтобы добавить предмет, нажмите и удерживайте пустую область сетки расписания.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Добавлять события удержанием пустой ячейки';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'В дневном или недельном виде нажмите и удерживайте пустую область сетки времени, чтобы добавить событие.';
 
   @override
   String get developerModeTitle => 'Режим разработчика';
@@ -2363,130 +2375,132 @@ class AppLocalizationsRu extends AppLocalizations {
       'Удерживайте 3 секунды, чтобы открыть режим разработчика';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Диагностика уведомлений';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Проверьте состояние доставки в Android, перестройте существующий план напоминаний и отправьте безопасные тестовые уведомления через обычную службу уведомлений Sked.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Диагностика уведомлений доступна только на Android.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Диагностика уведомлений станет доступна после запуска координатора календаря.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Обновить диагностику';
 
   @override
   String get developerNotificationSystemStatus =>
-      'System notification permission';
+      'Системное разрешение на уведомления';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Разрешено';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Заблокировано';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Точные сигналы';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Разрешены';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Не разрешены';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'План уведомлений календаря';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Охват';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Все известные напоминания с конечным числом повторов запланированы напрямую';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Повторяющиеся напоминания перепланируются по возможности для долгосрочного охвата';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Лимит прямого планирования сигналов достигнут; последующие напоминания перепланируются по возможности';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Условия точной доставки не выполнены';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Последняя синхронизация напоминаний завершилась ошибкой';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return 'Прямых сигналов: $scheduled / лимит: $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return 'Запланировано: $scheduled, в плане: $planned';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Последняя ошибка: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Перестроить план уведомлений';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'План уведомлений перестроен.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Тестовый канал';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Напоминания о занятиях';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Напоминания календаря';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'Отправить тест сейчас';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Запланировать фоновый тест через 30 секунд';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Мгновенное тестовое уведомление отправлено.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Фоновый тест запланирован через 30 секунд.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch =>
+      'Переключатель напоминаний в приложении';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Обычные напоминания включены';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Обычные напоминания отключены; тесты разработчика по-прежнему доступны';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Местный часовой пояс';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2495,22 +2509,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Ещё не создан. Он будет создан при тесте разработчика.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Включён';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Заблокирован';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Важность: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Важность недоступна';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2519,54 +2533,58 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return 'Ожидает: $pending / активно: $active';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Последний показ системой: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Пересчёты ещё не зарегистрированы.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder =>
+      'Следующее настоящее напоминание';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'В текущем плане нет будущих напоминаний';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Следующее обслуживание';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal =>
+      'Следующая попытка перепланирования';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Не запланировано';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Обрезка плана';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return 'Пропущено из-за лимита плана: $count';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => 'Последний пересчёт';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Последняя синхронизация напоминаний';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Восстановление запоздавших напоминаний';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return 'Восстановлено напоминаний после назначенного времени: $count';
   }
 
   @override
@@ -2580,118 +2598,121 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Передний план';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Фон';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Полный пересчёт';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Обслуживание';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Восстановление';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => 'Восстановить напоминания';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Восстановление напоминаний завершено';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Успешно';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Пропущено';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Заблокировано до выполнения всех условий точной доставки';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Ошибка';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Фоновые ограничения производителя';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Фоновые ограничения производителя могут влиять на доставку.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => 'Фоновый запуск производителя';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Производитель: $vendor; доступен переход к настройкам производителя. Android не предоставляет состояние этого разрешения.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Производитель: $vendor; вместо его настроек используются сведения о приложении. Android не предоставляет состояние этого разрешения.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Нет доступного перехода к фоновым настройкам производителя.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Последний открытый раздел: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'настройки производителя';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'сведения о приложении';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'нет';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Ограничения восстановления после перезагрузки';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Восстановление начинается после первой разблокировки; принудительно остановленное приложение не может запуститься самостоятельно.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Тесты недоступны во время проверки состояния уведомлений.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Тесты недоступны, поскольку системные уведомления заблокированы.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Тесты недоступны, поскольку выбранный канал уведомлений заблокирован.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Управляется настройками уведомлений Windows';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Не применяется в Windows';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity =>
+      'Идентификатор пакета Windows';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'Идентификатор MSIX доступен; показанные уведомления можно удалять';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Установите версию MSIX для надёжного удаления показанных уведомлений';
 
   @override
   String get collapseWorkspaceNavigation =>
@@ -2746,157 +2767,162 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Напоминания и уведомления';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Охват напоминаний';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Повторяющиеся события без даты окончания перепланируются в фоне для долгосрочного охвата.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android может напрямую запланировать до $capacity напоминаний; приложение пытается заранее перепланировать последующие.';
   }
 
   @override
   String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+      'Включить напоминания и уведомления';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Уведомления планируются только для элементов с напоминанием. Ниже задайте напоминание по умолчанию для предметов, которые его наследуют.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Напоминания зависят от разрешений системы и фоновой работы. Выключение, изменение времени и системные ограничения могут задержать доставку.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Включены';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Отключены';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Напоминания по умолчанию';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder =>
+      'Напоминание о занятиях по умолчанию';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'Напоминание календаря по умолчанию';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Без напоминания';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return 'За $minutes мин';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Разрешение на уведомления';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Разрешено системой';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Заблокировано системой';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Проверка разрешения…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Запросить разрешение';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings =>
+      'Открыть системные настройки';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Не удалось проверить разрешение на уведомления. Повторите попытку.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Разрешение на точные сигналы';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Разрешено системой';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'Требуется для точного времени напоминаний';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Разрешить точные сигналы';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Оптимизация батареи';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Добавлено в исключения оптимизации батареи Android';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Для точных напоминаний нужно исключение из оптимизации батареи Android';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Открыть настройки оптимизации батареи';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Фоновый запуск производителя';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Разрешите автозапуск или работу в фоне, чтобы напоминания могли восстановиться после перезагрузки.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Откройте сведения о приложении Sked и разрешите работу в фоне. Android не может проверить эту настройку производителя.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Страница настроек производителя не найдена. Проверьте сведения о приложении Sked вручную.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Открыть фоновые настройки производителя';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Не удалось открыть фоновые настройки производителя. Проверьте сведения о приложении Sked вручную.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles =>
+      'Показывать заголовки на экране блокировки';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Если отключено, подробности уведомлений скрыты на экране блокировки.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Виджеты главного экрана';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Обновите виджеты Sked и узнайте, как добавить их через главный экран.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Добавить виджет Sked';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'На главном экране устройства нажмите и удерживайте пустое место, выберите «Виджеты» и добавьте виджет Sked. Он покажет ближайшие занятия или события.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Обновить виджеты';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Виджеты обновлены';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Эта платформа не поддерживает нативные уведомления.';
 
   @override
   String get workspaceFeatures => 'Управление функциями';
@@ -2965,67 +2991,67 @@ class AppLocalizationsRu extends AppLocalizations {
       'Полная резервная копия включает данные и выбор включённых рабочих пространств.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'ИИ · Предпросмотр компоновки';
 
   @override
   String get assistantSelectionContext =>
-      'Uses the current selection as context';
+      'Использует текущее выделение как контекст';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Черновик сообщения';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Только предпросмотр компоновки. Ничего не будет отправлено или изменено.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Изменить размер панели';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Свернуть';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Развернуть';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Восстановить окно';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Закрыть окно';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Системное напоминание';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'По умолчанию ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Системные напоминания отключены в настройках уведомлений. Настройку этого предмета всё равно можно сохранить.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Напоминание о занятиях по умолчанию не задано. Выберите своё напоминание здесь или задайте значение по умолчанию в настройках уведомлений.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Эта настройка сохраняется вместе с предметом. Доставка зависит от системных разрешений на уведомления и фоновых ограничений.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Состояние системных уведомлений ещё не проверено. Проверьте настройки уведомлений, прежде чем полагаться на напоминания.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'За сколько минут до занятия';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Экспортировать';
 
   @override
   String get datePickerSelectWeek => 'Выберите неделю';
@@ -3069,93 +3095,94 @@ class AppLocalizationsRu extends AppLocalizations {
   String get timePickerWheelMode => 'Выбрать прокруткой';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Использовать по умолчанию';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Введите целое число минут, равное нулю или больше.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'Ширина столбцов настраиваемого вида';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Автоматическая';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Минимальная ширина';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'Минимальная ширина дня';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Для всех дат используется одинаковая минимальная ширина. Столбцы заполняют доступное место или прокручиваются по горизонтали. Действует только для настраиваемого вида.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Оформление и язык';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Цвета и контуры';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'В этот день нет событий';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Обзор';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Тема для';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Цветовой режим';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Настройки напоминаний';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Напоминания по умолчанию, разрешения и надёжность';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Рабочие области и навигация';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Политика конфиденциальности и очистка локальных данных';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: 'Занятий: $count',
+      one: 'Занятий: 1',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Занятие';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Длительность';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Перерыв';
 
   @override
   String periodTimesMinutesShort(int minutes) {
-    return '$minutes min';
+    return '$minutes мин';
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Ожидание сохранения…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Не сохранено · Ошибка сохранения';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Не сохранено · Исправьте выделенное время';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3191,45 +3218,46 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'При отключении пунктов «Настройки» или «Рабочая область» на панели они перемещаются в «Ещё». Меню «Ещё» нельзя скрыть, пока в нём есть необходимые действия. Переключение рабочих областей появляется, только когда нижняя навигация скрыта и включено несколько рабочих областей.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Завершено';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Закроется через 10 секунд. Используйте панель, чтобы оставить её открытой.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Открыть отдельно';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Управление категориями';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Скрыта';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Показать в календаре';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Скрыть в календаре';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Изменить цвет категории';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Палитра темы';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Свой цвет';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid =>
+      'Введите шестизначный шестнадцатеричный код цвета.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Цвет темы $number';
   }
 
   @override
@@ -3237,34 +3265,34 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Обновления в магазине могут появляться позже. Доступность определяется страницей магазина.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Получение уведомлений о предварительных версиях не подключает вас к тестовой программе магазина.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Доступна новая версия';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Примечания к выпуску не предоставлены.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Позже';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Повторить';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Предварительная версия';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Не удалось проверить обновления. Проверьте подключение и повторите попытку.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Более новая версия не найдена (текущая: $version)';
   }
 
   @override

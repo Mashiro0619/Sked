@@ -10,7 +10,7 @@ class AppLocalizationsEl extends AppLocalizations {
   AppLocalizationsEl([String locale = 'el']) : super(locale);
 
   @override
-  String get appTitle => 'Συντάκτης';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -40,7 +40,8 @@ class AppLocalizationsEl extends AppLocalizations {
   String get editTimetable => 'Επεξεργασία προγράμματος';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle =>
+      'Επεξεργασία αποτελέσματος ανάλυσης';
 
   @override
   String get schoolImportParsePageTitle => 'Ανάλυση προγράμματος';
@@ -69,23 +70,24 @@ class AppLocalizationsEl extends AppLocalizations {
       'Σύμπτυξη ακατέργαστης απόκρισης';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Ανάπτυξη προειδοποιήσεων εισαγωγής';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings =>
+      'Σύμπτυξη προειδοποιήσεων εισαγωγής';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Ορισμένα μαθήματα συνεχίζονται έως την εβδομάδα $week.';
   }
 
   @override
   String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+      'Αντικατάσταση τρέχοντος προγράμματος;';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Το εισαγόμενο πρόγραμμα θα αντικαταστήσει το τρέχον.';
 
   @override
   String get createTimetable => 'Νέο χρονοδιάγραμμα';
@@ -97,13 +99,13 @@ class AppLocalizationsEl extends AppLocalizations {
   String get timetable => 'Χρονολόγιο';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Πρόγραμμα';
 
   @override
   String get timetableName => 'Όνομα προγράμματος';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Εισαγάγετε όνομα προγράμματος';
 
   @override
   String get totalWeeks => 'Συνολικές εβδομάδες';
@@ -238,28 +240,28 @@ class AppLocalizationsEl extends AppLocalizations {
   String get settingsTitle => 'Ρυθμίσεις';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Πρόγραμμα μαθημάτων';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Γενικό πρόγραμμα';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Εμφάνιση';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Εφαρμογή';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Χώρος εργασίας';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Εμφάνιση και γλώσσα';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Δεδομένα και ασφάλεια';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Σχετικά με το Sked';
 
   @override
   String get noTimetableSettings =>
@@ -327,28 +329,28 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+      'Οριζόντια διάταξη και χειρονομίες';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Προσαρμογή επιλογής ημέρας στην οθόνη';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Εμφανίζει και τις επτά ημέρες στην οθόνη όταν είναι δυνατό. Απενεργοποιήστε το για σταθερό πλάτος και κύλιση.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Προσαρμογή στηλών εβδομάδας στην οθόνη';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Εμφανίζει και τις επτά στήλες του προγράμματος στην οθόνη όταν είναι δυνατό. Απενεργοποιήστε το για σταθερό πλάτος και κύλιση.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Αλλαγή εβδομάδας με σάρωση';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Σαρώστε αριστερά ή δεξιά για άλλη εβδομάδα. Με σταθερό πλάτος, κυλήστε πρώτα μέχρι την άκρη.';
 
   @override
   String get liveCourseOutlineColor => 'Χρώμα περιγράμματος μαθήματος';
@@ -391,7 +393,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get liveCourseOutlineWidth => 'Πλάτος περιγράμματος';
 
   @override
-  String get outlineWidthUnit => 'Πξ';
+  String get outlineWidthUnit => 'px';
 
   @override
   String get language => 'Γλώσσα';
@@ -587,7 +589,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get officialWebsite => 'Επίσημη ιστοσελίδα';
 
   @override
-  String get googlePlay => 'στο Google Play';
+  String get googlePlay => 'Google Play';
 
   @override
   String get cloudDrive => 'Δίκη Cloud';
@@ -604,23 +606,24 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Δεν ήταν δυνατή η λήψη της τελευταίας έκδοσης από το GitHub. Μπορείτε να ανοίξετε το GitHub Releases παρακάτω.';
 
   @override
   String get githubRepository => 'Αποθήκευση GitHub';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Προβολή του Sked στο Google Play';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed =>
+      'Δεν ήταν δυνατό το άνοιγμα του Google Play';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Δώστε ένα αστέρι στο Sked στο GitHub!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Ανοίξτε το αποθετήριο του έργου και δώστε ένα αστέρι στο Sked';
 
   @override
   String get openGithubFailed =>
@@ -797,18 +800,18 @@ class AppLocalizationsEl extends AppLocalizations {
       'Η αποθήκευση απέτυχε. Δοκιμάστε ξανά αργότερα.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Οι αλλαγές δεν αποθηκεύτηκαν';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Οι τελευταίες αλλαγές στις ώρες μαθημάτων δεν αποθηκεύτηκαν. Μπορείτε να προσπαθήσετε ξανά, να συνεχίσετε την επεξεργασία ή να τις απορρίψετε.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Ορισμένες ώρες μαθημάτων δεν είναι έγκυρες. Διορθώστε τις πριν από την αποθήκευση ή απορρίψτε τις αλλαγές και εξέλθετε.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Απόρριψη και έξοδος';
 
   @override
   String get appInstanceBlockedTitle => 'Το Sked είναι ήδη ανοιχτό';
@@ -961,7 +964,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'Στις εγγενείς εκδόσεις, το Sked αποθηκεύει τα προγράμματα μαθημάτων, τα γενικά προγράμματα, τις σχετικές ρυθμίσεις και την επεξεργάσιμη διαμόρφωση σχολικών ιστοτόπων στον κατάλογο υποστήριξης εφαρμογών του λειτουργικού συστήματος. Η έκδοση ιστού χρησιμοποιεί τον χώρο αποθήκευσης του προγράμματος περιήγησης. Αρχεία που παλαιότερες εκδόσεις αποθήκευσαν στον φάκελο Έγγραφα παραμένουν εκεί, αλλά δεν διαβάζονται ούτε μεταφέρονται αυτόματα. Για να διατηρήσετε αυτά τα δεδομένα, εξαγάγετε πλήρες αντίγραφο ασφαλείας από την παλιά έκδοση πριν από την αναβάθμιση και επαναφέρετέ το μετά. Οι ρυθμίσεις AI API αποθηκεύονται τοπικά. Το προσαρμοσμένο κλειδί API αποθηκεύεται μέσω του ασφαλούς χώρου αποθήκευσης της πλατφόρμας, όταν είναι διαθέσιμος. Τα πλήρη αντίγραφα ασφαλείας δεν περιλαμβάνουν αυτό το κλειδί. Η εφαρμογή δεν μεταφορτώνει αυτόματα τα τοπικά δεδομένα σε διακομιστή που ελέγχεται από τον προγραμματιστή.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Εισαγωγή και εξαγωγή';
@@ -1055,71 +1058,72 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolSitesImported => 'Σχολικές τοποθεσίες που εισάγονται';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Έλεγχος εισαγωγής σχολικών ιστοτόπων';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return 'Έγκυροι ιστότοποι: $validCount, μη έγκυρες εγγραφές: $invalidCount.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Το αρχείο περιέχει κενή λίστα σχολικών ιστοτόπων.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Η εγγραφή $position δεν είναι έγκυρη και θα παραλειφθεί.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Συγχώνευση';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Αντικατάσταση';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Αντικατάσταση τρεχόντων σχολικών ιστοτόπων;';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'Θα αφαιρεθούν οι $currentCount τρέχοντες ιστότοποι και θα αποθηκευτούν $importedCount εισαγόμενοι ιστότοποι. Η ενέργεια δεν αναιρείται.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Τα δεδομένα σχολικών ιστοτόπων χρειάζονται ανάκτηση';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Το Sked δεν μπόρεσε να διαβάσει το αρχείο σχολικών ιστοτόπων ή το αντίγραφο ασφαλείας του. Δημιουργήθηκαν προστατευμένα αντίγραφα πριν αποκλειστεί η εγγραφή.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Ο χώρος αποθήκευσης σχολικών ιστοτόπων δεν είναι διαθέσιμος';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Το Sked δεν έχει τώρα πρόσβαση στον χώρο αποθήκευσης σχολικών ιστοτόπων. Ελέγξτε την πρόσβαση ή τη διαθεσιμότητα της συσκευής και δοκιμάστε ξανά. Τα τρέχοντα δεδομένα δεν θα αντικατασταθούν.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Παρακάτω εμφανίζονται τα αρχεία ανάκτησης ή οι επηρεαζόμενες θέσεις αποθήκευσης. Μην αλλάξετε τα αρχεία μέχρι να ανακτηθεί η λίστα ιστοτόπων.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Έναρξη χωρίς σχολικούς ιστοτόπους';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Έναρξη με κενή λίστα σχολικών ιστοτόπων;';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Τα προστατευμένα αντίγραφα θα διατηρηθούν, αλλά το Sked θα δημιουργήσει νέο κενό αρχείο σχολικών ιστοτόπων. Συνεχίστε μόνο αν δεν θέλετε να δοκιμάσετε πρώτα ξανά την ανάκτηση.';
 
   @override
   String get schoolSitesEmpty => 'Δεν υπάρχει σχολική τοποθεσία ακόμα.';
@@ -1249,7 +1253,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Η διαμόρφωση του προσαρμοσμένου αναλυτή είναι ελλιπής. Συμπληρώστε πρώτα τη βασική διεύθυνση URL, το κλειδί API και το μοντέλο.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1371,7 +1375,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Το προσαρμοσμένο κλειδί API αποθηκεύεται μέσω του ασφαλούς χώρου αποθήκευσης της πλατφόρμας, όταν είναι διαθέσιμος. Χρησιμοποιείτε διαπιστευτήρια αναλυτή και διευθύνσεις HTTP μόνο σε συσκευές, προγράμματα περιήγησης και δίκτυα που εμπιστεύεστε.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1386,29 +1390,30 @@ class AppLocalizationsEl extends AppLocalizations {
       'Η προσαρμοσμένη διαμόρφωση του αναλυτή είναι ελλιπής. Συμπληρώστε πρώτα την URL βάσης, το κλειδί API και το μοντέλο.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Εκκαθάριση δεδομένων';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Οριστική διαγραφή όλων των τοπικών δεδομένων του Sked και έξοδος';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle =>
+      'Εκκαθάριση όλων των δεδομένων του Sked;';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'Διαγράφει οριστικά προγράμματα μαθημάτων, γενικά προγράμματα, ρυθμίσεις, σχολικούς ιστοτόπους, τοπικά αντίγραφα ασφαλείας, αντίγραφα ανάκτησης και το κλειδί AI API και έπειτα κλείνει το Sked. Αρχεία που εξαγάγατε αλλού δεν διαγράφονται. Η ενέργεια δεν αναιρείται.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Εκκαθάριση δεδομένων και έξοδος';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Δεν ήταν δυνατή η εκκαθάριση όλων των τοπικών δεδομένων. Το Sked θα μείνει ανοιχτό για να δοκιμάσετε ξανά.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Τα τοπικά δεδομένα διαγράφηκαν, αλλά το Sked δεν μπόρεσε να κλείσει. Κλείστε το χειροκίνητα πριν το χρησιμοποιήσετε ξανά.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1576,10 +1581,10 @@ class AppLocalizationsEl extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Γενικό πρόγραμμα';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Πρόγραμμα μαθημάτων';
 
   @override
   String get firstLaunchTitle => 'Επιλέξτε λειτουργία εκκίνησης';
@@ -1613,167 +1618,170 @@ class AppLocalizationsEl extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Αλλαγή λειτουργίας';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'Το γενικό πρόγραμμα έρχεται σύντομα';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Μετάβαση στο πρόγραμμα μαθημάτων';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Το πρόγραμμά μου';
 
   @override
   String get today => 'Σήμερα';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Προσθήκη συμβάντος';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Επεξεργασία συμβάντος';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Τίτλος';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Απαιτείται τίτλος';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Ώρα έναρξης';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Ώρα λήξης';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Ημερομηνία';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Ώρα';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Σημειώσεις';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Χρώμα';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Επανάληψη';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Χωρίς επανάληψη';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Κάθε εβδομάδα';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Ημερομηνία λήξης';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Χωρίς ημερομηνία λήξης';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Ορισμός';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Αλλαγή';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Επαναλαμβάνεται κάθε εβδομάδα';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'Έως $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Μετάβαση στο γενικό πρόγραμμα';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Ρυθμίσεις εμφάνισης προγράμματος';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Προβολές, γραμμή εργαλείων, μορφή ημερομηνίας και γρήγορη προσθήκη';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap => 'Κλείσιμο αναδυόμενου με πάτημα εκτός';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Εμφάνιση γραμμών πλέγματος';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Εισαγωγή και εξαγωγή κατηγοριών';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Εισαγωγή ή κοινοποίηση κατηγοριών προγράμματος';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Εισαγωγή κατηγοριών';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc =>
+      'Ανάγνωση κατηγοριών από αρχείο JSON';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Κοινοποίηση κατηγοριών';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc =>
+      'Κοινοποίηση κατηγοριών ως αρχείο JSON';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Αποθήκευση κατηγοριών';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Αποθήκευση κατηγοριών ως αρχείο JSON';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Επιλογή κατηγοριών για εξαγωγή';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Επιλογή κατηγοριών για εισαγωγή';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Συμβάντα: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Εισαγόμενες κατηγορίες: $count';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Προσθήκη ως νέα κατηγορία ή αντικατάσταση υπάρχουσας;';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Προσθήκη ως νέα κατηγορία';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+      'Επιλέξτε τουλάχιστον μία κατηγορία.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage =>
+      'Δεν υπάρχει διαθέσιμη κατηγορία για εξαγωγή.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Το αρχείο εισαγωγής δεν περιέχει κατηγορίες.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Επιλέξτε ακριβώς μία εισαγόμενη κατηγορία για αντικατάσταση.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Η επιλεγμένη κατηγορία προς αντικατάσταση δεν είναι διαθέσιμη.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Κατηγορίες';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Κατηγορία';
 
   @override
   String get viewWeek => 'Εβδομάδα';
@@ -1782,218 +1790,219 @@ class AppLocalizationsEl extends AppLocalizations {
   String get viewDay => 'Ημέρα';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Λίστα';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Μήνας';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return 'Κατηγορίες: $count';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Δεν υπάρχουν ορατές κατηγορίες';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Επιλογή κατηγορίας προς αντικατάσταση';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Αντικατάσταση κατηγορίας';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Διαγραφή συμβάντος';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'Αυτό το συμβάν θα διαγραφεί οριστικά.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle =>
+      'Διαγραφή επαναλαμβανόμενου συμβάντος';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Το συμβάν αντιγράφηκε';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Αναζήτηση συμβάντων';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Εκκαθάριση αναζήτησης';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Φιλτράρισμα ανά χρώμα';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Όλα τα χρώματα';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Επερχόμενα: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Με περασμένη ώρα λήξης: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Ολοήμερο';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Σύμπτυξη ολοήμερων συμβάντων';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Ανάπτυξη ολοήμερων συμβάντων';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return 'Ολοήμερα συμβάντα: $count';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count ακόμη';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Δεν υπάρχουν αντίστοιχα συμβάντα';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Δεν υπάρχουν επερχόμενα συμβάντα';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Προσθήκη κατηγορίας';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Νέα κατηγορία';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Απόκρυψη κατηγορίας';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Εμφάνιση κατηγορίας';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Μετονομασία';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Μετονομασία κατηγορίας';
 
   @override
-  String get name => 'Name';
+  String get name => 'Όνομα';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Διαγραφή κατηγορίας';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Διαγραφή του «$name»;';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Διαγραφή μόνο αυτής της εμφάνισης';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Διαγραφή αυτής και των επόμενων';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Διαγραφή ολόκληρης της σειράς';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Δημιουργία αντιγράφου';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Επαναλαμβάνεται κάθε ημέρα';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Επαναλαμβάνεται κάθε μήνα';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Διάστημα επανάληψης: $interval $unit';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count φορές';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Καθημερινά';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Κάθε μήνα';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Προσαρμοσμένο';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Κάθε';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Μονάδα';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'ημέρες';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'εβδομάδες';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'μήνες';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Αριθμός επαναλήψεων';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Χωρίς όριο';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Εισαγάγετε θετικό αριθμό';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Εκκαθάριση ημερομηνίας λήξης';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Επιλογή ημερομηνίας';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Επιλογή ώρας';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Υπενθύμιση στην εφαρμογή';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'Στην έναρξη';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes λεπτά πριν';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1 ώρα πριν';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1 ημέρα πριν';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Σήμανση ως διεκπεραιωμένη';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Επαναφορά υπενθύμισης στην εφαρμογή';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Η υπενθύμιση στην εφαρμογή επισημάνθηκε ως διεκπεραιωμένη';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Η υπενθύμιση στην εφαρμογή επαναφέρθηκε';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Επερχόμενη';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Πέρασε η ώρα λήξης';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Προσαρμογή εβδομάδας στην οθόνη';
@@ -2003,23 +2012,23 @@ class AppLocalizationsEl extends AppLocalizations {
       'Εμφάνιση ολόκληρης της εβδομάδας σε συμπαγείς διατάξεις. Απενεργοποιήστε για οριζόντια κύλιση. Τα προσαρμοσμένα εύρη άνω των 7 ημερών εξακολουθούν να κυλίονται.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Εμφάνιση Σαββατοκύριακου';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Ώρα έναρξης προβολής';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Ώρα λήξης προβολής';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Διάστημα πλέγματος ώρας';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Ύψος γραμμής ανά ώρα';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Προσαρμόζει την κατακόρυφη κλίμακα της ημερήσιας και εβδομαδιαίας προβολής χωρίς να αλλάζει το διάστημα πλέγματος 15, 30 ή 60 λεπτών.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2027,318 +2036,332 @@ class AppLocalizationsEl extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Εισαγωγή αρχείου JSON';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Επικόλληση JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Εισαγωγή κατηγοριών από αντιγραμμένο JSON';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Εισαγωγή αρχείου ICS';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc =>
+      'Ανάγνωση συμβάντων από αρχείο ημερολογίου .ics';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Επικόλληση ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc =>
+      'Εισαγωγή συμβάντων από αντιγραμμένο κείμενο ημερολογίου';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Αντιγραφή JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Αντιγραφή επιλεγμένων κατηγοριών ως κείμενο JSON';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Κοινοποίηση ICS';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Κοινοποίηση επιλεγμένων ημερολογίων ως .ics';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Αποθήκευση ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Αποθήκευση επιλεγμένων ημερολογίων ως .ics';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Αντιγραφή ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Αντιγραφή επιλεγμένων ημερολογίων ως κείμενο ICS';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Εισαγωγή ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'Περιεχόμενο ICS';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint =>
+      'Επικολλήστε εδώ περιεχόμενο που αρχίζει με BEGIN:VCALENDAR';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Βρέθηκαν $count συμβάντα. Προσθήκη σε νέα κατηγορία ή αντικατάσταση υπάρχουσας;';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Εισήχθησαν $count κατηγορίες με $warningCount προειδοποιήσεις';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Παραλείφθηκε συμβάν χωρίς ώρα έναρξης.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Παραλείφθηκε συμβάν με μη υποστηριζόμενη ώρα έναρξης.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Προσαρμόστηκε ώρα λήξης που δεν ήταν μετά την έναρξη.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Μη υποστηριζόμενα πεδία ICS προστέθηκαν στις σημειώσεις: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Αγνοήθηκε μη υποστηριζόμενη συχνότητα επανάληψης: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'Επιλογή ημερολογίων για αντιγραφή ως ICS';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'Επιλογή ημερολογίων για εξαγωγή ως ICS';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Εξαγωγή κειμένου ICS';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Εξαγωγή κειμένου JSON';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Τα δεδομένα της εφαρμογής επαναφέρθηκαν από το προηγούμενο αντίγραφο ασφαλείας, επειδή δεν ήταν δυνατή η φόρτωση του κύριου αρχείου.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Το κύριο αρχείο δεδομένων και το αντίγραφο ασφαλείας του έχουν καταστραφεί. Η εφαρμογή χρησιμοποιεί πλέον νέα δεδομένα.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Τα δεδομένα σας χρειάζονται ανάκτηση';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Το Sked δεν μπόρεσε να διαβάσει το κύριο αρχείο δεδομένων ή το αντίγραφο ασφαλείας του. Δημιουργήθηκαν προστατευμένα αντίγραφα πριν απενεργοποιηθεί η εγγραφή.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle =>
+      'Ο αποθηκευτικός χώρος δεν είναι διαθέσιμος';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Το Sked δεν έχει πρόσβαση στον τοπικό αποθηκευτικό χώρο αυτή τη στιγμή. Ελέγξτε την πρόσβαση ή τη διαθεσιμότητα της συσκευής και δοκιμάστε ξανά. Τα υπάρχοντα δεδομένα δεν θα αντικατασταθούν.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Ενημερώστε το Sked για να ανοίξετε αυτά τα δεδομένα';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Αυτά τα δεδομένα δημιουργήθηκαν από νεότερη έκδοση του Sked. Ενημερώστε την εφαρμογή πριν δοκιμάσετε ξανά. Η έναρξη με νέα δεδομένα έχει απενεργοποιηθεί για την προστασία τους.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Δοκιμή ξανά';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Τα αρχεία ανάκτησης ή οι επηρεαζόμενες θέσεις αποθήκευσης αναφέρονται παρακάτω. Μην αλλάξετε κανένα αρχείο μέχρι να ανακτηθούν τα δεδομένα σας.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'Εμφάνιση αρχείων και θέσεων ανάκτησης';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Έναρξη με νέα δεδομένα';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Έναρξη με νέα δεδομένα;';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Τα προστατευμένα αντίγραφα θα διατηρηθούν, αλλά το Sked θα δημιουργήσει ένα νέο τοπικό αρχείο δεδομένων. Συνεχίστε μόνο αν δεν θέλετε να δοκιμάσετε πρώτα ξανά την ανάκτηση.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Προηγούμενος μήνας';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Επόμενος μήνας';
 
   @override
   String timeGridMinutes(int minutes) {
-    return '$minutes min';
+    return '$minutes λεπτά';
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'Σε εξέλιξη';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Διαγραφή μαθήματος';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Να διαγραφεί αυτό το μάθημα;';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Εμφάνιση σεληνιακού ημερολογίου';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, $count συμβάντα';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Προεπιλεγμένη προβολή';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'Κατά την εκκίνηση';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Κουμπί αλλαγής προβολής';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Ενεργός χώρος εργασίας';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'Απόκρυψη πλοήγησης χώρων εργασίας';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Απόκρυψη πλοήγησης χώρων εργασίας. Η εναλλαγή παραμένει διαθέσιμη από το μενού της κύριας οθόνης.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Μορφή ετικέτας ημερομηνίας';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Τοπική μορφή (Ιούλ 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Με κάθετο (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Διάταξη γραμμής εργαλείων';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Πλοήγηση γραμμής εργαλείων';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Κρυφά στοιχεία';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Πλήρης απόκρυψη';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Μεταφορά στα Περισσότερα';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder =>
+      'Αναδιάταξη στοιχείων γραμμής εργαλείων';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility =>
+      'Εμφάνιση στοιχείου γραμμής εργαλείων';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Επιλογή προγράμματος μαθημάτων';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Επιλογή εβδομάδας';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Αλλαγή προβολής';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Επιλογή κατηγορίας';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Επιλογή ημερομηνίας';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Κατανομή χώρου γραμμής εργαλείων';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Αυτόματη κατανομή';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Ισομερής';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Προτεραιότητα κατηγορίας';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Προτεραιότητα ημερομηνίας';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Κυκλική εναλλαγή προβολών';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Άνοιγμα μενού προβολών';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Αλλαγή προβολής';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Επιλογή προβολής';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint =>
+      'Πατήστε παρατεταμένα για μετάβαση στο σήμερα';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Εμφάνιση προγράμματος';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Πλέγμα ώρας';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Συμπεριφορά αναδυόμενων παραθύρων';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Γρήγορες ενέργειες';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab =>
+      'Εμφάνιση αιωρούμενου κουμπιού προσθήκης μαθήματος';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Εμφάνιση ή απόκρυψη του αιωρούμενου κουμπιού προσθήκης μαθήματος στην κάτω δεξιά γωνία του προγράμματος μαθημάτων.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab =>
+      'Εμφάνιση αιωρούμενου κουμπιού προσθήκης συμβάντος';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Εμφάνιση ή απόκρυψη του αιωρούμενου κουμπιού προσθήκης συμβάντος στην κάτω δεξιά γωνία του προγράμματος.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'Παρατεταμένο πάτημα σε κενό κελί για προσθήκη μαθήματος';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Πατήστε παρατεταμένα σε μια κενή περιοχή του πλέγματος του προγράμματος μαθημάτων για να προσθέσετε μάθημα.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Παρατεταμένο πάτημα σε κενό κελί για προσθήκη συμβάντος';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'Στην ημερήσια ή εβδομαδιαία προβολή, πατήστε παρατεταμένα σε μια κενή περιοχή του πλέγματος ώρας για να προσθέσετε συμβάν.';
 
   @override
   String get developerModeTitle => 'Λειτουργία προγραμματιστή';
@@ -2372,130 +2395,133 @@ class AppLocalizationsEl extends AppLocalizations {
       'Πατήστε παρατεταμένα για 3 δευτερόλεπτα για να ανοίξετε τη λειτουργία προγραμματιστή';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Διαγνωστικά ειδοποιήσεων';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Ελέγξτε την κατάσταση παράδοσης στο Android, αναδημιουργήστε το υπάρχον πλάνο υπενθυμίσεων και στείλτε ασφαλείς δοκιμαστικές ειδοποιήσεις μέσω της κανονικής υπηρεσίας ειδοποιήσεων του Sked.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Τα διαγνωστικά ειδοποιήσεων είναι διαθέσιμα μόνο στο Android.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Τα διαγνωστικά ειδοποιήσεων θα είναι διαθέσιμα όταν ξεκινήσει ο συντονιστής προγράμματος.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Ανανέωση διαγνωστικών';
 
   @override
   String get developerNotificationSystemStatus =>
-      'System notification permission';
+      'Άδεια ειδοποιήσεων συστήματος';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Επιτρέπεται';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Αποκλεισμένη';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Ακριβή ξυπνητήρια';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Επιτρέπονται';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Δεν επιτρέπονται';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Πλάνο ειδοποιήσεων προγράμματος';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Κάλυψη υπενθυμίσεων';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Όλες οι γνωστές υπενθυμίσεις με πεπερασμένο αριθμό επαναλήψεων έχουν προγραμματιστεί απευθείας';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Γίνεται προσπάθεια συνεχούς ανανέωσης των επαναλαμβανόμενων υπενθυμίσεων για μακροχρόνια κάλυψη';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Το όριο άμεσου προγραμματισμού έχει καλυφθεί. Θα επιχειρηθεί ανανέωση των επόμενων υπενθυμίσεων';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Δεν πληρούνται οι προϋποθέσεις ακριβούς παράδοσης';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Ο τελευταίος συγχρονισμός υπενθυμίσεων απέτυχε';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '$scheduled απευθείας προγραμματισμένες / όριο $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '$scheduled προγραμματισμένες, $planned στο πλάνο';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Τελευταίο σφάλμα: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Αναδημιουργία πλάνου ειδοποιήσεων';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Το πλάνο ειδοποιήσεων αναδημιουργήθηκε.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Κανάλι δοκιμής';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Υπενθυμίσεις μαθημάτων';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Υπενθυμίσεις συμβάντων';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest =>
+      'Αποστολή άμεσης δοκιμαστικής ειδοποίησης';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Προγραμματισμός δοκιμής στο παρασκήνιο σε 30 δευτερόλεπτα';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Στάλθηκε άμεση δοκιμαστική ειδοποίηση.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Προγραμματίστηκε δοκιμή στο παρασκήνιο σε 30 δευτερόλεπτα.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch =>
+      'Διακόπτης υπενθυμίσεων εφαρμογής';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Οι κανονικές υπενθυμίσεις είναι ενεργοποιημένες';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Οι κανονικές υπενθυμίσεις είναι απενεργοποιημένες. Οι δοκιμές προγραμματιστή μπορούν να εκτελεστούν';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Τοπική ζώνη ώρας';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2504,22 +2530,22 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Δεν έχει δημιουργηθεί ακόμα. Θα δημιουργηθεί με μια δοκιμή προγραμματιστή.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Ενεργοποιημένο';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Αποκλεισμένο';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Σημαντικότητα: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Η σημαντικότητα δεν είναι διαθέσιμη';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2528,54 +2554,57 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '$pending σε αναμονή / $active ενεργές';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Τελευταία εμφάνιση από το σύστημα: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Δεν έχει καταγραφεί ακόμα επανυπολογισμός.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => 'Επόμενη κανονική υπενθύμιση';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'Δεν υπάρχει μελλοντική υπενθύμιση στο τρέχον πλάνο';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Επόμενη συντήρηση';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal => 'Επόμενη προσπάθεια ανανέωσης';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Δεν έχει προγραμματιστεί';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Περικοπή πλάνου';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return 'Παραλείφθηκαν $count λόγω του ορίου του πλάνου';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation =>
+      'Τελευταίος επανυπολογισμός';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Τελευταίος συγχρονισμός υπενθυμίσεων';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Ανάκτηση καθυστερημένων υπενθυμίσεων';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return 'Ανακτήθηκαν και παραδόθηκαν $count υπενθυμίσεις μετά την αρχικά προγραμματισμένη ώρα τους';
   }
 
   @override
@@ -2589,118 +2618,123 @@ class AppLocalizationsEl extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Προσκήνιο';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Παρασκήνιο';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Πλήρης επανυπολογισμός';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Συντήρηση';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Ανάκτηση';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery =>
+      'Εκτέλεση ανάκτησης υπενθυμίσεων';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Η ανάκτηση υπενθυμίσεων ολοκληρώθηκε';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Επιτυχία';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Παραλείφθηκε';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Ο προγραμματισμός αναστέλλεται μέχρι να πληρούνται όλες οι προϋποθέσεις ακριβούς παράδοσης';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Αποτυχία';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Περιορισμοί παρασκηνίου του κατασκευαστή';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Οι περιορισμοί παρασκηνίου του κατασκευαστή ενδέχεται να επηρεάζουν την παράδοση.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart =>
+      'Εκκίνηση στο παρασκήνιο από τον κατασκευαστή';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Κατασκευαστής: $vendor. Υπάρχει πρόσβαση στις ρυθμίσεις του κατασκευαστή. Το Android δεν μπορεί να αναφέρει την κατάσταση αυτής της άδειας.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Κατασκευαστής: $vendor. Χρησιμοποιείται η σελίδα πληροφοριών εφαρμογής. Το Android δεν μπορεί να αναφέρει την κατάσταση αυτής της άδειας.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Δεν υπάρχει διαθέσιμη πρόσβαση στις ρυθμίσεις παρασκηνίου του κατασκευαστή.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Τελευταία σελίδα που ανοίχτηκε: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'ρυθμίσεις κατασκευαστή';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'πληροφορίες εφαρμογής';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'καμία';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Περιορισμοί ανάκτησης μετά από επανεκκίνηση';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Η ανάκτηση ξεκινά μετά το πρώτο ξεκλείδωμα. Μια εφαρμογή που έχει διακοπεί αναγκαστικά δεν μπορεί να ξεκινήσει αυτόματα.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Οι δοκιμές δεν είναι διαθέσιμες όσο ελέγχεται η κατάσταση των ειδοποιήσεων.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Οι δοκιμές δεν είναι διαθέσιμες επειδή οι ειδοποιήσεις συστήματος είναι αποκλεισμένες.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Οι δοκιμές δεν είναι διαθέσιμες επειδή το επιλεγμένο κανάλι ειδοποιήσεων είναι αποκλεισμένο.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Διαχείριση από τις ρυθμίσεις ειδοποιήσεων των Windows';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Δεν ισχύει στα Windows';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity =>
+      'Ταυτότητα πακέτου Windows';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'Υπάρχει ταυτότητα MSIX. Οι εμφανιζόμενες ειδοποιήσεις μπορούν να αποσυρθούν';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Εγκαταστήστε την έκδοση MSIX για αξιόπιστη απόσυρση εμφανιζόμενων ειδοποιήσεων';
 
   @override
   String get collapseWorkspaceNavigation => 'Σύμπτυξη πλοήγησης χώρου εργασίας';
@@ -2754,157 +2788,165 @@ class AppLocalizationsEl extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Υπενθυμίσεις και ειδοποιήσεις';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Κάλυψη υπενθυμίσεων';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Τα επαναλαμβανόμενα συμβάντα χωρίς ημερομηνία λήξης χρησιμοποιούν ανανέωση στο παρασκήνιο για μακροχρόνια κάλυψη.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Το Android μπορεί να προγραμματίσει απευθείας έως $capacity υπενθυμίσεις. Για τις επόμενες γίνεται προσπάθεια ανανέωσης εκ των προτέρων.';
   }
 
   @override
   String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+      'Ενεργοποίηση υπενθυμίσεων και ειδοποιήσεων';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Προγραμματίζονται ειδοποιήσεις μόνο για στοιχεία με υπενθύμιση. Ορίστε παρακάτω μια προεπιλεγμένη υπενθύμιση για τα μαθήματα που τη χρησιμοποιούν.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Οι υπενθυμίσεις εξαρτώνται από τα δικαιώματα και την εκτέλεση στο παρασκήνιο. Τερματισμός, αλλαγές ώρας ή περιορισμοί συστήματος μπορεί να τις καθυστερήσουν.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Ενεργοποιημένες';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Απενεργοποιημένες';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Προεπιλεγμένες υπενθυμίσεις';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder =>
+      'Προεπιλεγμένη υπενθύμιση μαθημάτων';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'Προεπιλεγμένη υπενθύμιση συμβάντων';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Χωρίς υπενθύμιση';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes λεπτά πριν';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Άδεια ειδοποιήσεων';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Επιτρέπεται από το σύστημα';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Αποκλεισμένη από το σύστημα';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Έλεγχος άδειας…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Αίτημα άδειας';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings =>
+      'Άνοιγμα ρυθμίσεων συστήματος';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Δεν ήταν δυνατή η ανάγνωση της άδειας ειδοποιήσεων. Δοκιμάστε ξανά.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Άδεια ακριβών ξυπνητηριών';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Επιτρέπεται από το σύστημα';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'Απαιτείται για υπενθυμίσεις σε ακριβή ώρα';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest =>
+      'Να επιτρέπονται ακριβή ξυπνητήρια';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Βελτιστοποίηση μπαταρίας';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Έχει οριστεί εξαίρεση από τη βελτιστοποίηση μπαταρίας του Android';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Οι ακριβείς υπενθυμίσεις απαιτούν εξαίρεση από τη βελτιστοποίηση μπαταρίας του Android';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Άνοιγμα ρυθμίσεων βελτιστοποίησης μπαταρίας';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart =>
+      'Εκκίνηση στο παρασκήνιο από τον κατασκευαστή';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Επιτρέψτε την αυτόματη εκκίνηση ή τη λειτουργία στο παρασκήνιο, ώστε οι υπενθυμίσεις να επαναφέρονται μετά από επανεκκίνηση.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Ανοίξτε τις πληροφορίες εφαρμογής του Sked και επιτρέψτε τη λειτουργία στο παρασκήνιο. Το Android δεν μπορεί να ελέγξει αυτή τη ρύθμιση του κατασκευαστή.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Δεν βρέθηκε σελίδα ρυθμίσεων του κατασκευαστή. Ελέγξτε χειροκίνητα τις πληροφορίες εφαρμογής του Sked.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Άνοιγμα ρυθμίσεων παρασκηνίου του κατασκευαστή';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Δεν ήταν δυνατό το άνοιγμα των ρυθμίσεων παρασκηνίου του κατασκευαστή. Ελέγξτε χειροκίνητα τις πληροφορίες εφαρμογής του Sked.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles =>
+      'Εμφάνιση τίτλων στην οθόνη κλειδώματος';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Όταν είναι απενεργοποιημένο, οι λεπτομέρειες ειδοποιήσεων αποκρύπτονται στην οθόνη κλειδώματος.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Γραφικά στοιχεία αρχικής οθόνης';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Ανανεώστε τα γραφικά στοιχεία του Sked και μάθετε πώς να προσθέσετε ένα στην αρχική οθόνη.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle =>
+      'Προσθήκη γραφικού στοιχείου Sked';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'Στην αρχική οθόνη της συσκευής, πατήστε παρατεταμένα σε μια κενή περιοχή, επιλέξτε «Γραφικά στοιχεία» και προσθέστε ένα γραφικό στοιχείο Sked. Θα εμφανίζει τα επόμενα μαθήματα ή συμβάντα σας.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Ανανέωση γραφικών στοιχείων';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Τα γραφικά στοιχεία ανανεώθηκαν';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Αυτή η πλατφόρμα δεν παρέχει εγγενείς ειδοποιήσεις.';
 
   @override
   String get workspaceFeatures => 'Διαχείριση λειτουργιών';
@@ -2975,67 +3017,67 @@ class AppLocalizationsEl extends AppLocalizations {
       'Το πλήρες αντίγραφο ασφαλείας περιλαμβάνει δεδομένα και την επιλογή ενεργών χώρων εργασίας.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · Προεπισκόπηση διάταξης';
 
   @override
   String get assistantSelectionContext =>
-      'Uses the current selection as context';
+      'Χρησιμοποιεί την τρέχουσα επιλογή ως πλαίσιο';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Πρόχειρο μηνύματος';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Μόνο προεπισκόπηση διάταξης. Δεν θα σταλεί ή θα αλλάξει τίποτα.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Αλλαγή μεγέθους πίνακα';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Ελαχιστοποίηση';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Μεγιστοποίηση';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Επαναφορά παραθύρου';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Κλείσιμο παραθύρου';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Υπενθύμιση συστήματος';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Χρήση προεπιλογής ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Οι υπενθυμίσεις συστήματος είναι απενεργοποιημένες στις ρυθμίσεις ειδοποιήσεων. Η προτίμηση για αυτό το μάθημα μπορεί να αποθηκευτεί.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Δεν έχει οριστεί προεπιλεγμένη υπενθύμιση μαθημάτων. Επιλέξτε εδώ μια προσαρμοσμένη υπενθύμιση ή ορίστε μια προεπιλογή στις ρυθμίσεις ειδοποιήσεων.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Αυτή η προτίμηση αποθηκεύεται με το μάθημα. Η παράδοση εξαρτάται από τις άδειες ειδοποιήσεων του συστήματος και τους περιορισμούς παρασκηνίου.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Η κατάσταση των ειδοποιήσεων συστήματος δεν έχει ελεγχθεί. Ελέγξτε τις ρυθμίσεις ειδοποιήσεων πριν βασιστείτε στις υπενθυμίσεις.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Λεπτά πριν από το μάθημα';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Εξαγωγή';
 
   @override
   String get datePickerSelectWeek => 'Επιλογή εβδομάδας';
@@ -3078,93 +3120,95 @@ class AppLocalizationsEl extends AppLocalizations {
   String get timePickerWheelMode => 'Επιλογή με τροχούς κύλισης';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Χρήση προεπιλογής';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Εισαγάγετε ακέραιο αριθμό λεπτών, μηδέν ή μεγαλύτερο.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth =>
+      'Πλάτος στηλών προσαρμοσμένης προβολής';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Αυτόματο';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Ελάχιστο πλάτος';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'Ελάχιστο πλάτος ανά ημέρα';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Όλες οι ημερομηνίες έχουν το ίδιο ελάχιστο πλάτος. Οι στήλες γεμίζουν τον διαθέσιμο χώρο ή μετακινούνται οριζόντια. Επηρεάζει μόνο την προσαρμοσμένη προβολή.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Εμφάνιση και γλώσσα';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Χρώματα και περιγράμματα';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Δεν υπάρχουν συμβάντα αυτή την ημέρα';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Επισκόπηση';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Θέμα για';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Λειτουργία χρώματος';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Προτιμήσεις υπενθυμίσεων';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Προεπιλεγμένες υπενθυμίσεις, άδειες και αξιοπιστία';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Χώροι εργασίας και πλοήγηση';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Πολιτική απορρήτου και εκκαθάριση τοπικών δεδομένων';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count διδακτικές ώρες',
+      one: '1 διδακτική ώρα',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Διδακτική ώρα';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Διάρκεια';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Διάλειμμα';
 
   @override
   String periodTimesMinutesShort(int minutes) {
-    return '$minutes min';
+    return '$minutes λεπτά';
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Αναμονή αποθήκευσης…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Δεν αποθηκεύτηκε · Η αποθήκευση απέτυχε';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Δεν αποθηκεύτηκε · Διορθώστε τις επισημασμένες ώρες';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3200,45 +3244,46 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Η απενεργοποίηση των Ρυθμίσεων ή του Χώρου εργασίας στη γραμμή εργαλείων τα μεταφέρει στα Περισσότερα αντί να τα αφαιρέσει. Τα Περισσότερα δεν μπορούν να κρυφτούν όσο περιέχουν απαραίτητες ενέργειες. Η εναλλαγή χώρων εργασίας εμφανίζεται μόνο όταν η κάτω πλοήγηση είναι κρυφή και είναι ενεργοποιημένοι πολλοί χώροι εργασίας.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Ολοκληρώθηκε';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Κλείνει μετά από 10 δευτερόλεπτα. Αλληλεπιδράστε για να παραμείνει ανοιχτό.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Άνοιγμα ξεχωριστά';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Διαχείριση κατηγοριών';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Κρυφή';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Εμφάνιση στο ημερολόγιο';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Απόκρυψη από το ημερολόγιο';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Αλλαγή χρώματος κατηγορίας';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Παλέτα θέματος';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Προσαρμοσμένο';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid =>
+      'Εισαγάγετε εξαψήφιο δεκαεξαδικό κωδικό χρώματος.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Χρώμα θέματος $number';
   }
 
   @override
@@ -3246,34 +3291,34 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Οι ενημερώσεις του καταστήματος ενδέχεται να καθυστερήσουν. Η διαθεσιμότητα καθορίζεται από τη σελίδα του καταστήματος.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Η λήψη ειδοποιήσεων για προκαταρκτικές εκδόσεις δεν σας εγγράφει σε πρόγραμμα δοκιμών του καταστήματος.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Διαθέσιμη νέα έκδοση';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Δεν έχουν δοθεί σημειώσεις έκδοσης.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Αργότερα';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Δοκιμή ξανά';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Προκαταρκτική έκδοση';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Δεν ήταν δυνατός ο έλεγχος για ενημερώσεις. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Δεν βρέθηκε νεότερη έκδοση (τρέχουσα: $version)';
   }
 
   @override

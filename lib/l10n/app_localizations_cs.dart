@@ -10,7 +10,7 @@ class AppLocalizationsCs extends AppLocalizations {
   AppLocalizationsCs([String locale = 'cs']) : super(locale);
 
   @override
-  String get appTitle => 'Spoluučedník';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -40,7 +40,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get editTimetable => 'Upravit rozvrh';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle => 'Upravit výsledek analýzy';
 
   @override
   String get schoolImportParsePageTitle => 'Analyzovat rozvrh';
@@ -67,23 +67,22 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Sbalit nezpracovanou odpověď';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Rozbalit upozornění k importu';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'Sbalit upozornění k importu';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Některé kurzy pokračují až do $week. týdne.';
   }
 
   @override
-  String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+  String get replaceCurrentTimetableConfirmTitle => 'Nahradit aktuální rozvrh?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Importovaný rozvrh nahradí aktuální rozvrh.';
 
   @override
   String get createTimetable => 'Nový rozvrh';
@@ -95,13 +94,13 @@ class AppLocalizationsCs extends AppLocalizations {
   String get timetable => 'Rozvrh';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Plán';
 
   @override
   String get timetableName => 'Název jízdního řádu';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Zadejte název rozvrhu';
 
   @override
   String get totalWeeks => 'Celkem týdny';
@@ -236,28 +235,28 @@ class AppLocalizationsCs extends AppLocalizations {
   String get settingsTitle => 'Nastavení';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Rozvrh';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Obecný plán';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Vzhled';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Aplikace';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Pracovní prostor';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Vzhled a jazyk';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Data a zabezpečení';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'O aplikaci Sked';
 
   @override
   String get noTimetableSettings =>
@@ -321,29 +320,28 @@ class AppLocalizationsCs extends AppLocalizations {
       'Ovládejte, zda jsou v rozvrhu viditelné vodorovné a svislé čáry mřížky.';
 
   @override
-  String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+  String get timetableHorizontalLayoutSection => 'Vodorovné rozložení a gesta';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Přizpůsobit výběr dne obrazovce';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Pokud je to možné, zobrazí všech sedm dní na obrazovce. Vypnutím použijete pevnou šířku s posouváním.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Přizpůsobit sloupce týdne obrazovce';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Pokud je to možné, zobrazí všech sedm sloupců rozvrhu na obrazovce. Vypnutím použijete pevnou šířku s posouváním.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Měnit týdny přejetím';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Přejetím doleva nebo doprava přejdete na jiný týden. Při pevné šířce nejprve posuňte obsah až k okraji.';
 
   @override
   String get liveCourseOutlineColor => 'Barva obrysu kurzu';
@@ -384,7 +382,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get liveCourseOutlineWidth => 'Šířka obrysu';
 
   @override
-  String get outlineWidthUnit => 'Px';
+  String get outlineWidthUnit => 'px';
 
   @override
   String get language => 'Jazyk';
@@ -578,7 +576,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get officialWebsite => 'Oficiální webové stránky';
 
   @override
-  String get googlePlay => 'služby Google Play';
+  String get googlePlay => 'Google Play';
 
   @override
   String get cloudDrive => 'Cloud disk';
@@ -594,23 +592,23 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Nejnovější verzi se nepodařilo načíst z GitHubu. Níže můžete otevřít GitHub Releases ručně.';
 
   @override
   String get githubRepository => 'Úložiště GitHub';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Zobrazit Sked na Google Play';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Google Play se nepodařilo otevřít';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Dejte Sked hvězdičku na GitHubu!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Otevřete repozitář projektu a dejte Sked hvězdičku';
 
   @override
   String get openGithubFailed => 'Nelze otevřít odkaz na úložiště GitHub';
@@ -780,18 +778,18 @@ class AppLocalizationsCs extends AppLocalizations {
       'Uložení selhalo. Zkuste to prosím znovu později.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Změny nejsou uložené';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Poslední změny časů hodin se nepodařilo uložit. Můžete to zkusit znovu, pokračovat v úpravách nebo změny zahodit.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Některé časy hodin nejsou platné. Před uložením je opravte, nebo změny zahoďte a odejděte.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Zahodit změny a odejít';
 
   @override
   String get appInstanceBlockedTitle => 'Sked je již otevřený';
@@ -941,7 +939,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'V nativních verzích ukládá Sked rozvrhy, obecné plány, související nastavení a upravitelnou konfiguraci školních webů do složky podpory aplikace v operačním systému. Verze pro prohlížeč používá úložiště prohlížeče. Soubory, které starší verze uložily do uživatelské složky Dokumenty, zůstávají na místě, ale automaticky se nečtou ani nepřenášejí. Pokud je chcete zachovat, před aktualizací exportujte úplnou zálohu ze staré verze a poté ji obnovte. Nastavení AI API se ukládá místně. Vlastní klíč API se ukládá prostřednictvím zabezpečeného úložiště platformy, pokud je k dispozici. Úplné zálohy tento klíč neobsahují. Aplikace místní data automaticky neodesílá na server spravovaný vývojářem.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import a export';
@@ -1035,71 +1033,71 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolSitesImported => 'Školní stránky importované';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Zkontrolovat import školních webů';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return 'Platné weby: $validCount, neplatné záznamy: $invalidCount.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Soubor obsahuje prázdný seznam školních webů.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Záznam $position je neplatný a bude přeskočen.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Sloučit';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Nahradit';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Nahradit aktuální školní weby?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'Počet odstraněných současných webů: $currentCount. Počet uložených importovaných webů: $importedCount. Tuto akci nelze vrátit zpět.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Data školních webů vyžadují obnovu';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked nedokázal přečíst soubor školních webů ani jeho zálohu. Před zablokováním zápisu byly vytvořeny chráněné kopie.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Úložiště školních webů není dostupné';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Sked teď nemá přístup k úložišti školních webů. Zkontrolujte přístup k úložišti nebo dostupnost zařízení a zkuste to znovu. Současná data nebudou přepsána.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Níže jsou uvedeny soubory pro obnovu nebo dotčená umístění úložiště. Dokud se seznam webů neobnoví, soubory neměňte.';
 
   @override
-  String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+  String get schoolSitesRecoveryStartFreshAction => 'Začít bez školních webů';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Začít s prázdným seznamem školních webů?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Chráněné kopie zůstanou zachovány, ale Sked vytvoří nový prázdný soubor školních webů. Pokračujte pouze tehdy, pokud nechcete nejprve znovu zkusit obnovu.';
 
   @override
   String get schoolSitesEmpty => 'Zatím žádná konfigurace školních stránek.';
@@ -1206,7 +1204,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolWebImportPageTitleLabel => 'Název stránky';
 
   @override
-  String get schoolWebImportParserUsed => 'Parser';
+  String get schoolWebImportParserUsed => 'Analyzátor';
 
   @override
   String get schoolWebImportWarnings => 'Importovat poznámky';
@@ -1228,7 +1226,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Konfigurace vlastního analyzátoru není úplná. Nejprve vyplňte základní URL, klíč API a model.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1347,7 +1345,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Vlastní klíč API se ukládá prostřednictvím zabezpečeného úložiště platformy, pokud je dostupné. Přihlašovací údaje analyzátoru a adresy HTTP používejte pouze na zařízeních, v prohlížečích a sítích, kterým důvěřujete.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1362,29 +1360,29 @@ class AppLocalizationsCs extends AppLocalizations {
       'Konfigurace vlastního parseru je neúplná. Nejprve vyplňte základní adresu URL, klíč API a model.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Vymazat data';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Trvale odstranit všechna místní data Sked a ukončit aplikaci';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Vymazat všechna data Sked?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'Trvale odstraní rozvrhy, plány, nastavení, školní weby, místní zálohy, kopie pro obnovu a klíč AI API. Poté se Sked ukončí. Soubory exportované jinam se neodstraní. Tuto akci nelze vrátit zpět.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Vymazat data a ukončit';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Všechna místní data se nepodařilo vymazat. Sked zůstane otevřený, abyste to mohli zkusit znovu.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Místní data byla vymazána, ale Sked se nepodařilo ukončit. Před dalším použitím aplikaci ručně zavřete.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1504,7 +1502,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get weekdayShortSunday => 'Slunce';
 
   @override
-  String get monthJanuary => 'Jan';
+  String get monthJanuary => 'leden';
 
   @override
   String get monthFebruary => 'Únor';
@@ -1553,10 +1551,10 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Obecný plán';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Studijní rozvrh';
 
   @override
   String get firstLaunchTitle => 'Vyberte výchozí režim';
@@ -1590,167 +1588,168 @@ class AppLocalizationsCs extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Přepnout režim';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'Obecný plán připravujeme';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Přepnout na studijní rozvrh';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Můj plán';
 
   @override
   String get today => 'Dnes';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Přidat událost';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Upravit událost';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Název';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Zadejte název';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Čas začátku';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Čas konce';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Datum';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Čas';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Poznámky';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Barva';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Opakování';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Neopakovat';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Každý týden';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Datum konce';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Bez data konce';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Nastavit';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Změnit';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Opakuje se každý týden';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'Do $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Přepnout na obecný plán';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Nastavení zobrazení plánu';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Zobrazení, panel nástrojů, formát data a rychlé přidání';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap => 'Zavřít okno klepnutím mimo něj';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Zobrazit čáry mřížky';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Import a export kategorií';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Importovat nebo sdílet kategorie plánu';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Importovat kategorie';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'Načíst kategorie ze souboru JSON';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Sdílet kategorie';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Sdílet kategorie jako soubor JSON';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Uložit kategorie';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Uložit kategorie jako soubor JSON';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Vybrat kategorie k exportu';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Vybrat kategorie k importu';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Události: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Importované kategorie: $count';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Přidat jako novou kategorii, nebo nahradit existující?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Přidat jako novou kategorii';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+      'Vyberte alespoň jednu kategorii.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage =>
+      'Není dostupná žádná kategorie k exportu.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Importovaný soubor neobsahuje žádné kategorie.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Pro nahrazení vyberte právě jednu importovanou kategorii.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Vybraná kategorie k nahrazení není dostupná.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Kategorie';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Kategorie';
 
   @override
   String get viewWeek => 'Týden';
@@ -1759,218 +1758,218 @@ class AppLocalizationsCs extends AppLocalizations {
   String get viewDay => 'Den';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Seznam';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Měsíc';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return 'Kategorie: $count';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Žádné viditelné kategorie';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Vybrat kategorii k nahrazení';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Nahradit kategorii';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Smazat událost';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'Tato událost bude trvale smazána.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Smazat opakovanou událost';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Událost byla duplikována';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Hledat události';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Vymazat hledání';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Filtrovat podle barvy';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Všechny barvy';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Nadcházející: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Po konci: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Celý den';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Sbalit celodenní události';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Rozbalit celodenní události';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return 'Celodenní události: $count';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return 'Další: $count';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Žádné odpovídající události';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Žádné nadcházející události';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Přidat kategorii';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Nová kategorie';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Skrýt kategorii';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Zobrazit kategorii';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Přejmenovat';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Přejmenovat kategorii';
 
   @override
-  String get name => 'Name';
+  String get name => 'Název';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Smazat kategorii';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Smazat „$name“?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Smazat pouze tento výskyt';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Smazat tento a následující výskyty';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Smazat celou sérii';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Duplikovat';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Opakuje se každý den';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Opakuje se každý měsíc';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Interval opakování: $interval $unit';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count×';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Každý den';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Každý měsíc';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Vlastní';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Interval';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Jednotka';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'dny';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'týdny';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'měsíce';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Počet opakování';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Bez omezení';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Zadejte kladné číslo';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Vymazat datum konce';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Vybrat datum';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Vybrat čas';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Připomenutí v aplikaci';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'Při začátku';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes min předem';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1 hodinu předem';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1 den předem';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Označit jako vyřízené';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Obnovit připomenutí v aplikaci';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Připomenutí v aplikaci bylo označeno jako vyřízené';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Připomenutí v aplikaci bylo obnoveno';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Nadcházející';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Po konci';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Přizpůsobit týden obrazovce';
@@ -1980,23 +1979,23 @@ class AppLocalizationsCs extends AppLocalizations {
       'Zobrazí celý týden v kompaktním rozložení. Vypnutím povolíte vodorovné posouvání. Vlastní rozsahy nad 7 dní se posouvají i nadále.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Zobrazit víkendy';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Počáteční hodina zobrazení';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Koncová hodina zobrazení';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Interval časové mřížky';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Výška řádku hodiny';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Upravuje svislé měřítko denního a týdenního zobrazení, aniž by měnil interval mřížky 15, 30 nebo 60 minut.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2004,159 +2003,165 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Importovat soubor JSON';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Vložit JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Importovat kategorie ze zkopírovaného JSON';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Importovat soubor ICS';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc =>
+      'Načíst události z kalendářového souboru .ics';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Vložit ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc =>
+      'Importovat události ze zkopírovaného kalendářového textu';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Kopírovat JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Kopírovat vybrané kategorie jako text JSON';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Sdílet ICS';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Sdílet vybrané kalendáře jako .ics';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Uložit ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Uložit vybrané kalendáře jako .ics';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Kopírovat ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Kopírovat vybrané kalendáře jako text ICS';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Importovat ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'Obsah ICS';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint =>
+      'Sem vložte obsah začínající BEGIN:VCALENDAR';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Nalezené události: $count. Přidat jako novou kategorii, nebo nahradit existující?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Importované kategorie: $count, upozornění: $warningCount';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Událost bez času začátku byla přeskočena.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Událost s nepodporovaným časem začátku byla přeskočena.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Čas konce, který nebyl po začátku, byl upraven.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Nepodporovaná pole ICS byla přidána do poznámek: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Nepodporovaná frekvence opakování byla ignorována: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'Vybrat kalendáře ke kopírování jako ICS';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'Vybrat kalendáře k exportu jako ICS';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Exportovat text ICS';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Exportovat text JSON';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Hlavní soubor se nepodařilo načíst, proto byla data aplikace obnovena z předchozí zálohy.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Hlavní datový soubor i jeho záloha jsou poškozené. Aplikace nyní používá nový výchozí stav.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Vaše data vyžadují obnovu';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked nedokázal přečíst hlavní datový soubor ani jeho zálohu. Před zablokováním zápisu byly vytvořeny chráněné kopie.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'Úložiště není dostupné';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Sked teď nemá přístup k místnímu úložišti. Zkontrolujte přístup k úložišti nebo dostupnost zařízení a zkuste to znovu. Stávající data nebudou přepsána.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Pro otevření těchto dat aktualizujte Sked';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Tato data vytvořila novější verze Sked. Aktualizujte aplikaci a zkuste to znovu. Nový začátek je kvůli ochraně dat zakázán.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Zkusit znovu';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Níže jsou uvedeny soubory pro obnovu nebo dotčená umístění úložiště. Dokud data neobnovíte, soubory neměňte.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'Zobrazit soubory a umístění pro obnovu';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Začít s novými daty';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Začít s novými daty?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Chráněné kopie zůstanou zachovány, ale Sked vytvoří nový místní datový soubor. Pokračujte pouze tehdy, pokud nechcete nejprve znovu zkusit obnovu.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Předchozí měsíc';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Další měsíc';
 
   @override
   String timeGridMinutes(int minutes) {
@@ -2164,158 +2169,161 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'Probíhá';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Smazat kurz';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Smazat tento kurz?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Zobrazit lunární kalendář';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, události: $count';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Výchozí zobrazení';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'Při spuštění';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Tlačítko přepínání zobrazení';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Aktivní pracovní prostor';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation =>
+      'Skrýt navigaci pracovních prostorů';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Skryje navigaci pracovních prostorů. Přepínat je lze v nabídce na hlavní obrazovce.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Formát popisku data';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Místní formát (červenec 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'S lomítkem (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Rozložení panelu nástrojů';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Navigace na panelu nástrojů';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Skryté položky';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Úplně skrýt';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Přesunout do nabídky Další';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'Změnit pořadí položek panelu';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Zobrazit položku panelu';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Výběr rozvrhu';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Výběr týdne';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Přepínání zobrazení';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Výběr kategorie';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Výběr data';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Rozdělení místa na panelu nástrojů';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Automatické rozdělení';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Vyvážené';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Přednost kategorií';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Přednost data';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Postupně přepínat zobrazení';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Otevřít nabídku zobrazení';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Přepnout zobrazení';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Vybrat zobrazení';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint => 'Podržením přejdete na dnešek';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Zobrazení plánu';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Časová mřížka';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Chování vyskakovacích oken';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Rychlé akce';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => 'Zobrazit plovoucí tlačítko pro přidání kurzu';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Zobrazí nebo skryje plovoucí tlačítko pro přidání kurzu v pravém dolním rohu rozvrhu.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab =>
+      'Zobrazit plovoucí tlačítko pro přidání události';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Zobrazí nebo skryje plovoucí tlačítko pro přidání události v pravém dolním rohu plánu.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse => 'Přidat kurz podržením prázdné mřížky';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Podržením prázdného místa v mřížce rozvrhu přidáte kurz.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Přidat událost podržením prázdné mřížky';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'V denním nebo týdenním zobrazení podržte prázdné místo v časové mřížce a přidejte událost.';
 
   @override
   String get developerModeTitle => 'Vývojářský režim';
@@ -2349,130 +2357,132 @@ class AppLocalizationsCs extends AppLocalizations {
       'Dlouhým stisknutím na 3 sekundy otevřete vývojářský režim';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Diagnostika oznámení';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Zkontrolujte doručování v Androidu, obnovte stávající plán připomenutí a odešlete bezpečná testovací oznámení prostřednictvím běžné služby Sked.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Diagnostika oznámení je dostupná pouze v Androidu.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Diagnostika oznámení bude dostupná po spuštění koordinátoru plánovaných oznámení.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Obnovit diagnostiku';
 
   @override
   String get developerNotificationSystemStatus =>
-      'System notification permission';
+      'Systémové oprávnění k oznámením';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Povoleno';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Blokováno';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Přesné budíky';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Povoleny';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Nepovoleny';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Plán oznámení agendy';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Pokrytí';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Všechna známá připomenutí s konečným počtem opakování jsou přímo naplánována';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Opakovaná připomenutí se dlouhodobě obnovují podle možností systému';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Kapacita přímých budíků je plná; pozdější připomenutí se obnovují podle možností systému';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Podmínky přesného doručení nejsou splněny';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Poslední synchronizace připomenutí selhala';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return 'Přímé budíky: $scheduled / kapacita: $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return 'Naplánováno: $scheduled, v plánu: $planned';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Poslední chyba: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Znovu vytvořit plán oznámení';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Plán oznámení byl znovu vytvořen.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Testovací kanál';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Připomenutí kurzů';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Připomenutí událostí';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'Odeslat okamžitý test';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Naplánovat test na pozadí za 30 sekund';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Okamžité testovací oznámení bylo odesláno.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Test na pozadí je naplánován za 30 sekund.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch =>
+      'Přepínač připomenutí v aplikaci';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Běžná připomenutí jsou zapnutá';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Běžná připomenutí jsou vypnutá; vývojářské testy lze stále spouštět';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Místní časové pásmo';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2481,22 +2491,22 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Zatím není vytvořen. Vytvoří jej vývojářský test.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Zapnuto';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Blokováno';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Důležitost: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Důležitost není dostupná';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2505,54 +2515,56 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return 'Čekající: $pending / aktivní: $active';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Poslední systémové zobrazení: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Zatím nebylo zaznamenáno žádné přepočítání.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder => 'Další skutečné připomenutí';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'V aktuálním plánu není žádné budoucí připomenutí';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Další údržba';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal => 'Další pokus o obnovení';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Nenaplánováno';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Omezení plánu';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return 'Vynecháno kvůli limitu plánu: $count';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => 'Poslední přepočítání';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Poslední synchronizace připomenutí';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Obnova opožděných připomenutí';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return 'Po původním čase byla obnovena připomenutí v počtu $count';
   }
 
   @override
@@ -2566,118 +2578,120 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Na popředí';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Na pozadí';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Úplné přepočítání';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Údržba';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Obnova';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => 'Spustit obnovu připomenutí';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Obnova připomenutí byla dokončena';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Úspěšné';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Přeskočeno';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Blokováno do splnění všech podmínek přesného doručení';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Selhalo';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Omezení běhu na pozadí od výrobce';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Omezení běhu na pozadí od výrobce mohou ovlivnit doručování.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart =>
+      'Spouštění na pozadí podle výrobce';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Výrobce: $vendor. Je dostupný odkaz do jeho nastavení. Android neumí zjistit stav tohoto oprávnění.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Výrobce: $vendor. Místo jeho nastavení se otevřou podrobnosti aplikace. Android neumí zjistit stav tohoto oprávnění.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Není dostupný odkaz do nastavení běhu na pozadí od výrobce.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Poslední otevřený cíl: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor => 'nastavení výrobce';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'podrobnosti aplikace';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'žádný';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Podmínky obnovy po restartu';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Obnova začíná až po prvním odemknutí. Nuceně zastavená aplikace se nemůže sama spustit.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Během kontroly stavu oznámení nejsou testy dostupné.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Testy nejsou dostupné, protože systémová oznámení jsou blokovaná.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Testy nejsou dostupné, protože vybraný kanál oznámení je blokovaný.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Spravováno nastavením oznámení Windows';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Nevztahuje se na Windows';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity => 'Identita balíčku Windows';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'Identita MSIX je dostupná; zobrazená oznámení lze zrušit';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Pro spolehlivé rušení zobrazených oznámení nainstalujte verzi MSIX';
 
   @override
   String get collapseWorkspaceNavigation =>
@@ -2732,157 +2746,160 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Připomenutí a oznámení';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Pokrytí připomenutí';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Opakované plány bez data konce používají obnovování na pozadí pro dlouhodobé pokrytí.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android může přímo uchovat až $capacity připomenutí. Pozdější připomenutí se pokusí obnovit předem.';
   }
 
   @override
-  String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+  String get notificationSettingsEnabled => 'Zapnout připomenutí a oznámení';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Plánuje pouze položky s připomenutím. Pro kurzy, které dědí výchozí nastavení, zadejte níže výchozí připomenutí.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Připomenutí závisí na systémových oprávněních a běhu na pozadí. Vypnutí, změny času nebo systémová omezení je mohou zpozdit.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Zapnuto';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Vypnuto';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Výchozí připomenutí';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder => 'Výchozí připomenutí kurzu';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'Výchozí připomenutí události';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Bez připomenutí';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes min předem';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Oprávnění k oznámením';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Povoleno systémem';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Blokováno systémem';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Kontrola oprávnění…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Požádat o oprávnění';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings =>
+      'Otevřít systémové nastavení';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Oprávnění k oznámením se nepodařilo zjistit. Zkuste to znovu.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Oprávnění k přesným budíkům';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Povoleno systémem';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'Nutné pro připomenutí v přesný čas';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Povolit přesné budíky';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Optimalizace baterie';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Povolena výjimka z optimalizace baterie Androidu';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Přesná připomenutí vyžadují výjimku z optimalizace baterie Androidu';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Otevřít nastavení optimalizace baterie';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Spouštění na pozadí podle výrobce';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Povolte automatické spouštění nebo běh na pozadí, aby bylo možné obnovit připomenutí po restartu.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Otevřete podrobnosti aplikace Sked a povolte běh na pozadí. Android nedokáže toto nastavení výrobce ověřit.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Nastavení výrobce nebylo nalezeno. Ručně zkontrolujte podrobnosti aplikace Sked.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Otevřít nastavení běhu na pozadí od výrobce';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Nastavení běhu na pozadí od výrobce se nepodařilo otevřít. Ručně zkontrolujte podrobnosti aplikace Sked.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles =>
+      'Zobrazovat názvy na zamčené obrazovce';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Po vypnutí zůstanou podrobnosti oznámení na zamčené obrazovce skryté.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Widgety na domovské obrazovce';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Obnovte widgety Sked a zjistěte, jak je přidat z domovské obrazovky.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Přidat widget Sked';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'Na domovské obrazovce podržte prázdné místo, vyberte Widgety a přidejte widget Sked. Zobrazuje nadcházející kurzy nebo události.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Obnovit widgety';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Widgety byly obnoveny';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Tato platforma neposkytuje nativní oznámení.';
 
   @override
   String get workspaceFeatures => 'Správa funkcí';
@@ -2951,67 +2968,66 @@ class AppLocalizationsCs extends AppLocalizations {
       'Úplná záloha obsahuje data a výběr zapnutých pracovních prostorů.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · Náhled rozložení';
 
   @override
-  String get assistantSelectionContext =>
-      'Uses the current selection as context';
+  String get assistantSelectionContext => 'Používá aktuální výběr jako kontext';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Koncept zprávy';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Pouze náhled rozložení. Nic se neodešle ani nezmění.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Změnit velikost panelu';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Minimalizovat';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Maximalizovat';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Obnovit velikost okna';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Zavřít okno';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Systémové připomenutí';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Použít výchozí ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Systémová připomenutí jsou v nastavení oznámení vypnutá. Nastavení tohoto kurzu lze přesto uložit.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Výchozí připomenutí kurzu není nastavené. Zde vyberte vlastní nebo nastavte výchozí v nastavení oznámení.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Tato volba se ukládá s kurzem. Doručení závisí na systémových oprávněních k oznámením a omezeních běhu na pozadí.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Stav systémových oznámení zatím nebyl zkontrolován. Než se na připomenutí spolehnete, zkontrolujte nastavení oznámení.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Minuty před začátkem kurzu';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Exportovat';
 
   @override
   String get datePickerSelectWeek => 'Vybrat týden';
@@ -3054,78 +3070,79 @@ class AppLocalizationsCs extends AppLocalizations {
   String get timePickerWheelMode => 'Vybrat pomocí koleček';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Použít výchozí';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Zadejte celé nezáporné číslo minut.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'Šířka sloupců ve vlastním zobrazení';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Automaticky';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Minimální šířka';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'Minimální šířka dne';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Všechny dny mají stejnou minimální šířku. Sloupce vyplní dostupné místo nebo se posouvají vodorovně. Platí pouze pro vlastní zobrazení.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Vzhled a jazyk';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Barvy a obrysy';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Na tento den nejsou žádné události';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Přehled';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Motiv pro';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Barevný režim';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Nastavení připomenutí';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Výchozí připomenutí, oprávnění a spolehlivost';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Pracovní prostory a navigace';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Zásady ochrany soukromí a vymazání místních dat';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count',
+      one: '1',
     );
-    return '$_temp0';
+    return 'Počet hodin: $_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Hodina';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Délka';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Přestávka';
 
   @override
   String periodTimesMinutesShort(int minutes) {
@@ -3133,14 +3150,13 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Čeká na uložení…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Neuloženo · Uložení selhalo';
 
   @override
-  String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+  String get periodTimesInvalidStatus => 'Neuloženo · Opravte označené časy';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3176,45 +3192,45 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Vypnutím Nastavení nebo Pracovního prostoru na panelu nástrojů je přesunete do nabídky Další, nikoli odstraníte. Nabídku Další nelze skrýt, pokud obsahuje nezbytné akce. Přepínání pracovních prostorů se zobrazuje pouze při skryté dolní navigaci a více zapnutých pracovních prostorech.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Skončilo';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Zavře se za 10 sekund. Interakcí ponecháte panel otevřený.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Otevřít samostatně';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Spravovat kategorie';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Skrytá';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Zobrazit v kalendáři';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Skrýt v kalendáři';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Změnit barvu kategorie';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Paleta motivu';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Vlastní';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => 'Zadejte šestimístný šestnáctkový kód barvy.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Barva motivu $number';
   }
 
   @override
@@ -3222,34 +3238,34 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Aktualizace v obchodě mohou být dostupné později. Dostupnost určuje stránka v obchodě.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Oznámení o předběžných verzích vás nepřihlásí do testovacího programu obchodu.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Je dostupná nová verze';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Poznámky k vydání nebyly poskytnuty.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Později';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Zkusit znovu';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Předběžná verze';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Aktualizace se nepodařilo zkontrolovat. Ověřte připojení a zkuste to znovu.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Novější verze nebyla nalezena (aktuální: $version)';
   }
 
   @override

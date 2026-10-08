@@ -10,7 +10,7 @@ class AppLocalizationsEt extends AppLocalizations {
   AppLocalizationsEt([String locale = 'et']) : super(locale);
 
   @override
-  String get appTitle => 'Klassikaaslane';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -24,23 +24,23 @@ class AppLocalizationsEt extends AppLocalizations {
   String get settings => 'Seaded';
 
   @override
-  String get multiTimetableSwitch => 'Ajavahemite vahetamine';
+  String get multiTimetableSwitch => 'Vaheta tunniplaani';
 
   @override
   String currentTimetableWeeks(int weeks) {
-    return 'Praegune ajakava · $weeks nädalad';
+    return 'Praegune tunniplaan · $weeks nädalat';
   }
 
   @override
   String tapToSwitchWeeks(int weeks) {
-    return 'Puudutage vahetamiseks · $weeks nädalad';
+    return 'Vahetamiseks puuduta · $weeks nädalat';
   }
 
   @override
-  String get editTimetable => 'Ajaplani muutmine';
+  String get editTimetable => 'Muuda tunniplaani';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle => 'Muuda analüüsi tulemust';
 
   @override
   String get schoolImportParsePageTitle => 'Analüüsi tunniplaani';
@@ -67,41 +67,41 @@ class AppLocalizationsEt extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Ahenda töötlemata vastus';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings => 'Laienda impordi hoiatusi';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings => 'Ahenda impordi hoiatusi';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Mõned kursused kestavad $week. nädalani.';
   }
 
   @override
   String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+      'Asendada praegune tunniplaan?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Imporditud tunniplaan asendab praeguse tunniplaani.';
 
   @override
-  String get createTimetable => 'Uus ajakava';
+  String get createTimetable => 'Uus tunniplaan';
 
   @override
   String get jumpToWeek => 'Hüppa nädalale';
 
   @override
-  String get timetable => 'Ajaaeg';
+  String get timetable => 'Tunniplaan';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Ajakava';
 
   @override
-  String get timetableName => 'Ajarava nimi';
+  String get timetableName => 'Tunniplaani nimi';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Sisesta tunniplaani nimi';
 
   @override
   String get totalWeeks => 'Nädalad kokku';
@@ -116,7 +116,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get save => 'Salvesta';
 
   @override
-  String get deleteTimetableTitle => 'Kustuta ajakava';
+  String get deleteTimetableTitle => 'Kustuta tunniplaan';
 
   @override
   String deleteTimetableMessage(Object name) {
@@ -236,28 +236,28 @@ class AppLocalizationsEt extends AppLocalizations {
   String get settingsTitle => 'Seaded';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Tunniplaan';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Üldine ajakava';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Välimus';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Rakendus';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Tööruum';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Välimus ja keel';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Andmed ja turvalisus';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'Teave Skedi kohta';
 
   @override
   String get noTimetableSettings =>
@@ -322,28 +322,28 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+      'Horisontaalne paigutus ja viiped';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Mahuta päevavalik ekraanile';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Võimaluse korral kuvatakse ekraanil kõik seitse päeva. Väljalülitamisel kasutatakse fikseeritud laiust ja kerimist.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Mahuta nädala veerud ekraanile';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Võimaluse korral kuvatakse ekraanil kõik seitse tunniplaani veergu. Väljalülitamisel kasutatakse fikseeritud laiust ja kerimist.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Vaheta nädalat pühkides';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Teisele nädalale liikumiseks pühi vasakule või paremale. Fikseeritud laiuse korral keri esmalt servani ja lohista sellest edasi.';
 
   @override
   String get liveCourseOutlineColor => 'Kursuse kontuuri värv';
@@ -384,7 +384,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get liveCourseOutlineWidth => 'Kontuuri laius';
 
   @override
-  String get outlineWidthUnit => 'Px';
+  String get outlineWidthUnit => 'px';
 
   @override
   String get language => 'keel';
@@ -578,7 +578,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get officialWebsite => 'Ametlik veebileht';
 
   @override
-  String get googlePlay => 'Google Play\'i';
+  String get googlePlay => 'Google Play';
 
   @override
   String get cloudDrive => 'Pilvekäik';
@@ -594,23 +594,22 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'GitHubist ei õnnestunud uusimat versiooni hankida. Saad siiski allpool avada GitHubi väljalasete lehe.';
 
   @override
   String get githubRepository => 'GitHubi hoidlus';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Vaata Skedi Google Plays';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Google Play avamine nurjus';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Lisa Skedile GitHubis täht!';
 
   @override
-  String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+  String get starSkedOnGithubDesc => 'Ava projekti hoidla ja lisa Skedile täht';
 
   @override
   String get openGithubFailed => 'GitHubi salvestuse lingi avamine nurjus';
@@ -692,7 +691,7 @@ class AppLocalizationsEt extends AppLocalizations {
   }
 
   @override
-  String get importAction => 'Import';
+  String get importAction => 'Impordi';
 
   @override
   String get importTimetableDialogTitle => 'Importimise ajakava';
@@ -782,18 +781,18 @@ class AppLocalizationsEt extends AppLocalizations {
       'Salvestamine nurjus. Palun proovige hiljem uuesti.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'Muudatused on salvestamata';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'Tundide kellaaegade viimaseid muudatusi ei õnnestunud salvestada. Võid proovida uuesti, jätkata muutmist või muudatused hüljata.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Mõned tundide kellaajad on vigased. Paranda need enne salvestamist või hülga muudatused ja välju.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Hülga muudatused ja välju';
 
   @override
   String get appInstanceBlockedTitle => 'Sked on juba avatud';
@@ -942,7 +941,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'Skedi seadmerakendus salvestab tunniplaanid, üldised ajakavad, seotud seaded ja muudetavad kooliveebisaitide seaded operatsioonisüsteemi rakenduse tugikataloogi. Brauseriversioon kasutab brauseri salvestusruumi. Varasemate versioonide kasutaja dokumentide kausta salvestatud failid jäävad alles, kuid neid ei loeta ega migreerita automaatselt. Nende andmete säilitamiseks ekspordi enne uuendamist vanast versioonist rakenduse täielik varukoopia ja taasta see pärast uuendamist. AI API seaded salvestatakse kohalikult. Kohandatud API-võti salvestatakse võimaluse korral platvormi turvalisse salvestusruumi. Rakenduse täielikud varukoopiad ei sisalda kohandatud API-võtit. Rakendus ei laadi neid kohalikke andmeid automaatselt üles arendaja hallatavasse serverisse.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import ja eksport';
@@ -1036,71 +1035,72 @@ class AppLocalizationsEt extends AppLocalizations {
   String get schoolSitesImported => 'Imporditud koolikohad';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Vaata kooliveebisaitide import üle';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return '$validCount kehtivat veebisaiti, $invalidCount vigast kirjet.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'Failis on tühi kooliveebisaitide loend.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'Kirje $position on vigane ja jäetakse vahele.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Ühenda';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Asenda';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Asendada praegused kooliveebisaidid?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'See eemaldab $currentCount praegust veebisaiti ja salvestab $importedCount imporditud veebisaiti. Seda ei saa tagasi võtta.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Kooliveebisaitide andmed vajavad taastamist';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'Sked ei saanud lugeda kooliveebisaitide faili ega selle varukoopiat. Enne kirjutamise blokeerimist loodi kaitstud koopiad.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Kooliveebisaitide salvestusruum pole saadaval';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'Sked ei pääse praegu kooliveebisaitide salvestusruumile ligi. Kontrolli salvestusruumi juurdepääsu või seadme kättesaadavust ja proovi uuesti. Olemasolevaid veebisaitide andmeid ei kirjutata üle.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'Taastefailid või mõjutatud salvestuskohad on loetletud allpool. Ära muuda faile enne veebisaitide loendi taastamist.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Alusta ilma kooliveebisaitideta';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Alustada tühja kooliveebisaitide loendiga?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'Kaitstud koopiad säilitatakse, kuid Sked loob uue tühja kooliveebisaitide faili. Jätka ainult siis, kui sa ei soovi esmalt taastamist uuesti proovida.';
 
   @override
   String get schoolSitesEmpty => 'Kooli veebilehe konfiguratsioon veel puudub.';
@@ -1226,7 +1226,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Kohandatud parseri seadistus on puudulik. Sisesta esmalt baas-URL, API-võti ja mudel.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1347,7 +1347,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Kohandatud API-võti salvestatakse võimaluse korral platvormi turvalisse salvestusruumi. Kasuta kohandatud parseri juurdepääsuandmeid ja HTTP-otspunkte ainult usaldusväärsetes seadmetes, brauserites ja võrkudes.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1362,29 +1362,29 @@ class AppLocalizationsEt extends AppLocalizations {
       'Kohandatud parseri konfiguratsioon ei ole täielik. Täida esmalt baas URL, API võti ja mudel.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Kustuta andmed';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'Kustuta kõik kohalikud Skedi andmed jäädavalt ja sulge rakendus';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Kustutada kõik Skedi andmed?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'See kustutab jäädavalt tunniplaanid, ajakavad, seaded, kooliveebisaidid, kohalikud varukoopiad, taastekoopiad ja AI API-võtme ning sulgeb Skedi. Mujale eksporditud faile ei kustutata. Seda ei saa tagasi võtta.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Kustuta andmed ja välju';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Kõiki kohalikke andmeid ei õnnestunud kustutada. Sked jääb avatuks, et saaksid uuesti proovida.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'Kohalikud andmed kustutati, kuid Skedi sulgemine nurjus. Sulge rakendus käsitsi enne selle uuesti kasutamist.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1525,13 +1525,13 @@ class AppLocalizationsEt extends AppLocalizations {
   String get monthAugust => 'august';
 
   @override
-  String get monthSeptember => 'Sept';
+  String get monthSeptember => 'september';
 
   @override
   String get monthOctober => 'oktoober';
 
   @override
-  String get monthNovember => 'veebruar';
+  String get monthNovember => 'november';
 
   @override
   String get monthDecember => 'detsember';
@@ -1550,10 +1550,10 @@ class AppLocalizationsEt extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Üldine ajakava';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Tunniplaan';
 
   @override
   String get firstLaunchTitle => 'Vali algrežiim';
@@ -1587,167 +1587,167 @@ class AppLocalizationsEt extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => ' ja nõustud sellega.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Vaheta režiimi';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon => 'Üldine ajakava on peagi saadaval';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Lülitu tunniplaanile';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Minu ajakava';
 
   @override
   String get today => 'Täna';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Lisa sündmus';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Muuda sündmust';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Pealkiri';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'Sisesta pealkiri';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Algusaeg';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Lõppaeg';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Kuupäev';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Kellaaeg';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Märkmed';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Värv';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Kordumine';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Ei kordu';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Iga nädal';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Lõppkuupäev';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Lõppkuupäev puudub';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Määra';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Muuda';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Kordub iga nädal';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'Kuni $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Lülitu üldisele ajakavale';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Ajakava kuvaseaded';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Vaated, tööriistariba, kuupäevavorming ja kiirlisamine';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap =>
+      'Sulge hüpikaken sellest väljaspool puudutamisel';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Kuva ruudustiku jooned';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport => 'Kategooriate import ja eksport';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Impordi või jaga ajakava kategooriaid';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Impordi kategooriad';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'Loe kategooriad JSON-failist';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Jaga kategooriaid';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Jaga kategooriaid JSON-failina';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Salvesta kategooriad';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Salvesta kategooriad JSON-failina';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Vali eksporditavad kategooriad';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Vali imporditavad kategooriad';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Sündmusi: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Imporditi $count kategooriat';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Kas lisada import uue kategooriana või asendada olemasolev kategooria?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Lisa uue kategooriana';
 
   @override
-  String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+  String get selectAtLeastOneScheduleMessage => 'Vali vähemalt üks kategooria.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => 'Eksporditavaid kategooriaid pole.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Impordifail ei sisalda kategooriaid.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'Asendamiseks vali täpselt üks imporditud kategooria.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'Asendamiseks valitud kategooria pole saadaval.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Kategooriad';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Kategooria';
 
   @override
   String get viewWeek => 'Nädal';
@@ -1756,218 +1756,218 @@ class AppLocalizationsEt extends AppLocalizations {
   String get viewDay => 'Päev';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Loend';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Kuu';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return '$count kategooriat';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Nähtavaid kategooriaid pole';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Vali asendatav kategooria';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Asenda kategooria';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Kustuta sündmus';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'See sündmus kustutatakse jäädavalt.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Kustuta korduv sündmus';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Sündmus dubleeriti';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Otsi sündmusi';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Tühjenda otsing';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Filtreeri värvi järgi';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Kõik värvid';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Tulemas: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Tähtaja ületanud: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Kogu päev';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Ahenda kogu päeva sündmused';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Laienda kogu päeva sündmused';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return '$count kogu päeva sündmust';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count veel';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Vastavaid sündmusi pole';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Tulevasi sündmusi pole';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Lisa kategooria';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Uus kategooria';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Peida kategooria';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Kuva kategooria';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Nimeta ümber';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Nimeta kategooria ümber';
 
   @override
-  String get name => 'Name';
+  String get name => 'Nimi';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Kustuta kategooria';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Kustutada „$name“?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Kustuta see kord';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Kustuta see ja järgnevad korrad';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Kustuta kogu sari';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Dubleeri';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Kordub iga päev';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Kordub iga kuu';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Kordub iga $interval $unit järel';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count korda';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Iga päev';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Iga kuu';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Kohandatud';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Iga';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Ühik';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'päeva';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'nädala';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'kuu';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Korduste arv';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Piiranguta';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Sisesta positiivne arv';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Eemalda lõppkuupäev';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Vali kuupäev';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Vali kellaaeg';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Rakendusesisene meeldetuletus';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'Algusajal';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes minutit varem';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1 tund varem';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1 päev varem';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Märgi käsitletuks';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder => 'Taasta rakendusesisene meeldetuletus';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Rakendusesisene meeldetuletus märgiti käsitletuks';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored => 'Rakendusesisene meeldetuletus taastati';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Tulemas';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Tähtaeg möödunud';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Mahuta nädal ekraanile';
@@ -1977,23 +1977,23 @@ class AppLocalizationsEt extends AppLocalizations {
       'Kuva kogu nädal kompaktses paigutuses. Lülita välja horisontaalseks kerimiseks. Üle 7 päeva pikkused kohandatud vahemikud jäävad keritavaks.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Kuva nädalavahetused';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Algustund';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Lõpptund';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Ajaruudustiku tihedus';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Tunnirea kõrgus';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'Muudab päeva- ja nädalavaate vertikaalset skaalat, muutmata ruudustiku 15-, 30- või 60-minutilist intervalli.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2001,159 +2001,160 @@ class AppLocalizationsEt extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'Impordi JSON-fail';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'Kleebi JSON';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Impordi kategooriad kopeeritud JSON-ist';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'Impordi ICS-fail';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => 'Loe sündmused .ics-kalendrifailist';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'Kleebi ICS';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => 'Impordi sündmused kopeeritud kalendritekstist';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'Kopeeri JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Kopeeri valitud kategooriad JSON-tekstina';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'Jaga ICS-i';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Jaga valitud kalendreid .ics-failina';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'Salvesta ICS';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Salvesta valitud kalendrid .ics-failina';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'Kopeeri ICS';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Kopeeri valitud kalendrid ICS-tekstina';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'Impordi ICS';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'ICS-i sisu';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'Kleebi siia BEGIN:VCALENDAR sisu';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return 'Leiti $count sündmust. Kas lisada need uue kategooriana või asendada olemasolev kategooria?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Imporditi $count kategooriat, hoiatusi: $warningCount';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Algusajata sündmus jäeti vahele.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Toetamata algusajaga sündmus jäeti vahele.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Kohandati sündmust, mille lõppaeg ei olnud algusajast hilisem.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Toetamata ICS-väljad lisati märkmetesse: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Toetamata kordussagedust eirati: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs => 'Vali ICS-ina kopeeritavad kalendrid';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'Vali ICS-ina eksporditavad kalendrid';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'Ekspordi ICS-tekst';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'Ekspordi JSON-tekst';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Rakenduse andmed taastati eelmisest varukoopiast, sest põhifaili ei õnnestunud laadida.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'Nii põhiandmefail kui ka selle varukoopia on kahjustatud. Rakendus kasutab nüüd uusi andmeid.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Sinu andmed vajavad taastamist';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'Sked ei saanud lugeda põhiandmefaili ega selle varukoopiat. Enne kirjutamise blokeerimist loodi kaitstud koopiad.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'Salvestusruum pole saadaval';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'Sked ei pääse praegu kohalikule salvestusruumile ligi. Kontrolli salvestusruumi juurdepääsu või seadme kättesaadavust ja proovi uuesti. Olemasolevaid andmeid ei kirjutata üle.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Nende andmete avamiseks uuenda Skedi';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Need andmed loodi Skedi uuema versiooniga. Enne uuesti proovimist uuenda rakendust. Andmete kaitsmiseks on uute andmetega alustamine keelatud.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Proovi uuesti';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'Taastefailid või mõjutatud salvestuskohad on loetletud allpool. Ära muuda faile enne andmete taastamist.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction => 'Kuva taastefailid ja asukohad';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Alusta uute andmetega';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Alustada uute andmetega?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'Kaitstud koopiad säilitatakse, kuid Sked loob uue kohaliku andmefaili. Jätka ainult siis, kui sa ei soovi esmalt taastamist uuesti proovida.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Eelmine kuu';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Järgmine kuu';
 
   @override
   String timeGridMinutes(int minutes) {
@@ -2161,158 +2162,162 @@ class AppLocalizationsEt extends AppLocalizations {
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'Pooleli';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Kustuta kursus';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Kustutada see kursus?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Kuva kuukalender';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, $count sündmust';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Vaikevaade';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'Käivitamisel';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Vaate vahetamise nupp';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Aktiivne tööruum';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'Peida tööruumide navigeerimine';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'Peida tööruumide navigeerimine. Tööruumi saab endiselt vahetada põhikuva menüüst.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Kuupäevasildi vorming';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Kohalik (juuli 2026)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Kaldkriipsuga (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Tööriistariba paigutus';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Tööriistariba navigeerimine';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Peidetud üksused';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Peida täielikult';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Teisalda menüüsse Rohkem';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder =>
+      'Muuda tööriistariba üksuste järjekorda';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Kuva tööriistariba üksus';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Tunniplaani valik';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Nädala valik';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Vaate vahetus';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Kategooria valik';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Kuupäeva valik';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Tööriistariba ruumi jaotus';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Automaatne jaotus';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Võrdne jaotus';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Kategooria eelistus';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Kuupäeva eelistus';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Vaheta vaateid järjest';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Ava vaadete menüü';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Vaheta vaadet';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Vali vaade';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint =>
+      'Tänasele liikumiseks vajuta pikalt';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Ajakava kuvamine';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Ajaruudustik';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Hüpikakna käitumine';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Kiirtoimingud';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => 'Kuva kursuse lisamise ujuvnupp';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Kuva või peida kursuse lisamise ujuvnupp tunniplaani paremas alanurgas.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => 'Kuva sündmuse lisamise ujuvnupp';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'Kuva või peida sündmuse lisamise ujuvnupp ajakava paremas alanurgas.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'Lisa kursus tühja ruudustikku pikalt vajutades';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Kursuse lisamiseks vajuta pikalt tunniplaani ruudustiku tühja ala.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Lisa sündmus tühja ruudustikku pikalt vajutades';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'Sündmuse lisamiseks vajuta päeva- või nädalavaates pikalt ajaruudustiku tühja ala.';
 
   @override
   String get developerModeTitle => 'Arendajarežiim';
@@ -2346,130 +2351,131 @@ class AppLocalizationsEt extends AppLocalizations {
       'Arendajarežiimi avamiseks hoidke 3 sekundit all';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Teavituste diagnostika';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Kontrolli Androidi teavituste edastuse olekut, loo olemasolev meeldetuletuste plaan uuesti ja saada ohutuid testteavitusi Skedi tavapärase teavitusteenuse kaudu.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Teavituste diagnostika on saadaval ainult Androidis.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Teavituste diagnostika muutub kättesaadavaks pärast ajakava koordinaatori käivitumist.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Värskenda diagnostikat';
 
   @override
-  String get developerNotificationSystemStatus =>
-      'System notification permission';
+  String get developerNotificationSystemStatus => 'Süsteemi teavitusluba';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Lubatud';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Blokeeritud';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Täpsed alarmid';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Lubatud';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Pole lubatud';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Ajakava teavituste plaan';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Meeldetuletuste kaetus';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Kõik teadaolevad lõpliku korduste arvuga meeldetuletused on otse ajastatud';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Korduvate meeldetuletuste pikaajalist ajastust uuendatakse võimaluste piires';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'Otseajastuse piir on täis. Hilisemaid meeldetuletusi püütakse uuendada võimaluste piires';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'Täpse edastuse nõuded pole täidetud';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Viimane meeldetuletuste sünkroonimine nurjus';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '$scheduled otse ajastatud alarmi / piir $capacity';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '$scheduled ajastatud, $planned kavandatud';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Viimane viga: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Loo teavituste plaan uuesti';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Teavituste plaan loodi uuesti.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Testkanal';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Kursuste meeldetuletused';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Ajakava meeldetuletused';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'Saada testteavitus kohe';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Ajasta taustatest 30 sekundi pärast';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Testteavitus saadeti kohe.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'Taustatest ajastati 30 sekundi pärast.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch =>
+      'Rakenduse meeldetuletuste lüliti';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Tavalised meeldetuletused on lubatud';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Tavalised meeldetuletused on keelatud; arendajateste saab endiselt käivitada';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Kohalik ajavöönd';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2478,22 +2484,22 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Pole veel loodud. Arendajatest loob selle.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Lubatud';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Blokeeritud';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Tähtsus: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'Tähtsus pole saadaval';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2502,54 +2508,58 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '$pending ootel / $active aktiivset';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Süsteem kuvas viimati: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Ümberarvutust pole veel salvestatud.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder =>
+      'Järgmine tavaline meeldetuletus';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'Praeguses plaanis pole tulevasi meeldetuletusi';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Järgmine hooldus';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal =>
+      'Järgmine ajastuse uuendamise katse';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Pole ajastatud';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Plaani kärpimine';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return 'Plaani piirangu tõttu jäeti välja $count';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation => 'Viimane ümberarvutus';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Viimane meeldetuletuste sünkroonimine';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Hilinenud meeldetuletuste taastamine';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return 'Pärast algset kellaaega taastati ja edastati $count meeldetuletust';
   }
 
   @override
@@ -2563,118 +2573,120 @@ class AppLocalizationsEt extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Esiplaan';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Taust';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Täielik ümberarvutus';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Hooldus';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Taastamine';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery =>
+      'Käivita meeldetuletuste taastamine';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Meeldetuletuste taastamine on lõpetatud';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Õnnestus';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Vahele jäetud';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'Ajastamine on blokeeritud, kuni kõik täpse edastuse tingimused on täidetud';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Nurjus';
 
   @override
-  String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+  String get developerNotificationBackgroundLimits => 'Tootja taustapiirangud';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'Tootja taustapiirangud võivad edastust mõjutada.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => 'Tootja taustakäivitus';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Tootja: $vendor. Tootja seadete otsetee on saadaval. Android ei saa selle loa olekut näidata.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Tootja: $vendor. Kasutatakse rakenduse teabe lehte. Android ei saa selle loa olekut näidata.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Tootja taustaseadete otsetee pole saadaval.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Viimati avatud leht: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor => 'tootja seaded';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'rakenduse teave';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'puudub';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Taaskäivitamisjärgse taastamise piirangud';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'Taastamine algab pärast esimest avamist lukustusest. Sunniviisiliselt peatatud rakendus ei saa ise käivituda.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Testid pole saadaval, kuni teavituste olekut kontrollitakse.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'Testid pole saadaval, sest süsteemi teavitused on blokeeritud.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'Testid pole saadaval, sest valitud teavituskanal on blokeeritud.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'Hallatakse Windowsi teavitusseadetes';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Ei kehti Windowsis';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity =>
+      'Windowsi paketi identiteet';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'MSIX-i identiteet on saadaval; kuvatud teavitusi saab eemaldada';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Kuvatud teavituste usaldusväärseks eemaldamiseks installi MSIX-i versioon';
 
   @override
   String get collapseWorkspaceNavigation => 'Ahenda tööruumi navigeerimine';
@@ -2727,157 +2739,157 @@ class AppLocalizationsEt extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Meeldetuletused ja teavitused';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Meeldetuletuste kaetus';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'Lõppkuupäevata korduvate sündmuste meeldetuletuste ajastust uuendatakse taustal, et säilitada pikaajaline kaetus.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Android saab otse ajastada kuni $capacity meeldetuletust. Hilisemaid meeldetuletusi püütakse ajastada eelneva uuendamisega.';
   }
 
   @override
   String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+      'Luba meeldetuletused ja teavitused';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Teavitused ajastatakse ainult meeldetuletusega üksustele. Määra allpool vaikemeeldetuletus kursustele, mis seda kasutavad.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Meeldetuletused sõltuvad süsteemi õigustest ja taustal töötamisest. Väljalülitamine, kellaaja muutmine või süsteemi piirangud võivad neid edasi lükata.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Lubatud';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Keelatud';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Vaikemeeldetuletused';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder => 'Kursuste vaikemeeldetuletus';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder => 'Ajakava vaikemeeldetuletus';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Meeldetuletuseta';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes minutit varem';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Teavitusluba';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'Süsteem on lubanud';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'Süsteem on blokeerinud';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Loa kontrollimine…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Taotle luba';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings => 'Ava süsteemi seaded';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Teavitusloa lugemine nurjus. Proovi uuesti.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Täpsete alarmide luba';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'Süsteem on lubanud';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'Vajalik meeldetuletuste täpseks ajastamiseks';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Luba täpsed alarmid';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Aku optimeerimine';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Androidi aku optimeerimise erand on lubatud';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'Täpsed meeldetuletused vajavad Androidi aku optimeerimise erandit';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Ava aku optimeerimise seaded';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Tootja taustakäivitus';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Luba automaatne käivitamine või taustal töötamine, et meeldetuletused saaks pärast taaskäivitamist taastada.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Ava Skedi rakenduse teave ja luba taustal töötamine. Android ei saa seda tootja seadet kontrollida.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Tootja seadete lehte ei leitud. Kontrolli Skedi rakenduse teavet käsitsi.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest => 'Ava tootja taustaseaded';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Tootja taustaseadete avamine nurjus. Kontrolli Skedi rakenduse teavet käsitsi.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles => 'Kuva pealkirjad lukustuskuval';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Väljalülitamisel peidetakse lukustuskuval teavituste üksikasjad.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Avakuva vidinad';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Värskenda Skedi vidinaid ja vaata, kuidas neid avakuvale lisada.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Lisa Skedi vidin';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'Vajuta seadme avakuval pikalt tühjale alale, vali Vidinad ja lisa Skedi vidin. Vidin kuvab järgmisi kursusi või sündmusi.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Värskenda vidinaid';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Vidinad värskendati';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'See platvorm ei toeta süsteemi teavitusi.';
 
   @override
   String get workspaceFeatures => 'Funktsioonide haldus';
@@ -2945,67 +2957,67 @@ class AppLocalizationsEt extends AppLocalizations {
       'Täielik varukoopia sisaldab andmeid ja sisselülitatud tööruumide valikut.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · Paigutuse eelvaade';
 
   @override
   String get assistantSelectionContext =>
-      'Uses the current selection as context';
+      'Kasutab praegust valikut kontekstina';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Sõnumi mustand';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Ainult paigutuse eelvaade. Midagi ei saadeta ega muudeta.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Muuda paneeli suurust';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Minimeeri';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Maksimeeri';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Taasta aken';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Sulge aken';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Süsteemi meeldetuletus';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Kasuta vaikeseadet ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'Süsteemi meeldetuletused on teavitusseadetes välja lülitatud. Selle kursuse eelistuse saab siiski salvestada.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Kursuste vaikemeeldetuletust pole määratud. Vali siin kohandatud meeldetuletus või määra vaikemeeldetuletus teavitusseadetes.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'See eelistus salvestatakse koos kursusega. Edastus sõltub süsteemi teavituslubadest ja taustapiirangutest.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'Süsteemi teavituste olekut pole kontrollitud. Enne meeldetuletustele lootmist vaata teavitusseaded üle.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Minutit enne tundi';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Ekspordi';
 
   @override
   String get datePickerSelectWeek => 'Vali nädal';
@@ -3048,78 +3060,79 @@ class AppLocalizationsEt extends AppLocalizations {
   String get timePickerWheelMode => 'Vali kerimisratastega';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Kasuta vaikeseadet';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Sisesta täisarv minuteid, null või suurem.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'Kohandatud vaate veerulaius';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Automaatne';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Vähim laius';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'Vähim laius päeva kohta';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Kõik kuupäevad kasutavad sama vähimat laiust. Veerud täidavad vaba ruumi või neid saab horisontaalselt kerida. Mõjutab ainult kohandatud vaadet.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Välimus ja keel';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Värvid ja piirjooned';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Sel päeval pole sündmusi';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Ülevaade';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Teema siht';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Värvirežiim';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Meeldetuletuste eelistused';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Vaikemeeldetuletused, load ja töökindlus';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Tööruumid ja navigeerimine';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Privaatsuspoliitika ja kohalike andmete kustutamine';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count tundi',
+      one: '1 tund',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Tund';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Kestus';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Vahetund';
 
   @override
   String periodTimesMinutesShort(int minutes) {
@@ -3127,14 +3140,14 @@ class AppLocalizationsEt extends AppLocalizations {
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Salvestamise ootel…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Salvestamata · Salvestamine nurjus';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Salvestamata · Paranda esile tõstetud kellaajad';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3170,45 +3183,46 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Tööriistaribal Seadete või Tööruumi väljalülitamine viib selle menüüsse Rohkem ega eemalda seda. Menüüd Rohkem ei saa peita, kui see sisaldab olulisi toiminguid. Tööruumide vahetamine kuvatakse ainult siis, kui alumine navigeerimisriba on peidetud ja mitu tööruumi on lubatud.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Lõppenud';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      'Sulgub 10 sekundi pärast. Avatuks jätmiseks kasuta paneeli.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Ava eraldi';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Halda kategooriaid';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Peidetud';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Kuva kalendris';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Peida kalendrist';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Muuda kategooria värvi';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Teema värvipalett';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Kohandatud';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid =>
+      'Sisesta kuuekohaline kuueteistkümnendsüsteemis värvikood.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Teema värv $number';
   }
 
   @override
@@ -3216,34 +3230,34 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Poe uuendused võivad hilineda. Saadavust näitab poe leht.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Eelväljalasete uuenduste teavituste saamine ei liida sind poe testprogrammiga.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Uus versioon on saadaval';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Väljalaskemärkmeid pole lisatud.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Hiljem';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Proovi uuesti';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Eelväljalase';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Uuenduste kontrollimine nurjus. Kontrolli ühendust ja proovi uuesti.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Uuemat versiooni ei leitud (praegune: $version)';
   }
 
   @override

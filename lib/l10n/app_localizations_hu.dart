@@ -10,7 +10,7 @@ class AppLocalizationsHu extends AppLocalizations {
   AppLocalizationsHu([String locale = 'hu']) : super(locale);
 
   @override
-  String get appTitle => 'Osztálytársak';
+  String get appTitle => 'Sked';
 
   @override
   String weekLabel(int week) {
@@ -40,7 +40,8 @@ class AppLocalizationsHu extends AppLocalizations {
   String get editTimetable => 'A menetrend szerkesztése';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle =>
+      'Feldolgozott eredmény szerkesztése';
 
   @override
   String get schoolImportParsePageTitle => 'Órarend elemzése';
@@ -67,23 +68,25 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Nyers válasz összecsukása';
 
   @override
-  String get schoolImportExpandWarnings => 'Expand import warnings';
+  String get schoolImportExpandWarnings =>
+      'Importálási figyelmeztetések kibontása';
 
   @override
-  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+  String get schoolImportCollapseWarnings =>
+      'Importálási figyelmeztetések összecsukása';
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return 'Some courses continue through week $week.';
+    return 'Egyes tantárgyak a(z) $week. hétig tartanak.';
   }
 
   @override
   String get replaceCurrentTimetableConfirmTitle =>
-      'Replace current timetable?';
+      'Lecseréli a jelenlegi órarendet?';
 
   @override
   String get replaceCurrentTimetableConfirmMessage =>
-      'The imported timetable will replace the current timetable.';
+      'Az importált órarend lecseréli a jelenlegi órarendet.';
 
   @override
   String get createTimetable => 'Új menetrend';
@@ -95,13 +98,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get timetable => 'Naptár';
 
   @override
-  String get themeWorkspaceSchedule => 'Schedule';
+  String get themeWorkspaceSchedule => 'Naptár';
 
   @override
   String get timetableName => 'Időrend neve';
 
   @override
-  String get timetableNameRequired => 'Timetable name is required';
+  String get timetableNameRequired => 'Az órarend neve kötelező';
 
   @override
   String get totalWeeks => 'Összes hét';
@@ -236,28 +239,28 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsTitle => 'Beállítások';
 
   @override
-  String get settingsSectionTimetable => 'Timetable';
+  String get settingsSectionTimetable => 'Órarend';
 
   @override
-  String get settingsSectionGeneralSchedule => 'General schedule';
+  String get settingsSectionGeneralSchedule => 'Általános naptár';
 
   @override
-  String get settingsSectionAppearance => 'Appearance';
+  String get settingsSectionAppearance => 'Megjelenés';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Alkalmazás';
 
   @override
-  String get settingsSectionWorkspace => 'Workspace';
+  String get settingsSectionWorkspace => 'Munkaterület';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+  String get settingsSectionAppearanceLanguage => 'Megjelenés és nyelv';
 
   @override
-  String get settingsSectionDataSecurity => 'Data & security';
+  String get settingsSectionDataSecurity => 'Adatok és biztonság';
 
   @override
-  String get settingsSectionAbout => 'About Sked';
+  String get settingsSectionAbout => 'A Sked névjegye';
 
   @override
   String get noTimetableSettings =>
@@ -324,28 +327,28 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get timetableHorizontalLayoutSection =>
-      'Horizontal layout and gestures';
+      'Vízszintes elrendezés és gesztusok';
 
   @override
-  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+  String get fitDaySelectorToWidth => 'Napválasztó igazítása a képernyőhöz';
 
   @override
   String get fitDaySelectorToWidthHint =>
-      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+      'Ha lehet, mind a hét nap elfér a képernyőn; kikapcsolva rögzített szélességgel görgethető.';
 
   @override
-  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+  String get fitWeekColumnsToWidth => 'Heti oszlopok igazítása a képernyőhöz';
 
   @override
   String get fitWeekColumnsToWidthHint =>
-      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+      'Ha lehet, az órarend mind a hét oszlopa elfér a képernyőn; kikapcsolva rögzített szélességgel görgethető.';
 
   @override
-  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+  String get enableWeekSwipeNavigation => 'Hétváltás lapozással';
 
   @override
   String get enableWeekSwipeNavigationHint =>
-      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+      'Balra vagy jobbra húzva válthat hetet. Rögzített szélesség esetén előbb húzza túl a tartalmat a szélén.';
 
   @override
   String get liveCourseOutlineColor => 'A tanfolyam vázlata színe';
@@ -388,7 +391,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get liveCourseOutlineWidth => 'Vázlat szélessége';
 
   @override
-  String get outlineWidthUnit => 'pixel';
+  String get outlineWidthUnit => 'px';
 
   @override
   String get language => 'Nyelv';
@@ -584,7 +587,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get officialWebsite => 'Hivatalos honlap';
 
   @override
-  String get googlePlay => 'Google Játék';
+  String get googlePlay => 'Google Play';
 
   @override
   String get cloudDrive => 'Felhő meghajtó';
@@ -600,23 +603,23 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get updateCheckFailedMessage =>
-      'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.';
+      'Nem sikerült lekérni a legújabb verziót a GitHubról. Alább továbbra is megnyithatja a GitHub Releases oldalt.';
 
   @override
   String get githubRepository => 'GitHub tároló';
 
   @override
-  String get googlePlayStoreDesc => 'View Sked on Google Play';
+  String get googlePlayStoreDesc => 'Sked megtekintése a Google Playen';
 
   @override
-  String get openGooglePlayFailed => 'Unable to open Google Play';
+  String get openGooglePlayFailed => 'Nem sikerült megnyitni a Google Playt';
 
   @override
-  String get starSkedOnGithub => 'Star Sked on GitHub!';
+  String get starSkedOnGithub => 'Csillagozza meg a Skedet a GitHubon!';
 
   @override
   String get starSkedOnGithubDesc =>
-      'Open the project repository and give Sked a Star';
+      'Nyissa meg a projekt tárolóját, és adjon csillagot a Skednek';
 
   @override
   String get openGithubFailed =>
@@ -789,18 +792,18 @@ class AppLocalizationsHu extends AppLocalizations {
       'Mentés nem sikerült. Kérjük, próbálja meg újra később.';
 
   @override
-  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+  String get periodTimesUnsavedExitTitle => 'A módosítások nincsenek mentve';
 
   @override
   String get periodTimesSaveFailureExitMessage =>
-      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+      'A tanórák időpontjainak legutóbbi módosításait nem sikerült menteni. Próbálja újra, folytassa a szerkesztést, vagy vesse el őket.';
 
   @override
   String get periodTimesInvalidExitMessage =>
-      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+      'Néhány tanóra időpontja érvénytelen. Mentés előtt javítsa ki őket, vagy vesse el a módosításokat és lépjen ki.';
 
   @override
-  String get discardChangesAndExit => 'Discard and exit';
+  String get discardChangesAndExit => 'Elvetés és kilépés';
 
   @override
   String get appInstanceBlockedTitle => 'A Sked már meg van nyitva';
@@ -952,7 +955,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'Natív platformokon a Sked az órarend adatait, az általános naptárakat, a kapcsolódó beállításokat és a szerkeszthető iskolai webhelykonfigurációt az operációs rendszer alkalmazástámogatási könyvtárában tárolja; a böngészős változat a böngésző tárhelyét használja. A korábbi verziók által a felhasználó Dokumentumok mappájába írt fájlok a helyükön maradnak, de az alkalmazás nem olvassa be és nem költözteti át őket automatikusan. Az adatok megőrzéséhez frissítés előtt exportáljon teljes alkalmazásmentést a régi verzióból, majd állítsa vissza az újban. Az AI API beállításai helyben tárolódnak; az egyéni API-kulcs a platform biztonságos tárolójába kerül, ha az elérhető. A teljes alkalmazásmentés nem tartalmazza az egyéni API-kulcsot. Az alkalmazás nem tölti fel automatikusan ezeket a helyi adatokat a fejlesztő által kezelt szerverre.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import és export';
@@ -1047,71 +1050,72 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolSitesImported => 'Importált iskolai helyszínek';
 
   @override
-  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+  String get schoolSitesImportPreviewTitle =>
+      'Iskolai webhelyek importálásának áttekintése';
 
   @override
   String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
-    return '$validCount valid sites, $invalidCount invalid entries.';
+    return 'Érvényes webhelyek: $validCount, érvénytelen bejegyzések: $invalidCount.';
   }
 
   @override
   String get schoolSitesImportEmptyPreview =>
-      'The file contains an empty school-site list.';
+      'A fájl üres iskolai webhelylistát tartalmaz.';
 
   @override
   String schoolSitesImportInvalidEntry(int position) {
-    return 'Entry $position is invalid and will be skipped.';
+    return 'A(z) $position. bejegyzés érvénytelen, ezért kimarad.';
   }
 
   @override
-  String get schoolSitesImportMerge => 'Merge';
+  String get schoolSitesImportMerge => 'Egyesítés';
 
   @override
-  String get schoolSitesImportReplace => 'Replace';
+  String get schoolSitesImportReplace => 'Csere';
 
   @override
   String get schoolSitesImportReplaceConfirmTitle =>
-      'Replace current school sites?';
+      'Lecseréli a jelenlegi iskolai webhelyeket?';
 
   @override
   String schoolSitesImportReplaceConfirmMessage(
     int currentCount,
     int importedCount,
   ) {
-    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+    return 'Ez eltávolít $currentCount jelenlegi webhelyet, és ment $importedCount importált webhelyet. A művelet nem vonható vissza.';
   }
 
   @override
   String get schoolSitesRecoveryCorruptTitle =>
-      'School-site data needs recovery';
+      'Az iskolai webhelyadatok helyreállítást igényelnek';
 
   @override
   String get schoolSitesRecoveryCorruptMessage =>
-      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+      'A Sked nem tudta beolvasni az iskolai webhelyek fájlját vagy annak biztonsági mentését. Az írás letiltása előtt védett másolatok készültek.';
 
   @override
   String get schoolSitesRecoveryIoFailureTitle =>
-      'School-site storage is unavailable';
+      'Az iskolai webhelyek tárhelye nem érhető el';
 
   @override
   String get schoolSitesRecoveryIoFailureMessage =>
-      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+      'A Sked jelenleg nem fér hozzá az iskolai webhelyek tárhelyéhez. Ellenőrizze a tárhely elérhetőségét és az eszközt, majd próbálja újra. A jelenlegi webhelyadatok nem lesznek felülírva.';
 
   @override
   String get schoolSitesRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+      'A helyreállítási fájlok és az érintett tárhelyek alább láthatók. A webhelylista helyreállításáig ne módosítsa a fájlokat.';
 
   @override
   String get schoolSitesRecoveryStartFreshAction =>
-      'Start with no school sites';
+      'Kezdés iskolai webhelyek nélkül';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmTitle =>
-      'Start with an empty school-site list?';
+      'Üres iskolai webhelylistával kezd?';
 
   @override
   String get schoolSitesRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+      'A védett másolatok megmaradnak, de a Sked új, üres iskolai webhelyfájlt hoz létre. Csak akkor folytassa, ha előbb nem szeretné újrapróbálni a helyreállítást.';
 
   @override
   String get schoolSitesEmpty => 'Még nincs iskolai helyszín konfigurációja.';
@@ -1219,7 +1223,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolWebImportPageTitleLabel => 'Oldal címe';
 
   @override
-  String get schoolWebImportParserUsed => 'Parser';
+  String get schoolWebImportParserUsed => 'Feldolgozó';
 
   @override
   String get schoolWebImportWarnings => 'Importáljon jegyzeteket';
@@ -1241,7 +1245,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
+      'Az egyéni feldolgozó beállítása hiányos. Előbb adja meg az alap URL-t, az API-kulcsot és a modellt.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -1362,7 +1366,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+      'Az egyéni API-kulcs a platform biztonságos tárolójába kerül, ha az elérhető. Egyéni feldolgozói hitelesítő adatokat és HTTP-végpontokat csak megbízható eszközökön, böngészőkben és hálózatokon használjon.';
 
   @override
   String get schoolImportHttpConfirmationTitle =>
@@ -1377,29 +1381,29 @@ class AppLocalizationsHu extends AppLocalizations {
       'Az egyéni elemző konfigurációja nem teljes. Töltse ki először az alap URL-t, az API kulcsot és a modellt.';
 
   @override
-  String get clearAppData => 'Clear data';
+  String get clearAppData => 'Adatok törlése';
 
   @override
   String get clearAppDataDesc =>
-      'Permanently delete all local Sked data and exit the app';
+      'A Sked összes helyi adatának végleges törlése és kilépés az alkalmazásból';
 
   @override
-  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+  String get clearAppDataConfirmTitle => 'Törli a Sked összes adatát?';
 
   @override
   String get clearAppDataConfirmMessage =>
-      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+      'Ez végleg törli az órarendeket, naptárakat, beállításokat, iskolai webhelyeket, helyi biztonsági mentéseket, helyreállítási másolatokat és az AI API-kulcsot, majd bezárja a Skedet. A máshová exportált fájlok nem törlődnek. A művelet nem vonható vissza.';
 
   @override
-  String get clearAppDataAction => 'Clear data and exit';
+  String get clearAppDataAction => 'Adatok törlése és kilépés';
 
   @override
   String get clearAppDataFailed =>
-      'Unable to clear all local data. Sked will remain open so you can retry.';
+      'Nem sikerült minden helyi adatot törölni. A Sked nyitva marad, hogy újra próbálkozhasson.';
 
   @override
   String get clearAppDataExitFailed =>
-      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
+      'A helyi adatok törlődtek, de a Sked nem tudott kilépni. Újbóli használat előtt zárja be kézzel az alkalmazást.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -1568,10 +1572,10 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String get generalSchedule => 'General schedule';
+  String get generalSchedule => 'Általános naptár';
 
   @override
-  String get studentTimetable => 'Student timetable';
+  String get studentTimetable => 'Tanulói órarend';
 
   @override
   String get firstLaunchTitle => 'Válassza ki a kezdő módot';
@@ -1605,167 +1609,170 @@ class AppLocalizationsHu extends AppLocalizations {
   String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
-  String get switchMode => 'Switch mode';
+  String get switchMode => 'Módváltás';
 
   @override
-  String get generalScheduleComingSoon => 'General schedule coming soon';
+  String get generalScheduleComingSoon =>
+      'Az általános naptár hamarosan elérhető';
 
   @override
-  String get switchToStudentTimetable => 'Switch to Student timetable';
+  String get switchToStudentTimetable => 'Váltás a tanulói órarendre';
 
   @override
-  String get mySchedule => 'My schedule';
+  String get mySchedule => 'Saját naptár';
 
   @override
   String get today => 'Ma';
 
   @override
-  String get addEvent => 'Add event';
+  String get addEvent => 'Esemény hozzáadása';
 
   @override
-  String get editEvent => 'Edit event';
+  String get editEvent => 'Esemény szerkesztése';
 
   @override
-  String get eventTitle => 'Title';
+  String get eventTitle => 'Cím';
 
   @override
-  String get eventTitleRequired => 'Title is required';
+  String get eventTitleRequired => 'A cím kötelező';
 
   @override
-  String get eventStartTime => 'Start time';
+  String get eventStartTime => 'Kezdési idő';
 
   @override
-  String get eventEndTime => 'End time';
+  String get eventEndTime => 'Befejezési idő';
 
   @override
-  String get eventDate => 'Date';
+  String get eventDate => 'Dátum';
 
   @override
-  String get eventTime => 'Time';
+  String get eventTime => 'Idő';
 
   @override
-  String get eventNotes => 'Notes';
+  String get eventNotes => 'Jegyzetek';
 
   @override
-  String get eventColor => 'Color';
+  String get eventColor => 'Szín';
 
   @override
-  String get eventRecurrence => 'Repeat';
+  String get eventRecurrence => 'Ismétlés';
 
   @override
-  String get recurrenceNone => 'Does not repeat';
+  String get recurrenceNone => 'Nincs ismétlés';
 
   @override
-  String get recurrenceWeekly => 'Weekly';
+  String get recurrenceWeekly => 'Hetente';
 
   @override
-  String get recurrenceEndDate => 'End date';
+  String get recurrenceEndDate => 'Záró dátum';
 
   @override
-  String get recurrenceNoEndDate => 'No end date';
+  String get recurrenceNoEndDate => 'Nincs záró dátum';
 
   @override
-  String get recurrenceSetEndDate => 'Set';
+  String get recurrenceSetEndDate => 'Beállítás';
 
   @override
-  String get recurrenceChangeEndDate => 'Change';
+  String get recurrenceChangeEndDate => 'Módosítás';
 
   @override
-  String get repeatsWeekly => 'Repeats weekly';
+  String get repeatsWeekly => 'Hetente ismétlődik';
 
   @override
   String recurrenceUntil(Object date) {
-    return 'Until $date';
+    return 'Eddig: $date';
   }
 
   @override
-  String get switchToGeneralSchedule => 'Switch to General schedule';
+  String get switchToGeneralSchedule => 'Váltás az általános naptárra';
 
   @override
-  String get generalDisplaySettings => 'General display settings';
+  String get generalDisplaySettings => 'Általános megjelenítési beállítások';
 
   @override
   String get generalDisplaySettingsDesc =>
       'Nézetek, eszköztár, dátumformátum és gyors hozzáadás';
 
   @override
-  String get closePopupOnOutsideTap => 'Close popup on tap outside';
+  String get closePopupOnOutsideTap =>
+      'Felugró ablak bezárása külső koppintásra';
 
   @override
-  String get showGridLines => 'Show grid lines';
+  String get showGridLines => 'Rácsvonalak megjelenítése';
 
   @override
-  String get generalScheduleImportExport => 'Category import & export';
+  String get generalScheduleImportExport =>
+      'Kategóriák importálása és exportálása';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share schedule categories';
+      'Naptárkategóriák importálása vagy megosztása';
 
   @override
-  String get importGeneralSchedules => 'Import categories';
+  String get importGeneralSchedules => 'Kategóriák importálása';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
+  String get importGeneralSchedulesDesc => 'Kategóriák beolvasása JSON-fájlból';
 
   @override
-  String get shareGeneralSchedules => 'Share categories';
+  String get shareGeneralSchedules => 'Kategóriák megosztása';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Kategóriák megosztása JSON-fájlként';
 
   @override
-  String get saveGeneralSchedules => 'Save categories';
+  String get saveGeneralSchedules => 'Kategóriák mentése';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Kategóriák mentése JSON-fájlként';
 
   @override
-  String get selectSchedulesToExport => 'Select categories to export';
+  String get selectSchedulesToExport => 'Exportálandó kategóriák kiválasztása';
 
   @override
-  String get selectSchedulesToImport => 'Select categories to import';
+  String get selectSchedulesToImport => 'Importálandó kategóriák kiválasztása';
 
   @override
   String generalScheduleEventCount(int count) {
-    return 'Events: $count';
+    return 'Események: $count';
   }
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count categories';
+    return 'Importált kategóriák: $count';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Add the import as a new category or replace an existing category?';
+      'Új kategóriaként adja hozzá az importált adatokat, vagy lecserél egy meglévő kategóriát?';
 
   @override
-  String get addAsNewSchedule => 'Add as new category';
+  String get addAsNewSchedule => 'Hozzáadás új kategóriaként';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one category.';
+      'Válasszon legalább egy kategóriát.';
 
   @override
-  String get noExportableScheduleMessage => 'No category available to export.';
+  String get noExportableScheduleMessage => 'Nincs exportálható kategória.';
 
   @override
   String get noSchedulesInImportMessage =>
-      'Import file contains no categories.';
+      'Az importfájl nem tartalmaz kategóriákat.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one imported category for replacement.';
+      'A cseréhez pontosan egy importált kategóriát válasszon.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'The selected replacement category is unavailable.';
+      'A cserére kiválasztott kategória nem érhető el.';
 
   @override
-  String get calendars => 'Categories';
+  String get calendars => 'Kategóriák';
 
   @override
-  String get calendar => 'Category';
+  String get calendar => 'Kategória';
 
   @override
   String get viewWeek => 'Hét';
@@ -1774,218 +1781,220 @@ class AppLocalizationsHu extends AppLocalizations {
   String get viewDay => 'Nap';
 
   @override
-  String get viewList => 'List';
+  String get viewList => 'Lista';
 
   @override
-  String get viewMonth => 'Month';
+  String get viewMonth => 'Hónap';
 
   @override
   String visibleCategoryCount(int count) {
-    return '$count categories';
+    return '$count kategória';
   }
 
   @override
-  String get noVisibleCategories => 'No visible categories';
+  String get noVisibleCategories => 'Nincsenek látható kategóriák';
 
   @override
-  String get selectCategoryToReplace => 'Choose category to replace';
+  String get selectCategoryToReplace => 'Lecserélendő kategória kiválasztása';
 
   @override
-  String get replaceCategory => 'Replace category';
+  String get replaceCategory => 'Kategória cseréje';
 
   @override
-  String get deleteEventTitle => 'Delete event';
+  String get deleteEventTitle => 'Esemény törlése';
 
   @override
-  String get deleteEventConfirmation =>
-      'This event will be permanently deleted.';
+  String get deleteEventConfirmation => 'Ez az esemény véglegesen törlődik.';
 
   @override
-  String get deleteRecurringEventTitle => 'Delete recurring event';
+  String get deleteRecurringEventTitle => 'Ismétlődő esemény törlése';
 
   @override
-  String get eventDuplicated => 'Event duplicated';
+  String get eventDuplicated => 'Esemény megkettőzve';
 
   @override
-  String get searchEvents => 'Search events';
+  String get searchEvents => 'Események keresése';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Keresés törlése';
 
   @override
-  String get filterByColor => 'Filter by color';
+  String get filterByColor => 'Szűrés szín szerint';
 
   @override
-  String get allColors => 'All colors';
+  String get allColors => 'Minden szín';
 
   @override
   String upcomingEventsCount(int count) {
-    return 'Upcoming $count';
+    return 'Közelgő: $count';
   }
 
   @override
   String overdueEventsCount(int count) {
-    return 'Overdue $count';
+    return 'Lejárt: $count';
   }
 
   @override
-  String get allDay => 'All-day';
+  String get allDay => 'Egész napos';
 
   @override
-  String get collapseAllDayTimeline => 'Collapse all-day events';
+  String get collapseAllDayTimeline => 'Egész napos események összecsukása';
 
   @override
-  String get expandAllDayTimeline => 'Expand all-day events';
+  String get expandAllDayTimeline => 'Egész napos események kibontása';
 
   @override
   String allDayEventsCount(int count) {
-    return '$count all-day events';
+    return '$count egész napos esemény';
   }
 
   @override
   String moreEvents(int count) {
-    return '+$count more';
+    return '+$count további';
   }
 
   @override
-  String get noMatchingEvents => 'No matching events';
+  String get noMatchingEvents => 'Nincs megfelelő esemény';
 
   @override
-  String get noUpcomingEvents => 'No upcoming events';
+  String get noUpcomingEvents => 'Nincsenek közelgő események';
 
   @override
-  String get addCalendar => 'Add category';
+  String get addCalendar => 'Kategória hozzáadása';
 
   @override
-  String get newCalendar => 'New category';
+  String get newCalendar => 'Új kategória';
 
   @override
-  String get hideCalendar => 'Hide category';
+  String get hideCalendar => 'Kategória elrejtése';
 
   @override
-  String get showCalendar => 'Show category';
+  String get showCalendar => 'Kategória megjelenítése';
 
   @override
-  String get rename => 'Rename';
+  String get rename => 'Átnevezés';
 
   @override
-  String get renameCalendar => 'Rename category';
+  String get renameCalendar => 'Kategória átnevezése';
 
   @override
-  String get name => 'Name';
+  String get name => 'Név';
 
   @override
-  String get deleteCalendar => 'Delete category';
+  String get deleteCalendar => 'Kategória törlése';
 
   @override
   String deleteCalendarMessage(Object name) {
-    return 'Delete \"$name\"?';
+    return 'Törli ezt: „$name”?';
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this occurrence';
+  String get deleteThisOccurrence => 'Csak ennek az előfordulásnak a törlése';
 
   @override
-  String get deleteFutureOccurrences => 'Delete this and following';
+  String get deleteFutureOccurrences => 'Ennek és a következőknek a törlése';
 
   @override
-  String get deleteAllOccurrences => 'Delete entire series';
+  String get deleteAllOccurrences => 'Teljes sorozat törlése';
 
   @override
-  String get duplicateEvent => 'Duplicate';
+  String get duplicateEvent => 'Megkettőzés';
 
   @override
-  String get repeatsDaily => 'Repeats daily';
+  String get repeatsDaily => 'Naponta ismétlődik';
 
   @override
-  String get repeatsMonthly => 'Repeats monthly';
+  String get repeatsMonthly => 'Havonta ismétlődik';
 
   @override
   String repeatsEvery(int interval, Object unit) {
-    return 'Repeats every $interval $unit';
+    return 'Ismétlés: $interval $unit';
   }
 
   @override
   String recurrenceCountTimes(int count) {
-    return '$count times';
+    return '$count alkalom';
   }
 
   @override
-  String get recurrenceDaily => 'Daily';
+  String get recurrenceDaily => 'Naponta';
 
   @override
-  String get recurrenceMonthly => 'Monthly';
+  String get recurrenceMonthly => 'Havonta';
 
   @override
-  String get recurrenceCustom => 'Custom';
+  String get recurrenceCustom => 'Egyéni';
 
   @override
-  String get recurrenceEvery => 'Every';
+  String get recurrenceEvery => 'Gyakoriság';
 
   @override
-  String get recurrenceUnit => 'Unit';
+  String get recurrenceUnit => 'Egység';
 
   @override
-  String get recurrenceDays => 'Days';
+  String get recurrenceDays => 'nap';
 
   @override
-  String get recurrenceWeeks => 'Weeks';
+  String get recurrenceWeeks => 'hét';
 
   @override
-  String get recurrenceMonths => 'Months';
+  String get recurrenceMonths => 'hónap';
 
   @override
-  String get recurrenceRepeatCount => 'Repeat count';
+  String get recurrenceRepeatCount => 'Ismétlések száma';
 
   @override
-  String get recurrenceNoLimit => 'No limit';
+  String get recurrenceNoLimit => 'Korlátlan';
 
   @override
-  String get recurrencePositiveNumber => 'Enter a positive number';
+  String get recurrencePositiveNumber => 'Adjon meg pozitív számot';
 
   @override
-  String get clearEndDate => 'Clear end date';
+  String get clearEndDate => 'Záró dátum törlése';
 
   @override
-  String get pickDate => 'Pick date';
+  String get pickDate => 'Dátum választása';
 
   @override
-  String get pickTime => 'Pick time';
+  String get pickTime => 'Idő választása';
 
   @override
-  String get reminder => 'In-app reminder';
+  String get reminder => 'Alkalmazáson belüli emlékeztető';
 
   @override
-  String get reminderAtStart => 'At start';
+  String get reminderAtStart => 'Kezdéskor';
 
   @override
   String reminderMinutesBefore(int minutes) {
-    return '$minutes min before';
+    return '$minutes perccel előtte';
   }
 
   @override
-  String get reminderHourBefore => '1 hour before';
+  String get reminderHourBefore => '1 órával előtte';
 
   @override
-  String get reminderDayBefore => '1 day before';
+  String get reminderDayBefore => '1 nappal előtte';
 
   @override
-  String get markReminderHandled => 'Mark handled';
+  String get markReminderHandled => 'Megjelölés kezeltként';
 
   @override
-  String get restoreReminder => 'Restore in-app reminder';
+  String get restoreReminder =>
+      'Alkalmazáson belüli emlékeztető visszaállítása';
 
   @override
-  String get reminderHandled => 'In-app reminder marked handled';
+  String get reminderHandled =>
+      'Alkalmazáson belüli emlékeztető kezeltként megjelölve';
 
   @override
-  String get reminderRestored => 'In-app reminder restored';
+  String get reminderRestored =>
+      'Alkalmazáson belüli emlékeztető visszaállítva';
 
   @override
-  String get reminderUpcoming => 'Upcoming';
+  String get reminderUpcoming => 'Közelgő';
 
   @override
-  String get reminderOverdue => 'Overdue';
+  String get reminderOverdue => 'Lejárt';
 
   @override
   String get generalFitWeekColumnsToWidth => 'Heti nézet képernyőhöz igazítása';
@@ -1995,23 +2004,23 @@ class AppLocalizationsHu extends AppLocalizations {
       'A teljes hét megjelenítése kompakt elrendezésben. Kikapcsolva vízszintesen görgethető. A 7 napnál hosszabb egyéni tartományok továbbra is görgethetők.';
 
   @override
-  String get showWeekends => 'Show weekends';
+  String get showWeekends => 'Hétvégék megjelenítése';
 
   @override
-  String get startHour => 'Start hour';
+  String get startHour => 'Kezdő óra';
 
   @override
-  String get endHour => 'End hour';
+  String get endHour => 'Záró óra';
 
   @override
-  String get timeGridDensity => 'Time grid density';
+  String get timeGridDensity => 'Időrács sűrűsége';
 
   @override
-  String get timeGridHourHeight => 'Hour row height';
+  String get timeGridHourHeight => 'Órasor magassága';
 
   @override
   String get timeGridHourHeightHint =>
-      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+      'A napi és heti nézet függőleges léptékét módosítja a 15, 30 vagy 60 perces rácsköz megváltoztatása nélkül.';
 
   @override
   String timeGridHourHeightValue(int height) {
@@ -2019,318 +2028,324 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String get importJsonFile => 'Import JSON file';
+  String get importJsonFile => 'JSON-fájl importálása';
 
   @override
-  String get pasteJson => 'Paste JSON';
+  String get pasteJson => 'JSON beillesztése';
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import categories from copied JSON';
+      'Kategóriák importálása másolt JSON-ból';
 
   @override
-  String get importIcsFile => 'Import ICS file';
+  String get importIcsFile => 'ICS-fájl importálása';
 
   @override
-  String get importIcsFileDesc => 'Read events from an .ics calendar file';
+  String get importIcsFileDesc => 'Események beolvasása .ics naptárfájlból';
 
   @override
-  String get pasteIcs => 'Paste ICS';
+  String get pasteIcs => 'ICS beillesztése';
 
   @override
-  String get pasteIcsDesc => 'Import events from copied calendar text';
+  String get pasteIcsDesc => 'Események importálása másolt naptárszövegből';
 
   @override
-  String get copyJson => 'Copy JSON';
+  String get copyJson => 'JSON másolása';
 
   @override
-  String get copyJsonDesc => 'Copy selected categories as JSON text';
+  String get copyJsonDesc => 'Kijelölt kategóriák másolása JSON-szövegként';
 
   @override
-  String get shareIcs => 'Share ICS';
+  String get shareIcs => 'ICS megosztása';
 
   @override
-  String get shareIcsDesc => 'Share selected calendars as .ics';
+  String get shareIcsDesc => 'Kijelölt naptárak megosztása .ics formátumban';
 
   @override
-  String get saveIcs => 'Save ICS';
+  String get saveIcs => 'ICS mentése';
 
   @override
-  String get saveIcsDesc => 'Save selected calendars as .ics';
+  String get saveIcsDesc => 'Kijelölt naptárak mentése .ics formátumban';
 
   @override
-  String get copyIcs => 'Copy ICS';
+  String get copyIcs => 'ICS másolása';
 
   @override
-  String get copyIcsDesc => 'Copy selected calendars as ICS text';
+  String get copyIcsDesc => 'Kijelölt naptárak másolása ICS-szövegként';
 
   @override
-  String get importIcs => 'Import ICS';
+  String get importIcs => 'ICS importálása';
 
   @override
-  String get icsContent => 'ICS content';
+  String get icsContent => 'ICS-tartalom';
 
   @override
-  String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
+  String get pasteIcsContentHint => 'Illessze ide a BEGIN:VCALENDAR tartalmat';
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Add them as a new category or replace an existing category?';
+    return '$count esemény található. Új kategóriaként adja hozzá őket, vagy lecserél egy meglévőt?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count categories with $warningCount warnings';
+    return 'Importált kategóriák: $count; figyelmeztetések: $warningCount';
   }
 
   @override
   String get importWarningSkippedMissingStart =>
-      'Skipped an event without a start time.';
+      'Egy kezdési idő nélküli esemény kimaradt.';
 
   @override
   String get importWarningSkippedUnsupportedStart =>
-      'Skipped an event with an unsupported start time.';
+      'Egy nem támogatott kezdési idejű esemény kimaradt.';
 
   @override
   String get importWarningAdjustedEnd =>
-      'Adjusted an event whose end time was not after its start.';
+      'Egy esemény befejezési ideje módosult, mert nem volt későbbi a kezdésnél.';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'A nem támogatott ICS-mezők a jegyzetekbe kerültek: $fields';
   }
 
   @override
   String importWarningUnsupportedRRuleFrequency(Object frequency) {
-    return 'Ignored unsupported repeat frequency: $frequency';
+    return 'Nem támogatott ismétlési gyakoriság figyelmen kívül hagyva: $frequency';
   }
 
   @override
-  String get selectCalendarsToCopyIcs => 'Select calendars to copy as ICS';
+  String get selectCalendarsToCopyIcs =>
+      'ICS-ként másolandó naptárak kiválasztása';
 
   @override
-  String get selectCalendarsToExportIcs => 'Select calendars to export as ICS';
+  String get selectCalendarsToExportIcs =>
+      'ICS-ként exportálandó naptárak kiválasztása';
 
   @override
-  String get exportIcsText => 'Export ICS text';
+  String get exportIcsText => 'ICS-szöveg exportálása';
 
   @override
-  String get exportJsonText => 'Export JSON text';
+  String get exportJsonText => 'JSON-szöveg exportálása';
 
   @override
   String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+      'Az alkalmazás adatai a korábbi biztonsági mentésből álltak helyre, mert a fő fájlt nem sikerült betölteni.';
 
   @override
   String get dataBackupRestoreFailedNotice =>
-      'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+      'A fő adatfájl és a biztonsági mentése is sérült. Az alkalmazás most új, kezdeti állapotot használ.';
 
   @override
-  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+  String get dataRecoveryCorruptTitle => 'Az adatok helyreállítást igényelnek';
 
   @override
   String get dataRecoveryCorruptMessage =>
-      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+      'A Sked nem tudta beolvasni a fő adatfájlt vagy annak biztonsági mentését. Az írás letiltása előtt védett másolatok készültek.';
 
   @override
-  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+  String get dataRecoveryIoFailureTitle => 'A tárhely nem érhető el';
 
   @override
   String get dataRecoveryIoFailureMessage =>
-      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+      'A Sked jelenleg nem fér hozzá a helyi tárhelyhez. Ellenőrizze a tárhely elérhetőségét és az eszközt, majd próbálja újra. A meglévő adatok nem lesznek felülírva.';
 
   @override
   String get dataRecoveryUnsupportedVersionTitle =>
-      'Update Sked to open this data';
+      'Az adatok megnyitásához frissítse a Skedet';
 
   @override
   String get dataRecoveryUnsupportedVersionMessage =>
-      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+      'Ezeket az adatokat a Sked újabb verziója hozta létre. Újrapróbálkozás előtt frissítse az alkalmazást. Az adatok védelmében az újrakezdés le van tiltva.';
 
   @override
-  String get dataRecoveryRetryAction => 'Retry';
+  String get dataRecoveryRetryAction => 'Újrapróbálás';
 
   @override
   String get dataRecoveryArtifactsHint =>
-      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+      'A helyreállítási fájlok és az érintett tárhelyek alább láthatók. Az adatok helyreállításáig ne módosítsa a fájlokat.';
 
   @override
-  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+  String get dataRecoveryArtifactsAction =>
+      'Helyreállítási fájlok és helyek megjelenítése';
 
   @override
-  String get dataRecoveryStartFreshAction => 'Start with new data';
+  String get dataRecoveryStartFreshAction => 'Kezdés új adatokkal';
 
   @override
-  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+  String get dataRecoveryStartFreshConfirmTitle => 'Új adatokkal kezd?';
 
   @override
   String get dataRecoveryStartFreshConfirmMessage =>
-      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
+      'A védett másolatok megmaradnak, de a Sked új helyi adatfájlt hoz létre. Csak akkor folytassa, ha előbb nem szeretné újrapróbálni a helyreállítást.';
 
   @override
-  String get previousMonth => 'Previous month';
+  String get previousMonth => 'Előző hónap';
 
   @override
-  String get nextMonth => 'Next month';
+  String get nextMonth => 'Következő hónap';
 
   @override
   String timeGridMinutes(int minutes) {
-    return '$minutes min';
+    return '$minutes perc';
   }
 
   @override
-  String get reminderInProgress => 'In progress';
+  String get reminderInProgress => 'Folyamatban';
 
   @override
-  String get deleteCourseTitle => 'Delete course';
+  String get deleteCourseTitle => 'Tantárgy törlése';
 
   @override
-  String get deleteCourseMessage => 'Delete this course?';
+  String get deleteCourseMessage => 'Törli ezt a tantárgyat?';
 
   @override
-  String get showLunarCalendar => 'Show lunar calendar';
+  String get showLunarCalendar => 'Holdnaptár megjelenítése';
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day, $count events';
+    return '$day, $count esemény';
   }
 
   @override
-  String get defaultView => 'Default view';
+  String get defaultView => 'Alapértelmezett nézet';
 
   @override
-  String get generalDefaultViewSection => 'Startup';
+  String get generalDefaultViewSection => 'Indítás';
 
   @override
-  String get generalViewSwitchBehavior => 'View switch button';
+  String get generalViewSwitchBehavior => 'Nézetváltó gomb';
 
   @override
-  String get settingsWorkspaceMode => 'Active workspace';
+  String get settingsWorkspaceMode => 'Aktív munkaterület';
 
   @override
-  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
+  String get hideHomeWorkspaceNavigation => 'Munkaterület-navigáció elrejtése';
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
       'A munkaterületek navigációjának elrejtése. A főképernyő munkaterület-menüjében továbbra is válthat.';
 
   @override
-  String get generalDateLabelFormat => 'Date label format';
+  String get generalDateLabelFormat => 'Dátumfelirat formátuma';
 
   @override
-  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+  String get generalDateLabelFormatLocalized => 'Helyi (2026. júl.)';
 
   @override
-  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+  String get generalDateLabelFormatSlash => 'Perjeles (2026/7)';
 
   @override
   String get generalDateLabelFormatIso => 'ISO (2026-07)';
 
   @override
-  String get generalToolbarSection => 'Toolbar layout';
+  String get generalToolbarSection => 'Eszköztár elrendezése';
 
   @override
-  String get toolbarNavigationSection => 'Toolbar navigation';
+  String get toolbarNavigationSection => 'Eszköztár navigációja';
 
   @override
-  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+  String get toolbarNavigationHiddenBehavior => 'Rejtett elemek';
 
   @override
-  String get toolbarNavigationRemove => 'Hide completely';
+  String get toolbarNavigationRemove => 'Teljes elrejtés';
 
   @override
-  String get toolbarNavigationMore => 'Move into More';
+  String get toolbarNavigationMore => 'Áthelyezés a Továbbiak menübe';
 
   @override
-  String get toolbarNavigationReorder => 'Reorder toolbar items';
+  String get toolbarNavigationReorder => 'Eszköztárelemek átrendezése';
 
   @override
-  String get toolbarNavigationVisibility => 'Show toolbar item';
+  String get toolbarNavigationVisibility => 'Eszköztárelem megjelenítése';
 
   @override
-  String get toolbarNavigationTimetable => 'Timetable selector';
+  String get toolbarNavigationTimetable => 'Órarendválasztó';
 
   @override
-  String get toolbarNavigationWeek => 'Week selector';
+  String get toolbarNavigationWeek => 'Hétválasztó';
 
   @override
-  String get toolbarNavigationView => 'View switcher';
+  String get toolbarNavigationView => 'Nézetváltó';
 
   @override
-  String get toolbarNavigationCategory => 'Category selector';
+  String get toolbarNavigationCategory => 'Kategóriaválasztó';
 
   @override
-  String get toolbarNavigationDate => 'Date selector';
+  String get toolbarNavigationDate => 'Dátumválasztó';
 
   @override
-  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+  String get generalToolbarWidthPolicy => 'Eszköztár helyelosztása';
 
   @override
-  String get generalToolbarWidthContent => 'Automatic allocation';
+  String get generalToolbarWidthContent => 'Automatikus elosztás';
 
   @override
-  String get generalToolbarWidthBalanced => 'Balanced';
+  String get generalToolbarWidthBalanced => 'Kiegyensúlyozott';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Category priority';
+  String get generalToolbarWidthCalendarPriority => 'Kategória elsőbbsége';
 
   @override
-  String get generalToolbarWidthDatePriority => 'Date priority';
+  String get generalToolbarWidthDatePriority => 'Dátum elsőbbsége';
 
   @override
-  String get generalViewSwitchCycle => 'Cycle through views';
+  String get generalViewSwitchCycle => 'Nézetek váltása sorban';
 
   @override
-  String get generalViewSwitchMenu => 'Open view menu';
+  String get generalViewSwitchMenu => 'Nézetmenü megnyitása';
 
   @override
-  String get generalViewSwitchTooltip => 'Switch view';
+  String get generalViewSwitchTooltip => 'Nézetváltás';
 
   @override
-  String get generalViewSwitchMenuTooltip => 'Choose view';
+  String get generalViewSwitchMenuTooltip => 'Nézet választása';
 
   @override
-  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+  String get generalViewLongPressTodayHint =>
+      'Hosszan nyomva a mai napra ugrik';
 
   @override
-  String get generalScheduleDisplaySection => 'Schedule display';
+  String get generalScheduleDisplaySection => 'Naptár megjelenítése';
 
   @override
-  String get generalTimeGridSection => 'Time grid';
+  String get generalTimeGridSection => 'Időrács';
 
   @override
-  String get generalPopupSection => 'Popup behavior';
+  String get generalPopupSection => 'Felugró ablak viselkedése';
 
   @override
-  String get quickActionsSection => 'Quick actions';
+  String get quickActionsSection => 'Gyorsműveletek';
 
   @override
-  String get showAddCourseFab => 'Show floating add course button';
+  String get showAddCourseFab => 'Lebegő tantárgy-hozzáadás gomb megjelenítése';
 
   @override
   String get showAddCourseFabHint =>
-      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+      'Az órarend jobb alsó sarkában lévő lebegő tantárgy-hozzáadás gomb megjelenítése vagy elrejtése.';
 
   @override
-  String get showAddEventFab => 'Show floating add event button';
+  String get showAddEventFab => 'Lebegő esemény-hozzáadás gomb megjelenítése';
 
   @override
   String get showAddEventFabHint =>
-      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
+      'A naptár jobb alsó sarkában lévő lebegő esemény-hozzáadás gomb megjelenítése vagy elrejtése.';
 
   @override
-  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+  String get enableLongPressAddCourse =>
+      'Tantárgy hozzáadása a rács hosszú megnyomásával';
 
   @override
   String get enableLongPressAddCourseHint =>
-      'Long-press an empty area of the timetable grid to add a course.';
+      'Tantárgy hozzáadásához nyomja meg hosszan az órarend rácsának üres területét.';
 
   @override
-  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+  String get enableLongPressAddEvent =>
+      'Esemény hozzáadása a rács hosszú megnyomásával';
 
   @override
   String get enableLongPressAddEventHint =>
-      'In day or week view, long-press an empty area of the time grid to add an event.';
+      'Napi vagy heti nézetben nyomja meg hosszan az időrács üres területét egy esemény hozzáadásához.';
 
   @override
   String get developerModeTitle => 'Fejlesztői mód';
@@ -2364,130 +2379,132 @@ class AppLocalizationsHu extends AppLocalizations {
       'Tartsa lenyomva 3 másodpercig a fejlesztői mód megnyitásához';
 
   @override
-  String get developerNotificationDiagnostics => 'Notification diagnostics';
+  String get developerNotificationDiagnostics => 'Értesítési diagnosztika';
 
   @override
   String get developerNotificationDiagnosticsDescription =>
-      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+      'Ellenőrizze az Android kézbesítési állapotát, építse újra a meglévő emlékeztetőtervet, és küldjön biztonságos tesztértesítéseket a Sked szokásos értesítési szolgáltatásán keresztül.';
 
   @override
   String get developerNotificationUnsupported =>
-      'Notification diagnostics are available on Android only.';
+      'Az értesítési diagnosztika csak Androidon érhető el.';
 
   @override
   String get developerNotificationCoordinatorUnavailable =>
-      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+      'Az értesítési diagnosztika a naptárkoordinátor elindulása után érhető el.';
 
   @override
-  String get developerNotificationRefresh => 'Refresh diagnostics';
+  String get developerNotificationRefresh => 'Diagnosztika frissítése';
 
   @override
   String get developerNotificationSystemStatus =>
-      'System notification permission';
+      'Rendszerszintű értesítési engedély';
 
   @override
-  String get developerNotificationPermissionAllowed => 'Allowed';
+  String get developerNotificationPermissionAllowed => 'Engedélyezve';
 
   @override
-  String get developerNotificationPermissionBlocked => 'Blocked';
+  String get developerNotificationPermissionBlocked => 'Letiltva';
 
   @override
-  String get developerNotificationExactAlarm => 'Exact alarms';
+  String get developerNotificationExactAlarm => 'Pontos riasztások';
 
   @override
-  String get developerNotificationExactAlarmAllowed => 'Allowed';
+  String get developerNotificationExactAlarmAllowed => 'Engedélyezve';
 
   @override
-  String get developerNotificationExactAlarmBlocked => 'Not allowed';
+  String get developerNotificationExactAlarmBlocked => 'Nincs engedélyezve';
 
   @override
-  String get developerNotificationPlan => 'Agenda notification plan';
+  String get developerNotificationPlan => 'Naptárértesítési terv';
 
   @override
-  String get developerNotificationCoverage => 'Coverage';
+  String get developerNotificationCoverage => 'Lefedettség';
 
   @override
   String get developerNotificationCoverageReady =>
-      'All known finite reminders are directly scheduled';
+      'Minden ismert, véges ismétlésű emlékeztető közvetlenül ütemezve';
 
   @override
   String get developerNotificationCoverageRenewable =>
-      'Recurring reminders use best-effort long-term renewal';
+      'Az ismétlődő emlékeztetők hosszú távú lefedettségét lehetőség szerinti megújítás biztosítja';
 
   @override
   String get developerNotificationCoverageCapacityLimited =>
-      'Direct alarm capacity is full; later reminders use best-effort renewal';
+      'A közvetlen riasztási kapacitás megtelt; a későbbi emlékeztetők lehetőség szerint újra lesznek ütemezve';
 
   @override
   String get developerNotificationCoverageBlocked =>
-      'Precise-delivery requirements are not met';
+      'A pontos kézbesítés feltételei nem teljesülnek';
 
   @override
   String get developerNotificationCoverageFailed =>
-      'The latest reminder sync failed';
+      'Az emlékeztetők legutóbbi szinkronizálása sikertelen';
 
   @override
   String developerNotificationDirectCapacitySummary(
     int scheduled,
     int capacity,
   ) {
-    return '$scheduled direct alarms / $capacity capacity';
+    return '$scheduled közvetlen riasztás / $capacity kapacitás';
   }
 
   @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled scheduled, $planned planned';
+    return '$scheduled ütemezve, $planned tervezve';
   }
 
   @override
   String developerNotificationPlanError(Object message) {
-    return 'Last error: $message';
+    return 'Legutóbbi hiba: $message';
   }
 
   @override
-  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+  String get developerNotificationRunMaintenance =>
+      'Értesítési terv újraépítése';
 
   @override
   String get developerNotificationMaintenanceComplete =>
-      'Notification plan rebuilt.';
+      'Az értesítési terv újraépült.';
 
   @override
-  String get developerNotificationTestChannel => 'Test channel';
+  String get developerNotificationTestChannel => 'Tesztcsatorna';
 
   @override
-  String get developerNotificationTestCourse => 'Course reminders';
+  String get developerNotificationTestCourse => 'Tantárgyi emlékeztetők';
 
   @override
-  String get developerNotificationTestSchedule => 'Schedule reminders';
+  String get developerNotificationTestSchedule => 'Naptáremlékeztetők';
 
   @override
-  String get developerNotificationImmediateTest => 'Send immediate test';
+  String get developerNotificationImmediateTest => 'Azonnali teszt küldése';
 
   @override
   String get developerNotificationThirtySecondTest =>
-      'Schedule 30-second background test';
+      'Háttérteszt ütemezése 30 másodperc múlva';
 
   @override
   String get developerNotificationImmediateQueued =>
-      'Immediate test notification sent.';
+      'Az azonnali tesztértesítés elküldve.';
 
   @override
   String get developerNotificationThirtySecondQueued =>
-      'Background test scheduled for 30 seconds.';
+      'A háttérteszt 30 másodperc múlvára ütemezve.';
 
   @override
-  String get developerNotificationAppSwitch => 'App reminder switch';
+  String get developerNotificationAppSwitch =>
+      'Alkalmazás emlékeztetőkapcsolója';
 
   @override
   String get developerNotificationAppSwitchEnabled =>
-      'Enabled for normal reminders';
+      'Normál emlékeztetők engedélyezve';
 
   @override
   String get developerNotificationAppSwitchDisabled =>
-      'Disabled for normal reminders; developer tests can still run';
+      'Normál emlékeztetők letiltva; a fejlesztői tesztek továbbra is futtathatók';
 
   @override
-  String get developerNotificationTimeZone => 'Local time zone';
+  String get developerNotificationTimeZone => 'Helyi időzóna';
 
   @override
   String developerNotificationTimeZoneValue(Object zone, Object offset) {
@@ -2496,22 +2513,22 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get developerNotificationChannelNotCreated =>
-      'Not created yet. A developer test will create it.';
+      'Még nincs létrehozva. Egy fejlesztői teszt létrehozza.';
 
   @override
-  String get developerNotificationChannelEnabledState => 'Enabled';
+  String get developerNotificationChannelEnabledState => 'Engedélyezve';
 
   @override
-  String get developerNotificationChannelBlockedState => 'Blocked';
+  String get developerNotificationChannelBlockedState => 'Letiltva';
 
   @override
   String developerNotificationChannelImportance(int importance) {
-    return 'Importance: $importance';
+    return 'Fontosság: $importance';
   }
 
   @override
   String get developerNotificationChannelImportanceUnavailable =>
-      'Importance unavailable';
+      'A fontosság nem érhető el';
 
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
@@ -2520,54 +2537,59 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String developerNotificationPlatformState(int pending, int active) {
-    return '$pending pending / $active active';
+    return '$pending függőben / $active aktív';
   }
 
   @override
   String developerNotificationNativeLastPosted(String time) {
-    return 'native last posted $time';
+    return 'Legutóbbi natív megjelenítés: $time';
   }
 
   @override
   String get developerNotificationNoDiagnostic =>
-      'No reconciliation recorded yet.';
+      'Még nincs rögzített újraszámítás.';
 
   @override
-  String get developerNotificationNextReminder => 'Next real reminder';
+  String get developerNotificationNextReminder =>
+      'Következő valódi emlékeztető';
 
   @override
   String get developerNotificationNoPendingReminder =>
-      'No future reminder in the current plan';
+      'Nincs jövőbeli emlékeztető a jelenlegi tervben';
 
   @override
-  String get developerNotificationNextMaintenance => 'Next maintenance';
+  String get developerNotificationNextMaintenance => 'Következő karbantartás';
 
   @override
-  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+  String get developerNotificationNextRenewal =>
+      'Következő lehetőség szerinti megújítás';
 
   @override
-  String get developerNotificationNoMaintenance => 'Not scheduled';
+  String get developerNotificationNoMaintenance => 'Nincs ütemezve';
 
   @override
-  String get developerNotificationTruncation => 'Plan truncation';
+  String get developerNotificationTruncation => 'Terv csonkolása';
 
   @override
   String developerNotificationTruncationCount(int count) {
-    return '$count omitted by the plan limit';
+    return '$count kihagyva a tervkorlát miatt';
   }
 
   @override
-  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+  String get developerNotificationLastReconciliation =>
+      'Legutóbbi újraszámítás';
 
   @override
-  String get developerNotificationLastSynchronization => 'Last reminder sync';
+  String get developerNotificationLastSynchronization =>
+      'Emlékeztetők legutóbbi szinkronizálása';
 
   @override
-  String get developerNotificationLateRecovery => 'Late reminder recovery';
+  String get developerNotificationLateRecovery =>
+      'Késő emlékeztetők helyreállítása';
 
   @override
   String developerNotificationLateRecoveryCount(int count) {
-    return '$count reminder(s) were recovered after their original time';
+    return '$count emlékeztető az eredeti időpontja után lett helyreállítva és kézbesítve';
   }
 
   @override
@@ -2581,118 +2603,120 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String get developerNotificationReconcileOriginForeground => 'Foreground';
+  String get developerNotificationReconcileOriginForeground => 'Előtér';
 
   @override
-  String get developerNotificationReconcileOriginBackground => 'Background';
+  String get developerNotificationReconcileOriginBackground => 'Háttér';
 
   @override
-  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+  String get developerNotificationReconcileModeAuthoritative =>
+      'Teljes újraszámítás';
 
   @override
-  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+  String get developerNotificationReconcileModeMaintenance => 'Karbantartás';
 
   @override
-  String get developerNotificationReconcileModeRecovery => 'Recovery';
+  String get developerNotificationReconcileModeRecovery => 'Helyreállítás';
 
   @override
-  String get developerNotificationRunRecovery => 'Run reminder recovery';
+  String get developerNotificationRunRecovery => 'Emlékeztetők helyreállítása';
 
   @override
   String get developerNotificationRecoveryComplete =>
-      'Reminder recovery completed';
+      'Emlékeztetők helyreállítása befejezve';
 
   @override
-  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+  String get developerNotificationReconcileResultSuccess => 'Sikeres';
 
   @override
-  String get developerNotificationReconcileResultSkipped => 'Skipped';
+  String get developerNotificationReconcileResultSkipped => 'Kihagyva';
 
   @override
   String get developerNotificationReconcileResultBlocked =>
-      'Blocked until all precise-delivery conditions are met';
+      'A pontos kézbesítés összes feltételének teljesüléséig letiltva';
 
   @override
-  String get developerNotificationReconcileResultFailed => 'Failed';
+  String get developerNotificationReconcileResultFailed => 'Sikertelen';
 
   @override
   String get developerNotificationBackgroundLimits =>
-      'Vendor background limits';
+      'Gyártói háttérkorlátozások';
 
   @override
   String get developerNotificationOemBackgroundRestriction =>
-      'Vendor background restrictions may affect delivery.';
+      'A gyártó háttérkorlátozásai befolyásolhatják a kézbesítést.';
 
   @override
-  String get developerNotificationAutostart => 'Vendor background start';
+  String get developerNotificationAutostart => 'Gyártói háttérindítás';
 
   @override
   String developerNotificationAutostartVendor(Object vendor) {
-    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+    return 'Gyártó: $vendor; elérhető egy gyártói beállítási oldal. Az Android nem tudja lekérdezni az engedély állapotát.';
   }
 
   @override
   String developerNotificationAutostartFallback(Object vendor) {
-    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+    return 'Gyártó: $vendor; tartalék megoldásként az alkalmazásadatok nyílnak meg. Az Android nem tudja lekérdezni az engedély állapotát.';
   }
 
   @override
   String get developerNotificationAutostartUnavailable =>
-      'No vendor background settings entry is available.';
+      'Nem érhető el gyártói háttérbeállítási oldal.';
 
   @override
   String developerNotificationAutostartLastTarget(Object target) {
-    return 'Last opened target: $target';
+    return 'Legutóbb megnyitott cél: $target';
   }
 
   @override
-  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+  String get developerNotificationAutostartTargetVendor =>
+      'gyártói beállítások';
 
   @override
   String get developerNotificationAutostartTargetApplicationDetails =>
-      'application details';
+      'alkalmazásadatok';
 
   @override
-  String get developerNotificationAutostartTargetUnavailable => 'none';
+  String get developerNotificationAutostartTargetUnavailable => 'nincs';
 
   @override
   String get developerNotificationRebootBoundaryTitle =>
-      'Reboot recovery boundary';
+      'Újraindítás utáni helyreállítás korlátai';
 
   @override
   String get developerNotificationRebootBoundary =>
-      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+      'A helyreállítás az első feloldás után indul; a kényszerítetten leállított alkalmazás nem tud magától elindulni.';
 
   @override
   String get developerNotificationTestChecking =>
-      'Tests are unavailable while notification status is being checked.';
+      'Az értesítési állapot ellenőrzése közben a tesztek nem érhetők el.';
 
   @override
   String get developerNotificationTestBlockedSystem =>
-      'Tests are unavailable because system notifications are blocked.';
+      'A tesztek nem érhetők el, mert a rendszerértesítések le vannak tiltva.';
 
   @override
   String get developerNotificationTestBlockedChannel =>
-      'Tests are unavailable because the selected notification channel is blocked.';
+      'A tesztek nem érhetők el, mert a kiválasztott értesítési csatorna le van tiltva.';
 
   @override
   String get developerNotificationWindowsPermissionManaged =>
-      'Managed by Windows notification settings';
+      'A Windows értesítési beállításai kezelik';
 
   @override
   String get developerNotificationWindowsExactNotApplicable =>
-      'Not applicable on Windows';
+      'Windows alatt nem alkalmazható';
 
   @override
-  String get developerNotificationWindowsIdentity => 'Windows package identity';
+  String get developerNotificationWindowsIdentity => 'Windows-csomagazonosság';
 
   @override
   String get developerNotificationWindowsMsixReady =>
-      'MSIX identity available; active cards can be cancelled';
+      'Az MSIX-csomagazonosság elérhető; az aktív értesítési kártyák törölhetők';
 
   @override
   String get developerNotificationWindowsMsixRequired =>
-      'Install the MSIX build to cancel active cards reliably';
+      'Az aktív értesítési kártyák megbízható törléséhez telepítse az MSIX-verziót';
 
   @override
   String get collapseWorkspaceNavigation =>
@@ -2746,157 +2770,162 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String get notificationSettingsSection => 'Reminders & notifications';
+  String get notificationSettingsSection => 'Emlékeztetők és értesítések';
 
   @override
-  String get notificationCoverage => 'Reminder coverage';
+  String get notificationCoverage => 'Emlékeztetők lefedettsége';
 
   @override
   String get notificationCoverageRenewable =>
-      'Repeating schedules without an end date use background renewal for long-term coverage.';
+      'A záró dátum nélküli ismétlődő események hosszú távú lefedettségét háttérbeli megújítás tartja fenn.';
 
   @override
   String notificationCoverageCapacityLimited(int capacity) {
-    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+    return 'Az Android közvetlenül legfeljebb $capacity emlékeztetőt tárolhat; a későbbiek megújítását a rendszer előre megkísérli.';
   }
 
   @override
   String get notificationSettingsEnabled =>
-      'Enable reminders and notifications';
+      'Emlékeztetők és értesítések engedélyezése';
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
+      'Csak emlékeztetővel rendelkező elemekhez ütemez értesítést. Az alapértéket használó tantárgyakhoz állítsa be alább az alapértelmezett emlékeztetőt.';
 
   @override
   String get notificationPrecisionLimitations =>
       'Az emlékeztetők a rendszerengedélyektől és a háttérben futástól függenek. A kikapcsolás, az idő módosítása vagy a rendszer korlátozásai késést okozhatnak.';
 
   @override
-  String get notificationSettingsEnabledSummary => 'Enabled';
+  String get notificationSettingsEnabledSummary => 'Engedélyezve';
 
   @override
-  String get notificationSettingsDisabledSummary => 'Disabled';
+  String get notificationSettingsDisabledSummary => 'Letiltva';
 
   @override
-  String get notificationDefaultsSection => 'Default reminders';
+  String get notificationDefaultsSection => 'Alapértelmezett emlékeztetők';
 
   @override
-  String get notificationCourseDefaultReminder => 'Course default reminder';
+  String get notificationCourseDefaultReminder =>
+      'Tantárgyak alapértelmezett emlékeztetője';
 
   @override
-  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+  String get notificationGeneralDefaultReminder =>
+      'Naptár alapértelmezett emlékeztetője';
 
   @override
-  String get notificationReminderOff => 'No reminder';
+  String get notificationReminderOff => 'Nincs emlékeztető';
 
   @override
   String notificationReminderCustom(int minutes) {
-    return '$minutes minutes before';
+    return '$minutes perccel előtte';
   }
 
   @override
-  String get notificationPermission => 'Notification permission';
+  String get notificationPermission => 'Értesítési engedély';
 
   @override
-  String get notificationPermissionGranted => 'Allowed by the system';
+  String get notificationPermissionGranted => 'A rendszer engedélyezte';
 
   @override
-  String get notificationPermissionDenied => 'Blocked by the system';
+  String get notificationPermissionDenied => 'A rendszer letiltotta';
 
   @override
-  String get notificationPermissionChecking => 'Checking permission…';
+  String get notificationPermissionChecking => 'Engedély ellenőrzése…';
 
   @override
-  String get notificationPermissionRequest => 'Request permission';
+  String get notificationPermissionRequest => 'Engedély kérése';
 
   @override
-  String get notificationPermissionOpenSettings => 'Open system settings';
+  String get notificationPermissionOpenSettings =>
+      'Rendszerbeállítások megnyitása';
 
   @override
   String get notificationPermissionRequestFailed =>
-      'Could not read notification permission. Try again.';
+      'Nem sikerült lekérdezni az értesítési engedélyt. Próbálja újra.';
 
   @override
-  String get notificationExactAlarm => 'Exact alarm permission';
+  String get notificationExactAlarm => 'Pontos riasztások engedélye';
 
   @override
-  String get notificationExactAlarmAllowed => 'Allowed by the system';
+  String get notificationExactAlarmAllowed => 'A rendszer engedélyezte';
 
   @override
   String get notificationExactAlarmRequired =>
-      'Required for precise reminder times';
+      'A pontos emlékeztetőkhöz szükséges';
 
   @override
-  String get notificationExactAlarmRequest => 'Allow exact alarms';
+  String get notificationExactAlarmRequest => 'Pontos riasztások engedélyezése';
 
   @override
-  String get notificationBatteryOptimization => 'Battery optimization';
+  String get notificationBatteryOptimization => 'Akkumulátoroptimalizálás';
 
   @override
   String get notificationBatteryOptimizationAllowed =>
-      'Android battery optimization allowlisted';
+      'Kivétel az Android akkumulátoroptimalizálása alól';
 
   @override
   String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+      'A pontos emlékeztetőkhöz kivétel szükséges az Android akkumulátoroptimalizálása alól';
 
   @override
   String get notificationBatteryOptimizationRequest =>
-      'Open battery optimization settings';
+      'Akkumulátoroptimalizálási beállítások megnyitása';
 
   @override
-  String get notificationAutostart => 'Vendor background start';
+  String get notificationAutostart => 'Gyártói háttérindítás';
 
   @override
   String get notificationAutostartVendorHint =>
-      'Allow autostart or background running so reminders can be restored after a reboot.';
+      'Engedélyezze az automatikus indítást vagy a háttérben futást, hogy újraindítás után helyreállhassanak az emlékeztetők.';
 
   @override
   String get notificationAutostartFallbackHint =>
-      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+      'Nyissa meg a Sked alkalmazásadatait, és engedélyezze a háttérben futást. Az Android ezt a gyártói beállítást nem tudja ellenőrizni.';
 
   @override
   String get notificationAutostartUnavailable =>
-      'No vendor settings page was found. Check Sked\'s app details manually.';
+      'Nem található gyártói beállítási oldal. Ellenőrizze kézzel a Sked alkalmazásadatait.';
 
   @override
-  String get notificationAutostartRequest => 'Open vendor background settings';
+  String get notificationAutostartRequest =>
+      'Gyártói háttérbeállítások megnyitása';
 
   @override
   String get notificationAutostartOpenFailed =>
-      'Could not open vendor background settings. Check Sked\'s app details manually.';
+      'Nem sikerült megnyitni a gyártói háttérbeállításokat. Ellenőrizze kézzel a Sked alkalmazásadatait.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles =>
+      'Címek megjelenítése a zárolási képernyőn';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Kikapcsolva az értesítések részletei rejtve maradnak a zárolási képernyőn.';
 
   @override
-  String get notificationWidgets => 'Home screen widgets';
+  String get notificationWidgets => 'Kezdőképernyős modulok';
 
   @override
   String get notificationWidgetsDesc =>
-      'Refresh Sked widgets and learn how to add one from the launcher.';
+      'Frissítse a Sked moduljait, és tudja meg, hogyan adhat hozzá egyet a kezdőképernyőről.';
 
   @override
-  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+  String get notificationWidgetsDialogTitle => 'Sked-modul hozzáadása';
 
   @override
   String get notificationWidgetsDialogMessage =>
-      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+      'A készülék kezdőképernyőjén nyomjon meg hosszan egy üres területet, válassza a Modulok lehetőséget, majd adjon hozzá egy Sked-modult. A modul a következő tanórákat vagy eseményeket mutatja.';
 
   @override
-  String get notificationWidgetsRefresh => 'Refresh widgets';
+  String get notificationWidgetsRefresh => 'Modulok frissítése';
 
   @override
-  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+  String get notificationWidgetsRefreshed => 'Modulok frissítve';
 
   @override
   String get notificationPlatformUnsupported =>
-      'This platform does not provide native notifications.';
+      'Ez a platform nem támogat natív értesítéseket.';
 
   @override
   String get workspaceFeatures => 'Funkciók kezelése';
@@ -2965,67 +2994,67 @@ class AppLocalizationsHu extends AppLocalizations {
       'A teljes biztonsági másolat az adatokat és a bekapcsolt munkaterületek kiválasztását is tartalmazza.';
 
   @override
-  String get assistantLayoutPreview => 'AI · Layout preview';
+  String get assistantLayoutPreview => 'AI · Elrendezési előnézet';
 
   @override
   String get assistantSelectionContext =>
-      'Uses the current selection as context';
+      'Az aktuális kijelölést használja kontextusként';
 
   @override
   String get assistantPreviewDescription =>
       'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
 
   @override
-  String get assistantDraftLabel => 'Message draft';
+  String get assistantDraftLabel => 'Üzenetpiszkozat';
 
   @override
   String get assistantPreviewNoSend =>
-      'Layout preview only. Nothing will be sent or changed.';
+      'Csak elrendezési előnézet. Semmi sem lesz elküldve vagy módosítva.';
 
   @override
-  String get resizePanel => 'Resize panel';
+  String get resizePanel => 'Panel átméretezése';
 
   @override
-  String get minimizeWindow => 'Minimize';
+  String get minimizeWindow => 'Kis méret';
 
   @override
-  String get maximizeWindow => 'Maximize';
+  String get maximizeWindow => 'Teljes méret';
 
   @override
-  String get restoreWindow => 'Restore window';
+  String get restoreWindow => 'Ablak visszaállítása';
 
   @override
-  String get closeWindow => 'Close window';
+  String get closeWindow => 'Ablak bezárása';
 
   @override
-  String get courseSystemReminder => 'System reminder';
+  String get courseSystemReminder => 'Rendszeremlékeztető';
 
   @override
   String courseReminderInherit(String reminder) {
-    return 'Use default ($reminder)';
+    return 'Alapértelmezés használata ($reminder)';
   }
 
   @override
   String get courseReminderMasterOff =>
-      'System reminders are off in notification settings. This course preference can still be saved.';
+      'A rendszeremlékeztetők ki vannak kapcsolva az értesítési beállításokban. A tantárgy beállítása ettől még menthető.';
 
   @override
   String get courseReminderDefaultOff =>
-      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+      'Nincs alapértelmezett tantárgyi emlékeztető. Válasszon itt egyéni emlékeztetőt, vagy állítson be alapértéket az értesítési beállításokban.';
 
   @override
   String get courseReminderDeliveryHint =>
-      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+      'Ez a beállítás a tantárggyal együtt mentődik. A kézbesítés a rendszer értesítési engedélyeitől és háttérkorlátozásaitól függ.';
 
   @override
   String get courseReminderPermissionUnknown =>
-      'System notification status has not been checked. Review notification settings before relying on reminders.';
+      'A rendszer értesítési állapota még nincs ellenőrizve. Mielőtt az emlékeztetőkre hagyatkozna, ellenőrizze az értesítési beállításokat.';
 
   @override
-  String get courseReminderMinutesLabel => 'Minutes before class';
+  String get courseReminderMinutesLabel => 'Percekkel az óra előtt';
 
   @override
-  String get exportAction => 'Export';
+  String get exportAction => 'Exportálás';
 
   @override
   String get datePickerSelectWeek => 'Hét kiválasztása';
@@ -3062,93 +3091,94 @@ class AppLocalizationsHu extends AppLocalizations {
   String get timePickerWheelMode => 'Kiválasztás görgetőkerekekkel';
 
   @override
-  String get courseReminderUseDefault => 'Use default';
+  String get courseReminderUseDefault => 'Alapértelmezés használata';
 
   @override
   String get courseReminderInvalidMinutes =>
-      'Enter a whole number of minutes, zero or greater.';
+      'Adja meg a perceket nullánál nem kisebb egész számként.';
 
   @override
-  String get generalCustomColumnWidth => 'Custom view column width';
+  String get generalCustomColumnWidth => 'Egyéni nézet oszlopszélessége';
 
   @override
-  String get generalCustomColumnWidthAuto => 'Automatic';
+  String get generalCustomColumnWidthAuto => 'Automatikus';
 
   @override
-  String get generalCustomColumnWidthManual => 'Minimum width';
+  String get generalCustomColumnWidthManual => 'Minimális szélesség';
 
   @override
-  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+  String get generalCustomColumnWidthMinimum => 'Minimális szélesség naponta';
 
   @override
   String get generalCustomColumnWidthHint =>
-      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+      'Minden dátum ugyanazt a minimális szélességet használja. Az oszlopok kitöltik a rendelkezésre álló helyet, vagy oldalra görgethetők. Csak az egyéni nézetre hat.';
 
   @override
-  String get settingsAppearanceLanguage => 'Appearance & language';
+  String get settingsAppearanceLanguage => 'Megjelenés és nyelv';
 
   @override
-  String get settingsAppearanceDetails => 'Colors & outlines';
+  String get settingsAppearanceDetails => 'Színek és körvonalak';
 
   @override
-  String get monthNoEvents => 'No events on this day';
+  String get monthNoEvents => 'Ezen a napon nincs esemény';
 
   @override
-  String get settingsOverview => 'Overview';
+  String get settingsOverview => 'Áttekintés';
 
   @override
-  String get settingsThemeTarget => 'Theme for';
+  String get settingsThemeTarget => 'Téma célja';
 
   @override
-  String get settingsColorMode => 'Color mode';
+  String get settingsColorMode => 'Színmód';
 
   @override
-  String get settingsNotificationPreferences => 'Reminder preferences';
+  String get settingsNotificationPreferences => 'Emlékeztetőbeállítások';
 
   @override
   String get settingsNotificationPreferencesSummary =>
-      'Default reminders, permissions and reliability';
+      'Alapértelmezett emlékeztetők, engedélyek és megbízhatóság';
 
   @override
-  String get settingsFeaturesSummary => 'Workspaces and navigation';
+  String get settingsFeaturesSummary => 'Munkaterületek és navigáció';
 
   @override
-  String get settingsPrivacySummary => 'Privacy policy and clear local data';
+  String get settingsPrivacySummary =>
+      'Adatvédelmi szabályzat és helyi adatok törlése';
 
   @override
   String periodTimesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count periods',
-      one: '1 period',
+      other: '$count tanóra',
+      one: '1 tanóra',
     );
     return '$_temp0';
   }
 
   @override
-  String get periodTimesPeriodColumn => 'Period';
+  String get periodTimesPeriodColumn => 'Tanóra';
 
   @override
-  String get periodTimesDurationColumn => 'Duration';
+  String get periodTimesDurationColumn => 'Időtartam';
 
   @override
-  String get periodTimesGapColumn => 'Break';
+  String get periodTimesGapColumn => 'Szünet';
 
   @override
   String periodTimesMinutesShort(int minutes) {
-    return '$minutes min';
+    return '$minutes perc';
   }
 
   @override
-  String get periodTimesSavePending => 'Waiting to save…';
+  String get periodTimesSavePending => 'Mentésre vár…';
 
   @override
-  String get periodTimesSaveFailed => 'Not saved · Save failed';
+  String get periodTimesSaveFailed => 'Nincs mentve · A mentés sikertelen';
 
   @override
   String get periodTimesInvalidStatus =>
-      'Not saved · Fix the highlighted times';
+      'Nincs mentve · Javítsa a jelölt időpontokat';
 
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
@@ -3184,45 +3214,45 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get toolbarNavigationEssentialHint =>
-      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+      'Ha az eszköztáron kikapcsolja a Beállítások vagy Munkaterület elemet, az a Továbbiak menübe kerül. A Továbbiak nem rejthető el, amíg alapvető műveleteket tartalmaz. A munkaterületváltás csak rejtett alsó navigáció és több engedélyezett munkaterület esetén jelenik meg.';
 
   @override
-  String get reminderEnded => 'Ended';
+  String get reminderEnded => 'Befejeződött';
 
   @override
   String get reminderAutoCloseHint =>
-      'Closes after 10 seconds. Interact to keep open.';
+      '10 másodperc után bezárul. A panel használatával nyitva tarthatja.';
 
   @override
-  String get showReminderIndependently => 'Open independently';
+  String get showReminderIndependently => 'Megnyitás külön';
 
   @override
-  String get categoryManagerTitle => 'Manage categories';
+  String get categoryManagerTitle => 'Kategóriák kezelése';
 
   @override
-  String get categoryHidden => 'Hidden';
+  String get categoryHidden => 'Rejtett';
 
   @override
-  String get categoryShowOnCalendar => 'Show on calendar';
+  String get categoryShowOnCalendar => 'Megjelenítés a naptárban';
 
   @override
-  String get categoryHideOnCalendar => 'Hide from calendar';
+  String get categoryHideOnCalendar => 'Elrejtés a naptárból';
 
   @override
-  String get categoryEditColor => 'Change category color';
+  String get categoryEditColor => 'Kategória színének módosítása';
 
   @override
-  String get categoryThemePalette => 'Theme palette';
+  String get categoryThemePalette => 'Téma színpalettája';
 
   @override
-  String get categoryCustomColor => 'Custom';
+  String get categoryCustomColor => 'Egyéni';
 
   @override
-  String get colorHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => 'Adjon meg hatjegyű hexadecimális színkódot.';
 
   @override
   String categoryColorSlot(int number) {
-    return 'Theme color $number';
+    return 'Téma színe: $number';
   }
 
   @override
@@ -3230,34 +3260,34 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get storeUpdateDelay =>
-      'Store updates may arrive later. Availability is determined by the store page.';
+      'Az áruházi frissítések később érkezhetnek. Az elérhetőségről az áruház oldala tájékoztat.';
 
   @override
   String get storePrereleaseNotice =>
-      'Receiving prerelease update notices does not enroll you in a store testing track.';
+      'Az előzetes kiadásokról szóló értesítések fogadása nem jelent belépést az áruház tesztprogramjába.';
 
   @override
-  String get updateFoundTitle => 'New version available';
+  String get updateFoundTitle => 'Új verzió érhető el';
 
   @override
-  String get updateNoNotes => 'No release notes were provided.';
+  String get updateNoNotes => 'Nincsenek kiadási megjegyzések.';
 
   @override
-  String get updateLater => 'Later';
+  String get updateLater => 'Később';
 
   @override
-  String get updateRetry => 'Retry';
+  String get updateRetry => 'Újrapróbálás';
 
   @override
-  String get updatePrerelease => 'Prerelease';
+  String get updatePrerelease => 'Előzetes kiadás';
 
   @override
   String get updateNetworkFailure =>
-      'Unable to check for updates. Check your connection and try again.';
+      'Nem sikerült frissítéseket keresni. Ellenőrizze a kapcsolatot, és próbálja újra.';
 
   @override
   String updateNoNewerVersion(String version) {
-    return 'No newer version found (current: $version)';
+    return 'Nem található újabb verzió (jelenlegi: $version)';
   }
 
   @override
