@@ -8,7 +8,11 @@ import '../support/workspace_harness.dart';
 
 Finder k(String key) => find.byKey(ValueKey(key));
 void main() {
-  for (final (month, weeks) in [(2, 4), (9, 5), (8, 6)]) {
+  for (final (year, month, weeks) in [
+    (2027, 2, 4),
+    (2026, 9, 5),
+    (2026, 8, 6),
+  ]) {
     for (final lunar in [false, true]) {
       for (final scale in [1.0, 2.0]) {
         testWidgets(
@@ -22,7 +26,7 @@ void main() {
               buildDefaultPeriodTimes(),
               localeCode: 'zh',
             );
-            final date = DateTime(2026, month, 16);
+            final date = DateTime(year, month, 16);
             final data = base.copyWith(
               activeMode: AppMode.general,
               generalMode: base.generalMode.copyWith(
@@ -58,7 +62,7 @@ void main() {
               weeks * 7,
             );
             expect(grid.physics, isA<NeverScrollableScrollPhysics>());
-            final cell = k('general-month-day-cell-2026-$month-16');
+            final cell = k('general-month-day-cell-$year-$month-16');
             final height = t.getSize(cell).height;
             if (scale == 1) expect(height, closeTo(lunar ? 56 : 48, .1));
             expect(height, greaterThanOrEqualTo(48));
