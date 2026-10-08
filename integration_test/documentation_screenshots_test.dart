@@ -239,6 +239,20 @@ void main() {
             await t.pumpAndSettle();
           }
 
+          // The fixed sample dates can surface reminders at the runtime date.
+          // Close that transient panel through its real UI before capturing
+          // the requested calendar, details, or editor scene.
+          final reminders = _key('general-reminders-list');
+          if (reminders.evaluate().isNotEmpty) {
+            await tap(
+              find.descendant(
+                of: reminders,
+                matching: _key('workspace-inspector-close'),
+              ),
+            );
+          }
+          expect(reminders, findsNothing, reason: '$locale/$scene');
+
           if (scene.startsWith('course-')) {
             await tap(
               _key(
@@ -272,6 +286,7 @@ void main() {
           }
           FocusManager.instance.primaryFocus?.unfocus();
           await t.pumpAndSettle();
+          expect(reminders, findsNothing, reason: '$locale/$scene');
           expect(t.takeException(), isNull, reason: '$locale/$scene');
           final render =
               boundary.currentContext!.findRenderObject()!
