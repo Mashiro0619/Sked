@@ -2216,5 +2216,9 @@
   "categoryThemePalette": "主題配色",
   "categoryCustomColor": "自訂",
   "colorHexInvalid": "請輸入六位十六進位顏色。",
-  "categoryColorSlot": "主題顏色 {number}"
+  "categoryColorSlot": "主題顏色 {number}",
+  "backupRestoreInProgressTitle": "正在還原備份…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "還原完成前，暫時無法修改資料和設定。你仍可查看內容。",
+  "@backupRestoreInProgressMessage": {}
 }

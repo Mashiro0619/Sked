@@ -3243,4 +3243,11 @@ class AppLocalizationsDa extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Gendanner sikkerhedskopi…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Data og indstillinger kan ændres, når gendannelsen er færdig. Du kan stadig se dem.';
 }

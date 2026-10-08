@@ -3255,4 +3255,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Przywracanie kopii zapasowej…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Dane i ustawienia będzie można zmieniać po zakończeniu przywracania. Nadal możesz je przeglądać.';
 }

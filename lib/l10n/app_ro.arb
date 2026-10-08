@@ -1740,5 +1740,9 @@
   "settingsPanelDisplayOverlayDescription": "Suprapune partea dreaptă fără a redimensiona calendarul.",
   "settingsPanelDisplaySideBySideDescription": "Preferă afișarea alăturată; suprapune doar dacă calendarul devine prea îngust.",
   "settingsPanelDisplayAutomaticDescription": "Afișează alăturat dacă lățimea calendarului rămâne lizibilă; altfel suprapune.",
-  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.",
+  "backupRestoreInProgressTitle": "Se restaurează copia de siguranță…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "Datele și setările pot fi modificate după încheierea restaurării. Le poți consulta în continuare.",
+  "@backupRestoreInProgressMessage": {}
 }

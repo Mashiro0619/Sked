@@ -161,6 +161,7 @@ class _AppearanceChoiceField extends StatelessWidget {
     this.workspace,
     this.title,
     this.icon,
+    this.changesAppData = true,
   });
   final String? title;
   final IconData? icon;
@@ -170,6 +171,7 @@ class _AppearanceChoiceField extends StatelessWidget {
   final Key? choiceListKey;
   final bool enabled;
   final AppMode? workspace;
+  final bool changesAppData;
   @override
   Widget build(BuildContext context) => title != null
       ? SettingsChoiceTile<String>(
@@ -182,6 +184,7 @@ class _AppearanceChoiceField extends StatelessWidget {
               DropdownMenuEntry(value: option.value, label: option.label),
           ],
           enabled: enabled,
+          changesAppData: changesAppData,
           workspace: workspace,
           sessionKey: workspace,
           onSelected: (value) {
@@ -382,6 +385,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       if (provider.source.hasMultipleWorkspaces)
         SettingsChoiceTile<String>(
           key: const ValueKey('theme-workspace-target'),
+          changesAppData: false,
           title: l.settingsThemeTarget,
           icon: Icons.dashboard_outlined,
           value: provider.activeMode.value,
@@ -426,6 +430,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       Builder(
         builder: (anchor) => SettingsConnectedTile(
           key: const ValueKey('settings-theme-seed'),
+          changesAppData: true,
           leading: const Icon(Icons.palette_outlined),
           title: l.themeColor,
           value: formatSkedColorHex(provider.themeSeedColorValue),
@@ -548,6 +553,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                             if (source.hasMultipleWorkspaces)
                               _AppearanceChoiceField(
                                 title: l10n.settingsThemeTarget,
+                                changesAppData: false,
                                 icon: Icons.dashboard_outlined,
                                 enabled: !uiCommandBusy,
                                 workspace: provider.activeMode,
@@ -1338,7 +1344,9 @@ class _SingleThemeColorSection extends StatelessWidget {
                         ),
                         colorValue: colorValue,
                         selected: provider.themeSeedColorValue == colorValue,
-                        onTap: () => onSelectColor(colorValue),
+                        onTap: provider.source.isRestoringAppBackup
+                            ? null
+                            : () => onSelectColor(colorValue),
                       ),
                   ],
                 ),
@@ -1349,6 +1357,7 @@ class _SingleThemeColorSection extends StatelessWidget {
         Builder(
           builder: (anchor) => SettingsConnectedTile(
             leading: const Icon(Icons.colorize_outlined),
+            changesAppData: true,
             title: l10n.themeCustomColor,
             value: hasCustomColor
                 ? formatSkedColorHex(provider.themeSeedColorValue)
@@ -1588,7 +1597,7 @@ class _ThemeColorOption extends StatelessWidget {
 
   final int colorValue;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

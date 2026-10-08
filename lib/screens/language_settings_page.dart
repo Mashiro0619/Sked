@@ -74,7 +74,8 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                               selected: option.code == currentCode,
                               onTap:
                                   _isSelectingLanguage ||
-                                      _languageSelectionPopped
+                                      _languageSelectionPopped ||
+                                      provider.isRestoringAppBackup
                                   ? null
                                   : () {
                                       unawaited(
@@ -115,7 +116,9 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     TimetableProvider provider,
     String localeCode,
   ) async {
-    if (_isSelectingLanguage || _languageSelectionPopped) {
+    if (_isSelectingLanguage ||
+        _languageSelectionPopped ||
+        provider.isRestoringAppBackup) {
       return;
     }
     final normalizedCode = normalizeLocaleCode(localeCode);

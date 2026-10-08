@@ -6,13 +6,20 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'expressive_motion.dart';
 import 'workbench_layout_policy.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_dropdown_menu.dart';
 import '../models/app_mode.dart';
+
+bool _settingsWritesEnabled(BuildContext context) =>
+    !context.select<TimetableProvider?, bool>(
+      (provider) => provider?.isRestoringAppBackup ?? false,
+    );
 
 /// Blocks a settings surface during persistence without switching every child
 /// to its disabled colors. Pointer and keyboard actions are unavailable while
@@ -530,6 +537,7 @@ class SettingsConnectedTile extends StatelessWidget {
     this.onTapHint,
     this.foregroundColor,
     this.value,
+    this.changesAppData = false,
   });
 
   final Widget leading;
@@ -555,10 +563,16 @@ class SettingsConnectedTile extends StatelessWidget {
   /// A current preference, distinct from explanatory [subtitle] text.
   final String? value;
 
+  /// Navigation and read-only actions stay available during a backup restore.
+  final bool changesAppData;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final canWrite = !changesAppData || _settingsWritesEnabled(context);
+    final onTap = canWrite ? this.onTap : null;
+    final onLongPress = canWrite ? this.onLongPress : null;
     final enabled = onTap != null || onLongPress != null;
     final resolvedForegroundColor = enabled
         ? foregroundColor
@@ -1113,6 +1127,7 @@ class SettingsSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onChanged = _settingsWritesEnabled(context) ? this.onChanged : null;
     if (_SettingsTonalGroup.of(context) ||
         WorkbenchChromeMetrics.of(context).desktop) {
       return SettingsConnectedTile(
@@ -1121,13 +1136,13 @@ class SettingsSwitchTile extends StatelessWidget {
         subtitle: subtitle,
         trailing: Switch(value: value, onChanged: onChanged),
         semanticToggled: value,
-        onTap: onChanged == null ? null : () => onChanged!(!value),
+        onTap: onChanged == null ? null : () => onChanged(!value),
       );
     }
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
     final enabled = onChanged != null;
-    final toggle = enabled ? () => onChanged!(!value) : null;
+    final toggle = enabled ? () => onChanged(!value) : null;
     return Semantics(
       label: title,
       hint: subtitle,
@@ -1481,6 +1496,7 @@ class _SettingsToolbarNavigationEditorState
 
   bool get _reorderInteractionEnabled =>
       !widget.busy &&
+      !(context.read<TimetableProvider?>()?.isRestoringAppBackup ?? false) &&
       !_dragInProgress &&
       !_dropSettlementPending &&
       !_reorderSavePending;
@@ -1526,6 +1542,7 @@ class _SettingsToolbarNavigationEditorState
 
   void _onReorder(int oldIndex, int newIndex) {
     if (widget.busy ||
+        (context.read<TimetableProvider?>()?.isRestoringAppBackup ?? false) ||
         oldIndex == newIndex ||
         oldIndex < 0 ||
         newIndex < 0 ||
@@ -1655,6 +1672,7 @@ class _SettingsToolbarNavigationEditorState
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final shape = skedShapeSchemeOf(context).container;
+    final writesEnabled = _settingsWritesEnabled(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Material(
@@ -1680,7 +1698,7 @@ class _SettingsToolbarNavigationEditorState
               onReorderEnd: _onReorderEnd,
               proxyDecorator: _proxyDecorator,
               itemBuilder: (context, index) =>
-                  _buildItemRow(context, index, colors),
+                  _buildItemRow(context, index, colors, writesEnabled),
             ),
           ),
         ),
@@ -1688,9 +1706,14 @@ class _SettingsToolbarNavigationEditorState
     );
   }
 
-  Widget _buildItemRow(BuildContext context, int index, ColorScheme colors) {
+  Widget _buildItemRow(
+    BuildContext context,
+    int index,
+    ColorScheme colors,
+    bool writesEnabled,
+  ) {
     final item = _items[index];
-    final enabled = item.canHide && !widget.busy;
+    final enabled = item.canHide && !widget.busy && writesEnabled;
     final foreground = enabled
         ? colors.onSurface
         : colors.onSurface.withValues(alpha: 0.58);
@@ -1786,6 +1809,15 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (context.read<TimetableProvider?>()?.isRestoringAppBackup ?? false) {
+      _isInteracting = false;
+      _previewValue = _clamp(widget.value);
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant SettingsSliderTile oldWidget) {
     super.didUpdateWidget(oldWidget);
     final interactionCompleted = !oldWidget.enabled && widget.enabled;
@@ -1805,7 +1837,7 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
-    final enabled = widget.enabled;
+    final enabled = widget.enabled && _settingsWritesEnabled(context);
     final tonal = _SettingsTonalGroup.of(context);
     final safeValue = _clamp(_previewValue);
     final foregroundColor = enabled
@@ -1952,6 +1984,7 @@ class SettingsChoiceTile<T> extends StatelessWidget {
     this.workspace,
     this.sessionKey,
     this.subtitle,
+    this.changesAppData = true,
   });
   final String? subtitle;
   final String title;
@@ -1962,14 +1995,17 @@ class SettingsChoiceTile<T> extends StatelessWidget {
   final bool enabled;
   final AppMode? workspace;
   final Object? sessionKey;
+  final bool changesAppData;
 
   @override
   Widget build(BuildContext context) {
+    final enabled =
+        this.enabled && (!changesAppData || _settingsWritesEnabled(context));
     return SkedDropdownMenu<T>(
       initialSelection: value,
       dropdownMenuEntries: entries,
       enabled: enabled,
-      onSelected: onSelected,
+      onSelected: enabled ? onSelected : null,
       workspace: workspace,
       sessionKey: sessionKey,
       expandedInsets: EdgeInsets.zero,

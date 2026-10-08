@@ -2224,5 +2224,9 @@
   "updateRetry": "重试",
   "updatePrerelease": "预发布",
   "updateNetworkFailure": "暂时无法检查更新，请检查网络后重试。",
-  "updateNoNewerVersion": "未发现更新版本（当前：{version}）"
+  "updateNoNewerVersion": "未发现更新版本（当前：{version}）",
+  "backupRestoreInProgressTitle": "正在恢复备份…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "恢复完成前，暂时无法修改数据和设置。你仍可查看内容。",
+  "@backupRestoreInProgressMessage": {}
 }

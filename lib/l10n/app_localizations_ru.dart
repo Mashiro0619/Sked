@@ -3266,4 +3266,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Восстановление резервной копии…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Данные и настройки можно будет изменить после восстановления. Их по-прежнему можно просматривать.';
 }

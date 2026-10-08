@@ -3259,4 +3259,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle =>
+      'Biztonsági mentés visszaállítása…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Az adatok és beállítások a visszaállítás befejezése után módosíthatók. Továbbra is megtekintheted őket.';
 }

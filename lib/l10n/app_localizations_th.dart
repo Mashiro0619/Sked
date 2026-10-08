@@ -3229,4 +3229,11 @@ class AppLocalizationsTh extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'กำลังกู้คืนข้อมูลสำรอง…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'คุณจะเปลี่ยนข้อมูลและการตั้งค่าได้เมื่อการกู้คืนเสร็จสิ้น แต่ยังดูเนื้อหาได้ตามปกติ';
 }

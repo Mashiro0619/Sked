@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
+import '../providers/timetable_provider.dart';
 
 Future<bool> runUiCommandWithFeedback({
   required BuildContext context,
@@ -11,13 +12,16 @@ Future<bool> runUiCommandWithFeedback({
 }) async {
   final feedbackHost = UiCommandFeedbackHost._maybeOf(context);
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final failureMessage = AppLocalizations.of(context).saveFailedRetry;
+  final l10n = AppLocalizations.of(context);
   feedbackHost?._clearFailure();
   try {
     await command();
     return true;
   } catch (error, stackTrace) {
     debugPrint('$debugLabel failed: $error\n$stackTrace');
+    final failureMessage = error is AppBackupRestoreInProgressException
+        ? l10n.backupRestoreInProgressMessage
+        : l10n.saveFailedRetry;
     if (feedbackHost?.mounted ?? false) {
       feedbackHost!._showFailure(failureMessage);
     } else if (messenger?.mounted ?? false) {

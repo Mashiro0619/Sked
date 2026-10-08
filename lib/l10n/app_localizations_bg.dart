@@ -3272,4 +3272,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle =>
+      'Възстановяване на резервно копие…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Данните и настройките могат да се променят след края на възстановяването. Все още можете да ги преглеждате.';
 }

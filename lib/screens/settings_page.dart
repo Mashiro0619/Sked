@@ -174,6 +174,8 @@ class _SettingsPageState extends State<SettingsPage>
 
   @override
   Widget build(BuildContext context) {
+    final nestedPage =
+        context.findAncestorWidgetOfExactType<SettingsPage>() != null;
     return Consumer<TimetableProvider>(
       builder: (context, provider, _) {
         final l = AppLocalizations.of(context);
@@ -182,7 +184,7 @@ class _SettingsPageState extends State<SettingsPage>
           provider.enabledWorkspaces,
           canClearData: !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
         );
-        return PopScope(
+        final content = PopScope(
           canPop:
               !uiCommandBusy &&
               !_clearingAppData &&
@@ -220,6 +222,18 @@ class _SettingsPageState extends State<SettingsPage>
                     ),
                   ),
           ),
+        );
+        // The retained settings navigator owns one status footer. Nested
+        // destinations remain navigable and do not repeat the same notice.
+        if (nestedPage) {
+          return content;
+        }
+        return Column(
+          children: [
+            Expanded(child: content),
+            if (provider.isRestoringAppBackup && !provider.isDataClearActive)
+              const _BackupRestoreStatus(),
+          ],
         );
       },
     );
@@ -487,6 +501,7 @@ class _SettingsPageState extends State<SettingsPage>
                       ? _dataTransferController.studentPageContent(
                           context,
                           busy: busy,
+                          importEnabled: !provider.isRestoringAppBackup,
                           direction: widget.transferDirection,
                           onAction: (action) => unawaited(
                             _performStudentTransfer(provider, action),
@@ -497,7 +512,7 @@ class _SettingsPageState extends State<SettingsPage>
                               icon: Icons.language_outlined,
                               title: l10n.schoolWebImportEntry,
                               subtitle: l10n.schoolWebImportEntryDesc,
-                              onTap: busy
+                              onTap: busy || provider.isRestoringAppBackup
                                   ? null
                                   : () => _openSchoolSitesPage(provider),
                             ),
@@ -517,6 +532,7 @@ class _SettingsPageState extends State<SettingsPage>
                       : _dataTransferController.generalPageContent(
                           context,
                           busy: busy,
+                          importEnabled: !provider.isRestoringAppBackup,
                           direction: widget.transferDirection,
                           onAction: (action) => unawaited(
                             _performGeneralTransfer(provider, action),
@@ -612,6 +628,7 @@ class _SettingsPageState extends State<SettingsPage>
       if (!kIsWeb && defaultTargetPlatform != TargetPlatform.iOS)
         SettingsConnectedTile(
           key: const ValueKey('settings-clear-app-data'),
+          changesAppData: true,
           leading: const Icon(Icons.delete_forever_outlined),
           title: l10n.clearAppData,
           subtitle: l10n.clearAppDataDesc,
@@ -1009,6 +1026,7 @@ class _SettingsPageState extends State<SettingsPage>
       await _dataTransferController.runAppDataFlow(
         context,
         hasRecoveryArtifacts: () => provider.recoveryArtifacts.isNotEmpty,
+        restoreEnabled: !provider.isRestoringAppBackup,
         onAction: (action) async {
           switch (action) {
             case SettingsAppDataAction.restoreBackupFile:
@@ -1161,6 +1179,7 @@ class _SettingsPageState extends State<SettingsPage>
     String source,
     BuildContext feedbackContext,
   ) async {
+    if (!_canStartBackupRestore(provider, feedbackContext)) return false;
     AppData restored;
     try {
       restored = decodeAppBackup(
@@ -1237,6 +1256,7 @@ class _SettingsPageState extends State<SettingsPage>
       },
     );
     if (confirmed != true || !feedbackContext.mounted) return false;
+    if (!_canStartBackupRestore(provider, feedbackContext)) return false;
     final l10n = AppLocalizations.of(feedbackContext);
     final successMessage = l10n.restoreBackupSuccessMessage;
     final failureMessage = l10n.restoreBackupFailureMessage;
@@ -1263,6 +1283,23 @@ class _SettingsPageState extends State<SettingsPage>
       }
       return false;
     }
+  }
+
+  bool _canStartBackupRestore(
+    TimetableProvider provider,
+    BuildContext feedbackContext,
+  ) {
+    if (!provider.isRestoringAppBackup) return true;
+    if (feedbackContext.mounted) {
+      ScaffoldMessenger.of(feedbackContext).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(feedbackContext).backupRestoreInProgressMessage,
+          ),
+        ),
+      );
+    }
+    return false;
   }
 
   Future<void> _exportAppDataBackup(
@@ -2311,6 +2348,54 @@ String _settingsRecoveryArtifactFileName(String artifactPath) {
   if (fileName.isEmpty) fileName = 'Sked_recovery_data.json';
   if (!fileName.contains('.')) fileName = '$fileName.json';
   return fileName;
+}
+
+class _BackupRestoreStatus extends StatelessWidget {
+  const _BackupRestoreStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Semantics(
+      key: const ValueKey('settings-backup-restore-status'),
+      liveRegion: true,
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHigh,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ExcludeSemantics(child: LinearProgressIndicator()),
+            SafeArea(
+              top: false,
+              minimum: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 960),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.backupRestoreInProgressTitle,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.backupRestoreInProgressMessage,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _RecoveryNoticeTile extends StatelessWidget {

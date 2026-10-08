@@ -1740,5 +1740,9 @@
   "settingsPanelDisplayOverlayDescription": "Lägger panelen över höger sida utan att ändra kalenderns bredd.",
   "settingsPanelDisplaySideBySideDescription": "Föredrar sida vid sida; överlagrar bara om kalendern blir för smal.",
   "settingsPanelDisplayAutomaticDescription": "Visar sida vid sida när kalendern har läsbar bredd, annars som överlagring.",
-  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.",
+  "backupRestoreInProgressTitle": "Återställer säkerhetskopian…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "Data och inställningar kan ändras när återställningen är klar. Du kan fortfarande visa dem.",
+  "@backupRestoreInProgressMessage": {}
 }

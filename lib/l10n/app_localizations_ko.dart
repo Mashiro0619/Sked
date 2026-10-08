@@ -3188,4 +3188,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => '백업 복원 중…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      '복원이 완료되면 데이터와 설정을 변경할 수 있습니다. 내용은 계속 볼 수 있습니다.';
 }

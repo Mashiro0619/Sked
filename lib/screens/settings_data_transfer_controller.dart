@@ -62,6 +62,7 @@ class SettingsDataTransferController {
     BuildContext context, {
     required bool Function() hasRecoveryArtifacts,
     required Future<void> Function(SettingsAppDataAction action) onAction,
+    bool restoreEnabled = true,
   }) async {
     final action = await _showActions<SettingsAppDataAction>(
       context,
@@ -76,12 +77,14 @@ class SettingsDataTransferController {
             [
               _TransferAction(
                 value: SettingsAppDataAction.restoreBackupFile,
+                enabled: restoreEnabled,
                 icon: Icons.restore_page_outlined,
                 title: l10n.restoreBackupFileTitle,
                 subtitle: l10n.restoreBackupFileSubtitle,
               ),
               _TransferAction(
                 value: SettingsAppDataAction.restoreBackupText,
+                enabled: restoreEnabled,
                 icon: Icons.content_paste_go_outlined,
                 title: l10n.restoreBackupTextTitle,
                 subtitle: l10n.restoreBackupTextSubtitle,
@@ -272,6 +275,7 @@ class SettingsDataTransferController {
     BuildContext context, {
     required ValueChanged<SettingsStudentDataAction> onAction,
     required bool busy,
+    bool importEnabled = true,
     List<Widget> additionalImports = const [],
     List<Widget> importConfiguration = const [],
     SettingsTransferDirection? direction,
@@ -279,6 +283,7 @@ class SettingsDataTransferController {
     spec: _studentSpec(context),
     onAction: onAction,
     busy: busy,
+    importEnabled: importEnabled,
     additionalImports: additionalImports,
     importConfiguration: importConfiguration,
     direction: direction,
@@ -287,12 +292,14 @@ class SettingsDataTransferController {
     BuildContext context, {
     required ValueChanged<SettingsGeneralDataAction> onAction,
     required bool busy,
+    bool importEnabled = true,
     SettingsTransferDirection? direction,
   }) => _TransferPageContent(
     spec: _generalSpec(context),
     direction: direction,
     onAction: onAction,
     busy: busy,
+    importEnabled: importEnabled,
   );
 
   Future<T?> _showActions<T>(
@@ -331,7 +338,9 @@ class SettingsDataTransferController {
                       icon: action.icon,
                       title: action.title,
                       subtitle: action.subtitle,
-                      onTap: () => popWith(action.value),
+                      onTap: action.enabled
+                          ? () => popWith(action.value)
+                          : null,
                     ),
                 ],
               ),
@@ -370,12 +379,14 @@ class _TransferAction<T> {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.enabled = true,
   });
 
   final T value;
   final IconData icon;
   final String title;
   final String subtitle;
+  final bool enabled;
 }
 
 class _ActionSheetHeader extends StatelessWidget {
@@ -455,14 +466,19 @@ class _ActionSheetTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final foreground = onTap == null
+        ? colors.onSurface.withValues(alpha: 0.38)
+        : colors.onSurface;
+    final secondary = onTap == null ? foreground : colors.onSurfaceVariant;
     return ExpressiveTap(
       onTap: onTap,
+      enabled: onTap != null,
       borderRadius: BorderRadius.circular(16),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 72),
@@ -473,9 +489,7 @@ class _ActionSheetTile extends StatelessWidget {
               SizedBox(
                 width: 40,
                 height: 40,
-                child: Center(
-                  child: Icon(icon, color: colors.onSurfaceVariant),
-                ),
+                child: Center(child: Icon(icon, color: secondary)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -488,7 +502,7 @@ class _ActionSheetTile extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colors.onSurface,
+                        color: foreground,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -498,7 +512,7 @@ class _ActionSheetTile extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
+                        color: secondary,
                       ),
                     ),
                   ],
@@ -508,11 +522,7 @@ class _ActionSheetTile extends StatelessWidget {
               SizedBox(
                 width: 32,
                 height: 48,
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 28,
-                  color: colors.onSurfaceVariant,
-                ),
+                child: Icon(Icons.chevron_right, size: 28, color: secondary),
               ),
             ],
           ),
@@ -611,6 +621,7 @@ class _TransferPageContent<T> extends StatelessWidget {
     required this.spec,
     required this.onAction,
     required this.busy,
+    this.importEnabled = true,
     this.additionalImports = const [],
     this.importConfiguration = const [],
     this.direction,
@@ -618,6 +629,7 @@ class _TransferPageContent<T> extends StatelessWidget {
   final _TransferSheetSpec<T> spec;
   final ValueChanged<T> onAction;
   final bool busy;
+  final bool importEnabled;
   final List<Widget> additionalImports;
   final List<Widget> importConfiguration;
   final SettingsTransferDirection? direction;
@@ -648,7 +660,9 @@ class _TransferPageContent<T> extends StatelessWidget {
               icon: action.icon,
               title: action.title,
               subtitle: action.subtitle,
-              onTap: busy ? null : () => onAction(action.value),
+              onTap: busy || (index == 0 && !importEnabled)
+                  ? null
+                  : () => onAction(action.value),
             ),
           if (index == 0) ...additionalImports,
         ],

@@ -3245,4 +3245,11 @@ class AppLocalizationsEt extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Varukoopia taastamine…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Andmeid ja seadeid saab muuta pärast taastamise lõppu. Neid saab endiselt vaadata.';
 }

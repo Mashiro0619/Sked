@@ -3051,6 +3051,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return '未发现更新版本（当前：$version）';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => '正在恢复备份…';
+
+  @override
+  String get backupRestoreInProgressMessage => '恢复完成前，暂时无法修改数据和设置。你仍可查看内容。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6069,4 +6075,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String categoryColorSlot(int number) {
     return '主題顏色 $number';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => '正在還原備份…';
+
+  @override
+  String get backupRestoreInProgressMessage => '還原完成前，暫時無法修改資料和設定。你仍可查看內容。';
 }

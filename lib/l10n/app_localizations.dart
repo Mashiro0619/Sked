@@ -5813,6 +5813,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No newer version found (current: {version})'**
   String updateNoNewerVersion(String version);
+
+  /// No description provided for @backupRestoreInProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring backup…'**
+  String get backupRestoreInProgressTitle;
+
+  /// No description provided for @backupRestoreInProgressMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Data and settings can be changed when the restore finishes. You can still view them.'**
+  String get backupRestoreInProgressMessage;
 }
 
 class _AppLocalizationsDelegate

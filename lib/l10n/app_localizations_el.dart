@@ -3275,4 +3275,11 @@ class AppLocalizationsEl extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Επαναφορά αντιγράφου ασφαλείας…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Τα δεδομένα και οι ρυθμίσεις μπορούν να αλλάξουν όταν ολοκληρωθεί η επαναφορά. Μπορείτε ακόμα να τα προβάλετε.';
 }

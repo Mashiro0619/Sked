@@ -1740,5 +1740,9 @@
   "settingsPanelDisplayOverlayDescription": "ซ้อนทับด้านขวาโดยไม่เปลี่ยนขนาดปฏิทิน",
   "settingsPanelDisplaySideBySideDescription": "แสดงเคียงข้างกันเป็นหลัก และซ้อนทับเมื่อปฏิทินแคบเกินไปเท่านั้น",
   "settingsPanelDisplayAutomaticDescription": "แสดงเคียงข้างกันเมื่อปฏิทินยังกว้างพอให้อ่านได้ มิฉะนั้นจะซ้อนทับ",
-  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.",
+  "backupRestoreInProgressTitle": "กำลังกู้คืนข้อมูลสำรอง…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "คุณจะเปลี่ยนข้อมูลและการตั้งค่าได้เมื่อการกู้คืนเสร็จสิ้น แต่ยังดูเนื้อหาได้ตามปกติ",
+  "@backupRestoreInProgressMessage": {}
 }

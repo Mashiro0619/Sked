@@ -3252,4 +3252,11 @@ class AppLocalizationsFi extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Palautetaan varmuuskopiota…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Tietoja ja asetuksia voi muuttaa palautuksen valmistuttua. Voit edelleen tarkastella niitä.';
 }

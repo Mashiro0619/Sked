@@ -2242,5 +2242,9 @@
   "updatePrerelease": "Prerelease",
   "updateNetworkFailure": "Unable to check for updates. Check your connection and try again.",
   "updateNoNewerVersion": "No newer version found (current: {version})",
-  "@updateNoNewerVersion": {"placeholders": {"version": {"type": "String"}}}
+  "@updateNoNewerVersion": {"placeholders": {"version": {"type": "String"}}},
+  "backupRestoreInProgressTitle": "Restoring backup…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "Data and settings can be changed when the restore finishes. You can still view them.",
+  "@backupRestoreInProgressMessage": {}
 }

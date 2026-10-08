@@ -3252,4 +3252,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Obnavljanje varnostne kopije…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Podatke in nastavitve lahko spremenite po končani obnovitvi. Še vedno si jih lahko ogledate.';
 }

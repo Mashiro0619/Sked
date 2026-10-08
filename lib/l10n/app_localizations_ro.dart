@@ -3264,4 +3264,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle =>
+      'Se restaurează copia de siguranță…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Datele și setările pot fi modificate după încheierea restaurării. Le poți consulta în continuare.';
 }

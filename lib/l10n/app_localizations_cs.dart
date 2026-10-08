@@ -3251,4 +3251,11 @@ class AppLocalizationsCs extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Obnovování zálohy…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Data a nastavení bude možné změnit po dokončení obnovy. Stále si je můžete prohlížet.';
 }

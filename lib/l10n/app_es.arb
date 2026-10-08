@@ -1740,5 +1740,9 @@
   "settingsPanelDisplayOverlayDescription": "Se superpone a la derecha sin cambiar el tamaño del calendario.",
   "settingsPanelDisplaySideBySideDescription": "Prioriza la vista en paralelo; se superpone solo si el calendario queda demasiado estrecho.",
   "settingsPanelDisplayAutomaticDescription": "Usa la vista en paralelo si el calendario conserva un ancho legible; si no, se superpone.",
-  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.",
+  "backupRestoreInProgressTitle": "Restaurando copia de seguridad…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "Podrás modificar los datos y los ajustes cuando termine la restauración. Puedes seguir consultándolos.",
+  "@backupRestoreInProgressMessage": {}
 }

@@ -3266,4 +3266,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle =>
+      'Sicherung wird wiederhergestellt…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Daten und Einstellungen können nach der Wiederherstellung geändert werden. Du kannst sie weiterhin ansehen.';
 }

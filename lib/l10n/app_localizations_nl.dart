@@ -3249,4 +3249,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Back-up wordt hersteld…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Gegevens en instellingen kunnen na het herstellen worden gewijzigd. Je kunt ze nog wel bekijken.';
 }

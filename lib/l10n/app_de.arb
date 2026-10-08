@@ -1742,5 +1742,9 @@
   "settingsPanelDisplayOverlayDescription": "Überlagert die rechte Seite, ohne die Kalenderbreite zu ändern.",
   "settingsPanelDisplaySideBySideDescription": "Bevorzugt nebeneinander; überlagert nur, wenn der Kalender zu schmal würde.",
   "settingsPanelDisplayAutomaticDescription": "Zeigt Panels nebeneinander bei ausreichend lesbarer Kalenderbreite, sonst überlagert.",
-  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.",
+  "backupRestoreInProgressTitle": "Sicherung wird wiederhergestellt…",
+  "@backupRestoreInProgressTitle": {},
+  "backupRestoreInProgressMessage": "Daten und Einstellungen können nach der Wiederherstellung geändert werden. Du kannst sie weiterhin ansehen.",
+  "@backupRestoreInProgressMessage": {}
 }

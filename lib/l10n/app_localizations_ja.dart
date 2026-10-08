@@ -3186,4 +3186,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'バックアップを復元中…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      '復元が完了するまで、データや設定は変更できません。引き続き内容を閲覧できます。';
 }

@@ -89,6 +89,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   bool _customSchoolImportApiKeyPersistenceKnown = false;
   var _customSchoolImportApiKeyMutationEpoch = 0;
   var _appBackupRestoreReservationCount = 0;
+  var _isDisposed = false;
   Object? _activeAppBackupRestoreToken;
   SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
   StorageLoadStatus? _journalRecoveryLoadStatus;
@@ -108,6 +109,10 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   /// Invalidates UI selection sessions when a complete data replacement is
   /// reserved, including a restore that keeps the same workspace enabled.
   Object get dataSessionToken => _dataSessionToken;
+
+  /// A complete backup restore has reserved the write lease, including while
+  /// it is queued behind an earlier operation. Reading app data remains safe.
+  bool get isRestoringAppBackup => _appBackupRestoreReservationCount > 0;
 
   Future<void> _commitGeneralNavigation(
     GeneralScheduleData Function(GeneralScheduleData) change, {
@@ -218,12 +223,18 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
     }
     _appBackupRestoreReservationCount += 1;
     _dataSessionToken = Object();
+    if (_appBackupRestoreReservationCount == 1 && !_isDisposed) {
+      notifyListeners();
+    }
     return Object();
   }
 
   void _releaseAppBackupRestore() {
     assert(_appBackupRestoreReservationCount > 0);
     _appBackupRestoreReservationCount -= 1;
+    if (_appBackupRestoreReservationCount == 0 && !_isDisposed) {
+      notifyListeners();
+    }
   }
 
   Future<T> _runWithAppBackupRestoreLease<T>(
@@ -569,7 +580,6 @@ class TimetableProvider extends _TimetableProviderBase
   String? _storagePath;
   Timer? _uiStateSaveTimer;
   Future<void>? _uiStateSaveInFlight;
-  var _isDisposed = false;
   var _dataClearReserved = false;
   Future<void>? _dataClearInFlight;
   SchoolSiteRestoreLease? _permanentDataClearSchoolSiteLease;

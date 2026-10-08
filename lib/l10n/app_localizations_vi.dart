@@ -3249,4 +3249,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'Đang khôi phục bản sao lưu…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'Bạn có thể thay đổi dữ liệu và cài đặt sau khi khôi phục xong. Bạn vẫn có thể xem nội dung.';
 }

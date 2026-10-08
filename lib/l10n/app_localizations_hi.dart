@@ -3243,4 +3243,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String updateNoNewerVersion(String version) {
     return 'No newer version found (current: $version)';
   }
+
+  @override
+  String get backupRestoreInProgressTitle => 'बैकअप बहाल किया जा रहा है…';
+
+  @override
+  String get backupRestoreInProgressMessage =>
+      'बहाली पूरी होने के बाद डेटा और सेटिंग बदली जा सकती हैं। आप उन्हें अभी भी देख सकते हैं।';
 }
