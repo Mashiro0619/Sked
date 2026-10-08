@@ -813,6 +813,227 @@ void main() {
         );
       },
     );
+
+    for (final deleteFuture in [false, true]) {
+      test(
+        '${deleteFuture ? 'future' : 'single'} deletion preserves changes saved after the detail opened',
+        () {
+          final original = buildEvent(
+            id: 'repeat',
+            start: DateTime(2026, 5, 18, 9),
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.weekly,
+              count: 6,
+            ),
+          );
+          final calendar = GeneralSchedule(
+            id: 'cal',
+            name: 'Work',
+            events: [original],
+          );
+          final opened = buildOccurrence(
+            event: original,
+            calendar: calendar,
+            start: DateTime(2026, 6, 1, 9),
+            sequence: 2,
+          );
+          final edited = original.copyWith(
+            title: 'Updated through another detail',
+            location: 'Room B',
+            notes: 'Updated notes',
+            colorValue: 0xFF789ABC,
+            recurrenceExceptionDateIso: const ['2026-05-25'],
+            reminders: const [GeneralEventReminder(minutesBefore: 30)],
+          );
+          final data = buildData(
+            schedules: [
+              calendar.copyWith(events: [edited]),
+            ],
+          );
+
+          final updated = deleteFuture
+              ? service.deleteFutureOccurrences(data, opened)
+              : service.deleteOccurrence(data, opened);
+          final expected = deleteFuture
+              ? edited.copyWith(
+                  recurrenceRule: edited.recurrenceRule.copyWith(
+                    untilDateIso: '2026-05-31',
+                  ),
+                )
+              : edited.copyWith(
+                  recurrenceExceptionDateIso: const [
+                    '2026-05-25',
+                    '2026-06-01',
+                  ],
+                );
+
+          expect(
+            updated.activeSchedule.events.single.toJson(),
+            expected.toJson(),
+          );
+        },
+      );
+    }
+
+    test('future deletion uses the current occurrence sequence', () {
+      final openedEvent = buildEvent(
+        start: DateTime(2026, 5, 25, 9),
+        recurrenceRule: const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.weekly,
+          count: 4,
+        ),
+      );
+      final calendar = GeneralSchedule(
+        id: 'cal',
+        name: 'Work',
+        events: [openedEvent],
+      );
+      final opened = buildOccurrence(
+        event: openedEvent,
+        calendar: calendar,
+        start: DateTime(2026, 5, 25, 9),
+      );
+      final edited = openedEvent.copyWith(
+        startDateTimeIso: '2026-05-18T09:00:00.000',
+        endDateTimeIso: '2026-05-18T10:00:00.000',
+      );
+      final data = buildData(
+        schedules: [
+          calendar.copyWith(events: [edited]),
+        ],
+      );
+
+      final updated = service.deleteFutureOccurrences(data, opened);
+
+      expect(updated.activeSchedule.events, hasLength(1));
+      expect(
+        updated.activeSchedule.events.single.recurrenceRule.untilDateIso,
+        '2026-05-24',
+      );
+    });
+
+    test('duplication uses the current fields and occurrence duration', () {
+      final original = buildEvent(
+        start: DateTime(2026, 5, 18, 9),
+        recurrenceRule: const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.weekly,
+          count: 4,
+        ),
+      );
+      final calendar = GeneralSchedule(
+        id: 'cal',
+        name: 'Work',
+        events: [original],
+      );
+      final opened = buildOccurrence(
+        event: original,
+        calendar: calendar,
+        start: DateTime(2026, 5, 25, 9),
+        sequence: 1,
+      );
+      final edited = original.copyWith(
+        title: 'Updated title',
+        notes: 'Updated notes',
+        endDateTimeIso: '2026-05-18T11:00:00.000',
+      );
+      final data = buildData(
+        schedules: [
+          calendar.copyWith(events: [edited]),
+        ],
+      );
+
+      final result = service.duplicateOccurrence(
+        data,
+        opened,
+        now: DateTime(2026, 5, 24, 12),
+      );
+
+      expect(result.event.title, 'Updated title');
+      expect(result.event.notes, 'Updated notes');
+      expect(result.event.startDateTimeIso, '2026-05-25T09:00:00.000');
+      expect(result.event.endDateTimeIso, '2026-05-25T11:00:00.000');
+      expect(result.event.recurrenceRule.isRepeating, isFalse);
+      expect(result.data.activeSchedule.events, hasLength(2));
+    });
+
+    test(
+      'stale occurrence commands cannot revive or delete changed instances',
+      () {
+        final original = buildEvent(
+          start: DateTime(2026, 5, 18, 9),
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.weekly,
+            count: 4,
+          ),
+        );
+        final calendar = GeneralSchedule(
+          id: 'cal',
+          name: 'Work',
+          events: [original],
+        );
+        final opened = buildOccurrence(
+          event: original,
+          calendar: calendar,
+          start: DateTime(2026, 5, 25, 9),
+          sequence: 1,
+        );
+        final cases = <String, GeneralScheduleData>{
+          'deleted': buildData(),
+          'excluded': buildData(
+            schedules: [
+              calendar.copyWith(
+                events: [
+                  original.copyWith(
+                    recurrenceExceptionDateIso: const ['2026-05-25'],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          'rescheduled': buildData(
+            schedules: [
+              calendar.copyWith(
+                events: [
+                  original.copyWith(
+                    startDateTimeIso: '2026-05-18T11:00:00.000',
+                    endDateTimeIso: '2026-05-18T12:00:00.000',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          'truncated': buildData(
+            schedules: [
+              calendar.copyWith(
+                events: [
+                  original.copyWith(
+                    recurrenceRule: original.recurrenceRule.copyWith(count: 1),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        };
+
+        for (final entry in cases.entries) {
+          expect(
+            service.deleteOccurrence(entry.value, opened),
+            same(entry.value),
+            reason: entry.key,
+          );
+          expect(
+            service.deleteFutureOccurrences(entry.value, opened),
+            same(entry.value),
+            reason: entry.key,
+          );
+          expect(
+            () => service.duplicateOccurrence(entry.value, opened),
+            throwsStateError,
+            reason: entry.key,
+          );
+        }
+      },
+    );
   });
 
   group('GeneralCalendarService reminders', () {

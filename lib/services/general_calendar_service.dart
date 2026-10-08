@@ -335,13 +335,16 @@ class GeneralCalendarService {
     GeneralEventOccurrence occurrence, {
     DateTime? now,
   }) {
+    final currentOccurrence = _matchingOccurrenceInData(data, occurrence);
+    if (currentOccurrence == null) {
+      throw StateError('The event occurrence is no longer available.');
+    }
     final timestamp = (now ?? DateTime.now()).toIso8601String();
-    final duplicated = occurrence.event.copyWith(
+    final duplicated = currentOccurrence.event.copyWith(
       id: _nextEventId(data),
-      calendarId: occurrence.calendar.id,
-      title: occurrence.event.title,
-      startDateTimeIso: occurrence.start.toIso8601String(),
-      endDateTimeIso: occurrence.end.toIso8601String(),
+      calendarId: currentOccurrence.calendar.id,
+      startDateTimeIso: currentOccurrence.start.toIso8601String(),
+      endDateTimeIso: currentOccurrence.end.toIso8601String(),
       recurrenceRule: const GeneralEventRecurrenceRule(),
       recurrenceExceptionDateIso: const [],
       createdAtIso: timestamp,
@@ -357,12 +360,14 @@ class GeneralCalendarService {
     GeneralScheduleData data,
     GeneralEventOccurrence occurrence,
   ) {
-    final event = occurrence.event;
+    final currentOccurrence = _matchingOccurrenceInData(data, occurrence);
+    if (currentOccurrence == null) return data;
+    final event = currentOccurrence.event;
     if (!event.recurrenceRule.isRepeating) {
       return deleteEvent(data, event.id);
     }
     final exceptions = {...event.recurrenceExceptionDateIso}
-      ..add(occurrence.exceptionDateIso);
+      ..add(currentOccurrence.exceptionDateIso);
     final withException = saveEvent(
       data,
       event.copyWith(recurrenceExceptionDateIso: exceptions.toList()..sort()),
@@ -370,8 +375,10 @@ class GeneralCalendarService {
     return withException.copyWith(
       reminderAcknowledgements: withException.reminderAcknowledgements
           .where(
-            (item) =>
-                !_reminderKeyMatchesOccurrence(item.occurrenceKey, occurrence),
+            (item) => !_reminderKeyMatchesOccurrence(
+              item.occurrenceKey,
+              currentOccurrence,
+            ),
           )
           .toList(),
     );
@@ -381,11 +388,13 @@ class GeneralCalendarService {
     GeneralScheduleData data,
     GeneralEventOccurrence occurrence,
   ) {
-    final event = occurrence.event;
-    if (!event.recurrenceRule.isRepeating || occurrence.sequence <= 0) {
+    final currentOccurrence = _matchingOccurrenceInData(data, occurrence);
+    if (currentOccurrence == null) return data;
+    final event = currentOccurrence.event;
+    if (!event.recurrenceRule.isRepeating || currentOccurrence.sequence <= 0) {
       return deleteEvent(data, event.id);
     }
-    final until = previousCalendarDate(occurrence.start)
+    final until = previousCalendarDate(currentOccurrence.start)
         .toIso8601String()
         .split('T')
         .first;
@@ -401,9 +410,9 @@ class GeneralCalendarService {
           .where(
             (item) => !_reminderKeyMatchesEventAtOrAfter(
               item.occurrenceKey,
-              occurrence.calendar.id,
+              currentOccurrence.calendar.id,
               event.id,
-              occurrence.start,
+              currentOccurrence.start,
             ),
           )
           .toList(),

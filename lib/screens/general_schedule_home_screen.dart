@@ -1908,27 +1908,44 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     }
     _setUiBusyFlag(() => _detailsSheetOpen = true);
     final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
+    var displayedOccurrence = occurrence;
+    var deletingOccurrence = false;
+    GeneralEventOccurrence? resolveOccurrence() {
+      final calendar = provider.generalSchedules
+          .where((item) => item.id == occurrence.calendar.id)
+          .firstOrNull;
+      final event = calendar?.events
+          .where((item) => item.id == occurrence.event.id)
+          .firstOrNull;
+      if (calendar == null || event == null) return null;
+      return expandGeneralEventOccurrences(
+            calendar: calendar,
+            event: event,
+            startInclusive: occurrence.start,
+            endExclusive: occurrence.start.add(const Duration(microseconds: 1)),
+          )
+          .where((item) => item.start.isAtSameMomentAs(occurrence.start))
+          .firstOrNull;
+    }
+
     try {
       await showAppModalSheet<void>(
         context: context,
         workspacePane: _pane,
         panePresentation: WorkspacePanePresentation.view,
         workspace: AppMode.general,
-        isSessionCurrent:
-            (WorkbenchChromeMetrics.compactTouch(context) ||
-                _pane.hasModalTasks)
-            ? () => provider.generalSchedules.any(
-                (calendar) => calendar.events.any(
-                  (item) => item.id == occurrence.event.id,
-                ),
-              )
-            : null,
+        // Keep our own pending deletion alive for error feedback and retry.
+        // External moves, exclusions and deletions retire this exact instance.
+        isSessionCurrent: () =>
+            deletingOccurrence || resolveOccurrence() != null,
         selectionId: occurrence.occurrenceKey,
         isDismissible: canDismiss,
         enableDrag: false,
         maxWidth: appSheetWidthCompact,
         builder: (sheetContext) {
+          final detailProvider = sheetContext.watch<TimetableProvider>();
           final detailRoute = ModalRoute.of(sheetContext);
+          displayedOccurrence = resolveOccurrence() ?? displayedOccurrence;
           void closeDetails() {
             // Async data invalidation may already have retired this detail.
             // Never let its completion pop the summary or a newer route.
@@ -1937,54 +1954,76 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             }
           }
 
+          GeneralEventOccurrence? currentOccurrence() {
+            if (!mounted ||
+                !widget.interactive ||
+                !sheetContext.mounted ||
+                detailRoute?.isCurrent != true ||
+                !SkedTaskSessionScope.isCurrent(sheetContext)) {
+              return null;
+            }
+            final latest = resolveOccurrence();
+            if (latest == null) closeDetails();
+            return latest;
+          }
+
+          Future<void> command(
+            Future<void> Function(GeneralEventOccurrence) action, {
+            String? message,
+            bool deleting = false,
+          }) async {
+            final latest = currentOccurrence();
+            if (latest == null) return;
+            final messenger = ScaffoldMessenger.maybeOf(context);
+            deletingOccurrence = deleting;
+            try {
+              await action(latest);
+              closeDetails();
+              if (mounted && messenger?.mounted == true && message != null) {
+                messenger!.showSnackBar(SnackBar(content: Text(message)));
+              }
+            } finally {
+              deletingOccurrence = false;
+            }
+          }
+
+          final l10n = AppLocalizations.of(sheetContext);
           return GeneralEventDetailsSheet(
-            occurrence: occurrence,
-            isReminderHandled: provider.isGeneralReminderHandled(occurrence),
-            onEdit: () {
+            occurrence: displayedOccurrence,
+            isReminderHandled: detailProvider.isGeneralReminderHandled(
+              displayedOccurrence,
+            ),
+            onBeforeAction: () => currentOccurrence() != null,
+            canEdit: () => !_editorSheetOpen,
+            onEdit: () async {
+              final latest = currentOccurrence();
+              if (latest == null) return;
               closeDetails();
-              return _openEditor(context, provider, event: occurrence.event);
+              await _openEditor(context, provider, event: latest.event);
             },
-            onDismissReminder: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final message = AppLocalizations.of(context).reminderHandled;
-              await provider.dismissGeneralReminder(occurrence);
-              closeDetails();
-              if (mounted) {
-                messenger.showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-            onRestoreReminder: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final message = AppLocalizations.of(context).reminderRestored;
-              await provider.restoreGeneralReminder(occurrence);
-              closeDetails();
-              if (mounted) {
-                messenger.showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-            onDuplicate: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final message = AppLocalizations.of(context).eventDuplicated;
-              await provider.duplicateGeneralOccurrence(occurrence);
-              closeDetails();
-              if (mounted) {
-                messenger.showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-            onDeleteThis: () async {
-              await provider.deleteGeneralOccurrence(occurrence);
-              closeDetails();
-            },
-            onDeleteFuture: occurrence.event.recurrenceRule.isRepeating
-                ? () async {
-                    await provider.deleteFutureGeneralOccurrences(occurrence);
-                    closeDetails();
-                  }
+            onDismissReminder: () => command(
+              detailProvider.dismissGeneralReminder,
+              message: l10n.reminderHandled,
+            ),
+            onRestoreReminder: () => command(
+              detailProvider.restoreGeneralReminder,
+              message: l10n.reminderRestored,
+            ),
+            onDuplicate: () => command((latest) async {
+              await detailProvider.duplicateGeneralOccurrence(latest);
+            }, message: l10n.eventDuplicated),
+            onDeleteThis: () =>
+                command(detailProvider.deleteGeneralOccurrence, deleting: true),
+            onDeleteFuture: displayedOccurrence.event.recurrenceRule.isRepeating
+                ? () => command(
+                    detailProvider.deleteFutureGeneralOccurrences,
+                    deleting: true,
+                  )
                 : null,
-            onDeleteAll: () async {
-              await provider.deleteGeneralEvent(occurrence.event.id);
-              closeDetails();
-            },
+            onDeleteAll: () => command(
+              (latest) => detailProvider.deleteGeneralEvent(latest.event.id),
+              deleting: true,
+            ),
           );
         },
       );
