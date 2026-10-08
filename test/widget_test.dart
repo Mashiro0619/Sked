@@ -4200,7 +4200,7 @@ void main() {
     });
 
     testWidgets(
-      'TimetableGrid narrow course cards keep natural text wrapping',
+      'TimetableGrid narrow course cards prioritize complete title lines',
       (tester) async {
         await tester.binding.setSurfaceSize(const Size(360, 640));
         addTearDown(() async {
@@ -4277,21 +4277,31 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text(title), findsOneWidget);
-        expect(find.text(location), findsOneWidget);
-        expect(find.text(teacher), findsOneWidget);
+        expect(find.text(location), findsNothing);
+        expect(find.text(teacher), findsNothing);
 
         final titleText = tester.widget<Text>(find.text(title));
-        final locationText = tester.widget<Text>(find.text(location));
-        final teacherText = tester.widget<Text>(find.text(teacher));
-        expect(titleText.maxLines, isNull);
-        expect(locationText.maxLines, isNull);
-        expect(teacherText.maxLines, isNull);
-        expect(titleText.overflow, TextOverflow.visible);
-        expect(locationText.overflow, TextOverflow.visible);
-        expect(teacherText.overflow, TextOverflow.visible);
+        expect(titleText.maxLines, greaterThan(0));
+        expect(titleText.overflow, TextOverflow.ellipsis);
         expect(titleText.softWrap, isTrue);
-        expect(locationText.softWrap, isTrue);
-        expect(teacherText.softWrap, isTrue);
+        final titleRect = tester.getRect(find.text(title));
+        final cardRect = tester.getRect(
+          find.byKey(
+            const ValueKey('timetable-course-visual-course_legacy_text_wrap'),
+          ),
+        );
+        expect(titleRect.bottom, lessThanOrEqualTo(cardRect.bottom));
+        final painter = TextPainter(
+          text: TextSpan(text: title, style: titleText.style),
+          textDirection: TextDirection.ltr,
+          textScaler: titleText.textScaler!,
+          textHeightBehavior: titleText.textHeightBehavior,
+          maxLines: titleText.maxLines,
+          ellipsis: '…',
+        )..layout(maxWidth: titleRect.width);
+        expect(titleRect.height, closeTo(painter.height, .01));
+        expect(painter.didExceedMaxLines, isTrue);
+        painter.dispose();
       },
     );
 

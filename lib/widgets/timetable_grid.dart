@@ -1365,6 +1365,38 @@ class _CourseCard extends StatelessWidget {
     );
     final cardHeight = geometry.visualHeight;
     final compact = width < 140 || cardHeight < 96;
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
+    final baseTitleStyle = compact
+        ? textTheme.titleSmall
+        : textTheme.titleMedium;
+    var minimumTitleWidth = 0.0;
+    if (!desktop) {
+      final style = DefaultTextStyle.of(context).style
+          .merge(baseTitleStyle)
+          .copyWith(fontWeight: FontWeight.w700);
+      final scaler = MediaQuery.textScalerOf(context);
+      final ellipsis = TextPainter(
+        text: TextSpan(text: '…', style: style),
+        textDirection: Directionality.of(context),
+        textScaler: scaler,
+        locale: Localizations.maybeLocaleOf(context),
+      )..layout();
+      // A little room beyond an exact glyph-width boundary also avoids native
+      // font fallback rounding a CJK line into the following glyph's space.
+      minimumTitleWidth = math
+          .max(
+            scaler.scale(style.fontSize ?? 14) + (style.letterSpacing ?? 0),
+            ellipsis.width,
+          )
+          .ceilToDouble();
+      ellipsis.dispose();
+    }
+    final horizontalPadding = desktop
+        ? metrics.cardPadding
+        : math.min(
+            metrics.cardPadding,
+            math.max(0.0, (width - minimumTitleWidth) / 2),
+          );
     final normalizedColorName =
         layout.entry?.colorName ??
         (layout.course != null
@@ -1459,7 +1491,10 @@ class _CourseCard extends StatelessWidget {
           elevation: 0,
           shape: shape,
           child: Padding(
-            padding: EdgeInsets.all(metrics.cardPadding),
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: metrics.cardPadding,
+            ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final textColor =
@@ -1477,7 +1512,7 @@ class _CourseCard extends StatelessWidget {
                               : 0.92,
                         );
                 final desktopCourse =
-                    WorkbenchChromeMetrics.of(context).desktop &&
+                    desktop &&
                     layout.entry?.kind != TimetableEntryKind.generalEvent;
                 // Colorful mode keeps its shared automatic/custom text color.
                 // Theme-derived monochrome cards can use a stronger hierarchy.
@@ -1516,6 +1551,25 @@ class _CourseCard extends StatelessWidget {
                             color: textColor,
                             fontWeight: FontWeight.w600,
                           );
+                final showConflict =
+                    layout.isFullConflict &&
+                    cardHeight >= 24 &&
+                    (desktop ? width >= 32 : constraints.maxWidth >= 18);
+                final conflictBadge = showConflict
+                    ? Container(
+                        key: ValueKey('timetable-course-conflict-$itemId'),
+                        padding: EdgeInsets.all(compact ? 2 : 3),
+                        decoration: ShapeDecoration(
+                          color: colorScheme.primary.withValues(alpha: 0.18),
+                          shape: skedShapeSchemeOf(context).selectionIndicator,
+                        ),
+                        child: Icon(
+                          Icons.layers_outlined,
+                          size: compact ? 14 : 16,
+                          color: textColor,
+                        ),
+                      )
+                    : null;
                 return Stack(
                   children: [
                     if (desktopCourse)
@@ -1530,6 +1584,19 @@ class _CourseCard extends StatelessWidget {
                               layout.isFullConflict &&
                               cardHeight >= 24 &&
                               width >= 32,
+                        ),
+                      )
+                    else if (!desktop)
+                      Positioned.fill(
+                        child: _TouchCourseTypography(
+                          title: _title,
+                          location: _location,
+                          teacher: _teacher,
+                          titleStyle: titleStyle,
+                          locationStyle: bodyStyle,
+                          teacherStyle: teacherStyle,
+                          conflictBadge: conflictBadge,
+                          badgeExtent: compact ? 18 : 22,
                         ),
                       )
                     else
@@ -1592,25 +1659,11 @@ class _CourseCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    if (layout.isFullConflict &&
-                        cardHeight >= 24 &&
-                        width >= 32)
+                    if (desktop && conflictBadge != null)
                       PositionedDirectional(
                         end: 0,
                         bottom: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(compact ? 2 : 3),
-                          decoration: ShapeDecoration(
-                            color: colorScheme.primary.withValues(alpha: 0.18),
-                            shape: skedShapeSchemeOf(context)
-                                .selectionIndicator,
-                          ),
-                          child: Icon(
-                            Icons.layers_outlined,
-                            size: compact ? 14 : 16,
-                            color: textColor,
-                          ),
-                        ),
+                        child: conflictBadge,
                       ),
                   ],
                 );
@@ -1621,6 +1674,200 @@ class _CourseCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Fit complete lines to the time-sized card without scaling or clipping text.
+/// The title uses the available height first; optional fields use what remains.
+class _TouchCourseTypography extends StatelessWidget {
+  const _TouchCourseTypography({
+    required this.title,
+    required this.location,
+    required this.teacher,
+    required this.titleStyle,
+    required this.locationStyle,
+    required this.teacherStyle,
+    required this.conflictBadge,
+    required this.badgeExtent,
+  });
+
+  final String title;
+  final String location;
+  final String teacher;
+  final TextStyle? titleStyle;
+  final TextStyle? locationStyle;
+  final TextStyle? teacherStyle;
+  final Widget? conflictBadge;
+  final double badgeExtent;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth <= 0 || constraints.maxHeight <= 0) {
+        return const SizedBox.shrink();
+      }
+      final defaults = DefaultTextStyle.of(context);
+      final boldText = MediaQuery.boldTextOf(context);
+      TextStyle resolveStyle(TextStyle? style) {
+        final resolved = defaults.style.merge(style);
+        return boldText
+            ? resolved.merge(const TextStyle(fontWeight: FontWeight.bold))
+            : resolved;
+      }
+
+      final fields = <({String value, TextStyle style})>[
+        if (title.isNotEmpty) (value: title, style: resolveStyle(titleStyle)),
+        if (location.isNotEmpty)
+          (value: location, style: resolveStyle(locationStyle)),
+        if (teacher.isNotEmpty)
+          (value: teacher, style: resolveStyle(teacherStyle)),
+      ];
+      final scaler = MediaQuery.textScalerOf(context);
+      final direction = Directionality.of(context);
+      final locale = Localizations.maybeLocaleOf(context);
+      ({
+        double height,
+        double width,
+        int lines,
+        double emptyTruncatedLineHeight,
+      })
+      measure(int field, int? lines) {
+        final painter = TextPainter(
+          text: TextSpan(text: fields[field].value, style: fields[field].style),
+          textDirection: direction,
+          textScaler: scaler,
+          locale: locale,
+          textHeightBehavior: defaults.textHeightBehavior,
+          maxLines: lines,
+          ellipsis: lines == null ? null : '…',
+        )..layout(maxWidth: constraints.maxWidth);
+        final metrics = painter.computeLineMetrics();
+        final result = (
+          height: painter.height,
+          width: metrics.fold(
+            0.0,
+            (width, line) => math.max(width, line.width),
+          ),
+          lines: metrics.length,
+          emptyTruncatedLineHeight:
+              painter.didExceedMaxLines &&
+                  metrics.isNotEmpty &&
+                  metrics.last.width <= .01
+              ? metrics.last.height
+              : 0.0,
+        );
+        painter.dispose();
+        return result;
+      }
+
+      Widget omissionMark(int field, double height) => SizedBox(
+        width: constraints.maxWidth,
+        height: height,
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Icon(
+            Icons.more_horiz,
+            key: const ValueKey('timetable-course-text-omitted'),
+            size: math.min(18, math.min(constraints.maxWidth, height)),
+            color: fields[field].style.color,
+          ),
+        ),
+      );
+
+      // A narrow card cannot spare an entire side column for the badge. Keep
+      // it below the text, and give a complete primary line precedence when
+      // even that line and the badge cannot coexist in a very short card.
+      final firstLineHeight = fields.isEmpty ? 0.0 : measure(0, 1).height;
+      final showBadge =
+          conflictBadge != null &&
+          constraints.maxWidth >= badgeExtent &&
+          constraints.maxHeight >= firstLineHeight + badgeExtent + 2;
+      var remaining = constraints.maxHeight - (showBadge ? badgeExtent + 2 : 0);
+      final children = <Widget>[];
+      for (var field = 0; field < fields.length; field++) {
+        final firstLine = measure(field, 1);
+        if (firstLine.height > remaining) break;
+        if (firstLine.width > constraints.maxWidth + .01) {
+          // At the largest accessibility sizes even a single glyph (including
+          // the font's ellipsis) may exceed a fitted day column. Use a bounded
+          // omission mark instead of painting part of a character. The course
+          // hit target still exposes its full title and details.
+          if (field == 0) {
+            children.add(omissionMark(field, firstLine.height));
+          }
+          break;
+        }
+        final full = measure(field, null);
+        var lines = math.max(1, full.lines);
+        if (full.height > remaining ||
+            full.width > constraints.maxWidth + .01) {
+          var lower = 1;
+          var upper = lines;
+          while (lower < upper) {
+            final candidate = (lower + upper + 1) ~/ 2;
+            final measured = measure(field, candidate);
+            if (measured.height <= remaining &&
+                measured.width <= constraints.maxWidth + .01) {
+              lower = candidate;
+            } else {
+              upper = candidate - 1;
+            }
+          }
+          lines = lower;
+        }
+        final measured = measure(field, lines);
+        final height = measured.height;
+        final text = Text(
+          fields[field].value,
+          style: fields[field].style,
+          textScaler: scaler,
+          locale: locale,
+          textHeightBehavior: defaults.textHeightBehavior,
+          softWrap: true,
+          maxLines: lines,
+          overflow: TextOverflow.ellipsis,
+        );
+        children.add(
+          SizedBox(
+            width: constraints.maxWidth,
+            height: height,
+            // Some native fallback fonts leave the ellipsis-only final line
+            // empty at narrow widths. Mark that measured empty line explicitly
+            // without covering any text or altering its line height.
+            child: measured.emptyTruncatedLineHeight > 0
+                ? Stack(
+                    fit: StackFit.expand,
+                    clipBehavior: Clip.none,
+                    children: [
+                      text,
+                      PositionedDirectional(
+                        start: 0,
+                        end: 0,
+                        top: height - measured.emptyTruncatedLineHeight,
+                        child: omissionMark(
+                          field,
+                          measured.emptyTruncatedLineHeight,
+                        ),
+                      ),
+                    ],
+                  )
+                : text,
+          ),
+        );
+        remaining -= height;
+      }
+      return Stack(
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          ),
+          if (showBadge)
+            PositionedDirectional(end: 0, bottom: 0, child: conflictBadge!),
+        ],
+      );
+    },
+  );
 }
 
 /// Soften secondary text only while it remains readable on the actual fill.

@@ -1125,10 +1125,14 @@ void main() {
     );
     expect(title, findsOneWidget);
     final titleText = tester.widget<Text>(title);
-    expect(titleText.maxLines, isNull);
+    expect(titleText.maxLines, greaterThan(0));
     expect(titleText.softWrap, isTrue);
-    expect(titleText.overflow, TextOverflow.visible);
+    expect(titleText.overflow, TextOverflow.ellipsis);
     expect(tester.getSize(title).height, greaterThan(20));
+    expect(
+      tester.getRect(title).bottom,
+      lessThanOrEqualTo(tester.getRect(visual).bottom),
+    );
     expect(tester.takeException(), isNull);
   });
 
