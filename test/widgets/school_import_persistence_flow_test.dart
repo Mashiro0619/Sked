@@ -9,12 +9,16 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
+import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
+import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
+import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
@@ -171,11 +175,21 @@ Future<GlobalKey<NavigatorState>> _openHtmlReview(
   _Api api, {
   TargetPlatform platform = TargetPlatform.windows,
   bool appHome = false,
+  bool fromSchoolWeb = false,
 }) async {
   final navigator = GlobalKey<NavigatorState>();
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<TimetableProvider>.value(value: provider),
+        ChangeNotifierProvider<AgendaNotificationService>(
+          create: (_) => AgendaNotificationService(
+            enabled: false,
+            gateway: MemoryAgendaNotificationGateway(),
+            runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+          ),
+        ),
+      ],
       child: MaterialApp(
         navigatorKey: navigator,
         locale: const Locale('en'),
@@ -208,8 +222,40 @@ Future<GlobalKey<NavigatorState>> _openHtmlReview(
     await tester.tap(find.byIcon(Icons.settings_outlined).hitTestable());
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPage), findsOneWidget);
+    final transfer = find.byKey(const ValueKey('settings-student-transfer'));
+    await tester.ensureVisible(transfer);
+    await tester.pumpAndSettle();
+    await tester.tap(transfer);
+    await tester.pumpAndSettle();
+    final transferContext = tester.element(
+      find.byKey(const ValueKey('transfer-school-web')),
+    );
+    final sourceNavigator = Navigator.of(transferContext);
+    expect(sourceNavigator, isNot(same(navigator.currentState)));
+    if (fromSchoolWeb) {
+      const site = SchoolSite(
+        name: 'Example University',
+        loginUrl: 'https://portal.example.edu/timetable',
+      );
+      unawaited(
+        sourceNavigator.push<void>(
+          MaterialPageRoute(
+            builder: (_) => SchoolWebImportPage(
+              site: site,
+              loadSites: () async => const [site],
+              supportsPopupWindows: false,
+              webViewBuilder: (_) => const Text('Retained school webpage'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolWebImportPage), findsOneWidget);
+    }
+    // Use the real transfer destination's nested navigator, matching the
+    // production HTML action while substituting only its parsing API.
     unawaited(
-      navigator.currentState!.push<void>(
+      sourceNavigator.push<void>(
         MaterialPageRoute(
           builder: (_) => SchoolHtmlImportPage(
             initialContent: 'Monday period 1 Mathematics',
@@ -249,9 +295,22 @@ Future<void> _tapImport(WidgetTester tester, {bool replace = false}) async {
   }
 }
 
+Future<void> _pumpReview(WidgetTester tester, {required bool legacy}) async {
+  if (!legacy) {
+    await tester.pumpAndSettle();
+    return;
+  }
+  // A legacy sheet leaves its source's parsing indicator visible underneath.
+  // Advance both route transitions without waiting for that busy animation.
+  await tester.pump();
+  for (var frame = 0; frame < 4; frame++) {
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+}
+
 void main() {
   testWidgets(
-    'AppHome retains a reviewed import after a confirmed storage failure',
+    'AppHome retains a nested settings import after a confirmed storage failure',
     (tester) async {
       final (provider, storage) = await _provider();
       addTearDown(provider.dispose);
@@ -294,6 +353,11 @@ void main() {
       await _tapImport(tester);
       await tester.pumpAndSettle();
       expect(find.byType(SchoolImportParsePage), findsNothing);
+      expect(find.byType(SchoolHtmlImportPage), findsNothing);
+      expect(
+        find.byKey(const ValueKey('transfer-school-web')).hitTestable(),
+        findsOneWidget,
+      );
       expect(
         storage.data.studentMode.timetables.last.config.name,
         'Root recovery draft',
@@ -302,6 +366,214 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('cancelling a root review returns to its nested source draft', (
+    tester,
+  ) async {
+    final (provider, storage) = await _provider();
+    addTearDown(provider.dispose);
+    final api = _Api();
+    final root = await _openHtmlReview(tester, provider, api, appHome: true);
+    final source = tester.element(
+      find.byType(SchoolHtmlImportPage, skipOffstage: false),
+    );
+    final sourceRoute = ModalRoute.of(source)!;
+    final reviewRoute = ModalRoute.of(
+      tester.element(find.byType(SchoolImportParsePage)),
+    )!;
+    expect(reviewRoute.navigator, same(root.currentState));
+    expect(sourceRoute.navigator, isNot(same(root.currentState)));
+    final writes = storage.attempts;
+    await tester.tap(find.byTooltip('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SchoolImportParsePage), findsNothing);
+    expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      contains('Monday period 1 Mathematics'),
+    );
+    expect(storage.attempts, writes);
+    expect(api.calls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'a writable data-session replacement retires the nested source review',
+    (tester) async {
+      final (provider, storage) = await _provider();
+      addTearDown(provider.dispose);
+      await _openHtmlReview(tester, provider, _Api(), appHome: true);
+      final writes = storage.attempts;
+      provider.replaceDataSession();
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolImportParsePage), findsNothing);
+      expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
+      expect(provider.canWrite, isTrue);
+      expect(storage.attempts, writes);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final removeSettings in [false, true]) {
+    testWidgets(
+      'removing the nested ${removeSettings ? 'settings owner' : 'HTML source'} retires its root review',
+      (tester) async {
+        final (provider, storage) = await _provider();
+        addTearDown(provider.dispose);
+        await _openHtmlReview(tester, provider, _Api(), appHome: true);
+        final writes = storage.attempts;
+        final owner = tester.element(
+          removeSettings
+              ? find.byType(SettingsPage, skipOffstage: false).first
+              : find.byType(SchoolHtmlImportPage, skipOffstage: false),
+        );
+        final ownerRoute = ModalRoute.of(owner)!;
+        ownerRoute.navigator!.removeRoute(ownerRoute);
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(SchoolImportParsePage, skipOffstage: false),
+          findsNothing,
+        );
+        expect(
+          find.byType(SchoolHtmlImportPage, skipOffstage: false),
+          findsNothing,
+        );
+        expect(storage.attempts, writes);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final legacy in [false, true]) {
+    for (final outcome in ['retry', 'cancel', 'unknown', 'session']) {
+      testWidgets(
+        '${legacy ? 'legacy preview' : 'streaming review'} above a nested school webpage handles $outcome safely',
+        (tester) async {
+          final (provider, storage) = await _provider();
+          addTearDown(provider.dispose);
+          final api = _Api();
+          final root = await _openHtmlReview(
+            tester,
+            provider,
+            api,
+            appHome: true,
+            fromSchoolWeb: true,
+          );
+          final browser = tester.state(
+            find.byType(SchoolWebImportPage, skipOffstage: false),
+          );
+          if (legacy) {
+            // Exercise the retained return-a-response contract. This is the
+            // branch that presents the legacy sheet after parsing completes.
+            root.currentState!.pop(
+              SchoolImportParseOutcome(
+                response: _response(),
+                rawText: _rawResult,
+              ),
+            );
+            await _pumpReview(tester, legacy: legacy);
+          }
+          final review = find.byType(
+            legacy ? SchoolWebImportResultSheet : SchoolImportParsePage,
+          );
+          expect(review, findsOneWidget);
+          expect(
+            ModalRoute.of(tester.element(review))!.navigator,
+            same(root.currentState),
+          );
+          final name = legacy
+              ? find.descendant(of: review, matching: find.byType(TextField))
+              : _name;
+          await tester.enterText(name, 'Nested school correction');
+          final writes = storage.attempts;
+          storage.failures = 1;
+          if (outcome == 'unknown') {
+            storage.failure = const StorageWriteStateUnknownException(
+              writeError: 'Cannot confirm write',
+              rollbackError: 'Cannot confirm rollback',
+            );
+          }
+          await _tapImport(tester);
+          await _pumpReview(tester, legacy: legacy);
+          expect(provider.canWrite, isFalse);
+          expect(storage.attempts, writes + 1);
+          if (outcome != 'unknown') {
+            expect(review, findsOneWidget);
+            expect(
+              tester.widget<TextField>(name).controller!.text,
+              'Nested school correction',
+            );
+            expect(
+              tester.state(
+                find.byType(SchoolWebImportPage, skipOffstage: false),
+              ),
+              same(browser),
+            );
+          }
+          switch (outcome) {
+            case 'retry':
+              await tester.tap(
+                find.descendant(
+                  of: review,
+                  matching: find.widgetWithText(TextButton, 'Retry'),
+                ),
+              );
+              await _pumpReview(tester, legacy: legacy);
+              expect(provider.canWrite, isTrue);
+              await _tapImport(tester);
+              await tester.pumpAndSettle();
+              expect(find.byType(SchoolWebImportPage), findsOneWidget);
+              expect(
+                tester.state(find.byType(SchoolWebImportPage)),
+                same(browser),
+              );
+              expect(
+                find.byType(SchoolHtmlImportPage, skipOffstage: false),
+                findsNothing,
+              );
+              expect(storage.attempts, writes + 2);
+              expect(
+                storage.data.studentMode.timetables.last.config.name,
+                'Nested school correction',
+              );
+            case 'cancel':
+              await tester.tap(
+                legacy
+                    ? find.descendant(
+                        of: review,
+                        matching: find.widgetWithText(TextButton, 'Cancel'),
+                      )
+                    : find.byTooltip('Cancel'),
+              );
+              await tester.pumpAndSettle();
+            case 'session':
+              provider.replaceDataSession();
+              await tester.pumpAndSettle();
+            case 'unknown':
+              expect(provider.isStorageWriteStateUnknown, isTrue);
+          }
+          if (outcome != 'retry') {
+            expect(
+              find.byKey(const ValueKey('data-recovery-screen')),
+              findsOneWidget,
+            );
+            expect(
+              find.byType(SettingsPage, skipOffstage: false),
+              findsNothing,
+            );
+            expect(
+              find.byType(SchoolWebImportPage, skipOffstage: false),
+              findsNothing,
+            );
+            expect(storage.attempts, writes + 1);
+            expect(storage.data.studentMode.timetables, hasLength(1));
+          }
+          expect(api.calls, 1);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   testWidgets(
     'leaving a protected review while blocked returns to global recovery',

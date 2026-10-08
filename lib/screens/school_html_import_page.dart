@@ -541,6 +541,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     }
 
     final owner = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.student,
       ownerRoute: ModalRoute.of(context),
       isOwnerActive: () =>
           mounted && submissionGeneration == _submissionGeneration,
@@ -597,11 +599,21 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           final transitionAnchor = GlobalKey(
             debugLabel: 'school-import-parse-transition-anchor',
           );
-          final outcome = await Navigator.of(context)
-              .push<SchoolImportParseOutcome>(
-                MaterialPageRoute(
-                  settings: RouteSettings(arguments: recoveryDraft),
-                  builder: (_) => KeyedSubtree(
+          // Recovery examines the root route stack. Keep the review there,
+          // while its owner still belongs to the actual (possibly nested)
+          // source route so closing settings or replacing data retires it.
+          final reviewNavigator = Navigator.of(context, rootNavigator: true);
+          final themes = InheritedTheme.capture(
+            from: context,
+            to: reviewNavigator.context,
+          );
+          final outcome = await reviewNavigator.push<SchoolImportParseOutcome>(
+            MaterialPageRoute(
+              settings: RouteSettings(arguments: recoveryDraft),
+              builder: (_) => themes.wrap(
+                ChangeNotifierProvider<TimetableProvider>.value(
+                  value: provider,
+                  child: KeyedSubtree(
                     key: transitionAnchor,
                     child: SkedTaskRouteGuard(
                       parent: owner,
@@ -619,7 +631,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                     ),
                   ),
                 ),
-              );
+              ),
+            ),
+          );
           // Navigator completes the route future when the pop starts, before
           // the page's exit transition disposes its subtree. Wait for the
           // anchor to disappear so the preview sheet never overlaps the
@@ -640,6 +654,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                 : provider.periodTimeSets.first.id);
         final importResult = await showAppModalSheet<SchoolImportApplyRequest>(
           context: context,
+          useRootNavigator: true,
           maxWidth: appSheetWidthMedium,
           isDismissible: false,
           enableDrag: false,
