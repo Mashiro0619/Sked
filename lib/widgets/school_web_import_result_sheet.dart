@@ -13,6 +13,9 @@ import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
 import 'period_time_set_picker_dialog.dart';
 import 'school_import_week_range_confirmation.dart';
+import 'school_import_save_feedback.dart';
+import 'sked_task_route.dart';
+import 'workspace_route_lifecycle.dart';
 
 class SchoolWebImportResultSheet extends StatefulWidget {
   const SchoolWebImportResultSheet({
@@ -21,6 +24,7 @@ class SchoolWebImportResultSheet extends StatefulWidget {
     required this.canReplaceCurrent,
     required this.initialPeriodTimeSetId,
     required this.provider,
+    this.onApply,
   });
 
   final SchoolImportResponse response;
@@ -28,13 +32,23 @@ class SchoolWebImportResultSheet extends StatefulWidget {
   final String initialPeriodTimeSetId;
   final TimetableProvider provider;
 
+  /// When supplied, persistence runs before returning the configured request.
+  /// Hosts should disable barrier and drag dismissal for this saveable sheet.
+  final Future<void> Function(SchoolImportApplyRequest request)? onApply;
+
   @override
   State<SchoolWebImportResultSheet> createState() =>
       _SchoolWebImportResultSheetState();
 }
 
-class _SchoolWebImportResultSheetState
-    extends State<SchoolWebImportResultSheet> {
+class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
+    with WorkspaceRouteLifecycle<SchoolWebImportResultSheet> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+
+  @override
+  Future<bool> prepareWorkspaceDisable() async => !_isApplying;
+
   late final TextEditingController _nameController;
   late DateTime _startDate;
   late String _selectedPeriodTimeSetId;
@@ -44,6 +58,8 @@ class _SchoolWebImportResultSheetState
   bool _weekRangeConfirmationOpen = false;
   bool _hasPopped = false;
   bool _pickerOpen = false;
+  bool _isApplying = false;
+  Object? _applyError;
   final _startDateAnchor = GlobalKey();
 
   bool get _hasBundledPeriodTimeSet =>
@@ -57,6 +73,7 @@ class _SchoolWebImportResultSheetState
   bool get _canDiscardBundledPeriodTimeSet => _periodTimeSets.isNotEmpty;
 
   bool get _canSubmitImport =>
+      canSaveSchoolImport(widget.provider) &&
       widget.response.timetable.courses.isNotEmpty &&
       (_importBundledPeriodTimeSet || _selectedExistingPeriodTimeSet() != null);
 
@@ -68,7 +85,8 @@ class _SchoolWebImportResultSheetState
       _hasPopped ||
       _pickerOpen ||
       _replaceConfirmationOpen ||
-      _weekRangeConfirmationOpen;
+      _weekRangeConfirmationOpen ||
+      _isApplying;
 
   @override
   void initState() {
@@ -121,6 +139,7 @@ class _SchoolWebImportResultSheetState
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final timetable = widget.response.timetable;
     final warnings = widget.response.meta.warnings;
@@ -144,10 +163,17 @@ class _SchoolWebImportResultSheetState
       ),
       leadingIcon: Icons.schedule_outlined,
       trailingIcon: Icons.keyboard_arrow_down,
-      enabled: _periodTimeSets.isNotEmpty && !_blocked,
-      onTap: _periodTimeSets.isEmpty || _blocked
+      enabled:
+          _periodTimeSets.isNotEmpty &&
+          !_blocked &&
+          canSaveSchoolImport(widget.provider),
+      onTap:
+          _periodTimeSets.isEmpty ||
+              _blocked ||
+              !canSaveSchoolImport(widget.provider)
           ? null
           : () async {
+              if (!canSaveSchoolImport(widget.provider)) return;
               final result = await _runPicker(
                 () => showPeriodTimeSetPickerDialog(
                   context,
@@ -206,84 +232,101 @@ class _SchoolWebImportResultSheetState
           )
         : existingPeriodTimeSetSelector;
 
-    return AppSheetScaffold(
-      heightFactor: sheetHeightFactor,
-      contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-      title: Text(l10n.schoolWebImportPreview),
-      footer: _ImportPreviewActions(
-        canReplaceCurrent: widget.canReplaceCurrent,
-        canSubmit: _canSubmitImport && !_hasPopped,
-        onCancel: _hasPopped ? null : _cancel,
-        onAddAsNew: _canSubmitImport && !_hasPopped
-            ? () => _submit(TimetableImportMode.addAsNew)
-            : null,
-        onReplace: _canSubmitImport && !_hasPopped
-            ? _confirmAndSubmitReplacement
-            : null,
-      ),
-      child: FocusScope(
-        canRequestFocus: !_blocked,
-        child: AbsorbPointer(
-          absorbing: _hasPopped,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _nameController,
-                minLines: 1,
-                maxLines: 2,
-                decoration: InputDecoration(
-                  labelText: l10n.timetableName,
-                  alignLabelWithHint: true,
-                  prefixIcon: const Icon(Icons.table_chart_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _ImportFormSummary(
-                date: KeyedSubtree(
-                  key: _startDateAnchor,
-                  child: _CompactActionRow(
-                    key: const ValueKey('school-import-start-date-tile'),
-                    title: Text(l10n.semesterStartDate),
-                    subtitle: Text(_formatDate(_startDate)),
-                    leadingIcon: Icons.calendar_today_outlined,
-                    trailingIcon: Icons.chevron_right,
-                    enabled: !_blocked,
-                    onTap: _blocked ? null : _pickStartDate,
+    return PopScope(
+      canPop: !_isApplying,
+      child: AppSheetScaffold(
+        heightFactor: sheetHeightFactor,
+        contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        title: Text(l10n.schoolWebImportPreview),
+        footer: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SchoolImportSaveFeedback(
+              provider: widget.provider,
+              isSaving: _isApplying,
+              error: _applyError,
+              onRecoveryBusyChanged: (busy) =>
+                  setState(() => _isApplying = busy),
+            ),
+            _ImportPreviewActions(
+              canReplaceCurrent: widget.canReplaceCurrent,
+              canSubmit: _canSubmitImport && !_blocked,
+              onCancel: _blocked ? null : _cancel,
+              onAddAsNew: _canSubmitImport && !_blocked
+                  ? () => _submit(TimetableImportMode.addAsNew)
+                  : null,
+              onReplace: _canSubmitImport && !_blocked
+                  ? _confirmAndSubmitReplacement
+                  : null,
+            ),
+          ],
+        ),
+        child: FocusScope(
+          canRequestFocus: !_blocked,
+          child: AbsorbPointer(
+            absorbing: _blocked,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _nameController,
+                  enabled: !_isApplying,
+                  minLines: 1,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: l10n.timetableName,
+                    alignLabelWithHint: true,
+                    prefixIcon: const Icon(Icons.table_chart_outlined),
                   ),
                 ),
-                courseCount: l10n.schoolWebImportCourseCount(
-                  timetable.courses.length,
+                const SizedBox(height: 12),
+                _ImportFormSummary(
+                  date: KeyedSubtree(
+                    key: _startDateAnchor,
+                    child: _CompactActionRow(
+                      key: const ValueKey('school-import-start-date-tile'),
+                      title: Text(l10n.semesterStartDate),
+                      subtitle: Text(_formatDate(_startDate)),
+                      leadingIcon: Icons.calendar_today_outlined,
+                      trailingIcon: Icons.chevron_right,
+                      enabled: !_blocked,
+                      onTap: _blocked ? null : _pickStartDate,
+                    ),
+                  ),
+                  courseCount: l10n.schoolWebImportCourseCount(
+                    timetable.courses.length,
+                  ),
+                  periodTimeSetContent: periodTimeSetContent,
                 ),
-                periodTimeSetContent: periodTimeSetContent,
-              ),
-              if (_hasParserDetails) ...[
-                const SizedBox(height: 20),
-                _ParserDetailsDisclosure(
-                  expanded: _detailsExpanded,
-                  title: l10n.schoolWebImportParserDetails,
-                  expandLabel: l10n.schoolWebImportExpandParserDetails,
-                  collapseLabel: l10n.schoolWebImportCollapseParserDetails,
-                  pageTitleLabel: l10n.schoolWebImportPageTitleLabel,
-                  pageTitle: widget.response.meta.pageTitle,
-                  parserLabel: l10n.schoolImportParserSourceTitle,
-                  parser: widget.response.meta.parser,
-                  onChanged: _blocked
-                      ? null
-                      : (expanded) {
-                          setState(() => _detailsExpanded = expanded);
-                        },
-                ),
+                if (_hasParserDetails) ...[
+                  const SizedBox(height: 20),
+                  _ParserDetailsDisclosure(
+                    expanded: _detailsExpanded,
+                    title: l10n.schoolWebImportParserDetails,
+                    expandLabel: l10n.schoolWebImportExpandParserDetails,
+                    collapseLabel: l10n.schoolWebImportCollapseParserDetails,
+                    pageTitleLabel: l10n.schoolWebImportPageTitleLabel,
+                    pageTitle: widget.response.meta.pageTitle,
+                    parserLabel: l10n.schoolImportParserSourceTitle,
+                    parser: widget.response.meta.parser,
+                    onChanged: _blocked
+                        ? null
+                        : (expanded) {
+                            setState(() => _detailsExpanded = expanded);
+                          },
+                  ),
+                ],
+                if (warnings.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  _ImportWarningsGroup(
+                    title: l10n.schoolWebImportWarnings,
+                    warnings: warnings,
+                  ),
+                ],
               ],
-              if (warnings.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                _ImportWarningsGroup(
-                  title: l10n.schoolWebImportWarnings,
-                  warnings: warnings,
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -355,7 +398,7 @@ class _SchoolWebImportResultSheetState
   }
 
   Future<T?> _runPicker<T>(Future<T?> Function() picker) async {
-    if (_pickerOpen || _hasPopped) {
+    if (_blocked) {
       return null;
     }
     setState(() => _pickerOpen = true);
@@ -371,9 +414,14 @@ class _SchoolWebImportResultSheetState
   }
 
   Future<void> _submit(TimetableImportMode mode) async {
-    if (_hasPopped || _blocked) {
+    if (_hasPopped ||
+        _blocked ||
+        widget.response.timetable.courses.isEmpty ||
+        !canSaveSchoolImport(widget.provider)) {
       return;
     }
+    final dataSession = widget.provider.dataSessionToken;
+    final replacementId = widget.provider.activeTimetableOrNull?.id;
     setState(() => _weekRangeConfirmationOpen = true);
     bool confirmed;
     try {
@@ -384,7 +432,16 @@ class _SchoolWebImportResultSheetState
     } finally {
       if (mounted) setState(() => _weekRangeConfirmationOpen = false);
     }
-    if (!mounted || _hasPopped || !confirmed) return;
+    if (!mounted ||
+        _hasPopped ||
+        !routeWorkspaceEnabled ||
+        !confirmed ||
+        !canSaveSchoolImport(widget.provider) ||
+        !identical(dataSession, widget.provider.dataSessionToken) ||
+        (mode == TimetableImportMode.replaceActive &&
+            replacementId != widget.provider.activeTimetableOrNull?.id)) {
+      return;
+    }
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
     if (!_importBundledPeriodTimeSet && selectedPeriodTimeSet == null) {
       // A period-time-set mutation may arrive between the last build and this
@@ -403,17 +460,33 @@ class _SchoolWebImportResultSheetState
         startDate: _startDate,
       ),
     );
-    setState(() => _hasPopped = true);
-    Navigator.of(context).pop(
-      SchoolImportApplyRequest(
-        response: nextResponse,
-        mode: mode,
-        importBundledPeriodTimeSet: _importBundledPeriodTimeSet,
-        targetPeriodTimeSetId: _importBundledPeriodTimeSet
-            ? null
-            : selectedPeriodTimeSet!.id,
-      ),
+    final request = SchoolImportApplyRequest(
+      response: nextResponse,
+      mode: mode,
+      importBundledPeriodTimeSet: _importBundledPeriodTimeSet,
+      targetPeriodTimeSetId: _importBundledPeriodTimeSet
+          ? null
+          : selectedPeriodTimeSet!.id,
     );
+    final apply = widget.onApply;
+    if (apply != null) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      setState(() {
+        _isApplying = true;
+        _applyError = null;
+      });
+      try {
+        await apply(request);
+      } catch (error) {
+        if (mounted) setState(() => _applyError = error);
+        return;
+      } finally {
+        if (mounted) setState(() => _isApplying = false);
+      }
+    }
+    if (!mounted || _hasPopped || !routeWorkspaceEnabled) return;
+    setState(() => _hasPopped = true);
+    completeSkedTaskRoute(context, request);
   }
 
   Future<void> _confirmAndSubmitReplacement() async {
@@ -423,6 +496,8 @@ class _SchoolWebImportResultSheetState
         !widget.canReplaceCurrent) {
       return;
     }
+    final dataSession = widget.provider.dataSessionToken;
+    final replacementId = widget.provider.activeTimetableOrNull?.id;
     setState(() => _replaceConfirmationOpen = true);
     bool? confirmed;
     try {
@@ -453,17 +528,21 @@ class _SchoolWebImportResultSheetState
         setState(() => _replaceConfirmationOpen = false);
       }
     }
-    if (confirmed == true && mounted && !_hasPopped) {
+    if (confirmed == true &&
+        mounted &&
+        !_hasPopped &&
+        identical(dataSession, widget.provider.dataSessionToken) &&
+        replacementId == widget.provider.activeTimetableOrNull?.id) {
       await _submit(TimetableImportMode.replaceActive);
     }
   }
 
   void _cancel() {
-    if (_hasPopped) {
+    if (_blocked) {
       return;
     }
     setState(() => _hasPopped = true);
-    Navigator.of(context).pop();
+    completeSkedTaskRoute(context);
   }
 
   String _formatDate(DateTime date) {

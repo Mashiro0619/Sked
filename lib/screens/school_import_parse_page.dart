@@ -1,7 +1,9 @@
 import '../widgets/desktop_window_host.dart';
 import '../widgets/adaptive_form_columns.dart';
 import '../widgets/school_import_summary_preview.dart';
+import '../widgets/school_import_save_feedback.dart';
 import '../widgets/school_import_week_range_confirmation.dart';
+import '../widgets/sked_task_route.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 
 import 'dart:async';
@@ -35,6 +37,7 @@ class SchoolImportParseOutcome extends SchoolImportResponse {
     required SchoolImportResponse response,
     required this.rawText,
     this.applyRequest,
+    this.importApplied = false,
   }) : response = response,
        super(meta: response.meta, timetable: response.timetable);
 
@@ -48,6 +51,10 @@ class SchoolImportParseOutcome extends SchoolImportResponse {
   /// end-to-end import flow. Legacy callers can leave this null and continue
   /// using [response] only.
   final SchoolImportApplyRequest? applyRequest;
+
+  /// True only after the page's [SchoolImportParsePage.onApply] completed.
+  /// Callers must not apply [applyRequest] a second time in this case.
+  final bool importApplied;
 }
 
 /// Full-screen presentation for a streaming school timetable parse.
@@ -67,6 +74,7 @@ class SchoolImportParsePage extends StatefulWidget {
     this.maxEditableCodeUnits = 64 * 1024,
     this.returnResponseOnly = false,
     this.autoPopAfterEditor = false,
+    this.onApply,
   });
 
   static const int defaultMaxPreviewCodeUnits = 4096;
@@ -87,6 +95,10 @@ class SchoolImportParsePage extends StatefulWidget {
   /// The full-screen flow leaves the result page open so users can review it.
   final bool autoPopAfterEditor;
 
+  /// Keeps the configured draft on this page until persistence succeeds.
+  /// Without this callback the original return-a-request contract is retained.
+  final Future<void> Function(SchoolImportApplyRequest request)? onApply;
+
   @override
   State<SchoolImportParsePage> createState() => _SchoolImportParsePageState();
 }
@@ -100,6 +112,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     unawaited(_cancelSubscription());
   }
 
+  @override
+  Future<bool> prepareWorkspaceDisable() async => !_isApplying;
+
   static const _followResumeTolerance = 1.0;
 
   final _textBuffer = StringBuffer();
@@ -112,6 +127,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   String _previewText = '';
   SchoolImportResponse? _response;
   String? _error;
+  Object? _applyError;
+  bool _isApplying = false;
   bool _isDone = false;
   bool _isOpeningEditor = false;
   bool _replaceConfirmationOpen = false;
@@ -139,7 +156,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   bool get _isBusy =>
       _isOpeningEditor ||
       _replaceConfirmationOpen ||
-      _weekRangeConfirmationOpen;
+      _weekRangeConfirmationOpen ||
+      _pickerOpen ||
+      _isApplying;
 
   bool get _hasDirectImportConfiguration => widget.provider != null;
 
@@ -157,6 +176,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   bool get _canSubmitConfiguredImport =>
+      canSaveSchoolImport(widget.provider) &&
       _response?.timetable.courses.isNotEmpty == true &&
       (_importBundledPeriodTimeSet || _selectedExistingPeriodTimeSet != null);
 
@@ -285,9 +305,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   void _handlePeriodTimeSetsChanged() {
     if (!mounted || !_isDone) return;
     final resolved = _resolvedPeriodTimeSetId(_selectedPeriodTimeSetId);
-    if (resolved != _selectedPeriodTimeSetId) {
-      setState(() => _selectedPeriodTimeSetId = resolved);
-    }
+    setState(() => _selectedPeriodTimeSetId = resolved);
   }
 
   String _resolvedPeriodTimeSetId(String preferredId) {
@@ -541,7 +559,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     if (widget.autoPopAfterEditor) {
       _hasPopped = true;
       unawaited(_cancelSubscription());
-      Navigator.of(context).pop(
+      completeSkedTaskRoute(
+        context,
         widget.returnResponseOnly
             ? result.response
             : SchoolImportParseOutcome(
@@ -553,7 +572,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   Future<void> _cancelAndPop() async {
-    if (_hasPopped) return;
+    if (_hasPopped || _isApplying) return;
     _hasPopped = true;
     // Do not make the visible cancel action or system Back wait for a stream
     // implementation's cancellation future. The workflow closes the HTTP
@@ -561,7 +580,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     // subscription itself is still cancelled exactly once.
     unawaited(_cancelSubscription());
     if (mounted) {
-      Navigator.of(context).pop();
+      completeSkedTaskRoute(context);
     }
   }
 
@@ -569,7 +588,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     if (_hasPopped || !_isDone || _response == null || _isBusy) return;
     _hasPopped = true;
     unawaited(_cancelSubscription());
-    Navigator.of(context).pop(
+    completeSkedTaskRoute(
+      context,
       widget.returnResponseOnly
           ? _response
           : SchoolImportParseOutcome(response: _response!, rawText: _rawText),
@@ -577,7 +597,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   Future<void> _pickStartDate() async {
-    if (_pickerOpen || _hasPopped || _startDate == null) return;
+    if (_isBusy || _hasPopped || _startDate == null) return;
     final firstDate = DateTime(2020);
     final lastDate = DateTime(2035);
     final current = _startDate!;
@@ -602,7 +622,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   Future<T?> _runPicker<T>(Future<T?> Function() picker) async {
-    if (_pickerOpen || _hasPopped) return null;
+    if (_isBusy || _hasPopped) return null;
     setState(() => _pickerOpen = true);
     try {
       return await picker();
@@ -617,7 +637,12 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
 
   Future<void> _pickPeriodTimeSet() async {
     final provider = widget.provider;
-    if (provider == null || _pickerOpen || _hasPopped) return;
+    if (provider == null ||
+        _isBusy ||
+        _hasPopped ||
+        !canSaveSchoolImport(provider)) {
+      return;
+    }
     final result = await _runPicker(
       () => showPeriodTimeSetPickerDialog(
         context,
@@ -630,9 +655,16 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   Future<void> _submitConfiguredImport(TimetableImportMode mode) async {
-    if (_hasPopped || _isBusy || !_isDone || _response == null) {
+    if (_hasPopped ||
+        _isBusy ||
+        !_isDone ||
+        _response == null ||
+        _response!.timetable.courses.isEmpty ||
+        !canSaveSchoolImport(widget.provider)) {
       return;
     }
+    final dataSession = widget.provider?.dataSessionToken;
+    final replacementId = widget.provider?.activeTimetableOrNull?.id;
     final name = _nameController?.text.trim() ?? _response!.timetable.name;
     final parsedWeeks = int.tryParse(_totalWeeksController?.text.trim() ?? '');
     final totalWeeks = normalizeTimetableWeeks(
@@ -655,7 +687,16 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     } finally {
       if (mounted) setState(() => _weekRangeConfirmationOpen = false);
     }
-    if (!mounted || _hasPopped || !routeWorkspaceEnabled || !confirmed) return;
+    if (!mounted ||
+        _hasPopped ||
+        !routeWorkspaceEnabled ||
+        !confirmed ||
+        !canSaveSchoolImport(widget.provider) ||
+        !identical(dataSession, widget.provider?.dataSessionToken) ||
+        (mode == TimetableImportMode.replaceActive &&
+            replacementId != widget.provider?.activeTimetableOrNull?.id)) {
+      return;
+    }
     final selected = _selectedExistingPeriodTimeSet;
     if (!_importBundledPeriodTimeSet && selected == null) {
       final resolved = _resolvedPeriodTimeSetId(_selectedPeriodTimeSetId);
@@ -670,15 +711,34 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       importBundledPeriodTimeSet: _importBundledPeriodTimeSet,
       targetPeriodTimeSetId: _importBundledPeriodTimeSet ? null : selected!.id,
     );
+    final apply = widget.onApply;
+    if (apply != null) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      setState(() {
+        _isApplying = true;
+        _applyError = null;
+      });
+      try {
+        await apply(request);
+      } catch (error) {
+        if (mounted) setState(() => _applyError = error);
+        return;
+      } finally {
+        if (mounted) setState(() => _isApplying = false);
+      }
+    }
+    if (!mounted || _hasPopped || !routeWorkspaceEnabled) return;
     _hasPopped = true;
     unawaited(_cancelSubscription());
-    Navigator.of(context).pop(
+    completeSkedTaskRoute(
+      context,
       widget.returnResponseOnly
           ? nextResponse
           : SchoolImportParseOutcome(
               response: nextResponse,
               rawText: _rawText,
               applyRequest: request,
+              importApplied: apply != null,
             ),
     );
   }
@@ -691,6 +751,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         !widget.canReplaceCurrent) {
       return;
     }
+    final dataSession = widget.provider?.dataSessionToken;
+    final replacementId = widget.provider?.activeTimetableOrNull?.id;
     setState(() => _replaceConfirmationOpen = true);
     bool? confirmed;
     try {
@@ -722,7 +784,10 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       }
     }
     if (!mounted) return;
-    if (confirmed == true && !_hasPopped) {
+    if (confirmed == true &&
+        !_hasPopped &&
+        identical(dataSession, widget.provider?.dataSessionToken) &&
+        replacementId == widget.provider?.activeTimetableOrNull?.id) {
       await _submitConfiguredImport(TimetableImportMode.replaceActive);
     }
   }
@@ -744,7 +809,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
           title: Text(l10n.schoolImportParsePageTitle),
           leading: IconButton(
             tooltip: l10n.cancel,
-            onPressed: _hasPopped ? null : () => unawaited(_cancelAndPop()),
+            onPressed: _hasPopped || _isApplying
+                ? null
+                : () => unawaited(_cancelAndPop()),
             icon: const Icon(Icons.close),
           ),
         ),
@@ -953,9 +1020,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         FocusScope(
-          canRequestFocus: !_pickerOpen && !_hasPopped,
+          canRequestFocus: !_isBusy && !_hasPopped,
           child: IgnorePointer(
-            ignoring: _pickerOpen || _hasPopped,
+            ignoring: _isBusy || _hasPopped,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -963,6 +1030,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                   TextField(
                     key: const ValueKey('school-import-parse-timetable-name'),
                     controller: nameController,
+                    enabled: !_isApplying,
                     minLines: 1,
                     maxLines: 2,
                     decoration: InputDecoration(
@@ -1106,7 +1174,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
             ),
       icon: Icons.schedule_outlined,
       trailing: Icons.keyboard_arrow_down,
-      onTap: _periodTimeSets.isEmpty ? null : _pickPeriodTimeSet,
+      onTap: _periodTimeSets.isEmpty || !canSaveSchoolImport(widget.provider)
+          ? null
+          : _pickPeriodTimeSet,
     );
   }
 
@@ -1123,6 +1193,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     return TextField(
       key: const ValueKey('school-import-parse-total-weeks'),
       controller: controller,
+      enabled: !_isApplying,
       keyboardType: TextInputType.number,
       textInputAction: TextInputAction.done,
       decoration: InputDecoration(
@@ -1364,7 +1435,20 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: content,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SchoolImportSaveFeedback(
+                    provider: widget.provider,
+                    isSaving: _isApplying,
+                    error: _applyError,
+                    onRecoveryBusyChanged: (busy) =>
+                        setState(() => _isApplying = busy),
+                  ),
+                  content,
+                ],
+              ),
             ),
           ),
         );

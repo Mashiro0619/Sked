@@ -22,6 +22,7 @@ import '../widgets/desktop_window_host.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/school_import_recovery_draft.dart';
 import 'adaptive_sked_shell.dart';
 import 'settings_page.dart';
 
@@ -50,6 +51,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   Set<AppMode>? _firstLaunchPendingMode;
   TimetableProvider? _lastProvider;
   bool? _lastObservedCanWrite;
+  Route<dynamic>? _retainedRecoveryDraftRoute;
 
   @override
   void didChangeDependencies() {
@@ -115,8 +117,10 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     if (provider == null) return;
     final wasWritable = _lastObservedCanWrite;
     _lastObservedCanWrite = provider.canWrite;
-    if (provider.isLoaded && wasWritable == true && !provider.canWrite) {
-      _clearRoutesForRecovery(provider);
+    if (provider.isLoaded && !provider.canWrite) {
+      if (wasWritable == true || _retainedRecoveryDraftRoute != null) {
+        _clearRoutesForRecovery(provider);
+      }
       return;
     }
     if (!provider.isLoaded || !provider.canWrite) return;
@@ -132,14 +136,39 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         if (!mounted || _lastProvider != provider || provider.canWrite) {
           return;
         }
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).popUntil((route) => route.isFirst);
+        Navigator.of(context, rootNavigator: true).popUntil((route) {
+          if (route.isFirst) return true;
+          final draft = route.settings.arguments;
+          if (draft is! SchoolImportRecoveryDraft ||
+              !draft.canRetainFor(provider)) {
+            return false;
+          }
+          _observeRetainedRecoveryDraft(route, provider);
+          return true;
+        });
       } finally {
         _isClearingRoutesForRecovery = false;
       }
     });
+  }
+
+  void _observeRetainedRecoveryDraft(
+    Route<dynamic> route,
+    TimetableProvider provider,
+  ) {
+    if (identical(_retainedRecoveryDraftRoute, route)) return;
+    _retainedRecoveryDraftRoute = route;
+    unawaited(
+      route.popped.then<void>((_) {
+        if (!mounted || !identical(_retainedRecoveryDraftRoute, route)) return;
+        _retainedRecoveryDraftRoute = null;
+        // Leaving the protected draft while writes remain blocked must reveal
+        // the global recovery screen, not stale settings/source routes below it.
+        if (identical(_lastProvider, provider) && !provider.canWrite) {
+          _clearRoutesForRecovery(provider);
+        }
+      }),
+    );
   }
 
   void _ensurePrivacyConsentDialog(TimetableProvider provider) {

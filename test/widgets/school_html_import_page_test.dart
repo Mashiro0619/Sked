@@ -286,11 +286,18 @@ void main() {
 
     expect(
       mapSchoolImportApplyError(Exception('boom'), l10n),
-      l10n.importFailedCheckContent,
+      l10n.saveFailedRetry,
     );
     expect(
       mapSchoolImportApplyError(StateError('bad state'), l10n),
-      l10n.importFailedCheckContent,
+      l10n.saveFailedRetry,
+    );
+    expect(
+      mapSchoolImportApplyError(
+        const AppBackupRestoreInProgressException(),
+        l10n,
+      ),
+      l10n.backupRestoreInProgressMessage,
     );
   });
 

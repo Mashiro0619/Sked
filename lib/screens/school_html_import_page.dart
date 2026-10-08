@@ -23,8 +23,15 @@ import '../utils/text_input_limits.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/school_import_config_required_view.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
+import '../widgets/school_import_save_feedback.dart';
 import '../widgets/school_web_import_result_sheet.dart';
+import '../widgets/sked_task_route.dart';
+import '../widgets/sked_task_session.dart';
+import '../widgets/school_import_recovery_draft.dart';
 import 'school_import_parse_page.dart';
+
+export '../widgets/school_import_save_feedback.dart'
+    show mapSchoolImportApplyError;
 
 class SchoolHtmlImportPage extends StatefulWidget {
   const SchoolHtmlImportPage({
@@ -61,8 +68,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
 
   @override
   Future<bool> prepareWorkspaceDisable() async =>
-      _htmlController.text.trim().isEmpty ||
-      await confirmWorkspaceDraftDiscard(context);
+      !_isApplying &&
+      (_htmlController.text.trim().isEmpty ||
+          await confirmWorkspaceDraftDiscard(context));
 
   static const int _maxRememberedTruncatedContents = 8;
 
@@ -70,6 +78,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   final TextEditingController _htmlController = TextEditingController();
 
   bool _isSubmitting = false;
+  bool _isApplying = false;
+  SkedTaskSession? _reviewOwner;
   bool _isContentPrepared = false;
   bool _returnToWebPagePopped = false;
   late bool _contentWasTruncated;
@@ -111,6 +121,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   @override
   void dispose() {
     _submissionGeneration += 1;
+    _reviewOwner?.dispose();
     _workflow.cancelActiveParse();
     _htmlController.dispose();
     super.dispose();
@@ -122,163 +133,170 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<TimetableProvider>();
     final isConfigured = isSchoolImportParserConfigured(provider);
-    return Scaffold(
-      appBar: WorkbenchAppBar(
-        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-        title: Text(l10n.schoolHtmlImportPageTitle),
-        actions: [
-          if (widget.showReturnToWebPageButton)
-            TextButton(
-              onPressed: _returnToWebPagePopped ? null : _returnToWebPageOnce,
-              child: Text(l10n.schoolHtmlImportReturnToWebPage),
-            ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: !isConfigured
-            ? SchoolImportConfigRequiredView(
-                message: schoolImportConfigMessage(provider, l10n),
-              )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  final horizontalPadding = constraints.maxWidth < 600
-                      ? 16.0
-                      : 24.0;
-                  // Scaffold has already removed the keyboard from these
-                  // constraints; subtracting viewInsets again wastes editor space.
-                  final availableHeight = constraints.maxHeight;
-                  final editorHeight = _editorHeight(
-                    availableHeight: availableHeight,
-                    isNarrow: constraints.maxWidth < 600,
-                  );
-                  final maxContentWidth = constraints.maxWidth < 840
-                      ? 720.0
-                      : 1280.0;
-                  return ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      16,
-                      horizontalPadding,
-                      24,
-                    ),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    children: [
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: maxContentWidth,
-                          ),
-                          child: AdaptiveFormColumns(
-                            primary: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SizedBox(
-                                  height: editorHeight,
-                                  child: TextField(
-                                    controller: _htmlController,
-                                    enabled: !_isSubmitting,
-                                    inputFormatters: [_boundedInputFormatter],
-                                    onChanged: _handleContentChanged,
-                                    expands: true,
-                                    maxLines: null,
-                                    minLines: null,
-                                    decoration: InputDecoration(
-                                      labelText: l10n.schoolHtmlImportHtmlLabel,
-                                      hintText: l10n.schoolHtmlImportHtmlHint,
-                                      prefixIconConstraints:
-                                          const BoxConstraints(
-                                            minWidth: 48,
-                                            maxWidth: 48,
-                                            minHeight: 48,
-                                            maxHeight: 48,
+    return PopScope(
+      canPop: !_isApplying,
+      child: Scaffold(
+        appBar: WorkbenchAppBar(
+          automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+          title: Text(l10n.schoolHtmlImportPageTitle),
+          actions: [
+            if (widget.showReturnToWebPageButton)
+              TextButton(
+                onPressed: _returnToWebPagePopped || _isApplying
+                    ? null
+                    : _returnToWebPageOnce,
+                child: Text(l10n.schoolHtmlImportReturnToWebPage),
+              ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: !isConfigured
+              ? SchoolImportConfigRequiredView(
+                  message: schoolImportConfigMessage(provider, l10n),
+                )
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final horizontalPadding = constraints.maxWidth < 600
+                        ? 16.0
+                        : 24.0;
+                    // Scaffold has already removed the keyboard from these
+                    // constraints; subtracting viewInsets again wastes editor space.
+                    final availableHeight = constraints.maxHeight;
+                    final editorHeight = _editorHeight(
+                      availableHeight: availableHeight,
+                      isNarrow: constraints.maxWidth < 600,
+                    );
+                    final maxContentWidth = constraints.maxWidth < 840
+                        ? 720.0
+                        : 1280.0;
+                    return ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        16,
+                        horizontalPadding,
+                        24,
+                      ),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      children: [
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: maxContentWidth,
+                            ),
+                            child: AdaptiveFormColumns(
+                              primary: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                    height: editorHeight,
+                                    child: TextField(
+                                      controller: _htmlController,
+                                      enabled: !_isSubmitting,
+                                      inputFormatters: [_boundedInputFormatter],
+                                      onChanged: _handleContentChanged,
+                                      expands: true,
+                                      maxLines: null,
+                                      minLines: null,
+                                      decoration: InputDecoration(
+                                        labelText:
+                                            l10n.schoolHtmlImportHtmlLabel,
+                                        hintText: l10n.schoolHtmlImportHtmlHint,
+                                        prefixIconConstraints:
+                                            const BoxConstraints(
+                                              minWidth: 48,
+                                              maxWidth: 48,
+                                              minHeight: 48,
+                                              maxHeight: 48,
+                                            ),
+                                        prefixIcon: const Align(
+                                          alignment: Alignment.topCenter,
+                                          child: Padding(
+                                            padding: EdgeInsets.only(top: 12),
+                                            child: Icon(Icons.code),
                                           ),
-                                      prefixIcon: const Align(
-                                        alignment: Alignment.topCenter,
-                                        child: Padding(
-                                          padding: EdgeInsets.only(top: 12),
-                                          child: Icon(Icons.code),
                                         ),
+                                        alignLabelWithHint: true,
                                       ),
-                                      alignLabelWithHint: true,
                                     ),
                                   ),
-                                ),
-                                if (_contentWasTruncated) ...[
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        size: 18,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .tertiary,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          l10n.schoolImportContentTruncated,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
-                                              ),
+                                  if (_contentWasTruncated) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          size: 18,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .tertiary,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            l10n.schoolImportContentTruncated,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    l10n.schoolHtmlImportNonHtmlHint,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
                                   ),
                                 ],
-                                const SizedBox(height: 8),
-                                Text(
-                                  l10n.schoolHtmlImportNonHtmlHint,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                      ),
-                                ),
-                              ],
-                            ),
-                            secondary: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (widget.initialTitle.isNotEmpty)
-                                  Text(
-                                    widget.initialTitle,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
-                                  ),
-                                if (widget.initialUrl.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 8,
-                                      bottom: 16,
+                              ),
+                              secondary: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (widget.initialTitle.isNotEmpty)
+                                    Text(
+                                      widget.initialTitle,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
                                     ),
-                                    child: SelectableText(widget.initialUrl),
+                                  if (widget.initialUrl.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 8,
+                                        bottom: 16,
+                                      ),
+                                      child: SelectableText(widget.initialUrl),
+                                    ),
+                                  _buildImportActions(
+                                    l10n,
+                                    provider: provider,
+                                    useHorizontalLayout: false,
                                   ),
-                                _buildImportActions(
-                                  l10n,
-                                  useHorizontalLayout: false,
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                      ],
+                    );
+                  },
+                ),
+        ),
       ),
     );
   }
@@ -304,10 +322,11 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
 
   Widget _buildImportActions(
     AppLocalizations l10n, {
+    required TimetableProvider provider,
     required bool useHorizontalLayout,
   }) {
     final prepareButton = FilledButton.tonalIcon(
-      onPressed: _isSubmitting ? null : _prepareContent,
+      onPressed: _isSubmitting || _isApplying ? null : _prepareContent,
       icon: Icon(
         _isContentPrepared
             ? Icons.check_circle_outline
@@ -320,7 +339,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       ),
     );
     final submitButton = FilledButton.icon(
-      onPressed: _isSubmitting ? null : _submit,
+      onPressed: _isSubmitting || _isApplying || !canSaveSchoolImport(provider)
+          ? null
+          : _submit,
       icon: _isSubmitting
           ? const SizedBox(
               width: 16,
@@ -330,18 +351,30 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           : const Icon(Icons.file_download_outlined),
       label: Text(l10n.schoolHtmlImportSubmit),
     );
+    final Widget actions;
     if (useHorizontalLayout) {
-      return Row(
+      actions = Row(
         children: [
           Expanded(child: prepareButton),
           const SizedBox(width: 12),
           Expanded(child: submitButton),
         ],
       );
+    } else {
+      actions = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [prepareButton, const SizedBox(height: 12), submitButton],
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [prepareButton, const SizedBox(height: 12), submitButton],
+      children: [
+        SchoolImportSaveFeedback(
+          provider: provider,
+          onRecoveryBusyChanged: (busy) => setState(() => _isApplying = busy),
+        ),
+        actions,
+      ],
     );
   }
 
@@ -446,17 +479,19 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   }
 
   void _returnToWebPageOnce() {
-    if (_returnToWebPagePopped) {
+    if (_returnToWebPagePopped || _isApplying) {
       return;
     }
     setState(() => _returnToWebPagePopped = true);
-    Navigator.of(context).pop();
+    completeSkedTaskRoute(context);
   }
 
   String? _validateBeforeSubmit(
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
+    final blocked = schoolImportSaveBlockedMessage(provider, l10n);
+    if (blocked != null) return blocked;
     final html = _htmlController.text.trim();
     if (html.isEmpty) {
       return l10n.schoolHtmlImportEmpty;
@@ -505,11 +540,44 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       return;
     }
 
-    SchoolImportResponse? response;
-    SchoolImportApplyRequest? directImportRequest;
-    Object? streamError;
+    final owner = SkedTaskSession(
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () =>
+          mounted && submissionGeneration == _submissionGeneration,
+    );
+    _reviewOwner = owner;
+    var importApplied = false;
+    var applyAttempted = false;
+    final recoveryDraft = SchoolImportRecoveryDraft(
+      provider: provider,
+      isPendingImport: () =>
+          owner.isCurrent && applyAttempted && !importApplied,
+    );
+
+    Future<void> applyFromReview(SchoolImportApplyRequest request) async {
+      if (!owner.isCurrent || !mounted) {
+        throw StateError('The import page is no longer active.');
+      }
+      if (!canSaveSchoolImport(provider)) {
+        if (provider.isRestoringAppBackup) {
+          throw const AppBackupRestoreInProgressException();
+        }
+        throw StateError(
+          'School import is blocked while storage is unavailable.',
+        );
+      }
+      setState(() => _isApplying = true);
+      applyAttempted = true;
+      try {
+        await _workflow.apply(provider, request);
+        importApplied = true;
+      } finally {
+        if (mounted) setState(() => _isApplying = false);
+      }
+    }
+
     try {
-      response = await _workflow.parse(
+      final response = await _workflow.parse(
         payload: SchoolImportPagePayload(
           url: widget.initialUrl,
           title: widget.initialTitle,
@@ -532,17 +600,22 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           final outcome = await Navigator.of(context)
               .push<SchoolImportParseOutcome>(
                 MaterialPageRoute(
+                  settings: RouteSettings(arguments: recoveryDraft),
                   builder: (_) => KeyedSubtree(
                     key: transitionAnchor,
-                    child: SchoolImportParsePage(
-                      stream: stream,
-                      provider: provider,
-                      canReplaceCurrent: canReplaceCurrent,
-                      initialPeriodTimeSetId:
-                          provider.activePeriodTimeSetOrNull?.id ??
-                          (provider.periodTimeSets.isEmpty
-                              ? ''
-                              : provider.periodTimeSets.first.id),
+                    child: SkedTaskRouteGuard(
+                      parent: owner,
+                      child: SchoolImportParsePage(
+                        stream: stream,
+                        provider: provider,
+                        canReplaceCurrent: canReplaceCurrent,
+                        initialPeriodTimeSetId:
+                            provider.activePeriodTimeSetOrNull?.id ??
+                            (provider.periodTimeSets.isEmpty
+                                ? ''
+                                : provider.periodTimeSets.first.id),
+                        onApply: applyFromReview,
+                      ),
                     ),
                   ),
                 ),
@@ -554,66 +627,50 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           while (mounted && transitionAnchor.currentContext != null) {
             await WidgetsBinding.instance.endOfFrame;
           }
-          directImportRequest = outcome?.applyRequest;
+          if (outcome?.importApplied == true) importApplied = true;
           return outcome?.response;
         },
       );
-    } catch (error) {
-      streamError = error;
-    }
-
-    if (!mounted || submissionGeneration != _submissionGeneration) return;
-    setState(() => _isSubmitting = false);
-
-    if (streamError != null) {
-      _showMessage(mapSchoolImportApplyError(streamError, l10n));
-      return;
-    }
-
-    if (response == null) {
-      return;
-    }
-    final finalResponse = response;
-
-    final selectedPeriodTimeSetId =
-        provider.activePeriodTimeSetOrNull?.id ??
-        (provider.periodTimeSets.isEmpty
-            ? ''
-            : provider.periodTimeSets.first.id);
-    final importResult =
-        directImportRequest ??
-        await showAppModalSheet<SchoolImportApplyRequest>(
+      if (!mounted || !owner.isCurrent || response == null) return;
+      if (!importApplied) {
+        final selectedPeriodTimeSetId =
+            provider.activePeriodTimeSetOrNull?.id ??
+            (provider.periodTimeSets.isEmpty
+                ? ''
+                : provider.periodTimeSets.first.id);
+        final importResult = await showAppModalSheet<SchoolImportApplyRequest>(
           context: context,
           maxWidth: appSheetWidthMedium,
+          isDismissible: false,
+          enableDrag: false,
+          routeSettings: RouteSettings(arguments: recoveryDraft),
+          session: owner,
           builder: (_) => SchoolWebImportResultSheet(
-            response: finalResponse,
+            response: response,
             canReplaceCurrent: canReplaceCurrent,
             initialPeriodTimeSetId: selectedPeriodTimeSetId,
             provider: provider,
+            onApply: applyFromReview,
           ),
         );
-    if (importResult == null ||
-        !mounted ||
-        submissionGeneration != _submissionGeneration) {
-      return;
-    }
-    setState(() => _isSubmitting = true);
-    Object? applyError;
-    try {
-      await _workflow.apply(provider, importResult);
+        if (importResult == null || !importApplied) return;
+      }
+      if (!mounted || !owner.isCurrent) return;
+      _showMessage(l10n.schoolWebImportSuccess);
+      completeSkedTaskRoute(context);
     } catch (error) {
-      applyError = error;
+      if (mounted && owner.isCurrent) {
+        _showMessage(
+          error is FormatException
+              ? error.message
+              : l10n.importFailedCheckContent,
+        );
+      }
+    } finally {
+      if (identical(_reviewOwner, owner)) _reviewOwner = null;
+      owner.dispose();
+      if (mounted) setState(() => _isSubmitting = false);
     }
-    if (!mounted || submissionGeneration != _submissionGeneration) {
-      return;
-    }
-    setState(() => _isSubmitting = false);
-    if (applyError != null) {
-      _showMessage(mapSchoolImportApplyError(applyError, l10n));
-      return;
-    }
-    _showMessage(l10n.schoolWebImportSuccess);
-    Navigator.of(context).pop();
   }
 
   void _showMessage(String message) {
@@ -623,12 +680,4 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
-}
-
-@visibleForTesting
-String mapSchoolImportApplyError(Object error, AppLocalizations l10n) {
-  if (error is FormatException) {
-    return error.message;
-  }
-  return l10n.importFailedCheckContent;
 }
