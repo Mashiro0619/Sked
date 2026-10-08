@@ -3814,8 +3814,18 @@ void main() {
 
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    expect(find.text('1'), findsOneWidget);
-    expect(find.text('7'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('general-month-day-cell-2025-12-29')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('general-month-day-cell-2026-2-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('general-month-day-cell-2026-2-2')),
+      findsNothing,
+    );
   });
 
   testWidgets('month view title opens quick date picker', (tester) async {

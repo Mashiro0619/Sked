@@ -292,7 +292,7 @@ void main() {
             var largest = 0.0;
             for (var row = 0; row < 5; row++) {
               for (var col = 0; col < 7; col++) {
-                final date = DateTime(2026, 8, 30 + row * 7 + col);
+                final date = DateTime(2026, 8, 31 + row * 7 + col);
                 final rect = t.getRect(_cell(date));
                 for (final position in [
                   rect.left,
@@ -309,7 +309,7 @@ void main() {
                 largest = rect.width > largest ? rect.width : largest;
                 final y = rect.top + rect.height * .7;
                 if (col < 6) {
-                  final nextDate = DateTime(2026, 8, 31 + row * 7 + col);
+                  final nextDate = DateTime(2026, 8, 32 + row * 7 + col);
                   final next = t.getRect(_cell(nextDate));
                   expect(next.left - rect.right, closeTo(pixel, .00001));
                   final x = rect.right + pixel / 2;
@@ -339,7 +339,7 @@ void main() {
                   }
                 }
                 if (row < 4) {
-                  final nextDate = DateTime(2026, 8, 37 + row * 7 + col);
+                  final nextDate = DateTime(2026, 8, 38 + row * 7 + col);
                   final next = t.getRect(_cell(nextDate));
                   expect(next.top - rect.bottom, closeTo(pixel, .00001));
                   sample(
@@ -542,17 +542,64 @@ void main() {
     variant: _desktop,
   );
 
-  for (final (month, rows) in [(2, 4), (9, 5), (8, 6)]) {
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    testWidgets(
+      'month weekday columns stay Monday-first when weekends are toggled: $platform',
+      (t) async {
+        final p = await _mount(
+          t,
+          date: DateTime(2026, 9, 8),
+          locale: 'en',
+          size: platform == TargetPlatform.windows
+              ? const Size(1440, 900)
+              : const Size(393, 900),
+        );
+        List<String?> labels() => t
+            .widgetList<Text>(
+              find.descendant(
+                of: _key('general-month-weekday-header'),
+                matching: find.byType(Text),
+              ),
+            )
+            .map((text) => text.data)
+            .toList();
+        expect(labels(), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+        final monday = _cell(DateTime(2026, 8, 31));
+        final sunday = _cell(DateTime(2026, 9, 6));
+        expect(t.getTopLeft(monday).dy, t.getTopLeft(sunday).dy);
+        expect(t.getTopLeft(monday).dx, lessThan(t.getTopLeft(sunday).dx));
+        await t.tap(sunday);
+        await t.pumpAndSettle();
+        expect(p.selectedGeneralDate, DateTime(2026, 9, 6));
+        await p.setSelectedGeneralDate(DateTime(2026, 9, 8));
+        await p.updateGeneralDisplaySettings(showWeekends: false);
+        await t.pumpAndSettle();
+        expect(labels(), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+        expect(_cell(DateTime(2026, 9, 5)), findsNothing);
+        expect(sunday, findsNothing);
+        expect(monday, findsOneWidget);
+        expect(p.selectedGeneralDate, DateTime(2026, 9, 8));
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
+  for (final (year, month, rows) in [
+    (2027, 2, 4),
+    (2026, 9, 5),
+    (2026, 8, 6),
+  ]) {
     testWidgets(
       'desktop month keeps $rows equal-height rows and its final week reachable',
       (t) async {
         await _mount(
           t,
-          date: DateTime(2026, month, 16),
+          date: DateTime(year, month, 16),
           size: const Size(1600, 1100),
         );
         final cells = find.descendant(
-          of: _key('general-month-date-grid-2026-$month'),
+          of: _key('general-month-date-grid-$year-$month'),
           matching: find.byWidgetPredicate(
             (widget) =>
                 widget.key is ValueKey<String> &&
@@ -562,8 +609,10 @@ void main() {
           ),
         );
         expect(cells, findsNWidgets(rows * 7));
-        final firstDate = DateTime(2026, month, 1);
-        final first = firstDate.subtract(Duration(days: firstDate.weekday % 7));
+        final firstDate = DateTime(year, month, 1);
+        final first = firstDate.subtract(
+          Duration(days: firstDate.weekday - DateTime.monday),
+        );
         final top = t.getRect(_cell(first));
         var lastBottom = top.top - 1;
         for (var row = 0; row < rows; row++) {
@@ -1033,10 +1082,10 @@ void main() {
       );
       expect(_key('desktop-month-grid-lines'), findsOneWidget);
       final header = t.getRect(_key('general-month-weekday-header'));
-      final first = t.getRect(_cell(DateTime(2026, 8, 30)));
+      final first = t.getRect(_cell(DateTime(2026, 8, 31)));
       expect(first.top, header.bottom);
       for (var day = 0; day < 7; day++) {
-        final date = DateTime(2026, 8, 30 + day);
+        final date = DateTime(2026, 8, 31 + day);
         final cell = t.getRect(_cell(date));
         final weekday = t.getRect(
           _key('desktop-month-weekday-${date.weekday}'),

@@ -395,12 +395,8 @@ class _MonthGridModel {
   }) {
     final firstOfMonth = DateTime(monthDate.year, monthDate.month, 1);
     final lastOfMonth = DateTime(monthDate.year, monthDate.month + 1, 0);
-    final gridStart = showWeekends
-        ? startOfWeekSunday(firstOfMonth)
-        : startOfWeekMonday(firstOfMonth);
-    final lastWeekStart = showWeekends
-        ? startOfWeekSunday(lastOfMonth)
-        : startOfWeekMonday(lastOfMonth);
+    final gridStart = startOfWeekMonday(firstOfMonth);
+    final lastWeekStart = startOfWeekMonday(lastOfMonth);
     final gridEnd = addCalendarDays(lastWeekStart, showWeekends ? 6 : 4);
     final days = <DateTime>[];
     for (var d = gridStart; !d.isAfter(gridEnd); d = nextCalendarDate(d)) {
@@ -1116,13 +1112,13 @@ class _MonthWeekdayHeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final weekdays = showWeekends
         ? [
-            DateTime.sunday,
             DateTime.monday,
             DateTime.tuesday,
             DateTime.wednesday,
             DateTime.thursday,
             DateTime.friday,
             DateTime.saturday,
+            DateTime.sunday,
           ]
         : [
             DateTime.monday,
