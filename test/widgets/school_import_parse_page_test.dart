@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,6 +11,7 @@ import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
+import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 
@@ -190,6 +192,275 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
+  for (final wrapped in [false, true]) {
+    testWidgets(
+      'JSON course edits retain corrected metadata and unknown fields (wrapped: $wrapped)',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(900, 1000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final controller = StreamController<SchoolImportStreamEvent>();
+        addTearDown(controller.close);
+        final results = await _pumpDirectPage(tester, controller, provider);
+        final original = jsonDecode(_rawResponse) as Map<String, dynamic>;
+        final source = wrapped
+            ? jsonEncode({
+                'ok': true,
+                'timetable': original,
+                'unknownEnvelope': [1, 'kept'],
+              })
+            : _rawResponse;
+        controller.add(ParseDelta(source));
+        controller.add(ParseDone(response: _response()));
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportParsePage)),
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('school-import-parse-timetable-name')),
+          'Corrected term',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('school-import-parse-total-weeks')),
+          '22',
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('school-import-parse-start-date')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('sked-date-2026-05-27')));
+        await tester.tap(find.byKey(const ValueKey('sked-date-confirm')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.widgetWithText(
+            OutlinedButton,
+            l10n.schoolImportResultEditorTitle,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final field = find.byType(TextField);
+        final editorJson = jsonDecode(
+          tester.widget<TextField>(field).controller!.text,
+        ) as Map<String, dynamic>;
+        final timetableJson = wrapped
+            ? editorJson['timetable'] as Map<String, dynamic>
+            : editorJson;
+        expect(timetableJson['name'], 'Corrected term');
+        expect(timetableJson['totalWeeks'], 22);
+        expect(timetableJson['startDate'], '2026-05-27');
+        expect(timetableJson['unknownField'], {'kept': true});
+        if (wrapped) expect(editorJson['unknownEnvelope'], [1, 'kept']);
+        (timetableJson['courses'] as List).single['name'] = 'Physics';
+        final editedRaw = jsonEncode(editorJson);
+        await tester.enterText(field, editedRaw);
+        await tester.tap(find.byTooltip(l10n.confirm));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(
+                  const ValueKey('school-import-parse-timetable-name'),
+                ),
+              )
+              .controller!
+              .text,
+          'Corrected term',
+        );
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(const ValueKey('school-import-parse-total-weeks')),
+              )
+              .controller!
+              .text,
+          '22',
+        );
+        expect(find.text('2026-05-27'), findsOneWidget);
+        await tester.tap(
+          find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+        );
+        await tester.pumpAndSettle();
+        expect(results.single!.rawText, editedRaw);
+        expect(
+          results.single!.response.timetable.courses.single.name,
+          'Physics',
+        );
+        expect(
+          results.single!.response.timetable.startDate,
+          DateTime(2026, 5, 27),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('JSON metadata changes replace the corrected form values', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final controller = StreamController<SchoolImportStreamEvent>();
+    addTearDown(controller.close);
+    final results = await _pumpDirectPage(tester, controller, provider);
+    controller.add(const ParseDelta(_rawResponse));
+    controller.add(ParseDone(response: _response()));
+    await tester.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SchoolImportParsePage)),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('school-import-parse-timetable-name')),
+      'Form correction',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('school-import-parse-total-weeks')),
+      '22',
+    );
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, l10n.schoolImportResultEditorTitle),
+    );
+    await tester.pumpAndSettle();
+    final field = find.byType(TextField);
+    final editorJson = jsonDecode(
+      tester.widget<TextField>(field).controller!.text,
+    ) as Map<String, dynamic>;
+    editorJson.addAll({
+      'name': 'JSON correction',
+      'totalWeeks': 20,
+      'startDate': '2026-06-01',
+    });
+    await tester.enterText(field, jsonEncode(editorJson));
+    await tester.tap(find.byTooltip(l10n.confirm));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const ValueKey('school-import-parse-timetable-name')),
+          )
+          .controller!
+          .text,
+      'JSON correction',
+    );
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const ValueKey('school-import-parse-total-weeks')),
+          )
+          .controller!
+          .text,
+      '20',
+    );
+    expect(find.text('2026-06-01'), findsOneWidget);
+    await tester.tap(
+      find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+    );
+    await tester.pumpAndSettle();
+    expect(results.single!.response.timetable.name, 'JSON correction');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'discarding JSON edits retains the form draft and original raw text',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final controller = StreamController<SchoolImportStreamEvent>();
+      addTearDown(controller.close);
+      final results = await _pumpDirectPage(tester, controller, provider);
+      controller.add(const ParseDelta(_rawResponse));
+      controller.add(ParseDone(response: _response()));
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SchoolImportParsePage)),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('school-import-parse-timetable-name')),
+        'Keep this correction',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('school-import-parse-total-weeks')),
+        '22',
+      );
+      await tester.tap(
+        find.widgetWithText(OutlinedButton, l10n.schoolImportResultEditorTitle),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField),
+        _rawResponse.replaceFirst('Mathematics', 'Cancelled physics'),
+      );
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.discardChangesAndExit));
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolImportResultEditorPage), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('school-import-parse-timetable-name')),
+            )
+            .controller!
+            .text,
+        'Keep this correction',
+      );
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('school-import-parse-total-weeks')),
+            )
+            .controller!
+            .text,
+        '22',
+      );
+      await tester.tap(
+        find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+      );
+      await tester.pumpAndSettle();
+      expect(results.single!.response.timetable.name, 'Keep this correction');
+      expect(results.single!.response.timetable.totalWeeks, 22);
+      expect(
+        results.single!.response.timetable.courses.single.name,
+        'Mathematics',
+      );
+      expect(results.single!.rawText, _rawResponse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('opening unchanged metadata preserves JSON text exactly', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final controller = StreamController<SchoolImportStreamEvent>();
+    addTearDown(controller.close);
+    final results = await _pumpDirectPage(tester, controller, provider);
+    const source = '  \n$_rawResponse\n  ';
+    controller.add(const ParseDelta(source));
+    controller.add(ParseDone(response: _response()));
+    await tester.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SchoolImportParsePage)),
+    );
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, l10n.schoolImportResultEditorTitle),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      source,
+    );
+    await tester.tap(find.byTooltip(l10n.confirm));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+    );
+    await tester.pumpAndSettle();
+    expect(results.single!.rawText, source);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'parsed semester date changes only after picker confirmation and stays in the import draft',
     (tester) async {

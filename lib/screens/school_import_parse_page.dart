@@ -5,6 +5,7 @@ import '../widgets/school_import_week_range_confirmation.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:material_ui/material_ui.dart';
@@ -132,7 +133,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       _isDone &&
       _response != null &&
       _rawText.trim().isNotEmpty &&
-      _rawText.length <= widget.maxEditableCodeUnits;
+      _rawText.length <= widget.maxEditableCodeUnits &&
+      _editorTextWithImportDraft().length <= widget.maxEditableCodeUnits;
 
   bool get _isBusy =>
       _isOpeningEditor ||
@@ -468,14 +470,57 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     return codeUnit >= 0xdc00 && codeUnit <= 0xdfff ? start + 1 : start;
   }
 
+  String _editorTextWithImportDraft() {
+    final response = _response;
+    if (!_hasDirectImportConfiguration || response == null) return _rawText;
+    final timetable = response.timetable;
+    final changes = <String, Object>{};
+    final name = _nameController?.text;
+    if (name != null && name != timetable.name) changes['name'] = name.trim();
+    final weeks = _enteredTotalWeeks;
+    if (weeks != null &&
+        weeks >= 1 &&
+        weeks <= maxTimetableWeeks &&
+        weeks != timetable.totalWeeks) {
+      changes['totalWeeks'] = weeks;
+    }
+    final startDate = _startDate;
+    if (startDate != null &&
+        startDate != normalizeDateOnly(timetable.startDate)) {
+      changes['startDate'] = _formatDate(startDate);
+    }
+    // Avoid reformatting the parser's/user's JSON when no form values changed.
+    if (changes.isEmpty) return _rawText;
+
+    try {
+      final json = jsonDecode(_rawText);
+      if (json is! Map<String, dynamic>) return _rawText;
+      final rawTimetable = json.containsKey('timetable')
+          ? json['timetable']
+          : json;
+      if (rawTimetable is! Map<String, dynamic>) return _rawText;
+      // Patch only the edited metadata in the original object, preserving all
+      // course data and unknown fields in both supported response shapes.
+      rawTimetable.addAll(changes);
+      final formatted = const JsonEncoder.withIndent('  ').convert(json);
+      return formatted.length <= widget.maxEditableCodeUnits
+          ? formatted
+          : jsonEncode(json);
+    } on FormatException {
+      // Keep malformed model output available for manual repair.
+      return _rawText;
+    }
+  }
+
   Future<void> _openEditor() async {
     if (!_canEdit || _isBusy || !mounted) return;
+    final initialText = _editorTextWithImportDraft();
     setState(() => _isOpeningEditor = true);
     final result = await Navigator.of(context)
         .push<SchoolImportResultEditorOutcome>(
           MaterialPageRoute(
             builder: (_) => SchoolImportResultEditorPage(
-              initialText: _rawText,
+              initialText: initialText,
               maxEditableCodeUnits: widget.maxEditableCodeUnits,
             ),
           ),
