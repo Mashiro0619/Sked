@@ -1340,58 +1340,96 @@ class _WorkspaceRail extends StatelessWidget {
       child: Stack(
         children: [
           SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: NavigationRail(
-                    key: const ValueKey('adaptive-shell-navigation-rail'),
-                    selectedIndex: selectedIndex,
-                    extended: false,
-                    scrollable: true,
-                    labelType: NavigationRailLabelType.all,
-                    onDestinationSelected: busy || !enabled
-                        ? null
-                        : onDestinationSelected,
-                    leading: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: const _WorkspaceNavigationBrandIcon(),
-                    ),
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: const Icon(Icons.school_outlined),
-                        selectedIcon: const Icon(Icons.school),
-                        label: _WorkspaceRailLabel(
-                          label: l10n.studentTimetable,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const settingsExtent = kMinInteractiveDimension + 20;
+                const destinationViewport = kMinInteractiveDimension + 16;
+                const brandExtent = 48.0 + 24.0;
+                final minimumHeight = settingsExtent + destinationViewport;
+                final height = math.max(constraints.maxHeight, minimumHeight);
+                final showBrand = height >= minimumHeight + brandExtent;
+                // NavigationRail only scrolls destinations, not its leading
+                // decoration. At extreme heights the settings action must
+                // also remain reachable by scrolling the complete rail.
+                return SingleChildScrollView(
+                  key: const ValueKey(
+                    'adaptive-shell-navigation-height-scroll',
+                  ),
+                  primary: false,
+                  physics: height > constraints.maxHeight
+                      ? const ClampingScrollPhysics()
+                      : const NeverScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: height,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: NavigationRail(
+                            key: const ValueKey(
+                              'adaptive-shell-navigation-rail',
+                            ),
+                            selectedIndex: selectedIndex,
+                            extended: false,
+                            scrollable: true,
+                            labelType: NavigationRailLabelType.all,
+                            onDestinationSelected: busy || !enabled
+                                ? null
+                                : onDestinationSelected,
+                            leading: showBrand
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    child:
+                                        const _WorkspaceNavigationBrandIcon(),
+                                  )
+                                : null,
+                            destinations: [
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.school_outlined),
+                                selectedIcon: const Icon(Icons.school),
+                                label: _WorkspaceRailLabel(
+                                  label: l10n.studentTimetable,
+                                ),
+                                disabled: !enabled || busy,
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.event_note_outlined),
+                                selectedIcon: const Icon(Icons.event_note),
+                                label: _WorkspaceRailLabel(
+                                  label: l10n.generalSchedule,
+                                ),
+                                disabled: !enabled || busy,
+                              ),
+                            ],
+                          ),
                         ),
-                        disabled: !enabled || busy,
-                      ),
-                      NavigationRailDestination(
-                        icon: const Icon(Icons.event_note_outlined),
-                        selectedIcon: const Icon(Icons.event_note),
-                        label: _WorkspaceRailLabel(label: l10n.generalSchedule),
-                        disabled: !enabled || busy,
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+                          child: IconButton(
+                            key: const ValueKey(
+                              'adaptive-shell-settings-action',
+                            ),
+                            focusNode: settingsFocusNode,
+                            onPressed: busy || settingsBusy || !enabled
+                                ? null
+                                : onOpenSettings,
+                            tooltip: l10n.settings,
+                            icon: settingsBusy
+                                ? const SizedBox.square(
+                                    dimension: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.settings_outlined),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-                  child: IconButton(
-                    key: const ValueKey('adaptive-shell-settings-action'),
-                    focusNode: settingsFocusNode,
-                    onPressed: busy || settingsBusy || !enabled
-                        ? null
-                        : onOpenSettings,
-                    tooltip: l10n.settings,
-                    icon: settingsBusy
-                        ? const SizedBox.square(
-                            dimension: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.settings_outlined),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
           if (busy)

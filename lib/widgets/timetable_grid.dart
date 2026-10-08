@@ -377,7 +377,7 @@ class _TimetableGridState extends State<TimetableGrid> {
           return false;
         }
 
-        return SizedBox(
+        final content = SizedBox(
           width: constraints.maxWidth,
           child: Column(
             children: [
@@ -588,6 +588,22 @@ class _TimetableGridState extends State<TimetableGrid> {
               ),
             ],
           ),
+        );
+        if (!constraints.hasBoundedHeight) return content;
+        // A keyboard can leave less room than the measured day header alone.
+        // Keep the header and a usable grid viewport at their real sizes and
+        // let that short surface scroll instead of overflowing the column.
+        final minimumHeight = widget.showDayHeader
+            ? headerHeight + _minimumCourseHitExtent
+            : 0.0;
+        final contentHeight = math.max(constraints.maxHeight, minimumHeight);
+        return SingleChildScrollView(
+          key: const ValueKey('timetable-grid-height-scroll'),
+          primary: false,
+          physics: contentHeight > constraints.maxHeight
+              ? const ClampingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          child: SizedBox(height: contentHeight, child: content),
         );
       },
     );
