@@ -243,8 +243,13 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   AppData themeDataFor(AppMode mode) {
-    requireWorkspaceEnabled(mode);
-    return _appData.copyWith(activeMode: mode);
+    final data = _visibleAppData;
+    // Reading a still-visible workspace must not use the mutation guard: its
+    // pending disable is private until the storage transaction completes.
+    if (!data.isWorkspaceEnabled(mode)) {
+      throw StateError('Workspace is disabled: ${mode.value}');
+    }
+    return data.copyWith(activeMode: mode);
   }
 
   AppData _editTheme(AppMode? workspace, AppData Function(AppData) edit) {

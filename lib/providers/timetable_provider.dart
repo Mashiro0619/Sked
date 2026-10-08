@@ -509,6 +509,21 @@ class TimetableProvider extends _TimetableProviderBase
   AppData get _appData => _appDataValue;
 
   @override
+  AppData get _visibleAppData {
+    final data = super._visibleAppData;
+    if (_visibleActiveModeOverride == null &&
+        _visibleEnabledWorkspacesOverride == null) {
+      return data;
+    }
+    // A reader must see the same workspace selection and availability as the
+    // public getters while their transaction is waiting for durable storage.
+    return data.copyWith(
+      activeMode: _visibleActiveModeOverride,
+      enabledWorkspaces: _visibleEnabledWorkspacesOverride,
+    );
+  }
+
+  @override
   set _appData(AppData value) {
     _ensureAppBackupRestoreMutationAllowed();
     _appDataValue = value;

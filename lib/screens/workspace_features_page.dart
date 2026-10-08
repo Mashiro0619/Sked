@@ -205,29 +205,32 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
         ),
       );
     }
-    return Scaffold(
-      appBar: WorkbenchAppBar(
-        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-        title: Text(l.workspaceFeatures),
-      ),
-      body: Column(
-        children: [
-          UiCommandBusyIndicator(busy: uiCommandBusy),
-          Expanded(
-            child: SettingsInteractionBlocker(
-              blocked: uiCommandBusy,
-              child: ResponsiveSettingsSingleColumnBody(
-                children: [
-                  controls.first,
-                  SettingsConnectedGroup(
-                    tonal: true,
-                    children: controls.skip(1).toList(),
-                  ),
-                ],
+    return PopScope<void>(
+      canPop: !uiCommandBusy,
+      child: Scaffold(
+        appBar: WorkbenchAppBar(
+          automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+          title: Text(l.workspaceFeatures),
+        ),
+        body: Column(
+          children: [
+            UiCommandBusyIndicator(busy: uiCommandBusy),
+            Expanded(
+              child: SettingsInteractionBlocker(
+                blocked: uiCommandBusy,
+                child: ResponsiveSettingsSingleColumnBody(
+                  children: [
+                    controls.first,
+                    SettingsConnectedGroup(
+                      tonal: true,
+                      children: controls.skip(1).toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
