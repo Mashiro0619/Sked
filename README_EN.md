@@ -100,7 +100,7 @@ macOS and Linux are currently kept source-build compatible but do not have prebu
 ## Official Distribution
 
 > [!IMPORTANT]
-> Official Sked releases are published only through Google Play and this repository's GitHub Releases. Packages and derivative builds offered through other app stores, download sites, mirrors, or distribution channels are not official releases and have not been verified by the maintainer.
+> Official Sked releases are published through Google Play, Microsoft Store, and this repository's GitHub Releases. Packages and derivative builds offered through other app stores, download sites, mirrors, or distribution channels are not official releases and have not been verified by the maintainer.
 
 Without explicit written authorization, a third party must not claim, label, or promote its channel or build as an "official Sked release," "official mirror," or "official partner," or use the project name, icon, or maintainer identity in a way that falsely implies official authorization, partnership, or endorsement.
 

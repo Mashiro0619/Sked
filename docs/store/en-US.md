@@ -1,6 +1,6 @@
 # Sked — Microsoft Store listing (English, United States)
 
-适用：当前 Windows x64 Store 包，应用版本 `2.3.0-alpha.1+14`，MSIX 版本 `2.3.14.0`。这是本地提交素材草稿，不代表已经上架或通过认证。
+适用：Sked 2.3.0 Windows x64 正式版的商店文案草稿。当前代码版本仍为 `2.3.0-rc.2+16`；正式提交前以最终候选包核对版本、截图和新增功能。这份草稿不代表已经发布、上架或通过认证。
 
 ## 填写速查
 
@@ -39,7 +39,7 @@ Use a desktop workspace with a resource sidebar and detail and editing panels. A
 KEEP CONTROL OF YOUR DATA
 Your timetable and calendar data is stored locally. Import supported timetable files and preview entries before saving. Import and export calendars in JSON or ICS, and create full app backups to move or restore your setup. Core planning works offline and does not require an account. Optional online imports require an internet connection and may use third-party services.
 
-This release is an Alpha preview. Back up important data before upgrading. Windows notifications depend on system permissions and settings.
+Windows notifications depend on system permissions and settings.
 
 ## Short description
 
@@ -102,7 +102,7 @@ Third-party components and icon assets remain subject to their own license terms
 
 ## Before publishing
 
-1. 当前是 Alpha 预览版本；文案已如实注明。版本后缀不会自动创建商店测试渠道，必须单独确认产品可见性和发布范围。
+1. 这份文案用于正式版提交。若提交的仍是预览包，需在 Description 中明确注明预览状态；版本后缀不会自动创建商店测试渠道，必须单独确认产品可见性和发布范围。
 2. 首次提交按后台说明保持 What's new 为空。以后更新时填写实际版本变化。
 3. 核心规划功能可离线使用，不需要应用账号；但学校网页、解析 API 等可选功能会联网，不应宣称“所有数据绝不离开设备”。文本/HTML 等高级课表解析可能需要用户配置第三方 API，未宣传为免费内置 AI 服务。
 4. 没有宣传自动云同步、已接入的 AI 对话、支持所有学校，或“绝不错过提醒”等未经证实的能力。
