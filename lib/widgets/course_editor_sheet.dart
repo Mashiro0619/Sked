@@ -77,6 +77,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   late final TextEditingController _creditController;
   late final TextEditingController _remarksController;
   late final TextEditingController _customFieldsController;
+  late final String _initialCustomFieldsText;
   late final TextEditingController _reminderMinutesController;
 
   late int _selectedDayOfWeek;
@@ -165,12 +166,13 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           : initial.credit.toString(),
     );
     _remarksController = TextEditingController(text: initial?.remarks ?? '');
+    _initialCustomFieldsText = initial == null
+        ? ''
+        : initial.customFields.entries
+              .map((entry) => '${entry.key}:${entry.value}')
+              .join('\n');
     _customFieldsController = TextEditingController(
-      text: initial == null
-          ? ''
-          : initial.customFields.entries
-                .map((entry) => '${entry.key}:${entry.value}')
-                .join('\n'),
+      text: _initialCustomFieldsText,
     );
     final reminder =
         initial?.reminderSettings ?? const CourseReminderSettings();
@@ -1057,7 +1059,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       timeRange: buildTimeRange(startMinutes, endMinutes),
       credit: _parseCredit(_creditController.text),
       remarks: _remarksController.text.trim(),
-      customFields: _parseCustomFields(_customFieldsController.text),
+      // The line editor cannot represent every legal JSON value losslessly.
+      // Preserve the original map when this field was not edited, including
+      // multiline strings, nested values and their JSON types.
+      customFields: _customFieldsController.text == _initialCustomFieldsText
+          ? Map<String, dynamic>.from(widget.initialCourse?.customFields ?? {})
+          : _parseCustomFields(_customFieldsController.text),
       reminderSettings: _courseReminderSettings,
     );
     final result = CourseEditorResult.save(course);
