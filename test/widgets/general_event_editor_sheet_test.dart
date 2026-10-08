@@ -1869,7 +1869,7 @@ void main() {
     _setTestViewport(tester, const Size(320, 568));
     addTearDown(() => _resetTestViewport(tester));
 
-    for (final locale in const [Locale('de')]) {
+    for (final locale in AppLocalizations.supportedLocales) {
       await tester.pumpWidget(
         _localizedCompactApp(
           GeneralEventEditorSheet(
@@ -1914,6 +1914,11 @@ void main() {
       expect(dialogRect.left, greaterThanOrEqualTo(16));
       expect(dialogRect.right, lessThanOrEqualTo(304));
       expect(tester.takeException(), isNull);
+      expect(_dialogTextButton(l10n.cancel).hitTestable(), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, l10n.confirm).hitTestable(),
+        findsOneWidget,
+      );
       await tester.tap(_dialogTextButton(l10n.cancel));
       await tester.pumpAndSettle();
 

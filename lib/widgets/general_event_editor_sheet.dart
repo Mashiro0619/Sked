@@ -1444,7 +1444,13 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
       // the nested picker with a stale parent route.
       canPop: !_blocked,
       child: AlertDialog(
-        constraints: const BoxConstraints(maxWidth: expressiveDialogMaxWidth),
+        scrollable: true,
+        // A bounded width lets the scrollable title/body lay out responsive
+        // options without asking their LayoutBuilders for intrinsic sizes.
+        constraints: const BoxConstraints(
+          minWidth: expressiveDialogMaxWidth,
+          maxWidth: expressiveDialogMaxWidth,
+        ),
         insetPadding: _eventDialogInsetPadding(mediaQuery.size.width),
         title: Text(l10n.eventRecurrence),
         contentPadding: EdgeInsetsDirectional.fromSTEB(
