@@ -104,17 +104,19 @@ Future<void> _startCommit(WidgetTester t, AppMode mode, bool deleting) async {
   );
   await t.ensureVisible(action.last);
   await t.tap(action.last);
-  if (deleting && mode == AppMode.student) {
+  if (deleting) {
     await t.pumpAndSettle();
     await t.tap(
       find.descendant(
         of: find.byType(AlertDialog),
-        matching: find.widgetWithText(TextButton, 'Delete'),
+        matching: mode == AppMode.student
+            ? find.widgetWithText(TextButton, 'Delete')
+            : find.widgetWithText(FilledButton, 'Delete'),
       ),
     );
   }
   await t.pump();
-  await t.pump(const Duration(milliseconds: 100));
+  await t.pump(const Duration(milliseconds: 500));
 }
 
 class _DelayedStorage extends WorkspaceMemoryStorage {

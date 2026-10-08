@@ -371,42 +371,58 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   }
 
   Future<void> _delete() async {
-    if (_blocked) return;
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      final l = AppLocalizations.of(context);
-      setState(() => _selectionDialogOpen = true);
-      bool? confirmed;
-      try {
-        confirmed = await showExpressiveDialog<bool>(
-          context: context,
-          session: _editorSession,
-          waitForTransitionComplete: true,
-          builder: (dialogContext) => AlertDialog(
-            key: const ValueKey('editor-delete-confirmation'),
-            title: Text(l.deleteEventTitle),
-            content: Text(l.deleteEventConfirmation),
-            actions: [
-              TextButton(
-                onPressed: () => completeEditorRoute(dialogContext, false),
-                child: Text(l.cancel),
-              ),
-              FilledButton(
-                onPressed: () => completeEditorRoute(dialogContext, true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                  foregroundColor: Theme.of(dialogContext).colorScheme.onError,
-                ),
-                child: Text(l.delete),
+    final event = widget.initialEvent;
+    if (_blocked || event == null) return;
+    final l = AppLocalizations.of(context);
+    // Deletion targets the saved series, even if its recurrence was changed
+    // in the unsaved draft currently shown by the editor.
+    final repeating = event.recurrenceRule.isRepeating;
+    _dismissActiveInputFocus();
+    setState(() => _selectionDialogOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showExpressiveDialog<bool>(
+        context: context,
+        session: _editorSession,
+        waitForTransitionComplete: true,
+        builder: (dialogContext) => AlertDialog(
+          key: const ValueKey('editor-delete-confirmation'),
+          title: Text(repeating ? l.deleteAllOccurrences : l.deleteEventTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l.deleteEventConfirmation),
+              const SizedBox(height: 8),
+              Text(
+                event.title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(dialogContext).textTheme.titleSmall,
               ),
             ],
           ),
-        );
-      } finally {
-        if (mounted) setState(() => _selectionDialogOpen = false);
-      }
-      if (!mounted || confirmed != true || _editorSession?.isCurrent == false) {
-        return;
-      }
+          actions: [
+            TextButton(
+              onPressed: () => completeEditorRoute(dialogContext, false),
+              child: Text(l.cancel),
+            ),
+            FilledButton(
+              onPressed: () => completeEditorRoute(dialogContext, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+              ),
+              child: Text(repeating ? l.deleteAllOccurrences : l.delete),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _selectionDialogOpen = false);
+    }
+    if (!mounted || confirmed != true || _editorSession?.isCurrent == false) {
+      return;
     }
     final result = const GeneralEventEditorResult(delete: true);
     final delete = widget.onDelete;

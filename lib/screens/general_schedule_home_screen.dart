@@ -1857,6 +1857,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final calendarId = event?.calendarId.isNotEmpty == true
         ? event!.calendarId
         : provider.activeGeneralSchedule.id;
+    var deletingEvent = false;
     try {
       await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
@@ -1867,6 +1868,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           (calendar) =>
               calendar.id == calendarId &&
               (event == null ||
+                  deletingEvent ||
                   calendar.events.any((item) => item.id == event.id)),
         ),
         selectionId: event == null
@@ -1886,7 +1888,16 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           onSave: provider.saveGeneralEvent,
           onDelete: event == null
               ? null
-              : () => provider.deleteGeneralEvent(event.id),
+              : () async {
+                  // An optimistic delete temporarily removes the target.
+                  // Retain this editor until persistence or rollback settles.
+                  deletingEvent = true;
+                  try {
+                    await provider.deleteGeneralEvent(event.id);
+                  } finally {
+                    deletingEvent = false;
+                  }
+                },
         ),
       );
     } finally {

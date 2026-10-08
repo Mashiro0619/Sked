@@ -914,6 +914,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
     await tester.pumpAndSettle();
+    expect(deleteCount, 0);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('editor-delete-confirmation')),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     expect(deleteCount, 1);
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
@@ -923,6 +931,14 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+    expect(deleteCount, 1);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('editor-delete-confirmation')),
+        matching: find.byType(FilledButton),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(deleteCount, 2);
