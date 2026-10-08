@@ -13,7 +13,7 @@ import '../models/timetable_models.dart'
         TimetableData,
         buildConflictKeyForCourses,
         formatDayOfWeekLabel,
-        formatSemesterWeeksLabel,
+        formatSemesterWeeksValue,
         isFullConflictGroup,
         pickDisplayedCourseForConflict;
 import '../providers/timetable_provider.dart';
@@ -184,7 +184,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                   ),
                   _DetailRow(
                     label: l10n.semesterWeeks,
-                    value: formatSemesterWeeksLabel(
+                    value: formatSemesterWeeksValue(
                       course.semesterWeeks,
                       localeCode: app_locale.localeCodeFromLocale(
                         Localizations.localeOf(context),

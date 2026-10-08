@@ -41,6 +41,14 @@ String formatSemesterWeeksLabel(
       .formatSemesterWeeksLabel(normalized, totalWeeks: totalWeeks);
 }
 
+/// A value for a row that already provides the localized weeks label.
+String formatSemesterWeeksValue(
+  List<int> semesterWeeks, {
+  String localeCode = defaultLocaleCode,
+}) =>
+    AppStrings.forLocaleCode(localeCode)
+        .formatSemesterWeeksValue(normalizeSemesterWeeks(semesterWeeks));
+
 List<int> matchPeriodsForTimeRange(
   List<CoursePeriodTime> periodTimes,
   int startMinutes,

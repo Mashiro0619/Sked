@@ -90,6 +90,61 @@ Future<TimetableProvider> _createProvider({
 }
 
 void main() {
+  for (final locale in ['en', 'zh']) {
+    for (final wholeSemester in [false, true]) {
+      testWidgets(
+        'course details show the weeks label once: $locale, whole=$wholeSemester',
+        (tester) async {
+          final provider = await _createProvider();
+          addTearDown(provider.dispose);
+          await provider.saveCourse(
+            _course(id: 'course-a', name: 'Course A').copyWith(
+              semesterWeeks: wholeSemester ? const [] : const [4, 2, 1],
+            ),
+          );
+          await tester.pumpWidget(
+            ChangeNotifierProvider<TimetableProvider>.value(
+              value: provider,
+              child: MaterialApp(
+                locale: Locale(locale),
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: CourseDetailsSheet(
+                    timetableId: provider.activeTimetable.id,
+                    courseId: 'course-a',
+                    weekday: 1,
+                    conflictKey: null,
+                    isFullConflict: false,
+                    onEdit: () {},
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = AppLocalizations.of(
+            tester.element(find.byType(CourseDetailsSheet)),
+          );
+          expect(find.text(l10n.semesterWeeks), findsOneWidget);
+          expect(
+            find.text(
+              wholeSemester
+                  ? l10n.semesterWeeksWholeTerm
+                  : locale == 'zh'
+                  ? '1-2、4'
+                  : '1-2, 4',
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('Weeks 1-2, 4'), findsNothing);
+          expect(find.text('第 1-2、4 周'), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   testWidgets(
     'details and conflict order follow their owning timetable, not active selection',
     (tester) async {

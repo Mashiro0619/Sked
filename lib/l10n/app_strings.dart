@@ -36,6 +36,7 @@ abstract class AppStrings {
   String formatWeekdayShortLabel(int dayOfWeek);
   String formatMonthLabel(int month);
   String formatSemesterWeeksLabel(List<int> semesterWeeks, {int? totalWeeks});
+  String formatSemesterWeeksValue(List<int> semesterWeeks);
 }
 
 class _GeneratedAppStrings implements AppStrings {
@@ -175,13 +176,19 @@ class _GeneratedAppStrings implements AppStrings {
 
   @override
   String formatSemesterWeeksLabel(List<int> semesterWeeks, {int? totalWeeks}) {
-    final ranges = <String>[];
     if (semesterWeeks.isEmpty) {
       if (totalWeeks == null) {
         return _l10n.semesterWeeksWholeTerm;
       }
       return _l10n.semesterWeeksRange('1', '$totalWeeks');
     }
+    return _l10n.semesterWeeksList(formatSemesterWeeksValue(semesterWeeks));
+  }
+
+  @override
+  String formatSemesterWeeksValue(List<int> semesterWeeks) {
+    if (semesterWeeks.isEmpty) return _l10n.semesterWeeksWholeTerm;
+    final ranges = <String>[];
     var start = semesterWeeks.first;
     var previous = semesterWeeks.first;
     for (final week in semesterWeeks.skip(1)) {
@@ -193,7 +200,7 @@ class _GeneratedAppStrings implements AppStrings {
       start = previous = week;
     }
     ranges.add(start == previous ? '$start' : '$start-$previous');
-    return _l10n.semesterWeeksList(ranges.join(_semesterWeeksSeparator));
+    return ranges.join(_semesterWeeksSeparator);
   }
 
   String get _semesterWeeksSeparator {
