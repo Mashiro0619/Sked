@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -118,8 +120,21 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
       final p = await workspaceProvider(mode: AppMode.general);
-      await tester.pumpWidget(WorkspaceHarness(provider: p));
+      await p.updateGeneralDisplaySettings(
+        viewSwitchBehavior: generalViewSwitchBehaviorMenu,
+      );
+      await tester.pumpWidget(
+        GeneralReminderTimeScope(
+          now: () => DateTime(2026, 9, 8, 9),
+          createTimer: (delay, callback) => Timer(delay, callback),
+          child: WorkspaceHarness(provider: p),
+        ),
+      );
       await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('general-reminders-list')),
+        findsNothing,
+      );
       final date = p.selectedGeneralDate;
       await tester.tap(find.byKey(const ValueKey('general-next-period')));
       await tester.pumpAndSettle();
@@ -129,7 +144,15 @@ void main() {
       expect(p.selectedGeneralDate, date);
       await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Month').last);
+      final monthItem = find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is PopupMenuItem<String> &&
+                widget.value == generalViewMonth,
+          )
+          .hitTestable();
+      expect(monthItem, findsOneWidget);
+      await tester.tap(monthItem);
       await tester.pumpAndSettle();
       await p.setSelectedGeneralDate(DateTime(2026, 1, 31));
       await tester.pumpAndSettle();
