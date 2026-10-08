@@ -1,15 +1,18 @@
+import 'dart:async';
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/widgets/assistant_pane.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../support/workspace_harness.dart';
+import '../support/reminder_summary_harness.dart';
 
 Finder _key(String key) => find.byKey(ValueKey(key));
 Rect _calendarRect(WidgetTester t) =>
@@ -63,10 +66,14 @@ void main() {
             final preferences = DeveloperUiPreferences.memory(visible: true);
             addTearDown(preferences.dispose);
             await t.pumpWidget(
-              WorkspaceHarness(
-                provider: p,
-                developerUiPreferences: preferences,
-                textScale: scale,
+              GeneralReminderTimeScope(
+                now: () => DateTime(2026, 9, 8, 9),
+                createTimer: (delay, callback) => Timer(delay, callback),
+                child: WorkspaceHarness(
+                  provider: p,
+                  developerUiPreferences: preferences,
+                  textScale: scale,
+                ),
               ),
             );
             await t.pumpAndSettle();
@@ -211,6 +218,159 @@ void main() {
           variant: TargetPlatformVariant.only(TargetPlatform.windows),
         );
       }
+    }
+  }
+
+  for (final mode in [
+    WorkspacePanelDisplayMode.automatic,
+    WorkspacePanelDisplayMode.sideBySide,
+  ]) {
+    for (final resizeAssistant in [true, false]) {
+      testWidgets(
+        'two open panes keep the calendar continuous while resizing ${resizeAssistant ? 'assistant' : 'reminders'} in $mode',
+        (t) async {
+          final width = mode == WorkspacePanelDisplayMode.automatic
+              ? 1920.0
+              : 1440.0;
+          t.view.devicePixelRatio = 1;
+          t.view.physicalSize = Size(width, 1100);
+          addTearDown(t.view.reset);
+          final storage = reminderSummaryStorage();
+          final p = await workspaceProvider(
+            mode: AppMode.general,
+            storage: storage,
+          );
+          addTearDown(p.dispose);
+          await p.updateWorkspacePanelDisplayMode(mode);
+          final preferences = DeveloperUiPreferences.memory(visible: true);
+          addTearDown(preferences.dispose);
+          final clock = ReminderSummaryClock();
+          await t.pumpWidget(
+            WorkspaceHarness(
+              provider: p,
+              developerUiPreferences: preferences,
+              home: GeneralReminderTimeScope(
+                now: clock.now,
+                createTimer: (delay, callback) => Timer(delay, callback),
+                child: const GeneralScheduleHomeScreen(),
+              ),
+            ),
+          );
+          await t.pumpAndSettle();
+          final canvasWithoutTasks = _calendarRect(t);
+          final sidebar = t.getRect(_key('workspace-resource-width'));
+          final toolbar = t.getRect(_key('general-workspace-toolbar'));
+          await t.tap(_key('general-reminders-action'));
+          await t.pumpAndSettle();
+          expect(_key('general-reminders-list'), findsOneWidget);
+          final reminderElement = _key('general-reminders-list')
+              .evaluate()
+              .single;
+          await t.tap(_key('assistant-toggle'));
+          await t.pumpAndSettle();
+          expect(_key('general-reminders-list'), findsOneWidget);
+          expect(find.byType(AssistantPreviewPane), findsOneWidget);
+          await t.enterText(_key('assistant-draft'), 'Keep the two-pane draft');
+          final assistant = t
+              .widget<AssistantPreviewPane>(find.byType(AssistantPreviewPane))
+              .controller;
+          final frame = t.widget<WorkspaceFrame>(find.byType(WorkspaceFrame));
+          final floor = mode == WorkspacePanelDisplayMode.sideBySide
+              ? 360.0
+              : frame.minimumCanvas;
+          var previous = _calendarRect(t);
+          var peerWasHidden = false;
+
+          void expectTaskState() {
+            expect(t.getRect(_key('workspace-resource-width')), sidebar);
+            expect(t.getRect(_key('general-workspace-toolbar')), toolbar);
+            expect(
+              find
+                  .byKey(
+                    const ValueKey('general-reminders-list'),
+                    skipOffstage: false,
+                  )
+                  .evaluate()
+                  .single,
+              same(reminderElement),
+            );
+            expect(frame.controller.selectedId, 'general-reminders');
+            expect(assistant.isOpen, isTrue);
+            expect(assistant.draft.text, 'Keep the two-pane draft');
+          }
+
+          final gesture = await t.startGesture(
+            t.getCenter(
+              _key(
+                resizeAssistant
+                    ? 'workspace-assistant-resize'
+                    : 'workspace-detail-resize',
+              ),
+            ),
+            kind: PointerDeviceKind.mouse,
+          );
+          try {
+            for (final widening in [true, false]) {
+              for (var step = 0; step < 40; step++) {
+                await gesture.moveBy(Offset(widening ? -8 : 8, 0));
+                await t.pump();
+                await t.pump();
+                final next = _calendarRect(t);
+                final canvasDelta = next.width - previous.width;
+                expect(
+                  widening ? -canvasDelta : canvasDelta,
+                  inInclusiveRange(-.01, 16.01),
+                  reason: 'Switching the visible task must not release an open peer\'s reservation.',
+                );
+                expect(next.left, canvasWithoutTasks.left);
+                expect(next.top, canvasWithoutTasks.top);
+                expect(next.width, greaterThanOrEqualTo(floor - .01));
+                expectTaskState();
+                final peerVisible = resizeAssistant
+                    ? _key('general-reminders-list').evaluate().isNotEmpty
+                    : find.byType(AssistantPreviewPane).evaluate().isNotEmpty;
+                if (widening && !peerVisible) peerWasHidden = true;
+                previous = next;
+              }
+              if (widening) {
+                expect(peerWasHidden, isTrue);
+                expect(previous.width, closeTo(floor, .01));
+              }
+            }
+          } finally {
+            await gesture.up();
+          }
+          await t.pumpAndSettle();
+          expect(_key('general-reminders-list'), findsOneWidget);
+          expect(find.byType(AssistantPreviewPane), findsOneWidget);
+          expectTaskState();
+
+          final beforeAssistantClose = _calendarRect(t);
+          final assistantWidth = t
+              .getSize(_key('workspace-assistant-pane'))
+              .width;
+          await t.tap(_key('assistant-toggle'));
+          await t.pumpAndSettle();
+          expect(
+            _calendarRect(t).width,
+            closeTo(beforeAssistantClose.width + assistantWidth + 1, .01),
+          );
+          expect(_key('general-reminders-list'), findsOneWidget);
+          await t.tap(
+            find.descendant(
+              of: _key('general-reminders-list'),
+              matching: _key('workspace-inspector-close'),
+            ),
+          );
+          await t.pumpAndSettle();
+          expect(_calendarRect(t), canvasWithoutTasks);
+          expect(assistant.draft.text, 'Keep the two-pane draft');
+          expect(p.workspacePanelDisplayMode, mode);
+          expect(t.takeException(), isNull);
+          await t.pumpWidget(const SizedBox.shrink());
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.windows),
+      );
     }
   }
 }

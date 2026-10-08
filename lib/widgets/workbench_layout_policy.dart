@@ -174,7 +174,8 @@ class WorkbenchLayoutPolicy {
         assistantOpen &&
         contentWidth >=
             dockingCanvas + requestedDetail + requestedAssistant + 2 * divider;
-    // Hidden tasks stay mounted but neither take space nor receive input.
+    // Hidden tasks stay mounted without receiving input or their own dock.
+    // Their open-task reservation is accounted for separately below.
     final detailVisible =
         detailOpen && (!assistantOpen || bothDock || !assistantActive);
     final assistantVisible =
@@ -191,14 +192,13 @@ class WorkbenchLayoutPolicy {
     // Docking and canvas reservation are different budgets. Once the calendar
     // reaches its floor, further resizing covers it instead of springing it
     // back to the full work-area width. Pure overlay mode never reserves space.
-    final visibleTaskSpace =
-        (detailVisible ? requestedDetail + divider : 0.0) +
-        (assistantVisible ? requestedAssistant + divider : 0.0);
+    // A peer hidden at the two-pane docking limit is still open. Keep its
+    // budget until it closes so both resize directions remain continuous.
+    final openTaskSpace =
+        (detailOpen ? requestedDetail + divider : 0.0) +
+        (assistantOpen ? requestedAssistant + divider : 0.0);
     final taskSpace = allowDock
-        ? math.min(
-            visibleTaskSpace,
-            math.max(0.0, contentWidth - dockingCanvas),
-          )
+        ? math.min(openTaskSpace, math.max(0.0, contentWidth - dockingCanvas))
         : 0.0;
     // The month agenda belongs to the base view, not to a task's width. An
     // overlay keeps it; a task slot reuses its space instead of reserving both.

@@ -95,6 +95,128 @@ void main() {
     },
   );
 
+  for (final mode in [
+    WorkspacePanelDisplayMode.sideBySide,
+    WorkspacePanelDisplayMode.automatic,
+  ]) {
+    test(
+      'two-pane reservation stays continuous and releases on close: $mode',
+      () {
+        for (final scale in [1.0, 1.3, 2.0]) {
+          for (final collapsed in [false, true]) {
+            for (final minimumCanvas in [600.0, 736.0, 800.0]) {
+              for (final resizeAssistant in [false, true]) {
+                final width =
+                    (mode == WorkspacePanelDisplayMode.automatic
+                        ? 1920.0
+                        : 1440.0) *
+                    scale;
+                WorkbenchLayoutPolicy resolve(
+                  double preference, {
+                  bool detailOpen = true,
+                  bool assistantOpen = true,
+                  bool? assistantActive,
+                }) => WorkbenchLayoutPolicy.resolve(
+                  width,
+                  scale,
+                  detailOpen: detailOpen,
+                  assistantOpen: assistantOpen,
+                  assistantActive: assistantActive ?? resizeAssistant,
+                  hasSupporting: true,
+                  pointer: true,
+                  resourcesCollapsed: collapsed,
+                  panelDisplayMode: mode,
+                  minimumCanvas: minimumCanvas,
+                  preferredDetailWidth: resizeAssistant ? 360 : preference,
+                  preferredAssistantWidth: resizeAssistant ? preference : 400,
+                );
+                final base = resolve(resizeAssistant ? 400 : 360);
+                final content =
+                    width - (base.resources ? base.resourceWidth + 1 : 0);
+                final floor =
+                    (mode == WorkspacePanelDisplayMode.sideBySide
+                        ? 360
+                        : minimumCanvas) *
+                    scale;
+                final peerWidth = resizeAssistant
+                    ? base.detailWidth
+                    : base.assistantWidth;
+                final boundary = (content - floor - peerWidth - 2) / scale;
+                final before = resolve(boundary - 1);
+                final after = resolve(boundary + 1);
+                expect(before.dockedDetail && before.dockedAssistant, isTrue);
+                expect(after.detailVisible, !resizeAssistant);
+                expect(after.assistantVisible, resizeAssistant);
+                expect(content - after.canvasEndInset, closeTo(floor, .00001));
+
+                final preferences = [
+                  for (var offset = -24; offset <= 24; offset++)
+                    boundary + offset,
+                ];
+                for (final widening in [true, false]) {
+                  final sequence = widening
+                      ? preferences
+                      : preferences.reversed;
+                  var previous = resolve(sequence.first);
+                  for (final preference in sequence.skip(1)) {
+                    final current = resolve(preference);
+                    final reservedDelta =
+                        current.canvasEndInset - previous.canvasEndInset;
+                    expect(
+                      widening ? reservedDelta : -reservedDelta,
+                      inInclusiveRange(-.00001, scale + .00001),
+                      reason: 'Hiding an open peer must not release its calendar budget.',
+                    );
+                    expect(
+                      current.resourcePresentation,
+                      base.resourcePresentation,
+                    );
+                    expect(current.resourceWidth, base.resourceWidth);
+                    expect(
+                      content - current.canvasEndInset,
+                      greaterThanOrEqualTo(floor - .00001),
+                    );
+                    previous = current;
+                  }
+                }
+
+                final hiddenPeer = resolve(boundary + 24);
+                final otherActive = resolve(
+                  boundary + 24,
+                  assistantActive: !resizeAssistant,
+                );
+                expect(otherActive.canvasEndInset, hiddenPeer.canvasEndInset);
+                final peerClosed = resolve(
+                  boundary + 24,
+                  detailOpen: !resizeAssistant,
+                  assistantOpen: resizeAssistant,
+                );
+                final remainingWidth = resizeAssistant
+                    ? peerClosed.assistantWidth
+                    : peerClosed.detailWidth;
+                expect(
+                  peerClosed.canvasEndInset,
+                  closeTo(remainingWidth + 1, .00001),
+                );
+                expect(
+                  peerClosed.canvasEndInset,
+                  lessThan(hiddenPeer.canvasEndInset),
+                );
+                final allClosed = resolve(
+                  boundary + 24,
+                  detailOpen: false,
+                  assistantOpen: false,
+                );
+                expect(allClosed.supporting, isTrue);
+                expect(allClosed.canvasEndInset, allClosed.supportingWidth + 1);
+              }
+            }
+          }
+        }
+      },
+    );
+  }
+
   test('panel upper bounds use four fifths of the work area and preserve narrow defaults', () {
     for (final width in [320.0, 393.0, 600.0, 900.0, 1440.0, 1920.0, 2560.0]) {
       for (final scale in [1.0, 1.3, 2.0]) {
