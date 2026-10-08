@@ -1,4 +1,3 @@
-import '../utils/constants.dart';
 import '../utils/time_utils.dart';
 
 Map<String, dynamic> _asStringKeyedMap(Object? value) {
@@ -15,18 +14,35 @@ Map<String, dynamic> _asStringKeyedMap(Object? value) {
   return result;
 }
 
-List<int> _positiveIntList(Object? value, {required int maxValue}) {
+List<int> _positiveIntList(Object? value, {int? maxValue}) {
   if (value is! List) {
     return const [];
   }
   final result = <int>{};
   for (final item in value.whereType<num>()) {
-    if (!item.isFinite || item <= 0 || item > maxValue || item % 1 != 0) {
+    if (!item.isFinite ||
+        item <= 0 ||
+        (maxValue != null && item > maxValue) ||
+        item % 1 != 0) {
       continue;
     }
     result.add(item.toInt());
   }
   return result.toList()..sort();
+}
+
+List<int> _semesterWeekList(Object? value) {
+  if (value == null) return const [];
+  final weeks = _positiveIntList(value);
+  if (value is! List || (value.isNotEmpty && weeks.isEmpty)) {
+    throw const FormatException(
+      'semesterWeeks must contain positive integers, or be empty for the whole semester.',
+    );
+  }
+  // The maximum semester length limits the UI's teaching horizon, not the
+  // source course's explicit weeks. Keep them for the review warning instead
+  // of silently turning an out-of-range course into an every-week course.
+  return weeks;
 }
 
 List<dynamic> _listValue(Object? value) {
@@ -247,10 +263,7 @@ class ImportedCourseDraft {
       teacher: _stringValue(json['teacher']),
       location: _stringValue(json['location']),
       dayOfWeek: _intValue(json['dayOfWeek']) ?? 1,
-      semesterWeeks: _positiveIntList(
-        json['semesterWeeks'],
-        maxValue: maxTimetableWeeks,
-      ),
+      semesterWeeks: _semesterWeekList(json['semesterWeeks']),
       periods: _positiveIntList(json['periods'], maxValue: 999),
       startMinutes: _intValue(json['startMinutes']) ?? 0,
       endMinutes: _intValue(json['endMinutes']) ?? 0,

@@ -2021,6 +2021,7 @@ END:VCALENDAR
     for (final mode in TimetableImportMode.values) {
       for (final weeks in const <List<int>>[
         [3],
+        [101],
         [],
       ]) {
         test(

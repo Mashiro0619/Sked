@@ -11,6 +11,42 @@ void main() {
   };
 
   group('SchoolImportResponse decoding', () {
+    test(
+      'retains explicit positive weeks beyond the semester length limit',
+      () {
+        final draft = ImportedCourseDraft.fromJson({
+          ...validCourse(),
+          'semesterWeeks': [101, 999, 101, 3],
+        });
+        expect(draft.semesterWeeks, [3, 101, 999]);
+      },
+    );
+
+    test('malformed explicit weeks cannot silently mean every week', () {
+      for (final weeks in [
+        [0, -1, 'bad'],
+        [double.infinity, 2.5],
+        '3',
+      ]) {
+        expect(
+          () => ImportedCourseDraft.fromJson({
+            ...validCourse(),
+            'semesterWeeks': weeks,
+          }),
+          throwsA(isA<FormatException>()),
+        );
+      }
+      for (final weeks in [null, const []]) {
+        expect(
+          ImportedCourseDraft.fromJson({
+            ...validCourse(),
+            'semesterWeeks': weeks,
+          }).semesterWeeks,
+          isEmpty,
+        );
+      }
+    });
+
     test('filters malformed course and numeric list entries', () {
       final response = SchoolImportResponse.fromJson({
         'ok': true,

@@ -825,9 +825,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final replace in [false, true]) {
+  for (final (replace, week) in [
+    (false, 3),
+    (true, 3),
+    (false, 101),
+    (true, 101),
+  ]) {
     testWidgets(
-      'short semester warning can cancel or keep original weeks (replace: $replace)',
+      'short semester warning can cancel or keep original weeks (replace: $replace, week: $week)',
       (tester) async {
         final provider = await _createProvider();
         addTearDown(provider.dispose);
@@ -841,7 +846,7 @@ void main() {
         );
         controller.add(
           ParseDone(
-            response: _responseWithMaxCourseWeek(3, semesterWeeks: [3]),
+            response: _responseWithMaxCourseWeek(week, semesterWeeks: [week]),
           ),
         );
         await tester.pumpAndSettle();
@@ -873,7 +878,7 @@ void main() {
         await beginImport();
         expect(find.byType(AlertDialog), findsOneWidget);
         expect(
-          find.textContaining(l10n.schoolImportTotalWeeksTooShort(3)),
+          find.textContaining(l10n.schoolImportTotalWeeksTooShort(week)),
           findsOneWidget,
         );
         await tester.tap(
@@ -902,7 +907,7 @@ void main() {
         await tester.pumpAndSettle();
         final request = results.single!.applyRequest!;
         expect(request.response.timetable.totalWeeks, 2);
-        expect(request.response.timetable.courses.single.semesterWeeks, [3]);
+        expect(request.response.timetable.courses.single.semesterWeeks, [week]);
         expect(
           request.mode,
           replace
