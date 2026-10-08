@@ -48,6 +48,8 @@ class _SilentNotificationTimetableProvider extends TimetableProvider {
 SchoolImportResponse _buildResponse({
   bool withCourses = true,
   String name = 'Sample',
+  int totalWeeks = 18,
+  List<int> semesterWeeks = const [],
   SchoolImportMeta meta = const SchoolImportMeta(
     sourceUrl: '',
     pageTitle: '',
@@ -64,16 +66,16 @@ SchoolImportResponse _buildResponse({
     timetable: SchoolImportTimetableDraft(
       name: name,
       startDate: DateTime(2026, 5, 25),
-      totalWeeks: 18,
+      totalWeeks: totalWeeks,
       periodTimeSet: periodTimeSet,
       courses: withCourses
-          ? const [
+          ? [
               ImportedCourseDraft(
                 name: 'Sample course',
                 teacher: '',
                 location: '',
                 dayOfWeek: 1,
-                semesterWeeks: [],
+                semesterWeeks: semesterWeeks,
                 periods: [1],
                 startMinutes: 480,
                 endMinutes: 540,
@@ -365,6 +367,51 @@ void main() {
     expect(results.single?.mode, TimetableImportMode.replaceActive);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'preview confirms a short semester without changing explicit weeks',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final results = <SchoolImportApplyRequest?>[];
+      await _pumpPreviewSheet(
+        tester,
+        provider: provider,
+        response: _buildResponse(totalWeeks: 2, semesterWeeks: [3]),
+        onResult: results.add,
+      );
+      await _openPreviewSheet(tester);
+      final l10n = _sheetL10n(tester);
+      final add = find.widgetWithText(FilledButton, l10n.importAsNewTimetable);
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(l10n.schoolImportTotalWeeksTooShort(3)),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(TextButton, l10n.cancel),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(results, isEmpty);
+      expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(FilledButton, l10n.schoolImportParsePageContinue),
+      );
+      await tester.pumpAndSettle();
+      expect(results.single!.response.timetable.totalWeeks, 2);
+      expect(results.single!.response.timetable.courses.single.semesterWeeks, [
+        3,
+      ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('parser details are collapsed by default and retain name draft', (
     tester,

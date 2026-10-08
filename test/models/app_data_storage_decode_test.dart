@@ -510,7 +510,6 @@ void main() {
     for (final weeks in const [
       [0],
       [1, 1],
-      [19],
       [2, 1],
     ]) {
       test('rejects invalid semester weeks $weeks', () {
@@ -524,6 +523,19 @@ void main() {
         );
       });
     }
+
+    test('retains explicit course weeks outside the selected semester', () {
+      final course = validCourse()..['semesterWeeks'] = [19];
+      final timetable = validTimetable()..['courses'] = [course];
+      final snapshot = snapshotWithTimetables([timetable]);
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+      expect(decoded.studentMode.timetables.single.config.totalWeeks, 18);
+      expect(
+        decoded.studentMode.timetables.single.courses.single.semesterWeeks,
+        [19],
+      );
+    });
 
     for (final totalWeeks in const [0, 101]) {
       test('rejects invalid timetable totalWeeks $totalWeeks', () {

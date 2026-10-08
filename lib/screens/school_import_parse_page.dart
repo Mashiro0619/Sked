@@ -1,6 +1,7 @@
 import '../widgets/desktop_window_host.dart';
 import '../widgets/adaptive_form_columns.dart';
 import '../widgets/school_import_summary_preview.dart';
+import '../widgets/school_import_week_range_confirmation.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 
 import 'dart:async';
@@ -113,6 +114,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   bool _isDone = false;
   bool _isOpeningEditor = false;
   bool _replaceConfirmationOpen = false;
+  bool _weekRangeConfirmationOpen = false;
   bool _hasPopped = false;
   bool _warningsExpanded = false;
   bool _hasFailed = false;
@@ -132,7 +134,10 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       _rawText.trim().isNotEmpty &&
       _rawText.length <= widget.maxEditableCodeUnits;
 
-  bool get _isBusy => _isOpeningEditor || _replaceConfirmationOpen;
+  bool get _isBusy =>
+      _isOpeningEditor ||
+      _replaceConfirmationOpen ||
+      _weekRangeConfirmationOpen;
 
   bool get _hasDirectImportConfiguration => widget.provider != null;
 
@@ -579,16 +584,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     setState(() => _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(result));
   }
 
-  void _submitConfiguredImport(TimetableImportMode mode) {
+  Future<void> _submitConfiguredImport(TimetableImportMode mode) async {
     if (_hasPopped || _isBusy || !_isDone || _response == null) {
-      return;
-    }
-    final selected = _selectedExistingPeriodTimeSet;
-    if (!_importBundledPeriodTimeSet && selected == null) {
-      final resolved = _resolvedPeriodTimeSetId(_selectedPeriodTimeSetId);
-      if (resolved != _selectedPeriodTimeSetId) {
-        setState(() => _selectedPeriodTimeSetId = resolved);
-      }
       return;
     }
     final name = _nameController?.text.trim() ?? _response!.timetable.name;
@@ -603,6 +600,25 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         totalWeeks: totalWeeks,
       ),
     );
+    setState(() => _weekRangeConfirmationOpen = true);
+    bool confirmed;
+    try {
+      confirmed = await confirmSchoolImportWeekRange(
+        context,
+        nextResponse.timetable,
+      );
+    } finally {
+      if (mounted) setState(() => _weekRangeConfirmationOpen = false);
+    }
+    if (!mounted || _hasPopped || !routeWorkspaceEnabled || !confirmed) return;
+    final selected = _selectedExistingPeriodTimeSet;
+    if (!_importBundledPeriodTimeSet && selected == null) {
+      final resolved = _resolvedPeriodTimeSetId(_selectedPeriodTimeSetId);
+      if (resolved != _selectedPeriodTimeSetId) {
+        setState(() => _selectedPeriodTimeSetId = resolved);
+      }
+      return;
+    }
     final request = SchoolImportApplyRequest(
       response: nextResponse,
       mode: mode,
@@ -662,7 +678,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     }
     if (!mounted) return;
     if (confirmed == true && !_hasPopped) {
-      _submitConfiguredImport(TimetableImportMode.replaceActive);
+      await _submitConfiguredImport(TimetableImportMode.replaceActive);
     }
   }
 

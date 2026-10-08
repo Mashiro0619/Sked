@@ -540,12 +540,13 @@ void _validateStorageTimetable(
         );
       }
 
-      final totalWeeks = (config!['totalWeeks'] as num).toInt();
       final semesterWeeks = (course['semesterWeeks'] as List).cast<num>();
       var previousWeek = 0;
       for (final value in semesterWeeks) {
         final week = value.toInt();
-        if (week <= previousWeek || week > totalWeeks) {
+        // Explicit weeks can outlive a shortened semester. Preserve them as
+        // inactive weeks; an empty list would incorrectly mean every week.
+        if (week <= previousWeek) {
           throw const FormatException(
             'Stored timetable course semester weeks are invalid.',
           );

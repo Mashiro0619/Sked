@@ -453,7 +453,6 @@ TimetableData _normalizeTimetable(
   required TimetableConfig config,
 }) {
   final normalizedConfig = config.copyWith();
-  final totalWeeks = normalizedConfig.totalWeeks;
   final normalizedCourses = <CourseItem>[];
   for (final course in timetable.courses) {
     final courseId = _normalizeUniqueId(
@@ -468,10 +467,7 @@ TimetableData _normalizeTimetable(
       course.copyWith(
         id: courseId,
         dayOfWeek: normalizeDayOfWeek(course.dayOfWeek),
-        semesterWeeks: _normalizeCourseSemesterWeeks(
-          course.semesterWeeks,
-          totalWeeks: totalWeeks,
-        ),
+        semesterWeeks: normalizeSemesterWeeks(course.semesterWeeks),
         periods: periods,
         timeRange: buildTimeRange(course.startMinutes, course.endMinutes),
       ),
@@ -740,10 +736,7 @@ TimetableData _buildSchoolImportedTimetable(
         teacher: item.teacher.trim(),
         location: item.location.trim(),
         dayOfWeek: normalizeDayOfWeek(item.dayOfWeek),
-        semesterWeeks: _normalizeCourseSemesterWeeks(
-          item.semesterWeeks,
-          totalWeeks: totalWeeks,
-        ),
+        semesterWeeks: normalizeSemesterWeeks(item.semesterWeeks),
         periods: periods,
         startMinutes: startMinutes,
         endMinutes: endMinutes,
@@ -767,18 +760,4 @@ TimetableData _buildSchoolImportedTimetable(
     ),
     courses: courses,
   );
-}
-
-List<int> _normalizeCourseSemesterWeeks(
-  List<int> semesterWeeks, {
-  required int totalWeeks,
-}) {
-  final maxWeek = normalizeTimetableWeeks(totalWeeks);
-  final normalized =
-      semesterWeeks
-          .where((week) => week > 0 && week <= maxWeek)
-          .toSet()
-          .toList()
-        ..sort();
-  return normalized;
 }

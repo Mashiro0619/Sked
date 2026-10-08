@@ -1355,7 +1355,7 @@ END:VCALENDAR
       expect(normalized.studentMode.conflictDisplayCourseIds, isEmpty);
     });
 
-    test('drops course weeks beyond each timetable total week count', () {
+    test('preserves explicit course weeks beyond a shortened semester', () {
       final source = AppData(
         activeMode: AppMode.student,
         studentMode: studentData(
@@ -1379,7 +1379,7 @@ END:VCALENDAR
 
       final normalizedTimetable = normalized.studentMode.timetables.single;
       expect(normalizedTimetable.config.totalWeeks, 4);
-      expect(normalizedTimetable.courses.single.semesterWeeks, [1, 4]);
+      expect(normalizedTimetable.courses.single.semesterWeeks, [1, 4, 5, 99]);
     });
 
     test('keeps versioned conflict preferences for ids with separators', () {
@@ -1997,7 +1997,7 @@ END:VCALENDAR
       expect(course.timeRange, '08:50 - 09:35');
     });
 
-    test('drops imported semester weeks outside the timetable range', () {
+    test('preserves imported semester weeks outside the timetable range', () {
       final current = studentData();
 
       final mutation = service.applySchoolImportRequest(
@@ -2015,8 +2015,42 @@ END:VCALENDAR
 
       final imported = mutation.selectedTimetable!;
       expect(imported.config.totalWeeks, 4);
-      expect(imported.courses.single.semesterWeeks, [1, 2, 4]);
+      expect(imported.courses.single.semesterWeeks, [1, 2, 4, 5, 99]);
     });
+
+    for (final mode in TimetableImportMode.values) {
+      for (final weeks in const <List<int>>[
+        [3],
+        [],
+      ]) {
+        test(
+          '$mode keeps explicit and every-week courses distinct: $weeks',
+          () {
+            final mutation = service.applySchoolImportRequest(
+              studentData(),
+              SchoolImportApplyRequest(
+                response: schoolResponse(totalWeeks: 2, semesterWeeks: weeks),
+                mode: mode,
+                importBundledPeriodTimeSet: true,
+              ),
+              localeCode: defaultLocaleCode,
+            );
+
+            final imported = mutation.selectedTimetable!;
+            expect(imported.config.totalWeeks, 2);
+            expect(imported.courses.single.semesterWeeks, weeks);
+            expect(
+              matchesSemesterWeek(imported.courses.single, 1),
+              weeks.isEmpty,
+            );
+            expect(
+              matchesSemesterWeek(imported.courses.single, 2),
+              weeks.isEmpty,
+            );
+          },
+        );
+      }
+    }
 
     test('adds as new without bundled periods by reusing target set', () {
       final current = studentData(

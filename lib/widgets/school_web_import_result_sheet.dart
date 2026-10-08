@@ -12,6 +12,7 @@ import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
 import 'period_time_set_picker_dialog.dart';
+import 'school_import_week_range_confirmation.dart';
 
 class SchoolWebImportResultSheet extends StatefulWidget {
   const SchoolWebImportResultSheet({
@@ -40,6 +41,7 @@ class _SchoolWebImportResultSheetState
   late bool _importBundledPeriodTimeSet;
   bool _detailsExpanded = false;
   bool _replaceConfirmationOpen = false;
+  bool _weekRangeConfirmationOpen = false;
   bool _hasPopped = false;
   bool _pickerOpen = false;
   final _startDateAnchor = GlobalKey();
@@ -62,7 +64,11 @@ class _SchoolWebImportResultSheetState
       widget.response.meta.pageTitle.trim().isNotEmpty ||
       widget.response.meta.parser.trim().isNotEmpty;
 
-  bool get _blocked => _hasPopped || _pickerOpen || _replaceConfirmationOpen;
+  bool get _blocked =>
+      _hasPopped ||
+      _pickerOpen ||
+      _replaceConfirmationOpen ||
+      _weekRangeConfirmationOpen;
 
   @override
   void initState() {
@@ -364,10 +370,21 @@ class _SchoolWebImportResultSheetState
     }
   }
 
-  void _submit(TimetableImportMode mode) {
+  Future<void> _submit(TimetableImportMode mode) async {
     if (_hasPopped || _blocked) {
       return;
     }
+    setState(() => _weekRangeConfirmationOpen = true);
+    bool confirmed;
+    try {
+      confirmed = await confirmSchoolImportWeekRange(
+        context,
+        widget.response.timetable,
+      );
+    } finally {
+      if (mounted) setState(() => _weekRangeConfirmationOpen = false);
+    }
+    if (!mounted || _hasPopped || !confirmed) return;
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
     if (!_importBundledPeriodTimeSet && selectedPeriodTimeSet == null) {
       // A period-time-set mutation may arrive between the last build and this
@@ -437,7 +454,7 @@ class _SchoolWebImportResultSheetState
       }
     }
     if (confirmed == true && mounted && !_hasPopped) {
-      _submit(TimetableImportMode.replaceActive);
+      await _submit(TimetableImportMode.replaceActive);
     }
   }
 

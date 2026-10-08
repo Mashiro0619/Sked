@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/school_site_models.dart';
+import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
@@ -249,6 +250,85 @@ void main() {
       expect(backup.schoolSites.single.name, 'Old University');
     },
   );
+
+  test('school import preserves out-of-term weeks through reload and backup restore', () async {
+    final appStorage = _MemoryTimetableStorage(_appData('en'));
+    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final provider = await _provider(
+      appStorage: appStorage,
+      siteStore: siteStore,
+      secrets: _MemorySecretStore(''),
+    );
+    addTearDown(provider.dispose);
+    await provider.applySchoolImportRequest(
+      SchoolImportApplyRequest(
+        response: SchoolImportResponse.fromJson({
+          'ok': true,
+          'timetable': {
+            'name': 'Shortened term',
+            'startDate': '2026-09-07',
+            'totalWeeks': 2,
+            'courses': [
+              {
+                'name': 'Third week only',
+                'dayOfWeek': 1,
+                'semesterWeeks': [3],
+                'periods': [1],
+              },
+              {
+                'name': 'Every week',
+                'dayOfWeek': 1,
+                'semesterWeeks': [],
+                'periods': [2],
+              },
+            ],
+          },
+        }),
+        mode: TimetableImportMode.addAsNew,
+        importBundledPeriodTimeSet: false,
+        targetPeriodTimeSetId: provider.periodTimeSets.first.id,
+      ),
+    );
+
+    void expectPreserved(AppData data) {
+      final imported = data.studentMode.timetables.singleWhere(
+        (item) => item.config.name == 'Shortened term',
+      );
+      expect(imported.config.totalWeeks, 2);
+      final explicit = imported.courses.first;
+      expect(explicit.semesterWeeks, [3]);
+      expect(matchesSemesterWeek(explicit, 1), isFalse);
+      expect(matchesSemesterWeek(explicit, 2), isFalse);
+      expect(matchesSemesterWeek(explicit, 3), isTrue);
+      final everyWeek = imported.courses.last;
+      expect(everyWeek.semesterWeeks, isEmpty);
+      expect(matchesSemesterWeek(everyWeek, 1), isTrue);
+      expect(matchesSemesterWeek(everyWeek, 2), isTrue);
+    }
+
+    expectPreserved(appStorage.data!);
+    final restarted = await _provider(
+      appStorage: appStorage,
+      siteStore: siteStore,
+      secrets: _MemorySecretStore(''),
+    );
+    addTearDown(restarted.dispose);
+    final backup = await restarted.exportAppDataJson();
+    expectPreserved(decodeAppBackup(backup).appData);
+
+    final restoredStorage = _MemoryTimetableStorage(_appData('en'));
+    final restored = await _provider(
+      appStorage: restoredStorage,
+      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+      secrets: _MemorySecretStore(''),
+    );
+    addTearDown(restored.dispose);
+    await restored.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+    expectPreserved(restoredStorage.data!);
+    expectPreserved(
+      decodeAppBackup(await restored.exportAppDataJson()).appData,
+    );
+  });
 
   test(
     'blocked school-site recovery aborts before AppData or API key changes',

@@ -102,7 +102,10 @@ SchoolImportResponse _response() {
   );
 }
 
-SchoolImportResponse _responseWithMaxCourseWeek(int week) {
+SchoolImportResponse _responseWithMaxCourseWeek(
+  int week, {
+  List<int>? semesterWeeks,
+}) {
   final base = _response();
   final course = base.timetable.courses.single;
   return base.copyWith(
@@ -113,7 +116,7 @@ SchoolImportResponse _responseWithMaxCourseWeek(int week) {
           teacher: course.teacher,
           location: course.location,
           dayOfWeek: course.dayOfWeek,
-          semesterWeeks: [1, week],
+          semesterWeeks: semesterWeeks ?? [1, week],
           periods: course.periods,
           startMinutes: course.startMinutes,
           endMinutes: course.endMinutes,
@@ -548,6 +551,133 @@ void main() {
       TimetableImportMode.replaceActive,
     );
     expect(find.byType(SchoolImportParsePage), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final replace in [false, true]) {
+    testWidgets(
+      'short semester warning can cancel or keep original weeks (replace: $replace)',
+      (tester) async {
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final controller = StreamController<SchoolImportStreamEvent>();
+        addTearDown(controller.close);
+        final results = await _pumpDirectPage(
+          tester,
+          controller,
+          provider,
+          canReplaceCurrent: replace,
+        );
+        controller.add(
+          ParseDone(
+            response: _responseWithMaxCourseWeek(3, semesterWeeks: [3]),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportParsePage)),
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('school-import-parse-total-weeks')),
+          '2',
+        );
+        await tester.pumpAndSettle();
+
+        Future<void> beginImport() async {
+          await tester.tap(
+            replace
+                ? find.widgetWithText(
+                    OutlinedButton,
+                    l10n.replaceCurrentTimetable,
+                  )
+                : find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+          );
+          await tester.pumpAndSettle();
+          if (replace) {
+            await tester.tap(find.widgetWithText(FilledButton, l10n.confirm));
+            await tester.pumpAndSettle();
+          }
+        }
+
+        await beginImport();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(
+          find.textContaining(l10n.schoolImportTotalWeeksTooShort(3)),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.widgetWithText(TextButton, l10n.cancel),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(results, isEmpty);
+        expect(find.byType(SchoolImportParsePage), findsOneWidget);
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(const ValueKey('school-import-parse-total-weeks')),
+              )
+              .controller!
+              .text,
+          '2',
+        );
+
+        await beginImport();
+        await tester.tap(
+          find.widgetWithText(FilledButton, l10n.schoolImportParsePageContinue),
+        );
+        await tester.pumpAndSettle();
+        final request = results.single!.applyRequest!;
+        expect(request.response.timetable.totalWeeks, 2);
+        expect(request.response.timetable.courses.single.semesterWeeks, [3]);
+        expect(
+          request.mode,
+          replace
+              ? TimetableImportMode.replaceActive
+              : TimetableImportMode.addAsNew,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('an unspecified course week range imports without a warning', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final controller = StreamController<SchoolImportStreamEvent>();
+    addTearDown(controller.close);
+    final results = await _pumpDirectPage(tester, controller, provider);
+    controller.add(
+      ParseDone(response: _responseWithMaxCourseWeek(0, semesterWeeks: [])),
+    );
+    await tester.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SchoolImportParsePage)),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('school-import-parse-total-weeks')),
+      '2',
+    );
+    await tester.tap(
+      find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      results
+          .single!
+          .applyRequest!
+          .response
+          .timetable
+          .courses
+          .single
+          .semesterWeeks,
+      isEmpty,
+    );
     expect(tester.takeException(), isNull);
   });
 
