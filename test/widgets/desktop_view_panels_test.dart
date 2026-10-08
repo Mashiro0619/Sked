@@ -233,11 +233,13 @@ void main() {
       await t.tap(_key('general-day-agenda-add'));
       await t.pumpAndSettle();
       expect(
-        t
-            .widget<GeneralEventEditorSheet>(
-              find.byType(GeneralEventEditorSheet),
-            )
-            .initialDate,
+        DateUtils.dateOnly(
+          t
+              .widget<GeneralEventEditorSheet>(
+                find.byType(GeneralEventEditorSheet),
+              )
+              .initialDate!,
+        ),
         DateTime(2026, 9, 30),
       );
       expect(t.takeException(), isNull);

@@ -10,6 +10,7 @@ import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/workbench_compact_calendar_bar.dart';
 import '../utils/calendar_timeline_layout.dart';
+import '../utils/general_event_defaults.dart';
 import '../widgets/workbench_resource_widgets.dart';
 import '../widgets/sked_date_picker.dart';
 import '../widgets/sked_calendar_day_label.dart';
@@ -470,7 +471,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                       editor: WorkspaceEditorConfiguration(
                                         anchorRect: anchor,
                                       ),
-                                      initialDate: date,
+                                      initialStart: date,
                                     )
                                   : null,
                               onOccurrenceTap: (occurrence) =>
@@ -541,7 +542,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                       editor: WorkspaceEditorConfiguration(
                                         anchorRect: anchor,
                                       ),
-                                      initialDate: date,
+                                      initialStart: date,
                                     )
                                   : null,
                               onOccurrenceTap: (occurrence) =>
@@ -1846,6 +1847,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     BuildContext context,
     TimetableProvider provider, {
     DateTime? initialDate,
+    DateTime? initialStart,
     WorkspaceEditorConfiguration? editor,
     GeneralEvent? event,
   }) async {
@@ -1857,6 +1859,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final calendarId = event?.calendarId.isNotEmpty == true
         ? event!.calendarId
         : provider.activeGeneralSchedule.id;
+    final start =
+        initialStart ??
+        defaultGeneralEventStart(
+          date: initialDate ?? provider.selectedGeneralDate,
+          now: DateTime.now(),
+          dayStartHour: provider.generalDayStartHour,
+          dayEndHour: provider.generalDayEndHour,
+        );
     var deletingEvent = false;
     try {
       await showAppModalSheet<GeneralEventEditorResult>(
@@ -1879,7 +1889,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         maxWidth: appSheetWidthMedium,
         builder: (sheetContext) => GeneralEventEditorSheet(
           initialEvent: event,
-          initialDate: initialDate ?? provider.selectedGeneralDate,
+          initialDate: start,
           calendars: provider.generalSchedules,
           activeCalendarId: calendarId,
           defaultReminderMinutesBefore: event == null
