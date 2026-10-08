@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/desktop_window_host.dart';
 import '../widgets/adaptive_form_columns.dart';
 import '../widgets/school_import_summary_preview.dart';
@@ -883,7 +885,10 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: colors.primary,
+                color: skedReadableAccent(
+                  colors,
+                  surface: SkedSurface.colorOf(context),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -1502,7 +1507,15 @@ class _ParseImportActionRow extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
               child: Row(
                 children: [
-                  Icon(icon, color: enabled ? colors.primary : muted),
+                  Icon(
+                    icon,
+                    color: enabled
+                        ? skedReadableAccent(
+                            colors,
+                            surface: colors.primary.withValues(alpha: 0.12),
+                          )
+                        : muted,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -1585,7 +1598,12 @@ class _ParseImportChoiceRow extends StatelessWidget {
                     selected
                         ? Icons.radio_button_checked_outlined
                         : Icons.radio_button_unchecked_outlined,
-                    color: enabled ? colors.primary : muted,
+                    color: enabled
+                        ? skedReadableAccent(
+                            colors,
+                            surface: colors.primary.withValues(alpha: 0.12),
+                          )
+                        : muted,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -1636,7 +1654,13 @@ class _ParseImportInfoRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
         child: Row(
           children: [
-            Icon(icon, color: colors.primary),
+            Icon(
+              icon,
+              color: skedReadableAccent(
+                colors,
+                surface: SkedSurface.colorOf(context),
+              ),
+            ),
             const SizedBox(width: 10),
             Expanded(child: Text(text)),
           ],
@@ -1668,7 +1692,13 @@ class _SummaryRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, color: colors.primary),
+            Icon(
+              icon,
+              color: skedReadableAccent(
+                colors,
+                surface: SkedSurface.colorOf(context),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

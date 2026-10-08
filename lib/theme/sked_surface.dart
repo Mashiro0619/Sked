@@ -92,17 +92,32 @@ class _SurfaceScope extends InheritedWidget {
 /// for fills/swatches; text and icon-only selection need readable contrast on
 /// a bare surface, especially after removing a filled navigation indicator.
 Color skedReadableAccent(ColorScheme colors, {Color? surface}) {
-  final background = surface ?? colors.surface;
-  final foregroundLuminance = Color.alphaBlend(
-    colors.primary,
-    background,
-  ).computeLuminance();
+  final background = Color.alphaBlend(
+    surface ?? colors.surface,
+    colors.surface,
+  );
   final backgroundLuminance = background.computeLuminance();
-  final contrast = foregroundLuminance > backgroundLuminance
-      ? (foregroundLuminance + .05) / (backgroundLuminance + .05)
-      : (backgroundLuminance + .05) / (foregroundLuminance + .05);
-  if (contrast >= 4.5) return colors.primary;
-  return colors.brightness == Brightness.dark
-      ? colors.primaryFixedDim
-      : colors.onPrimaryFixedVariant;
+  bool readable(Color foreground) {
+    final luminance = Color.alphaBlend(
+      foreground,
+      background,
+    ).computeLuminance();
+    final contrast = luminance > backgroundLuminance
+        ? (luminance + .05) / (backgroundLuminance + .05)
+        : (backgroundLuminance + .05) / (luminance + .05);
+    return contrast >= 4.5;
+  }
+
+  // Check the actual surface, including translucent selection fills. A fixed
+  // tone chosen from brightness alone can still fail on a custom background.
+  for (final candidate in [
+    colors.primary,
+    if (colors.brightness == Brightness.dark) colors.primaryFixedDim,
+    colors.onPrimaryFixedVariant,
+    colors.primaryFixedDim,
+    colors.onSurface,
+  ]) {
+    if (readable(candidate)) return candidate;
+  }
+  return readable(Colors.black) ? Colors.black : Colors.white;
 }

@@ -58,6 +58,17 @@ ThemeData buildAppTheme({
       ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))
       : shapes.control;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
+  final accent = skedReadableAccent(
+    colorScheme,
+    surface: colorScheme.surfaceContainerHighest,
+  );
+  final selectedAccent = skedReadableAccent(
+    colorScheme,
+    surface: Color.alphaBlend(
+      selectedSurface,
+      colorScheme.surfaceContainerHighest,
+    ),
+  );
   final menuSurface = SkedSurfaceRole.content.resolve(colorScheme);
   final menuOutline = desktop
       ? SkedFloatingStyle.outline(colorScheme).color
@@ -134,7 +145,7 @@ ThemeData buildAppTheme({
       minLeadingWidth: desktop ? 20 : 24,
       horizontalTitleGap: desktop ? 10 : 16,
       iconColor: colorScheme.onSurfaceVariant,
-      selectedColor: colorScheme.primary,
+      selectedColor: selectedAccent,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       shape: shapes.compact,
       titleTextStyle: textTheme.bodyLarge?.copyWith(
@@ -152,8 +163,12 @@ ThemeData buildAppTheme({
         shape: controlShape,
       ),
     ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: accent),
+    ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
+        foregroundColor: accent,
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         minimumSize: Size(64, desktop ? 36 : 48),
         shape: controlShape,
@@ -187,14 +202,14 @@ ThemeData buildAppTheme({
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return textTheme.labelMedium?.copyWith(
-          color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          color: selected ? selectedAccent : colorScheme.onSurfaceVariant,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
         );
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          color: selected ? selectedAccent : colorScheme.onSurfaceVariant,
         );
       }),
     ),
@@ -209,7 +224,7 @@ ThemeData buildAppTheme({
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: SkedSurfaceRole.frame.resolve(colorScheme),
       indicatorColor: selectedSurface,
-      selectedIconTheme: IconThemeData(color: colorScheme.primary),
+      selectedIconTheme: IconThemeData(color: selectedAccent),
       unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
       selectedLabelTextStyle: textTheme.labelMedium?.copyWith(
         color: colorScheme.onSurface,
@@ -221,8 +236,8 @@ ThemeData buildAppTheme({
     ),
     tabBarTheme: TabBarThemeData(
       dividerColor: Colors.transparent,
-      indicatorColor: colorScheme.primary,
-      labelColor: colorScheme.primary,
+      indicatorColor: accent,
+      labelColor: accent,
       unselectedLabelColor: colorScheme.onSurfaceVariant,
       labelStyle: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
       unselectedLabelStyle: textTheme.titleSmall,
@@ -249,9 +264,24 @@ ThemeData buildAppTheme({
         color: colorScheme.onSurfaceVariant,
       ),
     ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: accent,
+      selectionColor: colorScheme.primary.withValues(alpha: 0.24),
+      selectionHandleColor: accent,
+    ),
     inputDecorationTheme: InputDecorationThemeData(
       filled: true,
       fillColor: colorScheme.surfaceContainerLow,
+      floatingLabelStyle: WidgetStateTextStyle.resolveWith((states) {
+        final color = states.contains(WidgetState.disabled)
+            ? colorScheme.onSurface.withValues(alpha: 0.38)
+            : states.contains(WidgetState.error)
+            ? colorScheme.error
+            : states.contains(WidgetState.focused)
+            ? accent
+            : colorScheme.onSurfaceVariant;
+        return TextStyle(color: color);
+      }),
       border: OutlineInputBorder(
         borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
         borderSide: BorderSide.none,
@@ -262,7 +292,7 @@ ThemeData buildAppTheme({
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
-        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        borderSide: BorderSide(color: accent, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
@@ -340,7 +370,7 @@ ThemeData buildAppTheme({
         }),
         foregroundColor: WidgetStateProperty.resolveWith((states) {
           return states.contains(WidgetState.selected)
-              ? colorScheme.primary
+              ? selectedAccent
               : colorScheme.onSurfaceVariant;
         }),
         textStyle: WidgetStatePropertyAll(
@@ -362,7 +392,7 @@ ThemeData buildAppTheme({
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
-          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+          borderSide: BorderSide(color: accent, width: 2),
         ),
       ),
       menuStyle: MenuStyle(
@@ -421,7 +451,7 @@ ThemeData buildAppTheme({
             return colorScheme.onSurface.withValues(alpha: 0.38);
           }
           if (states.contains(WidgetState.focused)) {
-            return colorScheme.primary;
+            return selectedAccent;
           }
           return colorScheme.onSurface;
         }),
@@ -430,7 +460,7 @@ ThemeData buildAppTheme({
             return colorScheme.onSurface.withValues(alpha: 0.38);
           }
           if (states.contains(WidgetState.focused)) {
-            return colorScheme.primary;
+            return selectedAccent;
           }
           return colorScheme.onSurfaceVariant;
         }),

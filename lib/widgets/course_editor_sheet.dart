@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'workspace_editor.dart';
 import 'workspace_editor_form.dart';
 import 'sked_task_session.dart';
@@ -788,7 +790,14 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                                             .labelLarge
                                             ?.copyWith(
                                               color: selected
-                                                  ? colorScheme.primary
+                                                  ? skedReadableAccent(
+                                                      colorScheme,
+                                                      surface: colorScheme
+                                                          .primary
+                                                          .withValues(
+                                                            alpha: 0.12,
+                                                          ),
+                                                    )
                                                   : colorScheme
                                                         .onSurfaceVariant,
                                               fontWeight: FontWeight.w700,
@@ -1735,7 +1744,15 @@ class _SelectionIcon extends StatelessWidget {
         color: colors.primary.withValues(alpha: enabled ? 0.10 : 0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
-      child: Icon(icon, color: enabled ? colors.primary : disabledColor),
+      child: Icon(
+        icon,
+        color: enabled
+            ? skedReadableAccent(
+                colors,
+                surface: colors.primary.withValues(alpha: 0.10),
+              )
+            : disabledColor,
+      ),
     );
   }
 }

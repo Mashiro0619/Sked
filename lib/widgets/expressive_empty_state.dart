@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_expressive_theme.dart';
@@ -47,7 +49,14 @@ class ExpressiveEmptyState extends StatelessWidget {
                     color: colors.primary.withValues(alpha: 0.10),
                     shape: shapes.selection,
                   ),
-                  child: Icon(icon, size: 36, color: colors.primary),
+                  child: Icon(
+                    icon,
+                    size: 36,
+                    color: skedReadableAccent(
+                      colors,
+                      surface: colors.primary.withValues(alpha: 0.10),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 18),

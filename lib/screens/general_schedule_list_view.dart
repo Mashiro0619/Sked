@@ -89,7 +89,14 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
         WorkspaceSelectionScope.of(context) == occurrence.occurrenceKey ||
         WorkspaceSelectionScope.of(context) == 'event:${occurrence.event.id}';
     final repeatIcon = occurrence.event.recurrenceRule.isRepeating
-        ? Icon(Icons.repeat, color: colors.primary, size: 20)
+        ? Icon(
+            Icons.repeat,
+            color: skedReadableAccent(
+              colors,
+              surface: SkedSurface.colorOf(context),
+            ),
+            size: 20,
+          )
         : null;
 
     if (WorkbenchChromeMetrics.of(context).desktop) {

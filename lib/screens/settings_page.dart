@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/desktop_window_host.dart';
 
 import 'dart:async';
@@ -2413,7 +2415,7 @@ class _RecoveryNoticeTile extends StatelessWidget {
         : theme.colorScheme.primary.withValues(alpha: 0.12);
     final foreground = isFailure
         ? theme.colorScheme.onErrorContainer
-        : theme.colorScheme.primary;
+        : skedReadableAccent(theme.colorScheme, surface: tone);
     final message = isFailure
         ? l10n.dataBackupRestoreFailedNotice
         : l10n.dataRestoredFromBackupNotice;
@@ -2513,7 +2515,12 @@ class _SelectableExportTile extends StatelessWidget {
             builder: (context, constraints) {
               final icon = Icon(
                 selected ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: selected ? colorScheme.primary : colorScheme.outline,
+                color: selected
+                    ? skedReadableAccent(
+                        colorScheme,
+                        surface: colorScheme.primary.withValues(alpha: 0.12),
+                      )
+                    : colorScheme.outline,
               );
               final content = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

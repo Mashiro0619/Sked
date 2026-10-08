@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -436,7 +438,12 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                     h1: theme.textTheme.titleLarge,
                     h2: theme.textTheme.titleMedium,
                     h3: theme.textTheme.titleSmall,
-                    a: TextStyle(color: theme.colorScheme.primary),
+                    a: TextStyle(
+                      color: skedReadableAccent(
+                        theme.colorScheme,
+                        surface: SkedSurface.colorOf(context),
+                      ),
+                    ),
                     tableColumnWidth: const IntrinsicColumnWidth(),
                     code: theme.textTheme.bodySmall?.copyWith(
                       fontFamily: 'monospace',

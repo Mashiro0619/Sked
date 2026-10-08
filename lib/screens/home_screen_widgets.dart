@@ -1168,11 +1168,15 @@ class _TimetableDrawerItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final accent = skedReadableAccent(
+      colors,
+      surface: colors.primary.withValues(alpha: 0.12),
+    );
     final contentColor = enabled
-        ? (selected ? colors.primary : colors.onSurface)
+        ? (selected ? accent : colors.onSurface)
         : colors.onSurface.withValues(alpha: 0.38);
     final secondaryColor = enabled
-        ? (selected ? colors.primary : colors.onSurfaceVariant)
+        ? (selected ? accent : colors.onSurfaceVariant)
         : colors.onSurface.withValues(alpha: 0.38);
     if (SkedTaskDialogScope.maybeOf(context) != null) {
       return ListTile(

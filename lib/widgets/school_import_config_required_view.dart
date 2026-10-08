@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -42,7 +44,14 @@ class SchoolImportConfigRequiredView extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(Icons.tune_outlined, size: 28, color: colors.primary),
+                    Icon(
+                      Icons.tune_outlined,
+                      size: 28,
+                      color: skedReadableAccent(
+                        colors,
+                        surface: SkedSurface.colorOf(context),
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       message,

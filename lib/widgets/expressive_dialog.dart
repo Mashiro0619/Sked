@@ -211,12 +211,16 @@ class ExpressiveDialogOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
-    final enabledOnSurface = selected ? colors.primary : colors.onSurface;
+    final accent = skedReadableAccent(
+      colors,
+      surface: colors.primary.withValues(alpha: 0.12),
+    );
+    final enabledOnSurface = selected ? accent : colors.onSurface;
     final textColor = enabled
         ? enabledOnSurface
         : colors.onSurface.withValues(alpha: 0.38);
     final secondaryColor = enabled
-        ? (selected ? colors.primary : colors.onSurfaceVariant)
+        ? (selected ? accent : colors.onSurfaceVariant)
         : colors.onSurface.withValues(alpha: 0.38);
     final trailingWidget =
         trailing ??
@@ -224,7 +228,7 @@ class ExpressiveDialogOption extends StatelessWidget {
             ? Icon(
                 Icons.check_circle,
                 color: enabled
-                    ? colors.primary
+                    ? accent
                     : colors.onSurface.withValues(alpha: 0.38),
               )
             : null);

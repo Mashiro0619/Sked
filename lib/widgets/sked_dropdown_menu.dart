@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -461,10 +463,14 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final enabled = onSelected != null;
+    final accent = skedReadableAccent(
+      colors,
+      surface: colors.primary.withValues(alpha: 0.12),
+    );
     final foregroundColor = !enabled
         ? colors.onSurface.withValues(alpha: 0.38)
         : selected
-        ? colors.primary
+        ? accent
         : colors.onSurface;
     final backgroundColor = selected
         ? colors.primary.withValues(alpha: 0.12)
@@ -477,7 +483,7 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
         trailingIcon:
             entry.trailingIcon ??
             (selected
-                ? Icon(Icons.check, color: colors.primary)
+                ? Icon(Icons.check, color: accent)
                 : reserveCheckSpace
                 ? const SizedBox.square(dimension: 24)
                 : null),

@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -407,7 +409,13 @@ class _ActionSheetHeader extends StatelessWidget {
       children: [
         SizedBox(
           width: 40,
-          child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+          child: Icon(
+            icon,
+            color: skedReadableAccent(
+              Theme.of(context).colorScheme,
+              surface: SkedSurface.colorOf(context),
+            ),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(

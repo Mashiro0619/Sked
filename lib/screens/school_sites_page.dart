@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/adaptive_navigation_scope.dart';
 
 import '../widgets/editor_exit_guard.dart';
@@ -1495,7 +1497,12 @@ class _SchoolSiteRow extends StatelessWidget {
                 ),
                 child: Icon(
                   Icons.school_outlined,
-                  color: enabled ? colors.primary : secondaryColor,
+                  color: enabled
+                      ? skedReadableAccent(
+                          colors,
+                          surface: colors.primary.withValues(alpha: 0.12),
+                        )
+                      : secondaryColor,
                 ),
               );
               final content = Column(

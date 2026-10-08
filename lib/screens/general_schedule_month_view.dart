@@ -1363,7 +1363,12 @@ class _MonthDayCell extends StatelessWidget {
             Text(
               '${date.day}',
               style: theme.textTheme.titleSmall?.copyWith(
-                color: isToday ? colorScheme.primary : baseColor,
+                color: isToday
+                    ? skedReadableAccent(
+                        colorScheme,
+                        surface: SkedSurface.colorOf(context),
+                      )
+                    : baseColor,
               ),
             ),
             const SizedBox(width: 6),
@@ -1399,7 +1404,10 @@ class _MonthDayCell extends StatelessWidget {
                 .moreEvents(occurrences.length - titleLimit),
             maxLines: 1,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: colorScheme.primary,
+              color: skedReadableAccent(
+                colorScheme,
+                surface: SkedSurface.colorOf(context),
+              ),
             ),
           ),
       ],
@@ -1700,7 +1708,10 @@ class _MonthAgendaEmptyState extends StatelessWidget {
                     ? Icons.event_busy_outlined
                     : Icons.event_available_outlined,
                 size: 28,
-                color: theme.colorScheme.primary,
+                color: skedReadableAccent(
+                  theme.colorScheme,
+                  surface: SkedSurface.colorOf(context),
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -1733,7 +1744,14 @@ class _MonthAgendaTile extends StatelessWidget {
       occurrence.calendar.name,
     ].join('  |  ');
     final repeatIcon = occurrence.event.recurrenceRule.isRepeating
-        ? Icon(Icons.repeat, color: colors.primary, size: 18)
+        ? Icon(
+            Icons.repeat,
+            color: skedReadableAccent(
+              colors,
+              surface: SkedSurface.colorOf(context),
+            ),
+            size: 18,
+          )
         : null;
 
     return Material(

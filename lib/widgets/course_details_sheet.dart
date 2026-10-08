@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -392,7 +394,13 @@ class _PrimaryInfoCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: colorScheme.primary),
+          Icon(
+            icon,
+            color: skedReadableAccent(
+              colorScheme,
+              surface: SkedSurface.colorOf(context),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

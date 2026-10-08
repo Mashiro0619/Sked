@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/desktop_window_host.dart';
 
 import 'dart:async';
@@ -165,10 +167,12 @@ class _LanguageOptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final foreground = selected ? colorScheme.primary : colorScheme.onSurface;
-    final subtitleColor = selected
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
+    final accent = skedReadableAccent(
+      colorScheme,
+      surface: colorScheme.primary.withValues(alpha: 0.12),
+    );
+    final foreground = selected ? accent : colorScheme.onSurface;
+    final subtitleColor = selected ? accent : colorScheme.onSurfaceVariant;
     return Semantics(
       key: ValueKey('language-option-semantics-${option.code}'),
       container: true,
@@ -220,7 +224,7 @@ class _LanguageOptionTile extends StatelessWidget {
                     ],
                   );
                   final check = selected
-                      ? Icon(Icons.check, color: colorScheme.primary)
+                      ? Icon(Icons.check, color: accent)
                       : null;
                   final stack =
                       selected &&

@@ -333,7 +333,12 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
             widget.occurrence.calendar.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: theme.colorScheme.primary),
+            style: TextStyle(
+              color: skedReadableAccent(
+                theme.colorScheme,
+                surface: SkedSurface.colorOf(context),
+              ),
+            ),
           ),
           toolbar: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -408,7 +413,10 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.primary,
+                          color: skedReadableAccent(
+                            theme.colorScheme,
+                            surface: SkedSurface.colorOf(context),
+                          ),
                         ),
                       ),
                     ],

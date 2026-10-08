@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../services/app_update_coordinator.dart';
 import '../services/update_service.dart';
 import '../services/update_distribution.dart';
@@ -1379,7 +1381,12 @@ class _FirstLaunchPrivacyConsentState
             text: widget.linkText,
             recognizer: _linkRecognizer,
             mouseCursor: SystemMouseCursors.click,
-            style: TextStyle(color: colors.primary),
+            style: TextStyle(
+              color: skedReadableAccent(
+                colors,
+                surface: SkedSurface.colorOf(context),
+              ),
+            ),
           ),
           TextSpan(text: widget.afterText),
         ],

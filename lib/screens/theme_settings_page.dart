@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/sked_color_draft.dart';
 import '../widgets/sked_task_session.dart';
 import '../widgets/sked_task_submission_controller.dart';
@@ -1439,7 +1441,10 @@ class _OutlineSettingsCard extends StatelessWidget {
                         ? Icons.check_circle_outline
                         : Icons.remove_circle_outline,
                     color: provider.liveCourseOutlineEnabled
-                        ? colors.primary
+                        ? skedReadableAccent(
+                            colors,
+                            surface: SkedSurface.colorOf(context),
+                          )
                         : colors.outline,
                   ),
                 ),
@@ -1451,7 +1456,10 @@ class _OutlineSettingsCard extends StatelessWidget {
                         ? Icons.check_circle_outline
                         : Icons.palette_outlined,
                     color: provider.liveCourseOutlineFollowTheme
-                        ? colors.primary
+                        ? skedReadableAccent(
+                            colors,
+                            surface: SkedSurface.colorOf(context),
+                          )
                         : colors.outline,
                   ),
                 ),
@@ -1869,7 +1877,10 @@ class _WorkspaceThemePreview extends StatelessWidget {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 18,
-                            color: colors.primary,
+                            color: skedReadableAccent(
+                              colors,
+                              surface: SkedSurface.colorOf(context),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -1878,7 +1889,14 @@ class _WorkspaceThemePreview extends StatelessWidget {
                               style: theme.textTheme.labelLarge,
                             ),
                           ),
-                          Icon(Icons.add, size: 18, color: colors.primary),
+                          Icon(
+                            Icons.add,
+                            size: 18,
+                            color: skedReadableAccent(
+                              colors,
+                              surface: SkedSurface.colorOf(context),
+                            ),
+                          ),
                         ],
                       ),
                     ),

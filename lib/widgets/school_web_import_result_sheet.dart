@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/expressive_motion.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -633,7 +635,13 @@ class _CourseCountSummary extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            Icon(Icons.menu_book_outlined, color: theme.colorScheme.primary),
+            Icon(
+              Icons.menu_book_outlined,
+              color: skedReadableAccent(
+                theme.colorScheme,
+                surface: SkedSurface.colorOf(context),
+              ),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -758,7 +766,10 @@ class _PeriodTimeSetChoiceRow extends StatelessWidget {
                             ? Icons.radio_button_checked_outlined
                             : Icons.radio_button_unchecked_outlined,
                         color: enabled
-                            ? colors.primary
+                            ? skedReadableAccent(
+                                colors,
+                                surface: colors.primary.withValues(alpha: 0.08),
+                              )
                             : colors.onSurfaceVariant,
                       ),
                     ),
@@ -855,7 +866,13 @@ class _ParserDetailsDisclosure extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Row(
                       children: [
-                        Icon(Icons.article_outlined, color: colors.primary),
+                        Icon(
+                          Icons.article_outlined,
+                          color: skedReadableAccent(
+                            colors,
+                            surface: SkedSurface.colorOf(context),
+                          ),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(title, style: theme.textTheme.titleSmall),
@@ -1088,7 +1105,12 @@ class _CompactActionRow extends StatelessWidget {
     // Material's disabled emphasis. Keep every element of the row on the same
     // token so a disabled row reads as disabled at a glance.
     final disabledColor = colors.onSurface.withValues(alpha: 0.38);
-    final iconColor = enabled ? colors.primary : disabledColor;
+    final iconColor = enabled
+        ? skedReadableAccent(
+            colors,
+            surface: colors.primary.withValues(alpha: 0.12),
+          )
+        : disabledColor;
     final titleStyle = theme.textTheme.titleSmall?.copyWith(
       color: enabled ? colors.onSurface : disabledColor,
     );

@@ -464,7 +464,10 @@ class SettingsConnectedGroup extends StatelessWidget {
                   child: Text(
                     title!,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: colors.primary,
+                      color: skedReadableAccent(
+                        colors,
+                        surface: SkedSurface.colorOf(context),
+                      ),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -896,7 +899,12 @@ class SettingsSectionHeader extends StatelessWidget {
         header: true,
         child: Text(
           title,
-          style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+          style: textTheme.labelLarge?.copyWith(
+            color: skedReadableAccent(
+              colorScheme,
+              surface: SkedSurface.colorOf(context),
+            ),
+          ),
         ),
       ),
     );
@@ -1878,7 +1886,10 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                     textAlign: TextAlign.end,
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: enabled
-                          ? colors.primary
+                          ? skedReadableAccent(
+                              colors,
+                              surface: SkedSurface.colorOf(context),
+                            )
                           : colors.onSurface.withValues(alpha: 0.38),
                       fontWeight: FontWeight.w600,
                     ),
