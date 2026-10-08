@@ -214,9 +214,9 @@ void main() {
           await tap(
             find.descendant(
               of: details,
-              matching: find.byTooltip(
-                mode == AppMode.student ? l.editCourseTooltip : l.editEvent,
-              ),
+              matching: mode == AppMode.student
+                  ? find.byTooltip(l.editCourseTooltip)
+                  : key('general-event-edit-action'),
             ),
           );
           await capture('${mode.value}-edit');
