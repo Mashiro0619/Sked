@@ -24,8 +24,10 @@ import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_service.dart';
+import 'package:sked/services/update_distribution.dart';
 import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
+import 'package:sked/widgets/app_update_dialog.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
@@ -3547,6 +3549,7 @@ void main() {
         context,
         provider: provider,
         source: UpdateCheckSource.manual,
+        distribution: const UpdateDistribution(UpdateChannel.github),
         updateService: const FakeSuccessUpdateService(
           UpdateCheckResult(
             localVersion: '1.0.0',
@@ -3559,8 +3562,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('GitHub 仓库'), findsOneWidget);
+      expect(find.byType(AppUpdateDialog), findsOneWidget);
+      expect(find.text('1.1.0'), findsOneWidget);
+      expect(find.text('Github'), findsOneWidget);
       expect(find.text('官网'), findsNothing);
       expect(find.text('Google Play'), findsNothing);
       expect(find.text('网盘'), findsNothing);
@@ -3582,13 +3586,15 @@ void main() {
         context,
         provider: provider,
         source: UpdateCheckSource.manual,
+        distribution: const UpdateDistribution(UpdateChannel.github),
         updateService: FakeThrowingUpdateService(Exception('boom')),
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(AppUpdateDialog), findsOneWidget);
       expect(find.text('检测更新失败'), findsOneWidget);
-      expect(find.text('GitHub 仓库'), findsOneWidget);
+      expect(find.text('Github'), findsOneWidget);
+      expect(find.text('重试'), findsOneWidget);
       expect(find.text('官网'), findsNothing);
       expect(find.text('Google Play'), findsNothing);
       expect(find.text('网盘'), findsNothing);
@@ -3599,7 +3605,7 @@ void main() {
       await future;
     });
 
-    testWidgets('启动时检测更新失败的错误弹窗包含忽略此版本', (tester) async {
+    testWidgets('启动时检测更新失败保持静默且不忽略未知版本', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
@@ -3610,20 +3616,15 @@ void main() {
         context,
         provider: provider,
         source: UpdateCheckSource.startup,
+        distribution: const UpdateDistribution(UpdateChannel.github),
         updateService: FakeThrowingUpdateService(Exception('boom')),
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('检测更新失败'), findsOneWidget);
-      expect(find.text('忽略此版本'), findsOneWidget);
-      expect(find.text('GitHub 仓库'), findsOneWidget);
-      expect(find.text('官网'), findsNothing);
-      expect(find.text('Google Play'), findsNothing);
-      expect(find.text('网盘'), findsNothing);
-
-      await tester.tap(find.text('取消'));
-      await tester.pumpAndSettle();
+      expect(find.byType(AppUpdateDialog), findsNothing);
+      expect(find.text('检测更新失败'), findsNothing);
+      expect(find.text('忽略此版本'), findsNothing);
+      expect(provider.ignoredUpdateVersion, isNull);
       await future;
     });
 

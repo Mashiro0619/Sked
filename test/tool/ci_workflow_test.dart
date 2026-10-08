@@ -92,11 +92,15 @@ void main() {
     expect(signingCommand, contains('> android/key.properties'));
     expect(signingCommand, isNot(contains('secrets.')));
 
-    for (final command in [
-      'flutter build apk --release',
-      'flutter build appbundle --release',
+    for (final (name, command) in [
+      ('Build Android APK release', 'flutter build apk --release'),
+      (
+        'Build Android App Bundle release',
+        'flutter build appbundle --release --dart-define=SKED_DISTRIBUTION_CHANNEL=google-play',
+      ),
     ]) {
-      final build = steps.singleWhere((step) => step['run'] == command);
+      final build = stepNamed(steps, name);
+      expect(build['run'], command);
       expect(steps.indexOf(signing), lessThan(steps.indexOf(build)));
     }
     final cleanup = stepNamed(steps, 'Remove ephemeral CI signing key');
