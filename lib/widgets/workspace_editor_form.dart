@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme/sked_surface.dart';
+
 /// Desktop form layout only. Labels and editors keep their elements when the
 /// available width changes; no state, navigation or validation is owned here.
 class WorkspaceEditorField extends StatelessWidget {
@@ -186,7 +188,12 @@ InputDecoration workspaceEditorInputDecoration(
     enabledBorder: border,
     disabledBorder: border,
     focusedBorder: border.copyWith(
-      borderSide: BorderSide(color: colors.primary),
+      borderSide: BorderSide(
+        color: skedReadableAccent(
+          colors,
+          surface: colors.surfaceContainerHighest,
+        ),
+      ),
     ),
     errorBorder: border.copyWith(borderSide: BorderSide(color: colors.error)),
     focusedErrorBorder: border.copyWith(
@@ -225,7 +232,12 @@ class WorkspaceEditorDropdownStyle extends StatelessWidget {
             enabledBorder: border,
             disabledBorder: border,
             focusedBorder: border.copyWith(
-              borderSide: BorderSide(color: theme.colorScheme.primary),
+              borderSide: BorderSide(
+                color: skedReadableAccent(
+                  theme.colorScheme,
+                  surface: theme.colorScheme.surfaceContainerHighest,
+                ),
+              ),
             ),
             suffixIconConstraints: const BoxConstraints(
               minWidth: 32,

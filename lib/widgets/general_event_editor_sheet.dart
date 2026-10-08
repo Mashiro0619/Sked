@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'workspace_editor.dart';
 import 'workspace_editor_form.dart';
 import 'workspace_editor_time_rows.dart';
@@ -1213,7 +1215,15 @@ class _DesktopEventChoice extends StatelessWidget {
           minimumSize: const Size(0, 36),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          foregroundColor: selected ? colors.primary : colors.onSurface,
+          foregroundColor: selected
+              ? skedReadableAccent(
+                  colors,
+                  surface: Color.alphaBlend(
+                    colors.primary.withValues(alpha: .12),
+                    SkedSurface.colorOf(context),
+                  ),
+                )
+              : colors.onSurface,
           backgroundColor: selected
               ? colors.primary.withValues(alpha: .12)
               : Colors.transparent,
@@ -1893,7 +1903,16 @@ class _DateTimeRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Icon(icon, color: colors.primary),
+            child: Icon(
+              icon,
+              color: skedReadableAccent(
+                colors,
+                surface: Color.alphaBlend(
+                  colors.primary.withValues(alpha: .10),
+                  SkedSurface.colorOf(context),
+                ),
+              ),
+            ),
           );
           final text = Column(
             crossAxisAlignment: CrossAxisAlignment.start,

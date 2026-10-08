@@ -6,6 +6,7 @@ import 'package:sked/theme/sked_surface.dart';
 import 'package:sked/utils/constants.dart';
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/sked_calendar_day_label.dart';
+import 'package:sked/widgets/workspace_editor_form.dart';
 
 double _contrast(Color foreground, Color background) {
   final a = Color.alphaBlend(foreground, background).computeLuminance();
@@ -113,6 +114,17 @@ void main() {
             await tester.pumpAndSettle();
             final colors = theme.colorScheme;
             final surface = role.resolve(colors);
+            final editorField = workspaceEditorInputDecoration(
+              tester.element(find.text('Title')),
+              'Notes',
+            );
+            expect(
+              _contrast(
+                editorField.focusedBorder!.borderSide.color,
+                colors.surfaceContainerHighest,
+              ),
+              greaterThanOrEqualTo(3),
+            );
             for (final label in ['Cancel', 'Edit']) {
               expect(
                 _contrast(_textColor(tester, label), surface),

@@ -3221,7 +3221,14 @@ List<PopupMenuEntry<String>> _generalViewMenuItems(
               const SizedBox(width: 12),
               Expanded(child: Text(item.label)),
               item.value == view
-                  ? Icon(Icons.check_rounded, size: 20, color: colors.primary)
+                  ? Icon(
+                      Icons.check_rounded,
+                      size: 20,
+                      color: skedReadableAccent(
+                        colors,
+                        surface: SkedSurface.colorOf(context),
+                      ),
+                    )
                   : const SizedBox.square(dimension: 20),
             ],
           ),
