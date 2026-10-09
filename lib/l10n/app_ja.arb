@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "1行に1件、形式: key:value",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "有効な JSON オブジェクトを入力するか、フィールドを空にしてください。",
+  "@customFieldsInvalidJson": {},
   "more": "その他",
   "@more": {},
   "selectDayOfWeek": "曜日を選択",

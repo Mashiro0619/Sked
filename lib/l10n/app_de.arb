@@ -137,6 +137,8 @@
   "@customFields": {},
   "customFieldsHint": "Eine pro Zeile, Format: schlüssel:wert",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Geben Sie ein gültiges JSON-Objekt ein oder leeren Sie das Feld.",
+  "@customFieldsInvalidJson": {},
   "more": "Mehr",
   "@more": {},
   "selectDayOfWeek": "Tag auswählen",

@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "หนึ่งต่อเส้นรูปแบบ: คีย์: ค่า",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "กรุณาป้อนออบเจ็กต์ JSON ที่ถูกต้อง หรือล้างข้อมูลในช่องนี้",
+  "@customFieldsInvalidJson": {},
   "more": "เพิ่มเติม",
   "@more": {},
   "selectDayOfWeek": "เลือกวัน",

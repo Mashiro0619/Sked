@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Jeden na řádek, formát: klíč:hodnota",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Zadejte platný objekt JSON nebo pole vymažte.",
+  "@customFieldsInvalidJson": {},
   "more": "Další",
   "@more": {},
   "selectDayOfWeek": "Vyberte si den",

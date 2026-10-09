@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Üks rida kohta, vorming: key:value",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Sisesta kehtiv JSON-objekt või tühjenda väli.",
+  "@customFieldsInvalidJson": {},
   "more": "Rohkem",
   "@more": {},
   "selectDayOfWeek": "Vali päev",

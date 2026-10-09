@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Um por linha, formato: chave:valor",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Digite um objeto JSON válido ou limpe o campo.",
+  "@customFieldsInvalidJson": {},
   "more": "Mais",
   "@more": {},
   "selectDayOfWeek": "Escolher dia",

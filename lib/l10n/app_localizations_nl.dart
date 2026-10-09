@@ -179,6 +179,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get customFieldsHint => 'Eén per regel, als sleutel:waarde';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Voer een geldig JSON-object in of maak het veld leeg.';
+
+  @override
   String get more => 'Meer';
 
   @override

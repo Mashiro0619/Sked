@@ -25,6 +25,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../previews/sked_preview_support.dart';
 import '../theme/sked_expressive_theme.dart';
+import '../utils/course_custom_fields_draft.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
 import 'sked_task_dialog.dart';
@@ -79,7 +80,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   late final TextEditingController _creditController;
   late final TextEditingController _remarksController;
   late final TextEditingController _customFieldsController;
-  late final String _initialCustomFieldsText;
+  late final CourseCustomFieldsDraft _customFieldsDraft;
+  final _customFieldsFocus = FocusNode();
+  bool _customFieldsInvalid = false;
   late final TextEditingController _reminderMinutesController;
 
   late int _selectedDayOfWeek;
@@ -168,13 +171,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           : initial.credit.toString(),
     );
     _remarksController = TextEditingController(text: initial?.remarks ?? '');
-    _initialCustomFieldsText = initial == null
-        ? ''
-        : initial.customFields.entries
-              .map((entry) => '${entry.key}:${entry.value}')
-              .join('\n');
+    _customFieldsDraft = CourseCustomFieldsDraft(initial?.customFields ?? {});
     _customFieldsController = TextEditingController(
-      text: _initialCustomFieldsText,
+      text: _customFieldsDraft.initialText,
     );
     final reminder =
         initial?.reminderSettings ?? const CourseReminderSettings();
@@ -218,6 +217,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     _creditController.dispose();
     _remarksController.dispose();
     _customFieldsController.dispose();
+    _customFieldsFocus.dispose();
     _reminderMinutesController.dispose();
     _detailsExpansion.dispose();
     _reminderMinutesFocus.dispose();
@@ -486,7 +486,6 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         TextEditingController controller, {
         int maxLines = 1,
         TextInputType? keyboardType,
-        String? hint,
       }) => WorkspaceEditorField(
         label: label,
         child: TextField(
@@ -494,11 +493,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           enabled: !_blocked,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          decoration: workspaceEditorInputDecoration(
-            context,
-            label,
-            hintText: hint,
-          ),
+          decoration: workspaceEditorInputDecoration(context, label),
         ),
       );
       return Column(
@@ -514,12 +509,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           const SizedBox(height: 8),
           input(l10n.remarks, _remarksController, maxLines: 2),
           const SizedBox(height: 8),
-          input(
-            l10n.customFields,
-            _customFieldsController,
-            maxLines: 2,
-            hint: l10n.customFieldsHint,
-          ),
+          _buildCustomFieldsField(l10n),
           const SizedBox(height: 12),
           _buildReminderField(l10n),
         ],
@@ -562,20 +552,41 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           maxLines: 2,
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _customFieldsController,
-          enabled: !_blocked,
-          decoration: InputDecoration(
-            labelText: l10n.customFields,
-            hintText: l10n.customFieldsHint,
-            prefixIcon: const Icon(Icons.data_object_outlined),
-          ),
-          maxLines: 3,
-        ),
+        _buildCustomFieldsField(l10n),
         const SizedBox(height: 16),
         _buildReminderField(l10n),
       ],
     );
+  }
+
+  Widget _buildCustomFieldsField(AppLocalizations l10n) {
+    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+    final usesJson = _customFieldsDraft.usesJson;
+    final decoration = desktop
+        ? workspaceEditorInputDecoration(context, l10n.customFields)
+        : InputDecoration(
+            labelText: l10n.customFields,
+            prefixIcon: const Icon(Icons.data_object_outlined),
+          );
+    final field = TextField(
+      key: const ValueKey('course-custom-fields'),
+      controller: _customFieldsController,
+      focusNode: _customFieldsFocus,
+      enabled: !_blocked,
+      maxLines: usesJson ? 6 : (desktop ? 2 : 3),
+      onChanged: (_) {
+        if (_customFieldsInvalid) setState(() => _customFieldsInvalid = false);
+      },
+      decoration: decoration.copyWith(
+        hintText: usesJson ? null : l10n.customFieldsHint,
+        helperText: usesJson ? l10n.jsonContent : null,
+        helperMaxLines: 2,
+        error: _customFieldsInvalid ? Text(l10n.customFieldsInvalidJson) : null,
+      ),
+    );
+    return desktop
+        ? WorkspaceEditorField(label: l10n.customFields, child: field)
+        : field;
   }
 
   Widget _buildReminderField(AppLocalizations l10n) =>
@@ -1025,6 +1036,30 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       return;
     }
 
+    final Map<String, dynamic> customFields;
+    try {
+      customFields = _customFieldsDraft.parse(_customFieldsController.text);
+    } on FormatException {
+      setState(() => _customFieldsInvalid = true);
+      _detailsExpansion.expand();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _blocked) return;
+        _customFieldsFocus.requestFocus();
+        final fieldContext = _customFieldsFocus.context;
+        if (fieldContext != null) {
+          unawaited(
+            Scrollable.ensureVisible(
+              fieldContext,
+              alignment: 0.5,
+              duration: SkedMotionPolicy.of(context)
+                  .effects(SkedMotionSpeed.fast),
+            ),
+          );
+        }
+      });
+      return;
+    }
+
     final reminderMinutes = int.tryParse(
       _reminderMinutesController.text.trim(),
     );
@@ -1068,12 +1103,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       timeRange: buildTimeRange(startMinutes, endMinutes),
       credit: _parseCredit(_creditController.text),
       remarks: _remarksController.text.trim(),
-      // The line editor cannot represent every legal JSON value losslessly.
-      // Preserve the original map when this field was not edited, including
-      // multiline strings, nested values and their JSON types.
-      customFields: _customFieldsController.text == _initialCustomFieldsText
-          ? Map<String, dynamic>.from(widget.initialCourse?.customFields ?? {})
-          : _parseCustomFields(_customFieldsController.text),
+      customFields: customFields,
       reminderSettings: _courseReminderSettings,
     );
     final result = CourseEditorResult.save(course);
@@ -1199,25 +1229,6 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       return l10n.periodNumberLabel(sorted.first);
     }
     return l10n.periodRangeLabel(sorted.first, sorted.last);
-  }
-
-  Map<String, dynamic> _parseCustomFields(String value) {
-    final result = <String, dynamic>{};
-    for (final line in value.split('\n')) {
-      final trimmed = line.trim();
-      if (trimmed.isEmpty) {
-        continue;
-      }
-      final separator = trimmed.indexOf(':');
-      if (separator <= 0) {
-        result[trimmed] = '';
-        continue;
-      }
-      final key = trimmed.substring(0, separator).trim();
-      final content = trimmed.substring(separator + 1).trim();
-      result[key] = content;
-    }
-    return result;
   }
 }
 

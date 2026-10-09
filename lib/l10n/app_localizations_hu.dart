@@ -182,6 +182,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get customFieldsHint => 'Egy soronként, formátum: kulcs:érték';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Adjon meg egy érvényes JSON-objektumot, vagy törölje a mező tartalmát.';
+
+  @override
   String get more => 'Továbbiak';
 
   @override

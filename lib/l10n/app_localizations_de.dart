@@ -181,6 +181,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get customFieldsHint => 'Eine pro Zeile, Format: schlüssel:wert';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Geben Sie ein gültiges JSON-Objekt ein oder leeren Sie das Feld.';
+
+  @override
   String get more => 'Mehr';
 
   @override

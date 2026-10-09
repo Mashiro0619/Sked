@@ -179,6 +179,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customFieldsHint => 'One per line, format: key:value';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Enter a valid JSON object, or clear the field.';
+
+  @override
   String get more => 'More';
 
   @override

@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "По одному в строке, формат: ключ:значение",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Введите корректный объект JSON или очистите поле.",
+  "@customFieldsInvalidJson": {},
   "more": "Ещё",
   "@more": {},
   "selectDayOfWeek": "Выберите день",

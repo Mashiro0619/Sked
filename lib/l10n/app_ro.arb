@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Unul pe linie, format: cheie:valoare",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Introdu un obiect JSON valid sau golește câmpul.",
+  "@customFieldsInvalidJson": {},
   "more": "Mai multe",
   "@more": {},
   "selectDayOfWeek": "Alegeți ziua",

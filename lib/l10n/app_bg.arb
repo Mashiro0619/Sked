@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Един на ред, формат: ключ:стойност",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Въведете валиден JSON обект или изчистете полето.",
+  "@customFieldsInvalidJson": {},
   "more": "Още",
   "@more": {},
   "selectDayOfWeek": "Изберете ден",

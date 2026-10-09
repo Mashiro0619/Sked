@@ -178,6 +178,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get customFieldsHint => 'หนึ่งต่อเส้นรูปแบบ: คีย์: ค่า';
 
   @override
+  String get customFieldsInvalidJson =>
+      'กรุณาป้อนออบเจ็กต์ JSON ที่ถูกต้อง หรือล้างข้อมูลในช่องนี้';
+
+  @override
   String get more => 'เพิ่มเติม';
 
   @override

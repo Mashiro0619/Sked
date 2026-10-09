@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "한 줄에 하나씩, 형식: key:value",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "유효한 JSON 객체를 입력하거나 필드를 비우세요.",
+  "@customFieldsInvalidJson": {},
   "more": "더보기",
   "@more": {},
   "selectDayOfWeek": "요일 선택",

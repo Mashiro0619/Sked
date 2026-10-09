@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Ena na vrstico, oblika: ključ: value",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Vnesite veljaven objekt JSON ali počistite polje.",
+  "@customFieldsInvalidJson": {},
   "more": "Več",
   "@more": {},
   "selectDayOfWeek": "Izberite dan",

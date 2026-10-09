@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Eén per regel, als sleutel:waarde",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Voer een geldig JSON-object in of maak het veld leeg.",
+  "@customFieldsInvalidJson": {},
   "more": "Meer",
   "@more": {},
   "selectDayOfWeek": "Kies een dag",

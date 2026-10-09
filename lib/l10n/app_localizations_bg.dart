@@ -184,6 +184,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get customFieldsHint => 'Един на ред, формат: ключ:стойност';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Въведете валиден JSON обект или изчистете полето.';
+
+  @override
   String get more => 'Още';
 
   @override

@@ -179,6 +179,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get customFieldsHint => 'Yksi rivistä kohti, muoto: avain:arvo';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Anna kelvollinen JSON-objekti tai tyhjennä kenttä.';
+
+  @override
   String get more => 'Lisää';
 
   @override

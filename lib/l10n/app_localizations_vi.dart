@@ -179,6 +179,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get customFieldsHint => 'Một cho mỗi dòng, định dạng: khóa: giá trị';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Nhập một đối tượng JSON hợp lệ hoặc xóa nội dung trường.';
+
+  @override
   String get more => 'Thêm';
 
   @override

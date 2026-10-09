@@ -180,6 +180,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get customFieldsHint => 'प्रति पंक्ति एक, फ़ॉर्मेट: key:value';
 
   @override
+  String get customFieldsInvalidJson =>
+      'कोई मान्य JSON ऑब्जेक्ट दर्ज करें या फ़ील्ड खाली करें।';
+
+  @override
   String get more => 'अधिक';
 
   @override

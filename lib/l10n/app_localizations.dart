@@ -451,6 +451,12 @@ abstract class AppLocalizations {
   /// **'One per line, format: key:value'**
   String get customFieldsHint;
 
+  /// No description provided for @customFieldsInvalidJson.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid JSON object, or clear the field.'**
+  String get customFieldsInvalidJson;
+
   /// No description provided for @more.
   ///
   /// In en, this message translates to:

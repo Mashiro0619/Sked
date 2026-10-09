@@ -179,6 +179,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get customFieldsHint => 'En per rad, format: nyckel:värde';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Ange ett giltigt JSON-objekt eller töm fältet.';
+
+  @override
   String get more => 'Mer';
 
   @override

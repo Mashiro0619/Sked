@@ -176,6 +176,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customFieldsHint => '1行に1件、形式: key:value';
 
   @override
+  String get customFieldsInvalidJson => '有効な JSON オブジェクトを入力するか、フィールドを空にしてください。';
+
+  @override
   String get more => 'その他';
 
   @override

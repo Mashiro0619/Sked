@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "En pr. linje, format: nøgle:værdi",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Angiv et gyldigt JSON-objekt, eller ryd feltet.",
+  "@customFieldsInvalidJson": {},
   "more": "Mere",
   "@more": {},
   "selectDayOfWeek": "Vælg dag",

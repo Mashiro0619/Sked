@@ -175,6 +175,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get customFieldsHint => '한 줄에 하나씩, 형식: key:value';
 
   @override
+  String get customFieldsInvalidJson => '유효한 JSON 객체를 입력하거나 필드를 비우세요.';
+
+  @override
   String get more => '더보기';
 
   @override

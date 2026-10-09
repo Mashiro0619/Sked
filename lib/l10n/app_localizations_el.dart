@@ -183,6 +183,10 @@ class AppLocalizationsEl extends AppLocalizations {
   String get customFieldsHint => 'Ένα ανά γραμμή, μορφή: κλειδί: τιμή';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Εισαγάγετε ένα έγκυρο αντικείμενο JSON ή αδειάστε το πεδίο.';
+
+  @override
   String get more => 'Περισσότερα';
 
   @override

@@ -178,6 +178,10 @@ class AppLocalizationsCs extends AppLocalizations {
   String get customFieldsHint => 'Jeden na řádek, formát: klíč:hodnota';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Zadejte platný objekt JSON nebo pole vymažte.';
+
+  @override
   String get more => 'Další';
 
   @override

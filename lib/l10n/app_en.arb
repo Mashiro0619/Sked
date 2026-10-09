@@ -141,6 +141,8 @@
   "@customFields": {},
   "customFieldsHint": "One per line, format: key:value",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Enter a valid JSON object, or clear the field.",
+  "@customFieldsInvalidJson": {},
   "more": "More",
   "@more": {},
   "selectDayOfWeek": "Choose day",

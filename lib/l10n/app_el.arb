@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Ένα ανά γραμμή, μορφή: κλειδί: τιμή",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Εισαγάγετε ένα έγκυρο αντικείμενο JSON ή αδειάστε το πεδίο.",
+  "@customFieldsInvalidJson": {},
   "more": "Περισσότερα",
   "@more": {},
   "selectDayOfWeek": "Επιλέξτε ημέρα",

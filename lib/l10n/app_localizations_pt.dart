@@ -179,6 +179,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get customFieldsHint => 'Um por linha, formato: chave:valor';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Digite um objeto JSON válido ou limpe o campo.';
+
+  @override
   String get more => 'Mais';
 
   @override

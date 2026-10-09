@@ -179,6 +179,10 @@ class AppLocalizationsDa extends AppLocalizations {
   String get customFieldsHint => 'En pr. linje, format: nøgle:værdi';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Angiv et gyldigt JSON-objekt, eller ryd feltet.';
+
+  @override
   String get more => 'Mere';
 
   @override

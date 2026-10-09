@@ -139,6 +139,8 @@
   "@customFields": {},
   "customFieldsHint": "每行一個，格式：鍵:值",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "請輸入有效的 JSON 物件，或清空此欄位。",
+  "@customFieldsInvalidJson": {},
   "more": "更多",
   "@more": {},
   "selectDayOfWeek": "選擇上課日",

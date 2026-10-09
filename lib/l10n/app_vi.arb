@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Một cho mỗi dòng, định dạng: khóa: giá trị",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Nhập một đối tượng JSON hợp lệ hoặc xóa nội dung trường.",
+  "@customFieldsInvalidJson": {},
   "more": "Thêm",
   "@more": {},
   "selectDayOfWeek": "Chọn ngày",

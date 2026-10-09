@@ -180,6 +180,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get customFieldsHint => 'Unul pe linie, format: cheie:valoare';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Introdu un obiect JSON valid sau golește câmpul.';
+
+  @override
   String get more => 'Mai multe';
 
   @override

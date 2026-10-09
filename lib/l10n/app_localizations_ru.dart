@@ -179,6 +179,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get customFieldsHint => 'По одному в строке, формат: ключ:значение';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Введите корректный объект JSON или очистите поле.';
+
+  @override
   String get more => 'Ещё';
 
   @override

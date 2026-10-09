@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Egy soronként, formátum: kulcs:érték",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Adjon meg egy érvényes JSON-objektumot, vagy törölje a mező tartalmát.",
+  "@customFieldsInvalidJson": {},
   "more": "Továbbiak",
   "@more": {},
   "selectDayOfWeek": "Válasszon napot",

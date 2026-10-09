@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "En per rad, format: nyckel:värde",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Ange ett giltigt JSON-objekt eller töm fältet.",
+  "@customFieldsInvalidJson": {},
   "more": "Mer",
   "@more": {},
   "selectDayOfWeek": "Välj dag",

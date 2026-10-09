@@ -181,6 +181,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get customFieldsHint => 'Uno por línea, formato: clave:valor';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Introduce un objeto JSON válido o borra el contenido del campo.';
+
+  @override
   String get more => 'Más';
 
   @override

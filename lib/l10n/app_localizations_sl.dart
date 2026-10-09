@@ -178,6 +178,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get customFieldsHint => 'Ena na vrstico, oblika: ključ: value';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Vnesite veljaven objekt JSON ali počistite polje.';
+
+  @override
   String get more => 'Več';
 
   @override

@@ -175,6 +175,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get customFieldsHint => '每行一个，格式：键:值';
 
   @override
+  String get customFieldsInvalidJson => '请输入有效的 JSON 对象，或清空此字段。';
+
+  @override
   String get more => '更多';
 
   @override
@@ -3227,6 +3230,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get customFieldsHint => '每行一個，格式：鍵:值';
+
+  @override
+  String get customFieldsInvalidJson => '請輸入有效的 JSON 物件，或清空此欄位。';
 
   @override
   String get more => '更多';

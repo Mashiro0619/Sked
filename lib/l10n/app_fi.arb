@@ -135,6 +135,8 @@
   "@customFields": {},
   "customFieldsHint": "Yksi rivistä kohti, muoto: avain:arvo",
   "@customFieldsHint": {},
+  "customFieldsInvalidJson": "Anna kelvollinen JSON-objekti tai tyhjennä kenttä.",
+  "@customFieldsInvalidJson": {},
   "more": "Lisää",
   "@more": {},
   "selectDayOfWeek": "Valitse päivä",

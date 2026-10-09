@@ -179,6 +179,10 @@ class AppLocalizationsEt extends AppLocalizations {
   String get customFieldsHint => 'Üks rida kohta, vorming: key:value';
 
   @override
+  String get customFieldsInvalidJson =>
+      'Sisesta kehtiv JSON-objekt või tühjenda väli.';
+
+  @override
   String get more => 'Rohkem';
 
   @override
