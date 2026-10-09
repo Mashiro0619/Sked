@@ -131,9 +131,12 @@ class WorkspacePaneController extends ChangeNotifier {
     bool dismissOnCanvasTap = true,
     WorkspacePanePresentation presentation = WorkspacePanePresentation.standard,
     WorkspaceEditorConfiguration? editor,
+    BuildContext? anchorContext,
+    Rect? anchorRect,
   }) async {
     final navigator = navigatorKey.currentState;
     if (navigator == null || _disposed) return null;
+    final movingHost = navigator.overlay?.context.findRenderObject();
     late final MaterialPageRoute<T> route;
     route = MaterialPageRoute<T>(
       builder: (context) => WorkspaceTaskScope(
@@ -147,11 +150,19 @@ class WorkspacePaneController extends ChangeNotifier {
         ),
       ),
     );
+    final viewAnchor = presentation == WorkspacePanePresentation.view
+        ? WorkspaceEditorConfiguration(
+            anchorContext: anchorContext,
+            anchorRect: anchorRect,
+          )
+        : null;
+    if (viewAnchor != null) _lastPointerAnchor = null;
     return _showRoute<T>(
       navigator,
       route,
       presentation: presentation,
-      editor: editor,
+      editor: editor?.snapshotIfInside(movingHost),
+      viewAnchor: viewAnchor?.snapshotIfInside(movingHost),
       modal: false,
       selectionId: selectionId,
       dismissible: dismissOnCanvasTap,
@@ -181,6 +192,7 @@ class WorkspacePaneController extends ChangeNotifier {
     required bool dismissible,
     WorkspacePanePresentation presentation = WorkspacePanePresentation.standard,
     WorkspaceEditorConfiguration? editor,
+    WorkspaceEditorConfiguration? viewAnchor,
   }) async {
     if (_disposed || !navigator.mounted) return null;
     final task = _WorkspaceTaskRoute(
@@ -190,6 +202,7 @@ class WorkspacePaneController extends ChangeNotifier {
       dismissible,
       presentation,
       editor,
+      viewAnchor,
     );
     _tasks.add(task);
     if (!modal) _activationRevision += 1;
@@ -260,15 +273,15 @@ class _WorkspaceTaskRoute {
     this.dismissible,
     this.presentation,
     this.editor,
+    this.viewAnchor,
   );
   final Route<dynamic> route;
   final WorkspacePanePresentation presentation;
   final WorkspaceEditorConfiguration? editor;
+  final WorkspaceEditorConfiguration? viewAnchor;
   final position = SkedFloatingPositionController();
   double editorWidth = 600;
   double? contentHeight;
-  // Logical end/top insets, owned by this route only (never persisted).
-  Offset? floatingOffset;
   final bool modal, dismissible;
   final String? selectionId;
 }
@@ -1077,29 +1090,70 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                   ((compactView || floatingEditor) ? 16 : 0),
             ),
           );
-          final viewHeight = (controller.viewContentHeight ?? 0).clamp(
-            0.0,
-            detailMaxHeight,
-          );
-          final maxViewEnd = math.max(
-            8.0,
-            constraints.maxWidth -
-                (policy.resources ? policy.resourceWidth + 1 : 0) -
-                detailWidth -
-                8,
-          );
-          final maxViewTop = math.max(
-            8.0,
-            constraints.maxHeight - overlayInset - viewHeight - 8,
-          );
-          Offset boundedViewOffset(Offset offset) => Offset(
-            offset.dx.clamp(8.0, maxViewEnd),
-            offset.dy.clamp(8.0, maxViewTop),
-          );
-          final viewOffset = boundedViewOffset(
-            viewTask?.floatingOffset ?? const Offset(8, 8),
-          );
           final rtl = Directionality.of(context) == TextDirection.rtl;
+          final panelBounds = Rect.fromLTRB(
+            policy.resources && !rtl ? policy.resourceWidth + 9 : 8,
+            overlayInset + 8,
+            constraints.maxWidth -
+                (policy.resources && rtl ? policy.resourceWidth + 9 : 8),
+            constraints.maxHeight - 8,
+          );
+          final frameRender =
+              _stackKey.currentContext?.findRenderObject() ??
+              context.findRenderObject();
+          final anchorBounds = Offset.zero & constraints.biggest;
+          Rect? localAnchor(WorkspaceEditorConfiguration? config) {
+            // The entry can disappear with a menu or resource drawer. Keep its
+            // captured rectangle while the panel measures its actual height.
+            final local = frameRender is RenderBox
+                ? config?.anchorIn(frameRender)
+                : null;
+            return local != null && local.overlaps(anchorBounds) ? local : null;
+          }
+
+          final viewAnchor = localAnchor(viewTask?.viewAnchor);
+          final viewSize = Size(
+            detailWidth,
+            (controller.viewContentHeight ?? detailMaxHeight).clamp(
+              0.0,
+              detailMaxHeight,
+            ),
+          );
+          var viewOverride = viewTask?.position.positionOverride(
+            hasAnchor: viewAnchor != null,
+          );
+          if (compactView &&
+              !rtl &&
+              viewTask!.position.detached &&
+              viewTask.position.size.width != viewSize.width) {
+            // The resize handle is on the leading edge. Keep a manually
+            // positioned panel's opposite edge fixed when its width changes.
+            viewOverride =
+                (viewTask.position.lastPosition ?? viewOverride!) +
+                Offset(viewTask.position.size.width - viewSize.width, 0);
+            viewTask.position.manualPosition = viewOverride;
+          }
+          final viewOffset = viewOverride != null
+              ? boundSkedFloatingPosition(viewOverride, viewSize, panelBounds)
+              : viewAnchor == null
+              ? boundSkedFloatingPosition(
+                  Offset(
+                    rtl ? panelBounds.left : panelBounds.right - detailWidth,
+                    panelBounds.top,
+                  ),
+                  viewSize,
+                  panelBounds,
+                )
+              : positionSkedFloatingPanel(
+                  bounds: panelBounds,
+                  anchorBounds: anchorBounds,
+                  size: viewSize,
+                  anchor: viewAnchor,
+                  rtl: rtl,
+                );
+          if (compactView) {
+            viewTask!.position.recordLayout(viewOffset, viewSize);
+          }
           void dragView(Offset delta) {
             if (!mounted ||
                 !widget.active ||
@@ -1107,36 +1161,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 !identical(viewTask, controller._tasks.lastOrNull)) {
               return;
             }
-            setState(() {
-              // Start from the visible, clamped position after a resize or
-              // content change, not an old off-screen preference.
-              final current = boundedViewOffset(
-                viewTask!.floatingOffset ?? const Offset(8, 8),
-              );
-              viewTask.floatingOffset = boundedViewOffset(
-                current + Offset(rtl ? delta.dx : -delta.dx, delta.dy),
-              );
-            });
+            setState(() => viewTask!.position.drag(delta, panelBounds));
           }
 
-          final editorBounds = Rect.fromLTRB(
-            policy.resources && !rtl ? policy.resourceWidth + 9 : 8,
-            overlayInset + 8,
-            constraints.maxWidth -
-                (policy.resources && rtl ? policy.resourceWidth + 9 : 8),
-            constraints.maxHeight - 8,
-          );
-          final frameRender = _stackKey.currentContext?.findRenderObject();
-          final frameOrigin = frameRender is RenderBox && frameRender.attached
-              ? frameRender.localToGlobal(Offset.zero)
-              : Offset.zero;
           final config = editingTask?.editor;
-          final globalAnchor =
-              config?.liveAnchor ??
-              (editingTask?.position.lastPosition == null
-                  ? config?.initialAnchor
-                  : null);
-          final anchor = globalAnchor?.shift(-frameOrigin);
+          final anchor = localAnchor(config);
           final editorSize = Size(
             detailWidth,
             (editingTask?.contentHeight ?? detailMaxHeight).clamp(
@@ -1151,10 +1180,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               ? boundSkedFloatingPosition(
                   editorOverride,
                   editorSize,
-                  editorBounds,
+                  panelBounds,
                 )
               : positionSkedFloatingPanel(
-                  bounds: editorBounds,
+                  bounds: panelBounds,
+                  anchorBounds: anchorBounds,
                   size: editorSize,
                   anchor: anchor,
                   rtl: rtl,
@@ -1171,7 +1201,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 ModalRoute.of(context)?.isCurrent != true) {
               return;
             }
-            setState(() => editingTask.position.drag(delta, editorBounds));
+            setState(() => editingTask.position.drag(delta, panelBounds));
           }
 
           final resizeExtent = metrics.desktop ? 9.0 : 48.0;
@@ -1378,19 +1408,24 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                             // mode change or activation of a different foreground task.
                             PositionedDirectional(
                               key: const ValueKey('workspace-detail-pane'),
-                              end: floatingEditor
+                              end: floatingEditor || compactView
                                   ? (rtl
-                                        ? editorOffset.dx
+                                        ? (floatingEditor
+                                              ? editorOffset.dx
+                                              : viewOffset.dx)
                                         : constraints.maxWidth -
-                                              editorOffset.dx -
+                                              (floatingEditor
+                                                  ? editorOffset.dx
+                                                  : viewOffset.dx) -
                                               detailWidth)
                                   : policy.dockedDetail
                                   ? assistantSpace
-                                  : (compactView ? viewOffset.dx : 0),
+                                  : 0,
                               top: floatingEditor
                                   ? editorOffset.dy
-                                  : overlayInset +
-                                        (compactView ? viewOffset.dy : 0),
+                                  : compactView
+                                  ? viewOffset.dy
+                                  : overlayInset,
                               width: detailWidth,
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(

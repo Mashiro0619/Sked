@@ -1,6 +1,7 @@
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_floating_anchor.dart';
 import 'sked_floating_surface.dart';
 import 'sked_panel_header.dart';
 import 'workbench_chrome_metrics.dart';
@@ -11,24 +12,24 @@ class WorkspaceEditorConfiguration {
     BuildContext? anchorContext,
     Rect? anchorRect,
     this.placement = SkedFloatingPlacement.automatic,
-  }) : anchorBox = _box(anchorContext),
-       initialAnchor = anchorRect ?? _rect(_box(anchorContext));
-  final RenderBox? anchorBox;
-  final Rect? initialAnchor;
+  }) : _anchor = anchorRect == null
+           ? SkedFloatingAnchor.capture(anchorContext)
+           : SkedFloatingAnchor.fromRect(anchorRect);
+  final SkedFloatingAnchor _anchor;
   final SkedFloatingPlacement placement;
-  static RenderBox? _box(BuildContext? context) {
-    if (context?.mounted != true) return null;
-    final render = context!.findRenderObject();
-    return render is RenderBox && render.attached && render.hasSize
-        ? render
-        : null;
-  }
+  Rect? get initialAnchor => _anchor.initialRect;
+  Rect? get liveAnchor => _anchor.globalRect;
+  Rect? anchorIn(RenderBox coordinateSpace) => _anchor.rectIn(coordinateSpace);
 
-  static Rect? _rect(RenderBox? box) =>
-      box != null && box.attached && box.hasSize
-      ? box.localToGlobal(Offset.zero) & box.size
-      : null;
-  Rect? get liveAnchor => _rect(anchorBox);
+  /// A details-to-editor transition reuses the same moving Navigator. Freeze
+  /// its outgoing control rather than following a position changed by this task.
+  WorkspaceEditorConfiguration snapshotIfInside(RenderObject? host) =>
+      host != null && _anchor.isInSubtreeOf(host)
+      ? WorkspaceEditorConfiguration(
+          anchorRect: initialAnchor ?? liveAnchor,
+          placement: placement,
+        )
+      : this;
 }
 
 /// Host-owned geometry and chrome. The editor owns validation and user exits.

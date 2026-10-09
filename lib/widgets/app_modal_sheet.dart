@@ -35,6 +35,8 @@ Future<T?> showAppModalSheet<T>({
   WorkspacePanePresentation panePresentation =
       WorkspacePanePresentation.standard,
   WorkspaceEditorConfiguration? editor,
+  BuildContext? anchorContext,
+  Rect? anchorRect,
   String? selectionId,
   AppMode? workspace,
   bool Function()? isSessionCurrent,
@@ -72,6 +74,8 @@ Future<T?> showAppModalSheet<T>({
             ? panePresentation
             : WorkspacePanePresentation.editor,
         editor: editor,
+        anchorContext: anchorContext,
+        anchorRect: anchorRect,
         selectionId: selectionId,
         dismissOnCanvasTap: isDismissible,
       );
