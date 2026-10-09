@@ -756,28 +756,31 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                     bottom: metrics.desktop ? 0 : null,
                     height: metrics.desktop ? null : 48,
                     width: metrics.desktop ? 9 : 48,
-                    child: _PaneResizeHandle(
-                      key: const ValueKey('workspace-detail-resize'),
-                      onActivate: () => _assistantLast = false,
-                      onResize: (dx) => setState(() {
-                        if (editing) {
-                          final task = controller._tasks.last;
-                          task.editorWidth = (task.editorWidth - dx).clamp(
-                            320.0,
-                            math
-                                .min(680.0, policy.maximumDetailWidth)
-                                .clamp(320.0, 680.0),
+                    child: TextFieldTapRegion(
+                      enabled: editing,
+                      child: _PaneResizeHandle(
+                        key: const ValueKey('workspace-detail-resize'),
+                        onActivate: () => _assistantLast = false,
+                        onResize: (dx) => setState(() {
+                          if (editing) {
+                            final task = controller._tasks.last;
+                            task.editorWidth = (task.editorWidth - dx).clamp(
+                              320.0,
+                              math
+                                  .min(680.0, policy.maximumDetailWidth)
+                                  .clamp(320.0, 680.0),
+                            );
+                            return;
+                          }
+                          _detailWidth = _resizedPaneWidth(
+                            _detailWidth,
+                            dx,
+                            minimumWidth: AppBreakpoints.minimumDetailPane,
+                            maximumWidth: policy.maximumDetailWidth,
+                            textScale: metrics.textScale,
                           );
-                          return;
-                        }
-                        _detailWidth = _resizedPaneWidth(
-                          _detailWidth,
-                          dx,
-                          minimumWidth: AppBreakpoints.minimumDetailPane,
-                          maximumWidth: policy.maximumDetailWidth,
-                          textScale: metrics.textScale,
-                        );
-                      }),
+                        }),
+                      ),
                     ),
                   ),
               ],
@@ -1010,6 +1013,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 preferredDetailWidth: editingTask == null
                     ? _detailWidth
                     : editingTask.editorWidth / metrics.textScale,
+                minimumDetailWidth: editingTask == null
+                    ? AppBreakpoints.minimumDetailPane
+                    : 320 / metrics.textScale,
                 preferredAssistantWidth: _assistant.width,
                 // Scaffold shortens the body for the IME. Only an actual short
                 // window, not typing in a pane, may compact the navigation.

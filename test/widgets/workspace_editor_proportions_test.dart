@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/workspace_editor_time_rows.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -52,6 +55,12 @@ void main() {
             await t.enterText(title, 'Proportion draft');
             await t.pumpAndSettle();
             final input = t.widget<TextField>(title).controller!;
+            final editable = find.descendant(
+              of: title,
+              matching: find.byType(EditableText),
+            );
+            final focus = t.widget<EditableText>(editable).focusNode;
+            expect(focus.hasFocus, isTrue);
             input.selection = const TextSelection(
               baseOffset: 0,
               extentOffset: 10,
@@ -71,11 +80,38 @@ void main() {
               matching: find.byTooltip(l.pickDate),
             );
             if (mode == AppMode.general && scale == 1) {
-              expect(t.getTopLeft(dates.first).dx, t.getTopLeft(dates.last).dx);
+              final times = find.descendant(
+                of: editor,
+                matching: find.byTooltip(l.pickTime),
+              );
+              final dateWidth = t
+                  .renderObject<RenderBox>(dates.first)
+                  .getMaxIntrinsicWidth(double.infinity);
+              final timeWidth = math.max(
+                t
+                    .renderObject<RenderBox>(times.first)
+                    .getMaxIntrinsicWidth(double.infinity),
+                t
+                    .renderObject<RenderBox>(times.last)
+                    .getMaxIntrinsicWidth(double.infinity),
+              );
+              final groupsFit =
+                  math.max(240, dateWidth + 12 + timeWidth) * 2 + 12 <=
+                  t.getSize(find.byType(WorkspaceEditorTimeRows)).width;
               expect(
                 t.getTopLeft(dates.first).dy,
-                lessThan(t.getTopLeft(dates.last).dy),
+                groupsFit
+                    ? closeTo(t.getTopLeft(dates.last).dy, .1)
+                    : lessThan(t.getTopLeft(dates.last).dy),
               );
+              if (groupsFit) {
+                expect(
+                  t.getTopLeft(dates.first).dx,
+                  rtl
+                      ? greaterThan(t.getTopLeft(dates.last).dx)
+                      : lessThan(t.getTopLeft(dates.last).dx),
+                );
+              }
             }
             await t.drag(
               find.byKey(const ValueKey('workspace-detail-resize')),
@@ -95,6 +131,28 @@ void main() {
             expect(t.widget<TextField>(title).controller, same(input));
             expect(input.text, 'Proportion draft');
             expect(input.selection.extentOffset, 10);
+            expect(t.widget<EditableText>(editable).focusNode, same(focus));
+            expect(focus.hasFocus, isTrue);
+            await t.drag(
+              find.byKey(const ValueKey('workspace-detail-resize')),
+              Offset(rtl ? -160 : 160, 0),
+            );
+            await t.pumpAndSettle();
+            expect(t.getRect(surface).width, closeTo(320, .01));
+            if (mode == AppMode.general) {
+              expect(
+                t.getTopLeft(dates.last).dy,
+                greaterThan(t.getTopLeft(dates.first).dy),
+              );
+            }
+            expect(t.element(editor), same(element));
+            expect(t.widget<TextField>(title).controller, same(input));
+            expect(
+              input.selection,
+              const TextSelection(baseOffset: 0, extentOffset: 10),
+            );
+            expect(t.widget<EditableText>(editable).focusNode, same(focus));
+            expect(focus.hasFocus, isTrue);
             t.view.physicalSize = const Size(660, 420);
             await t.pumpAndSettle();
             expect(t.element(editor), same(element));

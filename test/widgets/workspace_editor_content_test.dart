@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -80,7 +82,7 @@ void main() {
             final rect = t.getRect(
               find.byElementPredicate((value) => identical(value, element)),
             );
-            expect(rect.height, greaterThanOrEqualTo(36));
+            expect(rect.height, greaterThanOrEqualTo(40));
             expect(
               find.descendant(
                 of: find.byElementPredicate(
@@ -91,39 +93,68 @@ void main() {
               findsNothing,
             );
           }
-          Finder field(String label) => find.descendant(
+          final fields = find.descendant(
             of: editor,
-            matching: find.byWidgetPredicate(
-              (w) => w is WorkspaceEditorField && w.label == label,
-            ),
+            matching: find.byType(WorkspaceEditorField),
           );
-          final dateField = mode == AppMode.general
-              ? find.byType(WorkspaceEditorTimeRows)
-              : field(l.time);
-          expect(dateField, findsOneWidget);
-          final label = find.descendant(
-            of: dateField,
-            matching: find.text(
-              mode == AppMode.general ? l.eventStartTime : l.time,
-            ),
-          );
-          final control = mode == AppMode.general
-              ? find
-                    .descendant(
-                      of: dateField,
-                      matching: find.byTooltip(l.pickDate),
-                    )
-                    .first
-              : find
-                    .descendant(
-                      of: dateField,
-                      matching: find.byKey(
-                        const ValueKey('editor-field-control'),
-                      ),
-                    )
-                    .first;
-          expect(t.getCenter(label).dy, closeTo(t.getCenter(control).dy, 1));
-          expect(t.getRect(control).left, greaterThan(t.getRect(label).right));
+          expect(fields, findsWidgets);
+          for (final element in fields.evaluate()) {
+            final field = find.byElementPredicate(
+              (value) => identical(value, element),
+            );
+            final fieldWidget = element.widget as WorkspaceEditorField;
+            final label = find
+                .descendant(of: field, matching: find.text(fieldWidget.label))
+                .first;
+            final control = find
+                .descendant(
+                  of: field,
+                  matching: find.byKey(const ValueKey('editor-field-control')),
+                )
+                .first;
+            expect(t.getRect(label).bottom, lessThan(t.getRect(control).top));
+            expect(t.getRect(label).left, closeTo(t.getRect(control).left, .1));
+            expect(t.widget<Text>(label).style?.fontSize, 12);
+          }
+          if (mode == AppMode.general) {
+            final rows = find.byType(WorkspaceEditorTimeRows);
+            final dates = find.descendant(
+              of: rows,
+              matching: find.byTooltip(l.pickDate),
+            );
+            final times = find.descendant(
+              of: rows,
+              matching: find.byTooltip(l.pickTime),
+            );
+            final startLabel = find.descendant(
+              of: editor,
+              matching: find.text(l.eventStartTime),
+            );
+            expect(
+              t.getRect(startLabel).bottom,
+              lessThan(t.getRect(dates.first).top),
+            );
+            final dateWidth = t
+                .renderObject<RenderBox>(dates.first)
+                .getMaxIntrinsicWidth(double.infinity);
+            final timeWidth = math.max(
+              t
+                  .renderObject<RenderBox>(times.first)
+                  .getMaxIntrinsicWidth(double.infinity),
+              t
+                  .renderObject<RenderBox>(times.last)
+                  .getMaxIntrinsicWidth(double.infinity),
+            );
+            final groupsFit =
+                math.max(240, dateWidth + 12 + timeWidth) * 2 + 12 <=
+                t.getSize(rows).width;
+            expect(
+              t.getRect(dates.first).top,
+              groupsFit
+                  ? closeTo(t.getRect(dates.last).top, .1)
+                  : lessThan(t.getRect(dates.last).top),
+            );
+          }
           await t.enterText(title, 'Rebuilt editor draft');
           final countBefore = mode == AppMode.general
               ? p.generalSchedules.expand((calendar) => calendar.events).length

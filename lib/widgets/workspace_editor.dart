@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -5,6 +7,7 @@ import 'sked_floating_anchor.dart';
 import 'sked_floating_surface.dart';
 import 'sked_panel_header.dart';
 import 'workbench_chrome_metrics.dart';
+import 'workspace_editor_form.dart';
 
 /// Captured before a menu or details route closes; never looks up a dead context.
 class WorkspaceEditorConfiguration {
@@ -207,31 +210,79 @@ class _EditorSizeRender extends RenderProxyBox {
   }
 }
 
+/// Natural single-line widths for a desktop field's label and selected value.
+/// Omit [value] for free-text fields so typing cannot rearrange the form.
+double workspaceEditorMinimumFieldWidth(
+  BuildContext context, {
+  required String label,
+  String? value,
+  double valuePadding = 44,
+}) {
+  final textScaler = MediaQuery.textScalerOf(context);
+  final direction = Directionality.of(context);
+  final locale = Localizations.maybeLocaleOf(context);
+  double measure(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: direction,
+      textScaler: textScaler,
+      locale: locale,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
+  final labelWidth = measure(label, workspaceEditorLabelStyle(context));
+  return value == null
+      ? labelWidth
+      : math.max(
+          labelWidth,
+          measure(value, workspaceEditorContentStyle(context)) + valuePadding,
+        );
+}
+
 /// Stable wrap layout: resizing changes widths without moving fields to a new tree.
 class WorkspaceEditorFieldsRow extends StatelessWidget {
   const WorkspaceEditorFieldsRow({
     super.key,
     required this.children,
-    this.minimumWidth = 180,
+    this.minimumWidth = WorkspaceEditorFormMetrics.minimumColumnWidth,
+    this.minimumChildWidths = const [],
   });
   final List<Widget> children;
   final double minimumWidth;
+
+  /// Natural widths already measured with the current text scale. Empty keeps
+  /// the shared column minimum; otherwise provide one width for each child.
+  final List<double> minimumChildWidths;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
+      assert(
+        minimumChildWidths.isEmpty ||
+            minimumChildWidths.length == children.length,
+      );
+      final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      final columnMinimum = minimumChildWidths.fold(
+        minimumWidth * textScale,
+        math.max,
+      );
       final columns =
           bounds.maxWidth >=
-              minimumWidth *
-                      MediaQuery.textScalerOf(context).scale(1) *
-                      children.length +
-                  12 * (children.length - 1)
+              columnMinimum * children.length +
+                  WorkspaceEditorFormMetrics.fieldGap * (children.length - 1)
           ? children.length
           : 1;
-      final width = (bounds.maxWidth - 12 * (columns - 1)) / columns;
+      final width =
+          (bounds.maxWidth -
+              WorkspaceEditorFormMetrics.fieldGap * (columns - 1)) /
+          columns;
       return Wrap(
-        spacing: 12,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: WorkspaceEditorFormMetrics.fieldGap,
+        runSpacing: WorkspaceEditorFormMetrics.fieldGap,
+        crossAxisAlignment: WrapCrossAlignment.start,
         children: [
           for (var i = 0; i < children.length; i++)
             SizedBox(key: ValueKey(i), width: width, child: children[i]),

@@ -86,6 +86,7 @@ class WorkbenchLayoutPolicy {
     double minimumCanvas = AppBreakpoints.minimumCanvas,
     bool partialDetailOverlay = false,
     double preferredDetailWidth = AppBreakpoints.detailPane,
+    double minimumDetailWidth = AppBreakpoints.minimumDetailPane,
     double preferredAssistantWidth = AppBreakpoints.assistantPane,
   }) {
     final factor = textFactor(textScale);
@@ -151,10 +152,7 @@ class WorkbenchLayoutPolicy {
     );
     final requestedDetail = math.min(
       maximumDetailWidth,
-      math.max(
-        AppBreakpoints.minimumDetailPane * factor,
-        preferredDetailWidth * factor,
-      ),
+      math.max(minimumDetailWidth * factor, preferredDetailWidth * factor),
     );
     final requestedAssistant = math.min(
       maximumAssistantWidth,

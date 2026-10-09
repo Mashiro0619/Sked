@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -141,13 +142,33 @@ void main() {
                 of: rows,
                 matching: find.byType(Switch),
               );
+              final times = find.descendant(
+                of: rows,
+                matching: find.byTooltip(strings.pickTime),
+              );
+              final dateWidth = t
+                  .renderObject<RenderBox>(dates.first)
+                  .getMaxIntrinsicWidth(double.infinity);
+              final timeWidth = math.max(
+                t
+                    .renderObject<RenderBox>(times.first)
+                    .getMaxIntrinsicWidth(double.infinity),
+                t
+                    .renderObject<RenderBox>(times.last)
+                    .getMaxIntrinsicWidth(double.infinity),
+              );
+              final groupsFit =
+                  math.max(240, dateWidth + 12 + timeWidth) * 2 + 12 <=
+                  t.getSize(rows).width;
               expect(
-                t.getCenter(toggle).dy,
-                closeTo(t.getCenter(dates.first).dy, .1),
+                t.getRect(toggle).bottom,
+                lessThan(t.getRect(dates.first).top),
               );
               expect(
-                t.getTopLeft(dates.first).dx,
-                closeTo(t.getTopLeft(dates.last).dx, .1),
+                t.getTopLeft(dates.first).dy,
+                groupsFit
+                    ? closeTo(t.getTopLeft(dates.last).dy, .1)
+                    : lessThan(t.getTopLeft(dates.last).dy),
               );
             }
             await capture('floating');

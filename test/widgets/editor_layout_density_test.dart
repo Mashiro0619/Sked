@@ -97,23 +97,15 @@ void main() {
                   )
                   .map((w) => w.data)
                   .toList();
+              expect(
+                t.getRect(toggle).bottom,
+                lessThan(t.getRect(dates.first).top),
+              );
+              expect(
+                t.getRect(dates.first).overlaps(t.getRect(dates.last)),
+                isFalse,
+              );
               if (scale == 1) {
-                // The Ahem test font makes English dates and AM/PM unusually wide.
-                // Real-font inline alignment for both languages is checked in Windows integration.
-                if (locale == 'zh') {
-                  expect(
-                    t.getCenter(toggle).dy,
-                    closeTo(t.getCenter(dates.first).dy, .1),
-                  );
-                }
-                expect(
-                  t.getTopLeft(dates.first).dx,
-                  closeTo(t.getTopLeft(dates.last).dx, .1),
-                );
-                expect(
-                  t.getTopLeft(times.first).dx,
-                  closeTo(t.getTopLeft(times.last).dx, .1),
-                );
                 final recurrence = find.byKey(
                   const ValueKey('event-recurrence-field'),
                 );

@@ -2,6 +2,29 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_surface.dart';
 
+abstract final class WorkspaceEditorFormMetrics {
+  static const controlHeight = 40.0;
+  static const radius = 6.0;
+  static const labelGap = 6.0;
+  static const fieldGap = 12.0;
+  static const sectionGap = 16.0;
+  static const minimumColumnWidth = 240.0;
+}
+
+TextStyle workspaceEditorLabelStyle(BuildContext context) =>
+    Theme.of(context).textTheme.bodySmall!.copyWith(
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+
+TextStyle workspaceEditorContentStyle(BuildContext context) =>
+    Theme.of(context).textTheme.bodyMedium!.copyWith(
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+
 /// Desktop form layout only. Labels and editors keep their elements when the
 /// available width changes; no state, navigation or validation is owned here.
 class WorkspaceEditorField extends StatelessWidget {
@@ -17,40 +40,22 @@ class WorkspaceEditorField extends StatelessWidget {
   final double minimumControlWidth, labelWidth;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, bounds) {
-      final scale = MediaQuery.textScalerOf(context).scale(1);
-      final labelExtent = labelWidth * scale;
-      final horizontal =
-          bounds.maxWidth >= labelExtent + 12 + minimumControlWidth * scale;
-      return Wrap(
-        spacing: 12,
-        runSpacing: 6,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          SizedBox(
-            width: horizontal ? labelExtent : bounds.maxWidth,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          SizedBox(
-            key: const ValueKey('editor-field-control'),
-            width: horizontal
-                ? bounds.maxWidth - labelExtent - 12
-                : bounds.maxWidth,
-            child: Semantics(label: label, child: child),
-          ),
-        ],
-      );
-    },
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(label, style: workspaceEditorLabelStyle(context)),
+      const SizedBox(height: WorkspaceEditorFormMetrics.labelGap),
+      Semantics(
+        key: const ValueKey('editor-field-control'),
+        label: label,
+        child: child,
+      ),
+    ],
   );
 }
 
-/// A value, not a two-line menu tile. The caller provides the field label.
+/// A compact form control. The caller provides its visible field label.
 class WorkspaceEditorValue extends StatelessWidget {
   const WorkspaceEditorValue({
     super.key,
@@ -72,20 +77,45 @@ class WorkspaceEditorValue extends StatelessWidget {
     enabled: onPressed != null,
     child: TextButton(
       onPressed: onPressed,
-      style: TextButton.styleFrom(
-        minimumSize: const Size(0, 36),
-        visualDensity: VisualDensity.standard,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        disabledForegroundColor: Theme.of(context).colorScheme.onSurface
-            .withValues(alpha: .38),
-        backgroundColor: tonal
-            ? Theme.of(context).colorScheme.surfaceContainerHighest
-                  .withValues(alpha: .45)
-            : Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      ),
+      style:
+          TextButton.styleFrom(
+            minimumSize: const Size(
+              0,
+              WorkspaceEditorFormMetrics.controlHeight,
+            ),
+            visualDensity: VisualDensity.standard,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            textStyle: workspaceEditorContentStyle(context),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            disabledForegroundColor: Theme.of(context).colorScheme.onSurface
+                .withValues(alpha: .38),
+            backgroundColor: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: .35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                WorkspaceEditorFormMetrics.radius,
+              ),
+            ),
+          ).copyWith(
+            side: WidgetStateProperty.resolveWith((states) {
+              final colors = Theme.of(context).colorScheme;
+              return BorderSide(
+                color: states.contains(WidgetState.disabled)
+                    ? colors.outlineVariant.withValues(alpha: .38)
+                    : states.contains(WidgetState.focused)
+                    ? skedReadableAccent(
+                        colors,
+                        surface: colors.surfaceContainerHighest,
+                      )
+                    : states.contains(WidgetState.hovered)
+                    ? colors.outline
+                    : colors.outlineVariant,
+              );
+            }),
+          ),
       child: ExcludeSemantics(
         child: Row(
           children: [
@@ -93,8 +123,8 @@ class WorkspaceEditorValue extends StatelessWidget {
               Icon(icon, size: 16),
               const SizedBox(width: 8),
             ],
-            Flexible(child: Text(value)),
-            const SizedBox(width: 6),
+            Expanded(child: Text(value)),
+            const SizedBox(width: 8),
             Icon(
               Icons.keyboard_arrow_down,
               size: 16,
@@ -123,7 +153,7 @@ class WorkspaceEditorFormSection extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 12),
+    padding: const EdgeInsets.only(top: WorkspaceEditorFormMetrics.sectionGap),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -164,8 +194,10 @@ InputDecoration workspaceEditorInputDecoration(
 }) {
   final colors = Theme.of(context).colorScheme;
   final border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(6),
-    borderSide: BorderSide.none,
+    borderRadius: BorderRadius.circular(WorkspaceEditorFormMetrics.radius),
+    borderSide: headline
+        ? BorderSide.none
+        : BorderSide(color: colors.outlineVariant),
   );
   return InputDecoration(
     hintText: headline || metadata ? (hintText ?? label) : hintText,
@@ -174,19 +206,26 @@ InputDecoration workspaceEditorInputDecoration(
               .copyWith(color: colors.onSurfaceVariant)
         : null,
     floatingLabelBehavior: FloatingLabelBehavior.never,
-    constraints: const BoxConstraints(minHeight: 36),
+    constraints: const BoxConstraints(
+      minHeight: WorkspaceEditorFormMetrics.controlHeight,
+    ),
     filled: !headline,
-    fillColor: metadata
-        ? Colors.transparent
-        : colors.surfaceContainerHighest.withValues(alpha: .35),
+    fillColor: colors.surfaceContainerHighest.withValues(alpha: .35),
     isDense: true,
+    visualDensity: VisualDensity.standard,
     contentPadding: EdgeInsets.symmetric(
       horizontal: headline ? 0 : 10,
       vertical: headline ? 8 : 10,
     ),
     border: border,
     enabledBorder: border,
-    disabledBorder: border,
+    disabledBorder: headline
+        ? border
+        : border.copyWith(
+            borderSide: BorderSide(
+              color: colors.outlineVariant.withValues(alpha: .38),
+            ),
+          ),
     focusedBorder: border.copyWith(
       borderSide: BorderSide(
         color: skedReadableAccent(
@@ -210,27 +249,41 @@ class WorkspaceEditorDropdownStyle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final contentStyle = workspaceEditorContentStyle(context);
     final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: BorderSide.none,
+      borderRadius: BorderRadius.circular(WorkspaceEditorFormMetrics.radius),
+      borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
     );
     return Theme(
       data: theme.copyWith(
+        textTheme: theme.textTheme.copyWith(
+          titleMedium: contentStyle,
+          bodyLarge: contentStyle,
+          bodyMedium: contentStyle,
+        ),
         dropdownMenuTheme: theme.dropdownMenuTheme.copyWith(
+          textStyle: contentStyle,
           inputDecorationTheme: InputDecorationThemeData(
             filled: true,
             fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
               alpha: .35,
             ),
             isDense: true,
+            visualDensity: VisualDensity.standard,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 10,
               vertical: 8,
             ),
-            constraints: const BoxConstraints(minHeight: 36),
+            constraints: const BoxConstraints(
+              minHeight: WorkspaceEditorFormMetrics.controlHeight,
+            ),
             border: border,
             enabledBorder: border,
-            disabledBorder: border,
+            disabledBorder: border.copyWith(
+              borderSide: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: .38),
+              ),
+            ),
             focusedBorder: border.copyWith(
               borderSide: BorderSide(
                 color: skedReadableAccent(
@@ -241,12 +294,12 @@ class WorkspaceEditorDropdownStyle extends StatelessWidget {
             ),
             suffixIconConstraints: const BoxConstraints(
               minWidth: 32,
-              minHeight: 36,
+              minHeight: WorkspaceEditorFormMetrics.controlHeight,
             ),
           ),
         ),
       ),
-      child: child,
+      child: DefaultTextStyle.merge(style: contentStyle, child: child),
     );
   }
 }
