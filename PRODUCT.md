@@ -8,57 +8,69 @@ adaptive
 
 ## Users
 
-Sked primarily serves students who need to understand and maintain recurring class timetables, and people who want a local general schedule for events, reminders, calendars, and repeat rules. They use it throughout the day on phones, tablets, desktop windows, and split screens. They need a complete timetable or calendar with contextual editing on larger windows, and a focused task on narrow windows.
+Sked 面向需要管理课程安排的人，以及需要管理日常事件、分类日历和重复安排的人。两类需求可以来自同一人，也可以独立存在。用户在手机、平板、桌面和分屏窗口中查阅、录入、修改和整理时间。
+
+两类场景均为主要用户任务；通用日程不只是课程的附件，课表也不只是普通事件的一种显示皮肤。
 
 ## Product Purpose
 
-Sked is a local-first timetable and schedule manager. It keeps student timetable concepts such as semesters, weeks, periods, period-time sets, and courses alongside a separate general-schedule workspace for events, calendars, reminders, and recurring arrangements. Success means users can move between those two jobs without losing context, while retaining direct control over their data and theme choices.
+Sked 是同时服务课程安排与通用日程的本地优先工具，帮助用户看清时间、维护计划并可靠地处理变更。
+
+2026-10-09 确认的阶段方向是：未来半年课表和通用日程并重。两类任务都进入功能优先级、设计讨论和核心验收；这不要求功能数量、开发投入或每个页面的面积机械对半。下一阶段可根据实际使用证据重新评估。
 
 ## Positioning
 
-Sked combines a purpose-built student timetable model and a general calendar model in one application, while giving enabled workspaces equal importance. People can use either workspace alone without seeing the other workspace's everyday controls. It also lets users import timetable data through files, school-site workflows, or a user-configured OpenAI-compatible parsing endpoint instead of depending on a bundled parsing service.
+Sked 的价值来自课程专用概念与通用时间安排各自成立，并共享可靠的数据管理和交互能力。学期、教学周、节次与普通日期、重复规则、例外各自有明确含义，不能为了统一界面而互相替换。
+
+当前应用采用两个可独立启用的工作区。未来可以比较独立入口、组合导航或可选共同概览；工作区数量和首页结构是设计选择，不是产品定义。共同概览若有价值，也不意味着合并底层数据或让用户每次先经过一个仪表盘。
+
+本地优先、用户可导入导出自己的数据、无需依赖项目内置公共解析服务，是当前产品基础。云同步、协作、任务清单、AI 自动执行等可以提出和验证，但不因本次文档重构自动成为承诺或永久禁区。
 
 ## Operating Context
 
-- Android and Windows have release builds. Android phones and tablets and resizable Windows desktops are primary UI targets; macOS/Linux retain source compatibility and Web remains non-delivered.
-- Users commonly check the active week or day, switch timetables or calendars, add and edit courses or events, manage period-time sets, and import or back up data.
-- Native data lives in the operating system's application-support storage; Web uses browser local storage. User-initiated exports go to a chosen location, and API keys remain outside ordinary application backups.
-- Most workflows should remain useful offline. Network access is limited to explicit import, update, external-link, and user-configured parsing actions.
+- Android 和 Windows 是当前主要发布与交互平台；macOS/Linux 保留源码兼容，Web 工程不等于已经交付在线产品。平台投入可以随需求评估，发布状态以实际产物及验收为准。
+- 基础查阅和编辑离线可用。学校网页、用户配置的解析端点、更新与外部链接遵循各自明确的网络和隐私边界。
+- 本地数据、用户主动导出的文件与 API 密钥使用不同存储边界；密钥不进入普通应用备份。
+- 支持只使用课表、只使用日程和同时使用两者。停用保留数据和偏好，活动工作区与导航显隐保持独立。
 
 ## Capabilities and Constraints
 
-- Preserve the existing student-timetable and general-schedule data models, Provider persistence interfaces, backup and recovery protocol, import and export formats, privacy boundaries, and network behavior during the visual redesign.
-- Preserve exact user-selected theme colors, course colors, calendar colors, light/dark/system modes, and the current single-color or colorful theme behavior.
-- Treat enabled student and general-schedule workspaces as equal primary destinations. Availability is distinct from the active mode and from navigation visibility. Disabling retains data and preferences, stops domain-specific runtime work, and leaves re-enabling in Feature management.
-- New users start in the light theme; existing users retain their saved theme mode.
-- Recovery gates, save-failure feedback, first-launch privacy consent, and fail-closed data protections remain higher priority than visual transitions.
-- The interface is localized across the currently registered ARB locale set and must continue to work with long LTR translations.
+| 核心任务 | 课表场景 | 通用日程场景 |
+| --- | --- | --- |
+| 查阅安排 | 找到正确学期、教学周、课程、地点与节次 | 找到相关日期、事件、全天安排和重复实例 |
+| 创建与维护 | 手工录入或导入课程，修改周次、节次与课程信息 | 创建和修改事件，理解单次、后续或整组的操作范围 |
+| 处理复杂输入 | 校对解析结果，保留明确周次和自定义字段 | 管理分类、重复规则、例外及导入内容 |
+| 获得提醒 | 理解课程默认、单独覆盖与权限条件 | 理解事件提醒、稍后提醒与实际投递状态 |
+| 管理数据 | 可导出、备份、恢复；失败保留现有内容或可恢复草稿 | 相同保障，领域内容分别校验 |
+
+数据含义、用户的精确配色和已保存选择保持可信。视觉改动不应暗中改变数据、网络、权限或保存语义；确需变化时说明产品理由、迁移与验证。Provider、具体数据类、组件和路由机制都可以演进，参见 [DESIGN.md](DESIGN.md)。
 
 ## Brand Commitments
 
-- Product name: Sked.
-- Visual direction: Material 3 Expressive, implemented with Flutter's official Material components plus a small Sked-specific shape and motion layer where Flutter does not expose the corresponding Compose APIs.
-- Keep the user's precise color selections. Expression comes primarily from shape, hierarchy, responsive composition, and purposeful motion rather than recoloring or decorative gradients.
-- When both workspaces are enabled they have equal visual weight. A single-workspace setup removes mode navigation altogether rather than presenting a one-item selector.
-- The product voice is direct and functional. Labels describe the action or data users control rather than implementation details.
+- 名称为 Sked；两类核心场景使用一致而可辨识的产品语言。
+- 界面优先呈现时间与内容，状态、错误、动作范围和下一步清楚可见。品牌表达与信息密度可以探索，不以装饰数量或控件相似程度衡量质量。
+- 用户保存的颜色不被视觉改版重新解释；其展示可以配合可读前景、标签和形状，避免只靠颜色表达意义。
+- Material 3 Expressive 是现有视觉起点，正在与其他层次和密度方案重新比较。采用 Material 组件不要求永久沿用同一种圆角、填色、导航和动效。新视觉方向尚未定案，候选及验证方法见 [DESIGN.md](DESIGN.md)。
+- 产品文案直接描述用户控制的动作与数据；实验、预览与可用功能如实区分。
 
 ## Evidence on Hand
 
-- The repository contains the complete Flutter application, localization files, data and recovery tests, and historical screenshots under `docs/screenshots/`; both phone and desktop README galleries are marked as awaiting updates and are not the source of truth for the latest UI.
-- `README.md` documents the current feature set, local-first data handling, Google Play distribution, import behavior, and privacy boundaries.
-- Existing app icon assets are under `assets/`; their third-party attribution is recorded in `NOTICE`.
-- No user research, usage analytics, performance claims, testimonials, or commercial claims are present and none should be fabricated for the interface.
+- 仓库包含应用实现、回归测试和截图；图像修订、平台及更新状态见 [截图说明](docs/screenshots/README.md) 和 manifest。概念原型及模拟渲染不能证明真机、通知或安装行为。
+- [README](README.md) 记录当前可用功能、使用方式及发布渠道；[可靠性指南](docs/RELIABILITY_BASELINE.md) 记录数据与验收边界。当前默认主题、入口和控件布局属于实现现状，可以调整。
+- 现有图标与第三方归属见 [NOTICE](NOTICE)。
+- 目前没有可用的用户研究、使用分析或产品效果数据。两类场景并重是本轮明确选择；关于入口、密度和新视觉优劣的判断仍需验证，不编造用户偏好或绩效指标。
 
 ## Product Principles
 
-1. Show the user's immediate schedule state before offering configuration.
-2. Give enabled workspaces direct access without forcing unused features into daily tasks.
-3. Keep local data ownership, recoverability, and explicit network boundaries visible in behavior rather than promotional copy.
-4. Use expressive shape and motion to clarify state changes, not to distract from dense timetable or calendar information.
-5. Adapt structure to window size, text scale, input method, and platform conventions without changing the underlying task.
+1. 两类核心任务都应正确、可靠且可完成；不因底层实现方便降低其中一类的地位。
+2. 优先处理已复现的查找、录入、修改和切换成本。新功能说明它改善什么任务，以及增加的学习、维护和隐私成本。
+3. 根据任务组织信息，允许重组首页、搜索、快捷入口和设置；保持领域含义、已保存选择与任务连续性。
+4. 对产品组织、整体视觉等影响较大的调整，比较方案再确定方向。对两类场景使用同一组查阅、创建、复杂编辑、导入校对和失败恢复任务，观察完成情况、误选、步骤与理解困难；局部改进按影响范围验证。
+5. 结论区分已有验证与设计假设。菜单位置、组件类型或历史截图完全一致不是成功标准；可靠性也不能由“看起来更简洁”替代。
 
 ## Accessibility & Inclusion
 
-- Honor Android's system animation setting and Flutter accessibility features; reduced-motion users receive an immediate or non-spatial transition.
-- Keep Android primary interactive targets at least 48×48 dp. Windows uses compact 32–36 dp commands and 36 dp resource rows, with growing text budgets. Both retain visible keyboard focus and valid screen-reader labels, values, selected states, and live regions.
-- Support compact phones, large screens, keyboard and pointer input, and up to 2.0× text scaling without clipping or unreachable content.
+- 布局响应窗口、字体、输入方式及平台能力，至少覆盖当前支持范围内的 2× 文字、长译文和窄窗口，不截断关键时间、错误或操作。
+- 触控、鼠标、键盘及辅助技术都有可用路径，保持可见焦点、准确标签、足够命中区域和明确状态；具体尺寸由平台规范和实际验证决定。
+- 颜色对比根据真实背景核验，状态不只靠颜色表达。动效尊重系统减少动态效果的设置。
+- 独立使用任一场景与同时使用两者都进入设计验证；手机与桌面共享产品语义，允许采用适合各自输入方式的呈现。
