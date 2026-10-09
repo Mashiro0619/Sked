@@ -274,13 +274,13 @@ class _WorkspaceTaskRoute {
     this.presentation,
     this.editor,
     this.viewAnchor,
-  );
+  ) : editorWidth = (editor?.preferredWidth ?? 440).clamp(320.0, 680.0);
   final Route<dynamic> route;
   final WorkspacePanePresentation presentation;
   final WorkspaceEditorConfiguration? editor;
   final WorkspaceEditorConfiguration? viewAnchor;
   final position = SkedFloatingPositionController();
-  double editorWidth = 600;
+  double editorWidth;
   double? contentHeight;
   final bool modal, dismissible;
   final String? selectionId;

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,7 +94,6 @@ void _expectPair(
   final secondRect = tester.getRect(second);
   if (columns) {
     expect(firstRect.top, closeTo(secondRect.top, .1));
-    expect(firstRect.width, closeTo(secondRect.width, .1));
     expect(
       direction == TextDirection.ltr
           ? secondRect.left - firstRect.right
@@ -102,8 +102,13 @@ void _expectPair(
     );
   } else {
     expect(secondRect.top - firstRect.bottom, closeTo(12, .1));
-    expect(firstRect.left, closeTo(secondRect.left, .1));
-    expect(firstRect.width, closeTo(secondRect.width, .1));
+    expect(
+      direction == TextDirection.ltr ? firstRect.left : firstRect.right,
+      closeTo(
+        direction == TextDirection.ltr ? secondRect.left : secondRect.right,
+        .1,
+      ),
+    );
   }
 }
 
@@ -126,7 +131,7 @@ void main() {
           _viewport(tester);
           final provider = await workspaceProvider(locale: scenario.locale);
           addTearDown(provider.dispose);
-          final width = ValueNotifier(600.0);
+          final width = ValueNotifier(1000.0);
           addTearDown(width.dispose);
           final editing = scenario.brightness == Brightness.dark;
           await tester.pumpWidget(
@@ -179,30 +184,52 @@ void main() {
           );
           final teacherFocus = FocusManager.instance.primaryFocus;
           final timeElement = tester.element(_key('course-start-time-action'));
+          final periodsElement = tester.element(
+            _value(_field(editor, l.linkedPeriods)),
+          );
+          final naturalWidths = {
+            for (final label in [
+              l.dayOfWeek,
+              l.semesterWeeks,
+              l.startTime,
+              l.endTime,
+              l.linkedPeriods,
+              l.credits,
+            ])
+              label: tester.getSize(_field(editor, label)).width,
+          };
 
-          for (final value in [320.0, 680.0, 600.0]) {
+          for (final value in [320.0, 360.0, 440.0, 680.0, 600.0]) {
             width.value = value;
             await tester.pumpAndSettle();
-            final columns = value - 32 >= 480 * scenario.scale + 12;
+            final availableWidth = value - 32;
             _expectPair(
               tester,
               _field(editor, l.dayOfWeek),
               _field(editor, l.semesterWeeks),
-              columns: columns,
+              columns:
+                  availableWidth >=
+                  naturalWidths[l.dayOfWeek]! +
+                      naturalWidths[l.semesterWeeks]! +
+                      12,
               direction: scenario.direction,
             );
             _expectPair(
               tester,
               _field(editor, l.startTime),
               _field(editor, l.endTime),
-              columns: columns,
+              columns:
+                  availableWidth >=
+                  naturalWidths[l.startTime]! + naturalWidths[l.endTime]! + 12,
               direction: scenario.direction,
             );
             _expectPair(
               tester,
               _field(editor, l.teacherName),
               _field(editor, l.credits),
-              columns: columns,
+              columns:
+                  availableWidth >=
+                  160 * scenario.scale + naturalWidths[l.credits]! + 12,
               direction: scenario.direction,
             );
             for (final label in [
@@ -224,14 +251,33 @@ void main() {
               tester.getSize(_field(editor, l.location)).width,
               value - 32,
             );
-            expect(
-              tester.getSize(_field(editor, l.linkedPeriods)).width,
-              value - 32,
-            );
+            for (final entry in naturalWidths.entries) {
+              expect(
+                tester.getSize(_field(editor, entry.key)).width,
+                closeTo(math.min(entry.value, availableWidth), .1),
+                reason:
+                    '${entry.key} must keep its content width when the panel is $value wide',
+              );
+            }
+            if (scenario.locale == 'zh' && scenario.scale == 1) {
+              expect(tester.getSize(_field(editor, l.credits)).width, 96);
+              expect(
+                tester.getSize(_field(editor, l.startTime)).width,
+                lessThanOrEqualTo(128),
+              );
+              expect(
+                tester.getSize(_field(editor, l.linkedPeriods)).width,
+                lessThanOrEqualTo(200),
+              );
+            }
             expect(tester.element(teacher), same(teacherElement));
             expect(
               tester.element(_key('course-start-time-action')),
               same(timeElement),
+            );
+            expect(
+              tester.element(_value(_field(editor, l.linkedPeriods))),
+              same(periodsElement),
             );
             expect(FocusManager.instance.primaryFocus, same(teacherFocus));
             expect(teacherInput.text, 'Teacher draft retained');
@@ -274,7 +320,7 @@ void main() {
           _viewport(tester);
           final provider = await workspaceProvider(locale: scenario.locale);
           addTearDown(provider.dispose);
-          final width = ValueNotifier(600.0);
+          final width = ValueNotifier(1000.0);
           final name = TextEditingController(text: 'Timetable draft');
           final weeks = TextEditingController(text: '18');
           addTearDown(width.dispose);
@@ -325,15 +371,27 @@ void main() {
           final focus = FocusManager.instance.primaryFocus;
           final originalDateAnchor = dateAnchor.currentContext;
           final originalPeriodsAnchor = periodsAnchor.currentContext;
+          final naturalWidths = {
+            for (final label in [
+              l.totalWeeks,
+              l.semesterStartDate,
+              l.periodTimeSets,
+            ])
+              label: tester.getSize(_field(editor, label)).width,
+          };
 
-          for (final value in [320.0, 680.0, 600.0]) {
+          for (final value in [320.0, 360.0, 440.0, 680.0, 600.0]) {
             width.value = value;
             await tester.pumpAndSettle();
             _expectPair(
               tester,
               _field(editor, l.totalWeeks),
               _field(editor, l.semesterStartDate),
-              columns: value - 32 >= 480 * scenario.scale + 12,
+              columns:
+                  value - 32 >=
+                  naturalWidths[l.totalWeeks]! +
+                      naturalWidths[l.semesterStartDate]! +
+                      12,
               direction: scenario.direction,
             );
             for (final label in [
@@ -343,10 +401,25 @@ void main() {
             ]) {
               _expectTopLabel(tester, _field(editor, label), label);
             }
-            expect(
-              tester.getSize(_field(editor, l.periodTimeSets)).width,
-              value - 32,
-            );
+            for (final entry in naturalWidths.entries) {
+              expect(
+                tester.getSize(_field(editor, entry.key)).width,
+                closeTo(math.min(entry.value, value - 32), .1),
+                reason:
+                    '${entry.key} must keep its content width when the panel is $value wide',
+              );
+            }
+            if (scenario.locale == 'zh' && scenario.scale == 1) {
+              expect(tester.getSize(_field(editor, l.totalWeeks)).width, 96);
+              expect(
+                tester.getSize(_field(editor, l.semesterStartDate)).width,
+                lessThanOrEqualTo(224),
+              );
+              expect(
+                tester.getSize(_field(editor, l.periodTimeSets)).width,
+                lessThanOrEqualTo(256),
+              );
+            }
             expect(tester.element(weeksField), same(element));
             expect(FocusManager.instance.primaryFocus, same(focus));
             expect(weeks.selection.extentOffset, 1);
@@ -459,7 +532,7 @@ void main() {
       _viewport(tester);
       final provider = await workspaceProvider();
       addTearDown(provider.dispose);
-      final width = ValueNotifier(600.0);
+      final width = ValueNotifier(440.0);
       final dateLabel = ValueNotifier('2026-10-05');
       final name = TextEditingController(text: 'Timetable draft');
       final weeks = TextEditingController(text: '18');

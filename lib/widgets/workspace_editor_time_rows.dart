@@ -3,10 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Measures the start/end groups together, below a trailing all-day switch.
-/// Both groups fit side by side only when their labels and date/time controls
-/// fit at their natural widths. The child list never changes when wrapping;
-/// labels, values and focus nodes stay in the same element slots.
+/// A compact interval: aligned start/end rows with naturally sized controls.
+/// All-day shares the start row, or its label when space requires upper labels.
+/// Reflow only changes constraints and offsets, never the eight child slots.
 class WorkspaceEditorTimeRows extends MultiChildRenderObjectWidget {
   WorkspaceEditorTimeRows({
     super.key,
@@ -20,7 +19,8 @@ class WorkspaceEditorTimeRows extends MultiChildRenderObjectWidget {
     Widget? error,
     required this.showTime,
     required this.textDirection,
-    this.minimumGroupWidth = 240,
+    this.minimumDateWidth = 136,
+    this.minimumTimeWidth = 104,
   }) : super(
          children: [
            startLabel,
@@ -36,11 +36,15 @@ class WorkspaceEditorTimeRows extends MultiChildRenderObjectWidget {
   final bool showTime;
   final TextDirection textDirection;
 
-  /// Minimum width of each group, including the caller's text scale.
-  final double minimumGroupWidth;
+  /// Useful control widths, including the caller's text scale.
+  final double minimumDateWidth, minimumTimeWidth;
   @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _TimeRowsRender(showTime, textDirection, minimumGroupWidth);
+  RenderObject createRenderObject(BuildContext context) => _TimeRowsRender(
+    showTime,
+    textDirection,
+    minimumDateWidth,
+    minimumTimeWidth,
+  );
   @override
   void updateRenderObject(
     BuildContext context,
@@ -49,12 +53,14 @@ class WorkspaceEditorTimeRows extends MultiChildRenderObjectWidget {
     final rows = renderObject as _TimeRowsRender;
     if (rows.showTime == showTime &&
         rows.direction == textDirection &&
-        rows.minimumGroupWidth == minimumGroupWidth) {
+        rows.minimumDateWidth == minimumDateWidth &&
+        rows.minimumTimeWidth == minimumTimeWidth) {
       return;
     }
     rows.showTime = showTime;
     rows.direction = textDirection;
-    rows.minimumGroupWidth = minimumGroupWidth;
+    rows.minimumDateWidth = minimumDateWidth;
+    rows.minimumTimeWidth = minimumTimeWidth;
     rows.markNeedsLayout();
   }
 }
@@ -65,10 +71,15 @@ class _TimeRowsRender extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _TimeRowData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _TimeRowData> {
-  _TimeRowsRender(this.showTime, this.direction, this.minimumGroupWidth);
+  _TimeRowsRender(
+    this.showTime,
+    this.direction,
+    this.minimumDateWidth,
+    this.minimumTimeWidth,
+  );
   bool showTime;
   TextDirection direction;
-  double minimumGroupWidth;
+  double minimumDateWidth, minimumTimeWidth;
   @override
   void setupParentData(RenderBox child) {
     if (child.parentData is! _TimeRowData) child.parentData = _TimeRowData();
@@ -77,12 +88,19 @@ class _TimeRowsRender extends RenderBox
   Size _layout(BoxConstraints bounds, {required bool dry}) {
     final children = getChildrenAsList();
     final width = bounds.maxWidth;
-    const gap = 12.0;
+    const rowGap = 12.0;
+    const controlGap = 8.0;
     const labelGap = 6.0;
     double intrinsic(int i) =>
         math.max(0, children[i].getMaxIntrinsicWidth(double.infinity));
-    final dateMin = math.max(intrinsic(1), intrinsic(5));
-    final timeMin = showTime ? math.max(intrinsic(2), intrinsic(6)) : 0.0;
+    final dateMinimum = math.max(
+      minimumDateWidth,
+      math.max(intrinsic(1), intrinsic(5)),
+    );
+    final timeMinimum = math.max(
+      minimumTimeWidth,
+      math.max(intrinsic(2), intrinsic(6)),
+    );
     Size measure(int i, double available, {bool tight = true}) {
       final c = BoxConstraints(
         minWidth: tight ? math.max(0, available) : 0,
@@ -102,63 +120,88 @@ class _TimeRowsRender extends RenderBox
       }
     }
 
-    final toggle = measure(3, width, tight: false);
-    place(3, width - toggle.width, 0, toggle);
-    final valuesMin = dateMin + (showTime ? gap + timeMin : 0);
-    final groupMin = math.max(
-      minimumGroupWidth,
-      math.max(valuesMin, math.max(intrinsic(0), intrinsic(4))),
+    // Even at narrow widths, leave label space beside the toggle. Its text can
+    // wrap there instead of creating a line containing only the switch.
+    final toggle = measure(
+      3,
+      math.max(0, width - math.min(48, width * .25) - controlGap),
+      tight: false,
     );
-    final paired = groupMin * 2 + gap <= width;
-    final groupWidth = paired ? (width - gap) / 2 : width;
-    final stackValues = showTime && groupWidth < valuesMin;
-    final extra = math.max(0.0, groupWidth - valuesMin);
-    final dateWidth = !showTime || stackValues
-        ? groupWidth
-        : dateMin + extra * .55;
-    final timeWidth = showTime
-        ? (stackValues ? groupWidth : groupWidth - dateWidth - gap)
-        : groupWidth;
-    final startLabel = measure(0, groupWidth);
-    final endLabel = measure(4, groupWidth);
-    final pairedLabelHeight = math.max(startLabel.height, endLabel.height);
-    final groupsY = toggle.height + gap;
-    double y = groupsY;
-    double startBottom = groupsY;
+    final labelsMinimum = math.max(intrinsic(0), intrinsic(4));
+    final valuesMinimum =
+        dateMinimum + (showTime ? controlGap + timeMinimum : 0);
+    final inline =
+        labelsMinimum + controlGap + valuesMinimum + rowGap + toggle.width <=
+        width;
+    final dateWidth = math.min(dateMinimum, width);
+    final timeWidth = math.min(timeMinimum, width);
+    final stackValues = showTime && valuesMinimum > width;
+    final controlsX = inline ? labelsMinimum + controlGap : 0.0;
+    double y = 0;
     for (final start in [true, false]) {
       final base = start ? 0 : 4;
-      final x = !start && paired ? groupWidth + gap : 0.0;
-      final labelSize = start ? startLabel : endLabel;
-      place(base, x, y, labelSize);
-      final valuesY =
-          y + (paired ? pairedLabelHeight : labelSize.height) + labelGap;
+      final labelSize = measure(
+        base,
+        inline
+            ? labelsMinimum
+            : start
+            ? width - toggle.width - controlGap
+            : width,
+      );
       final date = measure(base + 1, dateWidth);
-      // Hidden time controls keep useful constraints as well as their element
-      // slots; a zero-width layout would overflow their retained child rows.
+      // Keep useful constraints even when Offstage hides the retained time.
       final time = measure(base + 2, timeWidth);
-      final rowHeight = math.max(
+      var rowHeight = math.max(
         date.height,
         showTime && !stackValues ? time.height : 0.0,
       );
-      place(base + 1, x, valuesY + (rowHeight - date.height) / 2, date);
+      double valuesY = y;
+      if (inline) {
+        rowHeight = math.max(rowHeight, labelSize.height);
+        if (start) rowHeight = math.max(rowHeight, toggle.height);
+        place(base, 0, y + (rowHeight - labelSize.height) / 2, labelSize);
+        if (start) {
+          place(
+            3,
+            controlsX + valuesMinimum + rowGap,
+            y + (rowHeight - toggle.height) / 2,
+            toggle,
+          );
+        }
+      } else {
+        final headerHeight = start
+            ? math.max(labelSize.height, toggle.height)
+            : labelSize.height;
+        place(base, 0, y + (headerHeight - labelSize.height) / 2, labelSize);
+        if (start) {
+          place(
+            3,
+            width - toggle.width,
+            y + (headerHeight - toggle.height) / 2,
+            toggle,
+          );
+        }
+        valuesY += headerHeight + labelGap;
+      }
+      place(base + 1, controlsX, valuesY + (rowHeight - date.height) / 2, date);
       place(
         base + 2,
-        stackValues || !showTime ? x : x + dateWidth + gap,
+        stackValues || !showTime
+            ? controlsX
+            : controlsX + dateWidth + controlGap,
         stackValues
-            ? valuesY + rowHeight + gap
+            ? valuesY + rowHeight + controlGap
             : valuesY + (rowHeight - time.height) / 2,
         time,
       );
-      final bottom =
-          valuesY + rowHeight + (stackValues ? gap + time.height : 0);
+      y = valuesY + rowHeight + (stackValues ? controlGap + time.height : 0);
       if (start) {
-        startBottom = bottom;
-        y = paired ? groupsY : bottom + gap;
+        y += rowGap;
       } else {
-        final error = measure(7, groupWidth);
-        final errorY = bottom + (error.height > 0 ? labelGap : 0);
-        place(7, x, errorY, error);
-        y = math.max(startBottom, errorY + error.height);
+        final error = measure(7, width - controlsX);
+        if (error.height > 0) y += labelGap;
+        place(7, controlsX, y, error);
+        y += error.height;
       }
     }
     return bounds.constrain(Size(width, y));

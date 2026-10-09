@@ -63,14 +63,18 @@ class TimetableInformationForm extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           WorkspaceEditorFieldsRow(
-            minimumWidth: 240,
             minimumChildWidths: [
-              workspaceEditorMinimumFieldWidth(context, label: l10n.totalWeeks),
+              workspaceEditorMinimumFieldWidth(
+                context,
+                label: l10n.totalWeeks,
+                minimumWidth: 96,
+              ),
               workspaceEditorMinimumFieldWidth(
                 context,
                 label: l10n.semesterStartDate,
                 value: startDateLabel,
                 valuePadding: 68,
+                minimumWidth: 160,
               ),
             ],
             children: [
@@ -102,15 +106,28 @@ class TimetableInformationForm extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          WorkspaceEditorField(
-            label: l10n.periodTimeSets,
-            child: WorkspaceEditorValue(
-              key: periodTimeSetAnchorKey,
-              label: l10n.periodTimeSets,
-              value: periodTimeSetSummary,
-              icon: Icons.schedule_outlined,
-              onPressed: enabled ? onPickPeriodTimeSet : null,
-            ),
+          WorkspaceEditorFieldsRow(
+            minimumChildWidths: [
+              workspaceEditorMinimumFieldWidth(
+                context,
+                label: l10n.periodTimeSets,
+                value: periodTimeSetSummary,
+                valuePadding: 68,
+                minimumWidth: 240,
+              ),
+            ],
+            children: [
+              WorkspaceEditorField(
+                label: l10n.periodTimeSets,
+                child: WorkspaceEditorValue(
+                  key: periodTimeSetAnchorKey,
+                  label: l10n.periodTimeSets,
+                  value: periodTimeSetSummary,
+                  icon: Icons.schedule_outlined,
+                  onPressed: enabled ? onPickPeriodTimeSet : null,
+                ),
+              ),
+            ],
           ),
         ],
       );

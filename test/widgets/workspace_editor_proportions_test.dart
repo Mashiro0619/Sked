@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -68,56 +66,56 @@ void main() {
             final surface = find.byKey(
               const ValueKey('workspace-detail-surface'),
             );
-            final wide = t.getRect(surface);
-            expect(wide.width, closeTo(600, .01));
+            final initial = t.getRect(surface);
+            expect(
+              initial.width,
+              closeTo(mode == AppMode.general ? 480 : 440, .01),
+            );
             final save = find.widgetWithText(FilledButton, l.save);
             expect(
               rtl ? t.getRect(save).left : t.getRect(save).right,
-              closeTo(rtl ? wide.left + 12 : wide.right - 12, .01),
+              closeTo(rtl ? initial.left + 12 : initial.right - 12, .01),
             );
             final dates = find.descendant(
               of: editor,
               matching: find.byTooltip(l.pickDate),
             );
-            if (mode == AppMode.general && scale == 1) {
-              final times = find.descendant(
-                of: editor,
-                matching: find.byTooltip(l.pickTime),
+            Future<void> resize(double width) async {
+              final delta = t.getRect(surface).width - width;
+              await t.drag(
+                find.byKey(const ValueKey('workspace-detail-resize')),
+                Offset(rtl ? -delta : delta, 0),
               );
-              final dateWidth = t
-                  .renderObject<RenderBox>(dates.first)
-                  .getMaxIntrinsicWidth(double.infinity);
-              final timeWidth = math.max(
-                t
-                    .renderObject<RenderBox>(times.first)
-                    .getMaxIntrinsicWidth(double.infinity),
-                t
-                    .renderObject<RenderBox>(times.last)
-                    .getMaxIntrinsicWidth(double.infinity),
-              );
-              final groupsFit =
-                  math.max(240, dateWidth + 12 + timeWidth) * 2 + 12 <=
-                  t.getSize(find.byType(WorkspaceEditorTimeRows)).width;
-              expect(
-                t.getTopLeft(dates.first).dy,
-                groupsFit
-                    ? closeTo(t.getTopLeft(dates.last).dy, .1)
-                    : lessThan(t.getTopLeft(dates.last).dy),
-              );
-              if (groupsFit) {
-                expect(
-                  t.getTopLeft(dates.first).dx,
-                  rtl
-                      ? greaterThan(t.getTopLeft(dates.last).dx)
-                      : lessThan(t.getTopLeft(dates.last).dx),
-                );
-              }
+              await t.pumpAndSettle();
+              expect(t.getRect(surface).width, closeTo(width, .01));
             }
-            await t.drag(
-              find.byKey(const ValueKey('workspace-detail-resize')),
-              Offset(rtl ? -120 : 120, 0),
-            );
-            await t.pumpAndSettle();
+
+            await resize(680);
+            final wide = t.getRect(surface);
+            if (mode == AppMode.general) {
+              final rows = find.byType(WorkspaceEditorTimeRows);
+              final startLabel = find.descendant(
+                of: rows,
+                matching: find.text(l.eventStartTime),
+              );
+              final toggle = find.descendant(
+                of: rows,
+                matching: find.byType(Switch),
+              );
+              expect(
+                t.getCenter(toggle).dy,
+                closeTo(t.getCenter(startLabel).dy, .1),
+              );
+              expect(
+                t.getRect(dates.last).top,
+                greaterThan(t.getRect(dates.first).bottom),
+              );
+            }
+            expect(t.element(editor), same(element));
+            expect(t.widget<TextField>(title).controller, same(input));
+            expect(input.selection.extentOffset, 10);
+            expect(focus.hasFocus, isTrue);
+            await resize(480);
             final narrow = t.getRect(surface);
             expect(narrow.width, closeTo(480, .01));
             expect(wide.height, lessThanOrEqualTo(narrow.height));
@@ -133,12 +131,7 @@ void main() {
             expect(input.selection.extentOffset, 10);
             expect(t.widget<EditableText>(editable).focusNode, same(focus));
             expect(focus.hasFocus, isTrue);
-            await t.drag(
-              find.byKey(const ValueKey('workspace-detail-resize')),
-              Offset(rtl ? -160 : 160, 0),
-            );
-            await t.pumpAndSettle();
-            expect(t.getRect(surface).width, closeTo(320, .01));
+            await resize(320);
             if (mode == AppMode.general) {
               expect(
                 t.getTopLeft(dates.last).dy,

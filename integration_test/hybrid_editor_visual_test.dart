@@ -88,23 +88,64 @@ void main() {
           .first;
       final titleController = tester.widget<TextField>(title).controller!;
       final draft = titleController.text;
-      expect(tester.getSize(find.byKey(_surfaceKey)).width, closeTo(600, .1));
+      final defaultWidth = switch (group) {
+        _EditorGroup.course => 440.0,
+        _EditorGroup.event => 480.0,
+        _EditorGroup.timetable => 360.0,
+      };
+      expect(
+        tester.getSize(find.byKey(_surfaceKey)).width,
+        closeTo(defaultWidth, .1),
+      );
+      Future<void> resize(double width) async {
+        final delta = tester.getSize(find.byKey(_surfaceKey)).width - width;
+        if (delta.abs() > .1) {
+          await tester.drag(
+            find.byKey(_resizeKey),
+            Offset(direction == TextDirection.rtl ? -delta : delta, 0),
+          );
+          await tester.pumpAndSettle();
+        }
+        expect(
+          tester.getSize(find.byKey(_surfaceKey)).width,
+          closeTo(width, .1),
+        );
+      }
+
       if (group == _EditorGroup.event && scale == 1) {
+        final rows = find.byType(WorkspaceEditorTimeRows);
         final dates = find.descendant(
-          of: find.byType(WorkspaceEditorTimeRows),
+          of: rows,
           matching: find.byTooltip(strings.pickDate),
         );
-        final allDay = find.descendant(
-          of: find.byType(WorkspaceEditorTimeRows),
-          matching: find.byType(Switch),
+        final times = find.descendant(
+          of: rows,
+          matching: find.byTooltip(strings.pickTime),
+        );
+        final allDay = find.descendant(of: rows, matching: find.byType(Switch));
+        final startLabel = find.descendant(
+          of: rows,
+          matching: find.text(strings.eventStartTime),
         );
         expect(
-          tester.getRect(allDay).bottom,
-          lessThan(tester.getRect(dates.first).top),
+          tester.getCenter(startLabel).dy,
+          closeTo(tester.getCenter(dates.first).dy, .1),
         );
         expect(
-          tester.getRect(dates.first).top,
-          closeTo(tester.getRect(dates.last).top, .1),
+          tester.getCenter(allDay).dy,
+          closeTo(tester.getCenter(dates.first).dy, .1),
+        );
+        expect(
+          tester.getCenter(times.first).dy,
+          closeTo(tester.getCenter(dates.first).dy, .1),
+        );
+        expect(
+          tester.getRect(dates.last).top,
+          greaterThan(tester.getRect(dates.first).bottom),
+        );
+        expect(
+          tester.getRect(dates.first).left,
+          closeTo(tester.getRect(dates.last).left, .1),
         );
       }
       await _capture(tester, '$name-floating');
@@ -160,13 +201,8 @@ void main() {
           WorkspacePanelDisplayMode.overlay,
         );
         await tester.pumpAndSettle();
-        for (final (width, delta) in [(480, 120.0), (320, 160.0)]) {
-          await tester.drag(find.byKey(_resizeKey), Offset(delta, 0));
-          await tester.pumpAndSettle();
-          expect(
-            tester.getSize(find.byKey(_surfaceKey)).width,
-            closeTo(width, .1),
-          );
+        for (final width in [480, 320]) {
+          await resize(width.toDouble());
           expect(tester.element(editor), same(element));
           expect(
             tester.widget<TextField>(title).controller,
@@ -188,9 +224,7 @@ void main() {
         await _capture(tester, '$name-short');
         tester.view.physicalSize = const Size(1440, 1000);
         await tester.pumpAndSettle();
-        await tester.drag(find.byKey(_resizeKey), const Offset(-280, 0));
-        await tester.pumpAndSettle();
-        expect(tester.getSize(find.byKey(_surfaceKey)).width, closeTo(600, .1));
+        await resize(defaultWidth);
         await tester.ensureVisible(title);
         await tester.enterText(title, '$draft · 更新');
         await tester.pumpAndSettle();
@@ -334,6 +368,7 @@ Future<void> _openEditor(
       workspacePane: tester.widget<WorkspaceFrame>(frame).controller,
       editor: WorkspaceEditorConfiguration(
         anchorContext: tester.element(anchor),
+        preferredWidth: event ? 480 : 440,
       ),
       workspace: event ? AppMode.general : AppMode.student,
       builder: (_) => event

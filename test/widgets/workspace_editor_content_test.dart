@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -130,29 +128,25 @@ void main() {
               of: editor,
               matching: find.text(l.eventStartTime),
             );
-            expect(
-              t.getRect(startLabel).bottom,
-              lessThan(t.getRect(dates.first).top),
+            final allDay = find.descendant(
+              of: rows,
+              matching: find.byType(Switch),
             );
-            final dateWidth = t
-                .renderObject<RenderBox>(dates.first)
-                .getMaxIntrinsicWidth(double.infinity);
-            final timeWidth = math.max(
-              t
-                  .renderObject<RenderBox>(times.first)
-                  .getMaxIntrinsicWidth(double.infinity),
-              t
-                  .renderObject<RenderBox>(times.last)
-                  .getMaxIntrinsicWidth(double.infinity),
-            );
-            final groupsFit =
-                math.max(240, dateWidth + 12 + timeWidth) * 2 + 12 <=
-                t.getSize(rows).width;
             expect(
-              t.getRect(dates.first).top,
-              groupsFit
-                  ? closeTo(t.getRect(dates.last).top, .1)
-                  : lessThan(t.getRect(dates.last).top),
+              t.getCenter(allDay).dy,
+              closeTo(t.getCenter(startLabel).dy, .1),
+            );
+            expect(
+              t.getRect(dates.last).top,
+              greaterThan(t.getRect(dates.first).bottom),
+            );
+            expect(
+              t.getRect(dates.first).left,
+              closeTo(t.getRect(dates.last).left, .1),
+            );
+            expect(
+              t.getRect(dates.first).overlaps(t.getRect(times.first)),
+              isFalse,
             );
           }
           await t.enterText(title, 'Rebuilt editor draft');

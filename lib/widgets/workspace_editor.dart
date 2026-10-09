@@ -15,14 +15,33 @@ class WorkspaceEditorConfiguration {
     BuildContext? anchorContext,
     Rect? anchorRect,
     this.placement = SkedFloatingPlacement.automatic,
+    this.preferredWidth = 440,
   }) : _anchor = anchorRect == null
            ? SkedFloatingAnchor.capture(anchorContext)
            : SkedFloatingAnchor.fromRect(anchorRect);
+
+  WorkspaceEditorConfiguration._withAnchor(
+    this._anchor, {
+    required this.placement,
+    required this.preferredWidth,
+  });
+
   final SkedFloatingAnchor _anchor;
   final SkedFloatingPlacement placement;
+  final double preferredWidth;
   Rect? get initialAnchor => _anchor.initialRect;
   Rect? get liveAnchor => _anchor.globalRect;
   Rect? anchorIn(RenderBox coordinateSpace) => _anchor.rectIn(coordinateSpace);
+
+  /// Adjust opening geometry without recapturing or freezing the live trigger.
+  WorkspaceEditorConfiguration withPreferredWidth(double width) =>
+      width == preferredWidth
+      ? this
+      : WorkspaceEditorConfiguration._withAnchor(
+          _anchor,
+          placement: placement,
+          preferredWidth: width,
+        );
 
   /// A details-to-editor transition reuses the same moving Navigator. Freeze
   /// its outgoing control rather than following a position changed by this task.
@@ -31,6 +50,7 @@ class WorkspaceEditorConfiguration {
       ? WorkspaceEditorConfiguration(
           anchorRect: initialAnchor ?? liveAnchor,
           placement: placement,
+          preferredWidth: preferredWidth,
         )
       : this;
 }
@@ -217,6 +237,7 @@ double workspaceEditorMinimumFieldWidth(
   required String label,
   String? value,
   double valuePadding = 44,
+  double minimumWidth = WorkspaceEditorFormMetrics.minimumColumnWidth,
 }) {
   final textScaler = MediaQuery.textScalerOf(context);
   final direction = Directionality.of(context);
@@ -234,7 +255,10 @@ double workspaceEditorMinimumFieldWidth(
     return width;
   }
 
-  final labelWidth = measure(label, workspaceEditorLabelStyle(context));
+  final labelWidth = math.max(
+    minimumWidth * textScaler.scale(14) / 14,
+    measure(label, workspaceEditorLabelStyle(context)),
+  );
   return value == null
       ? labelWidth
       : math.max(
@@ -248,15 +272,20 @@ class WorkspaceEditorFieldsRow extends StatelessWidget {
   const WorkspaceEditorFieldsRow({
     super.key,
     required this.children,
-    this.minimumWidth = WorkspaceEditorFormMetrics.minimumColumnWidth,
+    this.minimumWidth = 0,
     this.minimumChildWidths = const [],
+    this.flexes = const [],
   });
   final List<Widget> children;
   final double minimumWidth;
 
-  /// Natural widths already measured with the current text scale. Empty keeps
-  /// the shared column minimum; otherwise provide one width for each child.
+  /// Natural widths already measured with the current text scale. Empty uses
+  /// the compact field baseline; otherwise provide one width for each child.
   final List<double> minimumChildWidths;
+
+  /// Only flexible inputs share spare width; short selectors keep their width.
+  /// Empty keeps every child compact. Otherwise provide one flex per child.
+  final List<int> flexes;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
@@ -264,28 +293,52 @@ class WorkspaceEditorFieldsRow extends StatelessWidget {
         minimumChildWidths.isEmpty ||
             minimumChildWidths.length == children.length,
       );
+      assert(flexes.isEmpty || flexes.length == children.length);
+      assert(flexes.every((flex) => flex >= 0));
       final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-      final columnMinimum = minimumChildWidths.fold(
-        minimumWidth * textScale,
-        math.max,
+      final naturalWidths = List<double>.generate(
+        children.length,
+        (index) => math.max(
+          minimumWidth * textScale,
+          minimumChildWidths.isEmpty
+              ? WorkspaceEditorFormMetrics.minimumColumnWidth * textScale
+              : minimumChildWidths[index],
+        ),
       );
-      final columns =
-          bounds.maxWidth >=
-              columnMinimum * children.length +
-                  WorkspaceEditorFormMetrics.fieldGap * (children.length - 1)
-          ? children.length
-          : 1;
-      final width =
-          (bounds.maxWidth -
-              WorkspaceEditorFormMetrics.fieldGap * (columns - 1)) /
-          columns;
+      final naturalWidth =
+          naturalWidths.fold(0.0, (sum, width) => sum + width) +
+          WorkspaceEditorFormMetrics.fieldGap *
+              math.max(0, children.length - 1);
+      final available = bounds.hasBoundedWidth ? bounds.maxWidth : naturalWidth;
+      final fits = naturalWidth <= available;
+      final totalFlex = flexes.fold(0, (sum, flex) => sum + flex);
+      final spareWidth = math.max(0.0, available - naturalWidth);
+      double childWidth(int index) {
+        final flex = flexes.isEmpty ? 0 : flexes[index];
+        if (!fits) {
+          return flex > 0
+              ? available
+              : math.min(available, naturalWidths[index]);
+        }
+        return naturalWidths[index] +
+            (totalFlex == 0 ? 0 : spareWidth * flex / totalFlex);
+      }
+
       return Wrap(
         spacing: WorkspaceEditorFormMetrics.fieldGap,
         runSpacing: WorkspaceEditorFormMetrics.fieldGap,
         crossAxisAlignment: WrapCrossAlignment.start,
         children: [
           for (var i = 0; i < children.length; i++)
-            SizedBox(key: ValueKey(i), width: width, child: children[i]),
+            SizedBox(
+              key: ValueKey(i),
+              width: fits ? childWidth(i) : available,
+              child: Align(
+                alignment: AlignmentDirectional.topStart,
+                heightFactor: 1,
+                child: SizedBox(width: childWidth(i), child: children[i]),
+              ),
+            ),
         ],
       );
     },

@@ -286,7 +286,7 @@ void main() {
     (tester) async {
       final controller = TextEditingController(text: 'A retained value');
       addTearDown(controller.dispose);
-      final width = ValueNotifier(600.0);
+      final width = ValueNotifier(440.0);
       addTearDown(width.dispose);
       final scale = ValueNotifier(1.0);
       addTearDown(scale.dispose);
@@ -335,7 +335,7 @@ void main() {
         tester.getTopLeft(fields.first).dy,
         tester.getTopLeft(fields.last).dy,
       );
-      for (final (nextWidth, nextScale) in [(480.0, 1.0), (600.0, 1.5)]) {
+      for (final (nextWidth, nextScale) in [(240.0, 1.0), (320.0, 1.5)]) {
         width.value = nextWidth;
         scale.value = nextScale;
         await tester.pumpAndSettle();

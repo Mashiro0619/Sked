@@ -1973,7 +1973,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
         workspacePane: _pane,
-        editor: editor ?? _pane.takeEditorEntry(),
+        editor: (editor ?? _pane.takeEditorEntry()).withPreferredWidth(480),
         workspace: AppMode.general,
         isSessionCurrent: () => provider.generalSchedules.any(
           (calendar) =>

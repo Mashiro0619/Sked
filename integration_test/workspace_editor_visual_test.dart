@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -79,7 +78,10 @@ void main() {
             final editorTask = showAppModalSheet<void>(
               context: context,
               workspacePane: frame.controller,
-              editor: WorkspaceEditorConfiguration(anchorContext: anchor),
+              editor: WorkspaceEditorConfiguration(
+                anchorContext: anchor,
+                preferredWidth: mode == AppMode.general ? 480 : 440,
+              ),
               workspace: mode,
               builder: (_) => mode == AppMode.general
                   ? GeneralEventEditorSheet(
@@ -99,6 +101,14 @@ void main() {
             );
             unawaited(editorTask);
             await t.pumpAndSettle();
+            expect(
+              t
+                  .getSize(
+                    find.byKey(const ValueKey('workspace-detail-surface')),
+                  )
+                  .width,
+              closeTo(mode == AppMode.general ? 480 : 440, .1),
+            );
             if (editing) expect(mode == AppMode.general ? e : c, isNotNull);
             expect(
               find.text(
@@ -146,29 +156,29 @@ void main() {
                 of: rows,
                 matching: find.byTooltip(strings.pickTime),
               );
-              final dateWidth = t
-                  .renderObject<RenderBox>(dates.first)
-                  .getMaxIntrinsicWidth(double.infinity);
-              final timeWidth = math.max(
-                t
-                    .renderObject<RenderBox>(times.first)
-                    .getMaxIntrinsicWidth(double.infinity),
-                t
-                    .renderObject<RenderBox>(times.last)
-                    .getMaxIntrinsicWidth(double.infinity),
-              );
-              final groupsFit =
-                  math.max(240, dateWidth + 12 + timeWidth) * 2 + 12 <=
-                  t.getSize(rows).width;
-              expect(
-                t.getRect(toggle).bottom,
-                lessThan(t.getRect(dates.first).top),
+              final startLabel = find.descendant(
+                of: rows,
+                matching: find.text(strings.eventStartTime),
               );
               expect(
-                t.getTopLeft(dates.first).dy,
-                groupsFit
-                    ? closeTo(t.getTopLeft(dates.last).dy, .1)
-                    : lessThan(t.getTopLeft(dates.last).dy),
+                t.getCenter(startLabel).dy,
+                closeTo(t.getCenter(dates.first).dy, .1),
+              );
+              expect(
+                t.getCenter(toggle).dy,
+                closeTo(t.getCenter(dates.first).dy, .1),
+              );
+              expect(
+                t.getCenter(times.first).dy,
+                closeTo(t.getCenter(dates.first).dy, .1),
+              );
+              expect(
+                t.getRect(dates.last).top,
+                greaterThan(t.getRect(dates.first).bottom),
+              );
+              expect(
+                t.getRect(dates.first).left,
+                closeTo(t.getRect(dates.last).left, .1),
               );
             }
             await capture('floating');

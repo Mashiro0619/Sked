@@ -90,6 +90,10 @@ void main() {
                 of: rows,
                 matching: find.byType(Switch),
               );
+              final startLabel = find.descendant(
+                of: rows,
+                matching: find.text(l.eventStartTime),
+              );
               final startDate = t.element(dates.first);
               final originalTime = t
                   .widgetList<Text>(
@@ -98,11 +102,15 @@ void main() {
                   .map((w) => w.data)
                   .toList();
               expect(
-                t.getRect(toggle).bottom,
-                lessThan(t.getRect(dates.first).top),
+                t.getCenter(toggle).dy,
+                closeTo(t.getCenter(startLabel).dy, .1),
               );
               expect(
-                t.getRect(dates.first).overlaps(t.getRect(dates.last)),
+                t.getRect(dates.first).bottom,
+                lessThan(t.getRect(dates.last).top),
+              );
+              expect(
+                t.getRect(startLabel).overlaps(t.getRect(toggle)),
                 isFalse,
               );
               if (scale == 1) {
@@ -112,6 +120,35 @@ void main() {
                 final reminder = find.byKey(
                   const ValueKey('event-reminder-field'),
                 );
+                final surface = find.byKey(
+                  const ValueKey('workspace-detail-surface'),
+                );
+                final initialWidth = t.getSize(surface).width;
+                for (final field in [recurrence, reminder]) {
+                  expect(
+                    t.getRect(field).left,
+                    greaterThanOrEqualTo(t.getRect(surface).left),
+                  );
+                  expect(
+                    t.getRect(field).right,
+                    lessThanOrEqualTo(t.getRect(surface).right),
+                  );
+                }
+                expect(
+                  t.getRect(recurrence).overlaps(t.getRect(reminder)),
+                  isFalse,
+                );
+                // Ahem's English summaries wrap at the compact default width.
+                // Both summaries must share a row once their contents fit.
+                final resize = find.byKey(
+                  const ValueKey('workspace-detail-resize'),
+                );
+                final delta = initialWidth - 680;
+                await t.drag(
+                  resize,
+                  Offset(locale == 'en' ? -delta : delta, 0),
+                );
+                await t.pumpAndSettle();
                 expect(
                   t.getCenter(recurrence).dy,
                   closeTo(t.getCenter(reminder).dy, .1),
@@ -120,12 +157,22 @@ void main() {
                   t.getRect(recurrence).overlaps(t.getRect(reminder)),
                   isFalse,
                 );
+                await t.drag(
+                  resize,
+                  Offset(locale == 'en' ? delta : -delta, 0),
+                );
+                await t.pumpAndSettle();
+                expect(t.getSize(surface).width, closeTo(initialWidth, .1));
               }
               await t.ensureVisible(toggle);
               await t.tap(toggle);
               await t.pumpAndSettle();
               expect(times, findsNothing);
               expect(t.element(dates.first), same(startDate));
+              expect(
+                t.getCenter(toggle).dy,
+                closeTo(t.getCenter(startLabel).dy, .1),
+              );
               await t.tap(toggle);
               await t.pumpAndSettle();
               expect(times, findsNWidgets(2));

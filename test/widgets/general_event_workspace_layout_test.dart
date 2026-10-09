@@ -21,7 +21,7 @@ Finder _field(String label) => find.byWidgetPredicate(
 );
 
 Widget _editorHost({
-  double width = 600,
+  double width = 480,
   bool floating = true,
   List<GeneralSchedule> calendars = _calendars,
   GeneralEvent? initialEvent,
@@ -143,12 +143,12 @@ void main() {
             matching: find.text(l10n.eventStartTime),
           );
           expect(
-            tester.getBottomLeft(allDay).dy,
-            lessThan(tester.getTopLeft(startLabel).dy),
+            tester.getCenter(allDay).dy,
+            closeTo(tester.getCenter(startLabel).dy, .1),
           );
           expect(
-            tester.getBottomLeft(startLabel).dy,
-            lessThan(tester.getTopLeft(dates.first).dy),
+            tester.getRect(dates.last).top,
+            greaterThan(tester.getRect(dates.first).bottom),
           );
           expect(tester.widget<Text>(startLabel).style!.fontSize, 12);
           expect(tester.takeException(), isNull);
@@ -159,6 +159,67 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'short event options keep their useful width when the panel is widened',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 1000);
+      addTearDown(tester.view.reset);
+      final provider = await workspaceProvider(
+        mode: AppMode.general,
+        locale: 'zh',
+      );
+      addTearDown(provider.dispose);
+      Size? categorySize, recurrenceSize, reminderSize;
+      for (final width in [480.0, 680.0]) {
+        await tester.pumpWidget(
+          WorkspaceHarness(
+            provider: provider,
+            locale: const Locale('zh'),
+            home: _editorHost(width: width),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(GeneralEventEditorSheet)),
+        );
+        final category = tester.getSize(_field(l10n.calendar));
+        final recurrence = tester.getSize(
+          find.byKey(const ValueKey('event-recurrence-field')),
+        );
+        final reminder = tester.getSize(
+          find.byKey(const ValueKey('event-reminder-field')),
+        );
+        expect(category.width, lessThanOrEqualTo(160));
+        expect(recurrence.width, lessThanOrEqualTo(160));
+        expect(reminder.width, lessThanOrEqualTo(180));
+        if (categorySize != null) {
+          expect(category, categorySize);
+          expect(recurrence, recurrenceSize);
+          expect(reminder, reminderSize);
+        }
+        categorySize = category;
+        recurrenceSize = recurrence;
+        reminderSize = reminder;
+        final rows = find.byType(WorkspaceEditorTimeRows);
+        final dates = find.descendant(
+          of: rows,
+          matching: find.byTooltip(l10n.pickDate),
+        );
+        final times = find.descendant(
+          of: rows,
+          matching: find.byTooltip(l10n.pickTime),
+        );
+        expect(tester.getSize(dates.first).width, lessThan(200));
+        expect(tester.getSize(times.first).width, lessThan(180));
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets(
     'long category names use a full column without replacing the focused draft',
@@ -199,7 +260,7 @@ void main() {
       input.controller.selection = selection;
       final picker = find.byType(SkedDropdownMenu<String>);
       final pickerElement = tester.element(picker);
-      const longName = 'Product research and planning';
+      const longName = 'Product planning team';
 
       await pump(const [
         GeneralSchedule(id: 'work', name: longName, events: []),
@@ -267,8 +328,8 @@ void main() {
       await tester.pumpAndSettle();
       final recurrence = find.byKey(const ValueKey('event-recurrence-field'));
       final reminder = find.byKey(const ValueKey('event-reminder-field'));
-      expect(tester.getSize(recurrence).width, greaterThan(500));
-      expect(tester.getSize(recurrence).width, tester.getSize(reminder).width);
+      expect(tester.getSize(recurrence).width, greaterThan(400));
+      expect(tester.getSize(reminder).width, lessThan(200));
       expect(
         tester.getTopLeft(reminder).dy,
         greaterThan(tester.getBottomLeft(recurrence).dy),
@@ -288,7 +349,7 @@ void main() {
       addTearDown(tester.view.reset);
       final provider = await workspaceProvider(mode: AppMode.general);
       addTearDown(provider.dispose);
-      Future<void> pump({double width = 600, bool floating = true}) async {
+      Future<void> pump({double width = 480, bool floating = true}) async {
         await tester.pumpWidget(
           WorkspaceHarness(
             provider: provider,
@@ -328,7 +389,7 @@ void main() {
       expect(input.focusNode.hasFocus, isTrue);
 
       for (final floating in [false, true]) {
-        await pump(width: floating ? 600 : 320, floating: floating);
+        await pump(width: floating ? 480 : 320, floating: floating);
         expect(tester.element(editable), same(locationElement));
         expect(input.focusNode.hasFocus, isTrue);
         expect(input.controller.text, 'West meeting room');

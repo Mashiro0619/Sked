@@ -422,11 +422,13 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                     context,
                     label: l10n.dayOfWeek,
                     value: weekdayLabel,
+                    minimumWidth: 136,
                   ),
                   workspaceEditorMinimumFieldWidth(
                     context,
                     label: l10n.semesterWeeks,
                     value: weeksLabel,
+                    minimumWidth: 176,
                   ),
                 ]
               : const [],
@@ -464,19 +466,36 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
               : (anchor) => _pickTime(isStart: false, anchorContext: anchor),
         ),
         SizedBox(height: desktop ? 12 : 8),
-        _SelectionTile(
-          key: _periodsAnchor,
-          title: l10n.linkedPeriods,
-          subtitle: _selectedPeriods.isEmpty
-              ? l10n.linkedPeriodsUnmatched
-              : _formatPeriodsLabel(_selectedPeriods, l10n),
-          icon: Icons.tune,
-          enabled: !_blocked,
-          onTap: _blocked ? null : _pickPeriods,
-        ),
+        if (desktop)
+          WorkspaceEditorFieldsRow(
+            minimumChildWidths: [
+              workspaceEditorMinimumFieldWidth(
+                context,
+                label: l10n.linkedPeriods,
+                value: _selectedPeriods.isEmpty
+                    ? l10n.linkedPeriodsUnmatched
+                    : _formatPeriodsLabel(_selectedPeriods, l10n),
+                minimumWidth: 176,
+              ),
+            ],
+            children: [_buildPeriodsField(l10n)],
+          )
+        else
+          _buildPeriodsField(l10n),
       ],
     );
   }
+
+  Widget _buildPeriodsField(AppLocalizations l10n) => _SelectionTile(
+    key: _periodsAnchor,
+    title: l10n.linkedPeriods,
+    subtitle: _selectedPeriods.isEmpty
+        ? l10n.linkedPeriodsUnmatched
+        : _formatPeriodsLabel(_selectedPeriods, l10n),
+    icon: Icons.tune,
+    enabled: !_blocked,
+    onTap: _blocked ? null : _pickPeriods,
+  );
 
   String _reminderSummary(AppLocalizations l10n) => switch (_reminderBehavior) {
     CourseReminderBehavior.inherit => l10n.courseReminderUseDefault,
@@ -513,13 +532,18 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           WorkspaceEditorFieldsRow(
-            minimumWidth: 240,
+            flexes: const [1, 0],
             minimumChildWidths: [
               workspaceEditorMinimumFieldWidth(
                 context,
                 label: l10n.teacherName,
+                minimumWidth: 160,
               ),
-              workspaceEditorMinimumFieldWidth(context, label: l10n.credits),
+              workspaceEditorMinimumFieldWidth(
+                context,
+                label: l10n.credits,
+                minimumWidth: 96,
+              ),
             ],
             children: [
               input(l10n.teacherName, _teacherController),
@@ -1575,8 +1599,8 @@ class _ResponsiveFormRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return WorkspaceEditorFieldsRow(
-        minimumWidth: 240,
         minimumChildWidths: minimumChildWidths,
+        flexes: flexes ?? const [],
         children: children,
       );
     }
@@ -1828,17 +1852,18 @@ class _CourseTimeRange extends StatelessWidget {
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return WorkspaceEditorFieldsRow(
-        minimumWidth: 240,
         minimumChildWidths: [
           workspaceEditorMinimumFieldWidth(
             context,
             label: startLabel,
             value: startValue,
+            minimumWidth: 112,
           ),
           workspaceEditorMinimumFieldWidth(
             context,
             label: endLabel,
             value: endValue,
+            minimumWidth: 112,
           ),
         ],
         children: [

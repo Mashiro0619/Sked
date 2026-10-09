@@ -653,8 +653,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       ),
       const SizedBox(height: 12),
       WorkspaceEditorFieldsRow(
+        flexes: [1, if (_showCalendarPicker) 0],
         minimumChildWidths: [
-          workspaceEditorMinimumFieldWidth(context, label: l10n.place),
+          workspaceEditorMinimumFieldWidth(
+            context,
+            label: l10n.place,
+            minimumWidth: 180,
+          ),
           if (_showCalendarPicker)
             workspaceEditorMinimumFieldWidth(
               context,
@@ -663,6 +668,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                   .firstWhere((calendar) => calendar.id == _calendarId)
                   .name,
               valuePadding: 74,
+              minimumWidth: 144,
             ),
         ],
         children: [
@@ -686,11 +692,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
               context,
               label: l10n.eventRecurrence,
               value: _currentRecurrenceSummary(l10n),
+              minimumWidth: 144,
             ),
             workspaceEditorMinimumFieldWidth(
               context,
               label: l10n.reminder,
               value: _reminderSummary(_reminders, l10n),
+              minimumWidth: 160,
             ),
           ],
           children: [_buildRecurrenceField(l10n), _buildReminderField(l10n)],
@@ -1779,8 +1787,8 @@ class _DateTimeRange extends StatelessWidget {
       return WorkspaceEditorTimeRows(
         showTime: start.showTime,
         textDirection: Directionality.of(context),
-        minimumGroupWidth:
-            240 * MediaQuery.textScalerOf(context).scale(14) / 14,
+        minimumDateWidth: 136 * MediaQuery.textScalerOf(context).scale(14) / 14,
+        minimumTimeWidth: 104 * MediaQuery.textScalerOf(context).scale(14) / 14,
         startLabel: label(start.label),
         endLabel: label(end.label),
         startDate: start.desktopDate(context),

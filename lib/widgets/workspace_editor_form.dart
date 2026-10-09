@@ -8,7 +8,9 @@ abstract final class WorkspaceEditorFormMetrics {
   static const labelGap = 6.0;
   static const fieldGap = 12.0;
   static const sectionGap = 16.0;
-  static const minimumColumnWidth = 240.0;
+  // Baseline for a compact field when the caller has no content measurement.
+  // Each field can request its own width; columns do not stretch by default.
+  static const minimumColumnWidth = 120.0;
 }
 
 TextStyle workspaceEditorLabelStyle(BuildContext context) =>

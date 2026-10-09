@@ -38,7 +38,8 @@ Future<void> _pumpRows(
               child: WorkspaceEditorTimeRows(
                 showTime: showTime,
                 textDirection: direction,
-                minimumGroupWidth: 240 * scale,
+                minimumDateWidth: 136 * scale,
+                minimumTimeWidth: 104 * scale,
                 startLabel: label('start-label', 'Start time'),
                 startDate: control('start-date', dateMinimum),
                 startTime: control('start-time', timeMinimum),
@@ -70,7 +71,7 @@ Future<void> _pumpRows(
 void main() {
   for (final direction in TextDirection.values) {
     testWidgets(
-      'time groups have upper labels, a trailing toggle, and an end-group error: $direction',
+      'interval rows align their labels, values, and inline all-day switch: $direction',
       (tester) async {
         await _pumpRows(tester, direction: direction, error: true);
         final startLabel = tester.getRect(_key('start-label'));
@@ -83,24 +84,33 @@ void main() {
         final error = tester.getRect(_key('range-error'));
         final rows = tester.getRect(find.byType(WorkspaceEditorTimeRows));
 
-        expect(toggle.bottom, lessThan(startLabel.top));
-        expect(startLabel.top, endLabel.top);
-        expect(startLabel.bottom, lessThan(startDate.top));
-        expect(endLabel.bottom, lessThan(endDate.top));
-        expect(startDate.top, endDate.top);
+        expect(toggle.center.dy, startLabel.center.dy);
+        expect(startLabel.center.dy, startDate.center.dy);
+        expect(endLabel.center.dy, endDate.center.dy);
+        expect(startDate.bottom, lessThan(endDate.top));
+        expect(startDate.left, endDate.left);
+        expect(startDate.width, 140);
+        expect(startTime.width, 104);
         expect(startDate.top, startTime.top);
         expect(endDate.top, endTime.top);
         expect(startLabel.overlaps(endLabel), isFalse);
         if (direction == TextDirection.ltr) {
-          expect(toggle.right, rows.right);
-          expect(startTime.right, lessThan(endDate.left));
+          expect(toggle.left, startTime.right + 12);
+          expect(toggle.right, lessThan(rows.right));
+          expect(startTime.left, greaterThan(startDate.right));
         } else {
-          expect(toggle.left, rows.left);
-          expect(endDate.right, lessThan(startTime.left));
+          expect(toggle.right, startTime.left - 12);
+          expect(toggle.left, greaterThan(rows.left));
+          expect(startTime.right, lessThan(startDate.left));
         }
         expect(error.top, greaterThan(endDate.bottom));
-        expect(error.left, endLabel.left);
-        expect(error.right, endLabel.right);
+        if (direction == TextDirection.ltr) {
+          expect(error.left, endDate.left);
+          expect(error.right, rows.right);
+        } else {
+          expect(error.right, endDate.right);
+          expect(error.left, rows.left);
+        }
         expect(error.bottom, rows.bottom);
 
         final render = tester.renderObject<RenderBox>(
@@ -115,68 +125,78 @@ void main() {
     );
   }
 
-  testWidgets(
-    'natural date and time widths collapse groups before stacking their controls',
-    (tester) async {
-      Future<void> pump(double width) => _pumpRows(
-        tester,
-        width: width,
-        dateMinimum: 170,
-        timeMinimum: 100,
-        error: true,
-      );
+  testWidgets('narrow intervals move labels up before stacking date and time', (
+    tester,
+  ) async {
+    Future<void> pump(double width) => _pumpRows(
+      tester,
+      width: width,
+      dateMinimum: 170,
+      timeMinimum: 100,
+      error: true,
+    );
 
-      await pump(600);
-      expect(
-        tester.getTopLeft(_key('start-date')).dy,
-        tester.getTopLeft(_key('end-date')).dy,
-      );
+    await pump(600);
+    expect(
+      tester.getCenter(_key('start-label')).dy,
+      tester.getCenter(_key('start-date')).dy,
+    );
 
-      await pump(560);
-      expect(
-        tester.getTopLeft(_key('start-date')).dy,
-        tester.getTopLeft(_key('start-time')).dy,
-      );
-      expect(
-        tester.getTopLeft(_key('end-label')).dy,
-        greaterThan(tester.getBottomLeft(_key('start-time')).dy),
-      );
-      expect(
-        tester.getTopLeft(_key('range-error')).dx,
-        tester.getTopLeft(_key('end-label')).dx,
-      );
+    await pump(380);
+    expect(
+      tester.getCenter(_key('all-day')).dy,
+      tester.getCenter(_key('start-label')).dy,
+    );
+    expect(
+      tester.getBottomLeft(_key('start-label')).dy,
+      lessThan(tester.getTopLeft(_key('start-date')).dy),
+    );
+    expect(
+      tester.getTopLeft(_key('start-date')).dy,
+      tester.getTopLeft(_key('start-time')).dy,
+    );
+    expect(
+      tester.getTopLeft(_key('end-label')).dy,
+      greaterThan(tester.getBottomLeft(_key('start-time')).dy),
+    );
+    expect(
+      tester.getTopLeft(_key('range-error')).dx,
+      tester.getTopLeft(_key('end-label')).dx,
+    );
 
-      await pump(280);
-      expect(
-        tester.getTopLeft(_key('start-time')).dy,
-        greaterThan(tester.getBottomLeft(_key('start-date')).dy),
-      );
-      expect(
-        tester.getTopLeft(_key('end-time')).dy,
-        greaterThan(tester.getBottomLeft(_key('end-date')).dy),
-      );
-      expect(
-        tester.getTopLeft(_key('range-error')).dy,
-        greaterThan(tester.getBottomLeft(_key('end-time')).dy),
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await pump(270);
+    expect(
+      tester.getTopLeft(_key('start-time')).dy,
+      greaterThan(tester.getBottomLeft(_key('start-date')).dy),
+    );
+    expect(
+      tester.getTopLeft(_key('end-time')).dy,
+      greaterThan(tester.getBottomLeft(_key('end-date')).dy),
+    );
+    expect(
+      tester.getTopLeft(_key('range-error')).dy,
+      greaterThan(tester.getBottomLeft(_key('end-time')).dy),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   for (final scale in [1.0, 1.5, 2.0]) {
-    testWidgets('group minimum follows text scale: $scale', (tester) async {
-      await _pumpRows(tester, width: 568, scale: scale);
-      final start = tester.getRect(_key('start-label'));
-      final end = tester.getRect(_key('end-label'));
-      if (scale == 1) {
-        expect(start.top, end.top);
-        expect(start.width, greaterThanOrEqualTo(240 * scale));
-      } else {
+    testWidgets(
+      'control widths follow text scale without filling rows: $scale',
+      (tester) async {
+        await _pumpRows(tester, width: 568, scale: scale);
+        final start = tester.getRect(_key('start-label'));
+        final end = tester.getRect(_key('end-label'));
         expect(end.top, greaterThan(start.bottom));
-        expect(start.width, 568);
-      }
-      expect(tester.takeException(), isNull);
-    });
+        expect(tester.getCenter(_key('all-day')).dy, start.center.dy);
+        expect(
+          tester.getSize(_key('start-date')).width,
+          scale == 1 ? 140 : 136 * scale,
+        );
+        expect(tester.getSize(_key('start-time')).width, 104 * scale);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets(
@@ -207,10 +227,7 @@ void main() {
         same(time),
       );
       expect(tester.element(_key('start-date')), same(date));
-      expect(
-        tester.getSize(_key('start-date')).width,
-        tester.getSize(_key('start-label')).width,
-      );
+      expect(tester.getSize(_key('start-date')).width, 140);
       await _pumpRows(tester, retainedControls: true);
       expect(tester.element(_key('start-time')), same(time));
       expect(state.focusNode.hasFocus, isTrue);
