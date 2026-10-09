@@ -283,34 +283,36 @@ Windows 截图入口为 `integration_test/floating_panel_anchor_visual_test.dart
 
 ## 三类编辑面板：紧凑与规整（2026-10-10）
 
-本节更新课程、日程和课表桌面编辑器的内容样式，取代 10 月 4 日的横向标签、轻量文字选择值和开始时间同行全天开关。新建／编辑、浮动／并排使用相同表单；移动端继续使用原有布局，业务接口和存储格式不变。
+本节记录课程、日程和课表桌面编辑器的当前内容样式。初版等宽铺满和全天独占一行的布局已修正为按字段用途取宽；新建／编辑、浮动／并排使用相同表单。移动端继续使用原有布局，业务接口和存储格式不变。
 
 - 名称保留 22 sp 半粗主输入区。普通字段标签上置，使用 12 sp 次级文字；输入和选择值统一 14 sp、浅底细边框、6 dp 圆角。控件基准高度 40 dp，大字号及多行内容可自然增高。输入装饰显式使用标准视觉密度，避免桌面主题把实际高度压缩到 32 dp。
 - 字段与列间距 12 dp、分组间距 16 dp；下拉箭头固定在控件尾端，RTL 按阅读方向镜像。“更多”保留轻量折叠入口，取消／保存固定在底部，正文独立滚动。
-- 每列至少 240 dp × 14 sp 处的实际字号倍率，同时测量标签与选中值（包括图标、箭头和内边距）的自然宽度。内容不足以并排时转为单列；自由文本只测标签，打字不会引起表单换列。日期／时间额外测量组内控件，依次退为起止组单列、组内日期和时间堆叠。
+- 分别测量各字段的标签、选中值、图标及内边距，不再以最长字段作为所有列的最小宽度，也不等分剩余空间。短选择器保持自身宽度，只有显式配置的自由输入分配余量；不足时逐行排布，短控件仍不铺满。自由文本只测标签，打字不会引起表单换列。
+- 控件起始宽度按用途设置，再结合实际字体和内容增宽：课程起止时间各 112 dp、星期 136 dp、周次及关联节次 176 dp；总周数／学分 96 dp，课表日期 160 dp、节次时间集 240 dp。日程分类／重复 144 dp、提醒 160 dp，日期 136 dp、时间 104 dp。大字号按 14 sp 处实际倍率增加起始宽度，长值可扩展和换行。
+- 日程起止时间上下对齐。正常宽度下标签、日期、时间共处一行，全天紧跟开始时间；窄窗或大字号时改为上置标签，全天与开始标签同行，日期／时间下排或进一步堆叠。日期和时间控件不吸收额外空白。
 
-| 面板 | 常用字段排列 |
-| --- | --- |
-| 课程 | 名称突出；地点跨列；星期／周次并排；开始／结束时间并排；关联节次跨列 |
-| 日程 | 名称突出；地点／分类并排；全天开关在时间区上方；开始／结束各含日期与时间；重复／提醒并排 |
-| 课表 | 名称突出；总周数／开学日期并排；节次时间集跨列 |
+| 面板 | 默认宽度 | 常用字段排列 |
+| --- | --- | --- |
+| 课程 | 440 dp | 名称突出；地点留足输入空间；星期／周次并排；开始／结束时间并排；关联节次另行、按内容取宽 |
+| 日程 | 480 dp | 名称突出；地点／分类并排；起止时间上下对齐，全天融入开始行；重复／提醒并排 |
+| 课表 | 360 dp | 名称突出；总周数／开学日期并排；节次时间集另行、按内容取宽 |
 
-共用实现位于 `workspace_editor_form.dart`、`workspace_editor.dart` 和 `workspace_editor_time_rows.dart`。换列仅修改稳定子节点的约束和位置，日期时间的八个槽位及隐藏的时间控件继续保留；不会因调宽、全天切换或子选择器返回而重新创建输入、焦点或按钮锚点。调宽手柄纳入输入点击区域，拖动时保留焦点和选区。初始宽度仍为 600 dp，手动范围 320–680 dp；编辑器最小宽度独立于查看面板的字号缩放下限。
+共用实现位于 `workspace_editor_form.dart`、`workspace_editor.dart` 和 `workspace_editor_time_rows.dart`。换列仅修改稳定子节点的约束和位置，日期时间的八个槽位及隐藏的时间控件继续保留；不会因调宽、全天切换或子选择器返回而重新创建输入、焦点或按钮锚点。调宽手柄纳入输入点击区域，拖动时保留焦点和选区。手动范围仍为 320–680 dp，浮动／并排切换保留手动宽度。初始宽度配置共用原锚点实例，嵌套入口的冻结快照继续保留宽度，编辑器重建不覆盖本次调宽结果。
 
 ### 回归与实际字体截图
 
-新增专项覆盖三个编辑器、共用字段及时间排列，包括长分类／重复／周次摘要触发单列、中文／英文、浅深主题、RTL、1×／1.5×／2× 字号、窄矮窗口、全天切换、更多展开、选择器返回、草稿／焦点／选区和保存失败重试。原点击入口定位回归继续保留。
+专项覆盖三个编辑器、共用字段及时间排列，包括各入口的默认宽度、拉宽后短控件不伸长、自由输入分配余量、长分类／重复／周次摘要换行、中文／英文、浅深主题、RTL、1×／1.5×／2× 字号、窄矮窗口、全天切换、更多展开、选择器返回、草稿／焦点／选区和保存失败重试。原点击入口定位回归继续保留。
 
-最终联合回归覆盖 58 个测试文件，**947 项全部通过**，其中包括上一轮的 11 项入口定位专项。全项目 `flutter analyze --no-pub` 无问题，19 个变更 Dart 文件格式检查无变更，`git diff --check` 通过。共用组件提交另从其暂存树导出独立源码目录，47 项组件、布局与草稿状态回归通过，确认迁移前的调用方仍可编译；该运行不与最终计数相加。
+本次比例修正的最终联合回归覆盖 59 个测试文件，**956 项全部通过**，其中包括上一轮的 11 项入口定位专项。全项目 `flutter analyze --no-pub` 无问题，20 个变更 Dart 文件格式检查无变更，`git diff --check` 通过。
 
-Windows 实际字体入口为 `integration_test/hybrid_editor_visual_test.dart`，课程、日程、课表分别运行，三组共 **12 项全部通过**，输出 30 张 PNG。除正常新建／编辑外，还覆盖展开、全天、并排、480／320 dp、720×420 矮窗及保存失败。已检查三类正常面板、更多展开及暗色 RTL 大字号的代表截图。截图使用独立内存数据与 Flutter 测试指针，不作为原生鼠标拖动验收。
+Windows 实际字体入口为 `integration_test/hybrid_editor_visual_test.dart`，课程、日程、课表分别运行，三组共 **12 项全部通过**，输出 30 张 PNG。除正常新建／编辑外，还覆盖展开、全天、并排、480／320 dp、720×420 矮窗及保存失败。中英文 1× 均验证日程开始标签、日期、时间和全天同行，以及起止日期列对齐；已检查三类正常面板、更多展开和窄窗截图。截图使用独立内存数据与 Flutter 测试指针，不作为原生鼠标拖动验收。
 
 ```powershell
 foreach ($editorGroup in @('course', 'event', 'timetable')) {
-  flutter test --no-pub -d windows integration_test/hybrid_editor_visual_test.dart --dart-define=SKED_VISUAL_GROUP=$editorGroup --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/hybrid-editor-visual --reporter expanded
+  flutter test --no-pub -d windows integration_test/hybrid_editor_visual_test.dart --dart-define=SKED_VISUAL_GROUP=$editorGroup --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/compact-editor-visual --reporter expanded
 }
 ```
 
-本地截图位于 `.scratch/hybrid-editor-visual/`，代表文件为 `course-zh-add-1.0x-floating.png`、`event-zh-add-1.0x-floating.png` 和 `timetable-zh-edit-1.0x-floating.png`。Windows 验证和普通调试构建在 `.scratch/hybrid-editor-check/` 的独立源码目录执行，避免正在运行的应用锁定原构建目录；截图与运行日志不提交。
+本次截图位于 `.scratch/compact-editor-visual/`，代表文件为 `course-zh-add-1.0x-floating.png`、`event-zh-add-1.0x-floating.png` 和 `timetable-zh-edit-1.0x-floating.png`；首轮截图保留在 `.scratch/hybrid-editor-visual/` 供比较。Windows 验证和普通调试构建在 `.scratch/hybrid-editor-check/` 的独立源码目录执行，避免正在运行的应用锁定原构建目录；截图与运行日志不提交。
 
-最终普通 Windows 调试构建成功，输出 `.scratch/hybrid-editor-check/build/windows/x64/runner/Debug/sked.exe`。联合回归、静态检查、三组视觉测试和构建日志分别为 `.scratch/hybrid-editor-final-regressions.log`、`.scratch/hybrid-editor-final-analyze.log`、`.scratch/hybrid-editor-visual-final-{course,event,timetable}.log` 和 `.scratch/hybrid-editor-windows-build.log`。
+最终普通 Windows 调试构建成功，输出 `.scratch/hybrid-editor-check/build/windows/x64/runner/Debug/sked.exe`。联合回归、静态检查、三组视觉测试和构建日志分别为 `.scratch/compact-editor-regressions.log`、`.scratch/compact-editor-analyze.log`、`.scratch/compact-editor-visual-{course,event,timetable}.log` 和 `.scratch/compact-editor-windows-build.log`。
