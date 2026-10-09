@@ -73,6 +73,100 @@ const _customParserSettings = SchoolImportParserSettings(
 );
 
 void main() {
+  group('SchoolImportApi.tryDecodeImportObject', () {
+    final object = {
+      'ok': true,
+      'timetable': {
+        'name': 'Term {one}',
+        'courses': [_minimalCourseJson()],
+        'unknownField': {
+          'values': [true, 7, null],
+        },
+      },
+      'unknownEnvelope': [
+        'keep',
+        {'nested': 3},
+      ],
+    };
+    final json = jsonEncode(object);
+    for (final (format, source) in [
+      ('plain', '  \n$json\n  '),
+      ('json fence', '```json\n$json\n```'),
+      ('uppercase fence', '```JSON\n$json\n```'),
+      ('unlabelled fence', '```\n$json\n```'),
+      ('prose', 'Parsed timetable:\n$json\nReview before import.'),
+    ]) {
+      test('preserves the entire object from $format', () {
+        expect(SchoolImportApi.tryDecodeImportObject(source), object);
+      });
+    }
+
+    for (final source in ['No result', '[]', '```json\n{invalid}\n```']) {
+      test('rejects unparseable object: $source', () {
+        expect(SchoolImportApi.tryDecodeImportObject(source), isNull);
+      });
+    }
+
+    for (final (kind, value) in <(String, Object?)>[
+      ('array', ['prefix', object, 'suffix']),
+      ('string with braces', 'prefix {} suffix'),
+      ('number', 7),
+      ('boolean', true),
+      ('null', null),
+    ]) {
+      for (final fenced in [false, true]) {
+        final encoded = jsonEncode(value);
+        final source = fenced ? '```json\n$encoded\n```' : encoded;
+        test('rejects complete non-object $kind (fenced: $fenced)', () {
+          expect(SchoolImportApi.tryDecodeImportObject(source), isNull);
+        });
+      }
+    }
+
+    for (final fenced in [false, true]) {
+      test(
+        'stream rejects complete non-object array (fenced: $fenced)',
+        () async {
+          final encoded = jsonEncode(['prefix', object, 'suffix']);
+          final source = fenced ? '```json\n$encoded\n```' : encoded;
+          final sseBody =
+              'data: ${jsonEncode({
+                'choices': [
+                  {
+                    'delta': {'content': source},
+                  },
+                ],
+              })}\n\n'
+              'data: [DONE]\n\n';
+          final client = _StreamingClient((_) async {
+            return http.StreamedResponse(
+              Stream.value(utf8.encode(sseBody)),
+              200,
+            );
+          });
+          final events = await const SchoolImportApi()
+              .importCurrentPageStream(
+                const SchoolImportPagePayload(
+                  url: 'https://example.test/page',
+                  title: 'Timetable',
+                  html: '<table>demo</table>',
+                  locale: 'en',
+                  sourceHint: schoolImportParserSourceCustomOpenAi,
+                ),
+                parserSettings: _customParserSettings,
+                client: client,
+              )
+              .toList();
+          expect(events.whereType<ParseDone>(), isEmpty);
+          expect(
+            events.whereType<ParseError>().single.message,
+            contains('Import response parse failed.'),
+          );
+        },
+      );
+    }
+  });
+
   group('SchoolImportApi.buildResponseFromDoneEvent', () {
     Map<String, dynamic> timetableJson() {
       return {

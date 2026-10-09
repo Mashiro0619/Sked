@@ -67,65 +67,144 @@ void main() {
     },
   );
 
-  testWidgets(
-    'JSON preview and exact source survive reflow and confirm together',
-    (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(1280, 900);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.view.resetPhysicalSize);
-      final p = await workspaceProvider();
-      SchoolImportResultEditorOutcome? result;
-      await tester.pumpWidget(
-        WorkspaceHarness(
-          provider: p,
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: TextButton(
-                onPressed: () async {
-                  result = await Navigator.of(context)
-                      .push<SchoolImportResultEditorOutcome>(
-                        MaterialPageRoute(
-                          builder: (_) => SchoolImportResultEditorPage(
-                            initialText: _draft('Initial'),
+  for (final format in ['plain', 'fenced', 'prose']) {
+    testWidgets(
+      'JSON preview and exact source survive reflow and confirm together ($format)',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(1280, 900);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        final p = await workspaceProvider();
+        SchoolImportResultEditorOutcome? result;
+        await tester.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () async {
+                    result = await Navigator.of(context)
+                        .push<SchoolImportResultEditorOutcome>(
+                          MaterialPageRoute(
+                            builder: (_) => SchoolImportResultEditorPage(
+                              initialText: _draft('Initial'),
+                            ),
                           ),
-                        ),
-                      );
-                },
-                child: const Text('Open'),
+                        );
+                  },
+                  child: const Text('Open'),
+                ),
               ),
             ),
           ),
-        ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        final l = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportResultEditorPage)),
+        );
+        final field = find.byType(TextField);
+        final originalElement = tester.element(field);
+        expect(find.byType(SchoolImportSummaryPreview), findsOneWidget);
+        expect(find.text('Test course'), findsOneWidget);
+        final json = _draft('Changed title');
+        final raw = switch (format) {
+          'fenced' => '  ```json\n$json\n```\n',
+          'prose' => 'Parsed timetable:\n$json\nReview before import.',
+          _ => '  $json\n',
+        };
+        await tester.enterText(field, raw);
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.pumpAndSettle();
+        expect(find.text('Changed title'), findsOneWidget);
+        tester.view.physicalSize = const Size(360, 800);
+        await tester.pumpAndSettle();
+        expect(tester.element(field), same(originalElement));
+        expect(find.byType(SchoolImportSummaryPreview), findsNothing);
+        expect(tester.widget<TextField>(field).controller!.text, raw);
+        await tester.tap(find.byTooltip(l.confirm));
+        await tester.pumpAndSettle();
+        expect(result!.rawText, raw);
+        expect(result!.timetable.name, 'Changed title');
+        expect(result!.rawText, contains('unknownField'));
+        await tester.pumpWidget(const SizedBox.shrink());
+        p.dispose();
+      },
+    );
+  }
+
+  for (final (kind, value) in <(String, Object?)>[
+    ('array', ['prefix', jsonDecode(_draft('Inside array')), 'suffix']),
+    ('string with braces', 'prefix {} suffix'),
+    ('number', 7),
+    ('boolean', true),
+    ('null', null),
+  ]) {
+    for (final fenced in [false, true]) {
+      testWidgets(
+        'complete non-object $kind stays editable without partial import (fenced: $fenced)',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = const Size(1280, 900);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.view.resetPhysicalSize);
+          final p = await workspaceProvider();
+          addTearDown(p.dispose);
+          final encoded = jsonEncode(value);
+          final source = fenced ? '```json\n$encoded\n```' : encoded;
+          SchoolImportResultEditorOutcome? result;
+          await tester.pumpWidget(
+            WorkspaceHarness(
+              provider: p,
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () async {
+                      result = await Navigator.of(context)
+                          .push<SchoolImportResultEditorOutcome>(
+                            MaterialPageRoute(
+                              builder: (_) => SchoolImportResultEditorPage(
+                                initialText: source,
+                              ),
+                            ),
+                          );
+                    },
+                    child: const Text('Open'),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+          final l = AppLocalizations.of(
+            tester.element(find.byType(SchoolImportResultEditorPage)),
+          );
+          expect(find.byType(SchoolImportSummaryPreview), findsNothing);
+          await tester.tap(find.byTooltip(l.confirm));
+          await tester.pumpAndSettle();
+          expect(find.byType(SchoolImportResultEditorPage), findsOneWidget);
+          expect(find.text(l.importFailedCheckContent), findsOneWidget);
+          expect(result, isNull);
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            source,
+          );
+
+          final repaired = _draft('Repaired');
+          await tester.enterText(find.byType(TextField), repaired);
+          await tester.pump(const Duration(milliseconds: 250));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byTooltip(l.confirm));
+          await tester.pumpAndSettle();
+          expect(result!.rawText, repaired);
+          expect(result!.timetable.name, 'Repaired');
+          expect(tester.takeException(), isNull);
+        },
       );
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      final l = AppLocalizations.of(
-        tester.element(find.byType(SchoolImportResultEditorPage)),
-      );
-      final field = find.byType(TextField);
-      final originalElement = tester.element(field);
-      expect(find.byType(SchoolImportSummaryPreview), findsOneWidget);
-      expect(find.text('Test course'), findsOneWidget);
-      final raw = '  ${_draft('Changed title')}\n';
-      await tester.enterText(field, raw);
-      await tester.pump(const Duration(milliseconds: 250));
-      await tester.pumpAndSettle();
-      expect(find.text('Changed title'), findsOneWidget);
-      tester.view.physicalSize = const Size(360, 800);
-      await tester.pumpAndSettle();
-      expect(tester.element(field), same(originalElement));
-      expect(find.byType(SchoolImportSummaryPreview), findsNothing);
-      expect(tester.widget<TextField>(field).controller!.text, raw);
-      await tester.tap(find.byTooltip(l.confirm));
-      await tester.pumpAndSettle();
-      expect(result!.rawText, raw);
-      expect(result!.timetable.name, 'Changed title');
-      expect(result!.rawText, contains('unknownField'));
-      await tester.pumpWidget(const SizedBox.shrink());
-      p.dispose();
-    },
-  );
+    }
+  }
 
   testWidgets(
     'invalid JSON stays editable and Back protects the unsaved correction',

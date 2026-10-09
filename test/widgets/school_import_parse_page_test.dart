@@ -67,6 +67,12 @@ const _rawResponse = '''{
   "unknownField": {"kept": true}
 }''';
 
+String _parserText(String source, String format) => switch (format) {
+  'fenced' => '```json\n$source\n```',
+  'prose' => 'Parsed timetable:\n$source\nReview before import.',
+  _ => source,
+};
+
 SchoolImportResponse _response() {
   return SchoolImportResponse(
     meta: const SchoolImportMeta(
@@ -151,6 +157,7 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
   TimetableProvider provider, {
   bool canReplaceCurrent = false,
   TextScaler textScaler = TextScaler.noScaling,
+  int maxEditableCodeUnits = SchoolImportParsePage.defaultMaxEditableCodeUnits,
 }) async {
   final results = <SchoolImportParseOutcome?>[];
   await tester.pumpWidget(
@@ -172,6 +179,7 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
                         stream: controller.stream,
                         provider: provider,
                         canReplaceCurrent: canReplaceCurrent,
+                        maxEditableCodeUnits: maxEditableCodeUnits,
                         initialPeriodTimeSetId:
                             provider.activePeriodTimeSetOrNull?.id ??
                             provider.periodTimeSets.firstOrNull?.id,
@@ -192,9 +200,12 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
-  for (final wrapped in [false, true]) {
+  for (final (wrapped, format) in [
+    for (final wrapped in [false, true])
+      for (final format in ['plain', 'fenced', 'prose']) (wrapped, format),
+  ]) {
     testWidgets(
-      'JSON course edits retain corrected metadata and unknown fields (wrapped: $wrapped)',
+      'JSON course edits retain corrected metadata and unknown fields (wrapped: $wrapped, $format)',
       (tester) async {
         await tester.binding.setSurfaceSize(const Size(900, 1000));
         addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -204,13 +215,14 @@ void main() {
         addTearDown(controller.close);
         final results = await _pumpDirectPage(tester, controller, provider);
         final original = jsonDecode(_rawResponse) as Map<String, dynamic>;
-        final source = wrapped
+        final rawObject = wrapped
             ? jsonEncode({
                 'ok': true,
                 'timetable': original,
                 'unknownEnvelope': [1, 'kept'],
               })
             : _rawResponse;
+        final source = _parserText(rawObject, format);
         controller.add(ParseDelta(source));
         controller.add(ParseDone(response: _response()));
         await tester.pumpAndSettle();
@@ -360,106 +372,165 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'discarding JSON edits retains the form draft and original raw text',
-    (tester) async {
-      final provider = await _createProvider();
-      addTearDown(provider.dispose);
-      final controller = StreamController<SchoolImportStreamEvent>();
-      addTearDown(controller.close);
-      final results = await _pumpDirectPage(tester, controller, provider);
-      controller.add(const ParseDelta(_rawResponse));
-      controller.add(ParseDone(response: _response()));
-      await tester.pumpAndSettle();
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(SchoolImportParsePage)),
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('school-import-parse-timetable-name')),
-        'Keep this correction',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('school-import-parse-total-weeks')),
-        '22',
-      );
-      await tester.tap(
-        find.widgetWithText(OutlinedButton, l10n.schoolImportResultEditorTitle),
-      );
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byType(TextField),
-        _rawResponse.replaceFirst('Mathematics', 'Cancelled physics'),
-      );
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.discardChangesAndExit));
-      await tester.pumpAndSettle();
-      expect(find.byType(SchoolImportResultEditorPage), findsNothing);
-      expect(
-        tester
-            .widget<TextField>(
-              find.byKey(const ValueKey('school-import-parse-timetable-name')),
-            )
-            .controller!
-            .text,
-        'Keep this correction',
-      );
-      expect(
-        tester
-            .widget<TextField>(
-              find.byKey(const ValueKey('school-import-parse-total-weeks')),
-            )
-            .controller!
-            .text,
-        '22',
-      );
-      await tester.tap(
-        find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
-      );
-      await tester.pumpAndSettle();
-      expect(results.single!.response.timetable.name, 'Keep this correction');
-      expect(results.single!.response.timetable.totalWeeks, 22);
-      expect(
-        results.single!.response.timetable.courses.single.name,
-        'Mathematics',
-      );
-      expect(results.single!.rawText, _rawResponse);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  for (final format in ['plain', 'fenced', 'prose']) {
+    testWidgets(
+      'discarding JSON edits retains the form draft and original raw text ($format)',
+      (tester) async {
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final controller = StreamController<SchoolImportStreamEvent>();
+        addTearDown(controller.close);
+        final results = await _pumpDirectPage(tester, controller, provider);
+        final source = _parserText(_rawResponse, format);
+        controller.add(ParseDelta(source));
+        controller.add(ParseDone(response: _response()));
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportParsePage)),
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('school-import-parse-timetable-name')),
+          'Keep this correction',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('school-import-parse-total-weeks')),
+          '22',
+        );
+        await tester.tap(
+          find.widgetWithText(
+            OutlinedButton,
+            l10n.schoolImportResultEditorTitle,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byType(TextField),
+          source.replaceFirst('Mathematics', 'Cancelled physics'),
+        );
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.discardChangesAndExit));
+        await tester.pumpAndSettle();
+        expect(find.byType(SchoolImportResultEditorPage), findsNothing);
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(
+                  const ValueKey('school-import-parse-timetable-name'),
+                ),
+              )
+              .controller!
+              .text,
+          'Keep this correction',
+        );
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(const ValueKey('school-import-parse-total-weeks')),
+              )
+              .controller!
+              .text,
+          '22',
+        );
+        await tester.tap(
+          find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+        );
+        await tester.pumpAndSettle();
+        expect(results.single!.response.timetable.name, 'Keep this correction');
+        expect(results.single!.response.timetable.totalWeeks, 22);
+        expect(
+          results.single!.response.timetable.courses.single.name,
+          'Mathematics',
+        );
+        expect(results.single!.rawText, source);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
-  testWidgets('opening unchanged metadata preserves JSON text exactly', (
-    tester,
-  ) async {
-    final provider = await _createProvider();
-    addTearDown(provider.dispose);
-    final controller = StreamController<SchoolImportStreamEvent>();
-    addTearDown(controller.close);
-    final results = await _pumpDirectPage(tester, controller, provider);
-    const source = '  \n$_rawResponse\n  ';
-    controller.add(const ParseDelta(source));
-    controller.add(ParseDone(response: _response()));
-    await tester.pumpAndSettle();
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(SchoolImportParsePage)),
+    testWidgets(
+      'opening unchanged metadata preserves JSON text exactly ($format)',
+      (tester) async {
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final controller = StreamController<SchoolImportStreamEvent>();
+        addTearDown(controller.close);
+        final results = await _pumpDirectPage(tester, controller, provider);
+        final source = '  \n${_parserText(_rawResponse, format)}\n  ';
+        controller.add(ParseDelta(source));
+        controller.add(ParseDone(response: _response()));
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportParsePage)),
+        );
+        await tester.tap(
+          find.widgetWithText(
+            OutlinedButton,
+            l10n.schoolImportResultEditorTitle,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          source,
+        );
+        await tester.tap(find.byTooltip(l10n.confirm));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+        );
+        await tester.pumpAndSettle();
+        expect(results.single!.rawText, source);
+        expect(tester.takeException(), isNull);
+      },
     );
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, l10n.schoolImportResultEditorTitle),
+  }
+
+  for (final exceedsRawLimit in [true, false]) {
+    testWidgets(
+      'wrapped results enforce editor size limits (raw: $exceedsRawLimit)',
+      (tester) async {
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final controller = StreamController<SchoolImportStreamEvent>();
+        addTearDown(controller.close);
+        final rawObject = jsonEncode(jsonDecode(_rawResponse));
+        final source = _parserText(rawObject, 'fenced');
+        await _pumpDirectPage(
+          tester,
+          controller,
+          provider,
+          maxEditableCodeUnits: source.length - (exceedsRawLimit ? 1 : 0),
+        );
+        controller.add(ParseDelta(source));
+        controller.add(ParseDone(response: _response()));
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportParsePage)),
+        );
+        final editor = find.widgetWithText(
+          OutlinedButton,
+          l10n.schoolImportResultEditorTitle,
+        );
+        if (!exceedsRawLimit) {
+          expect(tester.widget<OutlinedButton>(editor).onPressed, isNotNull);
+          await tester.enterText(
+            find.byKey(const ValueKey('school-import-parse-timetable-name')),
+            'Corrected timetable ${'x' * 80}',
+          );
+          await tester.pumpAndSettle();
+        }
+        expect(tester.widget<OutlinedButton>(editor).onPressed, isNull);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+              )
+              .onPressed,
+          isNotNull,
+        );
+      },
     );
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      source,
-    );
-    await tester.tap(find.byTooltip(l10n.confirm));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
-    );
-    await tester.pumpAndSettle();
-    expect(results.single!.rawText, source);
-    expect(tester.takeException(), isNull);
-  });
+  }
 
   testWidgets(
     'parsed semester date changes only after picker confirmation and stays in the import draft',

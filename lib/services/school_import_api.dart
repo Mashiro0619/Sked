@@ -542,7 +542,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         );
       }
       final content = _extractOpenAiMessageContent(decoded);
-      final parsedJson = _tryDecodeJsonFromModelContent(content);
+      final parsedJson = tryDecodeImportObject(content);
       if (parsedJson is! Map<String, dynamic>) {
         throw FormatException(
           _errorWithDetails('Import response parse failed.', content),
@@ -927,7 +927,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     return baseUri.replace(path: path, query: '', fragment: '');
   }
 
-  Map<String, dynamic>? _tryDecodeJson(String source) {
+  static Map<String, dynamic>? _tryDecodeJson(String source) {
     try {
       return _asStringKeyedMap(jsonDecode(source));
     } catch (_) {
@@ -976,10 +976,20 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     return utf8.decode(bytes.takeBytes(), allowMalformed: allowMalformed);
   }
 
-  Map<String, dynamic>? _tryDecodeJsonFromModelContent(String source) {
-    final exact = _tryDecodeJson(source);
-    if (exact != null) {
-      return exact;
+  /// Decodes the JSON object accepted from a parser or its editable draft.
+  ///
+  /// Some parsers still add Markdown fences or explanatory text. Keep the
+  /// same extraction rules when synchronizing the form and editing that text,
+  /// without normalizing away unknown response or timetable fields.
+  /// A complete JSON value must be an object: extracting an object from an
+  /// array or string would silently discard the rest of that value.
+  static Map<String, dynamic>? tryDecodeImportObject(String source) {
+    try {
+      return _asStringKeyedMap(jsonDecode(source));
+    } on FormatException {
+      // Only invalid JSON can be a parser's object with surrounding text.
+    } catch (_) {
+      return null;
     }
 
     final trimmed = source.trim();
@@ -988,9 +998,12 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       caseSensitive: false,
     ).firstMatch(trimmed);
     if (fenceMatch != null) {
-      final fenced = _tryDecodeJson(fenceMatch.group(1) ?? '');
-      if (fenced != null) {
-        return fenced;
+      try {
+        return _asStringKeyedMap(jsonDecode(fenceMatch.group(1) ?? ''));
+      } on FormatException {
+        // A fence body may itself contain explanatory text around an object.
+      } catch (_) {
+        return null;
       }
     }
 
@@ -1222,7 +1235,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       }
 
       final accumulatedText = accumulatedContent.toString();
-      final parsedJson = _tryDecodeJsonFromModelContent(accumulatedText);
+      final parsedJson = tryDecodeImportObject(accumulatedText);
       if (parsedJson is! Map<String, dynamic>) {
         yield ParseError(
           _errorWithDetails('Import response parse failed.', accumulatedText),

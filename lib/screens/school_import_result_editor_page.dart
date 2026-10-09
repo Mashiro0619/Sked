@@ -6,7 +6,6 @@ import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -14,24 +13,6 @@ import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../services/school_import_api.dart';
 import '../utils/text_input_limits.dart';
-
-Map<String, dynamic>? _decodeSchoolImportObject(String source) {
-  try {
-    final decoded = jsonDecode(source);
-    if (decoded is! Map) {
-      return null;
-    }
-    final result = <String, dynamic>{};
-    for (final entry in decoded.entries) {
-      if (entry.key is String) {
-        result[entry.key as String] = entry.value;
-      }
-    }
-    return result;
-  } catch (_) {
-    return null;
-  }
-}
 
 /// The validated value returned by the full-screen parsed-result editor.
 ///
@@ -101,7 +82,7 @@ class _SchoolImportResultEditorPageState
   SchoolImportResponse? _preview;
 
   SchoolImportResponse? _parsePreview() {
-    final json = _decodeSchoolImportObject(_controller.text);
+    final json = SchoolImportApi.tryDecodeImportObject(_controller.text);
     if (json == null) return null;
     try {
       return SchoolImportApi.buildResponseFromDoneEvent(json);
@@ -154,7 +135,7 @@ class _SchoolImportResultEditorPageState
       return;
     }
 
-    final json = _decodeSchoolImportObject(rawText);
+    final json = SchoolImportApi.tryDecodeImportObject(rawText);
     if (json == null) {
       _showError(l10n.importFailedCheckContent);
       return;

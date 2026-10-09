@@ -512,24 +512,22 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     // Avoid reformatting the parser's/user's JSON when no form values changed.
     if (changes.isEmpty) return _rawText;
 
-    try {
-      final json = jsonDecode(_rawText);
-      if (json is! Map<String, dynamic>) return _rawText;
-      final rawTimetable = json.containsKey('timetable')
-          ? json['timetable']
-          : json;
-      if (rawTimetable is! Map<String, dynamic>) return _rawText;
-      // Patch only the edited metadata in the original object, preserving all
-      // course data and unknown fields in both supported response shapes.
-      rawTimetable.addAll(changes);
-      final formatted = const JsonEncoder.withIndent('  ').convert(json);
-      return formatted.length <= widget.maxEditableCodeUnits
-          ? formatted
-          : jsonEncode(json);
-    } on FormatException {
+    final json = SchoolImportApi.tryDecodeImportObject(_rawText);
+    if (json == null) {
       // Keep malformed model output available for manual repair.
       return _rawText;
     }
+    final rawTimetable = json.containsKey('timetable')
+        ? json['timetable']
+        : json;
+    if (rawTimetable is! Map<String, dynamic>) return _rawText;
+    // Patch only the edited metadata in the original object, preserving all
+    // course data and unknown fields in both supported response shapes.
+    rawTimetable.addAll(changes);
+    final formatted = const JsonEncoder.withIndent('  ').convert(json);
+    return formatted.length <= widget.maxEditableCodeUnits
+        ? formatted
+        : jsonEncode(json);
   }
 
   Future<void> _openEditor() async {
