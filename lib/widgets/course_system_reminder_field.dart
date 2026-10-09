@@ -142,6 +142,7 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
       onChanged: widget.onMinutesChanged,
       enabled: widget.enabled,
       keyboardType: const TextInputType.numberWithOptions(),
+      style: widget.compactEditor ? workspaceEditorContentStyle(context) : null,
       decoration: widget.compactEditor
           ? workspaceEditorInputDecoration(
               context,

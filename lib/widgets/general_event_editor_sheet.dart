@@ -653,27 +653,26 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       ),
       const SizedBox(height: 12),
       WorkspaceEditorFieldsRow(
-        minimumWidth: 220,
+        minimumChildWidths: [
+          workspaceEditorMinimumFieldWidth(context, label: l10n.place),
+          if (_showCalendarPicker)
+            workspaceEditorMinimumFieldWidth(
+              context,
+              label: l10n.calendar,
+              value: _calendarOptions
+                  .firstWhere((calendar) => calendar.id == _calendarId)
+                  .name,
+              valuePadding: 74,
+            ),
+        ],
         children: [
-          Semantics(
+          WorkspaceEditorField(
             label: l10n.place,
             child: TextFormField(
+              key: const ValueKey('event-desktop-location'),
               controller: _locationController,
-              decoration:
-                  workspaceEditorInputDecoration(
-                    context,
-                    l10n.place,
-                    metadata: true,
-                  ).copyWith(
-                    prefixIcon: const Icon(
-                      Icons.location_on_outlined,
-                      size: 18,
-                    ),
-                    prefixIconConstraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 36,
-                    ),
-                  ),
+              style: workspaceEditorContentStyle(context),
+              decoration: workspaceEditorInputDecoration(context, l10n.place),
             ),
           ),
           if (_showCalendarPicker) _buildCalendarField(l10n),
@@ -682,7 +681,18 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       WorkspaceEditorFormSection(child: _buildTimeRange(l10n)),
       WorkspaceEditorFormSection(
         child: WorkspaceEditorFieldsRow(
-          minimumWidth: 240,
+          minimumChildWidths: [
+            workspaceEditorMinimumFieldWidth(
+              context,
+              label: l10n.eventRecurrence,
+              value: _currentRecurrenceSummary(l10n),
+            ),
+            workspaceEditorMinimumFieldWidth(
+              context,
+              label: l10n.reminder,
+              value: _reminderSummary(_reminders, l10n),
+            ),
+          ],
           children: [_buildRecurrenceField(l10n), _buildReminderField(l10n)],
         ),
       ),
@@ -777,18 +787,20 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     ),
   );
 
+  String _currentRecurrenceSummary(AppLocalizations l10n) => _recurrenceSummary(
+    recurrence: _recurrence,
+    interval: _interval,
+    unit: _customUnit,
+    untilDate: _untilDate,
+    repeatCount: _repeatCount,
+    l10n: l10n,
+  );
+
   Widget _buildRecurrenceField(AppLocalizations l10n) => _EventOptionField(
     key: const ValueKey('event-recurrence-field'),
     icon: Icons.repeat,
     label: l10n.eventRecurrence,
-    value: _recurrenceSummary(
-      recurrence: _recurrence,
-      interval: _interval,
-      unit: _customUnit,
-      untilDate: _untilDate,
-      repeatCount: _repeatCount,
-      l10n: l10n,
-    ),
+    value: _currentRecurrenceSummary(l10n),
     onTap: _blocked
         ? null
         : (anchor) => unawaited(_openRecurrenceDialog(anchor)),
@@ -839,8 +851,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       },
     );
     return WorkspaceEditorScope.maybeOf(context)?.enabled == true
-        ? WorkspaceEditorDropdownStyle(
-            child: Semantics(label: l10n.calendar, child: picker),
+        ? WorkspaceEditorField(
+            label: l10n.calendar,
+            child: WorkspaceEditorDropdownStyle(child: picker),
           )
         : picker;
   }
@@ -850,6 +863,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     final theme = Theme.of(context);
     final notes = TextFormField(
       controller: _notesController,
+      style: desktop ? workspaceEditorContentStyle(context) : null,
       decoration: desktop
           ? workspaceEditorInputDecoration(context, l10n.eventNotes)
           : InputDecoration(
@@ -1040,12 +1054,20 @@ class _EditorSection extends StatelessWidget {
         onExpansionChanged: enabled ? onExpansionChanged : null,
         leading: desktop ? null : Icon(icon),
         minTileHeight: desktop ? 36 : null,
-        title: Text(title),
+        title: Text(
+          title,
+          style: desktop
+              ? workspaceEditorContentStyle(context).copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                )
+              : null,
+        ),
         tilePadding: desktop
             ? EdgeInsets.zero
             : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
         childrenPadding: desktop
-            ? EdgeInsets.only(top: MediaQuery.textScalerOf(context).scale(8))
+            ? const EdgeInsets.only(top: 12)
             : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
         shape: shape,
         collapsedShape: shape,
@@ -1076,8 +1098,6 @@ class _EventOptionField extends StatelessWidget {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return WorkspaceEditorField(
         label: label,
-        labelWidth: 88,
-        minimumControlWidth: 112,
         child: Builder(
           builder: (anchor) => WorkspaceEditorValue(
             label: label,
@@ -1754,16 +1774,13 @@ class _DateTimeRange extends StatelessWidget {
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       final theme = Theme.of(context);
-      Widget label(String text) => Text(
-        text,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      );
+      Widget label(String text) =>
+          Text(text, style: workspaceEditorLabelStyle(context));
       return WorkspaceEditorTimeRows(
         showTime: start.showTime,
         textDirection: Directionality.of(context),
-        labelWidth: MediaQuery.textScalerOf(context).scale(96),
+        minimumGroupWidth:
+            240 * MediaQuery.textScalerOf(context).scale(14) / 14,
         startLabel: label(start.label),
         endLabel: label(end.label),
         startDate: start.desktopDate(context),
@@ -1773,11 +1790,15 @@ class _DateTimeRange extends StatelessWidget {
         allDay: allDay,
         error: end.errorText == null
             ? null
-            : Text(
-                end.errorText!,
+            : Semantics(
                 key: end.errorKey,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
+                liveRegion: true,
+                child: Text(
+                  end.errorText!,
+                  key: const ValueKey('event-time-range-error'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
                 ),
               ),
       );
@@ -1837,9 +1858,7 @@ class _DateTimeRow extends StatelessWidget {
       message: AppLocalizations.of(context).pickDate,
       child: WorkspaceEditorValue(
         label: '$label · ${AppLocalizations.of(context).pickDate}',
-        tonal: true,
         value: _fmtDate(date),
-        icon: Icons.calendar_today_outlined,
         onPressed: onPickDate == null ? null : () => onPickDate!(anchor),
       ),
     ),
@@ -1849,7 +1868,6 @@ class _DateTimeRow extends StatelessWidget {
       message: AppLocalizations.of(context).pickTime,
       child: WorkspaceEditorValue(
         label: '$label · ${AppLocalizations.of(context).pickTime}',
-        tonal: true,
         value: time.format(context),
         onPressed: onPickTime == null ? null : () => onPickTime!(anchor),
       ),
@@ -2021,11 +2039,22 @@ class _EventSwitchRow extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title),
+          Flexible(
+            child: Text(
+              title,
+              style: workspaceEditorContentStyle(
+                context,
+              ).copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          ),
           const SizedBox(width: 8),
           Semantics(
             label: title,
-            child: Switch(value: value, onChanged: onChanged),
+            child: Switch(
+              value: value,
+              onChanged: onChanged,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
         ],
       );
@@ -2545,19 +2574,23 @@ class _CalendarDropdownItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = Text(
+      calendar.name,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         _ColorDot(color: effectiveGeneralCalendarColor(context, calendar)),
         const SizedBox(width: 8),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 240),
-          child: Text(
-            calendar.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        if (WorkspaceEditorScope.maybeOf(context)?.enabled == true)
+          Flexible(child: label)
+        else
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 240),
+            child: label,
           ),
-        ),
       ],
     );
   }

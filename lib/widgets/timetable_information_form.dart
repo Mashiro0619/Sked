@@ -61,34 +61,47 @@ class TimetableInformationForm extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          WorkspaceEditorField(
-            label: l10n.totalWeeks,
-            child: TextField(
-              controller: weeksController,
-              enabled: enabled,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              inputFormatters: weeksInputFormatters,
-              decoration: workspaceEditorInputDecoration(
+          const SizedBox(height: 16),
+          WorkspaceEditorFieldsRow(
+            minimumWidth: 240,
+            minimumChildWidths: [
+              workspaceEditorMinimumFieldWidth(context, label: l10n.totalWeeks),
+              workspaceEditorMinimumFieldWidth(
                 context,
-                l10n.totalWeeks,
+                label: l10n.semesterStartDate,
+                value: startDateLabel,
+                valuePadding: 68,
               ),
-            ),
+            ],
+            children: [
+              WorkspaceEditorField(
+                label: l10n.totalWeeks,
+                child: TextField(
+                  controller: weeksController,
+                  enabled: enabled,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: weeksInputFormatters,
+                  style: workspaceEditorContentStyle(context),
+                  decoration: workspaceEditorInputDecoration(
+                    context,
+                    l10n.totalWeeks,
+                  ),
+                ),
+              ),
+              WorkspaceEditorField(
+                label: l10n.semesterStartDate,
+                child: WorkspaceEditorValue(
+                  key: startDateAnchorKey,
+                  label: l10n.semesterStartDate,
+                  value: startDateLabel,
+                  icon: Icons.calendar_month_outlined,
+                  onPressed: enabled ? onPickStartDate : null,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          WorkspaceEditorField(
-            label: l10n.semesterStartDate,
-            child: WorkspaceEditorValue(
-              key: startDateAnchorKey,
-              label: l10n.semesterStartDate,
-              value: startDateLabel,
-              icon: Icons.calendar_month_outlined,
-              onPressed: enabled ? onPickStartDate : null,
-              tonal: true,
-            ),
-          ),
-          const SizedBox(height: 8),
           WorkspaceEditorField(
             label: l10n.periodTimeSets,
             child: WorkspaceEditorValue(

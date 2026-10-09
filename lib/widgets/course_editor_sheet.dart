@@ -364,21 +364,18 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         ),
       ),
       const SizedBox(height: 12),
-      Semantics(
+      WorkspaceEditorField(
         label: l10n.location,
         child: TextField(
           controller: _locationController,
           enabled: !_blocked,
-          decoration:
-              workspaceEditorInputDecoration(
-                context,
-                l10n.location,
-                metadata: true,
-              ).copyWith(
+          style: workspaceEditorContentStyle(context),
+          decoration: workspaceEditorInputDecoration(context, l10n.location)
+              .copyWith(
                 prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
                 prefixIconConstraints: const BoxConstraints(
                   minWidth: 32,
-                  minHeight: 36,
+                  minHeight: 40,
                 ),
               ),
         ),
@@ -401,43 +398,58 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   );
 
   Widget _buildScheduleFields(AppLocalizations l10n) {
+    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
     final localeCode = app_locale.localeCodeFromLocale(
       Localizations.localeOf(context),
+    );
+    final weekdayLabel = formatDayOfWeekLabel(
+      _selectedDayOfWeek,
+      localeCode: localeCode,
+    );
+    final weeksLabel = formatSemesterWeeksLabel(
+      _selectedSemesterWeeks,
+      totalWeeks: widget.totalWeeks,
+      localeCode: localeCode,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ResponsiveFormRow(
           breakpoint: 520,
+          minimumChildWidths: desktop
+              ? [
+                  workspaceEditorMinimumFieldWidth(
+                    context,
+                    label: l10n.dayOfWeek,
+                    value: weekdayLabel,
+                  ),
+                  workspaceEditorMinimumFieldWidth(
+                    context,
+                    label: l10n.semesterWeeks,
+                    value: weeksLabel,
+                  ),
+                ]
+              : const [],
           children: [
             _SelectionTile(
               key: _weekdayAnchor,
-              compactLabel: true,
               title: l10n.dayOfWeek,
-              subtitle: formatDayOfWeekLabel(
-                _selectedDayOfWeek,
-                localeCode: localeCode,
-              ),
+              subtitle: weekdayLabel,
               icon: Icons.today_outlined,
               enabled: !_blocked,
               onTap: _blocked ? null : _pickDayOfWeek,
             ),
             _SelectionTile(
               key: _weeksAnchor,
-              compactLabel: true,
               title: l10n.semesterWeeks,
-              subtitle: formatSemesterWeeksLabel(
-                _selectedSemesterWeeks,
-                totalWeeks: widget.totalWeeks,
-                localeCode: localeCode,
-              ),
+              subtitle: weeksLabel,
               icon: Icons.edit_calendar,
               enabled: !_blocked,
               onTap: _blocked ? null : _pickSemesterWeeks,
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: desktop ? 12 : 8),
         _CourseTimeRange(
           startLabel: l10n.startTime,
           startValue: _formatTimeOfDay(_startTime),
@@ -451,7 +463,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
               ? null
               : (anchor) => _pickTime(isStart: false, anchorContext: anchor),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: desktop ? 12 : 8),
         _SelectionTile(
           key: _periodsAnchor,
           title: l10n.linkedPeriods,
@@ -493,24 +505,38 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           enabled: !_blocked,
           maxLines: maxLines,
           keyboardType: keyboardType,
+          style: workspaceEditorContentStyle(context),
           decoration: workspaceEditorInputDecoration(context, label),
         ),
       );
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          input(l10n.teacherName, _teacherController),
-          const SizedBox(height: 8),
-          input(
-            l10n.credits,
-            _creditController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          WorkspaceEditorFieldsRow(
+            minimumWidth: 240,
+            minimumChildWidths: [
+              workspaceEditorMinimumFieldWidth(
+                context,
+                label: l10n.teacherName,
+              ),
+              workspaceEditorMinimumFieldWidth(context, label: l10n.credits),
+            ],
+            children: [
+              input(l10n.teacherName, _teacherController),
+              input(
+                l10n.credits,
+                _creditController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          input(l10n.remarks, _remarksController, maxLines: 2),
-          const SizedBox(height: 8),
-          _buildCustomFieldsField(l10n),
           const SizedBox(height: 12),
+          input(l10n.remarks, _remarksController, maxLines: 2),
+          const SizedBox(height: 12),
+          _buildCustomFieldsField(l10n),
+          const SizedBox(height: 16),
           _buildReminderField(l10n),
         ],
       );
@@ -573,6 +599,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       controller: _customFieldsController,
       focusNode: _customFieldsFocus,
       enabled: !_blocked,
+      style: desktop ? workspaceEditorContentStyle(context) : null,
       maxLines: usesJson ? 6 : (desktop ? 2 : 3),
       onChanged: (_) {
         if (_customFieldsInvalid) setState(() => _customFieldsInvalid = false);
@@ -1534,6 +1561,7 @@ class _ResponsiveFormRow extends StatelessWidget {
     required this.children,
     this.flexes,
     this.breakpoint = 480,
+    this.minimumChildWidths = const [],
   });
 
   static const double _spacing = 12;
@@ -1541,11 +1569,16 @@ class _ResponsiveFormRow extends StatelessWidget {
   final List<Widget> children;
   final List<int>? flexes;
   final double breakpoint;
+  final List<double> minimumChildWidths;
 
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorFieldsRow(minimumWidth: 240, children: children);
+      return WorkspaceEditorFieldsRow(
+        minimumWidth: 240,
+        minimumChildWidths: minimumChildWidths,
+        children: children,
+      );
     }
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1622,13 +1655,21 @@ class _EditorSection extends StatelessWidget {
         onExpansionChanged: enabled ? onExpansionChanged : null,
         leading: desktop ? null : Icon(icon),
         minTileHeight: desktop ? 36 : null,
-        title: Text(title),
+        title: Text(
+          title,
+          style: desktop
+              ? workspaceEditorContentStyle(context).copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                )
+              : null,
+        ),
         subtitle: subtitle == null ? null : Text(subtitle!),
         tilePadding: desktop
             ? EdgeInsets.zero
             : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
         childrenPadding: desktop
-            ? EdgeInsets.only(top: MediaQuery.textScalerOf(context).scale(8))
+            ? const EdgeInsets.only(top: 12)
             : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
         shape: shape,
         collapsedShape: shape,
@@ -1642,7 +1683,6 @@ class _EditorSection extends StatelessWidget {
 
 class _SelectionTile extends StatelessWidget {
   const _SelectionTile({
-    this.compactLabel = false,
     super.key,
     required this.title,
     required this.subtitle,
@@ -1651,7 +1691,6 @@ class _SelectionTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final bool compactLabel;
   final String title;
   final String subtitle;
   final IconData icon;
@@ -1663,8 +1702,6 @@ class _SelectionTile extends StatelessWidget {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return WorkspaceEditorField(
         label: title,
-        labelWidth: compactLabel ? 76 : 96,
-        minimumControlWidth: 132,
         child: WorkspaceEditorValue(
           label: title,
           value: subtitle,
@@ -1790,49 +1827,54 @@ class _CourseTimeRange extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorField(
-        label: AppLocalizations.of(context).time,
-        labelWidth: 96,
-        child: Row(
-          children: [
-            Expanded(
-              child: Builder(
-                builder: (anchor) => Tooltip(
-                  message: startLabel,
-                  child: WorkspaceEditorValue(
-                    key: const ValueKey('course-start-time-action'),
-                    tonal: true,
-                    label: startLabel,
-                    value: startValue,
-                    onPressed: enabled && onPickStart != null
-                        ? () => onPickStart!(anchor)
-                        : null,
-                  ),
+      return WorkspaceEditorFieldsRow(
+        minimumWidth: 240,
+        minimumChildWidths: [
+          workspaceEditorMinimumFieldWidth(
+            context,
+            label: startLabel,
+            value: startValue,
+          ),
+          workspaceEditorMinimumFieldWidth(
+            context,
+            label: endLabel,
+            value: endValue,
+          ),
+        ],
+        children: [
+          WorkspaceEditorField(
+            label: startLabel,
+            child: Builder(
+              builder: (anchor) => Tooltip(
+                message: startLabel,
+                child: WorkspaceEditorValue(
+                  key: const ValueKey('course-start-time-action'),
+                  label: startLabel,
+                  value: startValue,
+                  onPressed: enabled && onPickStart != null
+                      ? () => onPickStart!(anchor)
+                      : null,
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Text('–'),
-            ),
-            Expanded(
-              child: Builder(
-                builder: (anchor) => Tooltip(
-                  message: endLabel,
-                  child: WorkspaceEditorValue(
-                    key: const ValueKey('course-end-time-action'),
-                    tonal: true,
-                    label: endLabel,
-                    value: endValue,
-                    onPressed: enabled && onPickEnd != null
-                        ? () => onPickEnd!(anchor)
-                        : null,
-                  ),
+          ),
+          WorkspaceEditorField(
+            label: endLabel,
+            child: Builder(
+              builder: (anchor) => Tooltip(
+                message: endLabel,
+                child: WorkspaceEditorValue(
+                  key: const ValueKey('course-end-time-action'),
+                  label: endLabel,
+                  value: endValue,
+                  onPressed: enabled && onPickEnd != null
+                      ? () => onPickEnd!(anchor)
+                      : null,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
     final colors = Theme.of(context).colorScheme;

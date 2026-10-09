@@ -32,12 +32,9 @@ class WorkspaceEditorField extends StatelessWidget {
     super.key,
     required this.label,
     required this.child,
-    this.minimumControlWidth = 180,
-    this.labelWidth = 96,
   });
   final String label;
   final Widget child;
-  final double minimumControlWidth, labelWidth;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -63,12 +60,10 @@ class WorkspaceEditorValue extends StatelessWidget {
     required this.value,
     required this.onPressed,
     this.icon,
-    this.tonal = false,
   });
   final String label, value;
   final VoidCallback? onPressed;
   final IconData? icon;
-  final bool tonal;
   @override
   Widget build(BuildContext context) => Semantics(
     label: label,
@@ -190,7 +185,6 @@ InputDecoration workspaceEditorInputDecoration(
   String label, {
   bool headline = false,
   String? hintText,
-  bool metadata = false,
 }) {
   final colors = Theme.of(context).colorScheme;
   final border = OutlineInputBorder(
@@ -200,7 +194,7 @@ InputDecoration workspaceEditorInputDecoration(
         : BorderSide(color: colors.outlineVariant),
   );
   return InputDecoration(
-    hintText: headline || metadata ? (hintText ?? label) : hintText,
+    hintText: headline ? (hintText ?? label) : hintText,
     hintStyle: headline
         ? workspaceEditorTitleStyle(context)
               .copyWith(color: colors.onSurfaceVariant)

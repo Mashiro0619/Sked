@@ -21,7 +21,6 @@ class WorkspaceEditorTimeRows extends MultiChildRenderObjectWidget {
     required this.showTime,
     required this.textDirection,
     this.minimumGroupWidth = 240,
-    this.labelWidth,
   }) : super(
          children: [
            startLabel,
@@ -39,7 +38,6 @@ class WorkspaceEditorTimeRows extends MultiChildRenderObjectWidget {
 
   /// Minimum width of each group, including the caller's text scale.
   final double minimumGroupWidth;
-  final double? labelWidth;
   @override
   RenderObject createRenderObject(BuildContext context) =>
       _TimeRowsRender(showTime, textDirection, minimumGroupWidth);
