@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import 'expressive_dialog.dart';
+import 'ui_command.dart';
+import 'workspace_editor.dart';
+import 'workspace_editor_form.dart';
 
 class TimetableInformationForm extends StatelessWidget {
   const TimetableInformationForm({
@@ -37,6 +40,68 @@ class TimetableInformationForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            label: l10n.timetableName,
+            child: TextFormField(
+              controller: nameController,
+              enabled: enabled,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              textInputAction: TextInputAction.next,
+              validator: nameValidator,
+              style: workspaceEditorTitleStyle(context),
+              decoration: workspaceEditorInputDecoration(
+                context,
+                l10n.timetableName,
+                headline: true,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          WorkspaceEditorField(
+            label: l10n.totalWeeks,
+            child: TextField(
+              controller: weeksController,
+              enabled: enabled,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              inputFormatters: weeksInputFormatters,
+              decoration: workspaceEditorInputDecoration(
+                context,
+                l10n.totalWeeks,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          WorkspaceEditorField(
+            label: l10n.semesterStartDate,
+            child: WorkspaceEditorValue(
+              key: startDateAnchorKey,
+              label: l10n.semesterStartDate,
+              value: startDateLabel,
+              icon: Icons.calendar_month_outlined,
+              onPressed: enabled ? onPickStartDate : null,
+              tonal: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          WorkspaceEditorField(
+            label: l10n.periodTimeSets,
+            child: WorkspaceEditorValue(
+              key: periodTimeSetAnchorKey,
+              label: l10n.periodTimeSets,
+              value: periodTimeSetSummary,
+              icon: Icons.schedule_outlined,
+              onPressed: enabled ? onPickPeriodTimeSet : null,
+            ),
+          ),
+        ],
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,6 +165,9 @@ class TimetableInformationDialogSurface extends StatelessWidget {
     required this.actions,
     this.leading,
     this.embedded = false,
+    this.onClose,
+    this.closeEnabled = true,
+    this.busy = false,
   });
 
   final Widget title;
@@ -107,9 +175,27 @@ class TimetableInformationDialogSurface extends StatelessWidget {
   final Widget? leading;
   final List<Widget> actions;
   final bool embedded;
+  final VoidCallback? onClose;
+  final bool closeEnabled;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true &&
+        onClose != null) {
+      return WorkspaceEditorScaffold(
+        title: title,
+        onClose: onClose!,
+        closeEnabled: closeEnabled,
+        leading: leading,
+        actions: actions,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [if (busy) const UiCommandBusyIndicator(busy: true), form],
+        ),
+      );
+    }
     return SkedSurface(
       elevation: embedded ? 0 : 6,
       borderRadius: BorderRadius.circular(embedded ? 0 : 28),

@@ -142,6 +142,11 @@ void main() {
       );
       final provider = await workspaceProvider(storage: storage);
       addTearDown(provider.dispose);
+      // A floating timetable editor blocks background actions; this case
+      // deliberately exercises overlapping saves from a docked task.
+      await provider.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.sideBySide,
+      );
       await provider.addTimetable(
         TimetableConfig(
           name: 'Original timetable',

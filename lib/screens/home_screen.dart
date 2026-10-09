@@ -30,6 +30,7 @@ import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
+import '../widgets/workspace_editor.dart';
 import '../widgets/assistant_pane.dart' show AssistantPaneScope;
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/editor_exit_guard.dart';
@@ -334,9 +335,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: _EmptyTimetableState(
                               onCreate: _timetableItemDialogOpen
                                   ? null
-                                  : () => _openCreateTimetableDialog(
+                                  : (anchor) => _openCreateTimetableDialog(
                                       context,
                                       provider,
+                                      editor: WorkspaceEditorConfiguration(
+                                        anchorContext: anchor,
+                                      ),
                                     ),
                               onImport: _fileImportInProgress
                                   ? null
@@ -535,14 +539,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         PositionedDirectional(
                           end: 12,
                           bottom: 16,
-                          child: SkedPrimaryFab(
-                            heroTag: 'student-add-course',
-                            tooltip: l10n.addCourse,
-                            onPressed: () => _openEditor(context, provider),
-                            icon: const Icon(Icons.add),
-                            label: constraints.maxWidth >= 760
-                                ? Text(l10n.addCourse)
-                                : null,
+                          child: Builder(
+                            builder: (anchor) => SkedPrimaryFab(
+                              heroTag: 'student-add-course',
+                              tooltip: l10n.addCourse,
+                              onPressed: () => _openEditor(
+                                context,
+                                provider,
+                                editor: WorkspaceEditorConfiguration(
+                                  anchorContext: anchor,
+                                ),
+                              ),
+                              icon: const Icon(Icons.add),
+                              label: constraints.maxWidth >= 760
+                                  ? Text(l10n.addCourse)
+                                  : null,
+                            ),
                           ),
                         ),
                     ],
@@ -610,12 +622,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   : null,
 
               headerActions: [
-                IconButton(
-                  tooltip: l10n.createTimetable,
-                  icon: const Icon(Icons.add),
-                  onPressed: _courseEditorOpen || _timetableItemDialogOpen
-                      ? null
-                      : () => _openCreateTimetableDialog(context, provider),
+                Builder(
+                  builder: (anchor) => IconButton(
+                    tooltip: l10n.createTimetable,
+                    icon: const Icon(Icons.add),
+                    onPressed: _courseEditorOpen || _timetableItemDialogOpen
+                        ? null
+                        : () => _openCreateTimetableDialog(
+                            context,
+                            provider,
+                            editor: WorkspaceEditorConfiguration(
+                              anchorContext: anchor,
+                            ),
+                          ),
+                  ),
                 ),
                 Builder(
                   builder: (anchor) => PopupMenuButton<String>(
@@ -665,12 +685,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             timetable,
                           )
                         : null,
-                    onEdit: _courseEditorOpen
+                    onEditAt: _courseEditorOpen || _timetableItemDialogOpen
                         ? null
-                        : () => _openTimetableItemDialog(
+                        : (anchor) => _openTimetableItemDialog(
                             context,
                             provider,
                             timetable,
+                            editor: WorkspaceEditorConfiguration(
+                              anchorContext: anchor,
+                            ),
                           ),
                   ),
               ],

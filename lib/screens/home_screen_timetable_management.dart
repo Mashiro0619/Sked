@@ -15,16 +15,31 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
         onSwitch: (pickerContext, timetable) =>
             _switchTimetableFromPicker(pickerContext, provider, timetable),
         onEdit: (pickerContext, timetable) async {
+          final editor = WorkspaceEditorConfiguration(
+            anchorRect: WorkspaceEditorConfiguration(
+              anchorContext: pickerContext,
+            ).initialAnchor,
+          );
           Navigator.of(pickerContext).pop();
           await WidgetsBinding.instance.endOfFrame;
           if (!context.mounted) return false;
-          return _openTimetableItemDialog(context, provider, timetable);
+          return _openTimetableItemDialog(
+            context,
+            provider,
+            timetable,
+            editor: editor,
+          );
         },
         onCreate: (pickerContext) async {
+          final editor = WorkspaceEditorConfiguration(
+            anchorRect: WorkspaceEditorConfiguration(
+              anchorContext: pickerContext,
+            ).initialAnchor,
+          );
           Navigator.of(pickerContext).pop();
           await WidgetsBinding.instance.endOfFrame;
           if (!context.mounted) return false;
-          return _openCreateTimetableDialog(context, provider);
+          return _openCreateTimetableDialog(context, provider, editor: editor);
         },
       );
       if (WorkbenchChromeMetrics.of(context).desktop) {
@@ -141,8 +156,9 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
 
   Future<bool> _openCreateTimetableDialog(
     BuildContext context,
-    TimetableProvider provider,
-  ) {
+    TimetableProvider provider, {
+    WorkspaceEditorConfiguration? editor,
+  }) {
     final l10n = AppLocalizations.of(context);
     final periodTimeSetId =
         provider.activePeriodTimeSetOrNull?.id ??
@@ -152,6 +168,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     return _openTimetableConfigDialog(
       context,
       provider,
+      editor: editor,
       initialConfig: TimetableConfig(
         name: l10n.newTimetableName,
         startDate: DateUtils.dateOnly(DateTime.now()),
@@ -164,13 +181,15 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
   Future<bool> _openTimetableItemDialog(
     BuildContext context,
     TimetableProvider provider,
-    TimetableData timetable,
-  ) {
+    TimetableData timetable, {
+    WorkspaceEditorConfiguration? editor,
+  }) {
     return _openTimetableConfigDialog(
       context,
       provider,
       initialConfig: timetable.config,
       timetable: timetable,
+      editor: editor,
     );
   }
 
@@ -179,6 +198,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     TimetableProvider provider, {
     required TimetableConfig initialConfig,
     TimetableData? timetable,
+    WorkspaceEditorConfiguration? editor,
   }) async {
     final creating = timetable == null;
     if (_timetableItemDialogOpen || _courseEditorOpen || !mounted) {
@@ -202,6 +222,8 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
       final result = await showAppModalSheet<String>(
         context: context,
         workspacePane: _pane,
+        editor: editor ?? _pane.takeEditorEntry(),
+        workspace: AppMode.student,
         isDismissible: false,
         selectionId: timetable == null
             ? 'timetable:new'
@@ -322,225 +344,219 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                   }
                 }
 
-                return PopScope(
-                  canPop: !blocked && !popped,
-                  // The modal host (or desktop Scaffold) already avoids the
-                  // keyboard. Only preserve the bottom system safe area here.
-                  child: SafeArea(
-                    top: false,
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      // Short phone forms must not expand to the route's
-                      // maximum height; desktop tasks keep their full pane.
-                      heightFactor: WorkspaceTaskScope.contains(context)
-                          ? null
-                          : 1,
-                      child: SingleChildScrollView(
-                        child: Form(
-                          key: formKey,
-                          child: TimetableInformationDialogSurface(
-                            embedded: true,
-                            title: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                UiCommandBusyIndicator(busy: busy),
-                                const SizedBox(height: 16),
-                                Text(
-                                  creating
-                                      ? l10n.createTimetable
-                                      : l10n.editTimetable,
-                                ),
-                              ],
-                            ),
-                            form: TimetableInformationForm(
-                              startDateAnchorKey: startDateAnchor,
-                              periodTimeSetAnchorKey: periodTimeSetAnchor,
-                              nameController: nameController,
-                              weeksController: weeksController,
-                              startDateLabel: formatDate(selectedStartDate),
-                              periodTimeSetSummary: () {
-                                final selected = provider.periodTimeSetForId(
-                                  selectedPeriodTimeSetId,
-                                );
-                                return selected == null
-                                    ? l10n.selectPeriodTimeSet
-                                    : l10n.periodTimeSetSummary(
-                                        selected.name,
-                                        selected.periodTimes.length,
-                                      );
-                              }(),
-                              enabled: !blocked,
-                              nameValidator: (value) =>
-                                  value?.trim().isEmpty ?? true
-                                  ? l10n.timetableNameRequired
-                                  : null,
-                              weeksInputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                TextInputFormatter.withFunction((
-                                  oldValue,
-                                  newValue,
-                                ) {
-                                  final text = newValue.text;
-                                  if (text.isEmpty) {
-                                    return newValue;
-                                  }
-                                  final value = int.tryParse(text);
-                                  if (value == null) {
-                                    return oldValue;
-                                  }
-                                  final clamped = normalizeTimetableWeeks(
-                                    value,
-                                  );
-                                  if (clamped == value) {
-                                    return newValue;
-                                  }
-                                  final clampedText = clamped.toString();
-                                  return TextEditingValue(
-                                    text: clampedText,
-                                    selection: TextSelection.collapsed(
-                                      offset: clampedText.length,
-                                    ),
-                                  );
-                                }),
-                              ],
-                              onPickStartDate: blocked
-                                  ? null
-                                  : () async {
-                                      if (busy ||
-                                          startDatePickerOpen ||
-                                          periodTimeSetPickerOpen ||
-                                          deleteDialogOpen ||
-                                          popped) {
-                                        return;
-                                      }
-                                      final firstDate = DateTime(2020);
-                                      final lastDate = DateTime(2035);
-                                      final boundedInitialDate =
-                                          selectedStartDate.isBefore(firstDate)
-                                          ? firstDate
-                                          : selectedStartDate.isAfter(lastDate)
-                                          ? lastDate
-                                          : selectedStartDate;
-                                      setDialogState(
-                                        () => startDatePickerOpen = true,
-                                      );
-                                      try {
-                                        final picked = await showSkedDatePicker(
-                                          context: context,
-                                          workspace: AppMode.student,
-                                          anchorContext:
-                                              startDateAnchor.currentContext,
-                                          firstDate: firstDate,
-                                          lastDate: lastDate,
-                                          initialDate: boundedInitialDate,
-                                        );
-                                        if (!context.mounted ||
-                                            picked == null ||
-                                            picked == selectedStartDate) {
-                                          return;
-                                        }
-                                        setDialogState(
-                                          () => selectedStartDate = picked,
-                                        );
-                                      } finally {
-                                        if (context.mounted) {
-                                          setDialogState(
-                                            () => startDatePickerOpen = false,
-                                          );
-                                        } else {
-                                          startDatePickerOpen = false;
-                                        }
-                                      }
-                                    },
-                              onPickPeriodTimeSet: blocked
-                                  ? null
-                                  : () async {
-                                      if (busy ||
-                                          startDatePickerOpen ||
-                                          periodTimeSetPickerOpen ||
-                                          deleteDialogOpen ||
-                                          popped) {
-                                        return;
-                                      }
-                                      setDialogState(
-                                        () => periodTimeSetPickerOpen = true,
-                                      );
-                                      try {
-                                        final selected =
-                                            await showPeriodTimeSetPickerDialog(
-                                              context,
-                                              provider: provider,
-                                              anchorContext: periodTimeSetAnchor
-                                                  .currentContext,
-                                              selectedPeriodTimeSetId:
-                                                  selectedPeriodTimeSetId,
-                                            );
-                                        if (!context.mounted) return;
-                                        final fallbackId =
-                                            provider
-                                                .periodTimeSetForId(
-                                                  selectedPeriodTimeSetId,
-                                                )
-                                                ?.id ??
-                                            provider
-                                                .activePeriodTimeSetOrNull
-                                                ?.id ??
-                                            (provider.periodTimeSets.isEmpty
-                                                ? ''
-                                                : provider
-                                                      .periodTimeSets
-                                                      .first
-                                                      .id);
-                                        setDialogState(
-                                          () => selectedPeriodTimeSetId =
-                                              selected ?? fallbackId,
-                                        );
-                                      } finally {
-                                        if (context.mounted) {
-                                          setDialogState(
-                                            () =>
-                                                periodTimeSetPickerOpen = false,
-                                          );
-                                        } else {
-                                          periodTimeSetPickerOpen = false;
-                                        }
-                                      }
-                                    },
-                            ),
-                            leading: creating
-                                ? null
-                                : TextButton(
-                                    onPressed: blocked
-                                        ? null
-                                        : () => unawaited(confirmDelete()),
-                                    child: Text(l10n.delete),
-                                  ),
-                            actions: <Widget>[
-                              TextButton(
-                                onPressed: blocked
-                                    ? null
-                                    : () => unawaited(
-                                        context
-                                            .findAncestorStateOfType<
-                                              _TimetableDialogControllerOwnerState
-                                            >()!
-                                            .requestEditorExit(),
-                                      ),
-                                child: Text(l10n.cancel),
-                              ),
-                              FilledButton(
-                                onPressed: blocked
-                                    ? null
-                                    : () => unawaited(saveChanges()),
-                                child: Text(l10n.save),
+                final desktopEditor =
+                    WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+                void requestClose() => unawaited(
+                  context
+                      .findAncestorStateOfType<
+                        _TimetableDialogControllerOwnerState
+                      >()!
+                      .requestEditorExit(),
+                );
+                final form = Form(
+                  key: formKey,
+                  child: TimetableInformationDialogSurface(
+                    embedded: true,
+                    onClose: requestClose,
+                    closeEnabled: !blocked,
+                    busy: busy,
+                    title: desktopEditor
+                        ? Text(
+                            creating
+                                ? l10n.createTimetable
+                                : l10n.editTimetable,
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              UiCommandBusyIndicator(busy: busy),
+                              const SizedBox(height: 16),
+                              Text(
+                                creating
+                                    ? l10n.createTimetable
+                                    : l10n.editTimetable,
                               ),
                             ],
                           ),
-                        ),
-                      ),
+                    form: TimetableInformationForm(
+                      startDateAnchorKey: startDateAnchor,
+                      periodTimeSetAnchorKey: periodTimeSetAnchor,
+                      nameController: nameController,
+                      weeksController: weeksController,
+                      startDateLabel: formatDate(selectedStartDate),
+                      periodTimeSetSummary: () {
+                        final selected = provider.periodTimeSetForId(
+                          selectedPeriodTimeSetId,
+                        );
+                        return selected == null
+                            ? l10n.selectPeriodTimeSet
+                            : l10n.periodTimeSetSummary(
+                                selected.name,
+                                selected.periodTimes.length,
+                              );
+                      }(),
+                      enabled: !blocked,
+                      nameValidator: (value) => value?.trim().isEmpty ?? true
+                          ? l10n.timetableNameRequired
+                          : null,
+                      weeksInputFormatters: <TextInputFormatter>[
+                        FilteringTextInputFormatter.digitsOnly,
+                        TextInputFormatter.withFunction((oldValue, newValue) {
+                          final text = newValue.text;
+                          if (text.isEmpty) {
+                            return newValue;
+                          }
+                          final value = int.tryParse(text);
+                          if (value == null) {
+                            return oldValue;
+                          }
+                          final clamped = normalizeTimetableWeeks(value);
+                          if (clamped == value) {
+                            return newValue;
+                          }
+                          final clampedText = clamped.toString();
+                          return TextEditingValue(
+                            text: clampedText,
+                            selection: TextSelection.collapsed(
+                              offset: clampedText.length,
+                            ),
+                          );
+                        }),
+                      ],
+                      onPickStartDate: blocked
+                          ? null
+                          : () async {
+                              if (busy ||
+                                  startDatePickerOpen ||
+                                  periodTimeSetPickerOpen ||
+                                  deleteDialogOpen ||
+                                  popped) {
+                                return;
+                              }
+                              final firstDate = DateTime(2020);
+                              final lastDate = DateTime(2035);
+                              final boundedInitialDate =
+                                  selectedStartDate.isBefore(firstDate)
+                                  ? firstDate
+                                  : selectedStartDate.isAfter(lastDate)
+                                  ? lastDate
+                                  : selectedStartDate;
+                              setDialogState(() => startDatePickerOpen = true);
+                              try {
+                                final picked = await showSkedDatePicker(
+                                  context: context,
+                                  workspace: AppMode.student,
+                                  anchorContext: startDateAnchor.currentContext,
+                                  firstDate: firstDate,
+                                  lastDate: lastDate,
+                                  initialDate: boundedInitialDate,
+                                );
+                                if (!context.mounted ||
+                                    picked == null ||
+                                    picked == selectedStartDate) {
+                                  return;
+                                }
+                                setDialogState(
+                                  () => selectedStartDate = picked,
+                                );
+                              } finally {
+                                if (context.mounted) {
+                                  setDialogState(
+                                    () => startDatePickerOpen = false,
+                                  );
+                                } else {
+                                  startDatePickerOpen = false;
+                                }
+                              }
+                            },
+                      onPickPeriodTimeSet: blocked
+                          ? null
+                          : () async {
+                              if (busy ||
+                                  startDatePickerOpen ||
+                                  periodTimeSetPickerOpen ||
+                                  deleteDialogOpen ||
+                                  popped) {
+                                return;
+                              }
+                              setDialogState(
+                                () => periodTimeSetPickerOpen = true,
+                              );
+                              try {
+                                final selected =
+                                    await showPeriodTimeSetPickerDialog(
+                                      context,
+                                      provider: provider,
+                                      anchorContext:
+                                          periodTimeSetAnchor.currentContext,
+                                      selectedPeriodTimeSetId:
+                                          selectedPeriodTimeSetId,
+                                    );
+                                if (!context.mounted) return;
+                                final fallbackId =
+                                    provider
+                                        .periodTimeSetForId(
+                                          selectedPeriodTimeSetId,
+                                        )
+                                        ?.id ??
+                                    provider.activePeriodTimeSetOrNull?.id ??
+                                    (provider.periodTimeSets.isEmpty
+                                        ? ''
+                                        : provider.periodTimeSets.first.id);
+                                setDialogState(
+                                  () => selectedPeriodTimeSetId =
+                                      selected ?? fallbackId,
+                                );
+                              } finally {
+                                if (context.mounted) {
+                                  setDialogState(
+                                    () => periodTimeSetPickerOpen = false,
+                                  );
+                                } else {
+                                  periodTimeSetPickerOpen = false;
+                                }
+                              }
+                            },
                     ),
+                    leading: creating
+                        ? null
+                        : TextButton(
+                            onPressed: blocked
+                                ? null
+                                : () => unawaited(confirmDelete()),
+                            child: Text(l10n.delete),
+                          ),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: blocked ? null : requestClose,
+                        child: Text(l10n.cancel),
+                      ),
+                      FilledButton(
+                        onPressed: blocked
+                            ? null
+                            : () => unawaited(saveChanges()),
+                        child: Text(l10n.save),
+                      ),
+                    ],
                   ),
+                );
+                return PopScope(
+                  canPop: !blocked && !popped,
+                  child: desktopEditor
+                      ? form
+                      // The modal host already avoids the keyboard. Short
+                      // touch forms only add the remaining system safe area.
+                      : SafeArea(
+                          top: false,
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            heightFactor: WorkspaceTaskScope.contains(context)
+                                ? null
+                                : 1,
+                            child: SingleChildScrollView(child: form),
+                          ),
+                        ),
                 );
               },
             ),

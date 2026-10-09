@@ -95,7 +95,8 @@ class TimetableResourceRow extends StatefulWidget {
     required this.name,
     required this.selected,
     required this.onSelected,
-    required this.onEdit,
+    this.onEdit,
+    this.onEditAt,
   });
 
   final String timetableId;
@@ -103,6 +104,7 @@ class TimetableResourceRow extends StatefulWidget {
   final bool selected;
   final VoidCallback? onSelected;
   final VoidCallback? onEdit;
+  final ValueChanged<BuildContext>? onEditAt;
 
   @override
   State<TimetableResourceRow> createState() => _TimetableResourceRowState();
@@ -140,13 +142,17 @@ class _TimetableResourceRowState extends State<TimetableResourceRow> {
               ignoring: !showEdit,
               child: ExcludeSemantics(
                 excluding: !showEdit,
-                child: IconButton(
-                  key: ValueKey(
-                    'resource-timetable-edit-${widget.timetableId}',
+                child: Builder(
+                  builder: (anchor) => IconButton(
+                    key: ValueKey(
+                      'resource-timetable-edit-${widget.timetableId}',
+                    ),
+                    tooltip: AppLocalizations.of(context).editTimetable,
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: widget.onEditAt == null
+                        ? widget.onEdit
+                        : () => widget.onEditAt!(anchor),
                   ),
-                  tooltip: AppLocalizations.of(context).editTimetable,
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: widget.onEdit,
                 ),
               ),
             ),

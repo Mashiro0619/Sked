@@ -1115,8 +1115,8 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                                   ),
                             onEdit: _busy || _childDialogOpen
                                 ? null
-                                : () => _openChildDialog(
-                                    () => widget.onEdit(context, item),
+                                : (anchor) => _openChildDialog(
+                                    () => widget.onEdit(anchor, item),
                                     closeWhenNoTimetables: true,
                                   ),
                           ),
@@ -1127,12 +1127,14 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
               ),
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: FilledButton.icon(
-                  onPressed: _busy || _childDialogOpen
-                      ? null
-                      : () => _openChildDialog(() => widget.onCreate(context)),
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.createTimetable),
+                child: Builder(
+                  builder: (anchor) => FilledButton.icon(
+                    onPressed: _busy || _childDialogOpen
+                        ? null
+                        : () => _openChildDialog(() => widget.onCreate(anchor)),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.createTimetable),
+                  ),
                 ),
               ),
             ],
@@ -1162,7 +1164,7 @@ class _TimetableDrawerItem extends StatelessWidget {
   final String switchLabel;
   final String editTooltip;
   final VoidCallback? onTap;
-  final VoidCallback? onEdit;
+  final ValueChanged<BuildContext>? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -1191,10 +1193,12 @@ class _TimetableDrawerItem extends StatelessWidget {
         ),
         title: Text(timetable.config.name),
         subtitle: Text(selected ? currentLabel : switchLabel),
-        trailing: IconButton(
-          tooltip: editTooltip,
-          onPressed: enabled ? onEdit : null,
-          icon: const Icon(Icons.edit_outlined, size: 18),
+        trailing: Builder(
+          builder: (anchor) => IconButton(
+            tooltip: editTooltip,
+            onPressed: enabled && onEdit != null ? () => onEdit!(anchor) : null,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+          ),
         ),
         onTap: enabled ? onTap : null,
       );
@@ -1253,11 +1257,15 @@ class _TimetableDrawerItem extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: editTooltip,
-                    icon: const Icon(Icons.edit_outlined),
-                    color: secondaryColor,
-                    onPressed: onEdit,
+                  Builder(
+                    builder: (anchor) => IconButton(
+                      tooltip: editTooltip,
+                      icon: const Icon(Icons.edit_outlined),
+                      color: secondaryColor,
+                      onPressed: enabled && onEdit != null
+                          ? () => onEdit!(anchor)
+                          : null,
+                    ),
                   ),
                 ],
               ),
@@ -1845,7 +1853,7 @@ class _EmptyTimetableState extends StatelessWidget {
     required this.onImportFromWeb,
   });
 
-  final Future<void> Function()? onCreate;
+  final Future<void> Function(BuildContext anchorContext)? onCreate;
   final Future<void> Function()? onImport;
   final Future<void> Function()? onImportFromText;
   final Future<void> Function()? onImportFromWeb;
@@ -1864,10 +1872,12 @@ class _EmptyTimetableState extends StatelessWidget {
             title: l10n.noTimetableTitle,
             message: l10n.noTimetableMessage,
             actions: [
-              FilledButton.icon(
-                onPressed: onCreate,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.createTimetable),
+              Builder(
+                builder: (anchor) => FilledButton.icon(
+                  onPressed: onCreate == null ? null : () => onCreate!(anchor),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.createTimetable),
+                ),
               ),
               _EmptyTimetableImportMenu(
                 enabled: importEnabled,
