@@ -280,3 +280,37 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 Windows 截图入口为 `integration_test/floating_panel_anchor_visual_test.dart`，按 `--dart-define=SKED_VISUAL_GROUP=student` 与 `--dart-define=SKED_VISUAL_GROUP=general` 分组执行。截图和原生运行记录存放于本地 `.scratch/floating-panel-anchor/`；跨组连续运行曾发生原生堆错误，分组运行的七个场景均通过，详情见该目录的 `validation.md`。
 
 最终联合回归覆盖 73 个测试文件，1,327 项全部通过；全项目 `flutter analyze --no-pub`、变更 Dart 格式检查及 `git diff --check` 通过。普通 Windows 调试应用构建成功，输出 `build/windows/x64/runner/Debug/sked.exe`。本地完整日志为 `.scratch/floating-anchor-final-regressions.log` 与 `.scratch/floating-anchor-windows-build.log`。
+
+## 三类编辑面板：紧凑与规整（2026-10-10）
+
+本节更新课程、日程和课表桌面编辑器的内容样式，取代 10 月 4 日的横向标签、轻量文字选择值和开始时间同行全天开关。新建／编辑、浮动／并排使用相同表单；移动端继续使用原有布局，业务接口和存储格式不变。
+
+- 名称保留 22 sp 半粗主输入区。普通字段标签上置，使用 12 sp 次级文字；输入和选择值统一 14 sp、浅底细边框、6 dp 圆角。控件基准高度 40 dp，大字号及多行内容可自然增高。输入装饰显式使用标准视觉密度，避免桌面主题把实际高度压缩到 32 dp。
+- 字段与列间距 12 dp、分组间距 16 dp；下拉箭头固定在控件尾端，RTL 按阅读方向镜像。“更多”保留轻量折叠入口，取消／保存固定在底部，正文独立滚动。
+- 每列至少 240 dp × 14 sp 处的实际字号倍率，同时测量标签与选中值（包括图标、箭头和内边距）的自然宽度。内容不足以并排时转为单列；自由文本只测标签，打字不会引起表单换列。日期／时间额外测量组内控件，依次退为起止组单列、组内日期和时间堆叠。
+
+| 面板 | 常用字段排列 |
+| --- | --- |
+| 课程 | 名称突出；地点跨列；星期／周次并排；开始／结束时间并排；关联节次跨列 |
+| 日程 | 名称突出；地点／分类并排；全天开关在时间区上方；开始／结束各含日期与时间；重复／提醒并排 |
+| 课表 | 名称突出；总周数／开学日期并排；节次时间集跨列 |
+
+共用实现位于 `workspace_editor_form.dart`、`workspace_editor.dart` 和 `workspace_editor_time_rows.dart`。换列仅修改稳定子节点的约束和位置，日期时间的八个槽位及隐藏的时间控件继续保留；不会因调宽、全天切换或子选择器返回而重新创建输入、焦点或按钮锚点。调宽手柄纳入输入点击区域，拖动时保留焦点和选区。初始宽度仍为 600 dp，手动范围 320–680 dp；编辑器最小宽度独立于查看面板的字号缩放下限。
+
+### 回归与实际字体截图
+
+新增专项覆盖三个编辑器、共用字段及时间排列，包括长分类／重复／周次摘要触发单列、中文／英文、浅深主题、RTL、1×／1.5×／2× 字号、窄矮窗口、全天切换、更多展开、选择器返回、草稿／焦点／选区和保存失败重试。原点击入口定位回归继续保留。
+
+最终联合回归覆盖 58 个测试文件，**947 项全部通过**，其中包括上一轮的 11 项入口定位专项。全项目 `flutter analyze --no-pub` 无问题，19 个变更 Dart 文件格式检查无变更，`git diff --check` 通过。共用组件提交另从其暂存树导出独立源码目录，47 项组件、布局与草稿状态回归通过，确认迁移前的调用方仍可编译；该运行不与最终计数相加。
+
+Windows 实际字体入口为 `integration_test/hybrid_editor_visual_test.dart`，课程、日程、课表分别运行，三组共 **12 项全部通过**，输出 30 张 PNG。除正常新建／编辑外，还覆盖展开、全天、并排、480／320 dp、720×420 矮窗及保存失败。已检查三类正常面板、更多展开及暗色 RTL 大字号的代表截图。截图使用独立内存数据与 Flutter 测试指针，不作为原生鼠标拖动验收。
+
+```powershell
+foreach ($editorGroup in @('course', 'event', 'timetable')) {
+  flutter test --no-pub -d windows integration_test/hybrid_editor_visual_test.dart --dart-define=SKED_VISUAL_GROUP=$editorGroup --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/hybrid-editor-visual --reporter expanded
+}
+```
+
+本地截图位于 `.scratch/hybrid-editor-visual/`，代表文件为 `course-zh-add-1.0x-floating.png`、`event-zh-add-1.0x-floating.png` 和 `timetable-zh-edit-1.0x-floating.png`。Windows 验证和普通调试构建在 `.scratch/hybrid-editor-check/` 的独立源码目录执行，避免正在运行的应用锁定原构建目录；截图与运行日志不提交。
+
+最终普通 Windows 调试构建成功，输出 `.scratch/hybrid-editor-check/build/windows/x64/runner/Debug/sked.exe`。联合回归、静态检查、三组视觉测试和构建日志分别为 `.scratch/hybrid-editor-final-regressions.log`、`.scratch/hybrid-editor-final-analyze.log`、`.scratch/hybrid-editor-visual-final-{course,event,timetable}.log` 和 `.scratch/hybrid-editor-windows-build.log`。
