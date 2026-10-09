@@ -147,6 +147,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   bool _importBundledPeriodTimeSet = false;
   bool _pickerOpen = false;
   final _startDateAnchor = GlobalKey();
+  final _periodTimeSetAnchor = GlobalKey();
 
   bool get _canEdit =>
       _isDone &&
@@ -647,6 +648,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       () => showPeriodTimeSetPickerDialog(
         context,
         provider: provider,
+        anchorContext: _periodTimeSetAnchor.currentContext,
         selectedPeriodTimeSetId: _selectedPeriodTimeSetId,
       ),
     );
@@ -1166,20 +1168,23 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
 
   Widget _buildPeriodTimeSetSelector(AppLocalizations l10n) {
     final selected = _selectedExistingPeriodTimeSet;
-    return _ParseImportActionRow(
-      key: const ValueKey('school-import-parse-period-time-set'),
-      title: l10n.selectPeriodTimeSet,
-      subtitle: selected == null
-          ? l10n.noPeriodTimeAvailable
-          : l10n.periodTimeSetSummary(
-              selected.name,
-              selected.periodTimes.length,
-            ),
-      icon: Icons.schedule_outlined,
-      trailing: Icons.keyboard_arrow_down,
-      onTap: _periodTimeSets.isEmpty || !canSaveSchoolImport(widget.provider)
-          ? null
-          : _pickPeriodTimeSet,
+    return KeyedSubtree(
+      key: _periodTimeSetAnchor,
+      child: _ParseImportActionRow(
+        key: const ValueKey('school-import-parse-period-time-set'),
+        title: l10n.selectPeriodTimeSet,
+        subtitle: selected == null
+            ? l10n.noPeriodTimeAvailable
+            : l10n.periodTimeSetSummary(
+                selected.name,
+                selected.periodTimes.length,
+              ),
+        icon: Icons.schedule_outlined,
+        trailing: Icons.keyboard_arrow_down,
+        onTap: _periodTimeSets.isEmpty || !canSaveSchoolImport(widget.provider)
+            ? null
+            : _pickPeriodTimeSet,
+      ),
     );
   }
 

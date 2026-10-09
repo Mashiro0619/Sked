@@ -63,6 +63,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
   bool _isApplying = false;
   Object? _applyError;
   final _startDateAnchor = GlobalKey();
+  final _periodTimeSetAnchor = GlobalKey();
 
   bool get _hasBundledPeriodTimeSet =>
       widget.response.timetable.periodTimeSet.periodTimes.isNotEmpty;
@@ -154,6 +155,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
         : 0.84;
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
     final existingPeriodTimeSetSelector = _CompactActionRow(
+      key: _periodTimeSetAnchor,
       title: Text(l10n.selectPeriodTimeSet),
       subtitle: Text(
         selectedPeriodTimeSet == null
@@ -180,6 +182,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
                 () => showPeriodTimeSetPickerDialog(
                   context,
                   provider: widget.provider,
+                  anchorContext: _periodTimeSetAnchor.currentContext,
                   selectedPeriodTimeSetId: _selectedPeriodTimeSetId,
                 ),
               );

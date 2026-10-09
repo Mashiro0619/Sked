@@ -10,6 +10,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
+import 'package:sked/widgets/sked_floating_surface.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -186,6 +187,43 @@ AppLocalizations _sheetL10n(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets(
+    'desktop review period set picker stays next to its source field',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      await _pumpPreviewSheet(
+        tester,
+        provider: provider,
+        response: _buildResponse(),
+      );
+      await _openPreviewSheet(tester);
+      final field = find.widgetWithText(
+        InkWell,
+        _sheetL10n(tester).selectPeriodTimeSet,
+      );
+      await tester.ensureVisible(field);
+      final trigger = tester.getRect(field);
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      final panel = tester.getRect(find.byType(SkedFloatingSurface));
+      expect(panel.overlaps(trigger), isFalse);
+      expect(
+        [
+          (panel.left - trigger.right).abs(),
+          (trigger.left - panel.right).abs(),
+          (panel.top - trigger.bottom).abs(),
+          (trigger.top - panel.bottom).abs(),
+        ].reduce((a, b) => a < b ? a : b),
+        closeTo(6, 1),
+      );
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   testWidgets('compact preview keeps its fixed primary action visible', (
     tester,
   ) async {

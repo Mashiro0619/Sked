@@ -9,6 +9,7 @@ import '../services/text_file_picker.dart';
 import '../services/timetable_json_import_service.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
+import '../widgets/sked_floating_anchor.dart';
 import 'school_sites_page.dart';
 
 class _TimetableImportChoice {
@@ -200,6 +201,7 @@ class TimetableImportFlow {
     final dialogBody = canDiscardBundledSets
         ? l10n.importPeriodTimeSetDialogBody
         : '${l10n.importPeriodTimeSetDialogBody}\n\n${l10n.importDiscardPeriodTimeSetUnavailable}';
+    Rect? discardAnchor;
     final result = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
@@ -214,9 +216,17 @@ class TimetableImportFlow {
           title: Text(l10n.importPeriodTimeSetDialogTitle),
           content: Text(dialogBody),
           actions: [
-            TextButton(
-              onPressed: canDiscardBundledSets ? () => popOnce(false) : null,
-              child: Text(l10n.discardBundledPeriodTimeSets),
+            Builder(
+              builder: (anchor) => TextButton(
+                onPressed: canDiscardBundledSets
+                    ? () {
+                        discardAnchor = SkedFloatingAnchor.capture(anchor)
+                            .initialRect;
+                        popOnce(false);
+                      }
+                    : null,
+                child: Text(l10n.discardBundledPeriodTimeSets),
+              ),
             ),
             FilledButton(
               onPressed: () => popOnce(true),
@@ -238,6 +248,7 @@ class TimetableImportFlow {
     final selectedPeriodTimeSetId = await showPeriodTimeSetPickerDialog(
       context,
       provider: provider,
+      anchorRect: discardAnchor,
       selectedPeriodTimeSetId:
           provider.activePeriodTimeSetOrNull?.id ??
           provider.periodTimeSets.first.id,

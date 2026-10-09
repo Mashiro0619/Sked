@@ -14,6 +14,7 @@ import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/sked_floating_surface.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -200,6 +201,53 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
+  testWidgets(
+    'desktop import period set picker stays next to its source field',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final controller = StreamController<SchoolImportStreamEvent>();
+      addTearDown(controller.close);
+      await _pumpDirectPage(tester, controller, provider);
+      final response = _response();
+      controller.add(
+        ParseDone(
+          response: response.copyWith(
+            timetable: response.timetable.copyWith(
+              periodTimeSet: const ImportedPeriodTimeSetDraft(
+                name: '',
+                periodTimes: [],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final field = find.byKey(
+        const ValueKey('school-import-parse-period-time-set'),
+      );
+      await tester.ensureVisible(field);
+      final trigger = tester.getRect(field);
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      final panel = tester.getRect(find.byType(SkedFloatingSurface));
+      expect(panel.overlaps(trigger), isFalse);
+      expect(
+        [
+          (panel.left - trigger.right).abs(),
+          (trigger.left - panel.right).abs(),
+          (panel.top - trigger.bottom).abs(),
+          (trigger.top - panel.bottom).abs(),
+        ].reduce((a, b) => a < b ? a : b),
+        closeTo(6, 1),
+      );
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   for (final (wrapped, format) in [
     for (final wrapped in [false, true])
       for (final format in ['plain', 'fenced', 'prose']) (wrapped, format),
