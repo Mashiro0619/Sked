@@ -11,7 +11,7 @@ class _ListCalendarView extends StatelessWidget {
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +53,11 @@ class _ListCalendarView extends StatelessWidget {
               ),
             ),
             for (final occurrence in group.value)
-              _GeneralListOccurrenceTile(
-                occurrence: occurrence,
-                onTap: () => onOccurrenceTap(occurrence),
+              Builder(
+                builder: (anchor) => _GeneralListOccurrenceTile(
+                  occurrence: occurrence,
+                  onTap: () => onOccurrenceTap(occurrence, anchor),
+                ),
               ),
           ],
         );

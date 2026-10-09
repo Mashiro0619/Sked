@@ -35,6 +35,8 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       await showAppModalSheet<void>(
         context: context,
         workspacePane: _pane,
+        panePresentation: WorkspacePanePresentation.view,
+        anchorRect: info.anchorRect,
         workspace: AppMode.student,
         isSessionCurrent:
             (WorkbenchChromeMetrics.compactTouch(context) ||

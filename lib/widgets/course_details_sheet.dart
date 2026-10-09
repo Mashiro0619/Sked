@@ -18,6 +18,7 @@ import '../models/timetable_models.dart'
         pickDisplayedCourseForConflict;
 import '../providers/timetable_provider.dart';
 import 'ui_command.dart';
+import 'workspace_view_panel.dart';
 
 class CourseDetailsSheet extends StatefulWidget {
   const CourseDetailsSheet({
@@ -109,162 +110,158 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
             .where((item) => item.id != course.id)
             .toList();
 
+        final viewTask =
+            WorkspaceViewTaskScope.maybeOf(context)?.enabled == true;
+        final editAction = Builder(
+          builder: (anchor) => IconButton(
+            tooltip: l10n.editCourseTooltip,
+            onPressed: _actionInProgress
+                ? null
+                : () {
+                    widget.onEditAnchor?.call(anchor);
+                    unawaited(_runAction(widget.onEdit));
+                  },
+            icon: const Icon(Icons.edit),
+          ),
+        );
+        final details = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            UiCommandBusyIndicator(
+              key: const ValueKey('course-details-busy-indicator'),
+              busy: _actionInProgress,
+              semanticsKey: const ValueKey('course-details-busy-semantics'),
+            ),
+            if (!viewTask) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      course.name,
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                  ),
+                  editAction,
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            _PrimaryInfoCard(
+              icon: Icons.place_outlined,
+              label: l10n.place,
+              value: course.location.isEmpty ? l10n.notFilled : course.location,
+            ),
+            const SizedBox(height: 10),
+            _PrimaryInfoCard(
+              icon: Icons.schedule,
+              label: l10n.time,
+              value: course.periods.isEmpty
+                  ? course.timeRange
+                  : '${course.timeRange} · ${_formatPeriodsLabel(l10n, course.periods)}',
+            ),
+            const SizedBox(height: 12),
+            _DetailRow(
+              label: l10n.teacherName,
+              value: course.teacher.isEmpty ? l10n.notFilled : course.teacher,
+            ),
+            _DetailRow(
+              label: l10n.dayOfWeek,
+              value: formatDayOfWeekLabel(
+                course.dayOfWeek,
+                localeCode: app_locale.localeCodeFromLocale(
+                  Localizations.localeOf(context),
+                ),
+              ),
+            ),
+            _DetailRow(
+              label: l10n.semesterWeeks,
+              value: formatSemesterWeeksValue(
+                course.semesterWeeks,
+                localeCode: app_locale.localeCodeFromLocale(
+                  Localizations.localeOf(context),
+                ),
+              ),
+            ),
+            _DetailRow(
+              label: l10n.credits,
+              value: course.credit == 0
+                  ? l10n.notFilled
+                  : course.credit.toString(),
+            ),
+            _DetailRow(
+              label: l10n.remarks,
+              value: course.remarks.isEmpty ? l10n.none : course.remarks,
+            ),
+            if (otherConflictCourses.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(l10n.conflictCourses, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              for (final item in otherConflictCourses)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _ConflictCourseCard(
+                    title: item.name,
+                    subtitle:
+                        '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${item.timeRange}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
+                    actions: [
+                      if (widget.onSelectDisplayedCourse != null)
+                        IconButton(
+                          tooltip: l10n.setAsDisplayed,
+                          onPressed: _actionInProgress
+                              ? null
+                              : () => _runAction(
+                                  () => widget.onSelectDisplayedCourse!(item),
+                                  resetOnSuccess: false,
+                                ),
+                          icon: const Icon(Icons.visibility_outlined),
+                        ),
+                      if (widget.onEditConflictCourse != null)
+                        Builder(
+                          builder: (anchor) => IconButton(
+                            tooltip: l10n.editThisCourse,
+                            onPressed: _actionInProgress
+                                ? null
+                                : () {
+                                    widget.onEditAnchor?.call(anchor);
+                                    unawaited(
+                                      _runAction(
+                                        () =>
+                                            widget.onEditConflictCourse!(item),
+                                      ),
+                                    );
+                                  },
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+            if (course.customFields.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(l10n.customFields, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              for (final entry in course.customFields.entries)
+                _DetailRow(label: entry.key, value: entry.value.toString()),
+            ],
+          ],
+        );
+        if (viewTask) {
+          return WorkspaceViewPanel(
+            title: Text(course.name),
+            headerAction: editAction,
+            child: details,
+          );
+        }
         final maxHeight = MediaQuery.of(context).size.height * 0.8;
-
         return SafeArea(
           top: false,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  UiCommandBusyIndicator(
-                    key: const ValueKey('course-details-busy-indicator'),
-                    busy: _actionInProgress,
-                    semanticsKey: const ValueKey(
-                      'course-details-busy-semantics',
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          course.name,
-                          style: theme.textTheme.headlineSmall,
-                        ),
-                      ),
-                      Builder(
-                        builder: (anchor) => IconButton(
-                          tooltip: l10n.editCourseTooltip,
-                          onPressed: _actionInProgress
-                              ? null
-                              : () {
-                                  widget.onEditAnchor?.call(anchor);
-                                  unawaited(_runAction(widget.onEdit));
-                                },
-                          icon: const Icon(Icons.edit),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _PrimaryInfoCard(
-                    icon: Icons.place_outlined,
-                    label: l10n.place,
-                    value: course.location.isEmpty
-                        ? l10n.notFilled
-                        : course.location,
-                  ),
-                  const SizedBox(height: 10),
-                  _PrimaryInfoCard(
-                    icon: Icons.schedule,
-                    label: l10n.time,
-                    value: course.periods.isEmpty
-                        ? course.timeRange
-                        : '${course.timeRange} · ${_formatPeriodsLabel(l10n, course.periods)}',
-                  ),
-                  const SizedBox(height: 12),
-                  _DetailRow(
-                    label: l10n.teacherName,
-                    value: course.teacher.isEmpty
-                        ? l10n.notFilled
-                        : course.teacher,
-                  ),
-                  _DetailRow(
-                    label: l10n.dayOfWeek,
-                    value: formatDayOfWeekLabel(
-                      course.dayOfWeek,
-                      localeCode: app_locale.localeCodeFromLocale(
-                        Localizations.localeOf(context),
-                      ),
-                    ),
-                  ),
-                  _DetailRow(
-                    label: l10n.semesterWeeks,
-                    value: formatSemesterWeeksValue(
-                      course.semesterWeeks,
-                      localeCode: app_locale.localeCodeFromLocale(
-                        Localizations.localeOf(context),
-                      ),
-                    ),
-                  ),
-                  _DetailRow(
-                    label: l10n.credits,
-                    value: course.credit == 0
-                        ? l10n.notFilled
-                        : course.credit.toString(),
-                  ),
-                  _DetailRow(
-                    label: l10n.remarks,
-                    value: course.remarks.isEmpty ? l10n.none : course.remarks,
-                  ),
-                  if (otherConflictCourses.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.conflictCourses,
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    for (final item in otherConflictCourses)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _ConflictCourseCard(
-                          title: item.name,
-                          subtitle:
-                              '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${item.timeRange}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
-                          actions: [
-                            if (widget.onSelectDisplayedCourse != null)
-                              IconButton(
-                                tooltip: l10n.setAsDisplayed,
-                                onPressed: _actionInProgress
-                                    ? null
-                                    : () => _runAction(
-                                        () => widget.onSelectDisplayedCourse!(
-                                          item,
-                                        ),
-                                        resetOnSuccess: false,
-                                      ),
-                                icon: const Icon(Icons.visibility_outlined),
-                              ),
-                            if (widget.onEditConflictCourse != null)
-                              Builder(
-                                builder: (anchor) => IconButton(
-                                  tooltip: l10n.editThisCourse,
-                                  onPressed: _actionInProgress
-                                      ? null
-                                      : () {
-                                          widget.onEditAnchor?.call(anchor);
-                                          unawaited(
-                                            _runAction(
-                                              () =>
-                                                  widget.onEditConflictCourse!(
-                                                    item,
-                                                  ),
-                                            ),
-                                          );
-                                        },
-                                  icon: const Icon(Icons.edit_outlined),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                  ],
-                  if (course.customFields.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(l10n.customFields, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    for (final entry in course.customFields.entries)
-                      _DetailRow(
-                        label: entry.key,
-                        value: entry.value.toString(),
-                      ),
-                  ],
-                ],
-              ),
+              child: details,
             ),
           ),
         );

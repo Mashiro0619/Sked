@@ -101,7 +101,7 @@ class _MonthCalendarView extends StatefulWidget {
   final bool active;
   final ValueChanged<DateTime> onDaySelected;
   final void Function(DateTime date, Rect? anchor) onEmptySlotTap;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
 
   @override
   State<_MonthCalendarView> createState() => _MonthCalendarViewState();
@@ -357,10 +357,14 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                   else
                     SliverList.builder(
                       itemCount: selectedOccurrences.length,
-                      itemBuilder: (context, index) => _MonthAgendaTile(
-                        occurrence: selectedOccurrences[index],
-                        onTap: () =>
-                            widget.onOccurrenceTap(selectedOccurrences[index]),
+                      itemBuilder: (context, index) => Builder(
+                        builder: (anchor) => _MonthAgendaTile(
+                          occurrence: selectedOccurrences[index],
+                          onTap: () => widget.onOccurrenceTap(
+                            selectedOccurrences[index],
+                            anchor,
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -1605,7 +1609,7 @@ class _MonthAgendaPanel extends StatelessWidget {
   final List<GeneralEventOccurrence> occurrences;
   final bool filtered;
   final ValueChanged<BuildContext> onAddEvent;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1668,9 +1672,11 @@ class _MonthAgendaPanel extends StatelessWidget {
                             ),
                           );
                         }
-                        return _MonthAgendaTile(
-                          occurrence: occurrence,
-                          onTap: () => onOccurrenceTap(occurrence),
+                        return Builder(
+                          builder: (anchor) => _MonthAgendaTile(
+                            occurrence: occurrence,
+                            onTap: () => onOccurrenceTap(occurrence, anchor),
+                          ),
                         );
                       },
                     ),

@@ -13,6 +13,7 @@ const _generalDayPickerSelectionIndicatorKey = ValueKey<String>(
 typedef _AllDayCollapsedGroupTap = void Function(
   List<GeneralEventOccurrence> occurrences,
   DateTime day,
+  BuildContext anchor,
 );
 
 /// Kept by the home task, independent of page indices, range length and view.
@@ -54,8 +55,8 @@ class _WeekCalendarView extends StatefulWidget {
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onPageSettled;
   final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
-  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
+  final _GeneralOccurrencesTap onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
   final bool allDayTimelineCollapsed;
   final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
@@ -346,8 +347,8 @@ class _WeekTimelinePage extends StatelessWidget {
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
-  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
+  final _GeneralOccurrencesTap onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
   final bool allDayTimelineCollapsed;
   final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
@@ -414,8 +415,8 @@ class _DayCalendarView extends StatefulWidget {
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onPageSettled;
   final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
-  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
+  final _GeneralOccurrencesTap onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
   final bool allDayTimelineCollapsed;
   final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
@@ -824,8 +825,8 @@ class _DayTimelinePage extends StatelessWidget {
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
-  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
+  final _GeneralOccurrencesTap onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
   final bool allDayTimelineCollapsed;
   final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
@@ -1108,8 +1109,8 @@ class _CalendarTimeline extends StatelessWidget {
   final int? customDayMinWidth;
   final ValueChanged<DateTime>? onDaySelected;
   final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
-  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
+  final _GeneralOccurrencesTap onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
   final bool allDayTimelineCollapsed;
   final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
@@ -1257,10 +1258,11 @@ class _CalendarTimeline extends StatelessWidget {
                                 )
                               : null,
                           onOccurrenceTap: onOccurrenceTap,
-                          onCollapsedGroupTap: (group) =>
+                          onCollapsedGroupTap: (group, anchor) =>
                               onAllDayCollapsedGroupTap(
                                 group.occurrences,
                                 days[group.dayIndex],
+                                anchor,
                               ),
                         ),
                       ),
@@ -1533,13 +1535,15 @@ class _CalendarTimeline extends StatelessWidget {
               verticalInset,
           width: budget.columnWidth,
           height: cardHeight,
-          child: _OccurrenceCard(
-            occurrence: span.value,
-            dense: cardHeight < 52 * textScale,
-            narrow: budget.columnWidth < 64 * textScale,
-            compactStrip: cardHeight < 18 * textScale,
-            overlapping: group.columnCount > 1,
-            onTap: () => onOccurrenceTap(span.value),
+          child: Builder(
+            builder: (anchor) => _OccurrenceCard(
+              occurrence: span.value,
+              dense: cardHeight < 52 * textScale,
+              narrow: budget.columnWidth < 64 * textScale,
+              compactStrip: cardHeight < 18 * textScale,
+              overlapping: group.columnCount > 1,
+              onTap: () => onOccurrenceTap(span.value, anchor),
+            ),
           ),
         );
       }
@@ -1558,13 +1562,15 @@ class _CalendarTimeline extends StatelessWidget {
           top: topOffset + (first.start - startMinutes) * minuteHeight + 1,
           width: budget.overflowWidth,
           height: math.max(1, badgeHeight - 2),
-          child: _MoreOccurrencesCard(
-            occurrence: first.value,
-            count: hidden.length,
-            compactStrip: badgeHeight < 18 * textScale,
-            onTap: () => onMoreOccurrencesTap([
-              for (final event in group.events) event.span.value,
-            ]),
+          child: Builder(
+            builder: (anchor) => _MoreOccurrencesCard(
+              occurrence: first.value,
+              count: hidden.length,
+              compactStrip: badgeHeight < 18 * textScale,
+              onTap: () => onMoreOccurrencesTap([
+                for (final event in group.events) event.span.value,
+              ], anchor),
+            ),
           ),
         );
       }

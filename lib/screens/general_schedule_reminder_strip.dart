@@ -48,12 +48,13 @@ class _ReminderStrip extends StatefulWidget {
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final bool active;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
   final WorkspacePaneController pane;
   final bool listMode;
   final bool autoClose;
   final bool Function()? isOwnerActive;
-  final Widget Function(BuildContext, int, VoidCallback?)? actionBuilder;
+  final Widget Function(BuildContext, int, ValueChanged<BuildContext>?)?
+  actionBuilder;
 
   @override
   State<_ReminderStrip> createState() => _ReminderStripState();
@@ -191,9 +192,13 @@ class _ReminderStripState extends State<_ReminderStrip>
     );
     final l = AppLocalizations.of(context);
     if (!widget.listMode) {
-      final VoidCallback? openReminders = !widget.active || _listOpen
+      final ValueChanged<BuildContext>? openReminders =
+          !widget.active || _listOpen
           ? null
-          : () async {
+          : (anchor) async {
+              final anchorRect = WorkspaceEditorConfiguration(
+                anchorContext: anchor,
+              ).initialAnchor;
               setState(() => _listOpen = true);
               try {
                 // A manual activation replaces the startup preview with an
@@ -218,6 +223,7 @@ class _ReminderStripState extends State<_ReminderStrip>
                   ),
                   selectionId: 'general-reminders',
                   presentation: WorkspacePanePresentation.view,
+                  anchorRect: anchorRect,
                 );
               } finally {
                 if (mounted) setState(() => _listOpen = false);
@@ -226,14 +232,16 @@ class _ReminderStripState extends State<_ReminderStrip>
       if (widget.actionBuilder case final builder?) {
         return builder(context, items.length, openReminders);
       }
-      return IconButton(
-        key: const ValueKey('general-reminders-action'),
-        tooltip: l.reminder,
-        onPressed: openReminders,
-        icon: Badge(
-          isLabelVisible: items.isNotEmpty,
-          label: Text('${items.length}'),
-          child: const Icon(Icons.notifications_outlined),
+      return Builder(
+        builder: (anchor) => IconButton(
+          key: const ValueKey('general-reminders-action'),
+          tooltip: l.reminder,
+          onPressed: openReminders == null ? null : () => openReminders(anchor),
+          icon: Badge(
+            isLabelVisible: items.isNotEmpty,
+            label: Text('${items.length}'),
+            child: const Icon(Icons.notifications_outlined),
+          ),
         ),
       );
     }
@@ -336,25 +344,28 @@ class _ReminderStripState extends State<_ReminderStrip>
               child: Text(l.noUpcomingEvents),
             ),
           for (final item in items)
-            ListTile(
-              title: Text(item.occurrence.event.title),
-              subtitle: Text(
-                '${switch (item.status) {
-                  GeneralReminderStatus.upcoming => l.reminderUpcoming,
-                  GeneralReminderStatus.inProgress => l.reminderInProgress,
-                  GeneralReminderStatus.overdue => l.reminderEnded,
-                }} · ${intl.DateFormat.MMMd(l.localeName).add_Hm().format(item.occurrence.start)}',
-              ),
-              onTap: () => widget.onOccurrenceTap(item.occurrence),
-              trailing: IconButton(
-                tooltip: l.markReminderHandled,
-                icon: const Icon(Icons.check_circle_outline),
-                onPressed: () => unawaited(
-                  runUiCommandWithFeedback(
-                    context: context,
-                    debugLabel: 'Dismiss reminder',
-                    command: () =>
-                        widget.provider.dismissGeneralReminder(item.occurrence),
+            Builder(
+              builder: (anchor) => ListTile(
+                title: Text(item.occurrence.event.title),
+                subtitle: Text(
+                  '${switch (item.status) {
+                    GeneralReminderStatus.upcoming => l.reminderUpcoming,
+                    GeneralReminderStatus.inProgress => l.reminderInProgress,
+                    GeneralReminderStatus.overdue => l.reminderEnded,
+                  }} · ${intl.DateFormat.MMMd(l.localeName).add_Hm().format(item.occurrence.start)}',
+                ),
+                onTap: () => widget.onOccurrenceTap(item.occurrence, anchor),
+                trailing: IconButton(
+                  tooltip: l.markReminderHandled,
+                  icon: const Icon(Icons.check_circle_outline),
+                  onPressed: () => unawaited(
+                    runUiCommandWithFeedback(
+                      context: context,
+                      debugLabel: 'Dismiss reminder',
+                      command: () => widget.provider.dismissGeneralReminder(
+                        item.occurrence,
+                      ),
+                    ),
                   ),
                 ),
               ),

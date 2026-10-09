@@ -23,8 +23,9 @@ class _AllDayTimeline extends StatefulWidget {
   final bool collapsed;
   final bool canCollapse;
   final VoidCallback? onToggleCollapsed;
-  final ValueChanged<_AllDayCollapsedGroup> onCollapsedGroupTap;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final void Function(_AllDayCollapsedGroup group, BuildContext anchor)
+  onCollapsedGroupTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
   @override
   State<_AllDayTimeline> createState() => _AllDayTimelineState();
 }
@@ -106,12 +107,15 @@ class _AllDayTimelineState extends State<_AllDayTimeline> {
                               top: 0,
                               width: widget.dayWidth,
                               height: contentHeight,
-                              child: _AllDayCollapsedChip(
-                                count: group.occurrences.length,
-                                keySuffix: widget.dayCount > 1
-                                    ? group.dayIndex.toString()
-                                    : null,
-                                onTap: () => widget.onCollapsedGroupTap(group),
+                              child: Builder(
+                                builder: (anchor) => _AllDayCollapsedChip(
+                                  count: group.occurrences.length,
+                                  keySuffix: widget.dayCount > 1
+                                      ? group.dayIndex.toString()
+                                      : null,
+                                  onTap: () =>
+                                      widget.onCollapsedGroupTap(group, anchor),
+                                ),
                               ),
                             )
                         else
@@ -130,11 +134,15 @@ class _AllDayTimelineState extends State<_AllDayTimeline> {
                                   (segment.endIndex - segment.startIndex + 1) *
                                   widget.dayWidth,
                               height: laneHeight,
-                              child: _AllDayChip(
-                                occurrence: segment.occurrence,
-                                narrow: widget.dayWidth < 64,
-                                onTap: () =>
-                                    widget.onOccurrenceTap(segment.occurrence),
+                              child: Builder(
+                                builder: (anchor) => _AllDayChip(
+                                  occurrence: segment.occurrence,
+                                  narrow: widget.dayWidth < 64,
+                                  onTap: () => widget.onOccurrenceTap(
+                                    segment.occurrence,
+                                    anchor,
+                                  ),
+                                ),
                               ),
                             ),
                       ],

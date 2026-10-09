@@ -6,6 +6,7 @@ import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'timetable_entry.dart';
 import 'sked_calendar_day_label.dart';
+import 'sked_floating_anchor.dart';
 import 'workspace_frame.dart';
 import 'workbench_chrome_metrics.dart';
 
@@ -20,24 +21,28 @@ class TimetableCourseTapInfo {
     required this.courses,
     required this.isFullConflict,
     this.conflictKey,
+    this.anchorRect,
   });
 
   final CourseItem course;
   final List<CourseItem> courses;
   final bool isFullConflict;
   final String? conflictKey;
+  final Rect? anchorRect;
 
   TimetableCourseTapInfo copyWith({
     CourseItem? course,
     List<CourseItem>? courses,
     bool? isFullConflict,
     String? conflictKey,
+    Rect? anchorRect,
   }) {
     return TimetableCourseTapInfo(
       course: course ?? this.course,
       courses: courses ?? this.courses,
       isFullConflict: isFullConflict ?? this.isFullConflict,
       conflictKey: conflictKey ?? this.conflictKey,
+      anchorRect: anchorRect ?? this.anchorRect,
     );
   }
 }
@@ -550,7 +555,7 @@ class _TimetableGridState extends State<TimetableGrid> {
                                                       ),
                                                     );
                                                   },
-                                            onLayoutTap: (item) {
+                                            onLayoutTap: (item, anchor) {
                                               if (useEntries &&
                                                   item.entry != null) {
                                                 widget.onEntryTap!(item.entry!);
@@ -569,6 +574,7 @@ class _TimetableGridState extends State<TimetableGrid> {
                                                   isFullConflict:
                                                       item.isFullConflict,
                                                   conflictKey: item.conflictKey,
+                                                  anchorRect: anchor,
                                                 ),
                                               );
                                             },
@@ -660,7 +666,7 @@ class _DayColumn extends StatelessWidget {
   final Color outlineColor;
   final double outlineWidth;
   final void Function(Offset position, Rect anchor)? onLongPressAt;
-  final ValueChanged<CourseLayout> onLayoutTap;
+  final void Function(CourseLayout layout, Rect? anchor) onLayoutTap;
 
   @override
   Widget build(BuildContext context) {
@@ -745,8 +751,14 @@ class _DayColumn extends StatelessWidget {
                   _CourseHitTarget(
                     geometry: geometry,
                     metrics: metrics,
-                    onTap: () => onLayoutTap(geometry.layout),
-                    onLongPress: () => onLayoutTap(geometry.layout),
+                    onTap: (anchor) => onLayoutTap(
+                      geometry.layout,
+                      SkedFloatingAnchor.capture(anchor).globalRect,
+                    ),
+                    onLongPress: (anchor) => onLayoutTap(
+                      geometry.layout,
+                      SkedFloatingAnchor.capture(anchor).globalRect,
+                    ),
                     useVisualBounds:
                         hasDenseHitTargets &&
                         geometry.hitHeight < _minimumCourseHitExtent,
@@ -758,7 +770,10 @@ class _DayColumn extends StatelessWidget {
                     _CourseSemanticTarget(
                       geometry: geometry,
                       totalHeight: verticalLayout.totalHeight,
-                      onTap: () => onLayoutTap(geometry.layout),
+                      onTap: (anchor) => onLayoutTap(
+                        geometry.layout,
+                        SkedFloatingAnchor.capture(anchor).globalRect,
+                      ),
                     ),
               ],
             ),
@@ -2074,8 +2089,8 @@ class _CourseHitTarget extends StatelessWidget {
 
   final _CourseGeometry geometry;
   final _TimetableMetrics metrics;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final ValueChanged<BuildContext> onTap;
+  final ValueChanged<BuildContext> onLongPress;
   final bool useVisualBounds;
   final bool includeSemantics;
 
@@ -2092,8 +2107,8 @@ class _CourseHitTarget extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           key: ValueKey('timetable-course-hit-$itemId'),
-          onTap: onTap,
-          onLongPress: onLongPress,
+          onTap: () => onTap(context),
+          onLongPress: () => onLongPress(context),
           customBorder: skedShapeSchemeOf(context).compact,
           overlayColor: WidgetStatePropertyAll(
             Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
@@ -2118,7 +2133,7 @@ class _CourseHitTarget extends StatelessWidget {
                   WorkspaceSelectionScope.of(context) ==
                   'course:${layout.course?.id}',
               label: _semanticLabelForGeometry(geometry),
-              onTap: onTap,
+              onTap: () => onTap(context),
               child: visual,
             )
           : ExcludeSemantics(child: visual),
@@ -2138,7 +2153,7 @@ class _CourseSemanticTarget extends StatelessWidget {
 
   final _CourseGeometry geometry;
   final double totalHeight;
-  final VoidCallback onTap;
+  final ValueChanged<BuildContext> onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2156,7 +2171,7 @@ class _CourseSemanticTarget extends StatelessWidget {
         button: true,
         enabled: true,
         label: _semanticLabelForGeometry(geometry),
-        onTap: onTap,
+        onTap: () => onTap(context),
         child: IgnorePointer(child: const SizedBox.expand()),
       ),
     );

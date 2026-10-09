@@ -72,6 +72,16 @@ part 'general_schedule_month_grid_geometry.dart';
 
 const generalViewCustom = 'custom';
 
+typedef _GeneralOccurrenceTap = void Function(
+  GeneralEventOccurrence occurrence,
+  BuildContext anchor,
+);
+typedef _GeneralOccurrencesTap = void Function(
+  List<GeneralEventOccurrence> occurrences,
+  BuildContext anchor,
+);
+typedef _GeneralViewChanged = void Function(String view, BuildContext anchor);
+
 class GeneralScheduleHomeScreen extends StatefulWidget {
   const GeneralScheduleHomeScreen({
     super.key,
@@ -198,7 +208,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 widget.interactive &&
                 owner?.isCurrent != false &&
                 identical(dataSession, provider.dataSessionToken),
-            onOccurrenceTap: (item) => _openDetails(context, provider, item),
+            onOccurrenceTap: (item, anchor) =>
+                _openDetails(context, provider, item, anchorContext: anchor),
           ),
           selectionId: 'general-reminders',
           presentation: WorkspacePanePresentation.view,
@@ -325,19 +336,30 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             filter: filter,
                             active: widget.active,
                             pane: _pane,
-                            onOccurrenceTap: (item) =>
-                                _openDetails(context, provider, item),
+                            onOccurrenceTap: (item, anchor) => _openDetails(
+                              context,
+                              provider,
+                              item,
+                              anchorContext: anchor,
+                            ),
                           ),
                           if (needsWorkspaceMenu(context))
                             const WorkspaceModeMenu(),
                           if (_showDayAgendaEntry(context, view))
-                            IconButton(
-                              key: const ValueKey('general-day-agenda-toggle'),
-                              tooltip: l10n.selectedDayAgenda,
-                              onPressed: widget.interactive
-                                  ? () => _openDayAgenda(context)
-                                  : null,
-                              icon: const Icon(Icons.view_agenda_outlined),
+                            Builder(
+                              builder: (anchor) => IconButton(
+                                key: const ValueKey(
+                                  'general-day-agenda-toggle',
+                                ),
+                                tooltip: l10n.selectedDayAgenda,
+                                onPressed: widget.interactive
+                                    ? () => _openDayAgenda(
+                                        context,
+                                        anchorContext: anchor,
+                                      )
+                                    : null,
+                                icon: const Icon(Icons.view_agenda_outlined),
+                              ),
                             ),
                           const AssistantPaneToggle(),
                           if (width >= 600 &&
@@ -345,20 +367,31 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                               widget.active &&
                               widget.interactive &&
                               !_editorSheetOpen)
-                            Tooltip(
-                              message: l10n.addEvent,
-                              child: width >= 1000
-                                  ? FilledButton.icon(
-                                      onPressed: () =>
-                                          _openEditor(context, provider),
-                                      icon: const Icon(Icons.add),
-                                      label: Text(l10n.addEvent),
-                                    )
-                                  : IconButton.filled(
-                                      onPressed: () =>
-                                          _openEditor(context, provider),
-                                      icon: const Icon(Icons.add),
+                            Builder(
+                              builder: (anchor) {
+                                void openEditor() => unawaited(
+                                  _openEditor(
+                                    context,
+                                    provider,
+                                    editor: WorkspaceEditorConfiguration(
+                                      anchorContext: anchor,
                                     ),
+                                  ),
+                                );
+                                return Tooltip(
+                                  message: l10n.addEvent,
+                                  child: width >= 1000
+                                      ? FilledButton.icon(
+                                          onPressed: openEditor,
+                                          icon: const Icon(Icons.add),
+                                          label: Text(l10n.addEvent),
+                                        )
+                                      : IconButton.filled(
+                                          onPressed: openEditor,
+                                          icon: const Icon(Icons.add),
+                                        ),
+                                );
+                              },
                             ),
                         ],
                   padding: EdgeInsets.symmetric(
@@ -382,8 +415,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     settingsLabel: l10n.settings,
                     calendarDisabled:
                         _calendarManagerOpen || !widget.interactive,
-                    onOpenCalendar: () =>
-                        _openCalendarManager(context, provider),
+                    onOpenCalendar: (anchor) => _openCalendarManager(
+                      context,
+                      provider,
+                      anchorContext: anchor,
+                    ),
                     view: view,
                     navigationOrder: snapshot.toolbarNavigationOrder,
                     hiddenNavigationIds: snapshot.hiddenToolbarNavigationIds,
@@ -402,14 +438,17 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     dateNavigationDirection: dateNavigationDirection,
                     interactive: widget.interactive && !_dateNavigationBusy,
                     viewSwitchBehavior: snapshot.viewSwitchBehavior,
-                    onViewChanged: (nextView) =>
-                        unawaited(_changeView(provider, nextView)),
+                    onViewChanged: (nextView, anchor) => unawaited(
+                      _changeView(provider, nextView, anchorContext: anchor),
+                    ),
                     onStep: (direction) =>
                         unawaited(_stepDate(provider, direction)),
                     onToday: () => unawaited(_goToToday(provider)),
                     onPickDate: _datePickerOpen
                         ? null
-                        : () => unawaited(_pickDate(context, provider)),
+                        : (anchor) => unawaited(
+                            _pickDate(context, provider, anchorContext: anchor),
+                          ),
                   ),
                 );
           final selectDate = widget.interactive
@@ -474,21 +513,29 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                       initialStart: date,
                                     )
                                   : null,
-                              onOccurrenceTap: (occurrence) =>
-                                  _openDetails(context, provider, occurrence),
-                              onMoreOccurrencesTap: (occurrences) =>
+                              onOccurrenceTap: (occurrence, anchor) =>
+                                  _openDetails(
+                                    context,
+                                    provider,
+                                    occurrence,
+                                    anchorContext: anchor,
+                                  ),
+                              onMoreOccurrencesTap: (occurrences, anchor) =>
                                   _openMoreOccurrences(
                                     context,
                                     provider,
                                     occurrences,
+                                    anchorContext: anchor,
                                   ),
-                              onAllDayCollapsedGroupTap: (occurrences, day) =>
-                                  _openMoreOccurrences(
-                                    context,
-                                    provider,
-                                    occurrences,
-                                    contextDate: day,
-                                  ),
+                              onAllDayCollapsedGroupTap:
+                                  (occurrences, day, anchor) =>
+                                      _openMoreOccurrences(
+                                        context,
+                                        provider,
+                                        occurrences,
+                                        contextDate: day,
+                                        anchorContext: anchor,
+                                      ),
                               allDayTimelineCollapsed:
                                   snapshot.allDayTimelineCollapsed,
                               onAllDayTimelineCollapsedChanged: (collapsed) =>
@@ -503,8 +550,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                               date: selectedDate,
                               provider: provider,
                               filter: filter,
-                              onOccurrenceTap: (occurrence) =>
-                                  _openDetails(context, provider, occurrence),
+                              onOccurrenceTap: (occurrence, anchor) =>
+                                  _openDetails(
+                                    context,
+                                    provider,
+                                    occurrence,
+                                    anchorContext: anchor,
+                                  ),
                             ),
                             generalViewMonth => _MonthCalendarView(
                               date: selectedDate,
@@ -520,8 +572,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                   anchorRect: anchor,
                                 ),
                               ),
-                              onOccurrenceTap: (occurrence) =>
-                                  _openDetails(context, provider, occurrence),
+                              onOccurrenceTap: (occurrence, anchor) =>
+                                  _openDetails(
+                                    context,
+                                    provider,
+                                    occurrence,
+                                    anchorContext: anchor,
+                                  ),
                             ),
                             _ => _WeekCalendarView(
                               viewport: _calendarViewport,
@@ -545,21 +602,29 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                       initialStart: date,
                                     )
                                   : null,
-                              onOccurrenceTap: (occurrence) =>
-                                  _openDetails(context, provider, occurrence),
-                              onMoreOccurrencesTap: (occurrences) =>
+                              onOccurrenceTap: (occurrence, anchor) =>
+                                  _openDetails(
+                                    context,
+                                    provider,
+                                    occurrence,
+                                    anchorContext: anchor,
+                                  ),
+                              onMoreOccurrencesTap: (occurrences, anchor) =>
                                   _openMoreOccurrences(
                                     context,
                                     provider,
                                     occurrences,
+                                    anchorContext: anchor,
                                   ),
-                              onAllDayCollapsedGroupTap: (occurrences, day) =>
-                                  _openMoreOccurrences(
-                                    context,
-                                    provider,
-                                    occurrences,
-                                    contextDate: day,
-                                  ),
+                              onAllDayCollapsedGroupTap:
+                                  (occurrences, day, anchor) =>
+                                      _openMoreOccurrences(
+                                        context,
+                                        provider,
+                                        occurrences,
+                                        contextDate: day,
+                                        anchorContext: anchor,
+                                      ),
                               allDayTimelineCollapsed:
                                   snapshot.allDayTimelineCollapsed,
                               onAllDayTimelineCollapsedChanged: (collapsed) =>
@@ -595,12 +660,20 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 PositionedDirectional(
                   end: 12,
                   bottom: 16,
-                  child: SkedPrimaryFab(
-                    heroTag: 'general-add-event',
-                    tooltip: l10n.addEvent,
-                    onPressed: () => _openEditor(context, provider),
-                    icon: const Icon(Icons.add),
-                    label: width >= 760 ? Text(l10n.addEvent) : null,
+                  child: Builder(
+                    builder: (anchor) => SkedPrimaryFab(
+                      heroTag: 'general-add-event',
+                      tooltip: l10n.addEvent,
+                      onPressed: () => _openEditor(
+                        context,
+                        provider,
+                        editor: WorkspaceEditorConfiguration(
+                          anchorContext: anchor,
+                        ),
+                      ),
+                      icon: const Icon(Icons.add),
+                      label: width >= 760 ? Text(l10n.addEvent) : null,
+                    ),
                   ),
                 ),
             ],
@@ -1154,7 +1227,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       filter: filter,
       active: widget.active && widget.interactive,
       pane: _pane,
-      onOccurrenceTap: (item) => _openDetails(context, provider, item),
+      onOccurrenceTap: (item, anchor) =>
+          _openDetails(context, provider, item, anchorContext: anchor),
       isOwnerActive: () =>
           mounted &&
           widget.active &&
@@ -1178,9 +1252,17 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             if (!mounted || !widget.interactive) return;
             switch (id) {
               case 'reminders':
-                openReminders?.call();
+                openReminders?.call(
+                  _toolbarMoreButtonKey.currentContext ?? context,
+                );
               case 'agenda':
-                unawaited(_openDayAgenda(context));
+                unawaited(
+                  _openDayAgenda(
+                    context,
+                    anchorContext:
+                        _toolbarMoreButtonKey.currentContext ?? context,
+                  ),
+                );
               case 'category':
                 unawaited(
                   _openCalendarManager(
@@ -1209,8 +1291,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                           _toolbarMoreButtonKey.currentContext ?? context,
                       view: view,
                       interactive: canNavigate,
-                      onViewChanged: (value) =>
-                          unawaited(_changeView(provider, value)),
+                      onViewChanged: (value, anchor) => unawaited(
+                        _changeView(provider, value, anchorContext: anchor),
+                      ),
                     ),
                   );
                 } else {
@@ -1221,6 +1304,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                         view,
                         hasCustomRange: provider.customGeneralDateRange != null,
                       ),
+                      anchorContext:
+                          _toolbarMoreButtonKey.currentContext ?? context,
                     ),
                   );
                 }
@@ -1319,7 +1404,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       filter: const _GeneralOccurrenceFilter(query: '', colorValue: null),
       active: widget.active && widget.interactive,
       pane: _pane,
-      onOccurrenceTap: (item) => _openDetails(context, provider, item),
+      onOccurrenceTap: (item, anchor) =>
+          _openDetails(context, provider, item, anchorContext: anchor),
       isOwnerActive: () =>
           mounted &&
           widget.active &&
@@ -1430,14 +1516,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             label: count == 0 ? l.reminder : '${l.reminder} · $count',
             icon: Icons.notifications_outlined,
             dividerBefore: true,
-            onSelected: openReminders == null ? null : (_) => openReminders(),
+            onSelected: openReminders,
           ),
           if (_showDayAgendaEntry(context, view))
             WorkbenchOverflowAction(
               id: 'general-day-agenda-toggle',
               label: l.selectedDayAgenda,
               icon: Icons.view_agenda_outlined,
-              onSelected: (_) => unawaited(_openDayAgenda(context)),
+              onSelected: (anchor) =>
+                  unawaited(_openDayAgenda(context, anchorContext: anchor)),
             ),
           if (assistant?.enabled == true)
             WorkbenchOverflowAction(
@@ -1606,7 +1693,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           filter: const _GeneralOccurrenceFilter(query: '', colorValue: null),
           active: widget.active,
           pane: _pane,
-          onOccurrenceTap: (item) => _openDetails(context, provider, item),
+          onOccurrenceTap: (item, anchor) =>
+              _openDetails(context, provider, item, anchorContext: anchor),
           isOwnerActive: () =>
               mounted &&
               widget.active &&
@@ -1614,11 +1702,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               ModalRoute.of(context)?.isCurrent != false,
         ),
         if (_showDayAgendaEntry(context, view))
-          IconButton(
-            key: const ValueKey('general-day-agenda-toggle'),
-            tooltip: l.selectedDayAgenda,
-            onPressed: () => _openDayAgenda(context),
-            icon: const Icon(Icons.view_agenda_outlined),
+          Builder(
+            builder: (anchor) => IconButton(
+              key: const ValueKey('general-day-agenda-toggle'),
+              tooltip: l.selectedDayAgenda,
+              onPressed: () => _openDayAgenda(context, anchorContext: anchor),
+              icon: const Icon(Icons.view_agenda_outlined),
+            ),
           ),
         const AssistantPaneToggle(),
         if (widget.showSettingsAction && !resources)
@@ -1654,13 +1744,17 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       !(WorkbenchChromeMetrics.of(context).desktop &&
           WorkspaceCanvasScope.maybeOf(context)?.supporting == true);
 
-  Future<void> _openDayAgenda(BuildContext context) async {
+  Future<void> _openDayAgenda(
+    BuildContext context, {
+    required BuildContext anchorContext,
+  }) async {
     if (_dayAgendaOpen || !widget.interactive) return;
     _setUiBusyFlag(() => _dayAgendaOpen = true);
     try {
       await _pane.show<void>(
         _buildSelectedDayAgenda,
         presentation: WorkspacePanePresentation.view,
+        anchorContext: anchorContext,
       );
     } finally {
       _setUiBusyFlag(() => _dayAgendaOpen = false);
@@ -1744,9 +1838,16 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               padding: const EdgeInsets.all(8),
               children: [
                 for (final occurrence in occurrences)
-                  _GeneralListOccurrenceTile(
-                    occurrence: occurrence,
-                    onTap: () => _openDetails(context, provider, occurrence),
+                  Builder(
+                    builder: (anchor) => _GeneralListOccurrenceTile(
+                      occurrence: occurrence,
+                      onTap: () => _openDetails(
+                        context,
+                        provider,
+                        occurrence,
+                        anchorContext: anchor,
+                      ),
+                    ),
                   ),
                 if (occurrences.isEmpty)
                   Padding(
@@ -1918,9 +2019,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   Future<void> _openDetails(
     BuildContext context,
     TimetableProvider provider,
-    GeneralEventOccurrence occurrence,
-  ) async {
+    GeneralEventOccurrence occurrence, {
+    required BuildContext anchorContext,
+  }) async {
     if (!widget.interactive || _editorSheetOpen) return;
+    final anchorRect = WorkspaceEditorConfiguration(
+      anchorContext: anchorContext,
+    ).initialAnchor;
     if (_detailsSheetOpen) {
       if (_pane.selectedId == occurrence.occurrenceKey) return;
       await _pane.close();
@@ -1954,6 +2059,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         context: context,
         workspacePane: _pane,
         panePresentation: WorkspacePanePresentation.view,
+        anchorRect: anchorRect,
         workspace: AppMode.general,
         // Keep our own pending deletion alive for error feedback and retry.
         // External moves, exclusions and deletions retire this exact instance.
@@ -2016,6 +2122,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ),
             onBeforeAction: () => currentOccurrence() != null,
             canEdit: () => !_editorSheetOpen,
+            onEditAnchor: (anchor) =>
+                _pane.editorEntry = WorkspaceEditorConfiguration(
+                  anchorRect: WorkspaceEditorConfiguration(
+                    anchorContext: anchor,
+                  ).initialAnchor,
+                ),
             onEdit: () async {
               final latest = currentOccurrence();
               if (latest == null) return;
@@ -2058,6 +2170,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     TimetableProvider provider,
     List<GeneralEventOccurrence> occurrences, {
     DateTime? contextDate,
+    required BuildContext anchorContext,
   }) async {
     if (_moreOccurrencesSheetOpen ||
         _editorSheetOpen ||
@@ -2065,6 +2178,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         !widget.interactive) {
       return;
     }
+    final anchorRect = WorkspaceEditorConfiguration(
+      anchorContext: anchorContext,
+    ).initialAnchor;
     if (_detailsSheetOpen) {
       await _pane.close();
       await Future<void>.delayed(Duration.zero);
@@ -2076,6 +2192,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<void>(
         context: context,
         workspacePane: _pane,
+        panePresentation: WorkspacePanePresentation.view,
+        anchorRect: anchorRect,
         workspace: AppMode.general,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
@@ -2083,8 +2201,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         builder: (sheetContext) => _MoreGeneralOccurrencesSheet(
           occurrences: occurrences,
           contextDate: contextDate,
-          onOccurrenceTap: (occurrence) =>
-              unawaited(_openDetails(context, provider, occurrence)),
+          onOccurrenceTap: (occurrence, anchor) => unawaited(
+            _openDetails(context, provider, occurrence, anchorContext: anchor),
+          ),
         ),
       );
     } finally {
@@ -2212,7 +2331,7 @@ class _GeneralCalendarSelector extends StatelessWidget {
 
   final String label;
   final bool disabled;
-  final VoidCallback onPressed;
+  final ValueChanged<BuildContext> onPressed;
   final bool showIcon;
   final bool startAligned;
 
@@ -2232,7 +2351,7 @@ class _GeneralCalendarSelector extends StatelessWidget {
         width: double.infinity,
         child: TextButton(
           key: const ValueKey('general-calendar-selector'),
-          onPressed: disabled ? null : onPressed,
+          onPressed: disabled ? null : () => onPressed(context),
           style: TextButton.styleFrom(
             minimumSize: const Size(48, 48),
             padding: EdgeInsets.symmetric(horizontal: showIcon ? 10 : 8),
@@ -2313,16 +2432,16 @@ class _GeneralToolbarLayout extends StatelessWidget {
   final VoidCallback? settingsAction;
   final String settingsLabel;
   final bool calendarDisabled;
-  final VoidCallback onOpenCalendar;
+  final ValueChanged<BuildContext> onOpenCalendar;
   final String view;
   final DateTime selectedDate;
   final int dateNavigationDirection;
   final bool interactive;
   final String viewSwitchBehavior;
-  final ValueChanged<String> onViewChanged;
+  final _GeneralViewChanged onViewChanged;
   final VoidCallback onToday;
   final ValueChanged<int> onStep;
-  final VoidCallback? onPickDate;
+  final ValueChanged<BuildContext>? onPickDate;
   final List<String> navigationOrder;
   final List<String> hiddenNavigationIds;
   final String hiddenItemsBehavior;
@@ -2640,9 +2759,11 @@ class _GeneralToolbarLayout extends StatelessWidget {
                   onSelected: (id) {
                     switch (id) {
                       case 'category':
-                        onOpenCalendar();
+                        onOpenCalendar(moreButtonKey.currentContext ?? context);
                       case 'date':
-                        onPickDate?.call();
+                        onPickDate?.call(
+                          moreButtonKey.currentContext ?? context,
+                        );
                       case 'today':
                         onToday();
                       case 'view':
@@ -2672,6 +2793,7 @@ class _GeneralToolbarLayout extends StatelessWidget {
                                       .customGeneralDateRange !=
                                   null,
                             ),
+                            moreButtonKey.currentContext ?? context,
                           );
                         }
                     }
@@ -2955,10 +3077,10 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
   final double dateWidth;
   final String dateLabelFormat;
   final String viewSwitchBehavior;
-  final ValueChanged<String> onViewChanged;
+  final _GeneralViewChanged onViewChanged;
   final VoidCallback onToday;
   final ValueChanged<int> onStep;
-  final VoidCallback? onPickDate;
+  final ValueChanged<BuildContext>? onPickDate;
   final Key? viewSwitcherKey;
   final bool includeDate;
   final bool includeView;
@@ -3019,64 +3141,69 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     final fullDateLabel =
         '${view == generalViewCustom ? '$currentViewLabel, ' : ''}${_datePickerTitle(l10n, _dateUnitForView(view))}: $accessibleDateLabel';
     final dateInteractive = interactive && onPickDate != null;
-    final dateButton = SizedBox(
-      width: labelWidth,
-      child: Tooltip(
-        excludeFromSemantics: true,
-        message: fullDateLabel,
-        child: Semantics(
-          button: true,
-          enabled: dateInteractive,
-          label: fullDateLabel,
-          hint: l10n.generalViewLongPressTodayHint,
-          onTap: dateInteractive ? onPickDate : null,
-          onLongPress: dateInteractive ? onToday : null,
-          excludeSemantics: true,
-          child: OutlinedButton(
-            key: const ValueKey('general-date-title-button'),
-            onPressed: dateInteractive ? onPickDate : null,
+    final dateButton = Builder(
+      builder: (anchor) => SizedBox(
+        width: labelWidth,
+        child: Tooltip(
+          excludeFromSemantics: true,
+          message: fullDateLabel,
+          child: Semantics(
+            button: true,
+            enabled: dateInteractive,
+            label: fullDateLabel,
+            hint: l10n.generalViewLongPressTodayHint,
+            onTap: dateInteractive ? () => onPickDate!(anchor) : null,
             onLongPress: dateInteractive ? onToday : null,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              padding: const EdgeInsets.symmetric(
-                horizontal: _GeneralToolbarMetrics._dateButtonHorizontalPadding,
+            excludeSemantics: true,
+            child: OutlinedButton(
+              key: const ValueKey('general-date-title-button'),
+              onPressed: dateInteractive ? () => onPickDate!(anchor) : null,
+              onLongPress: dateInteractive ? onToday : null,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: const EdgeInsets.symmetric(
+                  horizontal:
+                      _GeneralToolbarMetrics._dateButtonHorizontalPadding,
+                ),
+                side: BorderSide.none,
+                alignment: compactTouch
+                    ? AlignmentDirectional.centerStart
+                    : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: Theme.of(context).textTheme.titleSmall,
               ),
-              side: BorderSide.none,
-              alignment: compactTouch ? AlignmentDirectional.centerStart : null,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              textStyle: Theme.of(context).textTheme.titleSmall,
-            ),
-            child: ClipRect(
-              child: SkedDirectionalTransition(
-                trigger: dateLabel,
-                direction: dateNavigationDirection,
-                distance: 16,
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: compactTouch
-                        ? CrossAxisAlignment.start
-                        : CrossAxisAlignment.center,
-                    children: [
-                      if (view == generalViewCustom && !compactTouch)
+              child: ClipRect(
+                child: SkedDirectionalTransition(
+                  trigger: dateLabel,
+                  direction: dateNavigationDirection,
+                  distance: 16,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: compactTouch
+                          ? CrossAxisAlignment.start
+                          : CrossAxisAlignment.center,
+                      children: [
+                        if (view == generalViewCustom && !compactTouch)
+                          Text(
+                            currentViewLabel,
+                            key: const ValueKey('general-custom-range-label'),
+                            style: Theme.of(context).textTheme.labelSmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         Text(
-                          currentViewLabel,
-                          key: const ValueKey('general-custom-range-label'),
-                          style: Theme.of(context).textTheme.labelSmall,
+                          dateLabel,
+                          key: ValueKey('general-date-label-$dateLabel'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
-                      Text(
-                        dateLabel,
-                        key: ValueKey('general-date-label-$dateLabel'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -3145,7 +3272,7 @@ class _GeneralViewSwitcher extends StatelessWidget {
   final String currentLabel;
   final String nextLabel;
   final bool interactive;
-  final ValueChanged<String> onViewChanged;
+  final _GeneralViewChanged onViewChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -3166,7 +3293,7 @@ class _GeneralViewSwitcher extends StatelessWidget {
         tooltip: tooltip,
         enabled: interactive,
         onSelected: (next) {
-          if (next != view) onViewChanged(next);
+          if (next != view) onViewChanged(next, context);
         },
         itemBuilder: (context) => _generalViewMenuItems(context, view),
       );
@@ -3191,6 +3318,7 @@ class _GeneralViewSwitcher extends StatelessWidget {
                             .customGeneralDateRange !=
                         null,
                   ),
+                  context,
                 )
               : null,
           icon: AnimatedSwitcher(
@@ -3242,7 +3370,7 @@ Future<void> _showGeneralViewSelectionMenu({
   required BuildContext anchorContext,
   required String view,
   required bool interactive,
-  required ValueChanged<String> onViewChanged,
+  required _GeneralViewChanged onViewChanged,
 }) async {
   if (!interactive) return;
   final anchor = anchorContext.findRenderObject();
@@ -3270,7 +3398,9 @@ Future<void> _showGeneralViewSelectionMenu({
         .routeStyle(AppMotion.menuAnimationStyle),
     items: _generalViewMenuItems(context, view),
   );
-  if (selected != null && selected != view) onViewChanged(selected);
+  if (selected != null && selected != view && anchorContext.mounted) {
+    onViewChanged(selected, anchorContext);
+  }
 }
 
 class _GeneralViewOption {
@@ -3491,23 +3621,47 @@ class _MoreGeneralOccurrencesSheet extends StatelessWidget {
 
   final List<GeneralEventOccurrence> occurrences;
   final DateTime? contextDate;
-  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final first = occurrences.first;
     final headingDate = contextDate ?? first.start;
+    final title = Text(
+      l10n.monthDayEvents(headingDate.day, occurrences.length),
+    );
+    final subtitle = Text(
+      contextDate == null
+          ? '${_formatDate(first.start)}  '
+                '${_formatOccurrenceTime(context, first)}'
+          : '${_formatDate(headingDate)}  '
+                '${_weekdayLabel(context, headingDate)}',
+    );
+    final entries = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final occurrence in occurrences)
+          Builder(
+            builder: (anchor) => _GeneralListOccurrenceTile(
+              occurrence: occurrence,
+              onTap: () => onOccurrenceTap(occurrence, anchor),
+            ),
+          ),
+      ],
+    );
+    if (WorkspaceViewTaskScope.maybeOf(context)?.enabled == true) {
+      return WorkspaceViewPanel(
+        key: const ValueKey('general-more-occurrences-sheet'),
+        title: title,
+        subtitle: subtitle,
+        child: entries,
+      );
+    }
     return AppSheetScaffold(
       key: const ValueKey('general-more-occurrences-sheet'),
-      title: Text(l10n.monthDayEvents(headingDate.day, occurrences.length)),
-      subtitle: Text(
-        contextDate == null
-            ? '${_formatDate(first.start)}  '
-                  '${_formatOccurrenceTime(context, first)}'
-            : '${_formatDate(headingDate)}  '
-                  '${_weekdayLabel(context, headingDate)}',
-      ),
+      title: title,
+      subtitle: subtitle,
       heightFactor: occurrences.length > 5 ? 0.72 : null,
       actions: [
         TextButton(
@@ -3515,16 +3669,7 @@ class _MoreGeneralOccurrencesSheet extends StatelessWidget {
           child: Text(l10n.cancel),
         ),
       ],
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final occurrence in occurrences)
-            _GeneralListOccurrenceTile(
-              occurrence: occurrence,
-              onTap: () => onOccurrenceTap(occurrence),
-            ),
-        ],
-      ),
+      child: entries,
     );
   }
 }
