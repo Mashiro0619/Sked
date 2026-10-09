@@ -58,6 +58,49 @@ void main() {
       const Offset(100, 56),
     );
   });
+  test('sidebar triggers remain attached outside the panel safe area', () {
+    const viewport = Rect.fromLTWH(0, 0, 1366, 768);
+    const panel = Size(600, 304);
+    expect(
+      positionSkedFloatingPanel(
+        bounds: const Rect.fromLTRB(248, 56, 1358, 760),
+        anchorBounds: viewport,
+        size: panel,
+        anchor: const Rect.fromLTWH(198, 219, 28, 28),
+      ),
+      const Offset(248, 219),
+    );
+    expect(
+      positionSkedFloatingPanel(
+        bounds: const Rect.fromLTRB(8, 56, 1118, 760),
+        anchorBounds: viewport,
+        size: panel,
+        anchor: const Rect.fromLTWH(1140, 219, 28, 28),
+        rtl: true,
+      ),
+      const Offset(518, 219),
+    );
+    expect(
+      skedFloatingHeightLimit(
+        const Rect.fromLTRB(248, 56, 1358, 760),
+        const Rect.fromLTWH(198, 219, 28, 28),
+        600,
+        anchorBounds: viewport,
+      ),
+      704,
+    );
+  });
+  test('viewport clipping still rejects triggers outside the window', () {
+    expect(
+      positionSkedFloatingPanel(
+        bounds: const Rect.fromLTRB(248, 56, 1358, 760),
+        anchorBounds: const Rect.fromLTWH(0, 0, 1366, 768),
+        size: const Size(600, 304),
+        anchor: const Rect.fromLTWH(198, -100, 28, 28),
+      ),
+      const Offset(503, 256),
+    );
+  });
   test(
     'right-side editor uses left space when both vertical sides are too small',
     () {

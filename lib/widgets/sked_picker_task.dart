@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_floating_anchor.dart';
 import 'sked_floating_surface.dart';
 
 /// Only compact touch windows opt into a task-specific presentation.
@@ -35,6 +36,7 @@ Future<T?> showSkedPickerTask<T>({
   required Size Function(BuildContext) preferredSize,
   required SkedPickerTaskBuilder<T> builder,
   BuildContext? anchorContext,
+  Rect? anchorRect,
   SkedFloatingPlacement placement = SkedFloatingPlacement.automatic,
   AppMode? workspace,
   Key? surfaceKey,
@@ -47,9 +49,9 @@ Future<T?> showSkedPickerTask<T>({
   final parent = ModalRoute.of(context);
   // Capture while the trigger is active. A closing/reflowing parent can leave
   // its Element mounted but inactive; never query that Element during layout.
-  final anchorRenderObject = anchorContext?.mounted == true
-      ? anchorContext!.findRenderObject()
-      : null;
+  final anchor = anchorRect == null
+      ? SkedFloatingAnchor.capture(anchorContext)
+      : SkedFloatingAnchor.fromRect(anchorRect);
   final focus =
       skedFloatingAnchorFocus(anchorContext) ??
       FocusManager.instance.primaryFocus;
@@ -71,6 +73,7 @@ Future<T?> showSkedPickerTask<T>({
     return null;
   }
   final navigator = Navigator.of(context, rootNavigator: true);
+  final overlayRenderObject = navigator.overlay?.context.findRenderObject();
   final themes = InheritedTheme.capture(from: context, to: navigator.context);
   final route = _PickerTaskRoute<T>(
     compactPresentation: compactPresentation,
@@ -89,8 +92,9 @@ Future<T?> showSkedPickerTask<T>({
             compactPresentation: compactPresentation,
             surfaceKey: surfaceKey,
             session: SkedTaskSessionScope.maybeOf(guardContext)!.session,
-            anchorBox: anchorRenderObject is RenderBox
-                ? anchorRenderObject
+            anchor: anchor,
+            coordinateSpace: overlayRenderObject is RenderBox
+                ? overlayRenderObject
                 : null,
             placement: placement,
           ),
@@ -162,7 +166,8 @@ class _PickerTaskHost<T> extends StatefulWidget {
     required this.compactPresentation,
     required this.surfaceKey,
     required this.session,
-    required this.anchorBox,
+    required this.anchor,
+    required this.coordinateSpace,
     required this.placement,
   });
   final SkedPickerTaskBuilder<T> builder;
@@ -170,7 +175,8 @@ class _PickerTaskHost<T> extends StatefulWidget {
   final SkedPickerCompactPresentation compactPresentation;
   final Key? surfaceKey;
   final SkedTaskSession session;
-  final RenderBox? anchorBox;
+  final SkedFloatingAnchor anchor;
+  final RenderBox? coordinateSpace;
   final SkedFloatingPlacement placement;
 
   @override
@@ -234,12 +240,13 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
         math.max(top + margin, constraints.maxHeight - bottom - margin),
       );
       _bounds = bounds;
+      final viewport = Offset.zero & constraints.biggest;
       Rect? anchor;
       if (metrics.desktop || compactAnchor) {
-        final render = widget.anchorBox;
-        if (render is RenderBox && render.attached && render.hasSize) {
-          final rect = render.localToGlobal(Offset.zero) & render.size;
-          if (rect.overlaps(Offset.zero & media.size)) anchor = rect;
+        final space = widget.coordinateSpace;
+        final rect = space == null ? null : widget.anchor.rectIn(space);
+        if (rect != null) {
+          if (rect.overlaps(viewport)) anchor = rect;
           if (compactAnchor &&
               (!rect.overlaps(bounds) ||
                   math.max(
@@ -265,6 +272,7 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
       return CustomSingleChildLayout(
         delegate: _PickerTaskPosition(
           bounds: bounds,
+          anchorBounds: viewport,
           anchor: anchor,
           placement: widget.placement,
           bottomSheet: bottomSheet,
@@ -317,6 +325,7 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
 class _PickerTaskPosition extends SingleChildLayoutDelegate {
   const _PickerTaskPosition({
     required this.bounds,
+    required this.anchorBounds,
     required this.anchor,
     required this.placement,
     required this.width,
@@ -328,6 +337,7 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
     required this.onPosition,
   });
   final Rect bounds;
+  final Rect anchorBounds;
   final Offset? manualPosition;
   final void Function(Offset, Size) onPosition;
   final Rect? anchor;
@@ -341,7 +351,12 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
         maxWidth: bottomSheet ? bounds.width : width,
         minHeight: 0,
         maxHeight: desktop
-            ? skedFloatingHeightLimit(bounds, anchor, width)
+            ? skedFloatingHeightLimit(
+                bounds,
+                anchor,
+                width,
+                anchorBounds: anchorBounds,
+              )
             : constrainToAnchor && anchor != null
             ? math
                   .max(
@@ -363,6 +378,7 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
               bounds: bounds,
               size: childSize,
               anchor: anchor,
+              anchorBounds: anchorBounds,
               rtl: rtl,
               placement: placement,
             );
@@ -395,6 +411,7 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
       placement != oldDelegate.placement ||
       manualPosition != oldDelegate.manualPosition ||
       bounds != oldDelegate.bounds ||
+      anchorBounds != oldDelegate.anchorBounds ||
       anchor != oldDelegate.anchor ||
       width != oldDelegate.width ||
       bottomSheet != oldDelegate.bottomSheet ||

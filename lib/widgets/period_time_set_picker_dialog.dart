@@ -50,6 +50,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext context, {
   required TimetableProvider provider,
   BuildContext? anchorContext,
+  Rect? anchorRect,
   required String selectedPeriodTimeSetId,
   Future<void> Function(String id)? commitSelection,
 }) async {
@@ -71,6 +72,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
       context: context,
       routeName: 'period-time-set-picker',
       anchorContext: anchorContext,
+      anchorRect: anchorRect,
       preferredWidth: 360,
       workspace: AppMode.student,
       session: session,

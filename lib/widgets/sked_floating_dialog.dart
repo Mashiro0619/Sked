@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_floating_anchor.dart';
 import 'sked_floating_surface.dart';
 import 'sked_task_dialog.dart';
 import 'workbench_chrome_metrics.dart';
@@ -32,18 +33,19 @@ class SkedFloatingDialogHost extends StatefulWidget {
   const SkedFloatingDialogHost({
     super.key,
     required this.options,
-    this.anchorBox,
+    this.anchor,
+    this.coordinateSpace,
     required this.child,
   });
   final SkedDesktopFloatingDialog options;
-  final RenderBox? anchorBox;
+  final SkedFloatingAnchor? anchor;
+  final RenderBox? coordinateSpace;
   final Widget child;
   @override
   State<SkedFloatingDialogHost> createState() => _SkedFloatingDialogHostState();
 }
 
 class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
-  final _layoutKey = GlobalKey();
   final _position = SkedFloatingPositionController();
   Rect _bounds = Rect.zero;
 
@@ -74,16 +76,14 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
               SkedFloatingStyle.margin,
         ),
       );
-      Rect? anchor;
-      final anchorBox = widget.anchorBox;
-      final layoutBox = _layoutKey.currentContext?.findRenderObject();
-      if (anchorBox is RenderBox && anchorBox.attached && anchorBox.hasSize) {
-        final origin = layoutBox is RenderBox && layoutBox.attached
-            ? layoutBox.localToGlobal(Offset.zero)
-            : Offset.zero;
-        anchor =
-            (anchorBox.localToGlobal(Offset.zero) - origin) & anchorBox.size;
-      }
+      final viewport = Offset.zero & constraints.biggest;
+      final space = widget.coordinateSpace;
+      final measuredAnchor = space == null
+          ? null
+          : widget.anchor?.rectIn(space);
+      final anchor = measuredAnchor?.overlaps(viewport) == true
+          ? measuredAnchor
+          : null;
       return Shortcuts(
         shortcuts: const {
           SingleActivator(LogicalKeyboardKey.escape): _FloatingDismissIntent(),
@@ -98,9 +98,9 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
             ),
           },
           child: CustomSingleChildLayout(
-            key: _layoutKey,
             delegate: _FloatingDialogPosition(
               bounds: _bounds,
+              anchorBounds: viewport,
               anchor: anchor,
               manualPosition: _position.positionOverride(
                 hasAnchor: anchor != null,
@@ -134,6 +134,7 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
 class _FloatingDialogPosition extends SingleChildLayoutDelegate {
   const _FloatingDialogPosition({
     required this.bounds,
+    required this.anchorBounds,
     required this.anchor,
     required this.manualPosition,
     required this.width,
@@ -142,6 +143,7 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
     required this.onLayout,
   });
   final Rect bounds;
+  final Rect anchorBounds;
   final Rect? anchor;
   final Offset? manualPosition;
   final double width;
@@ -153,7 +155,12 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
       BoxConstraints(
         minWidth: width,
         maxWidth: width,
-        maxHeight: skedFloatingHeightLimit(bounds, anchor, width),
+        maxHeight: skedFloatingHeightLimit(
+          bounds,
+          anchor,
+          width,
+          anchorBounds: anchorBounds,
+        ),
       );
   @override
   Offset getPositionForChild(Size size, Size childSize) {
@@ -162,6 +169,7 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
             bounds: bounds,
             size: childSize,
             anchor: anchor,
+            anchorBounds: anchorBounds,
             rtl: rtl,
             placement: placement,
           )

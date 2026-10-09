@@ -81,16 +81,20 @@ Offset boundSkedFloatingPosition(Offset position, Size size, Rect bounds) =>
 
 enum SkedFloatingPlacement { automatic, left, right, below }
 
+/// [bounds] limits the panel, while [anchorBounds] describes where triggers can
+/// live. A sidebar or toolbar trigger may be outside the panel's safe area.
 Offset positionSkedFloatingPanel({
   required Rect bounds,
   required Size size,
   Rect? anchor,
+  Rect? anchorBounds,
   bool rtl = false,
   SkedFloatingPlacement placement = SkedFloatingPlacement.automatic,
 }) {
   if (anchor == null ||
       !anchor.overlaps(
-        Rect.fromLTRB(bounds.left, 0, bounds.right, bounds.bottom),
+        anchorBounds ??
+            Rect.fromLTRB(bounds.left, 0, bounds.right, bounds.bottom),
       )) {
     return boundSkedFloatingPosition(
       bounds.center - Offset(size.width / 2, size.height / 2),
@@ -147,10 +151,16 @@ Offset positionSkedFloatingPanel({
 /// When no horizontal neighbour can hold the reading width, use the larger
 /// vertical space and let the body's existing scroll view absorb overflow.
 /// Keep a minimum usable header/footer budget rather than collapsing to a sliver.
-double skedFloatingHeightLimit(Rect bounds, Rect? anchor, double width) {
+double skedFloatingHeightLimit(
+  Rect bounds,
+  Rect? anchor,
+  double width, {
+  Rect? anchorBounds,
+}) {
   if (anchor == null ||
       !anchor.overlaps(
-        Rect.fromLTRB(bounds.left, 0, bounds.right, bounds.bottom),
+        anchorBounds ??
+            Rect.fromLTRB(bounds.left, 0, bounds.right, bounds.bottom),
       )) {
     return bounds.height;
   }

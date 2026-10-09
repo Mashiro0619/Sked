@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'ui_command.dart';
+import 'sked_floating_anchor.dart';
 import 'sked_floating_dialog.dart';
 import 'sked_floating_surface.dart';
 import 'sked_task_dialog.dart';
@@ -42,9 +43,14 @@ Future<T?> showExpressiveDialog<T>({
           : null) ??
       FocusManager.instance.primaryFocus;
   final owner = ModalRoute.of(context);
-  final anchorRenderObject =
-      floating && desktopFloating.anchorContext?.mounted == true
-      ? desktopFloating.anchorContext!.findRenderObject()
+  final anchor = floating
+      ? SkedFloatingAnchor.capture(desktopFloating.anchorContext)
+      : null;
+  final overlayRenderObject = floating
+      ? Navigator.of(
+          context,
+          rootNavigator: useRootNavigator,
+        ).overlay?.context.findRenderObject()
       : null;
   ModalRoute<dynamic>? shownRoute;
   final result = await showDialog<T>(
@@ -62,8 +68,9 @@ Future<T?> showExpressiveDialog<T>({
       final body = floating
           ? SkedFloatingDialogHost(
               options: desktopFloating,
-              anchorBox: anchorRenderObject is RenderBox
-                  ? anchorRenderObject
+              anchor: anchor,
+              coordinateSpace: overlayRenderObject is RenderBox
+                  ? overlayRenderObject
                   : null,
               child: UiCommandFeedbackHost(
                 builder: (_) => SkedStableTaskBody(builder: builder),
