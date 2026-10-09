@@ -289,6 +289,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     BuildContext? anchorContext,
     bool Function()? targetExists,
   }) async {
+    // Restore rotates the data session before it obtains the mutation lock.
+    // Retained entry callbacks must not create a draft in that new session.
+    if (!mounted || !context.mounted || target.source.isRestoringAppBackup) {
+      return;
+    }
     final task = SkedTaskSession(
       provider: target.source,
       workspace: target.activeMode,
@@ -488,7 +493,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     BuildContext context,
     WorkspaceThemeTarget provider,
   ) async {
-    if (_outlineSettingsPageOpen || uiCommandBusy) return;
+    if (_outlineSettingsPageOpen ||
+        uiCommandBusy ||
+        provider.source.isRestoringAppBackup) {
+      return;
+    }
     _outlineSettingsPageOpen = true;
     try {
       await Navigator.of(context).push<void>(
@@ -1401,7 +1410,7 @@ class _OutlineSettingsCard extends StatelessWidget {
       children: [
         ExpressiveTap(
           borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
+          onTap: provider.source.isRestoringAppBackup ? null : onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

@@ -140,6 +140,7 @@ class _ColorValueTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SettingsConnectedTile(
+      changesAppData: true,
       leading: const Icon(Icons.palette_outlined),
       title: title,
       value: formatSkedColorHex(colorValue),
