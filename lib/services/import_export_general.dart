@@ -178,7 +178,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
           .copyWith(
             reminderAcknowledgements: data.reminderAcknowledgements
                 .where(
-                  (item) => !_reminderKeyBelongsToSchedule(
+                  (item) => !generalReminderBelongsToSchedule(
                     item.occurrenceKey,
                     target,
                   ),
@@ -201,7 +201,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
     final existingEventContentKeys = _generalEventContentKeys(data.schedules);
     final appended = <GeneralSchedule>[];
     for (final schedule in selected) {
-      final nextId = _normalizeImportedGeneralId(
+      final nextId = normalizeImportedId(
         schedule.id,
         fallbackPrefix: 'schedule_import',
         existingIds: existingIds,
@@ -251,8 +251,7 @@ bool _matchesImportedGeneralScheduleId(
   String requestedId,
 ) {
   final trimmed = requestedId.trim();
-  return normalizedId == trimmed ||
-      normalizedId == _sanitizeImportedGeneralId(trimmed);
+  return normalizedId == trimmed || normalizedId == sanitizeImportedId(trimmed);
 }
 
 GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
@@ -268,7 +267,7 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
   final requestedActiveScheduleId = data.activeScheduleId.trim();
   final scheduleIds = <String>{};
   final eventIds = <String>{};
-  final occurrenceKeyRemaps = <_GeneralOccurrenceKeyRemap>[];
+  final occurrenceKeyRemaps = <GeneralOccurrenceKeyRemap>[];
   final schedules = <GeneralSchedule>[];
   String? activeScheduleId;
 
@@ -279,7 +278,7 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
   ) {
     final schedule = sourceSchedules[scheduleIndex];
     final rawScheduleId = schedule.id.trim();
-    final scheduleId = _normalizeImportedGeneralId(
+    final scheduleId = normalizeImportedId(
       rawScheduleId,
       fallbackPrefix: 'schedule_import',
       existingIds: scheduleIds,
@@ -297,7 +296,7 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
     final events = <GeneralEvent>[];
     for (final event in schedule.events) {
       final rawEventId = event.id.trim();
-      final eventId = _normalizeImportedGeneralId(
+      final eventId = normalizeImportedId(
         rawEventId,
         fallbackPrefix: 'evt_import',
         existingIds: eventIds,
@@ -308,7 +307,7 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
         fallbackCalendarId: scheduleId,
       );
       occurrenceKeyRemaps.add(
-        _GeneralOccurrenceKeyRemap(
+        GeneralOccurrenceKeyRemap(
           rawScheduleId: rawScheduleId,
           rawEventId: rawEventId,
           rawStartDateTimeIso: event.startDateTimeIso.trim(),
@@ -337,31 +336,10 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
     );
   }
 
-  final acknowledgementsByKey = <String, GeneralReminderAcknowledgement>{};
-  for (final acknowledgement in data.reminderAcknowledgements) {
-    final normalizedAcknowledgement = acknowledgement.normalized();
-    if (normalizedAcknowledgement.occurrenceKey.isEmpty) {
-      continue;
-    }
-    final occurrenceKey = _remapGeneralOccurrenceKey(
-      normalizedAcknowledgement.occurrenceKey,
-      occurrenceKeyRemaps,
-    );
-    if (occurrenceKey == null) {
-      continue;
-    }
-    final candidate = GeneralReminderAcknowledgement(
-      occurrenceKey: occurrenceKey,
-      isHandled: normalizedAcknowledgement.isHandled,
-      updatedAtIso: normalizedAcknowledgement.updatedAtIso,
-    );
-    final existing = acknowledgementsByKey[occurrenceKey];
-    if (existing == null || _isAcknowledgementNewer(candidate, existing)) {
-      acknowledgementsByKey[occurrenceKey] = candidate;
-    }
-  }
-  final acknowledgements = acknowledgementsByKey.values.toList()
-    ..sort((left, right) => left.occurrenceKey.compareTo(right.occurrenceKey));
+  final acknowledgements = remapGeneralReminderAcknowledgements(
+    data.reminderAcknowledgements,
+    occurrenceKeyRemaps,
+  );
 
   return data.copyWith(
     activeScheduleId: activeScheduleId ?? schedules.first.id,
@@ -380,173 +358,6 @@ bool _matchesGeneralActiveScheduleId({
   }
   return rawScheduleId == requestedActiveScheduleId ||
       normalizedScheduleId == requestedActiveScheduleId;
-}
-
-String? _remapGeneralOccurrenceKey(
-  String occurrenceKey,
-  List<_GeneralOccurrenceKeyRemap> remaps,
-) {
-  final parsed = parseGeneralOccurrenceKey(occurrenceKey);
-  if (parsed != null) {
-    final remap = _selectGeneralOccurrenceKeyRemap(
-      remaps,
-      calendarId: parsed.calendarId,
-      eventId: parsed.eventId,
-      startDateTimeIso: parsed.startDateTimeIso,
-    );
-    if (remap != null) {
-      if (!remap.hasReminders) {
-        return null;
-      }
-      final remappedStart = _remappedGeneralOccurrenceStart(
-        remap,
-        parsed.startDateTimeIso,
-      );
-      return buildGeneralOccurrenceKey(
-        remap.scheduleId,
-        remap.eventId,
-        remappedStart,
-      );
-    }
-    return null;
-  }
-  final legacyCandidates = <_GeneralOccurrenceKeyRemap>[];
-  String? legacyStartDateTimeIso;
-  for (final remap in remaps) {
-    final legacyPrefix = '${remap.rawScheduleId}|${remap.rawEventId}|';
-    if (occurrenceKey.startsWith(legacyPrefix)) {
-      legacyStartDateTimeIso = occurrenceKey.substring(legacyPrefix.length);
-      legacyCandidates.add(remap);
-    }
-  }
-  if (legacyStartDateTimeIso != null &&
-      tryParseStrictIsoDateTime(legacyStartDateTimeIso) != null) {
-    final remap = _selectGeneralOccurrenceKeyRemap(
-      legacyCandidates,
-      calendarId: legacyCandidates.first.rawScheduleId,
-      eventId: legacyCandidates.first.rawEventId,
-      startDateTimeIso: legacyStartDateTimeIso,
-    );
-    if (remap != null) {
-      if (!remap.hasReminders) {
-        return null;
-      }
-      final remappedStart = _remappedGeneralOccurrenceStart(
-        remap,
-        legacyStartDateTimeIso,
-      );
-      return buildGeneralOccurrenceKey(
-        remap.scheduleId,
-        remap.eventId,
-        remappedStart,
-      );
-    }
-  }
-  return null;
-}
-
-_GeneralOccurrenceKeyRemap? _selectGeneralOccurrenceKeyRemap(
-  Iterable<_GeneralOccurrenceKeyRemap> remaps, {
-  required String calendarId,
-  required String eventId,
-  required String startDateTimeIso,
-}) {
-  final candidates = remaps
-      .where((remap) => remap.matchesIds(calendarId, eventId))
-      .toList();
-  if (candidates.length == 1) {
-    return candidates.single;
-  }
-  final startCandidates = candidates
-      .where((remap) => remap.matchesStart(startDateTimeIso))
-      .toList();
-  return startCandidates.length == 1 ? startCandidates.single : null;
-}
-
-class _GeneralOccurrenceKeyRemap {
-  const _GeneralOccurrenceKeyRemap({
-    required this.rawScheduleId,
-    required this.rawEventId,
-    required this.rawStartDateTimeIso,
-    required this.scheduleId,
-    required this.eventId,
-    required this.startDateTimeIso,
-    required this.isRepeating,
-    required this.recurrenceRule,
-    required this.hasReminders,
-  });
-
-  final String rawScheduleId;
-  final String rawEventId;
-  final String rawStartDateTimeIso;
-  final String scheduleId;
-  final String eventId;
-  final String startDateTimeIso;
-  final bool isRepeating;
-  final GeneralEventRecurrenceRule recurrenceRule;
-  final bool hasReminders;
-
-  bool matchesIds(String calendarId, String eventId) {
-    final matchesRaw = calendarId == rawScheduleId && eventId == rawEventId;
-    final matchesNormalized =
-        calendarId == scheduleId && eventId == this.eventId;
-    return matchesRaw || matchesNormalized;
-  }
-
-  bool matchesStart(String startDateTimeIso) {
-    return _sameOccurrenceStart(startDateTimeIso, rawStartDateTimeIso) ||
-        _sameOccurrenceStart(startDateTimeIso, this.startDateTimeIso);
-  }
-}
-
-bool _isAcknowledgementNewer(
-  GeneralReminderAcknowledgement candidate,
-  GeneralReminderAcknowledgement existing,
-) {
-  final candidateUpdated = tryParseStrictIsoDateTime(candidate.updatedAtIso);
-  final existingUpdated = tryParseStrictIsoDateTime(existing.updatedAtIso);
-  if (candidateUpdated == null) {
-    return false;
-  }
-  if (existingUpdated == null) {
-    return true;
-  }
-  return candidateUpdated.isAfter(existingUpdated) ||
-      candidateUpdated.isAtSameMomentAs(existingUpdated);
-}
-
-String _remappedGeneralOccurrenceStart(
-  _GeneralOccurrenceKeyRemap remap,
-  String occurrenceStartDateTimeIso,
-) {
-  if (!remap.isRepeating) return remap.startDateTimeIso;
-  final rawEventStart = tryParseStrictIsoDateTime(remap.rawStartDateTimeIso);
-  final normalizedEventStart = tryParseStrictIsoDateTime(
-    remap.startDateTimeIso,
-  );
-  final occurrenceStart = tryParseStrictIsoDateTime(occurrenceStartDateTimeIso);
-  if (rawEventStart == null ||
-      normalizedEventStart == null ||
-      occurrenceStart == null) {
-    return remap.startDateTimeIso;
-  }
-  return remapLegacyElapsedGeneralOccurrenceStart(
-    rawEventStart: rawEventStart,
-    normalizedEventStart: normalizedEventStart,
-    recurrenceRule: remap.recurrenceRule,
-    occurrenceStart: occurrenceStart,
-  ).toIso8601String();
-}
-
-bool _sameOccurrenceStart(String left, String right) {
-  if (left == right) {
-    return true;
-  }
-  final leftParsed = tryParseStrictIsoDateTime(left);
-  final rightParsed = tryParseStrictIsoDateTime(right);
-  return leftParsed != null &&
-      rightParsed != null &&
-      leftParsed.isAtSameMomentAs(rightParsed);
 }
 
 Set<String> _generalEventIds(Iterable<GeneralSchedule> schedules) {
@@ -605,25 +416,6 @@ String _generalEventContentKey(GeneralSchedule schedule, GeneralEvent event) {
 
 String _normalizedGeneralText(String value) => value.trim();
 
-String _normalizeImportedGeneralId(
-  String rawId, {
-  required String fallbackPrefix,
-  required Set<String> existingIds,
-}) {
-  final sanitized = _sanitizeImportedGeneralId(rawId);
-  final candidate = sanitized.isEmpty ? fallbackPrefix : sanitized;
-  if (!existingIds.contains(candidate)) {
-    return candidate;
-  }
-  final base = sanitized.isEmpty ? fallbackPrefix : _copyIdBase(sanitized);
-  var next = base;
-  var suffix = 1;
-  while (existingIds.contains(next)) {
-    next = '${base}_${suffix++}';
-  }
-  return next;
-}
-
 GeneralSchedule _sanitizeImportedGeneralSchedule(
   GeneralSchedule schedule, {
   required String scheduleId,
@@ -631,7 +423,7 @@ GeneralSchedule _sanitizeImportedGeneralSchedule(
 }) {
   final events = <GeneralEvent>[];
   for (final event in schedule.events) {
-    final eventId = _normalizeImportedGeneralId(
+    final eventId = normalizeImportedId(
       event.id,
       fallbackPrefix: 'evt_import',
       existingIds: existingEventIds,
@@ -640,30 +432,6 @@ GeneralSchedule _sanitizeImportedGeneralSchedule(
     events.add(event.copyWith(id: eventId, calendarId: scheduleId));
   }
   return schedule.copyWith(id: scheduleId, events: events);
-}
-
-String _sanitizeImportedGeneralId(String rawId) {
-  return sanitizeImportedId(rawId);
-}
-
-bool _reminderKeyBelongsToSchedule(
-  String occurrenceKey,
-  GeneralSchedule schedule,
-) {
-  final parsed = parseGeneralOccurrenceKey(occurrenceKey);
-  if (parsed != null) {
-    return parsed.calendarId == schedule.id;
-  }
-  for (final event in schedule.events) {
-    final prefix = '${schedule.id}|${event.id}|';
-    if (occurrenceKey.startsWith(prefix) &&
-        tryParseStrictIsoDateTime(occurrenceKey.substring(prefix.length)) !=
-            null) {
-      return true;
-    }
-  }
-  final parts = occurrenceKey.split('|');
-  return parts.length == 3 && parts.first == schedule.id;
 }
 
 String _generalIcsImportErrorMessage(

@@ -375,7 +375,7 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
     Set<String> existingIds, {
     required String localeCode,
   }) {
-    final nextId = _normalizeUniqueId(
+    final nextId = normalizeUniqueId(
       periodTimeSet.id,
       fallbackPrefix: 'period_set',
       existingIds: existingIds,
@@ -437,7 +437,7 @@ TimetableData _copyImportedTimetableWithUniqueId(
   TimetableData timetable,
   Set<String> existingIds,
 ) {
-  final nextId = _normalizeUniqueId(
+  final nextId = normalizeUniqueId(
     timetable.id,
     fallbackPrefix: 'table_import',
     existingIds: existingIds,
@@ -455,7 +455,7 @@ TimetableData _normalizeTimetable(
   final normalizedConfig = config.copyWith();
   final normalizedCourses = <CourseItem>[];
   for (final course in timetable.courses) {
-    final courseId = _normalizeUniqueId(
+    final courseId = normalizeUniqueId(
       course.id.trim(),
       fallbackPrefix: 'course',
       existingIds: courseIds,
@@ -478,24 +478,6 @@ TimetableData _normalizeTimetable(
     config: normalizedConfig,
     courses: normalizedCourses,
   );
-}
-
-String _normalizeUniqueId(
-  String rawId, {
-  required String fallbackPrefix,
-  required Set<String> existingIds,
-}) {
-  final trimmed = rawId.trim();
-  if (trimmed.isNotEmpty && !existingIds.contains(trimmed)) {
-    return trimmed;
-  }
-  final base = trimmed.isEmpty ? fallbackPrefix : _copyIdBase(trimmed);
-  var candidate = base;
-  var suffix = 1;
-  while (existingIds.contains(candidate)) {
-    candidate = '${base}_${suffix++}';
-  }
-  return candidate;
 }
 
 bool _matchesRawId(String rawId, String requestedId) {
@@ -554,7 +536,7 @@ PeriodTimeSet _createImportedFallbackPeriodTimeSet(
   Set<String> existingIds, {
   required String localeCode,
 }) {
-  final fallbackId = _normalizeUniqueId(
+  final fallbackId = normalizeUniqueId(
     '',
     fallbackPrefix: 'period_set',
     existingIds: existingIds,

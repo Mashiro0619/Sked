@@ -1,3 +1,5 @@
+import 'unique_id.dart';
+
 String sanitizeImportedId(String rawId, {int maxLength = 96}) {
   final source = rawId.trim();
   if (source.isEmpty || maxLength <= 0) {
@@ -12,3 +14,13 @@ String sanitizeImportedId(String rawId, {int maxLength = 96}) {
   }
   return safe.length > maxLength ? safe.substring(0, maxLength) : safe;
 }
+
+String normalizeImportedId(
+  String rawId, {
+  required String fallbackPrefix,
+  required Set<String> existingIds,
+}) => normalizeUniqueId(
+  sanitizeImportedId(rawId),
+  fallbackPrefix: fallbackPrefix,
+  existingIds: existingIds,
+);

@@ -128,7 +128,7 @@ class GeneralCalendarService {
       schedules: remaining,
       reminderAcknowledgements: data.reminderAcknowledgements
           .where(
-            (item) => !_reminderKeyBelongsToSchedule(
+            (item) => !generalReminderBelongsToSchedule(
               item.occurrenceKey,
               deletedSchedule,
             ),
@@ -592,27 +592,6 @@ String _nextEventId(GeneralScheduleData data) {
     candidate = 'evt_$stamp';
   }
   return candidate;
-}
-
-bool _reminderKeyBelongsToSchedule(
-  String occurrenceKey,
-  GeneralSchedule schedule,
-) {
-  final parsed = parseGeneralOccurrenceKey(occurrenceKey);
-  if (parsed != null) {
-    return parsed.calendarId == schedule.id;
-  }
-  for (final event in schedule.events) {
-    if (_reminderKeyMatchesEventInSchedule(
-      occurrenceKey,
-      schedule.id,
-      event.id,
-    )) {
-      return true;
-    }
-  }
-  final parts = occurrenceKey.split('|');
-  return parts.length == 3 && parts.first == schedule.id;
 }
 
 bool _reminderKeyMatchesEventInSchedule(

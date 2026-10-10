@@ -4,6 +4,7 @@ import '../data/migrations/app_data_migrations.dart';
 import '../data/migrations/migration.dart';
 import '../l10n/app_locale.dart';
 import '../utils/constants.dart';
+import '../utils/import_id_sanitizer.dart';
 import '../utils/localized_names.dart';
 import '../utils/time_utils.dart';
 import 'app_mode.dart';
@@ -2479,7 +2480,7 @@ class GeneralScheduleExportData {
     final schedules = <GeneralSchedule>[];
     for (var i = 0; i < scheduleMaps.length; i++) {
       final schedule = GeneralSchedule.fromJson(scheduleMaps[i]);
-      final scheduleId = _normalizeGeneralScheduleImportId(
+      final scheduleId = normalizeImportedId(
         schedule.id,
         fallbackPrefix: 'calendar',
         existingIds: usedScheduleIds,
@@ -2503,47 +2504,6 @@ class GeneralScheduleExportData {
     }
     return GeneralScheduleExportData(schedules: schedules);
   }
-}
-
-String _normalizeGeneralScheduleImportId(
-  String rawId, {
-  required String fallbackPrefix,
-  required Set<String> existingIds,
-}) {
-  final sanitized = _sanitizeGeneralScheduleImportId(rawId);
-  final candidate = sanitized.isEmpty ? fallbackPrefix : sanitized;
-  if (!existingIds.contains(candidate)) {
-    return candidate;
-  }
-  final base = sanitized.isEmpty
-      ? fallbackPrefix
-      : _copyImportIdBase(sanitized);
-  var next = base;
-  var suffix = 1;
-  while (existingIds.contains(next)) {
-    next = '${base}_${suffix++}';
-  }
-  return next;
-}
-
-String _sanitizeGeneralScheduleImportId(String rawId) {
-  final source = rawId.trim();
-  if (source.isEmpty) {
-    return '';
-  }
-  final safe = source
-      .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
-      .replaceAll(RegExp(r'_+'), '_')
-      .replaceAll(RegExp(r'^_+|_+$'), '');
-  if (safe.isEmpty) {
-    return '';
-  }
-  return safe.length > 96 ? safe.substring(0, 96) : safe;
-}
-
-String _copyImportIdBase(String id) {
-  final match = RegExp(r'^(.*_copy)(?:_\d+)?$').firstMatch(id);
-  return match == null ? '${id}_copy' : match.group(1)!;
 }
 
 String encodeGeneralScheduleDataEnvelope(GeneralScheduleExportData data) {

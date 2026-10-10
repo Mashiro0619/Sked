@@ -4,6 +4,7 @@ import '../l10n/app_locale.dart' as app_locale;
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../utils/import_id_sanitizer.dart';
+import '../utils/unique_id.dart';
 import 'general_calendar_ics_service.dart';
 import 'student_timetable_service.dart' as student_timetable;
 
@@ -71,7 +72,7 @@ class _ImportExportServiceCore {
     for (final item in data.studentMode.periodTimeSets) {
       final normalized = normalizePeriodTimeSet(item, localeCode: localeCode);
       final rawId = normalized.id.trim();
-      final nextId = _normalizeUniqueId(
+      final nextId = normalizeUniqueId(
         rawId,
         fallbackPrefix: 'period_set',
         existingIds: normalizedSetIds,
@@ -90,7 +91,7 @@ class _ImportExportServiceCore {
     String? remappedActiveTimetableId;
     for (final item in data.studentMode.timetables) {
       final rawTimetableId = item.id.trim();
-      final timetableId = _normalizeUniqueId(
+      final timetableId = normalizeUniqueId(
         rawTimetableId,
         fallbackPrefix: 'table',
         existingIds: normalizedTimetableIds,
@@ -170,7 +171,7 @@ class _ImportExportServiceCore {
     for (final item in data.periodTimeSets) {
       final normalized = normalizePeriodTimeSet(item, localeCode: localeCode);
       final rawId = normalized.id.trim();
-      final nextId = _normalizeUniqueId(
+      final nextId = normalizeUniqueId(
         rawId,
         fallbackPrefix: 'period_set',
         existingIds: setIds,
@@ -186,7 +187,7 @@ class _ImportExportServiceCore {
     final timetableIds = <String>{};
     final courseIds = <String>{};
     for (final item in data.timetables) {
-      final timetableId = _normalizeUniqueId(
+      final timetableId = normalizeUniqueId(
         item.id.trim(),
         fallbackPrefix: 'table',
         existingIds: timetableIds,
@@ -251,9 +252,4 @@ class _ImportExportServiceCore {
       existing: existing,
     );
   }
-}
-
-String _copyIdBase(String id) {
-  final match = RegExp(r'^(.*_copy)(?:_\d+)?$').firstMatch(id);
-  return match == null ? '${id}_copy' : match.group(1)!;
 }
