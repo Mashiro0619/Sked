@@ -319,15 +319,16 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
       return;
     }
 
-    var next = _appData;
-    if (mode == colorfulCourseTextColorModeCustom) {
-      next = _settings.updateColorfulUiColorValue(
-        next,
-        colorfulCourseTextColorKey,
-        customColorValue,
-      );
-    }
-    _appData = _settings.updateColorfulCourseTextColorMode(next, mode);
+    _appData = _editTheme(AppMode.student, (data) {
+      final next = mode == colorfulCourseTextColorModeCustom
+          ? _settings.updateColorfulUiColorValue(
+              data,
+              colorfulCourseTextColorKey,
+              customColorValue,
+            )
+          : data;
+      return _settings.updateColorfulCourseTextColorMode(next, mode);
+    });
     await _saveAndNotify();
   }
 

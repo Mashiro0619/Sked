@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/providers/workspace_theme_target.dart';
 
 class _ControllableStorage implements TimetableStorage {
   _ControllableStorage(this.data);
@@ -140,50 +141,79 @@ void main() {
     },
   );
 
-  test('course text mode and custom color commit atomically', () async {
-    final storage = _ControllableStorage(
-      buildInitialAppData(buildDefaultPeriodTimes()),
-    );
-    final provider = await _providerFor(storage);
+  for (final activeMode in AppMode.values) {
+    test(
+      'student course text commits atomically while active=$activeMode',
+      () async {
+        final storage = _ControllableStorage(
+          buildInitialAppData(buildDefaultPeriodTimes())
+              .copyWith(activeMode: activeMode),
+        );
+        final provider = await _providerFor(storage);
+        addTearDown(provider.dispose);
+        final target = WorkspaceThemeTarget(provider, AppMode.student);
+        final originalGeneral = provider.appData.generalMode.toJson();
 
-    await provider.updateColorfulCourseTextSettings(
-      mode: colorfulCourseTextColorModeCustom,
-      customColorValue: 0xFF123456,
+        await target.updateColorfulCourseTextSettings(
+          mode: colorfulCourseTextColorModeCustom,
+          customColorValue: 0xFF123456,
+        );
+
+        expect(storage.saveCount, 1);
+        expect(provider.activeMode, activeMode);
+        expect(
+          target.colorfulCourseTextColorMode,
+          colorfulCourseTextColorModeCustom,
+        );
+        expect(
+          target.colorfulUiColorValues[colorfulCourseTextColorKey],
+          0xFF123456,
+        );
+        expect(provider.appData.generalMode.toJson(), originalGeneral);
+        expect(
+          storage
+              .data!
+              .studentMode
+              .colorfulUiColorValues[colorfulCourseTextColorKey],
+          0xFF123456,
+        );
+
+        await target.updateColorfulCourseTextSettings(
+          mode: colorfulCourseTextColorModeCustom,
+          customColorValue: 0xFF123456,
+        );
+        expect(storage.saveCount, 1);
+      },
     );
 
-    expect(storage.saveCount, 1);
-    expect(
-      provider.colorfulCourseTextColorMode,
-      colorfulCourseTextColorModeCustom,
-    );
-    expect(
-      provider.colorfulUiColorValues[colorfulCourseTextColorKey],
-      0xFF123456,
-    );
-  });
+    test(
+      'failed student course text save rolls back while active=$activeMode',
+      () async {
+        final storage = _ControllableStorage(
+          buildInitialAppData(buildDefaultPeriodTimes())
+              .copyWith(activeMode: activeMode),
+        );
+        final provider = await _providerFor(storage);
+        addTearDown(provider.dispose);
+        final original = provider.appData.toJson();
+        storage.nextSaveError = StateError('save failed');
 
-  test('failed course text settings save rolls back both fields', () async {
-    final storage = _ControllableStorage(
-      buildInitialAppData(buildDefaultPeriodTimes()),
-    );
-    final provider = await _providerFor(storage);
-    final originalMode = provider.colorfulCourseTextColorMode;
-    storage.nextSaveError = StateError('save failed');
+        await expectLater(
+          WorkspaceThemeTarget(
+            provider,
+            AppMode.student,
+          ).updateColorfulCourseTextSettings(
+            mode: colorfulCourseTextColorModeCustom,
+            customColorValue: 0xFF123456,
+          ),
+          throwsStateError,
+        );
 
-    await expectLater(
-      provider.updateColorfulCourseTextSettings(
-        mode: colorfulCourseTextColorModeCustom,
-        customColorValue: 0xFF123456,
-      ),
-      throwsStateError,
+        expect(provider.appData.toJson(), original);
+        expect(storage.data!.toJson(), original);
+      },
     );
-
-    expect(provider.colorfulCourseTextColorMode, originalMode);
-    expect(
-      provider.colorfulUiColorValues.containsKey(colorfulCourseTextColorKey),
-      isFalse,
-    );
-  });
+  }
 
   test('parser text settings commit once and roll back together', () async {
     final storage = _ControllableStorage(
