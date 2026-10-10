@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'migrations/migration.dart';
 import '../models/timetable_models.dart';
+import '../services/shared_preferences_recovery_reader.dart';
 import '../utils/app_storage_keys.dart';
 import '../utils/shared_preferences_recovery.dart';
 import 'timetable_storage.dart';
@@ -189,24 +189,14 @@ class BrowserTimetableStorage
   Future<String?> filePath() async => _browserPath(_storageKey);
 
   @override
-  Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
-    if (!artifactPath.startsWith(browserLocalStorageUriPrefix)) return null;
-    final key = artifactPath.substring(browserLocalStorageUriPrefix.length);
-    if (key != _storageKey && !_recoveryKeyPattern.hasMatch(key)) return null;
-    try {
-      final preferences = await _preferencesProvider();
-      await _preferencesReloader(preferences);
-      final value = preferences.get(key);
-      if (value == null) return null;
-      final source = sharedPreferencesRecoverySource(
-        originalKey: key,
-        value: value,
+  Future<Uint8List?> readRecoveryArtifact(String artifactPath) =>
+      readSharedPreferencesRecoveryArtifact(
+        artifactPath,
+        storageKey: _storageKey,
+        recoveryKeyPattern: _recoveryKeyPattern,
+        preferencesProvider: _preferencesProvider,
+        preferencesReloader: _preferencesReloader,
       );
-      return Uint8List.fromList(utf8.encode(source));
-    } catch (_) {
-      return null;
-    }
-  }
 
   Future<String> _isolateCorruptValue(
     SharedPreferences preferences,

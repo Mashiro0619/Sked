@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as path;
 
 import 'app_storage_layout_io.dart';
+import 'recovery_artifact_access_io.dart';
 import 'school_site_store.dart';
 
 class PlatformSchoolSiteStore extends SchoolSiteStore {
@@ -37,6 +38,19 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
   static var _generation = 0;
   static final Map<String, SchoolSiteStoreRecoveryBlockedException>
   _writeBlocks = {};
+
+  static final _recoveryAccess = RecoveryArtifactAccess(
+    directoryPrefix: _recoveryDirectoryPrefix,
+    directoryNamePattern: _recoveryDirectoryNamePattern,
+    allowedArtifactNames: const {
+      _fileName,
+      '$_fileName$_backupSuffix',
+      '$_fileName$_tempSuffix',
+      '$_fileName$_failedTempSuffix',
+    },
+    invalidDirectoryMessage:
+        'School-site recovery path is not a regular directory.',
+  );
 
   final AppStorageLayout _layout;
   final Future<void> Function()? _beforeMainReplace;
@@ -343,35 +357,16 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
   Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
     try {
       final storagePaths = await _resolvePaths();
-      final main = storagePaths.main;
-      final candidatePath = path.normalize(artifactPath);
-      final activePaths = <String>{
-        path.normalize(main.path),
-        path.normalize(storagePaths.backup.path),
-        path.normalize(storagePaths.temporary.path),
-        path.normalize(storagePaths.failedTemporary.path),
-      };
-      final recoveryDirectory = path.dirname(candidatePath);
-      final isIsolatedArtifact =
-          path.equals(
-            path.dirname(recoveryDirectory),
-            storagePaths.root.path,
-          ) &&
-          _recoveryDirectoryNamePattern.hasMatch(
-            path.basename(recoveryDirectory),
-          ) &&
-          _isAllowedRecoveryArtifactName(path.basename(candidatePath)) &&
-          await FileSystemEntity.type(recoveryDirectory, followLinks: false) ==
-              FileSystemEntityType.directory;
-      final isActiveArtifact = activePaths.any(
-        (activePath) => path.equals(activePath, candidatePath),
+      return await _recoveryAccess.read(
+        artifactPath,
+        root: storagePaths.root,
+        activeFiles: [
+          storagePaths.main,
+          storagePaths.backup,
+          storagePaths.temporary,
+          storagePaths.failedTemporary,
+        ],
       );
-      if (!isActiveArtifact && !isIsolatedArtifact) return null;
-      if (await FileSystemEntity.type(candidatePath, followLinks: false) !=
-          FileSystemEntityType.file) {
-        return null;
-      }
-      return await File(candidatePath).readAsBytes();
     } catch (_) {
       return null;
     }
@@ -435,91 +430,19 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     return artifacts;
   }
 
-  Future<Directory> _createRecoveryDirectory(Directory parent) async {
-    final stamp = _clock().toUtc().toIso8601String().replaceAll(
-      RegExp(r'[-:.]'),
-      '',
-    );
-    var suffix = 0;
-    while (true) {
-      final name =
-          '$_recoveryDirectoryPrefix$stamp${suffix == 0 ? '' : '_$suffix'}';
-      final candidate = await _layout.recoveryDirectory(name);
-      if (!path.equals(candidate.parent.path, parent.path)) {
-        throw StateError(
-          'App storage directory changed while resolving recovery paths.',
-        );
-      }
-      var type = await FileSystemEntity.type(
-        candidate.path,
-        followLinks: false,
+  Future<Directory> _createRecoveryDirectory(Directory parent) =>
+      _recoveryAccess.createDirectory(
+        parent,
+        resolveDirectory: _layout.recoveryDirectory,
+        clock: _clock,
       );
-      if (type == FileSystemEntityType.notFound) {
-        await candidate.create();
-        type = await FileSystemEntity.type(candidate.path, followLinks: false);
-        if (type != FileSystemEntityType.directory) {
-          throw FileSystemException(
-            'School-site recovery path is not a regular directory.',
-            candidate.path,
-          );
-        }
-        return candidate;
-      }
-      if (type != FileSystemEntityType.directory) {
-        throw FileSystemException(
-          'School-site recovery path is not a regular directory.',
-          candidate.path,
-        );
-      }
-      suffix += 1;
-    }
-  }
 
-  Future<List<String>> _existingRecoveryArtifacts(Directory parent) async {
-    final scan = await _scanExistingRecoveryArtifacts(parent);
-    final error = scan.error;
-    if (error != null) {
-      Error.throwWithStackTrace(error, scan.stackTrace!);
-    }
-    return scan.artifacts;
-  }
+  Future<List<String>> _existingRecoveryArtifacts(Directory parent) async =>
+      (await _scanExistingRecoveryArtifacts(parent)).requireArtifacts();
 
-  Future<_RecoveryArtifactScan> _scanExistingRecoveryArtifacts(
+  Future<RecoveryArtifactScan> _scanExistingRecoveryArtifacts(
     Directory parent,
-  ) async {
-    final artifacts = <String>[];
-    try {
-      if (!await parent.exists()) {
-        return const _RecoveryArtifactScan.success(<String>[]);
-      }
-      await for (final entity in _directoryLister(parent)) {
-        if (await FileSystemEntity.type(entity.path, followLinks: false) !=
-                FileSystemEntityType.directory ||
-            !_recoveryDirectoryNamePattern.hasMatch(
-              path.basename(entity.path),
-            )) {
-          continue;
-        }
-        final recoveryDirectory = Directory(entity.path);
-        await for (final artifact in _directoryLister(recoveryDirectory)) {
-          if (await FileSystemEntity.type(artifact.path, followLinks: false) ==
-                  FileSystemEntityType.file &&
-              _isAllowedRecoveryArtifactName(path.basename(artifact.path))) {
-            artifacts.add(artifact.path);
-          }
-        }
-      }
-    } catch (error, stackTrace) {
-      artifacts.sort();
-      return _RecoveryArtifactScan.failure(
-        List.unmodifiable(artifacts),
-        error,
-        stackTrace,
-      );
-    }
-    artifacts.sort();
-    return _RecoveryArtifactScan.success(List.unmodifiable(artifacts));
-  }
+  ) => _recoveryAccess.scan(parent, directoryLister: _directoryLister);
 
   Future<_ArtifactRead> _readArtifact(
     File file,
@@ -739,13 +662,6 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     }
   }
 
-  bool _isAllowedRecoveryArtifactName(String name) {
-    return name == _fileName ||
-        name == '$_fileName$_backupSuffix' ||
-        name == '$_fileName$_tempSuffix' ||
-        name == '$_fileName$_failedTempSuffix';
-  }
-
   Future<void> _flushParentDirectory(File file) async {
     if (!Platform.isLinux && !Platform.isMacOS) {
       return;
@@ -824,20 +740,4 @@ class _FileSnapshot {
 
   final bool exists;
   final List<int>? bytes;
-}
-
-class _RecoveryArtifactScan {
-  const _RecoveryArtifactScan.success(this.artifacts)
-    : error = null,
-      stackTrace = null;
-
-  const _RecoveryArtifactScan.failure(
-    this.artifacts,
-    this.error,
-    this.stackTrace,
-  );
-
-  final List<String> artifacts;
-  final Object? error;
-  final StackTrace? stackTrace;
 }
