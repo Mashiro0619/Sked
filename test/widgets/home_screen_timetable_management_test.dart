@@ -2446,6 +2446,64 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('timetable deletion preserves a newer root task', (tester) async {
+    final storage = _BlockingTimetableStorage(
+      _buildMultiTimetableStudentData(),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    try {
+      await _pumpHomeScreenWithProvider(tester, provider);
+      await _openTimetablePicker(tester);
+      await tester.tap(find.byTooltip('Edit timetable').last);
+      await tester.pumpAndSettle();
+      final delete = find.widgetWithText(TextButton, 'Delete');
+      await tester.ensureVisible(delete);
+      await tester.pumpAndSettle();
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      final ownerContext = tester.element(find.byType(AlertDialog));
+      final owner = ModalRoute.of(ownerContext)!;
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(storage.saveCount, 1);
+
+      final newer = DialogRoute<bool>(
+        context: ownerContext,
+        builder: (_) => const AlertDialog(
+          key: ValueKey('newer-timetable-task'),
+          title: Text('Other task'),
+        ),
+      );
+      unawaited(Navigator.of(ownerContext, rootNavigator: true).push(newer));
+      await _pumpRouteTransition(tester);
+      expect(owner.isCurrent, isFalse);
+      storage.completeSave();
+      await tester.pumpAndSettle();
+
+      expect(provider.timetables, hasLength(1));
+      expect(storage.data!.studentMode.timetables, hasLength(1));
+      expect(newer.isActive, isTrue);
+      expect(owner.isActive, isFalse);
+      expect(
+        find.byKey(const ValueKey('newer-timetable-task')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    } finally {
+      storage.completeSave();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      provider.dispose();
+    }
+  });
+
   testWidgets('deleting the last timetable closes the empty picker', (
     tester,
   ) async {

@@ -3,6 +3,7 @@ import '../theme/sked_surface.dart';
 import 'workspace_editor.dart';
 import 'workspace_editor_form.dart';
 import 'sked_task_session.dart';
+import 'sked_mutation_confirmation_dialog.dart';
 
 import 'package:flutter/services.dart';
 
@@ -1197,8 +1198,19 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         context: context,
         barrierDismissible: false,
         session: _editorSession,
-        builder: (_) =>
-            _DeleteCourseConfirmationDialog(onDelete: widget.onDelete),
+        builder: (dialogContext) {
+          final l10n = AppLocalizations.of(dialogContext);
+          return SkedMutationConfirmationDialog(
+            workspace: AppMode.student,
+            title: l10n.deleteCourseTitle,
+            message: l10n.deleteCourseMessage,
+            confirmLabel: l10n.delete,
+            debugLabel: 'Delete course',
+            onConfirm: widget.onDelete,
+            filledConfirmButton: false,
+            insetPadding: _editorDialogInsetPadding(dialogContext),
+          );
+        },
       );
       if (confirmed == true && mounted && !_hasPopped) {
         _popOnce(const CourseEditorResult.delete());
@@ -1280,82 +1292,6 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       return l10n.periodNumberLabel(sorted.first);
     }
     return l10n.periodRangeLabel(sorted.first, sorted.last);
-  }
-}
-
-class _DeleteCourseConfirmationDialog extends StatefulWidget {
-  const _DeleteCourseConfirmationDialog({this.onDelete});
-
-  final Future<void> Function()? onDelete;
-
-  @override
-  State<_DeleteCourseConfirmationDialog> createState() =>
-      _DeleteCourseConfirmationDialogState();
-}
-
-class _DeleteCourseConfirmationDialogState
-    extends State<_DeleteCourseConfirmationDialog> {
-  var _busy = false;
-  var _popped = false;
-
-  Future<void> _delete() async {
-    if (_busy || _popped) return;
-    final delete = widget.onDelete;
-    if (delete == null) {
-      _popped = true;
-      Navigator.of(context).pop(true);
-      return;
-    }
-    setState(() => _busy = true);
-    final deleted = await runUiCommandWithFeedback(
-      context: context,
-      debugLabel: 'Delete course',
-      command: delete,
-    );
-    if (!mounted) return;
-    if (deleted) {
-      _popped = true;
-      Navigator.of(context).pop(true);
-    } else {
-      setState(() => _busy = false);
-    }
-  }
-
-  void _cancel() {
-    if (_busy || _popped) return;
-    _popped = true;
-    Navigator.of(context).pop(false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return PopScope(
-      canPop: !_busy && !_popped,
-      child: AlertDialog(
-        insetPadding: _editorDialogInsetPadding(context),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            UiCommandBusyIndicator(busy: _busy),
-            const SizedBox(height: 16),
-            Text(l10n.deleteCourseTitle),
-          ],
-        ),
-        content: Text(l10n.deleteCourseMessage),
-        actions: [
-          TextButton(
-            onPressed: _busy ? null : _cancel,
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: _busy ? null : () => unawaited(_delete()),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
   }
 }
 

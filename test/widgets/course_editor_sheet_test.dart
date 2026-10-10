@@ -813,6 +813,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('course deletion preserves a newer root task', (tester) async {
+    final gate = Completer<void>();
+    var writes = 0;
+    final initialCourse = CourseItem(
+      id: 'course-delete-owner',
+      name: 'Course to delete',
+      teacher: '',
+      location: '',
+      dayOfWeek: 1,
+      semesterWeeks: const [1],
+      periods: const [1],
+      startMinutes: 480,
+      endMinutes: 525,
+      timeRange: '08:00-08:45',
+      credit: 0,
+      remarks: '',
+      customFields: const {},
+    );
+    try {
+      await _pumpEditorHost(
+        tester,
+        initialCourse: initialCourse,
+        onDelete: () async {
+          writes++;
+          await gate.future;
+        },
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+      final confirmation = find.byType(AlertDialog);
+      final ownerContext = tester.element(confirmation);
+      final owner = ModalRoute.of(ownerContext)!;
+      final confirm = find.descendant(
+        of: confirmation,
+        matching: find.widgetWithText(TextButton, 'Delete'),
+      );
+      await tester.tap(confirm);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(writes, 1);
+      final newer = DialogRoute<bool>(
+        context: ownerContext,
+        builder: (_) => const AlertDialog(
+          key: ValueKey('newer-course-task'),
+          title: Text('Other task'),
+        ),
+      );
+      unawaited(Navigator.of(ownerContext, rootNavigator: true).push(newer));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(owner.isCurrent, isFalse);
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(writes, 1);
+      expect(owner.isActive, isFalse);
+      expect(newer.isActive, isTrue);
+      expect(find.byKey(const ValueKey('newer-course-task')), findsOneWidget);
+      expect(find.byType(CourseEditorSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    } finally {
+      if (!gate.isCompleted) gate.complete();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
+
   testWidgets('delete failure keeps confirmation open and allows retry', (
     tester,
   ) async {

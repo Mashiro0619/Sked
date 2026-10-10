@@ -327,10 +327,16 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                       context: context,
                       barrierDismissible: false,
                       waitForTransitionComplete: true,
-                      builder: (_) => _DeleteTimetableConfirmationDialog(
-                        provider: provider,
-                        timetableId: timetable!.id,
-                        timetableName: timetable.config.name,
+                      session: SkedTaskSessionScope.maybeOf(context)?.session,
+                      builder: (_) => SkedMutationConfirmationDialog(
+                        workspace: AppMode.student,
+                        title: l10n.deleteTimetableTitle,
+                        message: l10n.deleteTimetableMessage(
+                          timetable!.config.name,
+                        ),
+                        confirmLabel: l10n.delete,
+                        debugLabel: 'Delete timetable',
+                        onConfirm: () => provider.deleteTimetable(timetable.id),
                       ),
                     );
                     if (!context.mounted || deleted != true) return;
@@ -630,79 +636,4 @@ class _TimetableDialogControllerOwnerState
     },
     child: widget.child,
   );
-}
-
-class _DeleteTimetableConfirmationDialog extends StatefulWidget {
-  const _DeleteTimetableConfirmationDialog({
-    required this.provider,
-    required this.timetableId,
-    required this.timetableName,
-  });
-
-  final TimetableProvider provider;
-  final String timetableId;
-  final String timetableName;
-
-  @override
-  State<_DeleteTimetableConfirmationDialog> createState() =>
-      _DeleteTimetableConfirmationDialogState();
-}
-
-class _DeleteTimetableConfirmationDialogState
-    extends State<_DeleteTimetableConfirmationDialog> {
-  var _busy = false;
-  var _popped = false;
-
-  Future<void> _delete() async {
-    if (_busy || _popped) return;
-    setState(() => _busy = true);
-    final deleted = await runUiCommandWithFeedback(
-      context: context,
-      debugLabel: 'Delete timetable',
-      command: () => widget.provider.deleteTimetable(widget.timetableId),
-    );
-    if (!mounted) return;
-    if (deleted) {
-      _popped = true;
-      Navigator.of(context).pop(true);
-    } else {
-      setState(() => _busy = false);
-    }
-  }
-
-  void _cancel() {
-    if (_busy || _popped) return;
-    _popped = true;
-    Navigator.of(context).pop(false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return PopScope(
-      canPop: !_busy && !_popped,
-      child: AlertDialog(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            UiCommandBusyIndicator(busy: _busy),
-            const SizedBox(height: 16),
-            Text(l10n.deleteTimetableTitle),
-          ],
-        ),
-        content: Text(l10n.deleteTimetableMessage(widget.timetableName)),
-        actions: [
-          TextButton(
-            onPressed: _busy ? null : _cancel,
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: _busy ? null : () => unawaited(_delete()),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
-  }
 }

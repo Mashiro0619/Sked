@@ -41,6 +41,8 @@ import '../widgets/course_editor_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_task_dialog.dart';
+import '../widgets/sked_task_session.dart';
+import '../widgets/sked_mutation_confirmation_dialog.dart';
 import '../widgets/sked_adaptive_picker_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
