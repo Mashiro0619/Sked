@@ -330,3 +330,48 @@ foreach ($editorGroup in @('course', 'event', 'timetable')) {
 最终 22 个相关测试文件共 **233 项通过**，含 8 项新增间距／排版专项及既有入口定位、拖动、窗口调宽和课程编辑回归；全项目静态分析、4 个变更 Dart 文件格式和差异空白检查通过。Windows 四个实际字体场景全部通过，生成并检查 **10 张截图**，保存在 `.scratch/course-details-spacing-visual/`。日志为 `.scratch/course-details-spacing-regressions.log`、`.scratch/course-details-spacing-analyze.log` 及 `.scratch/course-details-spacing-visual-{zh,en,rtl}.log`。原生鼠标验收范围不变。
 
 独立源码目录 `.scratch/hybrid-editor-check/` 的普通 Windows 调试构建成功，程序位于该目录的 `build/windows/x64/runner/Debug/sked.exe`，日志为 `.scratch/course-details-spacing-windows-build.log`。
+
+## 桌面面板标题统一（2026-10-10）
+
+本节取代各面板此前分别继承 `titleSmall`、`titleMedium` 或手写 15 sp／500 的标题规则。桌面主题把若干文本角色压缩为 14 sp；仅改字重仍会带入不同的行高、字距和字形回退，因此标题由 `sked_panel_header.dart` 定义独立语义样式。
+
+| 角色 | 字号／字重 | 用途 |
+| --- | --- | --- |
+| 操作或集合标题 | 16 sp／600 | 编辑课程、选择周次、日期时间、跳周、分类管理、提醒列表、更新等 |
+| 详情对象名称 | 18 sp／600 | 课程或日程本身的名称；独立日期面板的月份导航主值 |
+| 编辑正文主名称 | 22 sp／600 | 课程、日程及课表的名称输入 |
+| 副标题 | 12 sp／400 | 日历分类、日期说明或任务说明 |
+
+操作及对象标题行高 1.35，正文主名称 1.25，副标题 1.4；统一正常字形、0 字距及均匀行间留白。标题主字体沿用主题和用户设置，Windows 追加按语言选择的 CJK 回退：简体中文用 Microsoft YaHei UI，繁体用 Microsoft JhengHei UI，日文用 Yu Gothic UI，韩文用 Malgun Gothic，并保留调用方已有的字体回退优先级。测试记录请求的字体族与实际合成样式，不把这些信息误作逐字字体解析结果。
+
+标题栏使用方向性边距：起端 16、末端 12、上下 8 dp，正常最小高度 48 dp。主标题与关闭／同排动作居中，标题拖动区内部同样居中；副标题独立放在标题动作行下方 4 dp，不能让关闭按钮对齐标题与副标题的整体中心。长标题、大字号和窄窗仍使用宿主的换行／滚动预算，不限制文字倍率。关闭按钮、动作和正文输入继续在标题拖动区域之外。
+
+### 排查与接入清单
+
+| 覆盖范围 | 修正入口 |
+| --- | --- |
+| 课程／日程／课表编辑器及正文名称 | `WorkspaceEditorScaffold`、`workspaceEditorTitleStyle` |
+| 课程与日程详情、当天安排、提醒与更多日程列表 | `WorkspaceViewPanel`；详情显式使用对象标题，列表使用集合标题 |
+| 星期、周次、关联节次、节次时间集、重复、提醒、分类管理／名称／颜色、主题色 | `SkedTaskDialog`；移除主题色标题上方的忙碌占位，将稳定进度槽移到正文 |
+| 日期、范围、月份／年份导航、时间、跳周 | 独立 picker 标题显式接入；内嵌小日历保留原尺寸，月份主值与操作标题分层 |
+| 课表切换 | `home_screen_widgets.dart` 中的手写标题栏 |
+| 更新面板、AI 面板、备份操作 | 移除各自的 14／15 sp 覆盖，统一标题与动作／图标间距 |
+| 导入预览、站点编辑等标准任务面板 | `AppSheetScaffold` 桌面标题接入；首部重复的 20／24 dp 留白收紧 |
+
+移动端分支、页面级 AppBar、正文小节标题以及普通居中确认框的类型与默认样式保持原约定。改动不涉及路由会话、选择器提交、存储格式或业务接口。
+
+### 验证
+
+共享标题新增实际 `RenderParagraph` 字体层级、Windows 语言回退、长标题、RTL、带副标题与无关闭按钮、拖动以及移动默认样式测试；独立 picker 新增中英／2×、16／12 方向边距和输入状态回归。更新、主题保存失败重试、AI 草稿、备份操作也在对应测试中验证。
+
+最终相关回归覆盖 **73 个文件、1,174 项全部通过**。共享提交从暂存树另行导出，47 项组件／布局回归通过；这是独立运行，不与最终计数相加。全项目静态分析、变更 Dart 格式和差异空白检查通过。
+
+实际字体入口为 `integration_test/panel_heading_visual_test.dart`，提供 `course`、`timetable`、`event`、`categories`、`pickers`、`secondary` 分组和 `SKED_VISUAL_SCENE=zh/en/rtl`。复现课程编辑与周次选择的父子面板，覆盖普通、嵌套、窄矮、并排、暗色和 RTL 大字号，并为截图保存标题与关闭按钮矩形、合成样式 manifest。样例数据和外部动作均在内存中隔离。
+
+```powershell
+flutter test --no-pub -d windows integration_test/panel_heading_visual_test.dart --dart-define=SKED_VISUAL_GROUP=course --dart-define=SKED_VISUAL_SCENE=zh --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/panel-heading-visual --reporter expanded
+```
+
+Windows 首次把课程三种语言连续放在一个进程运行时，在第二场发生测试进程中断且无 Dart 断言失败；后续逐场启动独立进程验证。截图与 manifest 位于 `.scratch/panel-heading-visual/`，回归日志为 `.scratch/panel-heading-final-regressions.log`，各 Windows 场景日志为 `.scratch/panel-heading-visual-{group}-{scene}.log`。合成指针测试不替代原生鼠标拖动验收。
+
+最终 **16 个 Windows 场景全部通过，共 84 张截图**：五类主场景各覆盖中文、英文和暗色 RTL 2×，辅助场景另覆盖主题色、更新、AI 与备份。已检查父子标题、详情主副标题、日期月份层级、分类管理及辅助面板的代表截图。28 个变更 Dart 文件格式无变更，全项目 `flutter analyze --no-pub` 无问题；普通 Windows 调试构建成功，输出 `.scratch/hybrid-editor-check/build/windows/x64/runner/Debug/sked.exe`。静态检查与构建日志分别为 `.scratch/panel-heading-analyze.log`、`.scratch/panel-heading-windows-build.log`。
