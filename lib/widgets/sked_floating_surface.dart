@@ -47,9 +47,11 @@ class SkedFloatingTitleDragHandle extends StatelessWidget {
     super.key,
     required this.onUpdate,
     required this.child,
+    this.alignment = AlignmentDirectional.topStart,
   });
   final ValueChanged<Offset> onUpdate;
   final Widget child;
+  final AlignmentGeometry alignment;
   @override
   Widget build(BuildContext context) => MouseRegion(
     cursor: SystemMouseCursors.move,
@@ -61,7 +63,7 @@ class SkedFloatingTitleDragHandle extends StatelessWidget {
         constraints: BoxConstraints(
           minHeight: WorkbenchChromeMetrics.of(context).iconTarget,
         ),
-        child: Align(alignment: AlignmentDirectional.topStart, child: child),
+        child: Align(alignment: alignment, heightFactor: 1, child: child),
       ),
     ),
   );
@@ -191,8 +193,13 @@ class SkedFloatingDragScope extends InheritedWidget {
 }
 
 class SkedPickerTitle extends StatelessWidget {
-  const SkedPickerTitle({super.key, required this.child});
+  const SkedPickerTitle({
+    super.key,
+    required this.child,
+    this.alignment = AlignmentDirectional.topStart,
+  });
   final Widget child;
+  final AlignmentGeometry alignment;
   @override
   Widget build(BuildContext context) {
     final scope = SkedFloatingDragScope.maybeOf(context);
@@ -201,6 +208,7 @@ class SkedPickerTitle extends StatelessWidget {
         : SkedFloatingTitleDragHandle(
             key: const ValueKey('sked-picker-drag-handle'),
             onUpdate: scope.onDrag,
+            alignment: alignment,
             child: child,
           );
   }

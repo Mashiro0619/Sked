@@ -61,7 +61,7 @@ void main() {
             );
             final close = find.byKey(const ValueKey('workspace-editor-close'));
             expect(t.getCenter(heading).dy, closeTo(t.getCenter(close).dy, .1));
-            expect(DefaultTextStyle.of(t.element(heading)).style.fontSize, 15);
+            expect(DefaultTextStyle.of(t.element(heading)).style.fontSize, 16);
             expect(
               t
                   .getSize(find.byKey(const ValueKey('workspace-editor-drag')))

@@ -309,6 +309,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       return PopScope<void>(
         canPop: !_actionTriggered,
         child: WorkspaceViewPanel(
+          prominentTitle: true,
           headerAction: widget.headerAction,
           title: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,7 +317,15 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
               Container(
                 width: 10,
                 height: 10,
-                margin: const EdgeInsets.only(top: 5),
+                margin: EdgeInsets.only(
+                  top:
+                      (18 *
+                              1.35 *
+                              MediaQuery.textScalerOf(context).scale(18) /
+                              18 -
+                          10) /
+                      2,
+                ),
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 8),

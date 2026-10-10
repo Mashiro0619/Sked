@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_surface.dart';
+import 'sked_panel_header.dart';
 
 abstract final class WorkspaceEditorFormMetrics {
   static const controlHeight = 40.0;
@@ -179,8 +180,7 @@ class WorkspaceEditorFormSection extends StatelessWidget {
 }
 
 TextStyle workspaceEditorTitleStyle(BuildContext context) =>
-    Theme.of(context).textTheme.titleLarge!
-        .copyWith(fontSize: 22, fontWeight: FontWeight.w600, height: 1.25);
+    skedPanelHeadlineStyle(context);
 
 InputDecoration workspaceEditorInputDecoration(
   BuildContext context,

@@ -20,6 +20,7 @@ import '../models/timetable_models.dart'
 import '../providers/timetable_provider.dart';
 import 'ui_command.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_panel_header.dart';
 import 'workspace_view_panel.dart';
 
 class CourseDetailsSheet extends StatefulWidget {
@@ -270,15 +271,10 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
           return WorkspaceViewPanel(
             title: Text(
               course.name,
-              style: theme.textTheme.titleMedium!.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                height: 1.3,
-              ),
+              style: skedPanelTitleStyle(context, prominent: true),
             ),
             headerAction: editAction,
-            headerPadding: const EdgeInsetsDirectional.fromSTEB(16, 8, 12, 8),
-            headerVerticalAlignment: CrossAxisAlignment.center,
+            prominentTitle: true,
             inlineHeaderAction: true,
             contentPadding: const EdgeInsets.all(16).copyWith(top: 8),
             child: details,

@@ -61,9 +61,10 @@ class WorkspaceViewPanel extends StatelessWidget {
     this.toolbar,
     this.bodyViewportKey,
     this.contentPadding = const EdgeInsets.fromLTRB(12, 10, 12, 12),
-    this.headerPadding = const EdgeInsets.fromLTRB(16, 10, 12, 10),
-    this.headerVerticalAlignment = CrossAxisAlignment.start,
+    this.headerPadding = skedPanelHeaderPadding,
+    this.headerVerticalAlignment = CrossAxisAlignment.center,
     this.inlineHeaderAction,
+    this.prominentTitle = false,
   });
   final Widget title;
   final Widget? subtitle, headerAction, toolbar;
@@ -73,6 +74,7 @@ class WorkspaceViewPanel extends StatelessWidget {
   final EdgeInsetsGeometry headerPadding;
   final CrossAxisAlignment headerVerticalAlignment;
   final bool? inlineHeaderAction;
+  final bool prominentTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +83,6 @@ class WorkspaceViewPanel extends StatelessWidget {
     final layout = WorkspaceViewLayoutScope.maybeOf(context);
     final compact = task && layout?.compact == true;
     final onDragUpdate = compact ? layout?.onDragUpdate : null;
-    final theme = Theme.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
     return Align(
       // Navigator-backed panels are clipped by WorkspaceViewViewport. An
@@ -94,28 +95,6 @@ class WorkspaceViewPanel extends StatelessWidget {
           final inlineAction =
               inlineHeaderAction ??
               constraints.maxWidth >= 360 * metrics.textScale;
-          final heading = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DefaultTextStyle.merge(
-                style: theme.textTheme.titleSmall!.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-                child: title,
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 3),
-                DefaultTextStyle.merge(
-                  style: theme.textTheme.bodySmall!.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  child: subtitle!,
-                ),
-              ],
-            ],
-          );
           final content = Column(
             mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -131,19 +110,9 @@ class WorkspaceViewPanel extends StatelessWidget {
                     key: const ValueKey('workspace-view-header'),
                     padding: headerPadding,
                     child: SkedPanelHeader(
-                      title:
-                          headerVerticalAlignment == CrossAxisAlignment.center
-                          ? ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: metrics.iconTarget,
-                              ),
-                              child: Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                heightFactor: 1,
-                                child: heading,
-                              ),
-                            )
-                          : heading,
+                      title: title,
+                      subtitle: subtitle,
+                      prominentTitle: prominentTitle,
                       verticalAlignment: headerVerticalAlignment,
                       action: headerAction,
                       inlineAction: inlineAction,

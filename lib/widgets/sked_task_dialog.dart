@@ -84,11 +84,6 @@ class SkedTaskDialog extends StatelessWidget {
         titleTextStyle: titleTextStyle,
       );
     }
-    final heading = DefaultTextStyle.merge(
-      style: Theme.of(context).textTheme.titleMedium!
-          .copyWith(fontWeight: FontWeight.w600),
-      child: title ?? const SizedBox.shrink(),
-    );
     return LayoutBuilder(
       builder: (context, bounds) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -117,9 +112,9 @@ class SkedTaskDialog extends StatelessWidget {
                   ? const NeverScrollableScrollPhysics()
                   : null,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+                padding: skedPanelHeaderPadding,
                 child: SkedPanelHeader(
-                  title: heading,
+                  title: title ?? const SizedBox.shrink(),
                   action: titleAction,
                   bottom: titleBottom,
                   bottomGap: 6,
