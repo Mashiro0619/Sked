@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_floating_surface.dart';
@@ -72,6 +74,7 @@ class SkedPanelHeader extends StatelessWidget {
     this.bottomGap = 8,
     this.verticalAlignment,
     this.prominentTitle = false,
+    this.scrollableTitle = false,
   });
   final Widget title;
   final Widget? subtitle, action, bottom, toolbar;
@@ -82,6 +85,10 @@ class SkedPanelHeader extends StatelessWidget {
   final double actionGap, closeGap, bottomGap;
   final CrossAxisAlignment? verticalAlignment;
   final bool prominentTitle;
+
+  /// A bounded host reserves action rows before giving the title a viewport.
+  /// Unbounded headers keep their natural height and existing composition.
+  final bool scrollableTitle;
   @override
   Widget build(BuildContext context) {
     final metrics = WorkbenchChromeMetrics.of(context);
@@ -119,39 +126,53 @@ class SkedPanelHeader extends StatelessWidget {
         child: heading,
       ),
     );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          crossAxisAlignment: alignment,
-          children: [
-            Expanded(
-              child: onDrag == null
-                  ? alignedHeading
-                  : SkedFloatingTitleDragHandle(
-                      key: dragKey,
-                      onUpdate: onDrag!,
-                      alignment: headingAlignment,
-                      child: alignedHeading,
-                    ),
-            ),
-            if (inlineAction && action != null) ...[
-              SizedBox(width: actionGap),
-              action!,
-            ],
-            if (showClose) ...[
-              SizedBox(width: closeGap),
-              IconButton(
-                key: closeKey,
-                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                style: WorkbenchChromeMetrics.of(context).iconStyle,
-                onPressed: closeEnabled ? onClose : null,
-                icon: const Icon(Icons.close),
-              ),
-            ],
+    Widget scrollHeading(Widget child) {
+      final viewport = SingleChildScrollView(primary: false, child: child);
+      if (onDrag == null) return viewport;
+      // Pointer drags move the floating task; wheel signals can still reveal
+      // long titles. A scroll drag must not win the arena ahead of onPanUpdate.
+      return ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context)
+            .copyWith(dragDevices: const <PointerDeviceKind>{}),
+        child: viewport,
+      );
+    }
+
+    Widget buildHeader({double? maxHeight}) {
+      final bounded = maxHeight != null;
+      final visibleHeading = bounded
+          ? scrollHeading(alignedHeading)
+          : alignedHeading;
+      final titleHandle = onDrag == null
+          ? visibleHeading
+          : SkedFloatingTitleDragHandle(
+              key: dragKey,
+              onUpdate: onDrag!,
+              alignment: headingAlignment,
+              child: visibleHeading,
+            );
+      final titleRow = Row(
+        crossAxisAlignment: alignment,
+        children: [
+          // The handle follows the visible viewport, not offscreen title text.
+          Expanded(child: titleHandle),
+          if (inlineAction && action != null) ...[
+            SizedBox(width: actionGap),
+            action!,
           ],
-        ),
+          if (showClose) ...[
+            SizedBox(width: closeGap),
+            IconButton(
+              key: closeKey,
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              style: WorkbenchChromeMetrics.of(context).iconStyle,
+              onPressed: closeEnabled ? onClose : null,
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ],
+      );
+      final supplemental = <Widget>[
         if (metrics.desktop && subtitle != null) ...[
           const SizedBox(height: 4),
           DefaultTextStyle.merge(
@@ -165,7 +186,62 @@ class SkedPanelHeader extends StatelessWidget {
         ],
         if (bottom != null) ...[SizedBox(height: bottomGap), bottom!],
         if (toolbar != null) ...[const SizedBox(height: 8), toolbar!],
-      ],
-    );
+      ];
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (bounded)
+            Flexible(fit: FlexFit.loose, child: titleRow)
+          else
+            titleRow,
+          if (bounded && supplemental.isNotEmpty)
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (maxHeight - metrics.iconTarget).clamp(
+                  0.0,
+                  double.infinity,
+                ),
+              ),
+              child: SingleChildScrollView(
+                primary: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: supplemental,
+                ),
+              ),
+            )
+          else
+            ...supplemental,
+        ],
+      );
+    }
+
+    return scrollableTitle
+        ? LayoutBuilder(
+            builder: (context, constraints) {
+              if (!constraints.hasBoundedHeight) return buildHeader();
+              final hasFollowingContent =
+                  (metrics.desktop && subtitle != null) ||
+                  (!inlineAction && action != null) ||
+                  bottom != null ||
+                  toolbar != null;
+              // Keep a complete control viewport for both the title row and
+              // following actions. In a shorter host, scrolling the whole
+              // header lets ensureVisible reveal a full button instead of
+              // trapping it in a viewport smaller than its hit target.
+              final minimumFixedHeight =
+                  metrics.iconTarget +
+                  (hasFollowingContent
+                      ? kMinInteractiveDimension + bottomGap
+                      : 0);
+              if (constraints.maxHeight < minimumFixedHeight) {
+                return scrollHeading(buildHeader());
+              }
+              return buildHeader(maxHeight: constraints.maxHeight);
+            },
+          )
+        : buildHeader();
   }
 }

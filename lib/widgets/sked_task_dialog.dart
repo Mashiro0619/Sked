@@ -104,31 +104,24 @@ class SkedTaskDialog extends StatelessWidget {
                             1)
                         .clamp(0.0, double.infinity),
             ),
-            child: SingleChildScrollView(
-              physics:
-                  titleBottom == null &&
-                      (scope.onDragUpdate != null ||
-                          SkedFloatingDragScope.maybeOf(context) != null)
-                  ? const NeverScrollableScrollPhysics()
-                  : null,
-              child: Padding(
-                padding: skedPanelHeaderPadding,
-                child: SkedPanelHeader(
-                  title: title ?? const SizedBox.shrink(),
-                  action: titleAction,
-                  bottom: titleBottom,
-                  bottomGap: 6,
-                  onDrag:
-                      scope.onDragUpdate ??
-                      SkedFloatingDragScope.maybeOf(context)?.onDrag,
-                  dragKey: scope.onDragUpdate != null
-                      ? const ValueKey('floating-form-drag-handle')
-                      : const ValueKey('sked-picker-drag-handle'),
-                  showClose: scope.onClose != null,
-                  closeEnabled: closeEnabled,
-                  onClose: scope.onClose,
-                  closeKey: const ValueKey('floating-form-close'),
-                ),
+            child: Padding(
+              padding: skedPanelHeaderPadding,
+              child: SkedPanelHeader(
+                scrollableTitle: true,
+                title: title ?? const SizedBox.shrink(),
+                action: titleAction,
+                bottom: titleBottom,
+                bottomGap: 6,
+                onDrag:
+                    scope.onDragUpdate ??
+                    SkedFloatingDragScope.maybeOf(context)?.onDrag,
+                dragKey: scope.onDragUpdate != null
+                    ? const ValueKey('floating-form-drag-handle')
+                    : const ValueKey('sked-picker-drag-handle'),
+                showClose: scope.onClose != null,
+                closeEnabled: closeEnabled,
+                onClose: scope.onClose,
+                closeKey: const ValueKey('floating-form-close'),
               ),
             ),
           ),

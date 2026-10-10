@@ -9,6 +9,8 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
+import 'package:sked/widgets/sked_panel_header.dart';
+import 'package:sked/widgets/workbench_chrome_metrics.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -214,9 +216,8 @@ void main() {
           for (final width in [2400.0, 1000.0, 660.0, 330.0, 1440.0]) {
             t.view.physicalSize = Size(width, 900);
             await t.pumpAndSettle();
-            // Viewing tasks now own one shared title/close header, rather than
-            // the legacy standalone inspector close row. Wrapped agenda actions
-            // may extend below the close button at narrow widths or large text.
+            // The close button is centered beside the title; the subtitle and
+            // wrapped actions extend the header below that shared title row.
             expect(_key('workspace-inspector-header'), findsNothing);
             expect(_key('workspace-view-header'), findsOneWidget);
             final header = t.getRect(_key('workspace-view-header'));
@@ -229,16 +230,42 @@ void main() {
               findsOneWidget,
             );
             final button = t.getRect(close);
-            expect(button.top - header.top, closeTo(10, .01));
-            expect(header.bottom - button.bottom, greaterThanOrEqualTo(10));
+            final headerContext = t.element(_key('workspace-view-header'));
+            final sharedHeader = t.widget<SkedPanelHeader>(
+              find.descendant(
+                of: _key('workspace-view-header'),
+                matching: find.byType(SkedPanelHeader),
+              ),
+            );
+            final title = t.getRect(find.byWidget(sharedHeader.title));
+            final padding = skedPanelHeaderPadding.resolve(direction);
+            expect(button.center.dy, closeTo(title.center.dy, .01));
+            for (final control in [title, button]) {
+              expect(
+                control.top - header.top,
+                greaterThanOrEqualTo(padding.top),
+              );
+              expect(
+                header.bottom - control.bottom,
+                greaterThanOrEqualTo(padding.bottom),
+              );
+            }
             final edge = direction == TextDirection.ltr
                 ? header.right - button.right
                 : button.left - header.left;
             expect(
               edge,
-              closeTo(direction == TextDirection.ltr ? 12 : 16, .01),
+              closeTo(
+                direction == TextDirection.ltr ? padding.right : padding.left,
+                .01,
+              ),
             );
-            expect(button.top, greaterThanOrEqualTo(48 + 8));
+            expect(
+              button.top,
+              greaterThanOrEqualTo(
+                WorkbenchChromeMetrics.of(headerContext).toolbarHeight + 8,
+              ),
+            );
             expect(
               _key('workspace-inspector-close').hitTestable(),
               findsOneWidget,
