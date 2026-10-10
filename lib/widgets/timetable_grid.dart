@@ -2361,19 +2361,19 @@ List<CourseLayout> _buildDayLayouts({
 
   final layouts = <CourseLayout>[];
   for (final group in buildOverlapGroups(dayCourses)) {
-    if (_isFullConflictGroup(group.courses)) {
+    if (isFullConflictGroup(group.courses)) {
       final conflictKey = buildConflictKeyForCourses(
         timetable.id,
         weekday,
         group.courses,
       );
       final displayedCourseId = displayedCourseIdForConflict?.call(conflictKey);
-      final displayedCourse = _pickDisplayedCourse(
+      final displayedCourse = pickDisplayedCourseForConflict(
         group.courses,
         displayedCourseId,
       );
       final sortedCourses = [...group.courses]
-        ..sort(_compareDisplayedCourseChoice);
+        ..sort(compareDisplayedCourseChoice);
       final displayState =
           _displayStateForCourse(
             displayedCourse,
@@ -2410,7 +2410,7 @@ List<CourseLayout> _buildDayLayouts({
       continue;
     }
 
-    final sortedCourses = [...group.courses]..sort(_comparePaintPriority);
+    final sortedCourses = [...group.courses]..sort(compareCoursePaintPriority);
     for (var index = 0; index < sortedCourses.length; index++) {
       final course = sortedCourses[index];
       final displayState =
@@ -2634,71 +2634,4 @@ List<OverlapGroup> buildOverlapGroups(List<CourseItem> courses) {
     groups.add(OverlapGroup(List<CourseItem>.from(currentCourses)));
   }
   return groups;
-}
-
-bool _isFullConflictGroup(List<CourseItem> courses) {
-  if (courses.length < 2) {
-    return false;
-  }
-  final first = courses.first;
-  final allSameRange = courses.every(
-    (item) =>
-        item.startMinutes == first.startMinutes &&
-        item.endMinutes == first.endMinutes,
-  );
-  if (allSameRange) {
-    return true;
-  }
-  if (courses.length == 2) {
-    return _contains(courses[0], courses[1]) ||
-        _contains(courses[1], courses[0]);
-  }
-  return false;
-}
-
-bool _contains(CourseItem outer, CourseItem inner) {
-  return outer.startMinutes <= inner.startMinutes &&
-      outer.endMinutes >= inner.endMinutes;
-}
-
-CourseItem _pickDisplayedCourse(
-  List<CourseItem> courses,
-  String? displayedCourseId,
-) {
-  for (final course in courses) {
-    if (course.id == displayedCourseId) {
-      return course;
-    }
-  }
-  final sorted = [...courses]..sort(_compareDisplayedCourseChoice);
-  return sorted.first;
-}
-
-int _compareDisplayedCourseChoice(CourseItem a, CourseItem b) {
-  final durationCompare = (b.endMinutes - b.startMinutes).compareTo(
-    a.endMinutes - a.startMinutes,
-  );
-  if (durationCompare != 0) {
-    return durationCompare;
-  }
-  final startCompare = b.startMinutes.compareTo(a.startMinutes);
-  if (startCompare != 0) {
-    return startCompare;
-  }
-  return a.id.compareTo(b.id);
-}
-
-/// 晚开始的课压在上层，更符合肉眼对重叠关系的直觉；开始时间一样时再优先短课。
-int _comparePaintPriority(CourseItem a, CourseItem b) {
-  final startCompare = a.startMinutes.compareTo(b.startMinutes);
-  if (startCompare != 0) {
-    return startCompare;
-  }
-  final durationCompare = (b.endMinutes - b.startMinutes).compareTo(
-    a.endMinutes - a.startMinutes,
-  );
-  if (durationCompare != 0) {
-    return durationCompare;
-  }
-  return a.id.compareTo(b.id);
 }

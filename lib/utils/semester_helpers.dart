@@ -303,11 +303,12 @@ CourseItem pickDisplayedCourseForConflict(
       return course;
     }
   }
-  final sorted = [...courses]..sort(_compareDisplayedCourseChoice);
+  final sorted = [...courses]..sort(compareDisplayedCourseChoice);
   return sorted.first;
 }
 
-int _compareDisplayedCourseChoice(CourseItem a, CourseItem b) {
+/// Orders conflict choices consistently for the grid and the default selection.
+int compareDisplayedCourseChoice(CourseItem a, CourseItem b) {
   final durationCompare = (b.endMinutes - b.startMinutes).compareTo(
     a.endMinutes - a.startMinutes,
   );

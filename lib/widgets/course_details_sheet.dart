@@ -13,6 +13,7 @@ import '../models/timetable_models.dart'
         CourseItem,
         TimetableData,
         buildConflictKeyForCourses,
+        compareDisplayedCourseChoice,
         formatDayOfWeekLabel,
         formatSemesterWeeksValue,
         isFullConflictGroup,
@@ -351,7 +352,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
       displayedCourseId,
     );
     final others = [...courses.where((item) => item.id != displayedCourse.id)]
-      ..sort(_compareDisplayedCourseChoice);
+      ..sort(compareDisplayedCourseChoice);
     return [displayedCourse, ...others];
   }
 
@@ -377,20 +378,6 @@ String _formatPeriodsLabel(AppLocalizations l10n, List<int> periods) {
     return l10n.periodNumberLabel(sorted.first);
   }
   return l10n.periodRangeLabel(sorted.first, sorted.last);
-}
-
-int _compareDisplayedCourseChoice(CourseItem a, CourseItem b) {
-  final durationCompare = (b.endMinutes - b.startMinutes).compareTo(
-    a.endMinutes - a.startMinutes,
-  );
-  if (durationCompare != 0) {
-    return durationCompare;
-  }
-  final startCompare = b.startMinutes.compareTo(a.startMinutes);
-  if (startCompare != 0) {
-    return startCompare;
-  }
-  return a.id.compareTo(b.id);
 }
 
 class _PrimaryInfoCard extends StatelessWidget {
