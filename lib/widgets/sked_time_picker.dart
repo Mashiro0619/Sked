@@ -15,6 +15,7 @@ import 'package:material_ui/material_ui.dart';
 import '../models/app_mode.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/sked_expressive_theme.dart';
+import 'sked_panel_header.dart';
 import 'sked_picker_task.dart';
 import 'sked_picker_actions.dart';
 import 'workbench_chrome_metrics.dart';
@@ -539,7 +540,9 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
                         : double.infinity,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: _desktopTask
+                        ? skedPanelHeaderPadding.copyWith(top: 0, bottom: 16)
+                        : const EdgeInsets.all(16),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -552,25 +555,48 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: SkedPickerTitle(
-                                        child: Text(
-                                          material.timePickerDialHelpText,
-                                          style: theme.textTheme.titleMedium,
+                                Padding(
+                                  key: const ValueKey(
+                                    'sked-time-picker-heading',
+                                  ),
+                                  padding: _desktopTask
+                                      ? skedPanelHeaderPadding.copyWith(
+                                          start: 0,
+                                          end: 0,
+                                        )
+                                      : EdgeInsets.zero,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: SkedPickerTitle(
+                                          alignment: _desktopTask
+                                              ? AlignmentDirectional.centerStart
+                                              : AlignmentDirectional.topStart,
+                                          child: Semantics(
+                                            header: true,
+                                            child: Text(
+                                              material.timePickerDialHelpText,
+                                              style: _desktopTask
+                                                  ? skedPanelTitleStyle(context)
+                                                  : theme.textTheme.titleMedium,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    if (_desktopTask)
-                                      IconButton(
-                                        tooltip: material.closeButtonLabel,
-                                        onPressed: _cancel,
-                                        icon: const Icon(Icons.close),
-                                      ),
-                                  ],
+                                      if (_desktopTask)
+                                        IconButton(
+                                          key: const ValueKey(
+                                            'sked-time-picker-close',
+                                          ),
+                                          tooltip: material.closeButtonLabel,
+                                          style: metrics.iconStyle,
+                                          onPressed: _cancel,
+                                          icon: const Icon(Icons.close),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: _desktopTask ? 0 : 12),
                                 if (_inputMode)
                                   Row(
                                     crossAxisAlignment:

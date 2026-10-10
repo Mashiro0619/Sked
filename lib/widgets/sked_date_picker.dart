@@ -17,6 +17,7 @@ import '../models/general_schedule_data.dart'
 import '../utils/date_selection.dart';
 import '../utils/calendar_date_utils.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_panel_header.dart';
 import 'sked_picker_task.dart';
 import 'sked_picker_actions.dart';
 
@@ -895,6 +896,8 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                         child: Padding(
                           padding: widget.embedded
                               ? EdgeInsets.zero
+                              : metrics.desktop
+                              ? const EdgeInsets.fromLTRB(12, 0, 12, 12)
                               : compact
                               ? const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -907,49 +910,63 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                             children: [
                               if (!widget.embedded &&
                                   (!compact || _page == _CalendarPage.input))
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Semantics(
-                                        hint: _rangeMode
-                                            ? (widget
-                                                      .rangeController!
-                                                      .selectingEnd
-                                                  ? l.dateRangeChooseEnd
-                                                  : l.dateRangeChooseStart)
-                                            : null,
-                                        child: _headerLabel(
-                                          context,
-                                          title,
-                                          feedback: true,
+                                Padding(
+                                  key: const ValueKey(
+                                    'sked-date-picker-heading',
+                                  ),
+                                  padding: metrics.desktop
+                                      ? skedPanelHeaderPadding.subtract(
+                                          const EdgeInsetsDirectional.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                        )
+                                      : EdgeInsets.zero,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Semantics(
+                                          header: true,
+                                          hint: _rangeMode
+                                              ? (widget
+                                                        .rangeController!
+                                                        .selectingEnd
+                                                    ? l.dateRangeChooseEnd
+                                                    : l.dateRangeChooseStart)
+                                              : null,
+                                          child: _headerLabel(
+                                            context,
+                                            title,
+                                            feedback: true,
+                                            panelTitle: true,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    if (_rangeGestures &&
-                                        widget.rangeController!.saveFailed)
-                                      IconButton(
-                                        key: const ValueKey(
-                                          'sked-date-range-retry',
+                                      if (_rangeGestures &&
+                                          widget.rangeController!.saveFailed)
+                                        IconButton(
+                                          key: const ValueKey(
+                                            'sked-date-range-retry',
+                                          ),
+                                          tooltip: l.retrySave,
+                                          style: metrics.iconStyle,
+                                          onPressed: () =>
+                                              unawaited(_retryRange()),
+                                          icon: const Icon(Icons.refresh),
                                         ),
-                                        tooltip: l.retrySave,
-                                        style: metrics.iconStyle,
-                                        onPressed: () =>
-                                            unawaited(_retryRange()),
-                                        icon: const Icon(Icons.refresh),
-                                      ),
-                                    if (!_compactSingleDate)
-                                      IconButton(
-                                        key: const ValueKey(
-                                          'sked-date-picker-close',
+                                      if (!_compactSingleDate)
+                                        IconButton(
+                                          key: const ValueKey(
+                                            'sked-date-picker-close',
+                                          ),
+                                          tooltip: material.closeButtonLabel,
+                                          style: metrics.iconStyle,
+                                          onPressed: _savingRange
+                                              ? null
+                                              : widget.onCancel,
+                                          icon: const Icon(Icons.close),
                                         ),
-                                        tooltip: material.closeButtonLabel,
-                                        style: metrics.iconStyle,
-                                        onPressed: _savingRange
-                                            ? null
-                                            : widget.onCancel,
-                                        icon: const Icon(Icons.close),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               if (_page != _CalendarPage.input)
                                 _header(
@@ -1168,12 +1185,16 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     String label, {
     bool feedback = false,
     bool compact = false,
+    bool panelTitle = false,
   }) {
+    final desktopHeading =
+        WorkbenchChromeMetrics.of(context).desktop && !widget.embedded;
     final message = feedback ? _rangeFeedback(context) : null;
     final failed = message != null && !_savingRange;
     // Keep a numeric CJK date unit together when a large month heading wraps:
     // "2026年 / 9月", never "2026年9 / 月". Semantics retains the plain label.
-    final displayLabel = compact && message == null
+    final keepDateUnits = compact || (desktopHeading && !panelTitle);
+    final displayLabel = keepDateUnits && message == null
         ? label.replaceAllMapped(
             RegExp(r'([0-9]+)([年月])'),
             (match) => '${match[1]}\u2060${match[2]}',
@@ -1181,12 +1202,16 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
         : message ?? label;
     final text = Text(
       displayLabel,
-      semanticsLabel: compact ? message ?? label : null,
+      semanticsLabel: keepDateUnits ? message ?? label : null,
       key: failed ? const ValueKey('sked-date-range-error') : null,
-      maxLines: compact ? 2 : 1,
+      // Range feedback keeps one stable line so a failed save cannot move
+      // calendar cells beneath the pointer. Its tooltip exposes the full text.
+      maxLines: compact || (desktopHeading && !_rangeMode) ? 2 : 1,
       overflow: TextOverflow.ellipsis,
       style:
-          (compact
+          (desktopHeading
+                  ? skedPanelTitleStyle(context, prominent: !panelTitle)
+                  : compact
                   ? Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontSize: 18,
                       height: 1.2,
@@ -1215,7 +1240,12 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                   child: text,
                 ),
               )
-            : SkedPickerTitle(child: text),
+            : SkedPickerTitle(
+                alignment: desktopHeading
+                    ? AlignmentDirectional.centerStart
+                    : AlignmentDirectional.topStart,
+                child: text,
+              ),
       ),
     );
   }

@@ -8,9 +8,38 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/widgets/assistant_pane.dart';
+import 'package:sked/widgets/sked_panel_header.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
+
+void _expectDesktopAssistantHeading(WidgetTester tester) {
+  final panel = find.byType(AssistantPreviewPane);
+  final header = find.descendant(
+    of: panel,
+    matching: find.byType(SkedPanelHeader),
+  );
+  final heading = find.descendant(
+    of: header,
+    matching: find.text('AI · Layout preview'),
+  );
+  final close = find.descendant(of: header, matching: find.byTooltip('Close'));
+  final style = tester
+      .widget<RichText>(
+        find.descendant(of: heading, matching: find.byType(RichText)),
+      )
+      .text
+      .style!;
+  expect(style.fontSize, 16);
+  expect(style.fontWeight, FontWeight.w600);
+  expect(style.height, 1.35);
+  expect(style.letterSpacing, 0);
+  expect(
+    tester.getCenter(heading).dy,
+    closeTo(tester.getCenter(close).dy, 0.1),
+  );
+  expect(tester.getTopLeft(heading).dx - tester.getTopLeft(panel).dx, 16);
+}
 
 Future<void> _mount(
   WidgetTester t,
@@ -189,6 +218,7 @@ void main() {
           await t.tap(_key('assistant-toggle'));
           await t.pumpAndSettle();
           expect(assistant.isOpen, isTrue);
+          _expectDesktopAssistantHeading(t);
           await t.enterText(_key('assistant-draft'), 'Unsent conversation');
           switch (action) {
             case 'close':
@@ -216,6 +246,7 @@ void main() {
           await t.tap(_key('assistant-toggle'));
           await t.pumpAndSettle();
           expect(assistant.isOpen, isTrue);
+          _expectDesktopAssistantHeading(t);
           expect(assistant.draft.text, 'Unsent conversation');
           expect(writes, isEmpty);
           // Preference notifications after a failed feature change must not

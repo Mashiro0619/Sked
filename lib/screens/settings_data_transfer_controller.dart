@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/sked_panel_header.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 
 enum SettingsStudentDataAction {
@@ -404,31 +405,59 @@ class _ActionSheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: 40,
-          child: Icon(
-            icon,
-            color: skedReadableAccent(
-              Theme.of(context).colorScheme,
-              surface: SkedSurface.colorOf(context),
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
+    final headingStyle = desktop
+        ? skedPanelTitleStyle(context)
+        : Theme.of(context).textTheme.titleMedium!;
+    final heading = Text(title, style: headingStyle);
+    final iconOffset = desktop
+        ? (MediaQuery.textScalerOf(context).scale(headingStyle.fontSize!) *
+                      headingStyle.height! -
+                  20) /
+              2
+        : 0.0;
+    return Padding(
+      // The list already supplies the shared 16dp horizontal gutter.
+      padding: desktop
+          ? skedPanelHeaderPadding.copyWith(start: 0, end: 0)
+          : EdgeInsets.zero,
+      child: Row(
+        crossAxisAlignment: desktop
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: desktop ? 24 : 40,
+            child: Padding(
+              padding: EdgeInsets.only(top: math.max(0, iconOffset)),
+              child: Icon(
+                icon,
+                size: desktop ? 20 : null,
+                color: skedReadableAccent(
+                  Theme.of(context).colorScheme,
+                  surface: SkedSurface.colorOf(context),
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-            ],
+          SizedBox(width: desktop ? 8 : 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                desktop ? Semantics(header: true, child: heading) : heading,
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: desktop
+                      ? skedPanelSubtitleStyle(context)
+                      : Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -18,6 +18,7 @@ import 'school_import_week_range_confirmation.dart';
 import 'school_import_save_feedback.dart';
 import 'sked_task_route.dart';
 import 'workspace_route_lifecycle.dart';
+import 'workbench_chrome_metrics.dart';
 
 class SchoolWebImportResultSheet extends StatefulWidget {
   const SchoolWebImportResultSheet({
@@ -241,7 +242,9 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
       canPop: !_isApplying,
       child: AppSheetScaffold(
         heightFactor: sheetHeightFactor,
-        contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        contentPadding: WorkbenchChromeMetrics.of(context).desktop
+            ? const EdgeInsets.fromLTRB(16, 8, 16, 12)
+            : const EdgeInsets.fromLTRB(16, 20, 16, 12),
         title: Text(l10n.schoolWebImportPreview),
         footer: Column(
           mainAxisSize: MainAxisSize.min,

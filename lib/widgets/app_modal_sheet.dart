@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_panel_header.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -228,6 +229,7 @@ class AppSheetScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final editor = WorkspaceEditorScope.maybeOf(context);
     if (editor?.enabled == true && onClose != null) {
       return WorkspaceEditorScaffold(
@@ -256,21 +258,29 @@ class AppSheetScaffold extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DefaultTextStyle.merge(
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    child: title,
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
+                  if (desktop)
+                    SkedPanelHeader(
+                      title: title,
+                      subtitle: subtitle,
+                      showClose: false,
+                    )
+                  else ...[
                     DefaultTextStyle.merge(
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
                       ),
-                      child: subtitle!,
+                      child: title,
                     ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      DefaultTextStyle.merge(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        child: subtitle!,
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 16),
                   child,

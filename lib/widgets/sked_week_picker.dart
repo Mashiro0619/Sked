@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
+import 'sked_panel_header.dart';
 import 'sked_picker_task.dart';
 import 'workbench_chrome_metrics.dart';
 
@@ -261,39 +262,57 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
         child: FocusTraversalGroup(
           child: Padding(
             key: const ValueKey('sked-week-picker-content'),
-            padding: compact
+            padding: metrics.desktop
+                ? const EdgeInsets.fromLTRB(12, 0, 12, 12)
+                : compact
                 ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
                 : const EdgeInsets.all(12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: SkedPickerTitle(
-                        child: Text(
-                          l.jumpToWeek,
-                          style: compact
-                              ? Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      fontSize: 18,
-                                      height: 1.2,
-                                      fontWeight: FontWeight.w500,
-                                    )
-                              : Theme.of(context).textTheme.titleMedium,
+                Padding(
+                  key: const ValueKey('sked-week-picker-heading'),
+                  padding: metrics.desktop
+                      ? skedPanelHeaderPadding.subtract(
+                          const EdgeInsetsDirectional.symmetric(horizontal: 12),
+                        )
+                      : EdgeInsets.zero,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SkedPickerTitle(
+                          alignment: metrics.desktop
+                              ? AlignmentDirectional.centerStart
+                              : AlignmentDirectional.topStart,
+                          child: Semantics(
+                            header: true,
+                            child: Text(
+                              l.jumpToWeek,
+                              style: metrics.desktop
+                                  ? skedPanelTitleStyle(context)
+                                  : compact
+                                  ? Theme.of(context).textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontSize: 18,
+                                          height: 1.2,
+                                          fontWeight: FontWeight.w500,
+                                        )
+                                  : Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      key: const ValueKey('sked-week-picker-close'),
-                      tooltip: m.closeButtonLabel,
-                      style: metrics.iconStyle,
-                      onPressed: _cancel,
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
+                      IconButton(
+                        key: const ValueKey('sked-week-picker-close'),
+                        tooltip: m.closeButtonLabel,
+                        style: metrics.iconStyle,
+                        onPressed: _cancel,
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
                 ),
-                if (!compact) const SizedBox(height: 8),
+                if (!metrics.desktop && !compact) const SizedBox(height: 8),
                 Flexible(
                   child: LayoutBuilder(
                     builder: (context, constraints) {

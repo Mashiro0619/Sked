@@ -6,6 +6,7 @@ import '../widgets/editor_exit_guard.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
 import '../widgets/desktop_window_host.dart';
+import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
 
@@ -1664,7 +1665,9 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
           child: AppSheetScaffold(
-            contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+            contentPadding: WorkbenchChromeMetrics.of(context).desktop
+                ? const EdgeInsets.fromLTRB(16, 8, 16, 12)
+                : const EdgeInsets.fromLTRB(24, 24, 24, 12),
             title: Text(
               widget.initialSite == null ? l.schoolSitesAdd : l.schoolSitesEdit,
             ),

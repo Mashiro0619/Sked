@@ -272,27 +272,12 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                       constraints: BoxConstraints(maxHeight: height * .4),
                       child: SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                            16,
-                            4,
-                            12,
-                            4,
-                          ),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(minHeight: 40),
-                            child: SkedPanelHeader(
-                              title: Text(
-                                title,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              verticalAlignment: CrossAxisAlignment.center,
-                              closeKey: const ValueKey('app-update-close'),
-                              closeEnabled: !_busy,
-                              onClose: _close,
-                            ),
+                          padding: skedPanelHeaderPadding,
+                          child: SkedPanelHeader(
+                            title: Text(title),
+                            closeKey: const ValueKey('app-update-close'),
+                            closeEnabled: !_busy,
+                            onClose: _close,
                           ),
                         ),
                       ),

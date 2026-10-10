@@ -6,6 +6,8 @@ import '../l10n/app_localizations.dart';
 import '../models/workspace_context_snapshot.dart';
 import '../models/timetable_models.dart';
 import 'app_layout_tokens.dart';
+import 'sked_panel_header.dart';
+import 'workbench_chrome_metrics.dart';
 
 const aiLayoutPreviewEnabled = bool.fromEnvironment('SKED_AI_LAYOUT_PREVIEW');
 
@@ -97,29 +99,39 @@ class AssistantPreviewPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
     return SkedSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsetsDirectional.only(start: 16, end: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l.assistantLayoutPreview,
-                    style: Theme.of(context).textTheme.titleMedium,
+            padding: desktop
+                ? skedPanelHeaderPadding
+                : const EdgeInsetsDirectional.only(start: 16, end: 4),
+            child: desktop
+                ? SkedPanelHeader(
+                    title: Text(l.assistantLayoutPreview),
+                    closeEnabled: closeEnabled,
+                    onClose: onClose ?? () => controller.setOpen(false),
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l.assistantLayoutPreview,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: MaterialLocalizations.of(context)
+                            .closeButtonTooltip,
+                        onPressed: closeEnabled
+                            ? (onClose ?? () => controller.setOpen(false))
+                            : null,
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ),
-                ),
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  onPressed: closeEnabled
-                      ? (onClose ?? () => controller.setOpen(false))
-                      : null,
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
           ),
           const Divider(height: 1),
           Expanded(

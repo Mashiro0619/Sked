@@ -252,6 +252,29 @@ void main() {
         tester.widget<SkedPanelHeader>(find.byType(SkedPanelHeader)).onDrag,
         isNull,
       );
+      final heading = find.text('New version available');
+      final headingStyle = tester
+          .widget<RichText>(
+            find.descendant(of: heading, matching: find.byType(RichText)),
+          )
+          .text
+          .style!;
+      expect(headingStyle.fontSize, 16);
+      expect(headingStyle.fontWeight, FontWeight.w600);
+      expect(headingStyle.height, 1.35);
+      expect(headingStyle.letterSpacing, 0);
+      expect(
+        tester.getCenter(heading).dy,
+        closeTo(
+          tester.getCenter(find.byKey(const ValueKey('app-update-close'))).dy,
+          0.1,
+        ),
+      );
+      expect(
+        tester.getTopLeft(heading).dx -
+            tester.getTopLeft(find.byType(SkedFloatingSurface)).dx,
+        16,
+      );
       expect(find.byType(Divider), findsOneWidget);
       expect(
         tester.getCenter(find.text('2.0')).dy,

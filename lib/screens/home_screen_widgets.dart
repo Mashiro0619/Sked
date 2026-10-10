@@ -1046,6 +1046,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final floating = SkedTaskDialogScope.maybeOf(context) != null;
+    final metrics = WorkbenchChromeMetrics.of(context);
     final height = math.min(MediaQuery.sizeOf(context).height * 0.72, 640.0);
     return PopScope(
       canPop: !_busy && !_childDialogOpen,
@@ -1058,20 +1059,31 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 12, 8),
+                key: const ValueKey('timetable-picker-heading'),
+                padding: floating
+                    ? skedPanelHeaderPadding
+                    : const EdgeInsets.fromLTRB(24, 16, 12, 8),
                 child: Row(
                   children: [
                     Expanded(
                       child: SkedPickerTitle(
-                        child: Text(
-                          l10n.multiTimetableSwitch,
-                          style: floating
-                              ? Theme.of(context).textTheme.titleMedium
-                              : Theme.of(context).textTheme.headlineSmall,
+                        alignment: floating
+                            ? AlignmentDirectional.centerStart
+                            : AlignmentDirectional.topStart,
+                        child: Semantics(
+                          header: true,
+                          child: Text(
+                            l10n.multiTimetableSwitch,
+                            style: floating
+                                ? skedPanelTitleStyle(context)
+                                : Theme.of(context).textTheme.headlineSmall,
+                          ),
                         ),
                       ),
                     ),
                     IconButton(
+                      key: const ValueKey('timetable-picker-close'),
+                      style: floating ? metrics.iconStyle : null,
                       onPressed: _busy || _childDialogOpen
                           ? null
                           : () => Navigator.of(context).pop(),

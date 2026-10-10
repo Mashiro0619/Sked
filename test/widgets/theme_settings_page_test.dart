@@ -1,4 +1,5 @@
 import 'package:sked/widgets/sked_task_dialog.dart';
+import 'package:sked/widgets/sked_panel_header.dart';
 import 'package:flutter/services.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 
@@ -186,6 +187,79 @@ Future<void> _chooseAppearance(
 }
 
 void main() {
+  testWidgets(
+    'desktop color task keeps its heading aligned while saving and retrying',
+    (tester) async {
+      _setTestViewport(tester, const Size(1440, 1000));
+      addTearDown(() => _resetTestViewport(tester));
+      final storage = _BlockingTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _createProvider(storage);
+      addTearDown(provider.dispose);
+      await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+      await tester.pumpAndSettle();
+
+      final customColor = find.text('Custom color').last;
+      await tester.ensureVisible(customColor);
+      await tester.pumpAndSettle();
+      await tester.tap(customColor);
+      await tester.pumpAndSettle();
+
+      final heading = find.descendant(
+        of: find.byType(SkedPanelHeader),
+        matching: find.text('Custom color'),
+      );
+      final close = find.byKey(const ValueKey('floating-form-close'));
+      final progress = find.byKey(
+        const ValueKey('theme-persistence-dialog-busy-indicator'),
+      );
+      final hexField = find.byKey(
+        const ValueKey('compact-color-picker-hex-field'),
+      );
+      await tester.enterText(hexField, '#234567');
+      await tester.pumpAndSettle();
+      final headingRect = tester.getRect(heading);
+      final fieldRect = tester.getRect(hexField);
+      expect(headingRect.center.dy, closeTo(tester.getCenter(close).dy, 0.1));
+      expect(
+        tester.getRect(progress).top,
+        greaterThan(tester.getRect(find.byType(SkedPanelHeader)).bottom),
+      );
+      expect(tester.getSize(progress).height, 4);
+      final headingStyle = tester
+          .widget<RichText>(
+            find.descendant(of: heading, matching: find.byType(RichText)),
+          )
+          .text
+          .style!;
+      expect(headingStyle.fontSize, 16);
+      expect(headingStyle.fontWeight, FontWeight.w600);
+      expect(headingStyle.height, 1.35);
+
+      storage.blockNextSave();
+      storage.failNextSave();
+      final apply = find.widgetWithText(FilledButton, 'Apply color');
+      await tester.tap(apply);
+      await tester.pump();
+      _expectThemePersistenceDialogBlocked(tester);
+      expect(tester.getRect(heading), headingRect);
+      expect(tester.getRect(hexField), fieldRect);
+      storage.completeSave();
+      await tester.pumpAndSettle();
+      expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+      expect(tester.getRect(heading), headingRect);
+      expect(tester.widget<TextField>(hexField).controller!.text, '#234567');
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+      expect(storage.saveCount, 2);
+      expect(provider.themeSeedColorValue, 0xFF234567);
+      expect(find.byType(SkedTaskDialog), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   testWidgets(
     'desktop course text color mode uses the shared dropdown and cancels without saving',
     (t) async {

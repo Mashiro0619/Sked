@@ -1,4 +1,5 @@
 import '../widgets/sked_floating_surface.dart';
+import '../widgets/sked_panel_header.dart';
 import '../utils/mobile_toolbar_layout.dart';
 import '../widgets/sked_week_picker.dart';
 

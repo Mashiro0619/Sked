@@ -1269,6 +1269,11 @@ class _PersistingThemeDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final blocked = busy || popped;
+    final desktop = SkedTaskDialogScope.maybeOf(context) != null;
+    final progress = UiCommandBusyIndicator(
+      key: const ValueKey('theme-persistence-dialog-busy-indicator'),
+      busy: busy,
+    );
     return PopScope(
       canPop: !blocked,
       child: FocusScope(
@@ -1281,21 +1286,22 @@ class _PersistingThemeDialog extends StatelessWidget {
           absorbing: blocked,
           child: SkedTaskDialog(
             closeEnabled: !blocked,
-            title: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                UiCommandBusyIndicator(
-                  key: const ValueKey(
-                    'theme-persistence-dialog-busy-indicator',
+            title: desktop
+                ? title
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [progress, const SizedBox(height: 8), title],
                   ),
-                  busy: busy,
-                ),
-                const SizedBox(height: 8),
-                title,
-              ],
-            ),
-            content: content,
+            content: desktop
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    // The progress slot remains stable while saving and no
+                    // longer shifts the task title below its close action.
+                    children: [progress, const SizedBox(height: 8), content],
+                  )
+                : content,
             actions: actions,
           ),
         ),
