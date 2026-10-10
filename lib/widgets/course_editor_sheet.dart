@@ -313,7 +313,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                 ],
               ),
               const SizedBox(height: 12),
-              _EditorSection(
+              WorkspaceEditorDisclosure(
                 icon: Icons.event_note_outlined,
                 title: '${l10n.dayOfWeek} · ${l10n.time}',
                 subtitle: linkedPeriods.isEmpty
@@ -326,7 +326,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                 child: _buildScheduleFields(l10n),
               ),
               const SizedBox(height: 8),
-              _EditorSection(
+              WorkspaceEditorDisclosure(
                 key: const ValueKey('course-details-section'),
                 controller: _detailsExpansion,
                 icon: Icons.notes_outlined,
@@ -383,7 +383,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       ),
       WorkspaceEditorFormSection(child: _buildScheduleFields(l10n)),
       WorkspaceEditorFormSection(
-        child: _EditorSection(
+        child: WorkspaceEditorDisclosure(
+          compact: true,
           key: const ValueKey('course-details-section'),
           controller: _detailsExpansion,
           icon: Icons.notes_outlined,
@@ -1540,103 +1541,11 @@ class _ResponsiveFormRow extends StatelessWidget {
         children: children,
       );
     }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < breakpoint) {
-          return Column(
-            children: [
-              for (var index = 0; index < children.length; index++) ...[
-                if (index > 0) const SizedBox(height: _spacing),
-                children[index],
-              ],
-            ],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var index = 0; index < children.length; index++) ...[
-              if (index > 0) const SizedBox(width: _spacing),
-              Expanded(
-                flex: flexes == null || index >= flexes!.length
-                    ? 1
-                    : flexes![index],
-                child: children[index],
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// A persistent, keyboard-friendly disclosure section for the course sheet.
-/// ExpansionTile keeps its children alive so collapsing a section never clears
-/// a text controller or a pending picker selection.
-class _EditorSection extends StatelessWidget {
-  const _EditorSection({
-    super.key,
-    this.controller,
-    required this.icon,
-    required this.title,
-    required this.initiallyExpanded,
-    required this.onExpansionChanged,
-    required this.enabled,
-    required this.child,
-    this.subtitle,
-  });
-
-  final ExpansibleController? controller;
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final bool initiallyExpanded;
-  final ValueChanged<bool> onExpansionChanged;
-  final bool enabled;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
-    final shape = desktop
-        ? const RoundedRectangleBorder()
-        : skedShapeSchemeOf(context).field;
-    return Material(
-      color: Colors.transparent,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        controller: controller,
-        initiallyExpanded: initiallyExpanded,
-        maintainState: true,
-        enabled: enabled,
-        onExpansionChanged: enabled ? onExpansionChanged : null,
-        leading: desktop ? null : Icon(icon),
-        minTileHeight: desktop ? 36 : null,
-        title: Text(
-          title,
-          style: desktop
-              ? workspaceEditorContentStyle(context).copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                )
-              : null,
-        ),
-        subtitle: subtitle == null ? null : Text(subtitle!),
-        tilePadding: desktop
-            ? EdgeInsets.zero
-            : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
-        childrenPadding: desktop
-            ? const EdgeInsets.only(top: 12)
-            : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
-        shape: shape,
-        collapsedShape: shape,
-        backgroundColor: Colors.transparent,
-        collapsedBackgroundColor: Colors.transparent,
-        children: [child],
-      ),
+    return ResponsiveEditorFormRow(
+      flexes: flexes ?? const [],
+      breakpoint: breakpoint,
+      spacing: _spacing,
+      children: children,
     );
   }
 }

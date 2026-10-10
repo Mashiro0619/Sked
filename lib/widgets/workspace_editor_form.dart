@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_surface.dart';
+import '../theme/sked_expressive_theme.dart';
 import 'sked_panel_header.dart';
 
 abstract final class WorkspaceEditorFormMetrics {
@@ -27,6 +28,124 @@ TextStyle workspaceEditorContentStyle(BuildContext context) =>
       fontWeight: FontWeight.w400,
       color: Theme.of(context).colorScheme.onSurface,
     );
+
+/// A disclosure keeps its children alive across collapse/expand. Desktop
+/// editors opt into compact chrome; touch editors retain the full tile.
+class WorkspaceEditorDisclosure extends StatelessWidget {
+  const WorkspaceEditorDisclosure({
+    super.key,
+    this.controller,
+    required this.icon,
+    required this.title,
+    required this.initiallyExpanded,
+    required this.onExpansionChanged,
+    required this.enabled,
+    required this.child,
+    this.subtitle,
+    this.compact = false,
+  });
+
+  final ExpansibleController? controller;
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool initiallyExpanded, enabled, compact;
+  final ValueChanged<bool> onExpansionChanged;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = compact
+        ? const RoundedRectangleBorder()
+        : skedShapeSchemeOf(context).field;
+    return Material(
+      color: Colors.transparent,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        controller: controller,
+        initiallyExpanded: initiallyExpanded,
+        maintainState: true,
+        enabled: enabled,
+        onExpansionChanged: enabled ? onExpansionChanged : null,
+        leading: compact ? null : Icon(icon),
+        minTileHeight: compact ? 36 : null,
+        title: Text(
+          title,
+          style: compact
+              ? workspaceEditorContentStyle(context).copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                )
+              : null,
+        ),
+        subtitle: subtitle == null ? null : Text(subtitle!),
+        tilePadding: compact
+            ? EdgeInsets.zero
+            : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
+        childrenPadding: compact
+            ? const EdgeInsets.only(top: 12)
+            : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
+        shape: shape,
+        collapsedShape: shape,
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
+        children: [child],
+      ),
+    );
+  }
+}
+
+/// Touch forms and compact picker forms share the same responsive row. Keeping
+/// the Flex and child slots stable preserves input focus when it changes axis.
+class ResponsiveEditorFormRow extends StatelessWidget {
+  const ResponsiveEditorFormRow({
+    super.key,
+    required this.children,
+    this.flexes = const [],
+    this.breakpoint = 480,
+    this.spacing = 12,
+  });
+
+  final List<Widget> children;
+  final List<int> flexes;
+  final double breakpoint, spacing;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final horizontal = constraints.maxWidth >= breakpoint;
+      final totalFlex = List.generate(
+        children.length,
+        (index) => index < flexes.length ? flexes[index] : 1,
+      ).fold(0, (sum, flex) => sum + flex);
+      final availableWidth =
+          constraints.maxWidth - spacing * (children.length - 1);
+      return Flex(
+        direction: horizontal ? Axis.horizontal : Axis.vertical,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < children.length; index++) ...[
+            if (index > 0)
+              SizedBox(
+                width: horizontal ? spacing : 0,
+                height: horizontal ? 0 : spacing,
+              ),
+            SizedBox(
+              width: horizontal
+                  ? availableWidth *
+                        (index < flexes.length ? flexes[index] : 1) /
+                        totalFlex
+                  : constraints.maxWidth,
+              child: children[index],
+            ),
+          ],
+        ],
+      );
+    },
+  );
+}
 
 /// Desktop form layout only. Labels and editors keep their elements when the
 /// available width changes; no state, navigation or validation is owned here.

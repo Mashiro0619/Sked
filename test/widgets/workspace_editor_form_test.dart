@@ -6,6 +6,70 @@ import 'package:sked/widgets/workspace_editor.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
 
 void main() {
+  for (final direction in TextDirection.values) {
+    testWidgets('responsive form rows preserve active inputs: $direction', (
+      t,
+    ) async {
+      final controller = TextEditingController(text: 'Retained draft');
+      final focus = FocusNode();
+      addTearDown(controller.dispose);
+      addTearDown(focus.dispose);
+      var width = 600.0;
+      late StateSetter resize;
+      await t.pumpWidget(
+        MaterialApp(
+          home: Directionality(
+            textDirection: direction,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                resize = setState;
+                return Scaffold(
+                  body: Align(
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: width,
+                      child: ResponsiveEditorFormRow(
+                        spacing: 8,
+                        flexes: const [2, 1],
+                        children: [
+                          TextField(controller: controller, focusNode: focus),
+                          const TextField(),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      final input = find.byType(EditableText).first;
+      final element = t.element(input);
+      focus.requestFocus();
+      await t.pump();
+      controller.selection = const TextSelection(
+        baseOffset: 1,
+        extentOffset: 5,
+      );
+      final firstWidth = t.getSize(find.byType(TextField).first).width;
+      final secondWidth = t.getSize(find.byType(TextField).last).width;
+      expect(firstWidth, closeTo(secondWidth * 2, .01));
+      for (final nextWidth in [320.0, 600.0]) {
+        resize(() => width = nextWidth);
+        await t.pumpAndSettle();
+        expect(t.element(input), same(element));
+        expect(focus.hasFocus, isTrue);
+        expect(controller.text, 'Retained draft');
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 1, extentOffset: 5),
+        );
+      }
+      expect(t.takeException(), isNull);
+    });
+  }
+
   for (final brightness in Brightness.values) {
     testWidgets(
       'editor styling is theme-aware and leaves the surrounding theme unchanged: $brightness',

@@ -575,7 +575,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                           _buildCalendarField(l10n),
                         ],
                         const SizedBox(height: 8),
-                        _EditorSection(
+                        WorkspaceEditorDisclosure(
                           controller: _timeExpansion,
                           icon: Icons.schedule_outlined,
                           title: '${l10n.eventDate} · ${l10n.eventTime}',
@@ -592,7 +592,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _EditorSection(
+                        WorkspaceEditorDisclosure(
                           icon: Icons.tune_outlined,
                           title: '${l10n.eventRecurrence} · ${l10n.reminder}',
                           initiallyExpanded: _optionsSectionExpanded,
@@ -610,7 +610,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _EditorSection(
+                        WorkspaceEditorDisclosure(
                           icon: Icons.more_horiz,
                           title: '${l10n.eventNotes} · ${l10n.eventColor}',
                           initiallyExpanded: _detailsSectionExpanded,
@@ -705,7 +705,8 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         ),
       ),
       WorkspaceEditorFormSection(
-        child: _EditorSection(
+        child: WorkspaceEditorDisclosure(
+          compact: true,
           icon: Icons.more_horiz,
           title: l10n.more,
           initiallyExpanded: _detailsSectionExpanded,
@@ -1019,71 +1020,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         _pickerOpen = false;
       }
     }
-  }
-}
-
-/// Persistent disclosure container used by the editor's low-frequency groups.
-/// Keeping children alive preserves focus, text drafts, and selected colors
-/// while a user collapses a section on a small Android screen.
-class _EditorSection extends StatelessWidget {
-  const _EditorSection({
-    this.controller,
-    required this.icon,
-    required this.title,
-    required this.initiallyExpanded,
-    required this.onExpansionChanged,
-    required this.enabled,
-    required this.child,
-  });
-
-  final IconData icon;
-  final String title;
-  final bool initiallyExpanded;
-  final ExpansibleController? controller;
-  final ValueChanged<bool> onExpansionChanged;
-  final bool enabled;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
-    final shape = desktop
-        ? const RoundedRectangleBorder()
-        : skedShapeSchemeOf(context).field;
-    return Material(
-      color: Colors.transparent,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        controller: controller,
-        initiallyExpanded: initiallyExpanded,
-        maintainState: true,
-        enabled: enabled,
-        onExpansionChanged: enabled ? onExpansionChanged : null,
-        leading: desktop ? null : Icon(icon),
-        minTileHeight: desktop ? 36 : null,
-        title: Text(
-          title,
-          style: desktop
-              ? workspaceEditorContentStyle(context).copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                )
-              : null,
-        ),
-        tilePadding: desktop
-            ? EdgeInsets.zero
-            : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
-        childrenPadding: desktop
-            ? const EdgeInsets.only(top: 12)
-            : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
-        shape: shape,
-        collapsedShape: shape,
-        backgroundColor: Colors.transparent,
-        collapsedBackgroundColor: Colors.transparent,
-        children: [child],
-      ),
-    );
   }
 }
 
@@ -2214,7 +2150,8 @@ class _RepeatOptions extends StatelessWidget {
     return Column(
       children: [
         if (recurrence == GeneralEventRecurrence.custom)
-          _ResponsiveFormRow(
+          ResponsiveEditorFormRow(
+            spacing: 8,
             breakpoint:
                 desktop && WorkbenchChromeMetrics.of(context).textScale <= 1.3
                 ? 320
@@ -2252,7 +2189,8 @@ class _RepeatOptions extends StatelessWidget {
           ),
         if (recurrence == GeneralEventRecurrence.custom)
           const SizedBox(height: 8),
-        _ResponsiveFormRow(
+        ResponsiveEditorFormRow(
+          spacing: 8,
           breakpoint: 420,
           children: [
             TextFormField(
@@ -2534,43 +2472,6 @@ class _ColorOption extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ResponsiveFormRow extends StatelessWidget {
-  const _ResponsiveFormRow({required this.children, this.breakpoint = 480});
-
-  static const double _spacing = 8;
-
-  final List<Widget> children;
-  final double breakpoint;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < breakpoint) {
-          return Column(
-            children: [
-              for (var index = 0; index < children.length; index++) ...[
-                if (index > 0) const SizedBox(height: _spacing),
-                children[index],
-              ],
-            ],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var index = 0; index < children.length; index++) ...[
-              if (index > 0) const SizedBox(width: _spacing),
-              Expanded(child: children[index]),
-            ],
-          ],
-        );
-      },
     );
   }
 }
