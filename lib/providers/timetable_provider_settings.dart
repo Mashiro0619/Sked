@@ -345,45 +345,9 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
-  Future<void> updateCustomSchoolImportBaseUrl(String value) async {
-    requireWorkspaceEnabled(AppMode.student);
-    final normalized = value.trim();
-    if (_appData.aiApiSettings.customBaseUrl == normalized) {
-      return;
-    }
-    _appData = _appData.copyWith(
-      aiApiSettings: _appData.aiApiSettings.copyWith(customBaseUrl: normalized),
-    );
-    await _saveAndNotify();
-  }
-
   Future<void> updateCustomSchoolImportApiKey(String value) async {
     requireWorkspaceEnabled(AppMode.student);
     await _persistCustomSchoolImportApiKey(value);
-  }
-
-  Future<void> updateCustomSchoolImportModel(String value) async {
-    requireWorkspaceEnabled(AppMode.student);
-    final normalized = value.trim();
-    if (_appData.aiApiSettings.customModel == normalized) {
-      return;
-    }
-    _appData = _appData.copyWith(
-      aiApiSettings: _appData.aiApiSettings.copyWith(customModel: normalized),
-    );
-    await _saveAndNotify();
-  }
-
-  Future<void> updateCustomSchoolImportPrompt(String value) async {
-    requireWorkspaceEnabled(AppMode.student);
-    final normalized = value.trim();
-    if (_appData.aiApiSettings.customPrompt == normalized) {
-      return;
-    }
-    _appData = _appData.copyWith(
-      aiApiSettings: _appData.aiApiSettings.copyWith(customPrompt: normalized),
-    );
-    await _saveAndNotify();
   }
 
   Future<void> updateCustomSchoolImportTextSettings({

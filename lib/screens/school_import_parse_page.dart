@@ -29,19 +29,13 @@ import '../widgets/period_time_set_picker_dialog.dart';
 import 'school_import_result_editor_page.dart';
 
 /// The value returned by [SchoolImportParsePage] after a successful parse.
-///
-/// It extends [SchoolImportResponse] so callers that still use the original
-/// `Future<SchoolImportResponse?>` presenter contract remain source compatible,
-/// while newer callers can inspect [rawText] and preserve the exact edited
-/// response text.
-class SchoolImportParseOutcome extends SchoolImportResponse {
-  SchoolImportParseOutcome({
-    required SchoolImportResponse response,
+class SchoolImportParseOutcome {
+  const SchoolImportParseOutcome({
+    required this.response,
     required this.rawText,
     this.applyRequest,
     this.importApplied = false,
-  }) : response = response,
-       super(meta: response.meta, timetable: response.timetable);
+  });
 
   /// The validated response represented by this outcome.
   final SchoolImportResponse response;
@@ -49,9 +43,8 @@ class SchoolImportParseOutcome extends SchoolImportResponse {
   /// The unmodified (or user-edited) JSON text that produced [response].
   final String rawText;
 
-  /// A fully configured import request when the page was opened as the modern
-  /// end-to-end import flow. Legacy callers can leave this null and continue
-  /// using [response] only.
+  /// A configured request when the page was opened with import settings.
+  /// Preview-only callers receive [response] without an apply request.
   final SchoolImportApplyRequest? applyRequest;
 
   /// True only after the page's [SchoolImportParsePage.onApply] completed.
@@ -74,8 +67,6 @@ class SchoolImportParsePage extends StatefulWidget {
     this.initialPeriodTimeSetId,
     this.maxPreviewCodeUnits = 4096,
     this.maxEditableCodeUnits = 64 * 1024,
-    this.returnResponseOnly = false,
-    this.autoPopAfterEditor = false,
     this.onApply,
   });
 
@@ -88,14 +79,6 @@ class SchoolImportParsePage extends StatefulWidget {
   final String? initialPeriodTimeSetId;
   final int maxPreviewCodeUnits;
   final int maxEditableCodeUnits;
-
-  /// Keeps the pre-page presenter contract for legacy wrappers. New callers
-  /// should use the default and receive [SchoolImportParseOutcome].
-  final bool returnResponseOnly;
-
-  /// Legacy wrappers used to close as soon as the JSON editor was confirmed.
-  /// The full-screen flow leaves the result page open so users can review it.
-  final bool autoPopAfterEditor;
 
   /// Keeps the configured draft on this page until persistence succeeds.
   /// Without this callback the original return-a-request contract is retained.
@@ -557,19 +540,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     _response = result.response;
     _initializeImportConfiguration(result.response, preservePeriodChoice: true);
     setState(() {});
-    if (widget.autoPopAfterEditor) {
-      _hasPopped = true;
-      unawaited(_cancelSubscription());
-      completeSkedTaskRoute(
-        context,
-        widget.returnResponseOnly
-            ? result.response
-            : SchoolImportParseOutcome(
-                response: result.response,
-                rawText: result.rawText,
-              ),
-      );
-    }
   }
 
   Future<void> _cancelAndPop() async {
@@ -591,9 +561,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     unawaited(_cancelSubscription());
     completeSkedTaskRoute(
       context,
-      widget.returnResponseOnly
-          ? _response
-          : SchoolImportParseOutcome(response: _response!, rawText: _rawText),
+      SchoolImportParseOutcome(response: _response!, rawText: _rawText),
     );
   }
 
@@ -734,14 +702,12 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     unawaited(_cancelSubscription());
     completeSkedTaskRoute(
       context,
-      widget.returnResponseOnly
-          ? nextResponse
-          : SchoolImportParseOutcome(
-              response: nextResponse,
-              rawText: _rawText,
-              applyRequest: request,
-              importApplied: apply != null,
-            ),
+      SchoolImportParseOutcome(
+        response: nextResponse,
+        rawText: _rawText,
+        applyRequest: request,
+        importApplied: apply != null,
+      ),
     );
   }
 

@@ -308,62 +308,6 @@ class SettingsService {
     );
   }
 
-  AppData updateCustomSchoolImportBaseUrl(AppData data, String value) {
-    final normalized = value.trim();
-    if (data.aiApiSettings.customBaseUrl == normalized) {
-      return data;
-    }
-    return data.copyWith(
-      aiApiSettings: data.aiApiSettings.copyWith(customBaseUrl: normalized),
-    );
-  }
-
-  AppData updateCustomSchoolImportApiKey(AppData data, String value) {
-    final normalized = value.trim();
-    if (data.aiApiSettings.customApiKey == normalized) {
-      return data;
-    }
-    return data.copyWith(
-      aiApiSettings: data.aiApiSettings.copyWith(customApiKey: normalized),
-    );
-  }
-
-  AppData updateCustomSchoolImportModel(AppData data, String value) {
-    final normalized = value.trim();
-    if (data.aiApiSettings.customModel == normalized) {
-      return data;
-    }
-    return data.copyWith(
-      aiApiSettings: data.aiApiSettings.copyWith(customModel: normalized),
-    );
-  }
-
-  AppData updateCustomSchoolImportPrompt(AppData data, String value) {
-    final normalized = value.trim();
-    if (data.aiApiSettings.customPrompt == normalized) {
-      return data;
-    }
-    return data.copyWith(
-      aiApiSettings: data.aiApiSettings.copyWith(customPrompt: normalized),
-    );
-  }
-
-  AppData updateSchoolImportParserSettings(
-    AppData data,
-    SchoolImportParserSettings settings,
-  ) {
-    final current = data.aiApiSettings;
-    final normalized = settings.copyWith();
-    if (current.source == normalized.source &&
-        current.customBaseUrl == normalized.customBaseUrl &&
-        current.customApiKey == normalized.customApiKey &&
-        current.customModel == normalized.customModel &&
-        current.customPrompt == normalized.customPrompt) {
-      return data;
-    }
-    return data.copyWith(aiApiSettings: normalized);
-  }
-
   AppData updateLiveCourseOutlineColorValue(AppData data, int colorValue) {
     if (data.studentMode.liveCourseOutlineColorValue == colorValue) return data;
     return data.copyWith(

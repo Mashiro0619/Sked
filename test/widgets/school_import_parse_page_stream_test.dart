@@ -8,7 +8,6 @@ import 'package:sked/models/school_import_models.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
-import 'package:sked/widgets/school_import_stream_dialog.dart';
 
 const _validEditableJson = '''{
   "name": "Sample",
@@ -53,8 +52,17 @@ SchoolImportResponse _buildResponse() {
   );
 }
 
+Future<SchoolImportParseOutcome?> _openParsePage(
+  BuildContext context,
+  Stream<SchoolImportStreamEvent> stream,
+) => Navigator.of(context).push<SchoolImportParseOutcome>(
+  MaterialPageRoute(builder: (_) => SchoolImportParsePage(stream: stream)),
+);
+
 void main() {
-  testWidgets('stream dialog lays out on narrow screens', (tester) async {
+  testWidgets('streaming parse page lays out on narrow screens', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -68,13 +76,7 @@ void main() {
           body: Builder(
             builder: (context) => TextButton(
               onPressed: () {
-                unawaited(
-                  showDialog<SchoolImportResponse>(
-                    context: context,
-                    builder: (_) =>
-                        SchoolImportStreamDialog(stream: controller.stream),
-                  ),
-                );
+                unawaited(_openParsePage(context, controller.stream));
               },
               child: const Text('Open'),
             ),
@@ -105,7 +107,7 @@ void main() {
   ) async {
     final controller = StreamController<SchoolImportStreamEvent>();
     final response = _buildResponse();
-    final results = <SchoolImportResponse?>[];
+    final results = <SchoolImportParseOutcome?>[];
 
     await tester.pumpWidget(
       MaterialApp(
@@ -116,11 +118,7 @@ void main() {
             builder: (context) => TextButton(
               onPressed: () {
                 unawaited(
-                  showDialog<SchoolImportResponse>(
-                    context: context,
-                    builder: (_) =>
-                        SchoolImportStreamDialog(stream: controller.stream),
-                  ).then(results.add),
+                  _openParsePage(context, controller.stream).then(results.add),
                 );
               },
               child: const Text('Open'),
@@ -146,7 +144,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(results, [same(response)]);
+    expect(results, hasLength(1));
+    expect(results.single?.response, same(response));
     expect(find.text('Open'), findsOneWidget);
 
     unawaited(controller.close());
@@ -158,7 +157,7 @@ void main() {
     (tester) async {
       final controller = StreamController<SchoolImportStreamEvent>();
       final fullContent = 'BEGIN-${'x' * 10000}-TAIL';
-      final results = <SchoolImportResponse?>[];
+      final results = <SchoolImportParseOutcome?>[];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -169,10 +168,9 @@ void main() {
               builder: (context) => TextButton(
                 onPressed: () {
                   unawaited(
-                    showDialog<SchoolImportResponse>(
-                      context: context,
-                      builder: (_) =>
-                          SchoolImportStreamDialog(stream: controller.stream),
+                    _openParsePage(
+                      context,
+                      controller.stream,
                     ).then(results.add),
                   );
                 },
@@ -197,7 +195,7 @@ void main() {
         );
         expect(
           currentPreview.data!.length,
-          lessThanOrEqualTo(SchoolImportStreamDialog.maxPreviewCodeUnits),
+          lessThanOrEqualTo(SchoolImportParsePage.defaultMaxPreviewCodeUnits),
         );
       }
 
@@ -208,9 +206,11 @@ void main() {
       expect(preview.data, isNot(contains('BEGIN-')));
 
       controller.add(ParseDone(response: _buildResponse()));
-      await tester.pump();
-      await tester.tap(find.byType(OutlinedButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
+      final editButton = find.byType(OutlinedButton);
+      expect(editButton.hitTestable(), findsOneWidget);
+      await tester.tap(editButton);
+      await tester.pumpAndSettle();
 
       expect(find.byType(SchoolImportResultEditorPage), findsOneWidget);
       final editor = tester.widget<TextField>(find.byType(TextField));
@@ -218,15 +218,16 @@ void main() {
 
       await tester.enterText(
         find.byType(TextField),
-        '\u{1f600}' * (SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2 + 1),
+        '\u{1f600}' *
+            (SchoolImportParsePage.defaultMaxEditableCodeUnits ~/ 2 + 1),
       );
       expect(
         editor.controller!.text.length,
-        SchoolImportStreamDialog.maxEditableCodeUnits,
+        SchoolImportParsePage.defaultMaxEditableCodeUnits,
       );
       expect(
         editor.controller!.text.runes.length,
-        SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2,
+        SchoolImportParsePage.defaultMaxEditableCodeUnits ~/ 2,
       );
 
       await tester.enterText(find.byType(TextField), _validEditableJson);
@@ -234,8 +235,12 @@ void main() {
       await tester.tap(find.byIcon(Icons.check));
       await tester.pumpAndSettle();
 
+      expect(results, isEmpty);
+      expect(find.byType(SchoolImportParsePage), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Continue import'));
+      await tester.pumpAndSettle();
       expect(results, hasLength(1));
-      expect(results.single?.timetable.name, 'Sample');
+      expect(results.single?.response.timetable.name, 'Sample');
 
       unawaited(controller.close());
       await tester.pumpWidget(const SizedBox.shrink());
@@ -291,7 +296,7 @@ void main() {
     (tester) async {
       final controller = StreamController<SchoolImportStreamEvent>();
       final response = _buildResponse();
-      final results = <SchoolImportResponse?>[];
+      final results = <SchoolImportParseOutcome?>[];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -302,10 +307,9 @@ void main() {
               builder: (context) => TextButton(
                 onPressed: () {
                   unawaited(
-                    showDialog<SchoolImportResponse>(
-                      context: context,
-                      builder: (_) =>
-                          SchoolImportStreamDialog(stream: controller.stream),
+                    _openParsePage(
+                      context,
+                      controller.stream,
                     ).then(results.add),
                   );
                 },
@@ -319,20 +323,24 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pump();
       controller.add(
-        ParseDelta('x' * (SchoolImportStreamDialog.maxEditableCodeUnits + 1)),
+        ParseDelta(
+          'x' * (SchoolImportParsePage.defaultMaxEditableCodeUnits + 1),
+        ),
       );
       controller.add(ParseDone(response: response));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       final editButton = find.byType(OutlinedButton);
       expect(tester.widget<OutlinedButton>(editButton).onPressed, isNull);
       final confirmButton = find.byType(FilledButton);
       expect(tester.widget<FilledButton>(confirmButton).onPressed, isNotNull);
+      expect(confirmButton.hitTestable(), findsOneWidget);
 
       await tester.tap(confirmButton);
       await tester.pumpAndSettle();
 
-      expect(results, [same(response)]);
+      expect(results, hasLength(1));
+      expect(results.single?.response, same(response));
       expect(find.text('Open'), findsOneWidget);
 
       unawaited(controller.close());

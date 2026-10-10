@@ -59,6 +59,3 @@ class AiApiSettings {
     );
   }
 }
-
-@Deprecated('Use AiApiSettings. The API configuration is app-wide.')
-typedef SchoolImportParserSettings = AiApiSettings;

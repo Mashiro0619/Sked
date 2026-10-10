@@ -29,7 +29,7 @@ class SchoolImportWorkflow {
 
   Future<SchoolImportResponse?> parse({
     required SchoolImportPagePayload payload,
-    required SchoolImportParserSettings parserSettings,
+    required AiApiSettings parserSettings,
     required SchoolImportStreamPresenter presentStream,
   }) async {
     if (_activeParseSession != null) {

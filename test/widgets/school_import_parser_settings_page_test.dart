@@ -769,7 +769,11 @@ void main() {
     tester,
   ) async {
     final provider = await _createProvider();
-    await provider.updateCustomSchoolImportPrompt('Custom stored prompt');
+    await provider.updateCustomSchoolImportTextSettings(
+      baseUrl: provider.customSchoolImportBaseUrl,
+      model: provider.customSchoolImportModel,
+      prompt: 'Custom stored prompt',
+    );
     await _pumpPage(tester, provider, const SchoolImportApi());
 
     await tester.tap(find.byType(ExpansionTile));

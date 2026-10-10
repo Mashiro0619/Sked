@@ -65,12 +65,35 @@ Map<String, dynamic> _minimalCourseJson([String name = 'Imported Course']) {
   };
 }
 
-const _customParserSettings = SchoolImportParserSettings(
+const _customParserSettings = AiApiSettings(
   source: schoolImportParserSourceCustomOpenAi,
   customBaseUrl: 'https://api.example.com/v1',
   customApiKey: 'sk-test',
   customModel: 'gpt-4.1-mini',
 );
+
+String _sseFrame(Map<String, dynamic> event) =>
+    'data: ${jsonEncode(event)}\n\n';
+
+Future<ParseDone> _expectParseDone(
+  Stream<SchoolImportStreamEvent> stream,
+) async {
+  final events = await stream.toList();
+  expect(events.whereType<ParseError>(), isEmpty);
+  final done = events.whereType<ParseDone>().single;
+  expect(events.last, same(done));
+  return done;
+}
+
+Future<ParseError> _expectParseError(
+  Stream<SchoolImportStreamEvent> stream,
+) async {
+  final events = await stream.toList();
+  expect(events.whereType<ParseDone>(), isEmpty);
+  final error = events.whereType<ParseError>().single;
+  expect(events.last, same(error));
+  return error;
+}
 
 void main() {
   group('SchoolImportApi.tryDecodeImportObject', () {
@@ -370,7 +393,7 @@ void main() {
       expect(models, ['local-model']);
     });
 
-    test('custom import supports HTTP base URLs', () async {
+    test('custom stream supports HTTP base URLs', () async {
       final responseJson = {
         'ok': true,
         'meta': {
@@ -391,13 +414,15 @@ void main() {
         client: _StreamingClient((request) async {
           expect(request.url.scheme, 'http');
           expect(request.url.path, '/v1/chat/completions');
+          expect(request.headers['Accept'], 'text/event-stream');
+          expect(jsonDecode((request as http.Request).body)['stream'], isTrue);
           return http.StreamedResponse(
             Stream<List<int>>.fromIterable([
               utf8.encode(
-                jsonEncode({
+                _sseFrame({
                   'choices': [
                     {
-                      'message': {'content': jsonEncode(responseJson)},
+                      'delta': {'content': jsonEncode(responseJson)},
                       'finish_reason': 'stop',
                     },
                   ],
@@ -409,19 +434,21 @@ void main() {
         }),
       );
 
-      final result = await api.importCurrentPageWithRawResponse(
-        const SchoolImportPagePayload(
-          url: 'https://example.test/page',
-          title: 'Example page',
-          html: '<table>demo</table>',
-          locale: 'zh',
-          sourceHint: schoolImportParserSourceCustomOpenAi,
-        ),
-        parserSettings: const SchoolImportParserSettings(
-          source: schoolImportParserSourceCustomOpenAi,
-          customBaseUrl: 'http://api.example.com/v1',
-          customApiKey: 'sk-test',
-          customModel: 'gpt-4.1-mini',
+      final result = await _expectParseDone(
+        api.importCurrentPageStream(
+          const SchoolImportPagePayload(
+            url: 'https://example.test/page',
+            title: 'Example page',
+            html: '<table>demo</table>',
+            locale: 'zh',
+            sourceHint: schoolImportParserSourceCustomOpenAi,
+          ),
+          parserSettings: const AiApiSettings(
+            source: schoolImportParserSourceCustomOpenAi,
+            customBaseUrl: 'http://api.example.com/v1',
+            customApiKey: 'sk-test',
+            customModel: 'gpt-4.1-mini',
+          ),
         ),
       );
 
@@ -447,7 +474,7 @@ void main() {
                 locale: 'zh',
                 sourceHint: schoolImportParserSourceCustomOpenAi,
               ),
-              parserSettings: const SchoolImportParserSettings(
+              parserSettings: const AiApiSettings(
                 source: schoolImportParserSourceCustomOpenAi,
                 customBaseUrl: 'ftp://api.example.com/v1',
                 customApiKey: 'sk-test',
@@ -522,7 +549,7 @@ void main() {
       expect(models, ['a-model', 'z-model']);
     });
 
-    test('custom import ignores non-string message content parts', () async {
+    test('custom stream ignores non-string message content parts', () async {
       final responseJson = {
         'ok': true,
         'meta': {
@@ -548,7 +575,7 @@ void main() {
           return http.StreamedResponse(
             Stream<List<int>>.fromIterable([
               utf8.encode(
-                jsonEncode({
+                _sseFrame({
                   'choices': [
                     {
                       'message': {
@@ -573,19 +600,21 @@ void main() {
         }),
       );
 
-      final result = await api.importCurrentPageWithRawResponse(
-        const SchoolImportPagePayload(
-          url: 'https://example.test/page',
-          title: 'Example page',
-          html: '<table>demo</table>',
-          locale: 'zh',
-          sourceHint: schoolImportParserSourceCustomOpenAi,
-        ),
-        parserSettings: const SchoolImportParserSettings(
-          source: schoolImportParserSourceCustomOpenAi,
-          customBaseUrl: 'https://api.example.com/v1',
-          customApiKey: 'sk-test',
-          customModel: 'gpt-4.1-mini',
+      final result = await _expectParseDone(
+        api.importCurrentPageStream(
+          const SchoolImportPagePayload(
+            url: 'https://example.test/page',
+            title: 'Example page',
+            html: '<table>demo</table>',
+            locale: 'zh',
+            sourceHint: schoolImportParserSourceCustomOpenAi,
+          ),
+          parserSettings: const AiApiSettings(
+            source: schoolImportParserSourceCustomOpenAi,
+            customBaseUrl: 'https://api.example.com/v1',
+            customApiKey: 'sk-test',
+            customModel: 'gpt-4.1-mini',
+          ),
         ),
       );
 
@@ -594,13 +623,13 @@ void main() {
       expect(result.response.timetable.name, 'Segmented Timetable');
     });
 
-    test('custom import rejects error-shaped model responses', () async {
+    test('custom stream rejects error-shaped model responses', () async {
       final api = SchoolImportApi(
         client: _StreamingClient((request) async {
           return http.StreamedResponse(
             Stream<List<int>>.fromIterable([
               utf8.encode(
-                jsonEncode({
+                _sseFrame({
                   'choices': [
                     {
                       'message': {
@@ -617,8 +646,8 @@ void main() {
         }),
       );
 
-      await expectLater(
-        api.importCurrentPageWithRawResponse(
+      final error = await _expectParseError(
+        api.importCurrentPageStream(
           const SchoolImportPagePayload(
             url: 'https://example.test/page',
             title: 'Example page',
@@ -626,20 +655,17 @@ void main() {
             locale: 'zh',
             sourceHint: schoolImportParserSourceCustomOpenAi,
           ),
-          parserSettings: const SchoolImportParserSettings(
+          parserSettings: const AiApiSettings(
             source: schoolImportParserSourceCustomOpenAi,
             customBaseUrl: 'https://api.example.com/v1',
             customApiKey: 'sk-test',
             customModel: 'gpt-4.1-mini',
           ),
         ),
-        throwsA(
-          isA<FormatException>().having(
-            (error) => error.message,
-            'message',
-            'Import response parse failed.\n\nNo timetable',
-          ),
-        ),
+      );
+      expect(
+        error.message,
+        'Import response parse failed.\n\nFormatException: No timetable',
       );
     });
 
@@ -874,7 +900,7 @@ void main() {
               locale: 'zh',
               sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
-            parserSettings: const SchoolImportParserSettings(
+            parserSettings: const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -932,7 +958,7 @@ void main() {
               locale: 'zh',
               sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
-            parserSettings: const SchoolImportParserSettings(
+            parserSettings: const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -1004,7 +1030,7 @@ void main() {
               locale: 'zh',
               sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
-            parserSettings: const SchoolImportParserSettings(
+            parserSettings: const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -1194,7 +1220,7 @@ void main() {
               locale: 'zh',
               sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
-            parserSettings: const SchoolImportParserSettings(
+            parserSettings: const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -1256,7 +1282,7 @@ void main() {
               locale: 'zh',
               sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
-            parserSettings: const SchoolImportParserSettings(
+            parserSettings: const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -1305,11 +1331,11 @@ void main() {
       };
     }
 
-    String chatResponseBody(Map<String, dynamic> response) {
-      return jsonEncode({
+    String streamResponseBody(Map<String, dynamic> response) {
+      return _sseFrame({
         'choices': [
           {
-            'message': {'content': jsonEncode(response)},
+            'delta': {'content': jsonEncode(response)},
             'finish_reason': 'stop',
           },
         ],
@@ -1356,10 +1382,10 @@ void main() {
       },
     );
 
-    test('non-stream import enforces a raw byte response limit', () async {
-      final body = chatResponseBody(responseJson());
+    test('stream import enforces a raw byte response limit', () async {
+      final body = streamResponseBody(responseJson());
       final api = SchoolImportApi(
-        maxImportResponseBytes: 64,
+        maxStreamResponseBytes: 64,
         client: _StreamingClient((request) async {
           return http.StreamedResponse(
             Stream<List<int>>.fromIterable([
@@ -1371,19 +1397,13 @@ void main() {
         }),
       );
 
-      expect(
-        () => api.importCurrentPageWithRawResponse(
+      final error = await _expectParseError(
+        api.importCurrentPageStream(
           payload,
           parserSettings: _customParserSettings,
         ),
-        throwsA(
-          isA<FormatException>().having(
-            (error) => error.message,
-            'message',
-            contains('Import response exceeded 64 bytes'),
-          ),
-        ),
       );
+      expect(error.message, contains('Import stream exceeded 64 bytes'));
     });
 
     test('model-list errors expose only a small response excerpt', () async {
@@ -1406,31 +1426,37 @@ void main() {
       }
     });
 
-    test(
-      'non-stream parse errors expose only a small response excerpt',
-      () async {
-        final body = '课表原始响应' * 4000;
-        final api = SchoolImportApi(
-          client: _StreamingClient((request) async {
-            return http.StreamedResponse(Stream.value(utf8.encode(body)), 200);
-          }),
-        );
+    test('stream parse errors expose only a small response excerpt', () async {
+      final body = '课表原始响应' * 4000;
+      final api = SchoolImportApi(
+        client: _StreamingClient((request) async {
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                _sseFrame({
+                  'choices': [
+                    {
+                      'delta': {'content': body},
+                      'finish_reason': 'stop',
+                    },
+                  ],
+                }),
+              ),
+            ),
+            200,
+          );
+        }),
+      );
 
-        try {
-          await api.importCurrentPageWithRawResponse(
-            payload,
-            parserSettings: _customParserSettings,
-          );
-          fail('Expected a bounded import parse error.');
-        } on FormatException catch (error) {
-          expect(
-            error.message,
-            startsWith('Import response format is invalid.'),
-          );
-          expectSmallError(error.message);
-        }
-      },
-    );
+      final error = await _expectParseError(
+        api.importCurrentPageStream(
+          payload,
+          parserSettings: _customParserSettings,
+        ),
+      );
+      expect(error.message, startsWith('Import response parse failed.'));
+      expectSmallError(error.message);
+    });
 
     for (final finishReason in <Object?>[
       null,
@@ -1438,42 +1464,44 @@ void main() {
       'content_filter',
       42,
     ]) {
-      test('non-stream import rejects finish reason $finishReason', () async {
-        final choice = <String, dynamic>{
-          'message': {'content': jsonEncode(responseJson())},
-          'finish_reason': ?finishReason,
-        };
-        final api = SchoolImportApi(
-          client: _StreamingClient((request) async {
-            return http.StreamedResponse(
-              Stream.value(
-                utf8.encode(
-                  jsonEncode({
-                    'choices': [choice],
-                  }),
+      test(
+        'stream import rejects incomplete finish reason $finishReason',
+        () async {
+          final choice = <String, dynamic>{
+            'message': {'content': jsonEncode(responseJson())},
+            'finish_reason': ?finishReason,
+          };
+          final api = SchoolImportApi(
+            client: _StreamingClient((request) async {
+              return http.StreamedResponse(
+                Stream.value(
+                  utf8.encode(
+                    _sseFrame({
+                      'choices': [choice],
+                    }),
+                  ),
                 ),
-              ),
-              200,
-            );
-          }),
-        );
+                200,
+              );
+            }),
+          );
 
-        await expectLater(
-          api.importCurrentPageWithRawResponse(
-            payload,
-            parserSettings: _customParserSettings,
-          ),
-          throwsA(
-            isA<FormatException>().having(
-              (error) => error.message,
-              'message',
-              finishReason is String
-                  ? 'Import response ended with finish reason "$finishReason".'
-                  : 'Import response finish reason is invalid.',
+          final error = await _expectParseError(
+            api.importCurrentPageStream(
+              payload,
+              parserSettings: _customParserSettings,
             ),
-          ),
-        );
-      });
+          );
+          expect(
+            error.message,
+            finishReason == null
+                ? 'Connection closed unexpectedly.'
+                : finishReason is String
+                ? 'Import stream ended with finish reason "$finishReason".'
+                : 'Import stream finish reason is invalid.',
+          );
+        },
+      );
     }
 
     test(
@@ -1820,7 +1848,7 @@ void main() {
       const key = 'sk-SKED_ERROR_SECRET';
       const baseUrl =
           'https://user:URL_PASSWORD@api.example.test/v1?token=QUERY_SECRET#FRAGMENT_SECRET';
-      const settings = SchoolImportParserSettings(
+      const settings = AiApiSettings(
         source: schoolImportParserSourceCustomOpenAi,
         customBaseUrl: baseUrl,
         customApiKey: key,
@@ -1861,22 +1889,19 @@ void main() {
         }
       });
 
-      test('redacts credentials from non-stream response errors', () async {
+      test('redacts credentials from plain-text HTTP stream errors', () async {
         final client = _StreamingClient(
           (request) async => http.StreamedResponse(
             Stream.value(utf8.encode('Rejected $key at ${request.url}')),
             401,
           ),
         );
-        try {
-          await SchoolImportApi(
-            client: client,
-          ).importCurrentPageWithRawResponse(payload, parserSettings: settings);
-          fail('Expected an HTTP failure.');
-        } on FormatException catch (error) {
-          expect(error.message, contains('401'));
-          expectRedacted(error.toString());
-        }
+        final error = await _expectParseError(
+          SchoolImportApi(client: client)
+              .importCurrentPageStream(payload, parserSettings: settings),
+        );
+        expect(error.message, contains('401'));
+        expectRedacted(error.message);
       });
 
       test('redacts credentials from slash-escaped JSON HTTP errors', () async {
@@ -1905,7 +1930,7 @@ void main() {
         'redacts the whole quoted key in a JSON authorization echo',
         () async {
           const quotedKey = 'sk-prefix-quoted"suffix-sensitive';
-          const quotedSettings = SchoolImportParserSettings(
+          const quotedSettings = AiApiSettings(
             source: schoolImportParserSourceCustomOpenAi,
             customBaseUrl: baseUrl,
             customApiKey: quotedKey,
@@ -1942,7 +1967,7 @@ void main() {
       test('redacts a truncated JSON authorization echo completely', () async {
         final longKey =
             'sk-prefix-quoted"suffix-sensitive,${'repeated-secret' * 400}';
-        final longKeySettings = SchoolImportParserSettings(
+        final longKeySettings = AiApiSettings(
           source: schoolImportParserSourceCustomOpenAi,
           customBaseUrl: baseUrl,
           customApiKey: longKey,
@@ -2211,25 +2236,22 @@ void main() {
           return http.StreamedResponse(
             Stream.value(
               utf8.encode(
-                chatResponseBody(responseJson(courses: tooManyCourses)),
+                streamResponseBody(responseJson(courses: tooManyCourses)),
               ),
             ),
             200,
           );
         }),
       );
-      await expectLater(
-        importApi.importCurrentPageWithRawResponse(
+      final error = await _expectParseError(
+        importApi.importCurrentPageStream(
           payload,
           parserSettings: _customParserSettings,
         ),
-        throwsA(
-          isA<FormatException>().having(
-            (error) => error.message,
-            'message',
-            contains('Import response contains too many courses.'),
-          ),
-        ),
+      );
+      expect(
+        error.message,
+        contains('Import response contains too many courses.'),
       );
     });
 
@@ -2286,84 +2308,77 @@ void main() {
       );
     });
 
-    test(
-      'structured string bounds apply to direct non-stream and SSE results',
-      () async {
-        final directJson = responseJson();
-        (directJson['timetable'] as Map<String, dynamic>)['name'] =
-            'x' * (SchoolImportApi.maxImportedShortTextBytes + 1);
-        expect(
-          () => SchoolImportApi.buildResponseFromDoneEvent(directJson),
-          throwsA(
-            isA<FormatException>().having(
-              (error) => error.message,
-              'message',
-              'Import response timetable name is too long.',
-            ),
+    test('structured string bounds apply to direct and SSE results', () async {
+      final directJson = responseJson();
+      (directJson['timetable'] as Map<String, dynamic>)['name'] =
+          'x' * (SchoolImportApi.maxImportedShortTextBytes + 1);
+      expect(
+        () => SchoolImportApi.buildResponseFromDoneEvent(directJson),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Import response timetable name is too long.',
           ),
-        );
+        ),
+      );
 
-        final nonStreamJson = responseJson();
-        (nonStreamJson['meta'] as Map<String, dynamic>)['warnings'] = [
-          'x' * (SchoolImportApi.maxImportedLongTextBytes + 1),
-        ];
-        final nonStreamApi = SchoolImportApi(
-          client: _StreamingClient((request) async {
-            return http.StreamedResponse(
-              Stream.value(utf8.encode(chatResponseBody(nonStreamJson))),
-              200,
-            );
-          }),
-        );
-        await expectLater(
-          nonStreamApi.importCurrentPageWithRawResponse(
+      final warningJson = responseJson();
+      (warningJson['meta'] as Map<String, dynamic>)['warnings'] = [
+        'x' * (SchoolImportApi.maxImportedLongTextBytes + 1),
+      ];
+      final warningApi = SchoolImportApi(
+        client: _StreamingClient((request) async {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(streamResponseBody(warningJson))),
+            200,
+          );
+        }),
+      );
+      final warningError = await _expectParseError(
+        warningApi.importCurrentPageStream(
+          payload,
+          parserSettings: _customParserSettings,
+        ),
+      );
+      expect(
+        warningError.message,
+        contains('Import response warning is too long.'),
+      );
+
+      final streamJson = responseJson();
+      final streamCourse =
+          ((streamJson['timetable'] as Map<String, dynamic>)['courses'] as List)
+                  .single
+              as Map<String, dynamic>;
+      streamCourse['teacher'] =
+          'x' * (SchoolImportApi.maxImportedShortTextBytes + 1);
+      final streamBody =
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'delta': {'content': jsonEncode(streamJson)},
+              },
+            ],
+          })}\n\ndata: [DONE]\n\n';
+      final streamEvents = await const SchoolImportApi()
+          .importCurrentPageStream(
             payload,
             parserSettings: _customParserSettings,
-          ),
-          throwsA(
-            isA<FormatException>().having(
-              (error) => error.message,
-              'message',
-              contains('Import response warning is too long.'),
-            ),
-          ),
-        );
-
-        final streamJson = responseJson();
-        final streamCourse =
-            ((streamJson['timetable'] as Map<String, dynamic>)['courses']
-                        as List)
-                    .single
-                as Map<String, dynamic>;
-        streamCourse['teacher'] =
-            'x' * (SchoolImportApi.maxImportedShortTextBytes + 1);
-        final streamBody =
-            'data: ${jsonEncode({
-              'choices': [
-                {
-                  'delta': {'content': jsonEncode(streamJson)},
-                },
-              ],
-            })}\n\ndata: [DONE]\n\n';
-        final streamEvents = await const SchoolImportApi()
-            .importCurrentPageStream(
-              payload,
-              parserSettings: _customParserSettings,
-              client: _StreamingClient((request) async {
-                return http.StreamedResponse(
-                  Stream.value(utf8.encode(streamBody)),
-                  200,
-                );
-              }),
-            )
-            .toList();
-        expect(streamEvents.whereType<ParseDone>(), isEmpty);
-        expect(
-          streamEvents.whereType<ParseError>().single.message,
-          contains('Import response course teacher is too long.'),
-        );
-      },
-    );
+            client: _StreamingClient((request) async {
+              return http.StreamedResponse(
+                Stream.value(utf8.encode(streamBody)),
+                200,
+              );
+            }),
+          )
+          .toList();
+      expect(streamEvents.whereType<ParseDone>(), isEmpty);
+      expect(
+        streamEvents.whereType<ParseError>().single.message,
+        contains('Import response course teacher is too long.'),
+      );
+    });
 
     test('structured results enforce total text and custom-field bounds', () {
       final textHeavyCourses = List.generate(

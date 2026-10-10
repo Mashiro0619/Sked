@@ -51,7 +51,7 @@ class _RecordingSchoolImportApi extends SchoolImportApi {
   @override
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
     SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
     http.Client? client,
   }) {
     callCount += 1;
@@ -67,7 +67,7 @@ class _CompletedSchoolImportApi extends SchoolImportApi {
   @override
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
     SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
     http.Client? client,
   }) {
     return Stream.value(ParseDone(response: response));

@@ -175,40 +175,47 @@ class FakeThrowingUpdateService extends UpdateService {
 class FakeSchoolImportApi extends SchoolImportApi {
   FakeSchoolImportApi({required this.onImport});
 
-  final Future<SchoolImportApiResult> Function(
+  final Stream<SchoolImportStreamEvent> Function(
     SchoolImportPagePayload payload,
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
   )
   onImport;
 
   int callCount = 0;
   SchoolImportPagePayload? lastPayload;
-  SchoolImportParserSettings? lastParserSettings;
-
-  @override
-  Future<SchoolImportApiResult> importCurrentPageWithRawResponse(
-    SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
-  }) async {
-    callCount += 1;
-    lastPayload = payload;
-    lastParserSettings = parserSettings;
-    return onImport(payload, parserSettings);
-  }
+  AiApiSettings? lastParserSettings;
 
   @override
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
     SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
     http.Client? client,
   }) async* {
     callCount += 1;
     lastPayload = payload;
     lastParserSettings = parserSettings;
-    final result = await onImport(payload, parserSettings);
-    yield ParseDelta(result.rawBody);
-    yield ParseDone(response: result.response);
+    yield* onImport(payload, parserSettings);
   }
+}
+
+String _schoolImportSseResponse(Map<String, dynamic> response) =>
+    'data: ${jsonEncode({
+      'choices': [
+        {
+          'delta': {'content': jsonEncode(response)},
+          'finish_reason': 'stop',
+        },
+      ],
+    })}\n\n';
+
+Future<ParseDone> _expectParseDone(
+  Stream<SchoolImportStreamEvent> stream,
+) async {
+  final events = await stream.toList();
+  expect(events.whereType<ParseError>(), isEmpty);
+  final done = events.whereType<ParseDone>().single;
+  expect(events.last, same(done));
+  return done;
 }
 
 Widget _buildLocalizedApp(Widget child, {Locale locale = const Locale('zh')}) {
@@ -250,7 +257,7 @@ Future<BuildContext> _pumpUpdateHarness(
   return context;
 }
 
-AppData _withSchoolImportSettings(SchoolImportParserSettings settings) {
+AppData _withSchoolImportSettings(AiApiSettings settings) {
   final data = _buildTestAppData();
   return data.copyWith(aiApiSettings: settings);
 }
@@ -1714,14 +1721,12 @@ void main() {
       );
       await provider.load();
 
-      await provider.updateCustomSchoolImportBaseUrl(
-        'https://api.example.com/v1',
+      await provider.updateCustomSchoolImportTextSettings(
+        baseUrl: 'https://api.example.com/v1',
+        model: 'gpt-4.1-mini',
+        prompt: 'Prefer preserving original location text.',
       );
       await provider.updateCustomSchoolImportApiKey('sk-test');
-      await provider.updateCustomSchoolImportModel('gpt-4.1-mini');
-      await provider.updateCustomSchoolImportPrompt(
-        'Prefer preserving original location text.',
-      );
 
       expect(
         provider.schoolImportParserSource,
@@ -1761,7 +1766,7 @@ void main() {
       () async {
         final storage = MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: ' sk-test ',
@@ -1794,41 +1799,37 @@ void main() {
           capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
           capturedHeaders = request.headers;
           return http.Response(
-            jsonEncode({
-              'choices': [
-                {
-                  'message': {
-                    'content': jsonEncode(_buildSchoolImportSuccessJson()),
-                  },
-                  'finish_reason': 'stop',
-                },
-              ],
-            }),
+            _schoolImportSseResponse(_buildSchoolImportSuccessJson()),
             200,
+            headers: {'content-type': 'text/event-stream'},
           );
         }),
       );
 
-      final result = await api.importCurrentPageWithRawResponse(
-        const SchoolImportPagePayload(
-          url: 'https://example.com/page',
-          title: 'Import page',
-          html: '<html></html>',
-          locale: 'zh',
-          sourceHint: 'legacy',
-        ),
-        parserSettings: const SchoolImportParserSettings(
-          source: 'legacy',
-          customBaseUrl: 'https://api.example.com/v1',
-          customApiKey: 'sk-test',
-          customModel: 'gpt-4.1-mini',
+      final result = await _expectParseDone(
+        api.importCurrentPageStream(
+          const SchoolImportPagePayload(
+            url: 'https://example.com/page',
+            title: 'Import page',
+            html: '<html></html>',
+            locale: 'zh',
+            sourceHint: 'legacy',
+          ),
+          parserSettings: const AiApiSettings(
+            source: 'legacy',
+            customBaseUrl: 'https://api.example.com/v1',
+            customApiKey: 'sk-test',
+            customModel: 'gpt-4.1-mini',
+          ),
         ),
       );
 
       expect(capturedUri.scheme, 'https');
       expect(capturedUri.path, '/v1/chat/completions');
       expect(capturedHeaders['authorization'], 'Bearer sk-test');
+      expect(capturedHeaders['accept'], 'text/event-stream');
       expect(capturedBody['model'], 'gpt-4.1-mini');
+      expect(capturedBody['stream'], isTrue);
       expect(capturedBody['response_format']['type'], 'json_object');
       final messages = capturedBody['messages'] as List<dynamic>;
       final userPrompt =
@@ -1858,43 +1859,37 @@ void main() {
           capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
           capturedHeaders = request.headers;
           return http.Response(
-            jsonEncode({
-              'choices': [
-                {
-                  'message': {
-                    'content': jsonEncode(
-                      _buildSchoolImportSuccessJson(parser: ''),
-                    ),
-                  },
-                  'finish_reason': 'stop',
-                },
-              ],
-            }),
+            _schoolImportSseResponse(_buildSchoolImportSuccessJson(parser: '')),
             200,
+            headers: {'content-type': 'text/event-stream'},
           );
         }),
       );
 
-      final result = await api.importCurrentPageWithRawResponse(
-        const SchoolImportPagePayload(
-          url: 'https://example.com/page',
-          title: 'Import page',
-          html: '<html></html>',
-          locale: 'zh',
-          sourceHint: schoolImportParserSourceCustomOpenAi,
-        ),
-        parserSettings: const SchoolImportParserSettings(
-          source: schoolImportParserSourceCustomOpenAi,
-          customBaseUrl: 'https://api.example.com/v1',
-          customApiKey: 'sk-test',
-          customModel: 'gpt-4.1-mini',
-          customPrompt: 'You are a custom parser. Return JSON only.',
+      final result = await _expectParseDone(
+        api.importCurrentPageStream(
+          const SchoolImportPagePayload(
+            url: 'https://example.com/page',
+            title: 'Import page',
+            html: '<html></html>',
+            locale: 'zh',
+            sourceHint: schoolImportParserSourceCustomOpenAi,
+          ),
+          parserSettings: const AiApiSettings(
+            source: schoolImportParserSourceCustomOpenAi,
+            customBaseUrl: 'https://api.example.com/v1',
+            customApiKey: 'sk-test',
+            customModel: 'gpt-4.1-mini',
+            customPrompt: 'You are a custom parser. Return JSON only.',
+          ),
         ),
       );
 
       expect(capturedUri.path, '/v1/chat/completions');
       expect(capturedHeaders['authorization'], 'Bearer sk-test');
+      expect(capturedHeaders['accept'], 'text/event-stream');
       expect(capturedBody['model'], 'gpt-4.1-mini');
+      expect(capturedBody['stream'], isTrue);
       expect(capturedBody['response_format']['type'], 'json_object');
       final messages = capturedBody['messages'] as List<dynamic>;
       final systemPrompt =
@@ -1939,7 +1934,7 @@ void main() {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -1992,42 +1987,35 @@ void main() {
         client: MockClient((request) async {
           capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
           return http.Response(
-            jsonEncode({
-              'choices': [
-                {
-                  'message': {
-                    'content': jsonEncode(
-                      _buildSchoolImportSuccessJson(parser: ''),
-                    ),
-                  },
-                  'finish_reason': 'stop',
-                },
-              ],
-            }),
+            _schoolImportSseResponse(_buildSchoolImportSuccessJson(parser: '')),
             200,
+            headers: {'content-type': 'text/event-stream'},
           );
         }),
       );
 
-      await api.importCurrentPageWithRawResponse(
-        const SchoolImportPagePayload(
-          url: 'https://example.com/page',
-          title: 'Import page',
-          html: '<html></html>',
-          locale: 'zh',
-          sourceHint: schoolImportParserSourceCustomOpenAi,
-        ),
-        parserSettings: const SchoolImportParserSettings(
-          source: schoolImportParserSourceCustomOpenAi,
-          customBaseUrl: 'https://api.example.com/v1',
-          customApiKey: 'sk-test',
-          customModel: 'gpt-4.1-mini',
+      await _expectParseDone(
+        api.importCurrentPageStream(
+          const SchoolImportPagePayload(
+            url: 'https://example.com/page',
+            title: 'Import page',
+            html: '<html></html>',
+            locale: 'zh',
+            sourceHint: schoolImportParserSourceCustomOpenAi,
+          ),
+          parserSettings: const AiApiSettings(
+            source: schoolImportParserSourceCustomOpenAi,
+            customBaseUrl: 'https://api.example.com/v1',
+            customApiKey: 'sk-test',
+            customModel: 'gpt-4.1-mini',
+          ),
         ),
       );
 
       final messages = capturedBody['messages'] as List<dynamic>;
       final systemPrompt =
           (messages.first as Map<String, dynamic>)['content'] as String;
+      expect(capturedBody['stream'], isTrue);
       expect(systemPrompt, SchoolImportApi.defaultCustomOpenAiSystemPrompt);
     });
 
@@ -2062,7 +2050,7 @@ void main() {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -2121,7 +2109,7 @@ void main() {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -2211,7 +2199,7 @@ void main() {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -2320,7 +2308,7 @@ void main() {
       final incompleteProvider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: '',
               customApiKey: '',
@@ -2359,7 +2347,7 @@ void main() {
       final incompleteProvider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: '',
               customApiKey: '',
@@ -2393,7 +2381,7 @@ void main() {
       final completeProvider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -2640,7 +2628,7 @@ void main() {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -2650,8 +2638,14 @@ void main() {
         ),
       );
       await provider.load();
-      final completer = Completer<SchoolImportApiResult>();
-      final fakeApi = FakeSchoolImportApi(onImport: (_, _) => completer.future);
+      final completer = Completer<void>();
+      final fakeApi = FakeSchoolImportApi(
+        onImport: (_, _) async* {
+          await completer.future;
+          yield ParseDelta(jsonEncode(_buildSchoolImportSuccessJson()));
+          yield ParseDone(response: _buildSchoolImportResponse());
+        },
+      );
 
       await tester.pumpWidget(
         ChangeNotifierProvider<TimetableProvider>.value(
@@ -2687,13 +2681,7 @@ void main() {
       // contributes a progress indicator while the request is pending.
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-      completer.complete(
-        SchoolImportApiResult(
-          response: _buildSchoolImportResponse(),
-          rawBody: jsonEncode(_buildSchoolImportSuccessJson()),
-          statusCode: 200,
-        ),
-      );
+      completer.complete();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -2712,7 +2700,7 @@ void main() {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
-            const SchoolImportParserSettings(
+            const AiApiSettings(
               source: schoolImportParserSourceCustomOpenAi,
               customBaseUrl: 'https://api.example.com/v1',
               customApiKey: 'sk-test',
@@ -2723,19 +2711,22 @@ void main() {
       );
       await provider.load();
       final fakeApi = FakeSchoolImportApi(
-        onImport: (_, _) async => SchoolImportApiResult(
-          response: _buildSchoolImportResponse(
-            timetableName: 'Widget imported timetable',
-            customFields: const {'来源': 'widget-test'},
+        onImport: (_, _) => Stream.fromIterable([
+          ParseDelta(
+            jsonEncode(
+              _buildSchoolImportSuccessJson(
+                timetableName: 'Widget imported timetable',
+                customFields: const {'来源': 'widget-test'},
+              ),
+            ),
           ),
-          rawBody: jsonEncode(
-            _buildSchoolImportSuccessJson(
+          ParseDone(
+            response: _buildSchoolImportResponse(
               timetableName: 'Widget imported timetable',
               customFields: const {'来源': 'widget-test'},
             ),
           ),
-          statusCode: 200,
-        ),
+        ]),
       );
 
       await tester.pumpWidget(

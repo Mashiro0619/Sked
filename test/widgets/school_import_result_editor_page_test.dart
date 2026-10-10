@@ -42,9 +42,12 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetViewInsets);
       final p = await workspaceProvider();
-      await p.updateCustomSchoolImportBaseUrl('https://example.invalid/v1');
+      await p.updateCustomSchoolImportTextSettings(
+        baseUrl: 'https://example.invalid/v1',
+        model: 'fixture-model',
+        prompt: p.customSchoolImportPrompt,
+      );
       await p.updateCustomSchoolImportApiKey('memory-fixture');
-      await p.updateCustomSchoolImportModel('fixture-model');
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: p,

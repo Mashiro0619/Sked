@@ -28,18 +28,6 @@ class ParseError extends SchoolImportStreamEvent {
   final String message;
 }
 
-class SchoolImportApiResult {
-  const SchoolImportApiResult({
-    required this.response,
-    required this.rawBody,
-    required this.statusCode,
-  });
-
-  final SchoolImportResponse response;
-  final String rawBody;
-  final int statusCode;
-}
-
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
   if (value is! Map) {
     return null;
@@ -225,7 +213,6 @@ class SchoolImportApi {
     this._streamIdleTimeout = const Duration(minutes: 2),
     this._streamTotalTimeout = const Duration(minutes: 5),
     this._maxModelResponseBytes = 1024 * 1024,
-    this._maxImportResponseBytes = 2 * 1024 * 1024,
     this._maxStreamResponseBytes = 2 * 1024 * 1024,
     this._maxSseLineBytes = 128 * 1024,
   });
@@ -322,37 +309,8 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
   final Duration _streamIdleTimeout;
   final Duration _streamTotalTimeout;
   final int _maxModelResponseBytes;
-  final int _maxImportResponseBytes;
   final int _maxStreamResponseBytes;
   final int _maxSseLineBytes;
-
-  Future<SchoolImportResponse> importCurrentPage(
-    SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
-  }) async {
-    final result = await importCurrentPageWithRawResponse(
-      payload,
-      parserSettings: parserSettings,
-    );
-    return result.response;
-  }
-
-  Future<SchoolImportApiResult> importCurrentPageWithRawResponse(
-    SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
-  }) async {
-    final settings = parserSettings ?? const SchoolImportParserSettings();
-    try {
-      return await _importWithCustomOpenAi(payload, settings);
-    } on FormatException catch (error, stackTrace) {
-      Error.throwWithStackTrace(
-        FormatException(
-          _safeRequestError(error.message, settings.customApiKey),
-        ),
-        stackTrace,
-      );
-    }
-  }
 
   Future<List<String>> fetchCustomModels({
     required String baseUrl,
@@ -475,112 +433,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     }
   }
 
-  Future<SchoolImportApiResult> _importWithCustomOpenAi(
-    SchoolImportPagePayload payload,
-    SchoolImportParserSettings settings,
-  ) async {
-    final normalizedBaseUrl = settings.customBaseUrl.trim();
-    final normalizedApiKey = settings.customApiKey.trim();
-    final normalizedModel = settings.customModel.trim();
-    if (normalizedBaseUrl.isEmpty ||
-        normalizedApiKey.isEmpty ||
-        normalizedModel.isEmpty) {
-      throw const FormatException('Custom parser configuration is incomplete.');
-    }
-    _validateImportRequest(
-      payload: payload,
-      settings: settings,
-      apiKey: normalizedApiKey,
-      model: normalizedModel,
-    );
-
-    final client = _client ?? http.Client();
-    final ownsClient = _client == null;
-    try {
-      final uri = _buildOpenAiChatUri(normalizedBaseUrl);
-      final body = _buildOpenAiRequestBody(
-        payload: payload,
-        settings: settings,
-        model: normalizedModel,
-        stream: false,
-      );
-      final requestHandle = _AbortableRequestHandle('POST', uri);
-      requestHandle.request
-        ..followRedirects = false
-        ..headers.addAll({
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $normalizedApiKey',
-        })
-        ..body = body;
-      final response = await _sendSensitiveRequest(
-        client,
-        requestHandle,
-        operation: 'Import request',
-      );
-      final rawBody = await _readBoundedBody(
-        response.stream,
-        maxBytes: _maxImportResponseBytes,
-        operation: 'Import response',
-        totalTimeout: _requestTimeout,
-        allowMalformed: response.statusCode < 200 || response.statusCode >= 300,
-      );
-      final decoded = _tryDecodeJson(rawBody);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        final message = _extractErrorMessage(decoded);
-        throw FormatException(
-          message ??
-              _errorWithDetails(
-                'Import request failed (${response.statusCode}).',
-                rawBody,
-              ),
-        );
-      }
-      if (decoded is! Map<String, dynamic>) {
-        throw FormatException(
-          _errorWithDetails('Import response format is invalid.', rawBody),
-        );
-      }
-      final content = _extractOpenAiMessageContent(decoded);
-      final parsedJson = tryDecodeImportObject(content);
-      if (parsedJson is! Map<String, dynamic>) {
-        throw FormatException(
-          _errorWithDetails('Import response parse failed.', content),
-        );
-      }
-      try {
-        final normalizedResponseJson = _normalizeCustomImportResponse(
-          parsedJson,
-          payload: payload,
-          model: normalizedModel,
-        );
-        _validateImportResponseBounds(normalizedResponseJson);
-        return SchoolImportApiResult(
-          response: SchoolImportResponse.fromJson(normalizedResponseJson),
-          rawBody: rawBody,
-          statusCode: response.statusCode,
-        );
-      } on FormatException catch (error) {
-        throw FormatException(
-          _errorWithDetails('Import response parse failed.', error.message),
-        );
-      }
-    } on TimeoutException {
-      throw const FormatException('Import request timed out.');
-    } on FormatException {
-      rethrow;
-    } catch (error) {
-      throw FormatException(
-        _errorWithDetails('Unable to connect to the import service.', error),
-      );
-    } finally {
-      if (ownsClient) {
-        client.close();
-      }
-    }
-  }
-
-  String _buildCustomOpenAiSystemPrompt(SchoolImportParserSettings settings) {
+  String _buildCustomOpenAiSystemPrompt(AiApiSettings settings) {
     final customPrompt = settings.customPrompt.trim();
     if (customPrompt.isEmpty) {
       return defaultCustomOpenAiSystemPrompt;
@@ -611,14 +464,13 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
 
   String _buildOpenAiRequestBody({
     required SchoolImportPagePayload payload,
-    required SchoolImportParserSettings settings,
+    required AiApiSettings settings,
     required String model,
-    required bool stream,
   }) {
     final body = jsonEncode({
       'model': model,
       'temperature': 0,
-      if (stream) 'stream': true,
+      'stream': true,
       'messages': [
         {'role': 'system', 'content': _buildCustomOpenAiSystemPrompt(settings)},
         {'role': 'user', 'content': _buildOpenAiUserPrompt(payload)},
@@ -639,7 +491,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
 
   void _validateImportRequest({
     required SchoolImportPagePayload payload,
-    required SchoolImportParserSettings settings,
+    required AiApiSettings settings,
     required String apiKey,
     required String model,
   }) {
@@ -810,38 +662,6 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       }
     }
     return responseJson;
-  }
-
-  String _extractOpenAiMessageContent(Map<String, dynamic> json) {
-    final choices = json['choices'];
-    if (choices is! List || choices.isEmpty) {
-      throw const FormatException('Import response format is invalid.');
-    }
-    final firstChoice = choices.first;
-    if (firstChoice is! Map) {
-      throw const FormatException('Import response format is invalid.');
-    }
-    final finishReason = firstChoice['finish_reason'];
-    if (finishReason is! String || finishReason.trim().isEmpty) {
-      throw const FormatException('Import response finish reason is invalid.');
-    }
-    final normalizedFinishReason = finishReason.trim();
-    if (normalizedFinishReason != 'stop') {
-      final reason = _boundedUtf8(normalizedFinishReason, maxBytes: 256);
-      throw FormatException(
-        _boundedUtf8('Import response ended with finish reason "$reason".'),
-      );
-    }
-    final message = firstChoice['message'];
-    if (message is! Map) {
-      throw const FormatException('Import response format is invalid.');
-    }
-    final content = message['content'];
-    final result = _extractOpenAiTextContent(content).trim();
-    if (result.isNotEmpty) {
-      return result;
-    }
-    throw const FormatException('Import response format is invalid.');
   }
 
   String _extractOpenAiTextContent(Object? content) {
@@ -1077,10 +897,10 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
 
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
     SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
     http.Client? client,
   }) async* {
-    final settings = parserSettings ?? const SchoolImportParserSettings();
+    final settings = parserSettings ?? const AiApiSettings();
     yield* _importStreamWithCustomOpenAi(payload, settings, client: client).map(
       (event) => event is ParseError
           ? ParseError(_safeRequestError(event.message, settings.customApiKey))
@@ -1090,7 +910,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
 
   Stream<SchoolImportStreamEvent> _importStreamWithCustomOpenAi(
     SchoolImportPagePayload payload,
-    SchoolImportParserSettings settings, {
+    AiApiSettings settings, {
     http.Client? client,
   }) async* {
     final normalizedBaseUrl = settings.customBaseUrl.trim();
@@ -1117,7 +937,6 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         payload: payload,
         settings: settings,
         model: normalizedModel,
-        stream: true,
       );
 
       final requestHandle = _AbortableRequestHandle('POST', uri);

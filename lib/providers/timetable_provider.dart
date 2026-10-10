@@ -662,8 +662,6 @@ class TimetableProvider extends _TimetableProviderBase
   Map<String, int> get courseNameColorValues =>
       _appData.studentMode.courseNameColorValues;
   AiApiSettings get aiApiSettings => _appData.aiApiSettings;
-  @Deprecated('Use aiApiSettings.')
-  AiApiSettings get schoolImportParserSettings => _appData.aiApiSettings;
   String get schoolImportParserSource => _appData.aiApiSettings.source;
   String get customSchoolImportBaseUrl => _appData.aiApiSettings.customBaseUrl;
   String get customSchoolImportApiKey => _appData.aiApiSettings.customApiKey;

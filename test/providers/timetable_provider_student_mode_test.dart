@@ -133,8 +133,7 @@ void main() {
     List<PeriodTimeSet>? periodTimeSets,
     Map<String, String> conflictDisplayCourseIds = const {},
     Map<String, int> courseNameColorValues = const {},
-    SchoolImportParserSettings schoolImportParserSettings =
-        const SchoolImportParserSettings(),
+    AiApiSettings schoolImportParserSettings = const AiApiSettings(),
     AppMode activeMode = AppMode.student,
   }) {
     return buildInitialAppData(
@@ -825,7 +824,7 @@ void main() {
         final secrets = _MemorySecretStore('sk-old');
         final provider = providerWith(
           appData(
-            schoolImportParserSettings: const SchoolImportParserSettings(
+            schoolImportParserSettings: const AiApiSettings(
               customBaseUrl: 'https://api.example.com/v1',
               customModel: 'gpt-4.1-mini',
             ),
@@ -836,7 +835,7 @@ void main() {
           appData(
             activeTimetableId: 'restored',
             timetables: [timetable(id: 'restored', name: 'Restored')],
-            schoolImportParserSettings: const SchoolImportParserSettings(
+            schoolImportParserSettings: const AiApiSettings(
               customBaseUrl: 'https://api.example.com/v1',
               customModel: 'gpt-4.1-mini',
             ),
@@ -863,7 +862,7 @@ void main() {
       () async {
         final secrets = _MemorySecretStore('sk-old');
         final original = appData(
-          schoolImportParserSettings: const SchoolImportParserSettings(
+          schoolImportParserSettings: const AiApiSettings(
             customBaseUrl: 'https://api.example.com/v1',
             customModel: 'gpt-4.1-mini',
           ),

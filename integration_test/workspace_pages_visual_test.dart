@@ -232,14 +232,13 @@ void main() {
             mode: name == 'category-editor' ? AppMode.general : AppMode.student,
           );
           if (name == 'import-source') {
-            await provider.updateCustomSchoolImportBaseUrl(
-              'https://example.invalid/v1',
+            await provider.updateCustomSchoolImportTextSettings(
+              baseUrl: 'https://example.invalid/v1',
+              model: 'visual-fixture-model',
+              prompt: provider.customSchoolImportPrompt,
             );
             await provider.updateCustomSchoolImportApiKey(
               'visual-fixture-not-a-real-key',
-            );
-            await provider.updateCustomSchoolImportModel(
-              'visual-fixture-model',
             );
           }
           final notifications = AgendaNotificationService(

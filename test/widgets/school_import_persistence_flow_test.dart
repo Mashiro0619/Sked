@@ -120,7 +120,7 @@ class _Api extends SchoolImportApi {
   @override
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
     SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
     http.Client? client,
   }) {
     calls += 1;

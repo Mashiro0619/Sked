@@ -18,7 +18,7 @@ const _payload = SchoolImportPagePayload(
   sourceHint: schoolImportParserSourceCustomOpenAi,
 );
 
-const _parserSettings = SchoolImportParserSettings(
+const _parserSettings = AiApiSettings(
   source: schoolImportParserSourceCustomOpenAi,
   customBaseUrl: 'https://api.example.com/v1',
   customApiKey: 'sk-test',
@@ -30,14 +30,14 @@ class _RecordingApi extends SchoolImportApi {
     ParseError('synthetic stop'),
   ];
   SchoolImportPagePayload? payload;
-  SchoolImportParserSettings? parserSettings;
+  AiApiSettings? parserSettings;
   http.Client? client;
   var calls = 0;
 
   @override
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
     SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
     http.Client? client,
   }) {
     calls += 1;
@@ -52,7 +52,7 @@ class _ThrowingApi extends SchoolImportApi {
   @override
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
     SchoolImportPagePayload payload, {
-    SchoolImportParserSettings? parserSettings,
+    AiApiSettings? parserSettings,
     http.Client? client,
   }) {
     throw StateError('synthetic parser failure');
