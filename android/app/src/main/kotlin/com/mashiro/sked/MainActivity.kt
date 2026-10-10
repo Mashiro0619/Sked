@@ -13,11 +13,13 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import com.mashiro.sked.androidproductivity.BatteryOptimizationStatus
 import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.IOException
@@ -59,19 +61,25 @@ private object AppInstanceLeaseGuard {
     }
 }
 
-class MainActivity : FlutterActivity() {
+private data class SaveTextFileRequest(
+    val fileName: String,
+    val content: String,
+    val result: MethodChannel.Result,
+)
+
+class MainActivity : FlutterFragmentActivity() {
     private val appInstanceLeaseEngineId = AppInstanceLeaseGuard.createEngineId()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pendingAgendaIntents = ArrayDeque<String>()
     private var initialAgendaIntentConsumed = false
+    private var exportFileChannel: MethodChannel? = null
     private var appInstanceLeaseChannel: MethodChannel? = null
     private var productivityChannel: MethodChannel? = null
-    private var pendingNotificationPermissionResult: MethodChannel.Result? = null
+    private val pendingNotificationPermission = PendingActivityRequest<MethodChannel.Result>()
     private var pendingExactAlarmPermissionResult: MethodChannel.Result? = null
     private var exactAlarmPermissionRequestLeftActivity = false
-    private var pendingSaveResult: MethodChannel.Result? = null
-    private var pendingSaveContent: String? = null
-    private var pendingSaveFileName: String? = null
+    private val pendingSave = PendingActivityRequest<SaveTextFileRequest>()
+    private var activityDestroying = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,15 +124,12 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
-        // Permission requests retain a MethodChannel.Result until Android
-        // calls back.  A configuration/process teardown can happen before
-        // that callback (for example when the permission dialog is dismissed
-        // by the system), so release the result instead of retaining the
-        // Activity through the channel bridge or attempting to reply later.
-        pendingNotificationPermissionResult?.let { result ->
-            pendingNotificationPermissionResult = null
-            result.success(false)
-        }
+        activityDestroying = true
+        // Complete live calls before Flutter detaches. Activity recreation
+        // cannot carry a MethodChannel.Result or an export payload to the new
+        // engine, even when Android restores a pending platform result.
+        pendingNotificationPermission.cancel()?.success(false)
+        pendingSave.cancel()?.result?.success(null)
         pendingExactAlarmPermissionResult?.let { result ->
             pendingExactAlarmPermissionResult = null
             exactAlarmPermissionRequestLeftActivity = false
@@ -142,18 +147,20 @@ class MainActivity : FlutterActivity() {
         synchronized(pendingAgendaIntents) {
             initialAgendaIntentConsumed = false
         }
-        MethodChannel(
+        exportFileChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             EXPORT_FILE_CHANNEL,
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "saveTextFile" -> saveTextFile(
-                    fileName = call.argument<String>("fileName"),
-                    content = call.argument<String>("content"),
-                    mimeType = call.argument<String>("mimeType"),
-                    result = result,
-                )
-                else -> result.notImplemented()
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "saveTextFile" -> saveTextFile(
+                        fileName = call.argument<String>("fileName"),
+                        content = call.argument<String>("content"),
+                        mimeType = call.argument<String>("mimeType"),
+                        result = result,
+                    )
+                    else -> result.notImplemented()
+                }
             }
         }
         appInstanceLeaseChannel = MethodChannel(
@@ -237,13 +244,15 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
-        // A settings Activity can outlive the Flutter engine that initiated
-        // it. Its MethodChannel.Result belongs to that old engine, so never
-        // retain it until onResume() or the platform permission callback.
-        // A newly attached engine must be free to issue a fresh request.
-        pendingNotificationPermissionResult = null
+        // Platform surfaces can outlive their initiating engine. Invalidate
+        // the request tokens as well as dropping their results/content so a
+        // late callback cannot consume a new engine's pending request.
+        pendingNotificationPermission.cancel()
+        pendingSave.cancel()
         pendingExactAlarmPermissionResult = null
         exactAlarmPermissionRequestLeftActivity = false
+        exportFileChannel?.setMethodCallHandler(null)
+        exportFileChannel = null
         appInstanceLeaseChannel?.setMethodCallHandler(null)
         appInstanceLeaseChannel = null
         productivityChannel?.setMethodCallHandler(null)
@@ -300,20 +309,40 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun requestNotificationPermission(result: MethodChannel.Result) {
+        if (activityDestroying || isFinishing || isDestroyed) {
+            result.success(false)
+            return
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             isNotificationPermissionGranted()) {
             result.success(true)
             return
         }
-        if (pendingNotificationPermissionResult != null) {
+        val request = pendingNotificationPermission.begin(result)
+        if (request == null) {
             result.error("busy", "A notification permission request is already in progress.", null)
             return
         }
-        pendingNotificationPermissionResult = result
-        requestPermissions(
-            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-            NOTIFICATION_PERMISSION_REQUEST_CODE,
-        )
+        try {
+            val launcher = activityResultRegistry.register(
+                request.key,
+                ActivityResultContracts.RequestPermission(),
+            ) { granted ->
+                pendingNotificationPermission.complete(request)?.success(
+                    !activityDestroying && !isFinishing && !isDestroyed &&
+                        granted && isNotificationPermissionGranted(),
+                )
+            }
+            pendingNotificationPermission.releaseWhenComplete(request) {
+                // Registry 1.9 clears its launched key after invoking this
+                // callback. Unregister on the next main-loop turn so the key
+                // is removed as well as the callback.
+                mainHandler.post { launcher.unregister() }
+            }
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } catch (_: RuntimeException) {
+            pendingNotificationPermission.complete(request)?.success(false)
+        }
     }
 
     private fun canScheduleExactAlarms(): Boolean {
@@ -462,28 +491,17 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != NOTIFICATION_PERMISSION_REQUEST_CODE) return
-        val result = pendingNotificationPermissionResult ?: return
-        pendingNotificationPermissionResult = null
-        result.success(
-            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
-                isNotificationPermissionGranted(),
-        )
-    }
-
     private fun saveTextFile(
         fileName: String?,
         content: String?,
         mimeType: String?,
         result: MethodChannel.Result,
     ) {
-        if (pendingSaveResult != null) {
+        if (activityDestroying || isFinishing || isDestroyed) {
+            result.success(null)
+            return
+        }
+        if (pendingSave.isPending) {
             result.error("busy", "Another save operation is already in progress.", null)
             return
         }
@@ -492,9 +510,7 @@ class MainActivity : FlutterActivity() {
             return
         }
 
-        pendingSaveResult = result
-        pendingSaveContent = content
-        pendingSaveFileName = fileName
+        val request = pendingSave.begin(SaveTextFileRequest(fileName, content, result))!!
 
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -503,58 +519,73 @@ class MainActivity : FlutterActivity() {
         }
 
         try {
-            startActivityForResult(intent, SAVE_TEXT_FILE_REQUEST_CODE)
+            // Register per call rather than reusing a launcher: an old picker
+            // may still return after engine cleanup and a new Flutter call.
+            // Direct registration also permits an engine attached after STARTED.
+            val launcher = activityResultRegistry.register(
+                request.key,
+                ActivityResultContracts.StartActivityForResult(),
+            ) { activityResult -> completeSaveTextFile(request, activityResult) }
+            pendingSave.releaseWhenComplete(request) {
+                mainHandler.post { launcher.unregister() }
+            }
+            launcher.launch(intent)
         } catch (_: ActivityNotFoundException) {
-            clearPendingSave()
-            result.error("unsupported", "No document provider is available.", null)
+            pendingSave.complete(request)?.result?.error(
+                "unsupported", "No document provider is available.", null,
+            )
+        } catch (_: SecurityException) {
+            pendingSave.complete(request)?.result?.error(
+                "permissionDenied", "Permission denied while opening document provider.", null,
+            )
+        } catch (_: RuntimeException) {
+            pendingSave.complete(request)?.result?.error(
+                "failed", "Unable to open document provider.", null,
+            )
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode != SAVE_TEXT_FILE_REQUEST_CODE) {
-            super.onActivityResult(requestCode, resultCode, data)
-            return
-        }
+    private fun completeSaveTextFile(
+        request: PendingActivityRequest.Request,
+        activityResult: ActivityResult,
+    ) {
+        val pending = pendingSave.complete(request) ?: return
+        val result = pending.result
 
-        val result = pendingSaveResult ?: return
-        val content = pendingSaveContent
-        val fileName = pendingSaveFileName
-        clearPendingSave()
-
-        val uri: Uri? = data?.data
-        if (resultCode != Activity.RESULT_OK || uri == null || content == null) {
+        val uri = activityResult.data?.data
+        if (activityDestroying || isFinishing || isDestroyed ||
+            activityResult.resultCode != Activity.RESULT_OK || uri == null
+        ) {
             result.success(null)
             return
         }
 
-        try {
+        val streamOpened = try {
             contentResolver.openOutputStream(uri)?.use { output ->
-                output.write(content.toByteArray(Charsets.UTF_8))
+                output.write(pending.content.toByteArray(Charsets.UTF_8))
                 output.flush()
-            } ?: run {
-                result.error("failed", "Unable to open output stream.", null)
-                return
-            }
-            result.success(fileName)
+                true
+            } ?: false
         } catch (_: SecurityException) {
             result.error("permissionDenied", "Permission denied while saving file.", null)
+            return
         } catch (_: IOException) {
             result.error("failed", "Failed to save file.", null)
+            return
+        } catch (_: RuntimeException) {
+            result.error("failed", "Document provider failed while saving file.", null)
+            return
         }
-    }
-
-    private fun clearPendingSave() {
-        pendingSaveResult = null
-        pendingSaveContent = null
-        pendingSaveFileName = null
+        if (streamOpened) {
+            result.success(pending.fileName)
+        } else {
+            result.error("failed", "Unable to open output stream.", null)
+        }
     }
 
     private companion object {
         const val EXPORT_FILE_CHANNEL = "com.mashiro.sked/export_file"
         const val APP_INSTANCE_LEASE_CHANNEL = "com.mashiro.sked/app_instance_lease"
-        const val SAVE_TEXT_FILE_REQUEST_CODE = 1001
-        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
         const val MAX_PENDING_AGENDA_INTENTS = 16
     }
 }

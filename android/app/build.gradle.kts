@@ -89,6 +89,9 @@ tasks.matching { isReleaseBuildTask(it.name) }.configureEach {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     testImplementation("junit:junit:4.13.2")
+    // Own the Activity Result API dependency used by MainActivity explicitly.
+    // Keep the version already resolved by Flutter's Android embedding.
+    implementation("androidx.activity:activity:1.9.0")
     // A native WorkManager host keeps the rolling notification projection
     // current after boot and time-zone changes without parsing app data.
     implementation("androidx.work:work-runtime-ktx:2.10.5")
