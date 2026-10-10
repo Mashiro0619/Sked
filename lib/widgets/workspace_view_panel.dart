@@ -61,12 +61,18 @@ class WorkspaceViewPanel extends StatelessWidget {
     this.toolbar,
     this.bodyViewportKey,
     this.contentPadding = const EdgeInsets.fromLTRB(12, 10, 12, 12),
+    this.headerPadding = const EdgeInsets.fromLTRB(16, 10, 12, 10),
+    this.headerVerticalAlignment = CrossAxisAlignment.start,
+    this.inlineHeaderAction,
   });
   final Widget title;
   final Widget? subtitle, headerAction, toolbar;
   final Widget child;
   final Key? bodyViewportKey;
   final EdgeInsetsGeometry contentPadding;
+  final EdgeInsetsGeometry headerPadding;
+  final CrossAxisAlignment headerVerticalAlignment;
+  final bool? inlineHeaderAction;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +91,9 @@ class WorkspaceViewPanel extends StatelessWidget {
       alignment: Alignment.topCenter,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final inlineAction = constraints.maxWidth >= 360 * metrics.textScale;
+          final inlineAction =
+              inlineHeaderAction ??
+              constraints.maxWidth >= 360 * metrics.textScale;
           final heading = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -121,9 +129,22 @@ class WorkspaceViewPanel extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: Padding(
                     key: const ValueKey('workspace-view-header'),
-                    padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+                    padding: headerPadding,
                     child: SkedPanelHeader(
-                      title: heading,
+                      title:
+                          headerVerticalAlignment == CrossAxisAlignment.center
+                          ? ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: metrics.iconTarget,
+                              ),
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                heightFactor: 1,
+                                child: heading,
+                              ),
+                            )
+                          : heading,
+                      verticalAlignment: headerVerticalAlignment,
                       action: headerAction,
                       inlineAction: inlineAction,
                       actionGap: 8,

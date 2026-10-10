@@ -1,6 +1,7 @@
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,7 @@ import '../models/timetable_models.dart'
         pickDisplayedCourseForConflict;
 import '../providers/timetable_provider.dart';
 import 'ui_command.dart';
+import 'workbench_chrome_metrics.dart';
 import 'workspace_view_panel.dart';
 
 class CourseDetailsSheet extends StatefulWidget {
@@ -115,6 +117,9 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
         final editAction = Builder(
           builder: (anchor) => IconButton(
             tooltip: l10n.editCourseTooltip,
+            style: viewTask
+                ? WorkbenchChromeMetrics.of(context).iconStyle
+                : null,
             onPressed: _actionInProgress
                 ? null
                 : () {
@@ -148,50 +153,59 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
               const SizedBox(height: 8),
             ],
             _PrimaryInfoCard(
+              compact: viewTask,
               icon: Icons.place_outlined,
               label: l10n.place,
               value: course.location.isEmpty ? l10n.notFilled : course.location,
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: viewTask ? 12 : 10),
             _PrimaryInfoCard(
+              compact: viewTask,
               icon: Icons.schedule,
               label: l10n.time,
               value: course.periods.isEmpty
                   ? course.timeRange
                   : '${course.timeRange} · ${_formatPeriodsLabel(l10n, course.periods)}',
             ),
-            const SizedBox(height: 12),
-            _DetailRow(
-              label: l10n.teacherName,
-              value: course.teacher.isEmpty ? l10n.notFilled : course.teacher,
-            ),
-            _DetailRow(
-              label: l10n.dayOfWeek,
-              value: formatDayOfWeekLabel(
-                course.dayOfWeek,
-                localeCode: app_locale.localeCodeFromLocale(
-                  Localizations.localeOf(context),
+            SizedBox(height: viewTask ? 16 : 12),
+            _DetailFields(
+              compact: viewTask,
+              entries: [
+                (
+                  label: l10n.teacherName,
+                  value: course.teacher.isEmpty
+                      ? l10n.notFilled
+                      : course.teacher,
                 ),
-              ),
-            ),
-            _DetailRow(
-              label: l10n.semesterWeeks,
-              value: formatSemesterWeeksValue(
-                course.semesterWeeks,
-                localeCode: app_locale.localeCodeFromLocale(
-                  Localizations.localeOf(context),
+                (
+                  label: l10n.dayOfWeek,
+                  value: formatDayOfWeekLabel(
+                    course.dayOfWeek,
+                    localeCode: app_locale.localeCodeFromLocale(
+                      Localizations.localeOf(context),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            _DetailRow(
-              label: l10n.credits,
-              value: course.credit == 0
-                  ? l10n.notFilled
-                  : course.credit.toString(),
-            ),
-            _DetailRow(
-              label: l10n.remarks,
-              value: course.remarks.isEmpty ? l10n.none : course.remarks,
+                (
+                  label: l10n.semesterWeeks,
+                  value: formatSemesterWeeksValue(
+                    course.semesterWeeks,
+                    localeCode: app_locale.localeCodeFromLocale(
+                      Localizations.localeOf(context),
+                    ),
+                  ),
+                ),
+                (
+                  label: l10n.credits,
+                  value: course.credit == 0
+                      ? l10n.notFilled
+                      : course.credit.toString(),
+                ),
+                (
+                  label: l10n.remarks,
+                  value: course.remarks.isEmpty ? l10n.none : course.remarks,
+                ),
+              ],
             ),
             if (otherConflictCourses.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -242,15 +256,31 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
               const SizedBox(height: 12),
               Text(l10n.customFields, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
-              for (final entry in course.customFields.entries)
-                _DetailRow(label: entry.key, value: entry.value.toString()),
+              _DetailFields(
+                compact: viewTask,
+                entries: [
+                  for (final entry in course.customFields.entries)
+                    (label: entry.key, value: entry.value.toString()),
+                ],
+              ),
             ],
           ],
         );
         if (viewTask) {
           return WorkspaceViewPanel(
-            title: Text(course.name),
+            title: Text(
+              course.name,
+              style: theme.textTheme.titleMedium!.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
             headerAction: editAction,
+            headerPadding: const EdgeInsetsDirectional.fromSTEB(16, 8, 12, 8),
+            headerVerticalAlignment: CrossAxisAlignment.center,
+            inlineHeaderAction: true,
+            contentPadding: const EdgeInsets.all(16).copyWith(top: 8),
             child: details,
           );
         }
@@ -372,15 +402,61 @@ class _PrimaryInfoCard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.compact = false,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    if (compact) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              icon,
+              size: 20,
+              color: skedReadableAccent(
+                colorScheme,
+                surface: SkedSurface.colorOf(context),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall!.copyWith(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: theme.textTheme.bodyMedium!.copyWith(
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -490,6 +566,85 @@ class _ConflictCourseCard extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _DetailFields extends StatelessWidget {
+  const _DetailFields({required this.entries, required this.compact});
+
+  final List<({String label, String value})> entries;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!compact) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final entry in entries)
+            _DetailRow(label: entry.label, value: entry.value),
+        ],
+      );
+    }
+    final theme = Theme.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    final labelStyle = theme.textTheme.bodySmall!.copyWith(
+      fontSize: 12,
+      height: 1.75,
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final valueStyle = theme.textTheme.bodyMedium!.copyWith(
+      fontSize: 14,
+      height: 1.5,
+    );
+    var labelWidth = 56 * scaler.scale(12) / 12;
+    for (final entry in entries) {
+      final painter = TextPainter(
+        text: TextSpan(text: entry.label, style: labelStyle),
+        textDirection: Directionality.of(context),
+        textScaler: scaler,
+        locale: Localizations.maybeLocaleOf(context),
+        maxLines: 1,
+      )..layout();
+      labelWidth = math.max(labelWidth, painter.width);
+      painter.dispose();
+    }
+    return LayoutBuilder(
+      builder: (context, bounds) {
+        final stacked =
+            labelWidth + 12 + 160 * scaler.scale(14) / 14 > bounds.maxWidth;
+        final valueWidth = stacked
+            ? bounds.maxWidth
+            : bounds.maxWidth - labelWidth - 12;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var index = 0; index < entries.length; index++)
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == entries.length - 1 ? 0 : 8,
+                ),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 2,
+                  children: [
+                    SizedBox(
+                      width: stacked ? bounds.maxWidth : labelWidth,
+                      child: Text(entries[index].label, style: labelStyle),
+                    ),
+                    SizedBox(
+                      width: valueWidth,
+                      child: Text(entries[index].value, style: valueStyle),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
