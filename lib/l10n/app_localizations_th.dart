@@ -52,19 +52,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolImportParsePageFailed => 'วิเคราะห์ไม่สำเร็จ';
 
   @override
-  String get schoolImportParsePageComplete => 'วิเคราะห์เสร็จแล้ว';
-
-  @override
   String get schoolImportParsePageContinue => 'ดำเนินการต่อ';
-
-  @override
-  String get schoolImportParsePageRawContent => 'การตอบกลับดิบ';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'ขยายการตอบกลับดิบ';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'ย่อการตอบกลับดิบ';
 
   @override
   String get schoolImportExpandWarnings => 'ขยายคำเตือนการนำเข้า';
@@ -239,31 +227,13 @@ class AppLocalizationsTh extends AppLocalizations {
   String get settingsTitle => 'การตั้งค่า';
 
   @override
-  String get settingsSectionTimetable => 'ตารางเรียน';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'ตารางกิจกรรมทั่วไป';
-
-  @override
   String get settingsSectionAppearance => 'รูปลักษณ์';
-
-  @override
-  String get settingsSectionApp => 'แอป';
 
   @override
   String get settingsSectionWorkspace => 'พื้นที่ทำงาน';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'รูปลักษณ์และภาษา';
-
-  @override
-  String get settingsSectionDataSecurity => 'ข้อมูลและความปลอดภัย';
-
-  @override
   String get settingsSectionAbout => 'เกี่ยวกับ Sked';
-
-  @override
-  String get noTimetableSettings => 'ปัจจุบันไม่มีตารางเวลาสำหรับการตั้งค่า';
 
   @override
   String get semesterStartDate => 'วันเริ่มต้นภาคศึกษา';
@@ -319,10 +289,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get showTimetableGridLines => 'แสดงเส้นทางตารางเวลา';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'ควบคุมว่าเส้นทางตารางแนวนอนและแนวตั้งเห็นได้หรือไม่ในตารางเวลา';
-
-  @override
   String get timetableHorizontalLayoutSection =>
       'การจัดวางแนวนอนและท่าทางสัมผัส';
 
@@ -337,22 +303,11 @@ class AppLocalizationsTh extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'ปรับคอลัมน์รายสัปดาห์ให้พอดีหน้าจอ';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'แสดงคอลัมน์ตารางเรียนทั้งเจ็ดคอลัมน์ในหน้าจอเมื่อมีพื้นที่เพียงพอ ปิดเพื่อใช้ความกว้างคงที่และเลื่อนในแนวนอน';
-
-  @override
   String get enableWeekSwipeNavigation => 'ปัดเพื่อเปลี่ยนสัปดาห์';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'ปัดซ้ายหรือขวาเพื่อเปลี่ยนสัปดาห์ เมื่อใช้ความกว้างคงที่ ให้เลื่อนไปถึงขอบก่อนแล้วลากต่อ';
-
-  @override
-  String get liveCourseOutlineColor => 'สีโครงสร้างหลักสูตร';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'เลือกว่าโครงสร้างเป้าหมายหลักสูตรปัจจุบัน/ต่อไป หรือหลักสูตรทั้งหมดที่แสดงบนหน้าปัจจุบัน';
 
   @override
   String get liveCourseOutlineSettings => 'รายละเอียดหลักสูตร';
@@ -391,21 +346,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get language => 'ภาษา';
-
-  @override
-  String get languagePageDescription => 'เลือกหนึ่งในภาษาที่มีอยู่ในแอพจริง ๆ';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'ภาษาไทย';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'การตอบสนอง API';
 
   @override
   String get theme => 'ธีม';
@@ -476,10 +416,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get appBackupTitle => 'สำรองและกู้คืนแอป';
 
   @override
-  String get appBackupSubtitle =>
-      'สำรองหรือกู้คืนตารางเรียน ตารางเวลา การตั้งค่า และเว็บไซต์โรงเรียน ไม่รวมคีย์ API';
-
-  @override
   String get appBackupSheetSubtitle =>
       'การกู้คืนแบบเต็มจะแทนที่ข้อมูลแอปปัจจุบัน คีย์ AI API จะอยู่ในที่จัดเก็บที่ปลอดภัยและจะไม่ถูกเขียนลงในไฟล์สำรอง';
 
@@ -547,22 +483,11 @@ class AppLocalizationsTh extends AppLocalizations {
   String get checkForUpdates => 'ตรวจสอบการอัพเดท';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => 'การอัปเดตจัดการโดย Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'รับการอัปเดตเวอร์ชันก่อนเผยแพร่';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'รวมเวอร์ชัน Alpha, Beta และ RC ซึ่งอาจไม่เสถียร เมื่อปิดจะเสนอเฉพาะเวอร์ชันเสถียรเท่านั้น';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'อยู่ในรุ่นล่าสุดแล้ว ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'รุ่นปัจจุบัน';
@@ -571,19 +496,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get newVersionAvailable => 'มีการอัพเดท';
 
   @override
-  String get latestVersionLabel => 'เวอร์ชันล่าสุด';
-
-  @override
-  String get updateContentLabel => 'อัพเดทรายละเอียด';
-
-  @override
-  String get officialWebsite => 'เว็บไซต์อย่างเป็นทางการ';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'ไดรฟ์คลาวด์';
 
   @override
   String get ignoreThisVersion => 'ไม่สนใจรุ่นนี้';
@@ -593,10 +506,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'การตรวจสอบการอัพเดทล้มเหลว';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'ไม่สามารถดึงเวอร์ชันล่าสุดจาก GitHub ได้ คุณยังเปิดหน้า GitHub Releases ด้านล่างได้';
 
   @override
   String get githubRepository => 'เก็บข้อมูล GitHub';
@@ -609,9 +518,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'ให้ดาว Sked บน GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc => 'เปิดคลังโค้ดของโครงการแล้วให้ดาว Sked';
 
   @override
   String get openGithubFailed => 'ไม่สามารถเปิดลิงค์คลังข้อมูล GitHub ได้';
@@ -933,56 +839,6 @@ class AppLocalizationsTh extends AppLocalizations {
       'Sked เป็นเครื่องมือตารางเรียนที่เน้นการทำงานในเครื่องเป็นหลัก ตารางเรียน ชุดเวลา และการกำหนดค่าเว็บไซต์โรงเรียนจะถูกเก็บไว้ในอุปกรณ์หรือเบราว์เซอร์ของคุณเท่านั้น และไม่เคยถูกอัปโหลดโดยอัตโนมัติ แอปจะประมวลผลข้อมูลเฉพาะเมื่อคุณเรียกใช้การกระทำอย่างชัดเจน เช่น การนำเข้า การวิเคราะห์หน้าเว็บ การแชร์ หรือการเปิดลิงก์ภายนอก นโยบายความเป็นส่วนตัวฉบับเต็มมีให้ดูทางออนไลน์';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'การเก็บข้อมูลในท้องถิ่น';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'ในแอปที่ติดตั้งบนอุปกรณ์ Sked จะเก็บข้อมูลตารางเรียน ตารางกิจกรรมทั่วไป การตั้งค่าที่เกี่ยวข้อง และการตั้งค่าเว็บไซต์สถานศึกษาที่แก้ไขได้ไว้ในโฟลเดอร์ข้อมูลสนับสนุนแอปของระบบปฏิบัติการ ส่วนเวอร์ชันเว็บใช้พื้นที่จัดเก็บของเบราว์เซอร์ ไฟล์ที่เวอร์ชันก่อนหน้าเขียนไว้ในโฟลเดอร์เอกสารของผู้ใช้จะยังอยู่ที่เดิม แต่จะไม่ถูกอ่านหรือย้ายโดยอัตโนมัติ หากต้องการเก็บข้อมูลเหล่านั้นไว้ ให้ส่งออกข้อมูลสำรองทั้งแอปจากเวอร์ชันเก่าก่อนอัปเกรด แล้วจึงกู้คืนภายหลัง การตั้งค่า AI API จะเก็บไว้ในเครื่อง ส่วนคีย์ API ที่กำหนดเองจะเก็บผ่านระบบจัดเก็บที่ปลอดภัยของแพลตฟอร์มหากมีให้ใช้ ข้อมูลสำรองทั้งแอปจะไม่รวมคีย์ API ที่กำหนดเอง แอปจะไม่อัปโหลดข้อมูลในเครื่องเหล่านี้ไปยังเซิร์ฟเวอร์ที่ผู้พัฒนาควบคุมโดยอัตโนมัติ';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'นำเข้าและส่งออก';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'แอพอ่านหรือเขียนไฟล์ JSON ตารางเวลา ไฟล์ JSON ของเว็บไซต์โรงเรียน และไฟล์แม่แบบระยะเวลาเท่านั้นเมื่อคุณเลือกไฟล์หรือเริ่มการส่งออกอย่างชัดเจน การนำเข้าไฟล์เหล่านี้เป็นการดำเนินการในท้องถิ่น เว้นแต่คุณยังเลือกการวิเคราะห์หน้าเว็บ การรับรายชื่อแบบจำลองที่กำหนดเองยังเป็นการกระทําเครือข่ายที่ชัดเจน และติดต่อเพียงจุดสิ้นสุดที่กำหนดเองที่คุณกำหนดค่า';
-
-  @override
-  String get privacyPolicySharingTitle => 'การแบ่งปัน';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'เมื่อคุณใช้การแบ่งปันอย่างชัดเจน แอพจะส่งไฟล์ที่ส่งออกไปยังแผ่นแบ่งปันระบบหรือไปยังแอพเป้าหมายที่คุณเลือก วิธีการจัดการไฟล์นั้นหลังจากนั้นขึ้นอยู่กับแอพหรือบริการเป้าหมายที่คุณเลือก';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'ลิงค์ภายนอก';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'เมื่อคุณเปิดลิงค์ภายนอก เช่น GitHub repository แอพจะส่งการกระทําไปยังเบราว์เซอร์ของคุณหรือแอพพลิเคชันภายนอกอื่น การจัดการข้อมูลหลังจากจุดนั้นจะถูกควบคุมโดยบุคคลที่สามที่คุณเปิด';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'สิ่งที่แอพไม่รวบรวม';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'แอพไม่ต้องใช้บัญชี Sked และไม่เปิดใช้งานการวิเคราะห์ ตัวระบุการโฆษณา หรือการสำรองข้อมูลในเมฆ นอกจากนี้ยังไม่ให้สนามที่เฉพาะสำหรับการเก็บรวบรหัสผ่านบัญชีโรงเรียน ถ้าคุณเข้าสู่เว็บไซต์โรงเรียนภายในแอป การปฏิสัมพันธ์นั้นเกิดขึ้นในหน้าโรงเรียนที่คุณเปิด';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'การวิเคราะห์หน้าเว็บ';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'เมื่อคุณใช้นำเข้าหน้าเว็บของโรงเรียนหรือแยกวิเคราะห์ข้อความตารางเรียน / HTML ที่วางไว้ แอปจะเตรียมและล้างเนื้อหาในเครื่องก่อน จากนั้นจึงส่งข้อความตารางเรียน ข้อความหน้าเว็บ หรือเนื้อหา HTML ที่คุณส่ง ชื่อหน้าและ URL ที่เลือกใส่ได้ ภาษาปัจจุบันของแอป และเนื้อหา prompt ของตัวแยกวิเคราะห์ ไปยัง endpoint ที่เข้ากันได้กับ OpenAI ที่คุณกำหนดไว้ การดึงรายการโมเดลก็จะร้องขอไปยัง endpoint เดียวกัน Sked ไม่มี endpoint ตัวแยกวิเคราะห์ในตัว และจะไม่ส่งคำขอแยกวิเคราะห์ไปยัง backend ตัวแยกวิเคราะห์ตารางเรียนที่นักพัฒนาควบคุม endpoint แบบกำหนดเองและบริการต้นทางใด ๆ อาจจัดเก็บ ส่งต่อ จำกัด ลบ หรือประมวลผลข้อมูลด้วยวิธีอื่นตามกฎของผู้ให้บริการที่คุณเลือก หากคุณใช้ http:// Base URL ให้ใช้เฉพาะบนอุปกรณ์ เครือข่าย และบริการ endpoint ที่เชื่อถือได้เท่านั้น เพราะเนื้อหาและคีย์ API อาจไม่ได้รับการปกป้องด้วยการเข้ารหัสระหว่างส่งข้อมูล';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'การปรับปรุงนโยบาย';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'เวอร์ชั่นโยบายความเป็นส่วนตัวปัจจุบันคือ $version. หากเวอร์ชั่นใหม่เปลี่ยนแปลงวิธีการจัดการข้อมูล แอปอาจขอให้คุณอ่านและยอมรับนโยบายที่ปรับปรุงอีกครั้ง';
-  }
-
-  @override
   String get privacyGateTitle => 'โปรดยอมรับนโยบายความเป็นส่วนตัวก่อนใช้แอป';
 
   @override
@@ -1003,13 +859,6 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'นำเข้าหน้าเวลาปัจจุบันจากเว็บไซต์โรงเรียน';
-
-  @override
-  String get schoolSitesManageEntry => 'จัดการเว็บไซต์โรงเรียน';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'เพิ่ม แก้ไข และลบ URL การเข้าสู่ระบบโรงเรียนด้วยการนําเข้าและส่งออก JSON';
 
   @override
   String get schoolSitesPageTitle => 'การจัดการสถานที่โรงเรียน';
@@ -1138,12 +987,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolHtmlImportPageTitle => 'วิเคราะห์ตารางเวลาจากเนื้อหาหน้า';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'URL แหล่ง (ไม่เป็นตัวเลือก)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'ชื่อหน้า (ตัวเลือก)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'เนื้อหาหน้า';
 
   @override
@@ -1159,9 +1002,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'เตรียมเนื้อหาแล้ว';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'เตรียมเนื้อหาก่อน';
 
   @override
   String get schoolHtmlImportSubmit => 'วิเคราะห์และนำเข้า';
@@ -1181,9 +1021,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'กลับไปที่หน้าเว็บ';
 
   @override
-  String get schoolWebImportPageTitle => 'การนำเข้าเว็บไซต์โรงเรียน';
-
-  @override
   String get schoolWebImportPreview => 'นำเข้าการดูล่วงหน้า';
 
   @override
@@ -1198,9 +1035,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'ชื่อหน้า';
-
-  @override
-  String get schoolWebImportParserUsed => 'เครื่องวิเคราะห์';
 
   @override
   String get schoolWebImportWarnings => 'นำเข้าบันทึก';
@@ -1221,15 +1055,8 @@ class AppLocalizationsTh extends AppLocalizations {
       'เข้าสู่เว็บไซต์โรงเรียนในแอป จากนั้นเดินทางไปยังหน้าตารางเวลาด้วยมือ';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'การตั้งค่าตัวแยกวิเคราะห์ที่กำหนดเองยังไม่ครบ โปรดกรอก URL พื้นฐาน คีย์ API และโมเดลก่อน';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'แพลตฟอร์มนี้ยังไม่รองรับการเข้าสู่ระบบเว็บที่ฝังอยู่ กรุณาใช้แพลตฟอร์มที่รองรับ WebView';
-
-  @override
-  String get schoolWebImportSelectSchool => 'เลือกโรงเรียน';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1241,12 +1068,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'นำเข้าหน้าปัจจุบัน';
-
-  @override
-  String get schoolWebImportLoadingPage => 'กำลังโหลดหน้า…';
-
-  @override
-  String get schoolWebImportParsing => 'การวิเคราะห์หน้าปัจจุบัน...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1285,14 +1106,6 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'เข้ากันได้กับ OpenAI ที่กำหนดเอง';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'เครื่องวิเคราะห์ที่เข้ากันได้กับ OpenAI ที่กำหนดเอง';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'โปรมป์ตที่กำหนดเอง';
@@ -1380,11 +1193,6 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'ล้างข้อมูลในเครื่องแล้ว แต่ Sked ไม่สามารถออกได้ โปรดปิดแอปด้วยตนเองก่อนใช้งานอีกครั้ง';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'เครื่องวิเคราะห์: กำหนดเอง ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'ดูนโยบายความเป็นส่วนตัวเต็ม';
@@ -1565,12 +1373,6 @@ class AppLocalizationsTh extends AppLocalizations {
       'จัดการหมวดหมู่ เหตุการณ์ การแจ้งเตือน และข้อมูล JSON / ICS';
 
   @override
-  String get firstLaunchStartStudent => 'เริ่มด้วยตารางเรียน';
-
-  @override
-  String get firstLaunchStartGeneral => 'เริ่มด้วยตารางเวลา';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'เมื่อเลือกพื้นที่ทำงานเริ่มต้น แสดงว่าคุณได้อ่านและยอมรับ';
 
@@ -1584,14 +1386,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get switchMode => 'สลับโหมด';
 
   @override
-  String get generalScheduleComingSoon =>
-      'ตารางกิจกรรมทั่วไปจะพร้อมใช้งานเร็ว ๆ นี้';
-
-  @override
   String get switchToStudentTimetable => 'สลับไปที่ตารางเรียน';
-
-  @override
-  String get mySchedule => 'ตารางกิจกรรมของฉัน';
 
   @override
   String get today => 'วันนี้';
@@ -1637,15 +1432,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'วันที่สิ้นสุด';
-
-  @override
-  String get recurrenceNoEndDate => 'ไม่มีวันที่สิ้นสุด';
-
-  @override
-  String get recurrenceSetEndDate => 'ตั้งค่า';
-
-  @override
-  String get recurrenceChangeEndDate => 'เปลี่ยน';
 
   @override
   String get repeatsWeekly => 'ทำซ้ำทุกสัปดาห์';
@@ -1780,28 +1566,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'ทำสำเนากิจกรรมแล้ว';
-
-  @override
-  String get searchEvents => 'ค้นหากิจกรรม';
-
-  @override
-  String get clearSearch => 'ล้างการค้นหา';
-
-  @override
-  String get filterByColor => 'กรองตามสี';
-
-  @override
-  String get allColors => 'ทุกสี';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'ที่กำลังจะมาถึง $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'ที่เลยเวลาแล้ว $count';
-  }
 
   @override
   String get allDay => 'ทั้งวัน';
@@ -1960,14 +1724,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get reminderUpcoming => 'กำลังจะมาถึง';
 
   @override
-  String get reminderOverdue => 'เลยเวลาแล้ว';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'ปรับมุมมองสัปดาห์ให้พอดีหน้าจอ';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'แสดงทั้งสัปดาห์ในรูปแบบกะทัดรัด ปิดเพื่อเลื่อนแนวนอน ช่วงวันที่กำหนดเองที่เกิน 7 วันยังคงเลื่อนแนวนอนได้';
 
   @override
   String get showWeekends => 'แสดงวันเสาร์และอาทิตย์';
@@ -2179,9 +1936,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'ปุ่มสลับมุมมอง';
-
-  @override
-  String get settingsWorkspaceMode => 'พื้นที่ทำงานปัจจุบัน';
 
   @override
   String get hideHomeWorkspaceNavigation => 'ซ่อนการนำทางพื้นที่ทำงาน';
@@ -2410,21 +2164,9 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return 'ตั้งเวลาแล้ว $scheduled รายการ วางแผนไว้ $planned รายการ';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'ข้อผิดพลาดล่าสุด: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => 'สร้างแผนแจ้งเตือนใหม่';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'สร้างแผนแจ้งเตือนใหม่แล้ว';
 
   @override
   String get developerNotificationTestChannel => 'ช่องทางทดสอบ';
@@ -2513,25 +2255,8 @@ class AppLocalizationsTh extends AppLocalizations {
       'แผนปัจจุบันไม่มีการเตือนในอนาคต';
 
   @override
-  String get developerNotificationNextMaintenance => 'การบำรุงรักษาครั้งถัดไป';
-
-  @override
   String get developerNotificationNextRenewal =>
       'การต่ออายุเท่าที่ระบบทำได้ครั้งถัดไป';
-
-  @override
-  String get developerNotificationNoMaintenance => 'ยังไม่ได้ตั้งเวลา';
-
-  @override
-  String get developerNotificationTruncation => 'การตัดรายการตามขีดจำกัดแผน';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'ละเว้น $count รายการเนื่องจากขีดจำกัดแผน';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'การคำนวณใหม่ล่าสุด';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2564,9 +2289,6 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'คำนวณใหม่ทั้งหมด';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'บำรุงรักษา';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'กู้คืน';
@@ -2704,24 +2426,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'การเชื่อมต่อที่ไม่ปลอดภัย';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'เปิดหน้าลงชื่อเข้าใช้ของโรงเรียนหรือไม่';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'การลงชื่อเข้าใช้ของโรงเรียนอาจส่งข้อมูลรับรองผ่านแบบฟอร์มหรือการเปลี่ยนเส้นทางของเซิร์ฟเวอร์ไปยังโรงเรียนและผู้ให้บริการลงชื่อเข้าใช้ Android ไม่สามารถหยุดการส่งแต่ละครั้งเพื่อยืนยันปลายทางแยกกันได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือบริการเหล่านี้สำหรับเซสชันการนำเข้านี้:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'เปิดการลงชื่อเข้าใช้โรงเรียนที่ไม่ปลอดภัยหรือไม่';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'การลงชื่อเข้าใช้โรงเรียนนี้ใช้ HTTP ผู้ที่สามารถเฝ้าดูหรือแก้ไขการเชื่อมต่อนี้อาจอ่านหรือเปลี่ยนข้อมูลรับรองและเนื้อหาหน้าเว็บของคุณได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณยอมรับความเสี่ยงนี้สำหรับ:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'การเตือนและการแจ้งเตือน';
 
   @override
@@ -2850,26 +2554,6 @@ class AppLocalizationsTh extends AppLocalizations {
       'เมื่อปิด รายละเอียดการแจ้งเตือนจะถูกซ่อนบนหน้าจอล็อก';
 
   @override
-  String get notificationWidgets => 'วิดเจ็ตหน้าจอหลัก';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'รีเฟรชวิดเจ็ต Sked และดูวิธีเพิ่มวิดเจ็ตจากหน้าจอหลัก';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'เพิ่มวิดเจ็ต Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'บนหน้าจอหลักของอุปกรณ์ ให้แตะพื้นที่ว่างค้างไว้ เลือกวิดเจ็ต แล้วเพิ่มวิดเจ็ต Sked วิดเจ็ตจะแสดงวิชาหรือกิจกรรมที่กำลังจะมาถึง';
-
-  @override
-  String get notificationWidgetsRefresh => 'รีเฟรชวิดเจ็ต';
-
-  @override
-  String get notificationWidgetsRefreshed => 'รีเฟรชวิดเจ็ตแล้ว';
-
-  @override
   String get notificationPlatformUnsupported =>
       'แพลตฟอร์มนี้ไม่มีการแจ้งเตือนของระบบ';
 
@@ -2905,19 +2589,7 @@ class AppLocalizationsTh extends AppLocalizations {
       'ปิดพื้นที่ทำงานแล้ว แต่ยังล้างการเตือนไม่สำเร็จ โปรดลองกู้คืนการแจ้งเตือนอีกครั้ง';
 
   @override
-  String get settingsSearch => 'ค้นหาการตั้งค่า';
-
-  @override
-  String get settingsNoResults => 'ไม่พบการตั้งค่าที่ตรงกัน';
-
-  @override
   String get settingsDataPrivacy => 'ข้อมูลและความเป็นส่วนตัว';
-
-  @override
-  String get workspacePreferences => 'การแสดงผลและการโต้ตอบ';
-
-  @override
-  String get workspaceManage => 'จัดการ';
 
   @override
   String get selectedDayAgenda => 'วันที่เลือก';

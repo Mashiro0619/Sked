@@ -53,20 +53,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolImportParsePageFailed => 'पार्सिंग विफल';
 
   @override
-  String get schoolImportParsePageComplete => 'पार्सिंग पूरी हुई';
-
-  @override
   String get schoolImportParsePageContinue => 'जारी रखें';
-
-  @override
-  String get schoolImportParsePageRawContent => 'कच्ची प्रतिक्रिया';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'कच्ची प्रतिक्रिया विस्तृत करें';
-
-  @override
-  String get schoolImportParsePageCollapseRaw =>
-      'कच्ची प्रतिक्रिया संक्षिप्त करें';
 
   @override
   String get schoolImportExpandWarnings => 'आयात चेतावनियाँ खोलें';
@@ -241,32 +228,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsTitle => 'सेटिंग्स';
 
   @override
-  String get settingsSectionTimetable => 'टाइमटेबल';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'सामान्य शेड्यूल';
-
-  @override
   String get settingsSectionAppearance => 'दिखावट';
-
-  @override
-  String get settingsSectionApp => 'ऐप';
 
   @override
   String get settingsSectionWorkspace => 'कार्यस्थान';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'दिखावट और भाषा';
-
-  @override
-  String get settingsSectionDataSecurity => 'डेटा और सुरक्षा';
-
-  @override
   String get settingsSectionAbout => 'Sked के बारे में';
-
-  @override
-  String get noTimetableSettings =>
-      'सेटिंग्स के लिए अभी कोई टाइमटेबल उपलब्ध नहीं है।';
 
   @override
   String get semesterStartDate => 'सेमेस्टर प्रारंभ तिथि';
@@ -322,10 +290,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get showTimetableGridLines => 'टाइमटेबल ग्रिड लाइनें दिखाएँ';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'नियंत्रित करें कि टाइमटेबल में क्षैतिज और ऊर्ध्वाधर ग्रिड लाइनें दिखें या नहीं।';
-
-  @override
   String get timetableHorizontalLayoutSection => 'क्षैतिज लेआउट और जेस्चर';
 
   @override
@@ -339,22 +303,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'सप्ताह के कॉलम स्क्रीन में समाएँ';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'जहाँ संभव हो, टाइमटेबल के सभी सात कॉलम स्क्रीन पर दिखाएँ; निश्चित चौड़ाई और स्क्रॉलिंग के लिए इसे बंद करें।';
-
-  @override
   String get enableWeekSwipeNavigation => 'स्वाइप करके सप्ताह बदलें';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'दूसरे सप्ताह पर जाने के लिए बाएँ या दाएँ स्वाइप करें। निश्चित चौड़ाई होने पर पहले किनारे से आगे खींचें।';
-
-  @override
-  String get liveCourseOutlineColor => 'कोर्स आउटलाइन रंग';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'चुनें कि आउटलाइन वर्तमान/अगले कोर्स पर लागू हो या वर्तमान पेज पर दिख रहे सभी कोर्स पर।';
 
   @override
   String get liveCourseOutlineSettings => 'कोर्स आउटलाइन';
@@ -392,22 +345,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get language => 'भाषा';
-
-  @override
-  String get languagePageDescription =>
-      'ऐप में वास्तव में उपलब्ध भाषाओं में से एक चुनें।';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'English';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API प्रतिक्रिया';
 
   @override
   String get theme => 'थीम';
@@ -478,10 +415,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get appBackupTitle => 'ऐप बैकअप और पुनर्स्थापना';
 
   @override
-  String get appBackupSubtitle =>
-      'टाइमटेबल, शेड्यूल, सेटिंग और स्कूल साइटों का बैकअप लें या पुनर्स्थापित करें। API कुंजियां शामिल नहीं हैं।';
-
-  @override
   String get appBackupSheetSubtitle =>
       'पूरा पुनर्स्थापन वर्तमान ऐप डेटा को बदल देता है। AI API कुंजियां सुरक्षित संग्रहण में रहती हैं और बैकअप फ़ाइलों में नहीं लिखी जातीं।';
 
@@ -549,23 +482,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get checkForUpdates => 'अपडेट जाँचें';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'अपडेट Microsoft Store द्वारा प्रबंधित किए जाते हैं';
-
-  @override
   String get includePrereleaseUpdates => 'प्रीरिलीज़ अपडेट प्राप्त करें';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Alpha, Beta और RC संस्करण शामिल करें, जो अस्थिर हो सकते हैं। बंद होने पर केवल स्थिर संस्करण दिए जाते हैं।';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'आप पहले से नवीनतम संस्करण ($version) पर हैं';
-  }
 
   @override
   String get currentVersionLabel => 'वर्तमान संस्करण';
@@ -574,19 +495,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get newVersionAvailable => 'अपडेट उपलब्ध है';
 
   @override
-  String get latestVersionLabel => 'नवीनतम संस्करण';
-
-  @override
-  String get updateContentLabel => 'अपडेट विवरण';
-
-  @override
-  String get officialWebsite => 'आधिकारिक वेबसाइट';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'क्लाउड ड्राइव';
 
   @override
   String get ignoreThisVersion => 'इस संस्करण को अनदेखा करें';
@@ -596,10 +505,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'अपडेट जाँच विफल';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'GitHub से नवीनतम संस्करण नहीं मिला। आप नीचे GitHub Releases खोल सकते हैं।';
 
   @override
   String get githubRepository => 'GitHub रिपॉज़िटरी';
@@ -612,10 +517,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'GitHub पर Sked को स्टार दें!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'प्रोजेक्ट रिपॉज़िटरी खोलें और Sked को स्टार दें';
 
   @override
   String get openGithubFailed => 'GitHub रिपॉज़िटरी लिंक खोलने में असमर्थ';
@@ -944,56 +845,6 @@ class AppLocalizationsHi extends AppLocalizations {
       'Sked एक स्थानीय-प्रथम समय सारिणी उपकरण है। समय सारिणी, अवधि-समय सेट और स्कूल-साइट कॉन्फ़िगरेशन केवल आपके डिवाइस या ब्राउज़र में संग्रहीत होते हैं और कभी भी स्वचालित रूप से अपलोड नहीं होते। ऐप केवल तभी डेटा संसाधित करता है जब आप स्पष्ट रूप से आयात, वेबपेज पार्सिंग, साझाकरण या बाहरी लिंक खोलने जैसी कार्रवाइयाँ शुरू करते हैं। पूर्ण गोपनीयता नीति ऑनलाइन उपलब्ध है।';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'स्थानीय संग्रहण';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'मूल प्लेटफ़ॉर्म पर Sked टाइमटेबल डेटा, सामान्य शेड्यूल, संबंधित सेटिंग्स और संपादन योग्य स्कूल-साइट कॉन्फ़िगरेशन को ऑपरेटिंग सिस्टम के ऐप्लिकेशन-सपोर्ट फ़ोल्डर में रखता है; ब्राउज़र संस्करण ब्राउज़र स्टोरेज का उपयोग करते हैं। पुराने संस्करणों द्वारा उपयोगकर्ता के Documents फ़ोल्डर में लिखी गई फ़ाइलें वहीं रहती हैं, लेकिन उन्हें अपने आप पढ़ा या माइग्रेट नहीं किया जाता। उस डेटा को बनाए रखने के लिए, अपग्रेड से पहले पुराने संस्करण से पूरा ऐप बैकअप निर्यात करें और बाद में उसे पुनर्स्थापित करें। AI API सेटिंग्स स्थानीय रूप से सहेजी जाती हैं; उपलब्ध होने पर कस्टम API कुंजी प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखी जाती है। पूरे ऐप बैकअप में कस्टम API कुंजी शामिल नहीं होती। ऐप यह स्थानीय डेटा अपने आप डेवलपर-नियंत्रित सर्वर पर अपलोड नहीं करता।';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'आयात और निर्यात';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'ऐप टाइमटेबल JSON फ़ाइलें, स्कूल-साइट JSON फ़ाइलें और अवधि-टेम्पलेट फ़ाइलें तभी पढ़ता या लिखता है जब आप स्पष्ट रूप से कोई फ़ाइल चुनते हैं या निर्यात क्रिया शुरू करते हैं। इन फ़ाइलों का आयात एक स्थानीय क्रिया है, जब तक कि आप वेबपेज पार्सिंग भी न चुनें। कस्टम मॉडल सूची प्राप्त करना भी एक स्पष्ट नेटवर्क क्रिया है और यह केवल उसी कस्टम एंडपॉइंट से संपर्क करता है जिसे आपने कॉन्फ़िगर किया है।';
-
-  @override
-  String get privacyPolicySharingTitle => 'साझाकरण';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'जब आप स्पष्ट रूप से शेयरिंग का उपयोग करते हैं, तो ऐप निर्यात की गई फ़ाइल को सिस्टम शेयर शीट या आपके चुने गए लक्ष्य ऐप को भेजता है। उसके बाद उस फ़ाइल को कैसे संभाला जाता है, यह आपके चुने गए लक्ष्य ऐप या सेवा पर निर्भर करता है।';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'बाहरी लिंक';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'जब आप GitHub रिपॉज़िटरी जैसे बाहरी लिंक खोलते हैं, तो ऐप उस क्रिया को आपके ब्राउज़र या किसी अन्य बाहरी एप्लिकेशन को सौंप देता है। उसके बाद डेटा प्रबंधन उस तृतीय पक्ष द्वारा नियंत्रित होता है जिसे आप खोलते हैं।';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'ऐप क्या एकत्र नहीं करता';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'ऐप को Sked खाते की आवश्यकता नहीं है और यह एनालिटिक्स, विज्ञापन पहचानकर्ता या क्लाउड बैकअप सक्षम नहीं करता। यह स्कूल खाते के पासवर्ड एकत्र करने के लिए अलग फ़ील्ड भी प्रदान नहीं करता। यदि आप ऐप के अंदर किसी स्कूल वेबसाइट में साइन इन करते हैं, तो वह इंटरैक्शन उसी स्कूल पेज पर होता है जिसे आपने खोला है।';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'वेबपेज पार्सिंग';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'जब आप स्कूल वेबपेज आयात का उपयोग करते हैं या पेस्ट किए गए समय-सारणी पाठ / HTML को पार्स करते हैं, तो ऐप पहले सामग्री को स्थानीय रूप से तैयार और साफ करता है, फिर सबमिट किया गया समय-सारणी पाठ, पेज पाठ या HTML सामग्री, वैकल्पिक पेज शीर्षक और URL, ऐप की वर्तमान भाषा और पार्सर प्रॉम्प्ट सामग्री आपके कॉन्फ़िगर किए गए OpenAI-संगत एंडपॉइंट पर भेजता है। मॉडल सूची लाने पर भी वही एंडपॉइंट अनुरोधित होता है। Sked कोई अंतर्निहित पार्सर एंडपॉइंट प्रदान नहीं करता और पार्सिंग अनुरोधों को डेवलपर-नियंत्रित समय-सारणी पार्सर बैकएंड पर नहीं भेजता। कस्टम एंडपॉइंट और कोई भी अपस्ट्रीम सेवाएँ आपके चुने हुए सेवा प्रदाता के नियमों के अनुसार डेटा को सहेज, आगे भेज, सीमित, हटा या अन्यथा संसाधित कर सकती हैं। यदि आप http:// Base URL का उपयोग करते हैं, तो इसे केवल विश्वसनीय डिवाइस, विश्वसनीय नेटवर्क और विश्वसनीय एंडपॉइंट सेवाओं पर उपयोग करें, क्योंकि सामग्री और API कुंजियाँ ट्रांसपोर्ट एन्क्रिप्शन से सुरक्षित नहीं हो सकती हैं।';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'नीति अपडेट';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'वर्तमान गोपनीयता नीति संस्करण $version है। यदि किसी बाद के संस्करण में डेटा प्रबंधन का तरीका बदलता है, तो ऐप आपसे अद्यतन नीति को फिर से पढ़ने और स्वीकार करने के लिए कह सकता है।';
-  }
-
-  @override
   String get privacyGateTitle =>
       'ऐप का उपयोग करने से पहले कृपया गोपनीयता नीति से सहमत हों';
 
@@ -1015,13 +866,6 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'स्कूल साइट के वर्तमान टाइमटेबल पेज को आयात करें।';
-
-  @override
-  String get schoolSitesManageEntry => 'स्कूल साइट प्रबंधित करें';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'स्कूल लॉगिन URL जोड़ें, संपादित करें और हटाएँ, साथ में JSON आयात और निर्यात।';
 
   @override
   String get schoolSitesPageTitle => 'स्कूल साइट प्रबंधन';
@@ -1149,12 +993,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolHtmlImportPageTitle => 'पेज सामग्री से टाइमटेबल पार्स करें';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'स्रोत URL (वैकल्पिक)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'पेज शीर्षक (वैकल्पिक)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'पेज सामग्री';
 
   @override
@@ -1170,9 +1008,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'सामग्री तैयार है';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'पहले सामग्री तैयार करें।';
 
   @override
   String get schoolHtmlImportSubmit => 'पार्स करें और आयात करें';
@@ -1192,9 +1027,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'वेबपेज पर वापस जाएँ';
 
   @override
-  String get schoolWebImportPageTitle => 'स्कूल वेबपेज आयात';
-
-  @override
   String get schoolWebImportPreview => 'आयात पूर्वावलोकन';
 
   @override
@@ -1209,9 +1041,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'पेज शीर्षक';
-
-  @override
-  String get schoolWebImportParserUsed => 'पार्सर';
 
   @override
   String get schoolWebImportWarnings => 'आयात नोट्स';
@@ -1230,15 +1059,8 @@ class AppLocalizationsHi extends AppLocalizations {
       'ऐप के भीतर स्कूल साइट में साइन इन करें, फिर मैन्युअल रूप से टाइमटेबल पेज पर जाएँ।';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'कस्टम पार्सर का कॉन्फ़िगरेशन अधूरा है। पहले बेस URL, API कुंजी और मॉडल भरें।';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'यह प्लेटफ़ॉर्म अभी एम्बेडेड वेब लॉगिन का समर्थन नहीं करता। कृपया WebView समर्थन वाले प्लेटफ़ॉर्म का उपयोग करें।';
-
-  @override
-  String get schoolWebImportSelectSchool => 'स्कूल चुनें';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1250,12 +1072,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'वर्तमान पेज आयात करें';
-
-  @override
-  String get schoolWebImportLoadingPage => 'पेज लोड हो रहा है…';
-
-  @override
-  String get schoolWebImportParsing => 'वर्तमान पेज पार्स हो रहा है…';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1293,13 +1109,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'कस्टम OpenAI-compatible';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi => 'कस्टम OpenAI-compatible पार्सर';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'कस्टम प्रॉम्प्ट';
@@ -1389,11 +1198,6 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'आपका स्थानीय डेटा मिट गया, लेकिन Sked बंद नहीं हो सका। दोबारा उपयोग करने से पहले ऐप को स्वयं बंद करें।';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'पार्सर: कस्टम ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'पूरी गोपनीयता नीति देखें';
@@ -1577,12 +1381,6 @@ class AppLocalizationsHi extends AppLocalizations {
       'श्रेणियाँ, ईवेंट, रिमाइंडर और JSON / ICS डेटा प्रबंधित करें।';
 
   @override
-  String get firstLaunchStartStudent => 'टाइमटेबल से शुरू करें';
-
-  @override
-  String get firstLaunchStartGeneral => 'शेड्यूल से शुरू करें';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'शुरुआती कार्यक्षेत्र चुनकर आप पुष्टि करते हैं कि आपने ';
 
@@ -1596,13 +1394,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get switchMode => 'मोड बदलें';
 
   @override
-  String get generalScheduleComingSoon => 'सामान्य शेड्यूल जल्द आ रहा है';
-
-  @override
   String get switchToStudentTimetable => 'छात्र टाइमटेबल पर जाएँ';
-
-  @override
-  String get mySchedule => 'मेरा शेड्यूल';
 
   @override
   String get today => 'आज';
@@ -1648,15 +1440,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'समाप्ति की तारीख';
-
-  @override
-  String get recurrenceNoEndDate => 'कोई समाप्ति तारीख नहीं';
-
-  @override
-  String get recurrenceSetEndDate => 'तय करें';
-
-  @override
-  String get recurrenceChangeEndDate => 'बदलें';
 
   @override
   String get repeatsWeekly => 'हर सप्ताह दोहराता है';
@@ -1794,28 +1577,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'इवेंट की प्रतिलिपि बनाई गई';
-
-  @override
-  String get searchEvents => 'इवेंट खोजें';
-
-  @override
-  String get clearSearch => 'खोज साफ़ करें';
-
-  @override
-  String get filterByColor => 'रंग के अनुसार फ़िल्टर करें';
-
-  @override
-  String get allColors => 'सभी रंग';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'आगामी: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'बीते हुए: $count';
-  }
 
   @override
   String get allDay => 'पूरे दिन';
@@ -1974,15 +1735,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get reminderUpcoming => 'आगामी';
 
   @override
-  String get reminderOverdue => 'समय बीत गया';
-
-  @override
   String get generalFitWeekColumnsToWidth =>
       'सप्ताह दृश्य को स्क्रीन में फ़िट करें';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'कॉम्पैक्ट लेआउट में पूरा सप्ताह दिखाएँ। क्षैतिज स्क्रॉलिंग के लिए बंद करें। 7 दिनों से अधिक की कस्टम अवधियों में स्क्रॉलिंग जारी रहती है।';
 
   @override
   String get showWeekends => 'सप्ताहांत दिखाएँ';
@@ -2197,9 +1951,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'दृश्य बदलने का बटन';
-
-  @override
-  String get settingsWorkspaceMode => 'सक्रिय कार्यस्थान';
 
   @override
   String get hideHomeWorkspaceNavigation => 'कार्यस्थान नेविगेशन छिपाएँ';
@@ -2430,21 +2181,9 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled तय, $planned योजनाबद्ध';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'पिछली त्रुटि: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => 'सूचना योजना फिर बनाएँ';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'सूचना योजना फिर बनाई गई।';
 
   @override
   String get developerNotificationTestChannel => 'परीक्षण चैनल';
@@ -2535,24 +2274,7 @@ class AppLocalizationsHi extends AppLocalizations {
       'मौजूदा योजना में कोई आगामी रिमाइंडर नहीं है';
 
   @override
-  String get developerNotificationNextMaintenance => 'अगला रखरखाव';
-
-  @override
   String get developerNotificationNextRenewal => 'अगला यथासंभव पुनर्निर्धारण';
-
-  @override
-  String get developerNotificationNoMaintenance => 'तय नहीं किया गया';
-
-  @override
-  String get developerNotificationTruncation => 'योजना में कटौती';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'योजना की सीमा के कारण $count छोड़े गए';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'पिछली पुनर्गणना';
 
   @override
   String get developerNotificationLastSynchronization => 'पिछला रिमाइंडर सिंक';
@@ -2585,9 +2307,6 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'पूर्ण पुनर्गणना';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'रखरखाव';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'पुनर्प्राप्ति';
@@ -2726,23 +2445,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'असुरक्षित कनेक्शन';
 
   @override
-  String get schoolWebImportSignInConsentTitle => 'स्कूल साइन-इन खोलें?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'स्कूल साइन-इन, फ़ॉर्म या सर्वर रीडायरेक्ट के माध्यम से स्कूल और उसके साइन-इन प्रदाताओं को क्रेडेंशियल भेज सकता है। Android हर ऐसे ट्रांसफ़र को अलग गंतव्य पुष्टि के लिए रोक नहीं सकता। केवल तभी जारी रखें जब आप इस आयात सत्र के लिए उन पर भरोसा करते हों:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'असुरक्षित स्कूल साइन-इन खोलें?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'यह स्कूल साइन-इन HTTP का उपयोग करता है। इस कनेक्शन को देख या बदल सकने वाला कोई भी व्यक्ति आपके क्रेडेंशियल और पेज की सामग्री पढ़ या बदल सकता है। केवल तभी जारी रखें जब आप इसके लिए यह जोखिम स्वीकार करते हों:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'रिमाइंडर और सूचनाएँ';
 
   @override
@@ -2873,26 +2575,6 @@ class AppLocalizationsHi extends AppLocalizations {
       'बंद होने पर सूचना का विवरण लॉक स्क्रीन पर निजी रहता है।';
 
   @override
-  String get notificationWidgets => 'होम स्क्रीन विजेट';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Sked विजेट रीफ़्रेश करें और लॉन्चर से जोड़ने का तरीका जानें।';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Sked विजेट जोड़ें';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'डिवाइस के होम स्क्रीन पर खाली जगह को देर तक दबाएँ, विजेट चुनें और Sked विजेट जोड़ें। विजेट आपके अगले कोर्स या इवेंट दिखाता है।';
-
-  @override
-  String get notificationWidgetsRefresh => 'विजेट रीफ़्रेश करें';
-
-  @override
-  String get notificationWidgetsRefreshed => 'विजेट रीफ़्रेश किए गए';
-
-  @override
   String get notificationPlatformUnsupported =>
       'यह प्लेटफ़ॉर्म मूल सूचनाएँ उपलब्ध नहीं कराता।';
 
@@ -2928,19 +2610,7 @@ class AppLocalizationsHi extends AppLocalizations {
       'कार्यक्षेत्र बंद है, लेकिन रिमाइंडर हटाए नहीं जा सके। सूचनाएँ पुनर्स्थापित करने का फिर प्रयास करें।';
 
   @override
-  String get settingsSearch => 'सेटिंग खोजें';
-
-  @override
-  String get settingsNoResults => 'कोई मेल खाती सेटिंग नहीं';
-
-  @override
   String get settingsDataPrivacy => 'डेटा और गोपनीयता';
-
-  @override
-  String get workspacePreferences => 'प्रदर्शन और नियंत्रण';
-
-  @override
-  String get workspaceManage => 'प्रबंधित करें';
 
   @override
   String get selectedDayAgenda => 'चुना गया दिन';

@@ -52,19 +52,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analysen misslyckades';
 
   @override
-  String get schoolImportParsePageComplete => 'Analysen är klar';
-
-  @override
   String get schoolImportParsePageContinue => 'Fortsätt';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Rått svar';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Expandera rått svar';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Fäll ihop rått svar';
 
   @override
   String get schoolImportExpandWarnings => 'Visa importvarningar';
@@ -240,32 +228,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get settingsTitle => 'Inställningar';
 
   @override
-  String get settingsSectionTimetable => 'Kursschema';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Allmänt schema';
-
-  @override
   String get settingsSectionAppearance => 'Utseende';
-
-  @override
-  String get settingsSectionApp => 'App';
 
   @override
   String get settingsSectionWorkspace => 'Arbetsyta';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Utseende och språk';
-
-  @override
-  String get settingsSectionDataSecurity => 'Data och säkerhet';
-
-  @override
   String get settingsSectionAbout => 'Om Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'Ingen tidsplan finns för närvarande tillgänglig för inställningar.';
 
   @override
   String get semesterStartDate => 'Startdatum för terminen';
@@ -321,10 +290,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get showTimetableGridLines => 'Visa rutnätlinjer i tidtabellen';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Kontrollera om horisontella och vertikala nätlinjer är synliga i schemat.';
-
-  @override
   String get timetableHorizontalLayoutSection => 'Vågrät layout och gester';
 
   @override
@@ -338,22 +303,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Anpassa veckokolumnerna till skärmen';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Visa alla sju schemakolumner på skärmen om möjligt. Stäng av för att använda fast bredd och rulla i sidled.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Svep för att byta vecka';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Svep åt vänster eller höger för att byta vecka. Vid fast bredd behöver du först rulla till kanten och sedan dra vidare.';
-
-  @override
-  String get liveCourseOutlineColor => 'Färg på kursen';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Välj om konturerna riktar sig till nuvarande/nästa kurs eller alla kurser som visas på den aktuella sidan.';
 
   @override
   String get liveCourseOutlineSettings => 'Kursbeskrivning';
@@ -391,22 +345,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get language => 'Språk';
-
-  @override
-  String get languagePageDescription =>
-      'Välj ett av de språk som verkligen är tillgängliga i appen.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'Svenska';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API-svar';
 
   @override
   String get theme => 'Tema';
@@ -477,10 +415,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get appBackupTitle => 'Appsäkerhetskopia och återställning';
 
   @override
-  String get appBackupSubtitle =>
-      'Säkerhetskopiera eller återställ scheman, kalendrar, inställningar och skolsidor. API-nycklar ingår inte.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'En fullständig återställning ersätter aktuella appdata. AI API-nycklar ligger i säker lagring och skrivs inte till säkerhetskopior.';
 
@@ -549,23 +483,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get checkForUpdates => 'Kontrollera uppdateringar';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'Uppdateringar hanteras av Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Ta emot förhandsversioner';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Inkludera Alpha-, Beta- och RC-versioner, som kan vara instabila. När avstängt erbjuds endast stabila versioner.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Redan på den senaste versionen ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Aktuell version';
@@ -574,19 +496,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get newVersionAvailable => 'Uppdatering tillgänglig';
 
   @override
-  String get latestVersionLabel => 'Senaste versionen';
-
-  @override
-  String get updateContentLabel => 'Uppdatera detaljer';
-
-  @override
-  String get officialWebsite => 'Officiell hemsida';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Cloud Drive';
 
   @override
   String get ignoreThisVersion => 'Ignorera denna version';
@@ -596,10 +506,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Uppdateringskontroll misslyckades';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Det gick inte att hämta den senaste versionen från GitHub. Du kan fortfarande öppna GitHub Releases nedan.';
 
   @override
   String get githubRepository => 'GitHub-arkiv';
@@ -612,10 +518,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Ge Sked en stjärna på GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Öppna projektets kodarkiv och ge Sked en stjärna';
 
   @override
   String get openGithubFailed =>
@@ -944,56 +846,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Sked är ett lokalt-först schemaverktyg. Scheman, periodtidsuppsättningar och skolwebbplatskonfiguration lagras endast på din enhet eller i din webbläsare och laddas aldrig upp automatiskt. Appen behandlar endast data när du uttryckligen startar åtgärder som import, webbsidoparsning, delning eller öppnande av externa länkar. Den fullständiga integritetspolicyn finns tillgänglig online.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Lokal förvaring';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'På inbyggda plattformar lagrar Sked kursscheman, allmänna scheman, tillhörande inställningar och redigerbara skolwebbplatser i operativsystemets katalog för appdata. Webbläsarversionen använder webbläsarens lagring. Filer som tidigare versioner sparat i användarens Dokument-mapp finns kvar, men läses eller flyttas inte automatiskt. Om du vill behålla dessa data behöver du exportera en fullständig appsäkerhetskopia från den gamla versionen före uppgraderingen och sedan återställa den. Inställningar för AI-API lagras lokalt. Den egna API-nyckeln sparas via plattformens säkra lagring när sådan finns. Fullständiga appsäkerhetskopior innehåller inte den egna API-nyckeln. Appen laddar inte automatiskt upp dessa lokala data till en server som kontrolleras av utvecklaren.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Import och export';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Appen läser eller skriver JSON-filer för tidstabeller, JSON-filer för skolor och periodmallar endast när du uttryckligen väljer en fil eller startar en exportåtgärd. Importera dessa filer är en lokal åtgärd om du inte också väljer webbsidoparsing. Att hämta en anpassad modelllista är också en explicit nätverksåtgärd och kontaktar bara den anpassade slutpunkten du konfigurerat.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Delning';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'När du uttryckligen använder delning skickar appen den exporterade filen till systemdelningsbladet eller till den målapp du väljer. Hur filen hanteras senare beror på vilken målapp eller tjänst du väljer.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Externa länkar';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'När du öppnar externa länkar som GitHub-repositoriet överlämnar appen åtgärden till din webbläsare eller ett annat externt program. Datahantering efter denna punkt regleras av den tredje part du öppnar.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Vad appen inte samlar in';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Appen kräver inte ett Sked-konto och aktiverar inte analys, annonseringsidentifierare eller molnsäkerhetskopiering. Det tillhandahåller inte heller ett dedikerat fält för att samla in lösenord för skolkonton. Om du loggar in på en skolas webbplats i appen sker den interaktionen på skolans sida du öppnade.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Analysering av webbsidor';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'När du använder import från en skolas webbsida eller analyserar inklistrad schematext / HTML förbereder och rensar appen först innehållet lokalt och skickar sedan den inskickade schematexten, sidtexten eller HTML-innehållet, valfri sidtitel och URL, appens aktuella språk samt parserns promptinnehåll till den OpenAI-kompatibla endpoint som du har konfigurerat. Hämtning av modellistan använder också samma endpoint. Sked tillhandahåller ingen inbyggd parser-endpoint och skickar inte parserförfrågningar till en utvecklarkontrollerad backend för schemaanalys. Den anpassade endpointen och eventuella upstream-tjänster kan lagra, vidarebefordra, begränsa, ta bort eller på annat sätt behandla data enligt reglerna hos den tjänsteleverantör du väljer. Om du använder en http:// Base URL ska du bara använda den på betrodda enheter, nätverk och endpoint-tjänster, eftersom innehåll och API-nycklar kanske inte skyddas av transportkryptering.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Uppdateringar av policyn';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Den nuvarande versionen av sekretesspolicyn är $version. Om en senare version ändrar hur data hanteras kan appen be dig att läsa och godkänna den uppdaterade policyn igen.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Vänligen godkänn sekretesspolicyn innan du använder appen';
 
@@ -1015,13 +867,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Importera den aktuella tidtabellsidan från skolans webbplats.';
-
-  @override
-  String get schoolSitesManageEntry => 'Hantera skolans webbplatser';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Lägg till, redigera och ta bort skolans inloggningsadresser med JSON-import och -export.';
 
   @override
   String get schoolSitesPageTitle => 'Förvaltning av skolan';
@@ -1151,12 +996,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolHtmlImportPageTitle => 'Analysera tidsplan från sidinnehåll';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'Källa URL (valfritt)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Sidtitel (valfri)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Sidans innehåll';
 
   @override
@@ -1172,9 +1011,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Innehåll förberett';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Förbered innehållet först.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analysera och importera';
@@ -1194,9 +1030,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Tillbaka till webbsidan';
 
   @override
-  String get schoolWebImportPageTitle => 'Import av skolans webbsida';
-
-  @override
   String get schoolWebImportPreview => 'Importera förhandsgranskning';
 
   @override
@@ -1211,9 +1044,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Sidtitel';
-
-  @override
-  String get schoolWebImportParserUsed => 'Parser';
 
   @override
   String get schoolWebImportWarnings => 'Importera anteckningar';
@@ -1232,15 +1062,8 @@ class AppLocalizationsSv extends AppLocalizations {
       'Logga in på skolans webbplats i appen och navigera sedan till tidtabellsidan manuellt.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Inställningarna för den egna parsern är ofullständiga. Fyll först i bas-URL, API-nyckel och modell.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Denna plattform stöder inte inbäddad webbloggning ännu. Använd en plattform med WebView-stöd.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Välj skola';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1252,12 +1075,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importera aktuell sida';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Laddar sidan…';
-
-  @override
-  String get schoolWebImportParsing => 'Tolkar nuvarande sida...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1296,14 +1113,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Anpassad OpenAI-kompatibel';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Anpassad OpenAI-kompatibel parser';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Anpassad prompt';
@@ -1391,11 +1200,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Dina lokala data har rensats, men Sked kunde inte avslutas. Stäng appen manuellt innan du använder den igen.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Parser: Anpassad ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Visa hela sekretesspolicyn';
@@ -1578,12 +1382,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Hantera kategorier, händelser, påminnelser och JSON / ICS-data.';
 
   @override
-  String get firstLaunchStartStudent => 'Börja med schema';
-
-  @override
-  String get firstLaunchStartGeneral => 'Börja med kalender';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Genom att välja en startarbetsyta bekräftar du att du har läst och godkänner ';
 
@@ -1597,13 +1395,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get switchMode => 'Byt läge';
 
   @override
-  String get generalScheduleComingSoon => 'Allmänt schema kommer snart';
-
-  @override
   String get switchToStudentTimetable => 'Byt till kursschema';
-
-  @override
-  String get mySchedule => 'Mitt schema';
 
   @override
   String get today => 'I dag';
@@ -1649,15 +1441,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Slutdatum';
-
-  @override
-  String get recurrenceNoEndDate => 'Inget slutdatum';
-
-  @override
-  String get recurrenceSetEndDate => 'Ange';
-
-  @override
-  String get recurrenceChangeEndDate => 'Ändra';
 
   @override
   String get repeatsWeekly => 'Upprepas varje vecka';
@@ -1793,28 +1576,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Händelsen har duplicerats';
-
-  @override
-  String get searchEvents => 'Sök händelser';
-
-  @override
-  String get clearSearch => 'Rensa sökning';
-
-  @override
-  String get filterByColor => 'Filtrera efter färg';
-
-  @override
-  String get allColors => 'Alla färger';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Kommande: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Förfallna: $count';
-  }
 
   @override
   String get allDay => 'Hela dagen';
@@ -1974,14 +1735,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reminderUpcoming => 'Kommande';
 
   @override
-  String get reminderOverdue => 'Förfallen';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Anpassa veckovyn till skärmen';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Visa hela veckan i kompakta layouter. Stäng av för horisontell rullning. Anpassade intervall över 7 dagar går fortfarande att rulla.';
 
   @override
   String get showWeekends => 'Visa helger';
@@ -2195,9 +1949,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Knapp för vybyte';
-
-  @override
-  String get settingsWorkspaceMode => 'Aktiv arbetsyta';
 
   @override
   String get hideHomeWorkspaceNavigation => 'Dölj arbetsytenavigering';
@@ -2432,21 +2183,9 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled schemalagda, $planned planerade';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Senaste fel: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => 'Bygg om aviseringsplanen';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Aviseringsplanen har byggts om.';
 
   @override
   String get developerNotificationTestChannel => 'Testkanal';
@@ -2537,25 +2276,8 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det finns inga framtida påminnelser i den aktuella planen';
 
   @override
-  String get developerNotificationNextMaintenance => 'Nästa underhåll';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Nästa förnyelse i mån av möjlighet';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Inte schemalagt';
-
-  @override
-  String get developerNotificationTruncation => 'Begränsning av planen';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '$count utelämnade på grund av planens gräns';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Senaste omberäkning';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2589,9 +2311,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Fullständig omberäkning';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Underhåll';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Återställning';
@@ -2730,23 +2449,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Osäker anslutning';
 
   @override
-  String get schoolWebImportSignInConsentTitle => 'Öppna skolans inloggning?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Skolans inloggning kan skicka inloggningsuppgifter via formulär eller serveromdirigeringar till skolan och dess inloggningsleverantörer. Android kan inte pausa varje sådan överföring för en separat bekräftelse av destinationen. Fortsätt bara om du litar på dem under den här importsessionen:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Öppna en osäker skolinloggning?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Den här skolinloggningen använder HTTP. Den som kan övervaka eller ändra anslutningen kan läsa eller ändra dina inloggningsuppgifter och sidans innehåll. Fortsätt bara om du accepterar den här risken för:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Påminnelser och aviseringar';
 
   @override
@@ -2880,26 +2582,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'När detta är avstängt döljs aviseringsdetaljer på låsskärmen.';
 
   @override
-  String get notificationWidgets => 'Widgetar på startskärmen';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Uppdatera Skeds widgetar och se hur du lägger till en på startskärmen.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Lägg till en Sked-widget';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Tryck länge på ett tomt område på enhetens startskärm, välj Widgetar och lägg till en Sked-widget. Widgeten visar dina kommande kurser eller händelser.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Uppdatera widgetar';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Widgetarna har uppdaterats';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Denna plattform har inget stöd för systemaviseringar.';
 
@@ -2934,19 +2616,7 @@ class AppLocalizationsSv extends AppLocalizations {
       'Arbetsytan är avstängd, men påminnelserna kunde inte tas bort. Försök återställa aviseringarna igen.';
 
   @override
-  String get settingsSearch => 'Sök i inställningar';
-
-  @override
-  String get settingsNoResults => 'Inga matchande inställningar';
-
-  @override
   String get settingsDataPrivacy => 'Data och integritet';
-
-  @override
-  String get workspacePreferences => 'Visning och interaktion';
-
-  @override
-  String get workspaceManage => 'Hantera';
 
   @override
   String get selectedDayAgenda => 'Vald dag';

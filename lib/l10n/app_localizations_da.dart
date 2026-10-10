@@ -52,19 +52,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analysen mislykkedes';
 
   @override
-  String get schoolImportParsePageComplete => 'Analyse fuldført';
-
-  @override
   String get schoolImportParsePageContinue => 'Fortsæt';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Rå svar';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Udvid råt svar';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Fold råt svar sammen';
 
   @override
   String get schoolImportExpandWarnings => 'Vis importadvarsler';
@@ -240,32 +228,13 @@ class AppLocalizationsDa extends AppLocalizations {
   String get settingsTitle => 'Indstillinger';
 
   @override
-  String get settingsSectionTimetable => 'Skema';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Generel tidsplan';
-
-  @override
   String get settingsSectionAppearance => 'Udseende';
-
-  @override
-  String get settingsSectionApp => 'App';
 
   @override
   String get settingsSectionWorkspace => 'Arbejdsområde';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Udseende og sprog';
-
-  @override
-  String get settingsSectionDataSecurity => 'Data og sikkerhed';
-
-  @override
   String get settingsSectionAbout => 'Om Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'Der er i øjeblikket ingen tidsplan tilgængelig for indstillinger.';
 
   @override
   String get semesterStartDate => 'Startdato for semestret';
@@ -321,10 +290,6 @@ class AppLocalizationsDa extends AppLocalizations {
   String get showTimetableGridLines => 'Vis tidsplan gitterlinjer';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Kontroller, om vandrette og lodrette gitterlinjer er synlige i tidsplanen.';
-
-  @override
   String get timetableHorizontalLayoutSection => 'Vandret layout og bevægelser';
 
   @override
@@ -338,22 +303,11 @@ class AppLocalizationsDa extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Tilpas ugekolonnerne til skærmen';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Vis alle syv skemakolonner på skærmen, når det er muligt. Slå fra for at bruge fast bredde og rulning.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Skift uge ved at stryge';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Stryg til venstre eller højre for at gå til en anden uge. Ved fast bredde skal du først rulle ud til kanten.';
-
-  @override
-  String get liveCourseOutlineColor => 'Farve på kursus';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Vælg, om konturerne er rettet mod det aktuelle/næste kursus eller alle de kurser, der vises på den aktuelle side.';
 
   @override
   String get liveCourseOutlineSettings => 'Kursus oversigt';
@@ -391,22 +345,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get language => 'Sprog';
-
-  @override
-  String get languagePageDescription =>
-      'Vælg et af de sprog, der virkelig er tilgængelige i appen.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'engelsk';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API-svar';
 
   @override
   String get theme => 'Tema';
@@ -477,10 +415,6 @@ class AppLocalizationsDa extends AppLocalizations {
   String get appBackupTitle => 'App-sikkerhedskopi og gendannelse';
 
   @override
-  String get appBackupSubtitle =>
-      'Sikkerhedskopiér eller gendan skemaer, planer, indstillinger og skolesider. API-nøgler er ikke inkluderet.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'En fuld gendannelse erstatter de aktuelle appdata. AI-API-nøgler ligger i sikker lagring og skrives ikke til sikkerhedskopier.';
 
@@ -548,23 +482,11 @@ class AppLocalizationsDa extends AppLocalizations {
   String get checkForUpdates => 'Tjek efter opdateringer';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'Opdateringer administreres af Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Modtag foreløbige opdateringer';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Medtag Alpha-, Beta- og RC-versioner, som kan være ustabile. Når slået fra, tilbydes kun stabile versioner.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Allerede på den seneste version ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Aktuel version';
@@ -573,19 +495,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get newVersionAvailable => 'Opdatering tilgængelig';
 
   @override
-  String get latestVersionLabel => 'Seneste version';
-
-  @override
-  String get updateContentLabel => 'Opdater detaljer';
-
-  @override
-  String get officialWebsite => 'Officiel hjemmeside';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Cloud-drev';
 
   @override
   String get ignoreThisVersion => 'Ignorer denne version';
@@ -595,10 +505,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Opdateringskontrol mislykkedes';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Den nyeste version kunne ikke hentes fra GitHub. Du kan stadig åbne GitHub Releases nedenfor.';
 
   @override
   String get githubRepository => 'GitHub-lager';
@@ -611,10 +517,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Giv Sked en stjerne på GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Åbn projektets repository, og giv Sked en stjerne';
 
   @override
   String get openGithubFailed => 'Kan ikke åbne linket til GitHub-repositoriet';
@@ -938,56 +840,6 @@ class AppLocalizationsDa extends AppLocalizations {
       'Sked er et lokalt-først skemaværktøj. Skemaer, tidssæt og skolewebstedskonfiguration gemmes kun på din enhed eller i din browser og uploades aldrig automatisk. Appen behandler kun data, når du udtrykkeligt starter handlinger som import, websideanalyse, deling eller åbning af eksterne links. Den fulde fortrolighedspolitik er tilgængelig online.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Lokal opbevaring';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'På native platforme gemmer Sked skemaer, generelle tidsplaner, tilhørende indstillinger og redigerbar konfiguration af skolesider i operativsystemets mappe til appdata. Browserversioner bruger browserens lager. Filer, som ældre versioner har skrevet til brugerens Dokumenter-mappe, bliver liggende, men læses eller overføres ikke automatisk. Hvis du vil beholde disse data, skal du eksportere en fuld sikkerhedskopi fra den gamle version før opdateringen og gendanne den bagefter. AI API-indstillinger gemmes lokalt. Den brugerdefinerede API-nøgle gemmes via platformens sikre lager, når det er tilgængeligt. Fuldstændige sikkerhedskopier indeholder ikke den brugerdefinerede API-nøgle. Appen uploader ikke automatisk disse lokale data til en server, som udvikleren styrer.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Import og eksport';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Appen læser eller skriver kun tidsplan JSON-filer, skole-site JSON-filer og periode-skabelon-filer, når du udtrykkeligt vælger en fil eller starter en eksporthandling. Importering af disse filer er en lokal operation, medmindre du også vælger websideanalyse. Hent en brugerdefineret modelliste er også en eksplicit netværkshandling og kontakter kun det brugerdefinerede slutpunkt, du har konfigureret.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Deling';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Når du udtrykkeligt bruger deling, sender appen den eksporterede fil til systemdelingsarket eller til den målapp, du vælger. Hvordan filen håndteres bagefter afhænger af den målapp eller -tjeneste, du har valgt.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Eksterne links';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Når du åbner eksterne links som f.eks. GitHub-repositoriet, overfører appen handlingen til din browser eller et andet eksternt program. Databehandling efter dette punkt reguleres af den tredjepart, du åbner.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Hvad appen ikke indsamler';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Appen kræver ikke en Sked-konto og aktiverer ikke analyse, reklame-identifikatorer eller sikkerhedskopiering i skyen. Det giver heller ikke et dedikeret felt til indsamling af skolekonto adgangskoder. Hvis du logger på en skole hjemmeside i appen, sker denne interaktion på den skole side, du åbnede.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Analysering af websider';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Når du bruger import fra en skoles webside eller analyserer indsat skematext / HTML, forbereder og renser appen først indholdet lokalt og sender derefter den indsendte skematext, sidetekst eller HTML-indhold, valgfri sidetitel og URL, appens aktuelle sprog og parserens promptindhold til det OpenAI-kompatible endpoint, du har konfigureret. Hentning af modellisten bruger også det samme endpoint. Sked leverer ikke et indbygget parser-endpoint og sender ikke parserforespørgsler til en udviklerstyret skemaparser-backend. Det brugerdefinerede endpoint og eventuelle upstream-tjenester kan gemme, videresende, begrænse, slette eller på anden måde behandle data efter reglerne hos den tjenesteudbyder, du vælger. Hvis du bruger en http:// Base URL, bør den kun bruges på betroede enheder, netværk og endpoint-tjenester, fordi indhold og API-nøgler muligvis ikke er beskyttet af transportkryptering.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Opdateringer af politikken';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Den nuværende version af fortrolighedspolitikken er $version. Hvis en senere version ændrer, hvordan data håndteres, kan appen bede dig om at læse og acceptere den opdaterede politik igen.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Godkend venligst fortrolighedspolitikken før du bruger appen';
 
@@ -1009,13 +861,6 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Importer den aktuelle tidsplan side fra skolens websted.';
-
-  @override
-  String get schoolSitesManageEntry => 'Administrer skolens websteder';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Tilføj, rediger og slet skolens login-URL\'er med JSON-import og -eksport.';
 
   @override
   String get schoolSitesPageTitle => 'Skolen site management';
@@ -1143,12 +988,6 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolHtmlImportPageTitle => 'Analyser tidsplan fra sideindhold';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'Kilde URL (valgfrit)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Sidetitel (valgfrit)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Sideindhold';
 
   @override
@@ -1164,9 +1003,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Indhold forberedt';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Forbered indholdet først.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analyser og importer';
@@ -1186,9 +1022,6 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Tilbage til hjemmesiden';
 
   @override
-  String get schoolWebImportPageTitle => 'Import af skolens webside';
-
-  @override
   String get schoolWebImportPreview => 'Importer forhåndsvisning';
 
   @override
@@ -1203,9 +1036,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Sidetitel';
-
-  @override
-  String get schoolWebImportParserUsed => 'Parser';
 
   @override
   String get schoolWebImportWarnings => 'Importér noter';
@@ -1225,15 +1055,8 @@ class AppLocalizationsDa extends AppLocalizations {
       'Log på skolens websted i appen, og naviger derefter manuelt til tidsplanen.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Konfigurationen af den brugerdefinerede parser er ufuldstændig. Udfyld først basis-URL, API-nøgle og model.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Denne platform understøtter endnu ikke indlejret weblogin. Brug en platform med WebView-støtte.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Vælg skole';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1245,12 +1068,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importer nuværende side';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Indlæser side…';
-
-  @override
-  String get schoolWebImportParsing => 'Parser den aktuelle side...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1289,14 +1106,6 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Tilpasset OpenAI-kompatibel';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Tilpasset OpenAI-kompatibel parser';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Brugerdefineret prompt';
@@ -1384,11 +1193,6 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Dine lokale data blev ryddet, men Sked kunne ikke afsluttes. Luk appen manuelt, før du bruger den igen.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Parser: Brugerdefineret ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Se fuld fortrolighedspolitik';
@@ -1571,12 +1375,6 @@ class AppLocalizationsDa extends AppLocalizations {
       'Administrer kategorier, begivenheder, påmindelser og JSON / ICS-data.';
 
   @override
-  String get firstLaunchStartStudent => 'Start med skema';
-
-  @override
-  String get firstLaunchStartGeneral => 'Start med plan';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Ved at vælge et startarbejdsområde bekræfter du, at du har læst og accepterer ';
 
@@ -1590,13 +1388,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get switchMode => 'Skift tilstand';
 
   @override
-  String get generalScheduleComingSoon => 'Generel tidsplan kommer snart';
-
-  @override
   String get switchToStudentTimetable => 'Skift til studieskema';
-
-  @override
-  String get mySchedule => 'Min tidsplan';
 
   @override
   String get today => 'I dag';
@@ -1642,15 +1434,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Slutdato';
-
-  @override
-  String get recurrenceNoEndDate => 'Ingen slutdato';
-
-  @override
-  String get recurrenceSetEndDate => 'Indstil';
-
-  @override
-  String get recurrenceChangeEndDate => 'Skift';
 
   @override
   String get repeatsWeekly => 'Gentages ugentligt';
@@ -1786,28 +1569,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Begivenheden er duplikeret';
-
-  @override
-  String get searchEvents => 'Søg efter begivenheder';
-
-  @override
-  String get clearSearch => 'Ryd søgning';
-
-  @override
-  String get filterByColor => 'Filtrér efter farve';
-
-  @override
-  String get allColors => 'Alle farver';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Kommende: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Forbi sluttid: $count';
-  }
 
   @override
   String get allDay => 'Hele dagen';
@@ -1966,14 +1727,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get reminderUpcoming => 'Kommende';
 
   @override
-  String get reminderOverdue => 'Forbi sluttid';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Tilpas ugevisning til skærmen';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Vis hele ugen i kompakte layouts. Slå fra for vandret rulning. Selvvalgte intervaller over 7 dage ruller stadig.';
 
   @override
   String get showWeekends => 'Vis weekender';
@@ -2187,9 +1941,6 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Knap til at skifte visning';
-
-  @override
-  String get settingsWorkspaceMode => 'Aktivt arbejdsområde';
 
   @override
   String get hideHomeWorkspaceNavigation =>
@@ -2422,22 +2173,9 @@ class AppLocalizationsDa extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled lagt i kø, $planned planlagt';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Seneste fejl: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Genopbyg notifikationsplan';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Notifikationsplanen er genopbygget.';
 
   @override
   String get developerNotificationTestChannel => 'Testkanal';
@@ -2528,24 +2266,7 @@ class AppLocalizationsDa extends AppLocalizations {
       'Ingen fremtidig påmindelse i den aktuelle plan';
 
   @override
-  String get developerNotificationNextMaintenance => 'Næste vedligeholdelse';
-
-  @override
   String get developerNotificationNextRenewal => 'Næste forsøg på fornyelse';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Ikke planlagt';
-
-  @override
-  String get developerNotificationTruncation => 'Afkortning af planen';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '$count udeladt på grund af planens grænse';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Seneste genberegning';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2579,9 +2300,6 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Fuld genberegning';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Vedligeholdelse';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Gendannelse';
@@ -2721,23 +2439,6 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Usikker forbindelse';
 
   @override
-  String get schoolWebImportSignInConsentTitle => 'Åbn skolens login?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Skolens login kan sende legitimationsoplysninger via formularer eller serveromdirigeringer til skolen og dens loginudbydere. Android kan ikke sætte hver sådan overførsel på pause for at vise en særskilt destinationsbekræftelse. Fortsæt kun, hvis du har tillid til dem i denne importsession:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Åbn et usikkert skolelogin?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Dette skolelogin bruger HTTP. Enhver, der kan overvåge eller ændre forbindelsen, kan læse eller ændre dine loginoplysninger og sidens indhold. Fortsæt kun, hvis du accepterer denne risiko for:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Påmindelser og notifikationer';
 
   @override
@@ -2870,26 +2571,6 @@ class AppLocalizationsDa extends AppLocalizations {
       'Når indstillingen er slået fra, vises notifikationernes detaljer ikke på låseskærmen.';
 
   @override
-  String get notificationWidgets => 'Widgets på startskærmen';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Opdatér Sked-widgets, og se, hvordan du tilføjer en fra startskærmen.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Tilføj en Sked-widget';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Hold nede på et tomt område på enhedens startskærm, vælg Widgets, og tilføj en Sked-widget. Den viser dine næste kurser eller begivenheder.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Opdatér widgets';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Widgets er opdateret';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Denne platform tilbyder ikke native notifikationer.';
 
@@ -2925,19 +2606,7 @@ class AppLocalizationsDa extends AppLocalizations {
       'Arbejdsområdet er slået fra, men påmindelserne kunne ikke fjernes. Prøv at gendanne notifikationerne igen.';
 
   @override
-  String get settingsSearch => 'Søg i indstillinger';
-
-  @override
-  String get settingsNoResults => 'Ingen matchende indstillinger';
-
-  @override
   String get settingsDataPrivacy => 'Data og privatliv';
-
-  @override
-  String get workspacePreferences => 'Visning og betjening';
-
-  @override
-  String get workspaceManage => 'Administrer';
 
   @override
   String get selectedDayAgenda => 'Valgt dag';

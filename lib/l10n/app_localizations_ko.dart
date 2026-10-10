@@ -52,19 +52,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolImportParsePageFailed => '분석 실패';
 
   @override
-  String get schoolImportParsePageComplete => '분석 완료';
-
-  @override
   String get schoolImportParsePageContinue => '계속';
-
-  @override
-  String get schoolImportParsePageRawContent => '원시 응답';
-
-  @override
-  String get schoolImportParsePageExpandRaw => '원시 응답 펼치기';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => '원시 응답 접기';
 
   @override
   String get schoolImportExpandWarnings => '가져오기 경고 펼치기';
@@ -235,31 +223,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsTitle => '설정';
 
   @override
-  String get settingsSectionTimetable => '시간표';
-
-  @override
-  String get settingsSectionGeneralSchedule => '일반 일정';
-
-  @override
   String get settingsSectionAppearance => '화면 모양';
-
-  @override
-  String get settingsSectionApp => '앱';
 
   @override
   String get settingsSectionWorkspace => '작업 공간';
 
   @override
-  String get settingsSectionAppearanceLanguage => '화면 모양 및 언어';
-
-  @override
-  String get settingsSectionDataSecurity => '데이터 및 보안';
-
-  @override
   String get settingsSectionAbout => 'Sked 정보';
-
-  @override
-  String get noTimetableSettings => '설정할 수 있는 시간표가 현재 없습니다.';
 
   @override
   String get semesterStartDate => '학기 시작일';
@@ -313,9 +283,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get showTimetableGridLines => '시간표 격자선 표시';
 
   @override
-  String get showTimetableGridLinesHint => '시간표에서 가로 및 세로 격자선을 표시할지 설정합니다.';
-
-  @override
   String get timetableHorizontalLayoutSection => '가로 배치 및 제스처';
 
   @override
@@ -329,22 +296,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get fitWeekColumnsToWidth => '시간표 열을 화면 너비에 맞추기';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      '가능하면 7일의 시간표 열을 모두 화면 안에 표시합니다. 끄면 고정 너비로 표시하고 스크롤할 수 있습니다.';
-
-  @override
   String get enableWeekSwipeNavigation => '스와이프로 주 바꾸기';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       '좌우로 스와이프하여 다른 주로 이동합니다. 고정 너비를 사용할 때는 먼저 끝까지 스크롤하세요.';
-
-  @override
-  String get liveCourseOutlineColor => '수업 윤곽선 색상';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      '윤곽선을 현재/다음 수업에 적용할지, 현재 페이지에 표시된 모든 수업에 적용할지 선택하세요.';
 
   @override
   String get liveCourseOutlineSettings => '수업 윤곽선';
@@ -382,21 +338,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get language => '언어';
-
-  @override
-  String get languagePageDescription => '앱에서 실제로 사용할 수 있는 언어 중 하나를 선택하세요.';
-
-  @override
-  String get languageChinese => '중국어';
-
-  @override
-  String get languageEnglish => '영어';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API 응답';
 
   @override
   String get theme => '테마';
@@ -466,10 +407,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get appBackupTitle => '앱 백업 및 복원';
 
   @override
-  String get appBackupSubtitle =>
-      '시간표, 일정, 설정, 학교 사이트를 백업하거나 복원합니다. API 키는 포함되지 않습니다.';
-
-  @override
   String get appBackupSheetSubtitle =>
       '전체 복원은 현재 앱 데이터를 대체합니다. AI API 키는 보안 저장소에 보관되며 백업 파일에 기록되지 않습니다.';
 
@@ -531,22 +468,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get checkForUpdates => '업데이트 확인';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => '업데이트는 Microsoft Store에서 관리합니다';
-
-  @override
   String get includePrereleaseUpdates => '사전 출시 업데이트 받기';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       '불안정할 수 있는 Alpha, Beta, RC 버전도 확인합니다. 끄면 안정 버전만 제공됩니다.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return '이미 최신 버전입니다 ($version)';
-  }
 
   @override
   String get currentVersionLabel => '현재 버전';
@@ -555,19 +481,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get newVersionAvailable => '업데이트 उपलब्ध';
 
   @override
-  String get latestVersionLabel => '최신 버전';
-
-  @override
-  String get updateContentLabel => '업데이트 내용';
-
-  @override
-  String get officialWebsite => '공식 웹사이트';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => '클라우드 드라이브';
 
   @override
   String get ignoreThisVersion => '이 버전 무시';
@@ -577,10 +491,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => '업데이트 확인 실패';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'GitHub에서 최신 버전을 가져오지 못했습니다. 아래에서 GitHub Releases를 직접 열 수 있습니다.';
 
   @override
   String get githubRepository => 'GitHub 저장소';
@@ -593,9 +503,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'GitHub에서 Sked에 스타를 남겨 주세요!';
-
-  @override
-  String get starSkedOnGithubDesc => '프로젝트 저장소를 열고 Sked에 스타 남기기';
 
   @override
   String get openGithubFailed => 'GitHub 저장소 링크를 열 수 없습니다';
@@ -913,56 +820,6 @@ class AppLocalizationsKo extends AppLocalizations {
       'Sked는 로컬 우선 시간표 도구입니다. 시간표, 교시 시간 세트, 학교 사이트 설정은 기기 또는 브라우저에만 저장되며 자동으로 업로드되지 않습니다. 앱은 가져오기, 웹페이지 파싱, 공유, 외부 링크 열기와 같은 작업을 사용자가 명시적으로 실행할 때만 데이터를 처리합니다. 전체 개인정보 처리방침은 온라인에서 확인할 수 있습니다.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => '로컬 저장소';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      '네이티브 플랫폼에서 Sked는 시간표 데이터, 일반 일정, 관련 설정, 편집 가능한 학교 사이트 설정을 운영체제의 앱 지원 디렉터리에 저장합니다. 브라우저 버전은 브라우저 저장소를 사용합니다. 이전 버전이 사용자 문서 폴더에 저장한 파일은 그대로 남지만 자동으로 읽거나 이전하지 않습니다. 해당 데이터를 유지하려면 업데이트 전에 이전 버전에서 앱 전체 백업을 내보낸 뒤 업데이트 후 복원하세요. AI API 설정은 로컬에 저장되며, 사용자 지정 API 키는 지원되는 경우 플랫폼의 보안 저장소를 통해 저장됩니다. 앱 전체 백업에는 사용자 지정 API 키가 포함되지 않습니다. 앱은 이 로컬 데이터를 개발자가 관리하는 서버로 자동 업로드하지 않습니다.';
-
-  @override
-  String get privacyPolicyImportExportTitle => '가져오기 및 내보내기';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      '앱은 사용자가 명시적으로 파일을 선택하거나 내보내기를 시작한 경우에만 시간표 JSON 파일, 학교 사이트 JSON 파일, 교시 템플릿 파일을 읽거나 씁니다. 이 파일들의 가져오기는 웹페이지 파싱을 함께 선택하지 않는 한 로컬 작업입니다. 사용자 지정 모델 목록을 가져오는 것도 명시적인 네트워크 작업이며, 사용자가 설정한 사용자 지정 엔드포인트에만 연결합니다.';
-
-  @override
-  String get privacyPolicySharingTitle => '공유';
-
-  @override
-  String get privacyPolicySharingBody =>
-      '사용자가 명시적으로 공유 기능을 사용할 경우, 앱은 내보낸 파일을 시스템 공유 시트 또는 사용자가 선택한 대상 앱으로 전달합니다. 이후 파일 처리 방식은 사용자가 선택한 대상 앱 또는 서비스에 따라 달라집니다.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => '외부 링크';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'GitHub 저장소와 같은 외부 링크를 열면 앱은 해당 작업을 브라우저 또는 다른 외부 앱으로 넘깁니다. 그 이후의 데이터 처리는 사용자가 연 제3자에 의해 결정됩니다.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => '앱이 수집하지 않는 항목';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      '앱은 Sked 계정을 요구하지 않으며, 분석, 광고 식별자, 클라우드 백업을 활성화하지 않습니다. 또한 학교 계정 비밀번호를 수집하기 위한 전용 입력란도 제공하지 않습니다. 앱 내부에서 학교 사이트에 로그인하는 경우, 그 상호작용은 사용자가 연 학교 페이지에서 이루어집니다.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => '웹페이지 파싱';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      '학교 웹페이지 가져오기를 사용하거나 붙여넣은 시간표 텍스트 / HTML을 분석하면, 앱은 먼저 콘텐츠를 로컬에서 준비하고 정리한 뒤 제출한 시간표 텍스트, 페이지 텍스트 또는 HTML 콘텐츠, 선택적 페이지 제목과 URL, 현재 앱 언어, 파서 프롬프트 내용을 사용자가 설정한 OpenAI 호환 엔드포인트로 보냅니다. 모델 목록을 가져올 때도 같은 엔드포인트에 요청합니다. Sked는 내장 파서 엔드포인트를 제공하지 않으며, 개발자가 제어하는 시간표 파서 백엔드로 분석 요청을 보내지 않습니다. 사용자 지정 엔드포인트와 그 상위 서비스는 사용자가 선택한 서비스 제공자의 규칙에 따라 데이터를 저장, 전달, 제한, 삭제하거나 기타 방식으로 처리할 수 있습니다. http:// Base URL을 사용하는 경우 콘텐츠와 API 키가 전송 암호화로 보호되지 않을 수 있으므로 신뢰할 수 있는 기기, 네트워크, 엔드포인트 서비스에서만 사용하세요.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => '정책 업데이트';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return '현재 개인정보 처리방침 버전은 $version입니다. 이후 버전에서 데이터 처리 방식이 변경되면 앱이 업데이트된 정책을 다시 읽고 동의하도록 요청할 수 있습니다.';
-  }
-
-  @override
   String get privacyGateTitle => '앱을 사용하기 전에 개인정보 처리방침에 동의해 주세요';
 
   @override
@@ -982,13 +839,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolWebImportEntryDesc => '학교 사이트의 현재 시간표 페이지를 가져옵니다.';
-
-  @override
-  String get schoolSitesManageEntry => '학교 사이트 관리';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      '학교 로그인 URL을 추가, 수정, 삭제하고 JSON 가져오기/내보내기를 지원합니다.';
 
   @override
   String get schoolSitesPageTitle => '학교 사이트 관리';
@@ -1110,12 +960,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolHtmlImportPageTitle => '페이지 내용에서 시간표 파싱';
 
   @override
-  String get schoolHtmlImportUrlLabel => '원본 URL (선택 사항)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => '페이지 제목 (선택 사항)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => '페이지 내용';
 
   @override
@@ -1131,9 +975,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => '내용이 정리되었습니다';
-
-  @override
-  String get schoolHtmlImportCompressFirst => '먼저 내용을 정리하세요.';
 
   @override
   String get schoolHtmlImportSubmit => '파싱 후 가져오기';
@@ -1153,9 +994,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => '웹페이지로 돌아가기';
 
   @override
-  String get schoolWebImportPageTitle => '학교 웹페이지 가져오기';
-
-  @override
   String get schoolWebImportPreview => '가져오기 미리보기';
 
   @override
@@ -1170,9 +1008,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => '페이지 제목';
-
-  @override
-  String get schoolWebImportParserUsed => '파서';
 
   @override
   String get schoolWebImportWarnings => '가져오기 참고사항';
@@ -1191,15 +1026,8 @@ class AppLocalizationsKo extends AppLocalizations {
       '앱 내에서 학교 사이트에 로그인한 뒤, 시간표 페이지로 직접 이동하세요.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      '사용자 지정 분석기 설정이 완전하지 않습니다. 먼저 기본 URL, API 키, 모델을 입력하세요.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       '이 플랫폼은 아직 내장 웹 로그인 기능을 지원하지 않습니다. WebView를 지원하는 플랫폼을 사용하세요.';
-
-  @override
-  String get schoolWebImportSelectSchool => '학교 선택';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1211,12 +1039,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => '현재 페이지 가져오기';
-
-  @override
-  String get schoolWebImportLoadingPage => '페이지를 불러오는 중…';
-
-  @override
-  String get schoolWebImportParsing => '현재 페이지를 파싱하는 중…';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1252,13 +1074,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAi => '사용자 지정 OpenAI 호환';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi => '사용자 지정 OpenAI 호환 파서';
 
   @override
   String get schoolImportParserCustomPromptTitle => '사용자 지정 프롬프트';
@@ -1343,11 +1158,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       '로컬 데이터는 지웠지만 Sked를 종료하지 못했습니다. 다시 사용하기 전에 앱을 직접 닫아 주세요.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return '파서: 사용자 지정 ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => '전체 개인정보 처리방침 보기';
@@ -1524,12 +1334,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get firstLaunchGeneralDesc => '카테고리, 이벤트, 알림, JSON / ICS 데이터를 관리합니다.';
 
   @override
-  String get firstLaunchStartStudent => '시간표로 시작';
-
-  @override
-  String get firstLaunchStartGeneral => '일정으로 시작';
-
-  @override
   String get firstLaunchPrivacyConsentBefore => '시작 작업 공간을 선택하면 ';
 
   @override
@@ -1542,13 +1346,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get switchMode => '모드 전환';
 
   @override
-  String get generalScheduleComingSoon => '일반 일정 기능이 곧 제공됩니다';
-
-  @override
   String get switchToStudentTimetable => '학생 시간표로 전환';
-
-  @override
-  String get mySchedule => '내 일정';
 
   @override
   String get today => '오늘';
@@ -1594,15 +1392,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => '종료일';
-
-  @override
-  String get recurrenceNoEndDate => '종료일 없음';
-
-  @override
-  String get recurrenceSetEndDate => '설정';
-
-  @override
-  String get recurrenceChangeEndDate => '변경';
 
   @override
   String get repeatsWeekly => '매주 반복';
@@ -1732,28 +1521,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get eventDuplicated => '일정을 복제했습니다';
-
-  @override
-  String get searchEvents => '일정 검색';
-
-  @override
-  String get clearSearch => '검색 지우기';
-
-  @override
-  String get filterByColor => '색상으로 필터링';
-
-  @override
-  String get allColors => '모든 색상';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return '예정된 일정 $count개';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return '종료 시간이 지난 일정 $count개';
-  }
 
   @override
   String get allDay => '종일';
@@ -1912,14 +1679,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reminderUpcoming => '예정됨';
 
   @override
-  String get reminderOverdue => '종료 시간 지남';
-
-  @override
   String get generalFitWeekColumnsToWidth => '주 보기를 화면에 맞추기';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      '작은 화면에서 한 주 전체를 표시합니다. 끄면 가로로 스크롤합니다. 7일을 초과하는 사용자 지정 범위는 계속 가로로 스크롤됩니다.';
 
   @override
   String get showWeekends => '주말 표시';
@@ -2126,9 +1886,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => '보기 전환 버튼';
-
-  @override
-  String get settingsWorkspaceMode => '사용 중인 작업 공간';
 
   @override
   String get hideHomeWorkspaceNavigation => '작업 공간 탐색 숨기기';
@@ -2351,20 +2108,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '예약됨 $scheduled개, 계획됨 $planned개';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return '마지막 오류: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => '알림 계획 다시 만들기';
-
-  @override
-  String get developerNotificationMaintenanceComplete => '알림 계획을 다시 만들었습니다.';
 
   @override
   String get developerNotificationTestChannel => '테스트 채널';
@@ -2450,24 +2196,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get developerNotificationNoPendingReminder => '현재 계획에 예정된 알림이 없습니다';
 
   @override
-  String get developerNotificationNextMaintenance => '다음 유지 관리';
-
-  @override
   String get developerNotificationNextRenewal => '다음 재예약 시도';
-
-  @override
-  String get developerNotificationNoMaintenance => '예약되지 않음';
-
-  @override
-  String get developerNotificationTruncation => '계획 한도에 따른 생략';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '계획 한도로 인해 $count개 생략됨';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => '최근 재조정';
 
   @override
   String get developerNotificationLastSynchronization => '최근 알림 동기화';
@@ -2498,9 +2227,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get developerNotificationReconcileModeAuthoritative => '전체 재계산';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => '유지 관리';
 
   @override
   String get developerNotificationReconcileModeRecovery => '복구';
@@ -2634,23 +2360,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolWebImportInsecureConnection => '안전하지 않은 연결';
 
   @override
-  String get schoolWebImportSignInConsentTitle => '학교 로그인 페이지를 열까요?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '학교 로그인 과정에서 양식 또는 서버 리디렉션을 통해 학교와 로그인 제공업체에 인증 정보가 전송될 수 있습니다. Android에서는 이러한 전송을 매번 중지하여 대상을 별도로 확인할 수 없습니다. 현재 가져오기 세션에서 해당 서비스를 신뢰하는 경우에만 계속하세요:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      '안전하지 않은 학교 로그인을 여시겠어요?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return '이 학교 로그인은 HTTP를 사용합니다. 이 연결을 감시하거나 변경할 수 있는 사람은 로그인 정보와 페이지 내용을 읽거나 바꿀 수 있습니다. 다음 사이트에 대한 이러한 위험을 감수하는 경우에만 계속하세요:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => '미리 알림 및 알림';
 
   @override
@@ -2777,25 +2486,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '끄면 잠금 화면에 알림의 자세한 내용을 표시하지 않습니다.';
 
   @override
-  String get notificationWidgets => '홈 화면 위젯';
-
-  @override
-  String get notificationWidgetsDesc => 'Sked 위젯을 새로고침하고 런처에서 추가하는 방법을 확인하세요.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Sked 위젯 추가';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      '기기의 홈 화면에서 빈 곳을 길게 누른 뒤 위젯을 선택하고 Sked 위젯을 추가하세요. 위젯은 다음 수업이나 일정을 보여 줍니다.';
-
-  @override
-  String get notificationWidgetsRefresh => '위젯 새로고침';
-
-  @override
-  String get notificationWidgetsRefreshed => '위젯을 새로고침했습니다';
-
-  @override
   String get notificationPlatformUnsupported => '이 플랫폼은 네이티브 알림을 제공하지 않습니다.';
 
   @override
@@ -2828,19 +2518,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '작업 공간은 비활성화되었지만 알림 정리가 완료되지 않았습니다. 알림 복구를 다시 시도하세요.';
 
   @override
-  String get settingsSearch => '설정 검색';
-
-  @override
-  String get settingsNoResults => '일치하는 설정 없음';
-
-  @override
   String get settingsDataPrivacy => '데이터 및 개인정보';
-
-  @override
-  String get workspacePreferences => '표시 및 조작';
-
-  @override
-  String get workspaceManage => '관리';
 
   @override
   String get selectedDayAgenda => '선택한 날짜의 일정';

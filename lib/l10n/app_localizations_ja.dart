@@ -52,19 +52,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolImportParsePageFailed => '解析に失敗';
 
   @override
-  String get schoolImportParsePageComplete => '解析完了';
-
-  @override
   String get schoolImportParsePageContinue => '続行';
-
-  @override
-  String get schoolImportParsePageRawContent => '生の応答';
-
-  @override
-  String get schoolImportParsePageExpandRaw => '生の応答を展開';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => '生の応答を折りたたむ';
 
   @override
   String get schoolImportExpandWarnings => 'インポートの警告を展開';
@@ -236,31 +224,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTitle => '設定';
 
   @override
-  String get settingsSectionTimetable => '時間割';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'スケジュール';
-
-  @override
   String get settingsSectionAppearance => '外観';
-
-  @override
-  String get settingsSectionApp => 'アプリ';
 
   @override
   String get settingsSectionWorkspace => 'ワークスペース';
 
   @override
-  String get settingsSectionAppearanceLanguage => '外観と言語';
-
-  @override
-  String get settingsSectionDataSecurity => 'データとセキュリティ';
-
-  @override
   String get settingsSectionAbout => 'Sked について';
-
-  @override
-  String get noTimetableSettings => '設定できる時間割が現在ありません。';
 
   @override
   String get semesterStartDate => '学期開始日';
@@ -311,9 +281,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get showTimetableGridLines => '時間割のグリッド線を表示';
 
   @override
-  String get showTimetableGridLinesHint => '時間割の横線・縦線を表示するかどうかを設定します。';
-
-  @override
   String get timetableHorizontalLayoutSection => '横方向の表示とジェスチャー';
 
   @override
@@ -327,22 +294,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fitWeekColumnsToWidth => '時間割の列を画面幅に合わせる';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      '可能な限り7日分の列を画面内に表示します。オフにすると固定幅になり、スクロールで移動できます。';
-
-  @override
   String get enableWeekSwipeNavigation => 'スワイプで週を切り替える';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       '左右にスワイプすると前後の週に移動します。固定幅の場合は、まず端までスクロールしてください。';
-
-  @override
-  String get liveCourseOutlineColor => '授業の枠線色';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      '枠線の対象を現在/次の授業にするか、このページに表示中のすべての授業にするかを選びます。';
 
   @override
   String get liveCourseOutlineSettings => '授業の枠線';
@@ -380,21 +336,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get language => '言語';
-
-  @override
-  String get languagePageDescription => 'アプリで実際に利用できる言語を選択してください。';
-
-  @override
-  String get languageChinese => '中国語';
-
-  @override
-  String get languageEnglish => '英語';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'APIレスポンス';
 
   @override
   String get theme => 'テーマ';
@@ -464,10 +405,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get appBackupTitle => 'アプリのバックアップと復元';
 
   @override
-  String get appBackupSubtitle =>
-      '時間割、予定、設定、学校サイトをバックアップまたは復元します。API キーは含まれません。';
-
-  @override
   String get appBackupSheetSubtitle =>
       '完全復元では現在のアプリデータが置き換えられます。AI API キーは安全なストレージに保存され、バックアップファイルには書き込まれません。';
 
@@ -531,22 +468,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get checkForUpdates => 'アップデートを確認';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => '更新は Microsoft Store で管理されます';
-
-  @override
   String get includePrereleaseUpdates => 'プレリリース版の更新を受け取る';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       '不安定な可能性がある Alpha、Beta、RC 版も確認します。オフの場合は安定版のみが対象です。';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'すでに最新バージョンです ($version)';
-  }
 
   @override
   String get currentVersionLabel => '現在のバージョン';
@@ -555,19 +481,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newVersionAvailable => 'アップデートがあります';
 
   @override
-  String get latestVersionLabel => '最新バージョン';
-
-  @override
-  String get updateContentLabel => '更新内容';
-
-  @override
-  String get officialWebsite => '公式サイト';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'クラウドドライブ';
 
   @override
   String get ignoreThisVersion => 'このバージョンを無視';
@@ -577,10 +491,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'アップデート確認に失敗しました';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'GitHub から最新バージョンを取得できませんでした。下のボタンから GitHub Releases を開くことはできます。';
 
   @override
   String get githubRepository => 'GitHubリポジトリ';
@@ -593,9 +503,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'GitHub で Sked にスターを！';
-
-  @override
-  String get starSkedOnGithubDesc => 'リポジトリを開いて Sked にスターを付ける';
 
   @override
   String get openGithubFailed => 'GitHubリポジトリのリンクを開けませんでした';
@@ -913,56 +820,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'Sked はローカル優先の時間割ツールです。時間割、時限時間セット、学校サイト設定はお使いの端末またはブラウザ内にのみ保存され、自動的にアップロードされることはありません。アプリは、インポート、ウェブページ解析、共有、外部リンクの起動など、あなたが明示的に操作を行った場合にのみデータを処理します。完全なプライバシーポリシーはオンラインで確認できます。';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'ローカル保存';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'ネイティブ版の Sked は、時間割、スケジュール、関連設定、編集可能な学校サイト設定を OS のアプリ用サポートディレクトリに保存します。ブラウザー版はブラウザーのストレージを使用します。旧バージョンがユーザーのドキュメントフォルダーに保存したファイルは残りますが、自動で読み込んだり移行したりはしません。そのデータを引き継ぐには、更新前に旧バージョンからアプリ全体のバックアップをエクスポートし、更新後に復元してください。AI API 設定は端末内に保存され、カスタム API キーは利用可能な場合、プラットフォームの安全なストレージに保存されます。アプリ全体のバックアップにカスタム API キーは含まれません。これらのローカルデータが開発者の管理するサーバーへ自動的に送信されることはありません。';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'インポートとエクスポート';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'アプリが時間割JSONファイル、学校サイトJSONファイル、時限テンプレートファイルを読み書きするのは、あなたが明示的にファイルを選択するか、エクスポート操作を開始した場合のみです。これらのファイルのインポートは、Webページ解析も選択しない限りローカル処理です。カスタムモデル一覧の取得も明示的なネットワーク操作であり、設定したカスタムエンドポイントのみに接続します。';
-
-  @override
-  String get privacyPolicySharingTitle => '共有';
-
-  @override
-  String get privacyPolicySharingBody =>
-      '共有機能を明示的に使用した場合、アプリはエクスポートしたファイルをシステムの共有シート、またはあなたが選択した対象アプリへ渡します。その後のファイルの取り扱いは、選択した対象アプリまたはサービスに依存します。';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => '外部リンク';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'GitHub リポジトリなどの外部リンクを開くと、アプリはその操作をブラウザまたは他の外部アプリに引き渡します。その後のデータの取り扱いは、開いた第三者によって決まります。';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'アプリが収集しないもの';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'アプリは Sked アカウントを必要とせず、分析、広告識別子、クラウドバックアップも有効にしません。また、学校アカウントのパスワードを収集する専用入力欄も提供しません。アプリ内で学校サイトにログインする場合、その操作はあなたが開いた学校ページ上で行われます。';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Webページ解析';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      '学校のウェブページ取り込みを使用する場合、または貼り付けた時間割テキスト / HTML を解析する場合、アプリはまず内容をローカルで整形して不要な部分を取り除き、その後、送信された時間割テキスト、ページ本文または HTML 内容、任意のページタイトルと URL、現在のアプリ言語、解析用プロンプトの内容を、あなたが設定した OpenAI 互換エンドポイントへ送信します。モデル一覧の取得でも同じエンドポイントへリクエストします。Sked は組み込みの解析エンドポイントを提供せず、開発者が管理する時間割解析バックエンドへ解析リクエストを送信することもありません。カスタムエンドポイントおよびその上流サービスは、選択したサービス提供者の規則に従って、データを保存、転送、制限、削除、またはその他の方法で処理する場合があります。http:// Base URL を使用する場合は、内容や API キーが転送時暗号化で保護されない可能性があるため、信頼できる端末、ネットワーク、エンドポイントサービスでのみ使用してください。';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'ポリシーの更新';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return '現在のプライバシーポリシーのバージョンは $version です。今後のバージョンでデータの取り扱い方法が変わる場合、更新後のポリシーの再確認と再同意をお願いすることがあります。';
-  }
-
-  @override
   String get privacyGateTitle => 'アプリを使用する前にプライバシーポリシーへ同意してください';
 
   @override
@@ -982,13 +839,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolWebImportEntryDesc => '学校サイト上の現在の時間割ページをインポートします。';
-
-  @override
-  String get schoolSitesManageEntry => '学校サイトを管理';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      '学校ログインURLの追加・編集・削除を行い、JSONのインポート/エクスポートにも対応します。';
 
   @override
   String get schoolSitesPageTitle => '学校サイト管理';
@@ -1109,12 +959,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolHtmlImportPageTitle => 'ページ内容から時間割を解析';
 
   @override
-  String get schoolHtmlImportUrlLabel => '元のURL（任意）';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'ページタイトル（任意）';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'ページ内容';
 
   @override
@@ -1130,9 +974,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => '内容を整理しました';
-
-  @override
-  String get schoolHtmlImportCompressFirst => '先に内容を整理してください。';
 
   @override
   String get schoolHtmlImportSubmit => '解析してインポート';
@@ -1152,9 +993,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Webページに戻る';
 
   @override
-  String get schoolWebImportPageTitle => '学校Webページのインポート';
-
-  @override
   String get schoolWebImportPreview => 'インポートプレビュー';
 
   @override
@@ -1169,9 +1007,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'ページタイトル';
-
-  @override
-  String get schoolWebImportParserUsed => 'パーサー';
 
   @override
   String get schoolWebImportWarnings => 'インポート時の注意';
@@ -1190,15 +1025,8 @@ class AppLocalizationsJa extends AppLocalizations {
       'アプリ内で学校サイトにログインし、その後手動で時間割ページへ移動してください。';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'カスタム解析サービスの設定が不完全です。まずベース URL、API キー、モデルを入力してください。';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'このプラットフォームでは、埋め込みWebログインはまだサポートされていません。WebView対応のプラットフォームを使用してください。';
-
-  @override
-  String get schoolWebImportSelectSchool => '学校を選択';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1210,12 +1038,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => '現在のページをインポート';
-
-  @override
-  String get schoolWebImportLoadingPage => 'ページを読み込み中…';
-
-  @override
-  String get schoolWebImportParsing => '現在のページを解析中…';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1251,13 +1073,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'カスタム OpenAI 互換';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi => 'カスタム OpenAI 互換パーサー';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'カスタムプロンプト';
@@ -1343,11 +1158,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'ローカルデータは消去しましたが、Sked を終了できませんでした。再び使用する前にアプリを手動で終了してください。';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'パーサー: カスタム ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'プライバシーポリシー全文を見る';
@@ -1523,12 +1333,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get firstLaunchGeneralDesc => 'カテゴリ、イベント、リマインダー、JSON / ICS データを管理します。';
 
   @override
-  String get firstLaunchStartStudent => '時間割で開始';
-
-  @override
-  String get firstLaunchStartGeneral => '予定で開始';
-
-  @override
   String get firstLaunchPrivacyConsentBefore => '開始ワークスペースを選択すると、';
 
   @override
@@ -1541,13 +1345,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get switchMode => 'モードを切り替え';
 
   @override
-  String get generalScheduleComingSoon => 'スケジュール機能は近日公開です';
-
-  @override
   String get switchToStudentTimetable => '授業時間割に切り替え';
-
-  @override
-  String get mySchedule => '自分のスケジュール';
 
   @override
   String get today => '今日';
@@ -1593,15 +1391,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => '終了日';
-
-  @override
-  String get recurrenceNoEndDate => '終了日なし';
-
-  @override
-  String get recurrenceSetEndDate => '設定';
-
-  @override
-  String get recurrenceChangeEndDate => '変更';
 
   @override
   String get repeatsWeekly => '毎週繰り返す';
@@ -1732,28 +1521,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get eventDuplicated => '予定を複製しました';
-
-  @override
-  String get searchEvents => '予定を検索';
-
-  @override
-  String get clearSearch => '検索をクリア';
-
-  @override
-  String get filterByColor => '色で絞り込む';
-
-  @override
-  String get allColors => 'すべての色';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return '今後の予定 $count 件';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return '終了時刻を過ぎた予定 $count 件';
-  }
 
   @override
   String get allDay => '終日';
@@ -1912,14 +1679,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reminderUpcoming => '開始前';
 
   @override
-  String get reminderOverdue => '終了時刻経過';
-
-  @override
   String get generalFitWeekColumnsToWidth => '週表示を画面に合わせる';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'コンパクトなレイアウトで週全体を表示します。オフにすると横スクロールになります。7日を超えるカスタム範囲は引き続き横スクロールできます。';
 
   @override
   String get showWeekends => '週末を表示';
@@ -2125,9 +1885,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => '表示切り替えボタン';
-
-  @override
-  String get settingsWorkspaceMode => '使用中のワークスペース';
 
   @override
   String get hideHomeWorkspaceNavigation => 'ワークスペースのナビゲーションを隠す';
@@ -2347,20 +2104,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '予約済み $scheduled 件、計画済み $planned 件';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return '前回のエラー：$message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => '通知計画を再構築';
-
-  @override
-  String get developerNotificationMaintenanceComplete => '通知計画を再構築しました。';
 
   @override
   String get developerNotificationTestChannel => 'テストチャンネル';
@@ -2445,24 +2191,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get developerNotificationNoPendingReminder => '現在の計画に今後のリマインダーはありません';
 
   @override
-  String get developerNotificationNextMaintenance => '次回のメンテナンス';
-
-  @override
   String get developerNotificationNextRenewal => '次回の再予約試行';
-
-  @override
-  String get developerNotificationNoMaintenance => '未予約';
-
-  @override
-  String get developerNotificationTruncation => '計画の上限による省略';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '計画の上限により $count 件を省略';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => '直近の再調整';
 
   @override
   String get developerNotificationLastSynchronization => '直近のリマインダー同期';
@@ -2493,9 +2222,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get developerNotificationReconcileModeAuthoritative => '全体の再計算';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'メンテナンス';
 
   @override
   String get developerNotificationReconcileModeRecovery => '復旧';
@@ -2627,22 +2353,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolWebImportInsecureConnection => '安全でない接続';
 
   @override
-  String get schoolWebImportSignInConsentTitle => '学校のログインページを開きますか？';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '学校へのログインでは、フォームやサーバーのリダイレクトを通じて、学校やログインサービス提供元に認証情報が送信される場合があります。Android では、このような送信を毎回停止して移動先を個別に確認することはできません。今回のインポートセッションでこれらを信頼できる場合のみ続行してください：\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle => '安全でない学校ログインを開きますか？';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'この学校ログインは HTTP を使用しています。この接続を監視または改ざんできる第三者に、認証情報やページ内容を読み取られたり変更されたりする可能性があります。次のサイトについてこのリスクを受け入れる場合のみ続行してください：\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'リマインダーと通知';
 
   @override
@@ -2768,25 +2478,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationLockScreenTitlesHint => 'オフにすると、ロック画面に通知の詳細を表示しません。';
 
   @override
-  String get notificationWidgets => 'ホーム画面ウィジェット';
-
-  @override
-  String get notificationWidgetsDesc => 'Sked ウィジェットを更新し、ホーム画面への追加方法を確認します。';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Sked ウィジェットを追加';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      '端末のホーム画面の空白部分を長押しし、「ウィジェット」から Sked ウィジェットを追加してください。今後の授業や予定を表示できます。';
-
-  @override
-  String get notificationWidgetsRefresh => 'ウィジェットを更新';
-
-  @override
-  String get notificationWidgetsRefreshed => 'ウィジェットを更新しました';
-
-  @override
   String get notificationPlatformUnsupported => 'このプラットフォームはネイティブ通知を提供していません。';
 
   @override
@@ -2819,19 +2510,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'ワークスペースは無効ですが、リマインダーの削除が完了していません。通知の復旧を再試行してください。';
 
   @override
-  String get settingsSearch => '設定を検索';
-
-  @override
-  String get settingsNoResults => '一致する設定はありません';
-
-  @override
   String get settingsDataPrivacy => 'データとプライバシー';
-
-  @override
-  String get workspacePreferences => '表示と操作';
-
-  @override
-  String get workspaceManage => '管理';
 
   @override
   String get selectedDayAgenda => '選択した日の予定';

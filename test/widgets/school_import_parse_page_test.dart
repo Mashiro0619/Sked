@@ -648,10 +648,8 @@ void main() {
     final l10n = AppLocalizations.of(
       tester.element(find.byType(SchoolImportParsePage)),
     );
-    expect(find.text(l10n.schoolImportParsePageComplete), findsNothing);
     expect(find.text('Parsed timetable'), findsOneWidget);
     expect(find.textContaining('late mutation'), findsNothing);
-    expect(find.text(l10n.schoolImportParsePageRawContent), findsNothing);
     expect(find.text('unknownField'), findsNothing);
     expect(find.text('Check the imported week range.'), findsNothing);
     expect(
@@ -801,7 +799,6 @@ void main() {
     );
     expect(find.text(l10n.schoolImportParsePageFailed), findsOneWidget);
     expect(find.text('Parser stopped unexpectedly.'), findsOneWidget);
-    expect(find.text(l10n.schoolImportParsePageComplete), findsNothing);
   });
 
   testWidgets(
@@ -840,8 +837,6 @@ void main() {
         find.byKey(const ValueKey('school-import-parse-total-weeks')),
         findsOneWidget,
       );
-      expect(find.text(l10n.schoolImportParsePageComplete), findsNothing);
-      expect(find.text(l10n.schoolImportParsePageRawContent), findsNothing);
       expect(find.widgetWithText(TextButton, l10n.cancel), findsNothing);
       expect(find.text('Check the imported week range.'), findsNothing);
 

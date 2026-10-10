@@ -52,19 +52,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Jäsennys epäonnistui';
 
   @override
-  String get schoolImportParsePageComplete => 'Jäsennys valmis';
-
-  @override
   String get schoolImportParsePageContinue => 'Jatka';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Raakavastaus';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Laajenna raakavastaus';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Supista raakavastaus';
 
   @override
   String get schoolImportExpandWarnings => 'Laajenna tuonnin varoitukset';
@@ -240,32 +228,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get settingsTitle => 'Asetukset';
 
   @override
-  String get settingsSectionTimetable => 'Lukujärjestys';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Yleinen aikataulu';
-
-  @override
   String get settingsSectionAppearance => 'Ulkoasu';
-
-  @override
-  String get settingsSectionApp => 'Sovellus';
 
   @override
   String get settingsSectionWorkspace => 'Työtila';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Ulkoasu ja kieli';
-
-  @override
-  String get settingsSectionDataSecurity => 'Tiedot ja tietoturva';
-
-  @override
   String get settingsSectionAbout => 'Tietoja Skedistä';
-
-  @override
-  String get noTimetableSettings =>
-      'Aikataulua ei ole tällä hetkellä saatavilla asetuksille.';
 
   @override
   String get semesterStartDate => 'Lukukauden alkamispäivä';
@@ -321,10 +290,6 @@ class AppLocalizationsFi extends AppLocalizations {
   String get showTimetableGridLines => 'Näytä aikataulun verkko-rivit';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Hallitse, näkyvätkö aikataulussa vaakasuora- ja pystysuora-verkkovinjat.';
-
-  @override
   String get timetableHorizontalLayoutSection => 'Vaaka-asettelu ja eleet';
 
   @override
@@ -338,22 +303,11 @@ class AppLocalizationsFi extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Sovita viikon sarakkeet näytölle';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Näyttää kaikki seitsemän lukujärjestyksen saraketta näytöllä, jos mahdollista. Poista käytöstä, jos haluat kiinteän leveyden ja vierityksen.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Vaihda viikkoa pyyhkäisemällä';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Siirry toiseen viikkoon pyyhkäisemällä vasemmalle tai oikealle. Kiinteää leveyttä käytettäessä vieritä ensin reunaan ja vedä sen yli.';
-
-  @override
-  String get liveCourseOutlineColor => 'Kurssin luonteen väri';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Valitse, kohdistuvatko piirrokset nykyiseen/seuraavaan kurssiin vai kaikkiin nykyisellä sivulla näkyviin kursseihin.';
 
   @override
   String get liveCourseOutlineSettings => 'Kurssin luonnokset';
@@ -391,22 +345,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get language => 'Kieli';
-
-  @override
-  String get languagePageDescription =>
-      'Valitse yksi kielistä, jotka ovat todella saatavilla sovelluksessa.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'englanninkielinen';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API-vastaus';
 
   @override
   String get theme => 'Teema';
@@ -477,10 +415,6 @@ class AppLocalizationsFi extends AppLocalizations {
   String get appBackupTitle => 'Sovelluksen varmuuskopiointi ja palautus';
 
   @override
-  String get appBackupSubtitle =>
-      'Varmuuskopioi tai palauta lukujärjestykset, aikataulut, asetukset ja koulusivustot. API-avaimia ei sisällytetä.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Täysi palautus korvaa nykyiset sovellustiedot. AI API -avaimet ovat suojatussa tallennustilassa, eikä niitä kirjoiteta varmuuskopiotiedostoihin.';
 
@@ -549,22 +483,11 @@ class AppLocalizationsFi extends AppLocalizations {
   String get checkForUpdates => 'Tarkista päivitykset';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => 'Microsoft Store hallitsee päivityksiä';
-
-  @override
   String get includePrereleaseUpdates => 'Vastaanota ennakkoversioita';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Sisällytä Alpha-, Beta- ja RC-versiot, jotka voivat olla epävakaita. Pois käytöstä tarjotaan vain vakaita versioita.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Jo uusimmassa versiossa ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Nykyinen versio';
@@ -573,19 +496,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get newVersionAvailable => 'Päivitys saatavilla';
 
   @override
-  String get latestVersionLabel => 'Viimeisin versio';
-
-  @override
-  String get updateContentLabel => 'Päivitä yksityiskohdat';
-
-  @override
-  String get officialWebsite => 'Virallinen verkkosivusto';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Pilviasema';
 
   @override
   String get ignoreThisVersion => 'Jätä tämä versio huomiotta';
@@ -595,10 +506,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Päivitystarkastus epäonnistui';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Uusimman version hakeminen GitHubista epäonnistui. Voit silti avata GitHubin julkaisusivun alta.';
 
   @override
   String get githubRepository => 'GitHub-varasto';
@@ -611,10 +518,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Anna Skedille tähti GitHubissa!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Avaa projektin tietovarasto ja anna Skedille tähti';
 
   @override
   String get openGithubFailed => 'GitHub-arkiston linkkiä ei voi avata';
@@ -944,56 +847,6 @@ class AppLocalizationsFi extends AppLocalizations {
       'Sked on paikalliskäyttöön keskittyvä lukujärjestystyökalu. Lukujärjestykset, ajanjaksot ja koulusivuston asetukset tallennetaan vain laitteellesi tai selaimeesi, eikä niitä koskaan ladata automaattisesti. Sovellus käsittelee tietoja vain, kun käynnistät nimenomaisesti toimintoja kuten tuonnin, verkkosivujen analysoinnin, jakamisen tai ulkoisten linkkien avaamisen. Täydellinen tietosuojakäytäntö on saatavilla verkossa.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Paikallinen varastointi';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Skedin laitesovellus tallentaa lukujärjestykset, yleiset aikataulut, niihin liittyvät asetukset ja muokattavat oppilaitosten sivustoasetukset käyttöjärjestelmän sovellustukihakemistoon. Selainversio käyttää selaimen tallennustilaa. Aiempien versioiden käyttäjän Tiedostot-kansioon tallentamat tiedostot säilyvät, mutta niitä ei lueta tai siirretä automaattisesti. Säilytä nämä tiedot viemällä vanhasta versiosta sovelluksen täydellinen varmuuskopio ennen päivitystä ja palauttamalla se päivityksen jälkeen. AI API -asetukset tallennetaan paikallisesti. Mukautettu API-avain tallennetaan alustan suojattuun tallennustilaan, kun se on käytettävissä. Sovelluksen täydelliset varmuuskopiot eivät sisällä mukautettua API-avainta. Sovellus ei lähetä näitä paikallisia tietoja automaattisesti kehittäjän hallinnoimalle palvelimelle.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Tuonti ja vienti';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Sovellus lukee tai kirjoittaa aikataulun JSON-tiedostoja, koulun sivuston JSON-tiedostoja ja ajanjaksomallitiedostoja vain, kun valitset nimenomaisesti tiedoston tai aloitat vientitoimen. Näiden tiedostojen tuominen on paikallista, ellet valitse myös verkkosivujen analysointia. Mukautetun malliluettelon hakeminen on myös nimenomainen verkkotoiminta ja se ottaa yhteyttä vain määrittämääsi mukautettuun päätepisteeseen.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Jaaminen';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Kun käytät nimenomaisesti jakamista, sovellus siirtää viedyn tiedoston järjestelmän jakamiseen tai valitsemallesi kohde-sovellukselle. Tiedoston käsittelytapa riippuu valitsemastasi kohde-sovelluksesta tai palvelusta.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Ulkoiset linkit';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Kun avaat ulkoisia linkkejä, kuten GitHub-arkistoa, sovellus siirtää toiminnan selaimeesi tai muulle ulkoiselle sovellukselle. Tietojen käsittelyä tämän kohdan jälkeen hallitsee avaamasi kolmas osapuoli.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Mitä sovellus ei kerää';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Sovellus ei vaadi Sked-tiliä eikä salli analyysiä, mainontunnisteita tai pilvivarmuuskopiointia. Se ei myöskään tarjoa erityistä kenttää koulutilien salasanojen keräämiseen. Jos kirjaudut koulun verkkosivustoon sovelluksen sisällä, tämä vuorovaikutus tapahtuu avaamallasi koulusivulla.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Verkkosivujen analysointi';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Kun käytät koulun verkkosivun tuontia tai jäsennät liitettyä lukujärjestystekstiä / HTML:ää, sovellus valmistelee ja puhdistaa sisällön ensin paikallisesti ja lähettää sen jälkeen lähettämäsi lukujärjestystekstin, sivutekstin tai HTML-sisällön, valinnaisen sivun otsikon ja URL-osoitteen, sovelluksen nykyisen kielen sekä jäsentimen kehotesisällön määrittämääsi OpenAI-yhteensopivaan päätepisteeseen. Malliluettelon haku tekee pyynnön samaan päätepisteeseen. Sked ei tarjoa sisäänrakennettua jäsenninpäätepistettä eikä lähetä jäsennyspyyntöjä kehittäjän hallitsemaan lukujärjestysjäsentimen taustapalveluun. Mukautettu päätepiste ja mahdolliset ylävirran palvelut voivat tallentaa, välittää, rajoittaa, poistaa tai muuten käsitellä tietoja valitsemasi palveluntarjoajan sääntöjen mukaisesti. Jos käytät http:// Base URL -osoitetta, käytä sitä vain luotetuilla laitteilla, luotetuissa verkoissa ja luotetuissa päätepistepalveluissa, koska sisältöä ja API-avaimia ei välttämättä suojata siirtokerroksen salauksella.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Käytännön päivitykset';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Nykyinen tietosuojakäytännön versio on $version. Jos myöhempi versio muuttaa tietojen käsittelytapaa, sovellus saattaa pyytää sinua lukemaan ja hyväksymään päivitetyn käytännön uudelleen.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Hyväksy tietosuojakäytäntö ennen sovelluksen käyttöä';
 
@@ -1015,13 +868,6 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Tuo nykyinen aikataulun sivu koulun sivustosta.';
-
-  @override
-  String get schoolSitesManageEntry => 'Hallitse koulun sivustoja';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Lisää, muokkaa ja poista koulun kirjautumisURL-osoitteita JSON-tuonnin ja -viennin avulla.';
 
   @override
   String get schoolSitesPageTitle => 'Koulun sivuston hallinta';
@@ -1152,12 +998,6 @@ class AppLocalizationsFi extends AppLocalizations {
       'Aikataulun analysointi sivun sisällöstä';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'Lähde-URL (valinnainen)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Sivun otsikko (valinnainen)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Sivun sisältö';
 
   @override
@@ -1173,9 +1013,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Sisältö valmisteltu';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Valmistele sisältö ensin.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analyysi ja tuonti';
@@ -1195,9 +1032,6 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Takaisin verkkosivulle';
 
   @override
-  String get schoolWebImportPageTitle => 'Koulun verkkosivujen tuonti';
-
-  @override
   String get schoolWebImportPreview => 'Tuo esikatselu';
 
   @override
@@ -1212,9 +1046,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Sivun otsikko';
-
-  @override
-  String get schoolWebImportParserUsed => 'Parseri';
 
   @override
   String get schoolWebImportWarnings => 'Tuo muistiinpanot';
@@ -1235,15 +1066,8 @@ class AppLocalizationsFi extends AppLocalizations {
       'Kirjaudu koulun sivustolle sovelluksessa ja siirry sitten aikataulun sivulle manuaalisesti.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Mukautetun jäsentimen asetukset ovat puutteelliset. Täytä ensin perus-URL, API-avain ja malli.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Tämä alusta ei vielä tue upotettua verkkokirjautumista. Käytä alustaa, jossa on WebView-tuki.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Valitse koulu';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1255,12 +1079,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Tuo nykyinen sivu';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Sivu ladataan…';
-
-  @override
-  String get schoolWebImportParsing => 'Nykyisen sivun analysointi...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1300,14 +1118,6 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Custom OpenAI-yhteensopiva';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Mukautettu OpenAI-yhteensopiva analysoija';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Mukautettu pyyntö';
@@ -1395,11 +1205,6 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Paikalliset tiedot tyhjennettiin, mutta Skediä ei voitu sulkea. Sulje sovellus käsin ennen kuin käytät sitä uudelleen.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Parseri: Mukautettu ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Katso täysi tietosuojakäytäntö';
@@ -1581,12 +1386,6 @@ class AppLocalizationsFi extends AppLocalizations {
       'Hallitse kategorioita, tapahtumia, muistutuksia ja JSON / ICS -tietoja.';
 
   @override
-  String get firstLaunchStartStudent => 'Aloita lukujärjestyksellä';
-
-  @override
-  String get firstLaunchStartGeneral => 'Aloita aikataululla';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Valitsemalla aloitustyötilan vahvistat, että olet lukenut ja hyväksyt ';
 
@@ -1600,13 +1399,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get switchMode => 'Vaihda tilaa';
 
   @override
-  String get generalScheduleComingSoon => 'Yleinen aikataulu on tulossa pian';
-
-  @override
   String get switchToStudentTimetable => 'Siirry lukujärjestykseen';
-
-  @override
-  String get mySchedule => 'Oma aikataulu';
 
   @override
   String get today => 'Tänään';
@@ -1652,15 +1445,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Päättymispäivä';
-
-  @override
-  String get recurrenceNoEndDate => 'Ei päättymispäivää';
-
-  @override
-  String get recurrenceSetEndDate => 'Aseta';
-
-  @override
-  String get recurrenceChangeEndDate => 'Muuta';
 
   @override
   String get repeatsWeekly => 'Toistuu viikoittain';
@@ -1797,28 +1581,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Tapahtuma kopioitiin';
-
-  @override
-  String get searchEvents => 'Hae tapahtumia';
-
-  @override
-  String get clearSearch => 'Tyhjennä haku';
-
-  @override
-  String get filterByColor => 'Suodata värin mukaan';
-
-  @override
-  String get allColors => 'Kaikki värit';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Tulevia: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Myöhässä: $count';
-  }
 
   @override
   String get allDay => 'Koko päivä';
@@ -1978,14 +1740,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get reminderUpcoming => 'Tulossa';
 
   @override
-  String get reminderOverdue => 'Myöhässä';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Sovita viikkonäkymä näytölle';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Näytä koko viikko tiiviissä asettelussa. Poista käytöstä vierittääksesi vaakasuunnassa. Yli 7 päivän mukautetut jaksot ovat edelleen vieritettäviä.';
 
   @override
   String get showWeekends => 'Näytä viikonloput';
@@ -2200,9 +1955,6 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Näkymän vaihtopainike';
-
-  @override
-  String get settingsWorkspaceMode => 'Aktiivinen työtila';
 
   @override
   String get hideHomeWorkspaceNavigation => 'Piilota työtilojen navigointi';
@@ -2434,22 +2186,9 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled ajastettu, $planned suunniteltu';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Viimeisin virhe: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Luo ilmoitussuunnitelma uudelleen';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Ilmoitussuunnitelma luotiin uudelleen.';
 
   @override
   String get developerNotificationTestChannel => 'Testikanava';
@@ -2541,26 +2280,8 @@ class AppLocalizationsFi extends AppLocalizations {
       'Nykyisessä suunnitelmassa ei ole tulevia muistutuksia';
 
   @override
-  String get developerNotificationNextMaintenance => 'Seuraava ylläpito';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Seuraava ajastuksen uusimisyritys';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Ei ajastettu';
-
-  @override
-  String get developerNotificationTruncation => 'Suunnitelman rajaus';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'Suunnitelman rajan vuoksi jätettiin pois $count';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation =>
-      'Viimeisin uudelleenlaskenta';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2594,9 +2315,6 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Täysi uudelleenlaskenta';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Ylläpito';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Palautus';
@@ -2736,24 +2454,6 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Suojaamaton yhteys';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Avataanko koulun kirjautuminen?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Koulun kirjautuminen voi lähettää tunnistetietoja lomakkeiden tai palvelimen uudelleenohjausten kautta koululle ja sen kirjautumispalvelujen tarjoajille. Android ei voi keskeyttää jokaista tällaista siirtoa erillistä kohteen vahvistusta varten. Jatka vain, jos luotat niihin tämän tuonti-istunnon ajan:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Avataanko suojaamaton koulukirjautuminen?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Tämä koulukirjautuminen käyttää HTTP-yhteyttä. Kuka tahansa yhteyttä tarkkaileva tai muuttava voi lukea tai muuttaa kirjautumistietojasi ja sivun sisältöä. Jatka vain, jos hyväksyt tämän riskin kohteelle:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Muistutukset ja ilmoitukset';
 
   @override
@@ -2884,26 +2584,6 @@ class AppLocalizationsFi extends AppLocalizations {
       'Kun asetus on pois käytöstä, ilmoitusten yksityiskohdat piilotetaan lukitusnäytöllä.';
 
   @override
-  String get notificationWidgets => 'Aloitusnäytön widgetit';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Päivitä Skedin widgetit ja katso, miten voit lisätä widgetin aloitusnäytölle.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Lisää Sked-widget';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Paina laitteen aloitusnäytön tyhjää aluetta pitkään, valitse Widgetit ja lisää Sked-widget. Widget näyttää seuraavat kurssisi tai tapahtumasi.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Päivitä widgetit';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Widgetit päivitettiin';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Tämä alusta ei tue järjestelmäilmoituksia.';
 
@@ -2939,19 +2619,7 @@ class AppLocalizationsFi extends AppLocalizations {
       'Työtila on poistettu käytöstä, mutta muistutuksia ei voitu poistaa. Yritä ilmoitusten palautusta uudelleen.';
 
   @override
-  String get settingsSearch => 'Hae asetuksia';
-
-  @override
-  String get settingsNoResults => 'Vastaavia asetuksia ei löytynyt';
-
-  @override
   String get settingsDataPrivacy => 'Tiedot ja tietosuoja';
-
-  @override
-  String get workspacePreferences => 'Näyttö ja käyttö';
-
-  @override
-  String get workspaceManage => 'Hallitse';
 
   @override
   String get selectedDayAgenda => 'Valittu päivä';

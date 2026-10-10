@@ -52,19 +52,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolImportParsePageFailed => '解析失败';
 
   @override
-  String get schoolImportParsePageComplete => '解析完成';
-
-  @override
   String get schoolImportParsePageContinue => '继续导入';
-
-  @override
-  String get schoolImportParsePageRawContent => '原始解析内容';
-
-  @override
-  String get schoolImportParsePageExpandRaw => '展开原始解析内容';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => '收起原始解析内容';
 
   @override
   String get schoolImportExpandWarnings => '展开导入提示';
@@ -235,31 +223,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTitle => '设置';
 
   @override
-  String get settingsSectionTimetable => '课表';
-
-  @override
-  String get settingsSectionGeneralSchedule => '通用日程';
-
-  @override
   String get settingsSectionAppearance => '外观';
-
-  @override
-  String get settingsSectionApp => '应用';
 
   @override
   String get settingsSectionWorkspace => '工作区';
 
   @override
-  String get settingsSectionAppearanceLanguage => '外观与语言';
-
-  @override
-  String get settingsSectionDataSecurity => '数据与安全';
-
-  @override
   String get settingsSectionAbout => '关于 Sked';
-
-  @override
-  String get noTimetableSettings => '当前没有可设置的课表';
 
   @override
   String get semesterStartDate => '开学日期';
@@ -309,9 +279,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showTimetableGridLines => '显示课表网格线';
 
   @override
-  String get showTimetableGridLinesHint => '控制课表中的横向与纵向网格线是否显示。';
-
-  @override
   String get timetableHorizontalLayoutSection => '横向布局与手势';
 
   @override
@@ -324,19 +291,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fitWeekColumnsToWidth => '周课表列适应屏幕';
 
   @override
-  String get fitWeekColumnsToWidthHint => '尽可能在屏幕内显示完整七列；关闭后使用固定宽度并支持横向滚动。';
-
-  @override
   String get enableWeekSwipeNavigation => '允许滑动切换周数';
 
   @override
   String get enableWeekSwipeNavigationHint => '左右滑动切换周数；固定宽度模式下需先滑到边缘再继续拖动。';
-
-  @override
-  String get liveCourseOutlineColor => '课程描边颜色';
-
-  @override
-  String get liveCourseOutlineColorHint => '描边目标可选择当前/下一节课程，或当前页所有已显示课程。';
 
   @override
   String get liveCourseOutlineSettings => '课程描边';
@@ -374,21 +332,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get language => '语言';
-
-  @override
-  String get languagePageDescription => '请选择应用当前真正支持的语言。';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'English';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API 响应';
 
   @override
   String get theme => '主题';
@@ -457,9 +400,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appBackupTitle => '完整应用备份与恢复';
 
   @override
-  String get appBackupSubtitle => '备份或恢复课表、通用日程、设置和学校站点；不包含 API 密钥。';
-
-  @override
   String get appBackupSheetSubtitle =>
       '完整备份会覆盖当前应用数据。AI API 密钥存放在系统安全存储中，不会写入备份文件。';
 
@@ -519,22 +459,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get checkForUpdates => '检测更新';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => '更新由 Microsoft Store 管理';
-
-  @override
   String get includePrereleaseUpdates => '接收预发布更新';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       '同时检查 Alpha、Beta、RC 等测试版，可能不稳定；关闭时仅检查正式版。';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return '当前已是最新版本（$version）';
-  }
 
   @override
   String get currentVersionLabel => '当前版本';
@@ -543,19 +472,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newVersionAvailable => '有新版本';
 
   @override
-  String get latestVersionLabel => '最新版本';
-
-  @override
-  String get updateContentLabel => '更新内容';
-
-  @override
-  String get officialWebsite => '官网';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => '网盘';
 
   @override
   String get ignoreThisVersion => '忽略此版本';
@@ -565,10 +482,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => '检测更新失败';
-
-  @override
-  String get updateCheckFailedMessage =>
-      '无法从 GitHub 获取最新版本。你仍可打开下方 GitHub Releases 页面。';
 
   @override
   String get githubRepository => 'GitHub 仓库';
@@ -581,9 +494,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => '为 Sked 点亮 Star！';
-
-  @override
-  String get starSkedOnGithubDesc => '打开项目仓库并为 Sked 点亮 Star';
 
   @override
   String get openGithubFailed => '无法打开 GitHub 仓库链接';
@@ -893,56 +803,6 @@ class AppLocalizationsZh extends AppLocalizations {
       'Sked 为本地优先的课程表工具。课表数据、通用日程、节次时间集和学校站点配置仅保存在你的设备或浏览器本地，不会自动上传。应用仅在你主动触发导入、课表文本 / HTML 解析、学校网页导入、分享或打开外部链接等操作时才会处理对应内容。完整隐私政策可在线查看。';
 
   @override
-  String get privacyPolicyLocalStorageTitle => '本地存储';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      '在原生平台上，Sked 会将课表数据、通用日程、相关设置和可编辑的学校站点配置保存在操作系统管理的应用支持目录中；浏览器版本使用浏览器本地存储。旧版本写入用户“文档 / Documents”目录的文件会继续留在原处，但不会被自动读取或迁移；如需保留这些数据，请在升级前从旧版本导出完整应用备份，并在升级后恢复。AI API 配置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。';
-
-  @override
-  String get privacyPolicyImportExportTitle => '导入与导出';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      '只有在你主动选择文件、粘贴 JSON 或主动执行导出时，应用才会读取或写出 JSON 课表文件、课表 JSON 文本、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点 JSON 文件和节次模板文件。这些文件和 JSON 文本的导入导出本身属于本地操作；只有当你进一步选择课表文本 / HTML 解析或学校网页导入时，相关内容才会被发送到你配置的解析接口。获取自定义模型列表同样属于你主动触发的联网操作，并且只会请求你填写的自定义接口。';
-
-  @override
-  String get privacyPolicySharingTitle => '分享功能';
-
-  @override
-  String get privacyPolicySharingBody =>
-      '当你主动使用分享功能时，应用会把你选中的导出文件交给系统分享面板或目标应用。后续如何处理该文件，由你选择的目标应用或服务自行决定。';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => '外部链接';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      '当你主动打开 GitHub 仓库等外部链接时，应用会调用系统浏览器或其他外部应用。离开应用后的数据处理将受对应第三方的政策约束。';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => '不会收集的内容';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      '应用不要求你注册 Sked 账号，也不会启用分析统计、广告标识符或云端备份。应用本身也没有专门用于采集学校账号密码的输入字段；如果你在应用内打开的学校网页中登录，该交互发生在你访问的学校页面内。';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => '课表文本 / HTML 解析';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      '当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理并清理内容，再把你提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容接口。获取模型列表时也会请求同一个自定义接口。Sked 的课表解析只使用你配置的自定义接口，不提供内置解析接口，也不会把解析请求发送到开发者控制的课表解析后端。自定义接口及其上游服务可能会按照你选择的服务提供方规则保存、转发、限制、删除或继续处理数据。如果你使用 http:// Base URL，请只在可信设备、可信网络和可信接口服务中使用，因为内容和 API 密钥可能不受传输层加密保护。';
-
-  @override
-  String get privacyPolicyUpdatesTitle => '政策更新';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return '当前隐私政策版本为 $version。如果后续版本调整了数据处理方式，应用可能会要求你重新阅读并同意更新后的隐私政策。';
-  }
-
-  @override
   String get privacyGateTitle => '使用前请先同意隐私政策';
 
   @override
@@ -962,12 +822,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolWebImportEntryDesc => '进入学校网站后导入当前课表页。';
-
-  @override
-  String get schoolSitesManageEntry => '学校站点管理';
-
-  @override
-  String get schoolSitesManageEntryDesc => '新增、编辑、删除学校登录地址，并支持 JSON 导入导出。';
 
   @override
   String get schoolSitesPageTitle => '学校站点管理';
@@ -1087,12 +941,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolHtmlImportPageTitle => '解析文本 / HTML 课表内容';
 
   @override
-  String get schoolHtmlImportUrlLabel => '来源 URL（可选）';
-
-  @override
-  String get schoolHtmlImportTitleLabel => '页面标题（可选）';
-
-  @override
   String get schoolHtmlImportHtmlLabel => '文本 / HTML 内容';
 
   @override
@@ -1110,9 +958,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolHtmlImportCompressed => '内容已整理';
 
   @override
-  String get schoolHtmlImportCompressFirst => '请先整理内容。';
-
-  @override
   String get schoolHtmlImportSubmit => '解析并导入';
 
   @override
@@ -1126,9 +971,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolHtmlImportReturnToWebPage => '返回网页';
-
-  @override
-  String get schoolWebImportPageTitle => '学校网页导入';
 
   @override
   String get schoolWebImportPreview => '导入预览';
@@ -1147,9 +989,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportPageTitleLabel => '页面标题';
 
   @override
-  String get schoolWebImportParserUsed => '解析器';
-
-  @override
   String get schoolWebImportWarnings => '导入提示';
 
   @override
@@ -1165,15 +1004,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportOpenPageHint => '请在应用内登录学校网站，并手动切换到课表页。';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      '自定义解析配置不完整，请先填写 Base URL、API 密钥和模型名称。';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       '当前平台暂不支持内嵌网页登录，请在支持 WebView 的平台上使用。';
-
-  @override
-  String get schoolWebImportSelectSchool => '选择学校';
 
   @override
   String get schoolWebImportNoSchools => '当前没有可用学校配置，请先检查 school_sites.json。';
@@ -1183,12 +1015,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => '导入当前页';
-
-  @override
-  String get schoolWebImportLoadingPage => '页面加载中…';
-
-  @override
-  String get schoolWebImportParsing => '正在解析当前页面…';
 
   @override
   String get schoolWebImportLoadFailed => '页面加载失败，请刷新后重试。';
@@ -1223,13 +1049,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAi => '自定义 OpenAI 兼容接口';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      '把课表文本、页面文本或 HTML 内容直接发送到你自己的 OpenAI 兼容端点。HTTP 端点仅建议在可信网络中使用。';
-
-  @override
-  String get schoolImportParserCustomOpenAi => '自定义 OpenAI 兼容解析';
 
   @override
   String get schoolImportParserCustomPromptTitle => '自定义提示词';
@@ -1310,11 +1129,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get clearAppDataExitFailed => '本地数据已清除，但 Sked 无法自动退出。请手动关闭应用后再重新使用。';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return '解析器：自定义（$model）';
-  }
 
   @override
   String get privacyViewFullPolicy => '查看完整隐私政策';
@@ -1487,12 +1301,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get firstLaunchGeneralDesc => '管理分类、日程、提醒，以及 JSON / ICS 数据。';
 
   @override
-  String get firstLaunchStartStudent => '使用学生课表';
-
-  @override
-  String get firstLaunchStartGeneral => '使用通用日程';
-
-  @override
   String get firstLaunchPrivacyConsentBefore => '选择起始工作区，即表示你已阅读并同意';
 
   @override
@@ -1505,13 +1313,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get switchMode => '切换模式';
 
   @override
-  String get generalScheduleComingSoon => '通用日程即将上线';
-
-  @override
   String get switchToStudentTimetable => '切换到学生课表';
-
-  @override
-  String get mySchedule => '我的日程';
 
   @override
   String get today => '今天';
@@ -1557,15 +1359,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => '结束日期';
-
-  @override
-  String get recurrenceNoEndDate => '无结束日期';
-
-  @override
-  String get recurrenceSetEndDate => '设置';
-
-  @override
-  String get recurrenceChangeEndDate => '更改';
 
   @override
   String get repeatsWeekly => '每周重复';
@@ -1694,28 +1487,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get eventDuplicated => '已复制日程';
-
-  @override
-  String get searchEvents => '搜索日程';
-
-  @override
-  String get clearSearch => '清除搜索';
-
-  @override
-  String get filterByColor => '按颜色筛选';
-
-  @override
-  String get allColors => '全部颜色';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return '即将开始 $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return '已过期 $count';
-  }
 
   @override
   String get allDay => '全天';
@@ -1874,14 +1645,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reminderUpcoming => '即将开始';
 
   @override
-  String get reminderOverdue => '已过期';
-
-  @override
   String get generalFitWeekColumnsToWidth => '周视图适应屏幕';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      '紧凑布局中一屏显示整周；关闭后横向滚动。超过 7 天的自定义范围仍横向浏览。';
 
   @override
   String get showWeekends => '显示周末';
@@ -2085,9 +1849,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => '视图切换按钮';
-
-  @override
-  String get settingsWorkspaceMode => '当前工作区';
 
   @override
   String get hideHomeWorkspaceNavigation => '隐藏主界面工作区导航';
@@ -2301,20 +2062,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '已排程 $scheduled 条，计划 $planned 条';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return '最近错误：$message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => '重建通知计划';
-
-  @override
-  String get developerNotificationMaintenanceComplete => '通知计划已重建。';
 
   @override
   String get developerNotificationTestChannel => '测试通道';
@@ -2396,24 +2146,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerNotificationNoPendingReminder => '当前计划中没有未来提醒';
 
   @override
-  String get developerNotificationNextMaintenance => '下一次维护';
-
-  @override
   String get developerNotificationNextRenewal => '下一次尽力续排';
-
-  @override
-  String get developerNotificationNoMaintenance => '尚未安排';
-
-  @override
-  String get developerNotificationTruncation => '计划截断';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '因计划上限省略 $count 条';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => '最近一次重算';
 
   @override
   String get developerNotificationLastSynchronization => '最近一次提醒同步';
@@ -2444,9 +2177,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get developerNotificationReconcileModeAuthoritative => '权威重算';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => '维护重算';
 
   @override
   String get developerNotificationReconcileModeRecovery => '恢复同步';
@@ -2569,22 +2299,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportInsecureConnection => '不安全连接';
 
   @override
-  String get schoolWebImportSignInConsentTitle => '打开学校登录页面？';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '学校登录可能会通过表单或服务器重定向，将登录凭据提交给学校及其登录服务提供方。Android 无法在每次此类传输前都暂停并单独确认目标。仅在你信任这些服务用于本次导入会话时继续：\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle => '打开不安全的学校登录页面？';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return '此学校登录使用 HTTP。任何能够监听或篡改此连接的人都可能读取或修改你的登录凭据及页面内容。仅在你接受以下站点的这一风险时继续：\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => '提醒与通知';
 
   @override
@@ -2704,25 +2418,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationLockScreenTitlesHint => '关闭后，锁屏通知不会显示详细内容。';
 
   @override
-  String get notificationWidgets => '桌面小组件';
-
-  @override
-  String get notificationWidgetsDesc => '刷新 Sked 小组件，并查看如何从启动器添加小组件。';
-
-  @override
-  String get notificationWidgetsDialogTitle => '添加 Sked 小组件';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      '在设备启动器中长按空白区域，选择“小组件”，然后添加 Sked 小组件。小组件会显示接下来的课程或日程。';
-
-  @override
-  String get notificationWidgetsRefresh => '刷新小组件';
-
-  @override
-  String get notificationWidgetsRefreshed => '小组件已刷新';
-
-  @override
   String get notificationPlatformUnsupported => '当前平台不提供原生通知。';
 
   @override
@@ -2753,19 +2448,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workspaceReminderCleanupFailed => '工作区已停用，但提醒清理未完成，请重试通知恢复。';
 
   @override
-  String get settingsSearch => '搜索设置';
-
-  @override
-  String get settingsNoResults => '没有匹配的设置';
-
-  @override
   String get settingsDataPrivacy => '数据与隐私';
-
-  @override
-  String get workspacePreferences => '显示与交互';
-
-  @override
-  String get workspaceManage => '管理';
 
   @override
   String get selectedDayAgenda => '当天安排';
@@ -3109,19 +2792,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolImportParsePageFailed => '解析失敗';
 
   @override
-  String get schoolImportParsePageComplete => '解析完成';
-
-  @override
   String get schoolImportParsePageContinue => '繼續匯入';
-
-  @override
-  String get schoolImportParsePageRawContent => '原始解析內容';
-
-  @override
-  String get schoolImportParsePageExpandRaw => '展開原始解析內容';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => '收起原始解析內容';
 
   @override
   String get schoolImportExpandWarnings => '展開匯入提示';
@@ -3292,31 +2963,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsTitle => '設定';
 
   @override
-  String get settingsSectionTimetable => '課表';
-
-  @override
-  String get settingsSectionGeneralSchedule => '通用日程';
-
-  @override
   String get settingsSectionAppearance => '外觀';
-
-  @override
-  String get settingsSectionApp => '應用';
 
   @override
   String get settingsSectionWorkspace => '工作區';
 
   @override
-  String get settingsSectionAppearanceLanguage => '外觀與語言';
-
-  @override
-  String get settingsSectionDataSecurity => '資料與安全性';
-
-  @override
   String get settingsSectionAbout => '關於 Sked';
-
-  @override
-  String get noTimetableSettings => '當前沒有可設定的課表';
 
   @override
   String get semesterStartDate => '開學日期';
@@ -3366,9 +3019,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get showTimetableGridLines => '顯示課表網格線';
 
   @override
-  String get showTimetableGridLinesHint => '控制課表中的橫向與縱向網格線是否顯示。';
-
-  @override
   String get timetableHorizontalLayoutSection => '橫向佈局與手勢';
 
   @override
@@ -3381,19 +3031,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fitWeekColumnsToWidth => '週課表欄位適應螢幕';
 
   @override
-  String get fitWeekColumnsToWidthHint => '盡可能在螢幕內顯示完整七欄；關閉後使用固定寬度並支援橫向捲動。';
-
-  @override
   String get enableWeekSwipeNavigation => '允許滑動切換週數';
 
   @override
   String get enableWeekSwipeNavigationHint => '左右滑動切換週數；固定寬度模式下需先滑到邊緣再繼續拖動。';
-
-  @override
-  String get liveCourseOutlineColor => '課程描邊顏色';
-
-  @override
-  String get liveCourseOutlineColorHint => '描邊目標可選擇當前／下一節課程，或當前頁所有已顯示課程。';
 
   @override
   String get liveCourseOutlineSettings => '課程描邊';
@@ -3431,21 +3072,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get language => '語言';
-
-  @override
-  String get languagePageDescription => '請選擇應用當前真正支援的語言。';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'English';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API 回應';
 
   @override
   String get theme => '主題';
@@ -3514,9 +3140,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get appBackupTitle => '完整應用備份與恢復';
 
   @override
-  String get appBackupSubtitle => '備份或恢復課表、通用日程、設定和學校站點；不包含 API 金鑰。';
-
-  @override
   String get appBackupSheetSubtitle =>
       '完整備份會覆蓋目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。';
 
@@ -3576,22 +3199,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get checkForUpdates => '檢查更新';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => '更新由 Microsoft Store 管理';
-
-  @override
   String get includePrereleaseUpdates => '接收預先發行更新';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       '同時檢查 Alpha、Beta、RC 等測試版，可能不穩定；關閉時僅檢查正式版。';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return '目前已是最新版本（$version）';
-  }
 
   @override
   String get currentVersionLabel => '目前版本';
@@ -3600,19 +3212,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get newVersionAvailable => '有新版本';
 
   @override
-  String get latestVersionLabel => '最新版本';
-
-  @override
-  String get updateContentLabel => '更新內容';
-
-  @override
-  String get officialWebsite => '官網';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => '雲端硬碟';
 
   @override
   String get ignoreThisVersion => '忽略此版本';
@@ -3622,10 +3222,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get updateCheckFailedTitle => '檢查更新失敗';
-
-  @override
-  String get updateCheckFailedMessage =>
-      '無法從 GitHub 取得最新版本。你仍可開啟下方 GitHub Releases 頁面。';
 
   @override
   String get githubRepository => 'GitHub 倉庫';
@@ -3638,9 +3234,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get starSkedOnGithub => '為 Sked 點亮 Star！';
-
-  @override
-  String get starSkedOnGithubDesc => '開啟專案倉庫並為 Sked 點亮 Star';
 
   @override
   String get openGithubFailed => '無法開啟 GitHub 倉庫連結';
@@ -3949,56 +3542,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       'Sked 為本地優先的課程表工具。課表資料、通用日程、節次時間集和學校站點設定僅保存在你的裝置或瀏覽器本機，不會自動上傳。應用僅在你主動觸發匯入、課表文字 / HTML 解析、學校網頁匯入、分享或開啟外部連結等操作時才會處理對應內容。完整隱私政策可於線上查看。';
 
   @override
-  String get privacyPolicyLocalStorageTitle => '本機儲存';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      '在原生平台上，Sked 會將課表資料、通用日程、相關設定和可編輯的學校站點設定儲存在作業系統管理的應用程式支援目錄中；瀏覽器版本使用瀏覽器本機儲存。舊版本寫入使用者「文件 / Documents」目錄的檔案會繼續留在原處，但不會被自動讀取或遷移；如需保留這些資料，請在升級前從舊版本匯出完整應用備份，並在升級後還原。AI API 設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
-
-  @override
-  String get privacyPolicyImportExportTitle => '匯入與匯出';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      '只有在你主動選擇檔案、貼上 JSON 或主動執行匯出時，應用才會讀取或寫出 JSON 課表檔案、課表 JSON 文字、通用日程 JSON / ICS 檔案、完整應用備份 JSON 檔案、學校站點 JSON 檔案和節次範本檔案。這些檔案和 JSON 文字的匯入匯出本身屬於本機操作；只有當你進一步選擇課表文字 / HTML 解析或學校網頁匯入時，相關內容才會被發送到你設定的解析介面。取得自訂模型清單同樣屬於你主動觸發的連網操作，並且只會請求你填寫的自訂介面。';
-
-  @override
-  String get privacyPolicySharingTitle => '分享功能';
-
-  @override
-  String get privacyPolicySharingBody =>
-      '當你主動使用分享功能時，應用會把你選中的匯出檔案交給系統分享面板或目標應用。後續如何處理該檔案，由你選擇的目標應用或服務自行決定。';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => '外部連結';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      '當你主動開啟 GitHub 倉庫等外部連結時，應用會呼叫系統瀏覽器或其他外部應用。離開應用後的資料處理將受對應第三方的政策約束。';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => '不會收集的內容';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      '應用不要求你註冊 Sked 帳號，也不會啟用分析統計、廣告識別碼或雲端備份。應用本身也沒有專門用於收集學校帳號密碼的輸入欄位；如果你在應用內開啟的學校網頁中登入，該互動發生在你造訪的學校頁面內。';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => '課表文字 / HTML 解析';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      '當你使用學校網頁匯入或貼上課表文字 / HTML 進行解析時，應用會先在本機整理並清理內容，再把你提交的普通課表文字、頁面文字或 HTML 內容、可選的頁面標題與 URL、目前應用語言以及解析提示詞發送到你設定的 OpenAI 相容介面。取得模型清單時也會請求同一個自訂介面。Sked 的課表解析只使用你設定的自訂介面，不提供內建解析介面，也不會把解析請求發送到開發者控制的課表解析後端。自訂介面及其上游服務可能會按照你選擇的服務提供方規則保存、轉發、限制、刪除或繼續處理資料。如果你使用 http:// Base URL，請只在可信裝置、可信網路和可信介面服務中使用，因為內容和 API 金鑰可能不受傳輸層加密保護。';
-
-  @override
-  String get privacyPolicyUpdatesTitle => '政策更新';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return '目前隱私政策版本為 $version。如果後續版本調整了資料處理方式，應用可能會要求你重新閱讀並同意更新後的隱私政策。';
-  }
-
-  @override
   String get privacyGateTitle => '使用前請先同意隱私政策';
 
   @override
@@ -4018,12 +3561,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolWebImportEntryDesc => '進入學校網站後匯入當前課表頁。';
-
-  @override
-  String get schoolSitesManageEntry => '學校站點管理';
-
-  @override
-  String get schoolSitesManageEntryDesc => '新增、編輯、刪除學校登入地址，並支援 JSON 匯入匯出。';
 
   @override
   String get schoolSitesPageTitle => '學校站點管理';
@@ -4143,12 +3680,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolHtmlImportPageTitle => '解析文字 / HTML 課表內容';
 
   @override
-  String get schoolHtmlImportUrlLabel => '來源 URL（可選）';
-
-  @override
-  String get schoolHtmlImportTitleLabel => '頁面標題（可選）';
-
-  @override
   String get schoolHtmlImportHtmlLabel => '文字 / HTML 內容';
 
   @override
@@ -4166,9 +3697,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolHtmlImportCompressed => '內容已整理';
 
   @override
-  String get schoolHtmlImportCompressFirst => '請先整理內容。';
-
-  @override
   String get schoolHtmlImportSubmit => '解析並匯入';
 
   @override
@@ -4182,9 +3710,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolHtmlImportReturnToWebPage => '返回網頁';
-
-  @override
-  String get schoolWebImportPageTitle => '學校網頁匯入';
 
   @override
   String get schoolWebImportPreview => '匯入預覽';
@@ -4203,9 +3728,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportPageTitleLabel => '頁面標題';
 
   @override
-  String get schoolWebImportParserUsed => '解析器';
-
-  @override
   String get schoolWebImportWarnings => '匯入提示';
 
   @override
@@ -4221,15 +3743,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportOpenPageHint => '請在應用內登入學校網站，並手動切換到課表頁。';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      '自訂解析設定不完整，請先填寫 Base URL、API 金鑰和模型名稱。';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       '當前平台暫不支援內嵌網頁登入，請在支援 WebView 的平台上使用。';
-
-  @override
-  String get schoolWebImportSelectSchool => '選擇學校';
 
   @override
   String get schoolWebImportNoSchools => '當前沒有可用學校設定，請先檢查 school_sites.json。';
@@ -4239,12 +3754,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolWebImportImportCurrentPage => '匯入目前頁面';
-
-  @override
-  String get schoolWebImportLoadingPage => '頁面載入中…';
-
-  @override
-  String get schoolWebImportParsing => '正在解析目前頁面…';
 
   @override
   String get schoolWebImportLoadFailed => '頁面載入失敗，請重新整理後重試。';
@@ -4279,13 +3788,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportParserSourceCustomOpenAi => '自訂 OpenAI 相容介面';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      '把課表文字、頁面文字或 HTML 內容直接發送到你自己的 OpenAI 相容端點。HTTP 端點僅建議在可信網路中使用。';
-
-  @override
-  String get schoolImportParserCustomOpenAi => '自訂 OpenAI 相容解析';
 
   @override
   String get schoolImportParserCustomPromptTitle => '自訂提示詞';
@@ -4366,11 +3868,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get clearAppDataExitFailed => '本機資料已清除，但 Sked 無法自動退出。請手動關閉應用程式後再重新使用。';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return '解析器：自訂（$model）';
-  }
 
   @override
   String get privacyViewFullPolicy => '查看完整隱私政策';
@@ -4543,12 +4040,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get firstLaunchGeneralDesc => '管理分類、日程、提醒，以及 JSON / ICS 資料。';
 
   @override
-  String get firstLaunchStartStudent => '使用學生課表';
-
-  @override
-  String get firstLaunchStartGeneral => '使用通用日程';
-
-  @override
   String get firstLaunchPrivacyConsentBefore => '選擇起始工作區，即表示你已閱讀並同意';
 
   @override
@@ -4561,13 +4052,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get switchMode => '切換模式';
 
   @override
-  String get generalScheduleComingSoon => '通用日程即將上線';
-
-  @override
   String get switchToStudentTimetable => '切換到學生課表';
-
-  @override
-  String get mySchedule => '我的日程';
 
   @override
   String get today => '今天';
@@ -4613,15 +4098,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get recurrenceEndDate => '結束日期';
-
-  @override
-  String get recurrenceNoEndDate => '無結束日期';
-
-  @override
-  String get recurrenceSetEndDate => '設定';
-
-  @override
-  String get recurrenceChangeEndDate => '更改';
 
   @override
   String get repeatsWeekly => '每週重複';
@@ -4750,28 +4226,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get eventDuplicated => '已複製日程';
-
-  @override
-  String get searchEvents => '搜尋日程';
-
-  @override
-  String get clearSearch => '清除搜尋';
-
-  @override
-  String get filterByColor => '按顏色篩選';
-
-  @override
-  String get allColors => '全部顏色';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return '即將開始 $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return '已逾期 $count';
-  }
 
   @override
   String get allDay => '全天';
@@ -4930,14 +4384,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get reminderUpcoming => '即將開始';
 
   @override
-  String get reminderOverdue => '已逾期';
-
-  @override
   String get generalFitWeekColumnsToWidth => '週視圖適應螢幕';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      '在緊湊版面中一屏顯示整週；關閉後橫向捲動。超過 7 天的自訂範圍仍橫向瀏覽。';
 
   @override
   String get showWeekends => '顯示週末';
@@ -5141,9 +4588,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get generalViewSwitchBehavior => '視圖切換按鈕';
-
-  @override
-  String get settingsWorkspaceMode => '目前工作區';
 
   @override
   String get hideHomeWorkspaceNavigation => '隱藏主介面工作區導覽';
@@ -5357,20 +4801,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '已排程 $scheduled 則，計畫 $planned 則';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return '最近錯誤：$message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => '重建通知計畫';
-
-  @override
-  String get developerNotificationMaintenanceComplete => '通知計畫已重建。';
 
   @override
   String get developerNotificationTestChannel => '測試通道';
@@ -5452,24 +4885,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerNotificationNoPendingReminder => '目前計畫中沒有未來提醒';
 
   @override
-  String get developerNotificationNextMaintenance => '下一次維護';
-
-  @override
   String get developerNotificationNextRenewal => '下一次盡力續排';
-
-  @override
-  String get developerNotificationNoMaintenance => '尚未安排';
-
-  @override
-  String get developerNotificationTruncation => '計畫截斷';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '因計畫上限省略 $count 則';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => '最近一次重算';
 
   @override
   String get developerNotificationLastSynchronization => '最近一次提醒同步';
@@ -5500,9 +4916,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developerNotificationReconcileModeAuthoritative => '權威重算';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => '維護重算';
 
   @override
   String get developerNotificationReconcileModeRecovery => '恢復同步';
@@ -5626,22 +5039,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportInsecureConnection => '不安全連線';
 
   @override
-  String get schoolWebImportSignInConsentTitle => '開啟學校登入頁面？';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '學校登入可能會透過表單或伺服器重新導向，將登入憑證提交給學校及其登入服務提供者。Android 無法在每次此類傳輸前都暫停並單獨確認目標。僅在你信任這些服務用於本次匯入工作階段時繼續：\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle => '開啟不安全的學校登入頁面？';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return '此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => '提醒與通知';
 
   @override
@@ -5763,25 +5160,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationLockScreenTitlesHint => '關閉後，鎖定畫面通知不會顯示詳細內容。';
 
   @override
-  String get notificationWidgets => '主畫面小工具';
-
-  @override
-  String get notificationWidgetsDesc => '重新整理 Sked 小工具，並查看如何從啟動器新增小工具。';
-
-  @override
-  String get notificationWidgetsDialogTitle => '新增 Sked 小工具';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      '在裝置啟動器中長按空白區域，選擇「小工具」，然後新增 Sked 小工具。小工具會顯示接下來的課程或日程。';
-
-  @override
-  String get notificationWidgetsRefresh => '重新整理小工具';
-
-  @override
-  String get notificationWidgetsRefreshed => '小工具已重新整理';
-
-  @override
   String get notificationPlatformUnsupported => '目前平台不提供原生通知。';
 
   @override
@@ -5812,19 +5190,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get workspaceReminderCleanupFailed => '工作區已停用，但提醒清理未完成，請重試通知復原。';
 
   @override
-  String get settingsSearch => '搜尋設定';
-
-  @override
-  String get settingsNoResults => '沒有符合的設定';
-
-  @override
   String get settingsDataPrivacy => '資料與隱私';
-
-  @override
-  String get workspacePreferences => '顯示與互動';
-
-  @override
-  String get workspaceManage => '管理';
 
   @override
   String get selectedDayAgenda => '當日安排';

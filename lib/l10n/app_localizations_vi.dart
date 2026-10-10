@@ -52,19 +52,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Phân tích không thành công';
 
   @override
-  String get schoolImportParsePageComplete => 'Đã phân tích xong';
-
-  @override
   String get schoolImportParsePageContinue => 'Tiếp tục';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Phản hồi thô';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Mở rộng phản hồi thô';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Thu gọn phản hồi thô';
 
   @override
   String get schoolImportExpandWarnings => 'Mở rộng cảnh báo nhập';
@@ -240,31 +228,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsTitle => 'Cài đặt';
 
   @override
-  String get settingsSectionTimetable => 'Thời khóa biểu';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Lịch chung';
-
-  @override
   String get settingsSectionAppearance => 'Giao diện';
-
-  @override
-  String get settingsSectionApp => 'Ứng dụng';
 
   @override
   String get settingsSectionWorkspace => 'Không gian làm việc';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Giao diện và ngôn ngữ';
-
-  @override
-  String get settingsSectionDataSecurity => 'Dữ liệu và bảo mật';
-
-  @override
   String get settingsSectionAbout => 'Giới thiệu Sked';
-
-  @override
-  String get noTimetableSettings => 'Hiện tại không có lịch trình cho cài đặt.';
 
   @override
   String get semesterStartDate => 'Ngày bắt đầu học kỳ';
@@ -320,10 +290,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get showTimetableGridLines => 'Hiển thị các dòng lưới lịch trình';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Kiểm soát xem các đường lưới ngang và dọc có thể nhìn thấy trong lịch trình hay không.';
-
-  @override
   String get timetableHorizontalLayoutSection => 'Bố cục ngang và cử chỉ';
 
   @override
@@ -337,22 +303,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Điều chỉnh các cột tuần vừa màn hình';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Hiển thị đủ bảy cột thời khóa biểu trên màn hình khi có thể. Tắt để dùng chiều rộng cố định và cuộn ngang.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Vuốt để đổi tuần';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Vuốt sang trái hoặc phải để đổi tuần. Khi dùng chiều rộng cố định, hãy cuộn đến mép rồi kéo tiếp.';
-
-  @override
-  String get liveCourseOutlineColor => 'Màu sắc phác thảo khóa học';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Chọn liệu phác thảo có nhắm mục tiêu khóa học hiện tại / tiếp theo hoặc tất cả các khóa học được hiển thị trên trang hiện tại hay không.';
 
   @override
   String get liveCourseOutlineSettings => 'Khóa học phác thảo';
@@ -392,22 +347,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get language => 'Ngôn ngữ';
-
-  @override
-  String get languagePageDescription =>
-      'Chọn một trong những ngôn ngữ thực sự có sẵn trong ứng dụng.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'Tiếng Anh';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Phản ứng API';
 
   @override
   String get theme => 'Chủ đề';
@@ -478,10 +417,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get appBackupTitle => 'Sao lưu và khôi phục ứng dụng';
 
   @override
-  String get appBackupSubtitle =>
-      'Sao lưu hoặc khôi phục thời khóa biểu, lịch trình, cài đặt và trang trường học. Không bao gồm khóa API.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Khôi phục đầy đủ sẽ thay thế dữ liệu ứng dụng hiện tại. Khóa AI API nằm trong bộ nhớ bảo mật và không được ghi vào tệp sao lưu.';
 
@@ -549,23 +484,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get checkForUpdates => 'Kiểm tra cập nhật';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'Các bản cập nhật do Microsoft Store quản lý';
-
-  @override
   String get includePrereleaseUpdates => 'Nhận bản cập nhật phát hành trước';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Bao gồm các phiên bản Alpha, Beta và RC có thể chưa ổn định. Khi tắt, chỉ cung cấp các phiên bản ổn định.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Đã có phiên bản mới nhất ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Phiên bản hiện tại';
@@ -574,19 +497,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get newVersionAvailable => 'Cập nhật có sẵn';
 
   @override
-  String get latestVersionLabel => 'Phiên bản mới nhất';
-
-  @override
-  String get updateContentLabel => 'Cập nhật chi tiết';
-
-  @override
-  String get officialWebsite => 'Trang web chính thức';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Động cơ đám mây';
 
   @override
   String get ignoreThisVersion => 'Bỏ qua phiên bản này';
@@ -596,10 +507,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Kiểm tra cập nhật không thành công';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Không thể lấy phiên bản mới nhất từ GitHub. Bạn vẫn có thể mở trang GitHub Releases bên dưới.';
 
   @override
   String get githubRepository => 'Kho lưu trữ GitHub';
@@ -612,10 +519,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Tặng Sked một sao trên GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Mở kho mã nguồn của dự án và tặng Sked một sao';
 
   @override
   String get openGithubFailed => 'Không thể mở liên kết kho GitHub';
@@ -943,57 +846,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Sked là công cụ thời khóa biểu ưu tiên lưu trữ cục bộ. Thời khóa biểu, bộ thời gian và cấu hình trang web trường học chỉ được lưu trên thiết bị hoặc trình duyệt của bạn và không bao giờ được tự động tải lên. Ứng dụng chỉ xử lý dữ liệu khi bạn chủ động kích hoạt các thao tác như nhập, phân tích trang web, chia sẻ hoặc mở liên kết bên ngoài. Chính sách bảo mật đầy đủ có sẵn trực tuyến.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Lưu trữ địa phương';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Trên các nền tảng cài đặt ứng dụng, Sked lưu dữ liệu thời khóa biểu, lịch chung, các cài đặt liên quan và cấu hình trang web trường học có thể chỉnh sửa trong thư mục hỗ trợ ứng dụng của hệ điều hành; bản chạy trên trình duyệt dùng bộ nhớ của trình duyệt. Các tệp do phiên bản trước ghi vào thư mục Tài liệu của người dùng vẫn được giữ nguyên, nhưng không được tự động đọc hoặc di chuyển. Để giữ lại dữ liệu đó, hãy xuất bản sao lưu toàn bộ ứng dụng từ phiên bản cũ trước khi nâng cấp, rồi khôi phục sau đó. Cài đặt AI API được lưu cục bộ; khóa API tùy chỉnh được lưu qua lớp lưu trữ an toàn của nền tảng nếu có. Bản sao lưu toàn bộ ứng dụng không chứa khóa API tùy chỉnh. Ứng dụng không tự động tải dữ liệu cục bộ này lên máy chủ do nhà phát triển kiểm soát.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Nhập khẩu và xuất khẩu';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Ứng dụng đọc hoặc viết các tệp JSON lịch trình, các tệp JSON trang web trường học và các tệp mẫu thời gian chỉ khi bạn chọn rõ ràng một tệp hoặc bắt đầu hành động xuất. Nhập các tệp này là một hoạt động cục bộ trừ khi bạn cũng chọn phân tích trang web. Lấy một danh sách mô hình tùy chỉnh cũng là một hành động mạng rõ ràng và chỉ liên hệ với điểm cuối tùy chỉnh mà bạn cấu hình.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Chia sẻ';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Khi bạn sử dụng chia sẻ rõ ràng, ứng dụng sẽ truyền tệp xuất đến trang chia sẻ hệ thống hoặc ứng dụng mục tiêu bạn chọn. Cách xử lý tập tin đó sau đó phụ thuộc vào ứng dụng hoặc dịch vụ mục tiêu mà bạn đã chọn.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Liên kết bên ngoài';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Khi bạn mở các liên kết bên ngoài như kho GitHub, ứng dụng sẽ chuyển hành động ra trình duyệt của bạn hoặc ứng dụng bên ngoài khác. Xử lý dữ liệu sau thời điểm đó được quản lý bởi bên thứ ba bạn mở.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle =>
-      'Những gì ứng dụng không thu thập';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Ứng dụng không yêu cầu tài khoản Sked và không cho phép phân tích, nhận dạng quảng cáo hoặc sao lưu đám mây. Nó cũng không cung cấp một trường chuyên dụng để thu thập mật khẩu tài khoản trường học. Nếu bạn đăng nhập vào trang web của trường bên trong ứng dụng, tương tác đó xảy ra trên trang trường bạn đã mở.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Phân tích trang web';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Khi bạn dùng nhập trang web của trường hoặc phân tích văn bản thời khóa biểu / HTML đã dán, ứng dụng trước tiên chuẩn bị và làm sạch nội dung cục bộ, rồi gửi văn bản thời khóa biểu, văn bản trang hoặc nội dung HTML đã gửi, tiêu đề và URL trang tùy chọn, ngôn ngữ hiện tại của ứng dụng và nội dung prompt của trình phân tích tới endpoint tương thích OpenAI mà bạn đã cấu hình. Việc lấy danh sách mô hình cũng yêu cầu cùng endpoint đó. Sked không cung cấp endpoint phân tích tích hợp và không gửi yêu cầu phân tích tới backend phân tích thời khóa biểu do nhà phát triển kiểm soát. Endpoint tùy chỉnh và mọi dịch vụ upstream có thể lưu trữ, chuyển tiếp, giới hạn, xóa hoặc xử lý dữ liệu theo cách khác theo quy tắc của nhà cung cấp dịch vụ mà bạn chọn. Nếu bạn dùng Base URL http://, chỉ dùng trên thiết bị, mạng và dịch vụ endpoint đáng tin cậy, vì nội dung và khóa API có thể không được bảo vệ bằng mã hóa truyền tải.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Cập nhật chính sách';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Phiên bản chính sách bảo mật hiện tại là $version. Nếu một phiên bản mới hơn thay đổi cách xử lý dữ liệu, ứng dụng có thể yêu cầu bạn đọc và đồng ý với chính sách cập nhật một lần nữa.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Vui lòng đồng ý với chính sách bảo mật trước khi sử dụng ứng dụng';
 
@@ -1015,13 +867,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Nhập trang lịch trình hiện tại từ trang web trường.';
-
-  @override
-  String get schoolSitesManageEntry => 'Quản lý trang web trường';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Thêm, chỉnh sửa và xóa URL đăng nhập trường, với nhập và xuất JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Quản lý trang web trường';
@@ -1152,12 +997,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Phân tích lịch trình từ nội dung trang';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'URL nguồn (tùy chọn)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Tiêu đề trang (tùy chọn)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Nội dung trang';
 
   @override
@@ -1173,9 +1012,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Nội dung đã chuẩn bị';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Hãy chuẩn bị nội dung trước.';
 
   @override
   String get schoolHtmlImportSubmit => 'Phân tích và nhập khẩu';
@@ -1195,9 +1031,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Trở lại trang web';
 
   @override
-  String get schoolWebImportPageTitle => 'Nhập trang web trường học';
-
-  @override
   String get schoolWebImportPreview => 'Nhập xem trước';
 
   @override
@@ -1212,9 +1045,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Tiêu đề trang';
-
-  @override
-  String get schoolWebImportParserUsed => 'Phân tích';
 
   @override
   String get schoolWebImportWarnings => 'Nhập ghi chú';
@@ -1234,15 +1064,8 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đăng nhập vào trang web của trường trong ứng dụng, sau đó điều hướng đến trang lịch trình thủ công.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Cấu hình trình phân tích tùy chỉnh chưa đầy đủ. Hãy điền URL cơ sở, khóa API và mô hình trước.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Nền tảng này chưa hỗ trợ đăng nhập web nhúng. Vui lòng sử dụng một nền tảng với hỗ trợ WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Chọn trường';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1254,12 +1077,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Nhập trang hiện tại';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Đang tải trang…';
-
-  @override
-  String get schoolWebImportParsing => 'Phân tích trang hiện tại...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1298,14 +1115,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Tùy chỉnh OpenAI tương thích';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Phân tích tương thích OpenAI tùy chỉnh';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Tùy chỉnh nhắc nhở';
@@ -1394,11 +1203,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Dữ liệu cục bộ đã được xóa, nhưng Sked không thể thoát. Hãy đóng ứng dụng thủ công trước khi sử dụng lại.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Phân tích: Tùy chỉnh ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Xem chính sách bảo mật đầy đủ';
@@ -1582,12 +1386,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Quản lý danh mục, sự kiện, nhắc nhở và dữ liệu JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Bắt đầu với thời khóa biểu';
-
-  @override
-  String get firstLaunchStartGeneral => 'Bắt đầu với lịch trình';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Khi chọn không gian làm việc ban đầu, bạn xác nhận đã đọc và đồng ý với ';
 
@@ -1601,13 +1399,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get switchMode => 'Chuyển chế độ';
 
   @override
-  String get generalScheduleComingSoon => 'Lịch chung sắp ra mắt';
-
-  @override
   String get switchToStudentTimetable => 'Chuyển sang thời khóa biểu';
-
-  @override
-  String get mySchedule => 'Lịch của tôi';
 
   @override
   String get today => 'Hôm nay';
@@ -1653,15 +1445,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Ngày kết thúc';
-
-  @override
-  String get recurrenceNoEndDate => 'Không có ngày kết thúc';
-
-  @override
-  String get recurrenceSetEndDate => 'Đặt';
-
-  @override
-  String get recurrenceChangeEndDate => 'Thay đổi';
 
   @override
   String get repeatsWeekly => 'Lặp lại hằng tuần';
@@ -1796,28 +1579,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Đã nhân bản sự kiện';
-
-  @override
-  String get searchEvents => 'Tìm sự kiện';
-
-  @override
-  String get clearSearch => 'Xóa tìm kiếm';
-
-  @override
-  String get filterByColor => 'Lọc theo màu';
-
-  @override
-  String get allColors => 'Tất cả màu';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Sắp tới $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Quá hạn $count';
-  }
 
   @override
   String get allDay => 'Cả ngày';
@@ -1977,14 +1738,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reminderUpcoming => 'Sắp tới';
 
   @override
-  String get reminderOverdue => 'Quá hạn';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Vừa tuần với màn hình';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Hiển thị cả tuần trong bố cục nhỏ gọn. Tắt để cuộn ngang. Phạm vi tùy chỉnh trên 7 ngày vẫn cuộn ngang.';
 
   @override
   String get showWeekends => 'Hiển thị cuối tuần';
@@ -2195,9 +1949,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Nút chuyển chế độ xem';
-
-  @override
-  String get settingsWorkspaceMode => 'Không gian làm việc hiện tại';
 
   @override
   String get hideHomeWorkspaceNavigation => 'Ẩn điều hướng không gian làm việc';
@@ -2427,22 +2178,9 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return 'Đã lên lịch $scheduled, dự kiến $planned';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Lỗi gần nhất: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Tạo lại kế hoạch thông báo';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Đã tạo lại kế hoạch thông báo.';
 
   @override
   String get developerNotificationTestChannel => 'Kênh thử nghiệm';
@@ -2533,25 +2271,8 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không có lời nhắc trong tương lai trong kế hoạch hiện tại';
 
   @override
-  String get developerNotificationNextMaintenance => 'Lần bảo trì tiếp theo';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Lần gia hạn theo khả năng tiếp theo';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Chưa lên lịch';
-
-  @override
-  String get developerNotificationTruncation => 'Cắt bớt kế hoạch';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '$count mục bị bỏ qua do giới hạn kế hoạch';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Lần tính lại gần nhất';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2584,9 +2305,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Tính lại toàn bộ';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Bảo trì';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Khôi phục';
@@ -2726,24 +2444,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Kết nối không bảo mật';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Mở trang đăng nhập của trường?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Quá trình đăng nhập của trường có thể gửi thông tin xác thực qua biểu mẫu hoặc lệnh chuyển hướng của máy chủ đến trường và các nhà cung cấp đăng nhập. Android không thể tạm dừng mọi lần truyền như vậy để xác nhận riêng từng đích. Chỉ tiếp tục nếu bạn tin cậy các bên này trong phiên nhập này:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Mở trang đăng nhập trường học không an toàn?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Trang đăng nhập trường học này sử dụng HTTP. Bất kỳ ai có thể theo dõi hoặc can thiệp vào kết nối này đều có thể đọc hoặc thay đổi thông tin xác thực và nội dung trang của bạn. Chỉ tiếp tục nếu bạn chấp nhận rủi ro này đối với:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Lời nhắc và thông báo';
 
   @override
@@ -2875,26 +2575,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Khi tắt, chi tiết thông báo sẽ được ẩn trên màn hình khóa.';
 
   @override
-  String get notificationWidgets => 'Tiện ích màn hình chính';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Làm mới tiện ích Sked và xem cách thêm tiện ích từ trình khởi chạy.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Thêm tiện ích Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Trên màn hình chính của thiết bị, nhấn giữ một vùng trống, chọn Tiện ích rồi thêm tiện ích Sked. Tiện ích hiển thị các môn học hoặc sự kiện sắp tới.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Làm mới tiện ích';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Đã làm mới tiện ích';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Nền tảng này không cung cấp thông báo gốc.';
 
@@ -2930,19 +2610,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không gian làm việc đã tắt nhưng chưa thể xóa lời nhắc. Hãy thử khôi phục thông báo lại.';
 
   @override
-  String get settingsSearch => 'Tìm kiếm cài đặt';
-
-  @override
-  String get settingsNoResults => 'Không có cài đặt phù hợp';
-
-  @override
   String get settingsDataPrivacy => 'Dữ liệu và quyền riêng tư';
-
-  @override
-  String get workspacePreferences => 'Hiển thị và tương tác';
-
-  @override
-  String get workspaceManage => 'Quản lý';
 
   @override
   String get selectedDayAgenda => 'Ngày đã chọn';

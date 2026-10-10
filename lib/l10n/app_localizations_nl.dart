@@ -52,20 +52,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analyse mislukt';
 
   @override
-  String get schoolImportParsePageComplete => 'Analyse voltooid';
-
-  @override
   String get schoolImportParsePageContinue => 'Doorgaan';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Onbewerkt antwoord';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Onbewerkt antwoord uitvouwen';
-
-  @override
-  String get schoolImportParsePageCollapseRaw =>
-      'Onbewerkt antwoord samenvouwen';
 
   @override
   String get schoolImportExpandWarnings => 'Importmeldingen uitvouwen';
@@ -240,32 +227,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsTitle => 'Instellingen';
 
   @override
-  String get settingsSectionTimetable => 'Rooster';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Agenda';
-
-  @override
   String get settingsSectionAppearance => 'Weergave';
-
-  @override
-  String get settingsSectionApp => 'App';
 
   @override
   String get settingsSectionWorkspace => 'Werkruimte';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Weergave en taal';
-
-  @override
-  String get settingsSectionDataSecurity => 'Gegevens en beveiliging';
-
-  @override
   String get settingsSectionAbout => 'Over Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'Er is momenteel geen rooster om in te stellen.';
 
   @override
   String get semesterStartDate => 'Begindatum van het semester';
@@ -321,10 +289,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get showTimetableGridLines => 'Rasterlijnen in het rooster tonen';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Bepaalt of horizontale en verticale rasterlijnen zichtbaar zijn in het rooster.';
-
-  @override
   String get timetableHorizontalLayoutSection =>
       'Horizontale indeling en gebaren';
 
@@ -339,22 +303,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Weekkolommen aanpassen aan het scherm';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Toon indien mogelijk alle zeven roosterkolommen op het scherm. Zet dit uit om een vaste breedte te gebruiken en te scrollen.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Vegen om van week te wisselen';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Veeg naar links of rechts om naar een andere week te gaan. Sleep bij vaste breedtes eerst voorbij de rand.';
-
-  @override
-  String get liveCourseOutlineColor => 'Randkleur van vakken';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Kies of de rand het huidige of volgende vak markeert, of alle weergegeven vakken op de huidige pagina.';
 
   @override
   String get liveCourseOutlineSettings => 'Rand rond vakken';
@@ -392,22 +345,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get language => 'Taal';
-
-  @override
-  String get languagePageDescription =>
-      'Kies een van de talen die in de app beschikbaar zijn.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'English';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API-antwoord';
 
   @override
   String get theme => 'Thema';
@@ -478,10 +415,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get appBackupTitle => 'App-back-up en herstel';
 
   @override
-  String get appBackupSubtitle =>
-      'Maak een back-up van roosters, agenda\'s, instellingen en schoolsites of herstel ze. API-sleutels worden niet meegenomen.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Een volledig herstel vervangt de huidige appgegevens. AI-API-sleutels staan in beveiligde opslag en worden niet naar back-upbestanden geschreven.';
 
@@ -549,23 +482,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get checkForUpdates => 'Controleren op updates';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'Updates worden beheerd door de Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Voorlopige updates ontvangen';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Neem Alpha-, Beta- en RC-versies op, die instabiel kunnen zijn. Uitgeschakeld worden alleen stabiele versies aangeboden.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Je gebruikt al de nieuwste versie ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Huidige versie';
@@ -574,19 +495,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get newVersionAvailable => 'Update beschikbaar';
 
   @override
-  String get latestVersionLabel => 'Nieuwste versie';
-
-  @override
-  String get updateContentLabel => 'Updatedetails';
-
-  @override
-  String get officialWebsite => 'Officiële website';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Cloudopslag';
 
   @override
   String get ignoreThisVersion => 'Deze versie negeren';
@@ -596,10 +505,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Controleren op updates mislukt';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'De nieuwste versie kan niet van GitHub worden opgehaald. Je kunt hieronder wel de GitHub-releases openen.';
 
   @override
   String get githubRepository => 'GitHub-repository';
@@ -612,10 +517,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Geef Sked een ster op GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Open de projectrepository en geef Sked een ster';
 
   @override
   String get openGithubFailed =>
@@ -947,56 +848,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Sked is een lokaal-eerst roosterhulpmiddel. Roosters, periodetijdsets en schoolwebsiteconfiguratie worden alleen op je apparaat of in je browser opgeslagen en worden nooit automatisch geüpload. De app verwerkt alleen gegevens wanneer je expliciet acties start zoals importeren, webpagina-analyse, delen of het openen van externe links. Het volledige privacybeleid is online beschikbaar.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Lokale opslag';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Op native platforms bewaart Sked roosters, agenda’s, bijbehorende instellingen en bewerkbare schoolwebsiteconfiguraties in de map voor toepassingsgegevens van het besturingssysteem. De webversie gebruikt de opslag van de browser. Bestanden die oudere versies in de map Documenten van de gebruiker hebben geplaatst, blijven daar staan, maar worden niet automatisch gelezen of gemigreerd. Exporteer vóór de upgrade een volledige app-back-up vanuit de oude versie en zet deze daarna terug om die gegevens te behouden. De instellingen voor de AI-API worden lokaal opgeslagen. De eigen API-sleutel wordt waar mogelijk in de beveiligde opslag van het platform bewaard. Volledige app-back-ups bevatten de eigen API-sleutel niet. De app uploadt deze lokale gegevens niet automatisch naar een server die door de ontwikkelaar wordt beheerd.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Importeren en exporteren';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'The app reads or writes timetable JSON files, school-site JSON files, and period-template files only when you explicitly choose a file or start an export action. Importing these files is a local operation unless you also choose webpage parsing. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Delen';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Als je zelf kiest om te delen, geeft de app het geëxporteerde bestand door aan het deelvenster van het systeem of aan de app die je kiest. Hoe het bestand daarna wordt verwerkt, hangt af van de gekozen app of dienst.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Externe links';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Als je externe links opent, zoals de GitHub-repository, geeft de app de actie door aan je browser of een andere externe toepassing. De verdere verwerking van gegevens valt onder het beleid van de derde partij die je opent.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Wat de app niet verzamelt';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'De app vereist geen Sked-account en schakelt geen analyses, advertentie-identificatoren of cloudback-ups in. De app heeft ook geen apart veld om wachtwoorden van schoolaccounts te verzamelen. Als je in de app inlogt op een schoolwebsite, gebeurt die interactie op de schoolpagina die je hebt geopend.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Webpage parsing';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Wanneer je schoolwebpagina-import gebruikt of geplakte roostertekst / HTML analyseert, bereidt en schoont de app de inhoud eerst lokaal op en verzendt daarna de ingediende roostertekst, paginatekst of HTML-inhoud, de optionele paginatitel en URL, de huidige app-taal en de parserprompt naar het OpenAI-compatibele endpoint dat je hebt geconfigureerd. Het ophalen van de modellenlijst vraagt ook datzelfde endpoint aan. Sked biedt geen ingebouwd parser-endpoint en verzendt geen parseraanvragen naar een door de ontwikkelaar beheerde roosterparser-backend. Het aangepaste endpoint en eventuele upstreamdiensten kunnen gegevens opslaan, doorsturen, beperken, verwijderen of anderszins verwerken volgens de regels van de door jou gekozen serviceprovider. Als je een http:// Base URL gebruikt, gebruik die dan alleen op vertrouwde apparaten, vertrouwde netwerken en vertrouwde endpointdiensten, omdat inhoud en API-sleutels mogelijk niet door transportversleuteling worden beschermd.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Wijzigingen in het beleid';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'De huidige versie van het privacybeleid is $version. Als een latere versie verandert hoe gegevens worden verwerkt, kan de app je vragen het aangepaste beleid opnieuw te lezen en te accepteren.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Ga akkoord met het privacybeleid voordat je de app gebruikt';
 
@@ -1018,13 +869,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Importeer de huidige roosterpagina van de schoolwebsite.';
-
-  @override
-  String get schoolSitesManageEntry => 'Schoolwebsites beheren';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Voeg inlog-URL’s van scholen toe, bewerk of verwijder ze, met JSON-import en -export.';
 
   @override
   String get schoolSitesPageTitle => 'Schoolwebsites beheren';
@@ -1154,12 +998,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolHtmlImportPageTitle => 'Parse timetable from page content';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'Bron-URL (optioneel)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Paginatitel (optioneel)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Page content';
 
   @override
@@ -1175,9 +1013,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Inhoud voorbereid';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Bereid eerst de inhoud voor.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analyseren en importeren';
@@ -1197,9 +1032,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Terug naar de webpagina';
 
   @override
-  String get schoolWebImportPageTitle => 'Importeren van een schoolwebsite';
-
-  @override
   String get schoolWebImportPreview => 'Importvoorbeeld';
 
   @override
@@ -1214,9 +1046,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Paginatitel';
-
-  @override
-  String get schoolWebImportParserUsed => 'Parser';
 
   @override
   String get schoolWebImportWarnings => 'Importopmerkingen';
@@ -1236,15 +1065,8 @@ class AppLocalizationsNl extends AppLocalizations {
       'Log in de app in op de schoolwebsite en ga vervolgens zelf naar de roosterpagina.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'De instellingen van de eigen parser zijn onvolledig. Vul eerst de basis-URL, API-sleutel en het model in.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Dit platform ondersteunt ingebouwd inloggen op websites nog niet. Gebruik een platform met WebView-ondersteuning.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Kies een school';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1256,12 +1078,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Huidige pagina importeren';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Pagina laden…';
-
-  @override
-  String get schoolWebImportParsing => 'Huidige pagina analyseren…';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1300,14 +1116,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Eigen OpenAI-compatibele dienst';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Eigen OpenAI-compatibele parser';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Eigen prompt';
@@ -1396,11 +1204,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Je lokale gegevens zijn gewist, maar Sked kon niet worden gesloten. Sluit de app handmatig voordat je deze opnieuw gebruikt.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Parser: eigen ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Volledig privacybeleid bekijken';
@@ -1584,12 +1387,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Beheer categorieën, evenementen, herinneringen en JSON / ICS-gegevens.';
 
   @override
-  String get firstLaunchStartStudent => 'Starten met rooster';
-
-  @override
-  String get firstLaunchStartGeneral => 'Starten met agenda';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Door een startwerkruimte te kiezen, bevestig je dat je het ';
 
@@ -1604,13 +1401,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get switchMode => 'Modus wisselen';
 
   @override
-  String get generalScheduleComingSoon => 'Agenda binnenkort beschikbaar';
-
-  @override
   String get switchToStudentTimetable => 'Naar het lesrooster';
-
-  @override
-  String get mySchedule => 'Mijn agenda';
 
   @override
   String get today => 'Vandaag';
@@ -1656,15 +1447,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Einddatum';
-
-  @override
-  String get recurrenceNoEndDate => 'Geen einddatum';
-
-  @override
-  String get recurrenceSetEndDate => 'Instellen';
-
-  @override
-  String get recurrenceChangeEndDate => 'Wijzigen';
 
   @override
   String get repeatsWeekly => 'Wordt wekelijks herhaald';
@@ -1804,28 +1586,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Afspraak gedupliceerd';
-
-  @override
-  String get searchEvents => 'Afspraken zoeken';
-
-  @override
-  String get clearSearch => 'Zoekopdracht wissen';
-
-  @override
-  String get filterByColor => 'Filteren op kleur';
-
-  @override
-  String get allColors => 'Alle kleuren';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Aankomend: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Verlopen: $count';
-  }
 
   @override
   String get allDay => 'Hele dag';
@@ -1985,15 +1745,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reminderUpcoming => 'Aankomend';
 
   @override
-  String get reminderOverdue => 'Verlopen';
-
-  @override
   String get generalFitWeekColumnsToWidth =>
       'Weekweergave aan scherm aanpassen';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Toon de hele week in compacte lay-outs. Schakel uit om horizontaal te scrollen. Aangepaste perioden van meer dan 7 dagen blijven scrollbaar.';
 
   @override
   String get showWeekends => 'Weekenden tonen';
@@ -2209,9 +1962,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Knop voor weergavewissel';
-
-  @override
-  String get settingsWorkspaceMode => 'Actieve werkruimte';
 
   @override
   String get hideHomeWorkspaceNavigation => 'Werkruimtenavigatie verbergen';
@@ -2446,22 +2196,9 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled ingepland, $planned gepland';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Laatste fout: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Meldingsplan opnieuw opbouwen';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Meldingsplan opnieuw opgebouwd.';
 
   @override
   String get developerNotificationTestChannel => 'Testkanaal';
@@ -2554,25 +2291,8 @@ class AppLocalizationsNl extends AppLocalizations {
       'Geen toekomstige herinnering in het huidige plan';
 
   @override
-  String get developerNotificationNextMaintenance => 'Volgend onderhoud';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Volgende poging tot opnieuw inplannen';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Niet ingepland';
-
-  @override
-  String get developerNotificationTruncation => 'Afkapping van het plan';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '$count weggelaten vanwege de planlimiet';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Laatste herberekening';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2606,9 +2326,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Volledige herberekening';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Onderhoud';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Herstel';
@@ -2747,24 +2464,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Onveilige verbinding';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Aanmelden bij de school openen?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Bij aanmelden bij de school kunnen aanmeldgegevens via formulieren of serveromleidingen naar de school en haar aanmeldproviders worden verzonden. Android kan niet elke dergelijke overdracht onderbreken voor een afzonderlijke bevestiging van de bestemming. Ga alleen door als u hen voor deze importsessie vertrouwt:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Onveilige schoolaanmelding openen?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Deze schoolaanmelding gebruikt HTTP. Iedereen die deze verbinding kan volgen of wijzigen, kan uw aanmeldgegevens en de pagina-inhoud lezen of veranderen. Ga alleen door als u dit risico accepteert voor:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Herinneringen en meldingen';
 
   @override
@@ -2898,26 +2597,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Als dit is uitgeschakeld, blijven de meldingsdetails verborgen op het vergrendelscherm.';
 
   @override
-  String get notificationWidgets => 'Widgets op het startscherm';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Vernieuw Sked-widgets en lees hoe je er een toevoegt vanuit het startscherm.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Een Sked-widget toevoegen';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Houd een lege plek op het startscherm van je apparaat ingedrukt, kies Widgets en voeg een Sked-widget toe. De widget toont je volgende lessen of afspraken.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Widgets vernieuwen';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Widgets vernieuwd';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Dit platform ondersteunt geen systeemeigen meldingen.';
 
@@ -2953,19 +2632,7 @@ class AppLocalizationsNl extends AppLocalizations {
       'De werkruimte is uitgeschakeld, maar herinneringen konden niet worden verwijderd. Probeer het meldingsherstel opnieuw.';
 
   @override
-  String get settingsSearch => 'Instellingen zoeken';
-
-  @override
-  String get settingsNoResults => 'Geen overeenkomende instellingen';
-
-  @override
   String get settingsDataPrivacy => 'Gegevens en privacy';
-
-  @override
-  String get workspacePreferences => 'Weergave en bediening';
-
-  @override
-  String get workspaceManage => 'Beheren';
 
   @override
   String get selectedDayAgenda => 'Geselecteerde dag';

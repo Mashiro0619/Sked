@@ -217,35 +217,11 @@ abstract class AppLocalizations {
   /// **'Parsing failed'**
   String get schoolImportParsePageFailed;
 
-  /// No description provided for @schoolImportParsePageComplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Parsing complete'**
-  String get schoolImportParsePageComplete;
-
   /// No description provided for @schoolImportParsePageContinue.
   ///
   /// In en, this message translates to:
   /// **'Continue import'**
   String get schoolImportParsePageContinue;
-
-  /// No description provided for @schoolImportParsePageRawContent.
-  ///
-  /// In en, this message translates to:
-  /// **'Raw parsed content'**
-  String get schoolImportParsePageRawContent;
-
-  /// No description provided for @schoolImportParsePageExpandRaw.
-  ///
-  /// In en, this message translates to:
-  /// **'Expand raw parsed content'**
-  String get schoolImportParsePageExpandRaw;
-
-  /// No description provided for @schoolImportParsePageCollapseRaw.
-  ///
-  /// In en, this message translates to:
-  /// **'Collapse raw parsed content'**
-  String get schoolImportParsePageCollapseRaw;
 
   /// No description provided for @schoolImportExpandWarnings.
   ///
@@ -571,29 +547,11 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
-  /// No description provided for @settingsSectionTimetable.
-  ///
-  /// In en, this message translates to:
-  /// **'Timetable'**
-  String get settingsSectionTimetable;
-
-  /// No description provided for @settingsSectionGeneralSchedule.
-  ///
-  /// In en, this message translates to:
-  /// **'General schedule'**
-  String get settingsSectionGeneralSchedule;
-
   /// No description provided for @settingsSectionAppearance.
   ///
   /// In en, this message translates to:
   /// **'Appearance'**
   String get settingsSectionAppearance;
-
-  /// No description provided for @settingsSectionApp.
-  ///
-  /// In en, this message translates to:
-  /// **'App'**
-  String get settingsSectionApp;
 
   /// No description provided for @settingsSectionWorkspace.
   ///
@@ -601,29 +559,11 @@ abstract class AppLocalizations {
   /// **'Workspace'**
   String get settingsSectionWorkspace;
 
-  /// No description provided for @settingsSectionAppearanceLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'Appearance & language'**
-  String get settingsSectionAppearanceLanguage;
-
-  /// No description provided for @settingsSectionDataSecurity.
-  ///
-  /// In en, this message translates to:
-  /// **'Data & security'**
-  String get settingsSectionDataSecurity;
-
   /// No description provided for @settingsSectionAbout.
   ///
   /// In en, this message translates to:
   /// **'About Sked'**
   String get settingsSectionAbout;
-
-  /// No description provided for @noTimetableSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'No timetable is currently available for settings.'**
-  String get noTimetableSettings;
 
   /// No description provided for @semesterStartDate.
   ///
@@ -715,12 +655,6 @@ abstract class AppLocalizations {
   /// **'Show timetable grid lines'**
   String get showTimetableGridLines;
 
-  /// No description provided for @showTimetableGridLinesHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Control whether horizontal and vertical grid lines are visible in the timetable.'**
-  String get showTimetableGridLinesHint;
-
   /// No description provided for @timetableHorizontalLayoutSection.
   ///
   /// In en, this message translates to:
@@ -745,12 +679,6 @@ abstract class AppLocalizations {
   /// **'Fit week columns to screen'**
   String get fitWeekColumnsToWidth;
 
-  /// No description provided for @fitWeekColumnsToWidthHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.'**
-  String get fitWeekColumnsToWidthHint;
-
   /// No description provided for @enableWeekSwipeNavigation.
   ///
   /// In en, this message translates to:
@@ -762,18 +690,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swipe left or right to move to another week. With fixed widths, drag past the edge first.'**
   String get enableWeekSwipeNavigationHint;
-
-  /// No description provided for @liveCourseOutlineColor.
-  ///
-  /// In en, this message translates to:
-  /// **'Course outline color'**
-  String get liveCourseOutlineColor;
-
-  /// No description provided for @liveCourseOutlineColorHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose whether outlines target the current/next course or all displayed courses on the current page.'**
-  String get liveCourseOutlineColorHint;
 
   /// No description provided for @liveCourseOutlineSettings.
   ///
@@ -846,36 +762,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Language'**
   String get language;
-
-  /// No description provided for @languagePageDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose one of the languages that is truly available in the app.'**
-  String get languagePageDescription;
-
-  /// No description provided for @languageChinese.
-  ///
-  /// In en, this message translates to:
-  /// **'中文'**
-  String get languageChinese;
-
-  /// No description provided for @languageEnglish.
-  ///
-  /// In en, this message translates to:
-  /// **'English'**
-  String get languageEnglish;
-
-  /// No description provided for @githubRepositoryUrl.
-  ///
-  /// In en, this message translates to:
-  /// **'github.com/Mashiro0619/Sked'**
-  String get githubRepositoryUrl;
-
-  /// No description provided for @apiResponseTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'API response'**
-  String get apiResponseTitle;
 
   /// No description provided for @theme.
   ///
@@ -1009,12 +895,6 @@ abstract class AppLocalizations {
   /// **'App backup and restore'**
   String get appBackupTitle;
 
-  /// No description provided for @appBackupSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.'**
-  String get appBackupSubtitle;
-
   /// No description provided for @appBackupSheetSubtitle.
   ///
   /// In en, this message translates to:
@@ -1129,18 +1009,6 @@ abstract class AppLocalizations {
   /// **'Check for updates'**
   String get checkForUpdates;
 
-  /// No description provided for @checkForUpdatesDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'GitHub'**
-  String get checkForUpdatesDesc;
-
-  /// No description provided for @microsoftStoreUpdates.
-  ///
-  /// In en, this message translates to:
-  /// **'Updates are managed by Microsoft Store'**
-  String get microsoftStoreUpdates;
-
   /// No description provided for @includePrereleaseUpdates.
   ///
   /// In en, this message translates to:
@@ -1152,12 +1020,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Include Alpha, Beta, and RC releases, which may be unstable. When off, only stable releases are offered.'**
   String get includePrereleaseUpdatesDesc;
-
-  /// No description provided for @alreadyLatestVersion.
-  ///
-  /// In en, this message translates to:
-  /// **'Already on the latest version ({version})'**
-  String alreadyLatestVersion(Object version);
 
   /// No description provided for @currentVersionLabel.
   ///
@@ -1171,35 +1033,11 @@ abstract class AppLocalizations {
   /// **'Update available'**
   String get newVersionAvailable;
 
-  /// No description provided for @latestVersionLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Latest version'**
-  String get latestVersionLabel;
-
-  /// No description provided for @updateContentLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Update details'**
-  String get updateContentLabel;
-
-  /// No description provided for @officialWebsite.
-  ///
-  /// In en, this message translates to:
-  /// **'Official website'**
-  String get officialWebsite;
-
   /// No description provided for @googlePlay.
   ///
   /// In en, this message translates to:
   /// **'Google Play'**
   String get googlePlay;
-
-  /// No description provided for @cloudDrive.
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud drive'**
-  String get cloudDrive;
 
   /// No description provided for @ignoreThisVersion.
   ///
@@ -1218,12 +1056,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update check failed'**
   String get updateCheckFailedTitle;
-
-  /// No description provided for @updateCheckFailedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to fetch the latest version from GitHub. You can still open GitHub Releases below.'**
-  String get updateCheckFailedMessage;
 
   /// No description provided for @githubRepository.
   ///
@@ -1248,12 +1080,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Star Sked on GitHub!'**
   String get starSkedOnGithub;
-
-  /// No description provided for @starSkedOnGithubDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Open the project repository and give Sked a Star'**
-  String get starSkedOnGithubDesc;
 
   /// No description provided for @openGithubFailed.
   ///
@@ -1819,90 +1645,6 @@ abstract class AppLocalizations {
   /// **'Sked is a local-first timetable tool. Timetables, general schedules, period-time sets, and school-site configuration are stored only on your device or in your browser, and are never automatically uploaded. The app only processes data when you explicitly trigger actions such as import, timetable text / HTML parsing, school webpage import, sharing, or opening external links. The full privacy policy is available online.'**
   String get privacyPolicyIntro;
 
-  /// No description provided for @privacyPolicyLocalStorageTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Local storage'**
-  String get privacyPolicyLocalStorageTitle;
-
-  /// No description provided for @privacyPolicyLocalStorageBody.
-  ///
-  /// In en, this message translates to:
-  /// **'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.'**
-  String get privacyPolicyLocalStorageBody;
-
-  /// No description provided for @privacyPolicyImportExportTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Import and export'**
-  String get privacyPolicyImportExportTitle;
-
-  /// No description provided for @privacyPolicyImportExportBody.
-  ///
-  /// In en, this message translates to:
-  /// **'The app reads or writes timetable JSON files, timetable JSON text, general schedule JSON / ICS files, full app backup JSON files, school-site JSON files, and period-template files only when you explicitly choose a file, paste JSON, or start an export action. Importing these files and JSON text is a local operation unless you also choose timetable text / HTML parsing or school webpage import. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.'**
-  String get privacyPolicyImportExportBody;
-
-  /// No description provided for @privacyPolicySharingTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Sharing'**
-  String get privacyPolicySharingTitle;
-
-  /// No description provided for @privacyPolicySharingBody.
-  ///
-  /// In en, this message translates to:
-  /// **'When you explicitly use sharing, the app passes the exported file to the system share sheet or to the target app you choose. How that file is handled afterward depends on the target app or service you selected.'**
-  String get privacyPolicySharingBody;
-
-  /// No description provided for @privacyPolicyExternalLinksTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'External links'**
-  String get privacyPolicyExternalLinksTitle;
-
-  /// No description provided for @privacyPolicyExternalLinksBody.
-  ///
-  /// In en, this message translates to:
-  /// **'When you open external links such as the GitHub repository, the app hands the action off to your browser or another external application. Data handling after that point is governed by the third party you open.'**
-  String get privacyPolicyExternalLinksBody;
-
-  /// No description provided for @privacyPolicyNoCollectionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'What the app does not collect'**
-  String get privacyPolicyNoCollectionTitle;
-
-  /// No description provided for @privacyPolicyNoCollectionBody.
-  ///
-  /// In en, this message translates to:
-  /// **'The app does not require a Sked account and does not enable analytics, advertising identifiers, or cloud backup. It also does not provide a dedicated field for collecting school account passwords. If you sign in to a school website inside the app, that interaction happens on the school page you opened.'**
-  String get privacyPolicyNoCollectionBody;
-
-  /// No description provided for @privacyPolicyFutureFeatureTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Timetable text / HTML parsing'**
-  String get privacyPolicyFutureFeatureTitle;
-
-  /// No description provided for @privacyPolicyFutureFeatureBody.
-  ///
-  /// In en, this message translates to:
-  /// **'When you use school webpage import or parse pasted timetable text / HTML, the app first prepares and cleans the content locally, then sends the submitted timetable text, page text or HTML content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, only use it on trusted devices, trusted networks, and trusted endpoint services, because content and API keys may not be protected by transport encryption.'**
-  String get privacyPolicyFutureFeatureBody;
-
-  /// No description provided for @privacyPolicyUpdatesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Policy updates'**
-  String get privacyPolicyUpdatesTitle;
-
-  /// No description provided for @privacyPolicyUpdatesBody.
-  ///
-  /// In en, this message translates to:
-  /// **'The current privacy policy version is {version}. If a later version changes how data is handled, the app may ask you to read and agree to the updated policy again.'**
-  String privacyPolicyUpdatesBody(Object version);
-
   /// No description provided for @privacyGateTitle.
   ///
   /// In en, this message translates to:
@@ -1938,18 +1680,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import the current timetable page from the school site.'**
   String get schoolWebImportEntryDesc;
-
-  /// No description provided for @schoolSitesManageEntry.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage school sites'**
-  String get schoolSitesManageEntry;
-
-  /// No description provided for @schoolSitesManageEntryDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Add, edit, and delete school login URLs, with JSON import and export.'**
-  String get schoolSitesManageEntryDesc;
 
   /// No description provided for @schoolSitesPageTitle.
   ///
@@ -2158,18 +1888,6 @@ abstract class AppLocalizations {
   /// **'Parse timetable text / HTML'**
   String get schoolHtmlImportPageTitle;
 
-  /// No description provided for @schoolHtmlImportUrlLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Source URL (optional)'**
-  String get schoolHtmlImportUrlLabel;
-
-  /// No description provided for @schoolHtmlImportTitleLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Page title (optional)'**
-  String get schoolHtmlImportTitleLabel;
-
   /// No description provided for @schoolHtmlImportHtmlLabel.
   ///
   /// In en, this message translates to:
@@ -2199,12 +1917,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Content prepared'**
   String get schoolHtmlImportCompressed;
-
-  /// No description provided for @schoolHtmlImportCompressFirst.
-  ///
-  /// In en, this message translates to:
-  /// **'Prepare the content first.'**
-  String get schoolHtmlImportCompressFirst;
 
   /// No description provided for @schoolHtmlImportSubmit.
   ///
@@ -2236,12 +1948,6 @@ abstract class AppLocalizations {
   /// **'Back to webpage'**
   String get schoolHtmlImportReturnToWebPage;
 
-  /// No description provided for @schoolWebImportPageTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'School webpage import'**
-  String get schoolWebImportPageTitle;
-
   /// No description provided for @schoolWebImportPreview.
   ///
   /// In en, this message translates to:
@@ -2265,12 +1971,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Page title'**
   String get schoolWebImportPageTitleLabel;
-
-  /// No description provided for @schoolWebImportParserUsed.
-  ///
-  /// In en, this message translates to:
-  /// **'Parser'**
-  String get schoolWebImportParserUsed;
 
   /// No description provided for @schoolWebImportWarnings.
   ///
@@ -2302,23 +2002,11 @@ abstract class AppLocalizations {
   /// **'Sign in to the school site in-app, then navigate to the timetable page manually.'**
   String get schoolWebImportOpenPageHint;
 
-  /// No description provided for @schoolWebImportConfigMissing.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.'**
-  String get schoolWebImportConfigMissing;
-
   /// No description provided for @schoolWebImportUnsupportedPlatform.
   ///
   /// In en, this message translates to:
   /// **'This platform does not support embedded web login yet. Please use a platform with WebView support.'**
   String get schoolWebImportUnsupportedPlatform;
-
-  /// No description provided for @schoolWebImportSelectSchool.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose school'**
-  String get schoolWebImportSelectSchool;
 
   /// No description provided for @schoolWebImportNoSchools.
   ///
@@ -2337,18 +2025,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import current page'**
   String get schoolWebImportImportCurrentPage;
-
-  /// No description provided for @schoolWebImportLoadingPage.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading page…'**
-  String get schoolWebImportLoadingPage;
-
-  /// No description provided for @schoolWebImportParsing.
-  ///
-  /// In en, this message translates to:
-  /// **'Parsing current page…'**
-  String get schoolWebImportParsing;
 
   /// No description provided for @schoolWebImportLoadFailed.
   ///
@@ -2415,18 +2091,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom OpenAI-compatible'**
   String get schoolImportParserSourceCustomOpenAi;
-
-  /// No description provided for @schoolImportParserSourceCustomOpenAiDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Send timetable text, page text, or HTML content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.'**
-  String get schoolImportParserSourceCustomOpenAiDesc;
-
-  /// No description provided for @schoolImportParserCustomOpenAi.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom OpenAI-compatible parser'**
-  String get schoolImportParserCustomOpenAi;
 
   /// No description provided for @schoolImportParserCustomPromptTitle.
   ///
@@ -2571,12 +2235,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.'**
   String get clearAppDataExitFailed;
-
-  /// No description provided for @schoolImportParserCurrentSourceCustom.
-  ///
-  /// In en, this message translates to:
-  /// **'Parser: Custom ({model})'**
-  String schoolImportParserCurrentSourceCustom(Object model);
 
   /// No description provided for @privacyViewFullPolicy.
   ///
@@ -2902,18 +2560,6 @@ abstract class AppLocalizations {
   /// **'Manage categories, events, reminders, and JSON / ICS data.'**
   String get firstLaunchGeneralDesc;
 
-  /// No description provided for @firstLaunchStartStudent.
-  ///
-  /// In en, this message translates to:
-  /// **'Start with timetable'**
-  String get firstLaunchStartStudent;
-
-  /// No description provided for @firstLaunchStartGeneral.
-  ///
-  /// In en, this message translates to:
-  /// **'Start with schedule'**
-  String get firstLaunchStartGeneral;
-
   /// No description provided for @firstLaunchPrivacyConsentBefore.
   ///
   /// In en, this message translates to:
@@ -2938,23 +2584,11 @@ abstract class AppLocalizations {
   /// **'Switch mode'**
   String get switchMode;
 
-  /// No description provided for @generalScheduleComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'General schedule coming soon'**
-  String get generalScheduleComingSoon;
-
   /// No description provided for @switchToStudentTimetable.
   ///
   /// In en, this message translates to:
   /// **'Switch to Student timetable'**
   String get switchToStudentTimetable;
-
-  /// No description provided for @mySchedule.
-  ///
-  /// In en, this message translates to:
-  /// **'My schedule'**
-  String get mySchedule;
 
   /// No description provided for @today.
   ///
@@ -3045,24 +2679,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'End date'**
   String get recurrenceEndDate;
-
-  /// No description provided for @recurrenceNoEndDate.
-  ///
-  /// In en, this message translates to:
-  /// **'No end date'**
-  String get recurrenceNoEndDate;
-
-  /// No description provided for @recurrenceSetEndDate.
-  ///
-  /// In en, this message translates to:
-  /// **'Set'**
-  String get recurrenceSetEndDate;
-
-  /// No description provided for @recurrenceChangeEndDate.
-  ///
-  /// In en, this message translates to:
-  /// **'Change'**
-  String get recurrenceChangeEndDate;
 
   /// No description provided for @repeatsWeekly.
   ///
@@ -3303,42 +2919,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Event duplicated'**
   String get eventDuplicated;
-
-  /// No description provided for @searchEvents.
-  ///
-  /// In en, this message translates to:
-  /// **'Search events'**
-  String get searchEvents;
-
-  /// No description provided for @clearSearch.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear search'**
-  String get clearSearch;
-
-  /// No description provided for @filterByColor.
-  ///
-  /// In en, this message translates to:
-  /// **'Filter by color'**
-  String get filterByColor;
-
-  /// No description provided for @allColors.
-  ///
-  /// In en, this message translates to:
-  /// **'All colors'**
-  String get allColors;
-
-  /// No description provided for @upcomingEventsCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming {count}'**
-  String upcomingEventsCount(int count);
-
-  /// No description provided for @overdueEventsCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Overdue {count}'**
-  String overdueEventsCount(int count);
 
   /// No description provided for @allDay.
   ///
@@ -3628,23 +3208,11 @@ abstract class AppLocalizations {
   /// **'Upcoming'**
   String get reminderUpcoming;
 
-  /// No description provided for @reminderOverdue.
-  ///
-  /// In en, this message translates to:
-  /// **'Overdue'**
-  String get reminderOverdue;
-
   /// No description provided for @generalFitWeekColumnsToWidth.
   ///
   /// In en, this message translates to:
   /// **'Fit week view to screen'**
   String get generalFitWeekColumnsToWidth;
-
-  /// No description provided for @generalFitWeekColumnsToWidthHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Show the whole week in compact layouts. Turn off for horizontal scrolling. Custom ranges over 7 days still scroll.'**
-  String get generalFitWeekColumnsToWidthHint;
 
   /// No description provided for @showWeekends.
   ///
@@ -4011,12 +3579,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View switch button'**
   String get generalViewSwitchBehavior;
-
-  /// No description provided for @settingsWorkspaceMode.
-  ///
-  /// In en, this message translates to:
-  /// **'Active workspace'**
-  String get settingsWorkspaceMode;
 
   /// No description provided for @hideHomeWorkspaceNavigation.
   ///
@@ -4429,29 +3991,11 @@ abstract class AppLocalizations {
     int capacity,
   );
 
-  /// No description provided for @developerNotificationPlanSummary.
-  ///
-  /// In en, this message translates to:
-  /// **'{scheduled} scheduled, {planned} planned'**
-  String developerNotificationPlanSummary(int scheduled, int planned);
-
   /// No description provided for @developerNotificationPlanError.
   ///
   /// In en, this message translates to:
   /// **'Last error: {message}'**
   String developerNotificationPlanError(Object message);
-
-  /// No description provided for @developerNotificationRunMaintenance.
-  ///
-  /// In en, this message translates to:
-  /// **'Rebuild notification plan'**
-  String get developerNotificationRunMaintenance;
-
-  /// No description provided for @developerNotificationMaintenanceComplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Notification plan rebuilt.'**
-  String get developerNotificationMaintenanceComplete;
 
   /// No description provided for @developerNotificationTestChannel.
   ///
@@ -4591,41 +4135,11 @@ abstract class AppLocalizations {
   /// **'No future reminder in the current plan'**
   String get developerNotificationNoPendingReminder;
 
-  /// No description provided for @developerNotificationNextMaintenance.
-  ///
-  /// In en, this message translates to:
-  /// **'Next maintenance'**
-  String get developerNotificationNextMaintenance;
-
   /// No description provided for @developerNotificationNextRenewal.
   ///
   /// In en, this message translates to:
   /// **'Next best-effort renewal'**
   String get developerNotificationNextRenewal;
-
-  /// No description provided for @developerNotificationNoMaintenance.
-  ///
-  /// In en, this message translates to:
-  /// **'Not scheduled'**
-  String get developerNotificationNoMaintenance;
-
-  /// No description provided for @developerNotificationTruncation.
-  ///
-  /// In en, this message translates to:
-  /// **'Plan truncation'**
-  String get developerNotificationTruncation;
-
-  /// No description provided for @developerNotificationTruncationCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} omitted by the plan limit'**
-  String developerNotificationTruncationCount(int count);
-
-  /// No description provided for @developerNotificationLastReconciliation.
-  ///
-  /// In en, this message translates to:
-  /// **'Latest reconciliation'**
-  String get developerNotificationLastReconciliation;
 
   /// No description provided for @developerNotificationLastSynchronization.
   ///
@@ -4673,12 +4187,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Authoritative'**
   String get developerNotificationReconcileModeAuthoritative;
-
-  /// No description provided for @developerNotificationReconcileModeMaintenance.
-  ///
-  /// In en, this message translates to:
-  /// **'Maintenance'**
-  String get developerNotificationReconcileModeMaintenance;
 
   /// No description provided for @developerNotificationReconcileModeRecovery.
   ///
@@ -4902,30 +4410,6 @@ abstract class AppLocalizations {
   /// **'Insecure connection'**
   String get schoolWebImportInsecureConnection;
 
-  /// No description provided for @schoolWebImportSignInConsentTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open school sign-in?'**
-  String get schoolWebImportSignInConsentTitle;
-
-  /// No description provided for @schoolWebImportSignInConsentMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n{origin}'**
-  String schoolWebImportSignInConsentMessage(Object origin);
-
-  /// No description provided for @schoolWebImportInsecureSignInConsentTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open an insecure school sign-in?'**
-  String get schoolWebImportInsecureSignInConsentTitle;
-
-  /// No description provided for @schoolWebImportInsecureSignInConsentMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}'**
-  String schoolWebImportInsecureSignInConsentMessage(Object origin);
-
   /// No description provided for @notificationSettingsSection.
   ///
   /// In en, this message translates to:
@@ -5148,42 +4632,6 @@ abstract class AppLocalizations {
   /// **'When off, notification details stay private on the lock screen.'**
   String get notificationLockScreenTitlesHint;
 
-  /// No description provided for @notificationWidgets.
-  ///
-  /// In en, this message translates to:
-  /// **'Home screen widgets'**
-  String get notificationWidgets;
-
-  /// No description provided for @notificationWidgetsDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Refresh Sked widgets and learn how to add one from the launcher.'**
-  String get notificationWidgetsDesc;
-
-  /// No description provided for @notificationWidgetsDialogTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a Sked widget'**
-  String get notificationWidgetsDialogTitle;
-
-  /// No description provided for @notificationWidgetsDialogMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.'**
-  String get notificationWidgetsDialogMessage;
-
-  /// No description provided for @notificationWidgetsRefresh.
-  ///
-  /// In en, this message translates to:
-  /// **'Refresh widgets'**
-  String get notificationWidgetsRefresh;
-
-  /// No description provided for @notificationWidgetsRefreshed.
-  ///
-  /// In en, this message translates to:
-  /// **'Widgets refreshed'**
-  String get notificationWidgetsRefreshed;
-
   /// No description provided for @notificationPlatformUnsupported.
   ///
   /// In en, this message translates to:
@@ -5244,35 +4692,11 @@ abstract class AppLocalizations {
   /// **'The workspace is off, but reminders could not be cleared. Retry notification recovery.'**
   String get workspaceReminderCleanupFailed;
 
-  /// No description provided for @settingsSearch.
-  ///
-  /// In en, this message translates to:
-  /// **'Search settings'**
-  String get settingsSearch;
-
-  /// No description provided for @settingsNoResults.
-  ///
-  /// In en, this message translates to:
-  /// **'No matching settings'**
-  String get settingsNoResults;
-
   /// No description provided for @settingsDataPrivacy.
   ///
   /// In en, this message translates to:
   /// **'Data and privacy'**
   String get settingsDataPrivacy;
-
-  /// No description provided for @workspacePreferences.
-  ///
-  /// In en, this message translates to:
-  /// **'Display and interaction'**
-  String get workspacePreferences;
-
-  /// No description provided for @workspaceManage.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage'**
-  String get workspaceManage;
 
   /// No description provided for @selectedDayAgenda.
   ///

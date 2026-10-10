@@ -1981,8 +1981,8 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('de'));
     final studentCard = _firstLaunchRect(tester, 'first-launch-student-card');
     final generalCard = _firstLaunchRect(tester, 'first-launch-general-card');
-    expect(find.text(l10n.firstLaunchStartStudent), findsNothing);
-    expect(find.text(l10n.firstLaunchStartGeneral), findsNothing);
+    expect(find.text(l10n.workspaceOnlyStudent), findsOneWidget);
+    expect(find.text(l10n.workspaceOnlyGeneral), findsOneWidget);
     expect((studentCard.height - generalCard.height).abs(), lessThan(1));
     expect(tester.takeException(), isNull);
   });
@@ -2017,8 +2017,8 @@ void main() {
       tester.getTopLeft(find.text(l10n.firstLaunchTitle)).dy,
       greaterThanOrEqualTo(16),
     );
-    expect(find.text(l10n.firstLaunchStartStudent), findsNothing);
-    expect(find.text(l10n.firstLaunchStartGeneral), findsNothing);
+    expect(find.text(l10n.workspaceOnlyStudent), findsOneWidget);
+    expect(find.text(l10n.workspaceOnlyGeneral), findsOneWidget);
     _expectFirstLaunchCardsStacked(tester);
     final student = _firstLaunchRect(tester, 'first-launch-student-card');
     expect(student.left, closeTo(16, 0.1));

@@ -53,21 +53,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Η ανάλυση απέτυχε';
 
   @override
-  String get schoolImportParsePageComplete => 'Η ανάλυση ολοκληρώθηκε';
-
-  @override
   String get schoolImportParsePageContinue => 'Συνέχεια';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Ακατέργαστη απόκριση';
-
-  @override
-  String get schoolImportParsePageExpandRaw =>
-      'Ανάπτυξη ακατέργαστης απόκρισης';
-
-  @override
-  String get schoolImportParsePageCollapseRaw =>
-      'Σύμπτυξη ακατέργαστης απόκρισης';
 
   @override
   String get schoolImportExpandWarnings => 'Ανάπτυξη προειδοποιήσεων εισαγωγής';
@@ -244,32 +230,13 @@ class AppLocalizationsEl extends AppLocalizations {
   String get settingsTitle => 'Ρυθμίσεις';
 
   @override
-  String get settingsSectionTimetable => 'Πρόγραμμα μαθημάτων';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Γενικό πρόγραμμα';
-
-  @override
   String get settingsSectionAppearance => 'Εμφάνιση';
-
-  @override
-  String get settingsSectionApp => 'Εφαρμογή';
 
   @override
   String get settingsSectionWorkspace => 'Χώρος εργασίας';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Εμφάνιση και γλώσσα';
-
-  @override
-  String get settingsSectionDataSecurity => 'Δεδομένα και ασφάλεια';
-
-  @override
   String get settingsSectionAbout => 'Σχετικά με το Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'Δεν υπάρχει διαθέσιμο χρονοδιάγραμμα για τις ρυθμίσεις.';
 
   @override
   String get semesterStartDate => 'Ημερομηνία έναρξης του εξάμηνου';
@@ -328,10 +295,6 @@ class AppLocalizationsEl extends AppLocalizations {
       'Εμφάνιση γραμμών πλέγματος προγραμματισμού';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Ελέγξτε εάν οι οριζόντιες και κάθετες γραμμές πλέγματος είναι ορατές στο χρονοδιάγραμμα.';
-
-  @override
   String get timetableHorizontalLayoutSection =>
       'Οριζόντια διάταξη και χειρονομίες';
 
@@ -346,22 +309,11 @@ class AppLocalizationsEl extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Προσαρμογή στηλών εβδομάδας στην οθόνη';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Εμφανίζει και τις επτά στήλες του προγράμματος στην οθόνη όταν είναι δυνατό. Απενεργοποιήστε το για σταθερό πλάτος και κύλιση.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Αλλαγή εβδομάδας με σάρωση';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Σαρώστε αριστερά ή δεξιά για άλλη εβδομάδα. Με σταθερό πλάτος, κυλήστε πρώτα μέχρι την άκρη.';
-
-  @override
-  String get liveCourseOutlineColor => 'Χρώμα περιγράμματος μαθήματος';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Επιλέξτε εάν τα περιγράμματα στοχεύουν στο τρέχον/επόμενο μάθημα ή σε όλα τα μαθήματα που εμφανίζονται στην τρέχουσα σελίδα.';
 
   @override
   String get liveCourseOutlineSettings => 'Σχεδιασμός μαθημάτων';
@@ -401,22 +353,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get language => 'Γλώσσα';
-
-  @override
-  String get languagePageDescription =>
-      'Επιλέξτε μία από τις γλώσσες που είναι πραγματικά διαθέσιμη στην εφαρμογή.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'Αγγλικά';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Απάντηση API';
 
   @override
   String get theme => 'Θέμα';
@@ -487,10 +423,6 @@ class AppLocalizationsEl extends AppLocalizations {
   String get appBackupTitle => 'Αντίγραφο ασφαλείας και επαναφορά εφαρμογής';
 
   @override
-  String get appBackupSubtitle =>
-      'Δημιουργήστε αντίγραφα ασφαλείας ή επαναφέρετε ωρολόγια προγράμματα, προγράμματα, ρυθμίσεις και σχολικούς ιστότοπους. Τα κλειδιά API δεν περιλαμβάνονται.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Η πλήρης επαναφορά αντικαθιστά τα τρέχοντα δεδομένα της εφαρμογής. Τα κλειδιά AI API αποθηκεύονται σε ασφαλή αποθήκευση και δεν γράφονται στα αρχεία αντιγράφων ασφαλείας.';
 
@@ -559,23 +491,11 @@ class AppLocalizationsEl extends AppLocalizations {
   String get checkForUpdates => 'Ελέγξτε για ενημερώσεις';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'Οι ενημερώσεις διαχειρίζονται από το Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Λήψη προκαταρκτικών ενημερώσεων';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Συμπερίληψη εκδόσεων Alpha, Beta και RC, που ενδέχεται να είναι ασταθείς. Όταν είναι ανενεργό, προσφέρονται μόνο σταθερές εκδόσεις.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Ήδη στην τελευταία έκδοση ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Τρέχουσα έκδοση';
@@ -584,19 +504,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get newVersionAvailable => 'Ενημέρωση διαθέσιμη';
 
   @override
-  String get latestVersionLabel => 'Τελευταία έκδοση';
-
-  @override
-  String get updateContentLabel => 'Λεπτομέρειες ενημέρωσης';
-
-  @override
-  String get officialWebsite => 'Επίσημη ιστοσελίδα';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Δίκη Cloud';
 
   @override
   String get ignoreThisVersion => 'Αγνοήστε αυτή την έκδοση';
@@ -607,10 +515,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Ο έλεγχος ενημέρωσης απέτυχε';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Δεν ήταν δυνατή η λήψη της τελευταίας έκδοσης από το GitHub. Μπορείτε να ανοίξετε το GitHub Releases παρακάτω.';
 
   @override
   String get githubRepository => 'Αποθήκευση GitHub';
@@ -624,10 +528,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Δώστε ένα αστέρι στο Sked στο GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Ανοίξτε το αποθετήριο του έργου και δώστε ένα αστέρι στο Sked';
 
   @override
   String get openGithubFailed =>
@@ -964,56 +864,6 @@ class AppLocalizationsEl extends AppLocalizations {
       'Το Sked είναι ένα εργαλείο χρονοδιαγραμμάτων που δίνει προτεραιότητα στην τοπική αποθήκευση. Τα χρονοδιαγράμματα, τα σύνολα χρονικών περιόδων και η διαμόρφωση του σχολικού ιστότοπου αποθηκεύονται μόνο στη συσκευή σας ή στο πρόγραμμα περιήγησής σας και δεν ανεβαίνουν ποτέ αυτόματα. Η εφαρμογή επεξεργάζεται δεδομένα μόνο όταν ενεργοποιείτε ρητά ενέργειες όπως εισαγωγή, ανάλυση ιστοσελίδας, κοινή χρήση ή άνοιγμα εξωτερικών συνδέσμων. Η πλήρης πολιτική απορρήτου είναι διαθέσιμη online.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Τοπική αποθήκευση';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Στις εγγενείς εκδόσεις, το Sked αποθηκεύει τα προγράμματα μαθημάτων, τα γενικά προγράμματα, τις σχετικές ρυθμίσεις και την επεξεργάσιμη διαμόρφωση σχολικών ιστοτόπων στον κατάλογο υποστήριξης εφαρμογών του λειτουργικού συστήματος. Η έκδοση ιστού χρησιμοποιεί τον χώρο αποθήκευσης του προγράμματος περιήγησης. Αρχεία που παλαιότερες εκδόσεις αποθήκευσαν στον φάκελο Έγγραφα παραμένουν εκεί, αλλά δεν διαβάζονται ούτε μεταφέρονται αυτόματα. Για να διατηρήσετε αυτά τα δεδομένα, εξαγάγετε πλήρες αντίγραφο ασφαλείας από την παλιά έκδοση πριν από την αναβάθμιση και επαναφέρετέ το μετά. Οι ρυθμίσεις AI API αποθηκεύονται τοπικά. Το προσαρμοσμένο κλειδί API αποθηκεύεται μέσω του ασφαλούς χώρου αποθήκευσης της πλατφόρμας, όταν είναι διαθέσιμος. Τα πλήρη αντίγραφα ασφαλείας δεν περιλαμβάνουν αυτό το κλειδί. Η εφαρμογή δεν μεταφορτώνει αυτόματα τα τοπικά δεδομένα σε διακομιστή που ελέγχεται από τον προγραμματιστή.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Εισαγωγή και εξαγωγή';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Η εφαρμογή διαβάζει ή γράφει αρχεία JSON χρονοδιαγράμματος, αρχεία JSON σχολικής τοποθεσίας και αρχεία προτύπων περιόδων μόνο όταν επιλέξετε ρητά ένα αρχείο ή ξεκινήσετε μια ενέργεια εξαγωγής. Η εισαγωγή αυτών των αρχείων είναι μια τοπική λειτουργία εκτός εάν επιλέξετε επίσης την ανάλυση ιστοσελίδας. Η λήψη μιας προσαρμοσμένης λίστας μοντέλων είναι επίσης μια ρητή ενέργεια δικτύου και επικοινωνεί μόνο με το προσαρμοσμένο τελικό σημείο που έχετε διαμορφώσει.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Κοινή χρήση';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Όταν χρησιμοποιείτε ρητά την κοινή χρήση, η εφαρμογή μεταδίδει το εξαγωγμένο αρχείο στο φύλλο κοινής χρήσης του συστήματος ή στην εφαρμογή στόχου που επιλέγετε. Ο τρόπος διαχείρισης αυτού του αρχείου στη συνέχεια εξαρτάται από την εφαρμογή ή την υπηρεσία στόχου που επιλέξατε.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Εξωτερικοί συνδέσμοι';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Όταν ανοίγετε εξωτερικούς συνδέσμους, όπως το αποθήκευση GitHub, η εφαρμογή μεταδίδει την ενέργεια στο πρόγραμμα περιήγησής σας ή σε άλλη εξωτερική εφαρμογή. Ο χειρισμός δεδομένων μετά το σημείο αυτό διέπεται από το τρίτο μέρος που ανοίγετε.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Τι δεν συλλέγει η εφαρμογή';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Η εφαρμογή δεν απαιτεί λογαριασμό Sked και δεν ενεργοποιεί αναλύσεις, αναγνωριστικά διαφήμισης ή αντιγραφή ασφαλείας στο cloud. Επίσης δεν παρέχει ένα ειδικό πεδίο για τη συλλογή κωδικών πρόσβασης λογαριασμού σχολείου. Εάν συνδεθείτε σε έναν ιστότοπο σχολείου μέσα στην εφαρμογή, αυτή η αλληλεπίδραση συμβαίνει στη σελίδα του σχολείου που ανοίξατε.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Ανάλυση ιστοσελίδας';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Όταν χρησιμοποιείτε εισαγωγή σχολικής ιστοσελίδας ή ανάλυση επικολλημένου κειμένου ωρολογίου προγράμματος / HTML, η εφαρμογή πρώτα προετοιμάζει και καθαρίζει το περιεχόμενο τοπικά και έπειτα στέλνει το υποβληθέν κείμενο προγράμματος, κείμενο σελίδας ή περιεχόμενο HTML, τον προαιρετικό τίτλο και το URL της σελίδας, την τρέχουσα γλώσσα της εφαρμογής και το περιεχόμενο οδηγιών του αναλυτή στο συμβατό με OpenAI endpoint που ρυθμίσατε. Η λήψη της λίστας μοντέλων ζητά επίσης το ίδιο endpoint. Το Sked δεν παρέχει ενσωματωμένο endpoint ανάλυσης και δεν στέλνει αιτήματα ανάλυσης σε backend αναλυτή προγραμμάτων που ελέγχεται από τον προγραμματιστή. Το προσαρμοσμένο endpoint και τυχόν ανάντη υπηρεσίες μπορεί να αποθηκεύουν, προωθούν, περιορίζουν, διαγράφουν ή επεξεργάζονται με άλλο τρόπο τα δεδομένα σύμφωνα με τους κανόνες του παρόχου υπηρεσίας που επιλέγετε. Αν χρησιμοποιείτε http:// Base URL, χρησιμοποιήστε το μόνο σε αξιόπιστες συσκευές, δίκτυα και υπηρεσίες endpoint, επειδή το περιεχόμενο και τα API keys μπορεί να μην προστατεύονται με κρυπτογράφηση μεταφοράς.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Ενημερώσεις πολιτικής';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Η τρέχουσα έκδοση της πολιτικής απορρήτου είναι $version. Εάν μια μεταγενέστερη έκδοση αλλάξει τον τρόπο χειρισμού των δεδομένων, η εφαρμογή μπορεί να σας ζητήσει να διαβάσετε και να συμφωνήσετε ξανά με την ενημερωμένη πολιτική.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Συμφωνήστε με την πολιτική απορρήτου πριν χρησιμοποιήσετε την εφαρμογή';
 
@@ -1035,13 +885,6 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Εισαγωγή της σελίδας του τρέχοντος προγράμματος από την ιστοσελίδα του σχολείου.';
-
-  @override
-  String get schoolSitesManageEntry => 'Διαχείριση σχολικών ιστότοπων';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Προσθήκη, επεξεργασία και διαγραφή διευθύνσεων URL σύνδεσης σχολείου, με εισαγωγή και εξαγωγή JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Διαχείριση χώρου σχολείου';
@@ -1172,12 +1015,6 @@ class AppLocalizationsEl extends AppLocalizations {
       'Ανάλυση χρονοδιαγράμματος από το περιεχόμενο της σελίδας';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'URL πηγής (προαιρετικό)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Τίτλος σελίδας (προαιρετικό)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Περιεχόμενο σελίδας';
 
   @override
@@ -1193,10 +1030,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Το περιεχόμενο προετοιμάστηκε';
-
-  @override
-  String get schoolHtmlImportCompressFirst =>
-      'Προετοιμάστε πρώτα το περιεχόμενο.';
 
   @override
   String get schoolHtmlImportSubmit => 'Ανάλυση και εισαγωγή';
@@ -1216,9 +1049,6 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Επιστροφή στην ιστοσελίδα';
 
   @override
-  String get schoolWebImportPageTitle => 'Εισαγωγή ιστοσελίδας σχολείου';
-
-  @override
   String get schoolWebImportPreview => 'Εισαγωγή προεπισκόπησης';
 
   @override
@@ -1233,9 +1063,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Τίτλος σελίδας';
-
-  @override
-  String get schoolWebImportParserUsed => 'Αναλυτής';
 
   @override
   String get schoolWebImportWarnings => 'Εισαγωγή σημειώσεων';
@@ -1256,15 +1083,8 @@ class AppLocalizationsEl extends AppLocalizations {
       'Συνδεθείτε στην ιστοσελίδα του σχολείου μέσα στην εφαρμογή και, στη συνέχεια, πλοηγηθείτε στη σελίδα του προγράμματος με μη αυτόματο τρόπο.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Η διαμόρφωση του προσαρμοσμένου αναλυτή είναι ελλιπής. Συμπληρώστε πρώτα τη βασική διεύθυνση URL, το κλειδί API και το μοντέλο.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Αυτή η πλατφόρμα δεν υποστηρίζει ακόμα ενσωματωμένη σύνδεση στο διαδίκτυο. Χρησιμοποιήστε μια πλατφόρμα με υποστήριξη WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Επιλέξτε το σχολείο';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1276,12 +1096,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Εισαγωγή τρέχουσας σελίδας';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Φόρτωση σελίδας…';
-
-  @override
-  String get schoolWebImportParsing => 'Ανάλυση τρέχουσας σελίδας...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1320,14 +1134,6 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Προσαρμοσμένη OpenAI-συμβατή';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Προσαρμοσμένος αναλυτής συμβατός με OpenAI';
 
   @override
   String get schoolImportParserCustomPromptTitle =>
@@ -1418,11 +1224,6 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Τα τοπικά δεδομένα διαγράφηκαν, αλλά το Sked δεν μπόρεσε να κλείσει. Κλείστε το χειροκίνητα πριν το χρησιμοποιήσετε ξανά.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Αναλυτής: Προσαρμοσμένη ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Δείτε πλήρη πολιτική απορρήτου';
@@ -1606,12 +1407,6 @@ class AppLocalizationsEl extends AppLocalizations {
       'Διαχειριστείτε κατηγορίες, συμβάντα, υπενθυμίσεις και δεδομένα JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Έναρξη με ωρολόγιο πρόγραμμα';
-
-  @override
-  String get firstLaunchStartGeneral => 'Έναρξη με πρόγραμμα';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Επιλέγοντας έναν αρχικό χώρο εργασίας, επιβεβαιώνετε ότι έχετε διαβάσει και αποδέχεστε την ';
 
@@ -1625,13 +1420,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get switchMode => 'Αλλαγή λειτουργίας';
 
   @override
-  String get generalScheduleComingSoon => 'Το γενικό πρόγραμμα έρχεται σύντομα';
-
-  @override
   String get switchToStudentTimetable => 'Μετάβαση στο πρόγραμμα μαθημάτων';
-
-  @override
-  String get mySchedule => 'Το πρόγραμμά μου';
 
   @override
   String get today => 'Σήμερα';
@@ -1677,15 +1466,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Ημερομηνία λήξης';
-
-  @override
-  String get recurrenceNoEndDate => 'Χωρίς ημερομηνία λήξης';
-
-  @override
-  String get recurrenceSetEndDate => 'Ορισμός';
-
-  @override
-  String get recurrenceChangeEndDate => 'Αλλαγή';
 
   @override
   String get repeatsWeekly => 'Επαναλαμβάνεται κάθε εβδομάδα';
@@ -1825,28 +1605,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Το συμβάν αντιγράφηκε';
-
-  @override
-  String get searchEvents => 'Αναζήτηση συμβάντων';
-
-  @override
-  String get clearSearch => 'Εκκαθάριση αναζήτησης';
-
-  @override
-  String get filterByColor => 'Φιλτράρισμα ανά χρώμα';
-
-  @override
-  String get allColors => 'Όλα τα χρώματα';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Επερχόμενα: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Με περασμένη ώρα λήξης: $count';
-  }
 
   @override
   String get allDay => 'Ολοήμερο';
@@ -2006,14 +1764,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get reminderUpcoming => 'Επερχόμενη';
 
   @override
-  String get reminderOverdue => 'Πέρασε η ώρα λήξης';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Προσαρμογή εβδομάδας στην οθόνη';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Εμφάνιση ολόκληρης της εβδομάδας σε συμπαγείς διατάξεις. Απενεργοποιήστε για οριζόντια κύλιση. Τα προσαρμοσμένα εύρη άνω των 7 ημερών εξακολουθούν να κυλίονται.';
 
   @override
   String get showWeekends => 'Εμφάνιση Σαββατοκύριακου';
@@ -2231,9 +1982,6 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Κουμπί αλλαγής προβολής';
-
-  @override
-  String get settingsWorkspaceMode => 'Ενεργός χώρος εργασίας';
 
   @override
   String get hideHomeWorkspaceNavigation => 'Απόκρυψη πλοήγησης χώρων εργασίας';
@@ -2470,22 +2218,9 @@ class AppLocalizationsEl extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled προγραμματισμένες, $planned στο πλάνο';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Τελευταίο σφάλμα: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Αναδημιουργία πλάνου ειδοποιήσεων';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Το πλάνο ειδοποιήσεων αναδημιουργήθηκε.';
 
   @override
   String get developerNotificationTestChannel => 'Κανάλι δοκιμής';
@@ -2578,25 +2313,7 @@ class AppLocalizationsEl extends AppLocalizations {
       'Δεν υπάρχει μελλοντική υπενθύμιση στο τρέχον πλάνο';
 
   @override
-  String get developerNotificationNextMaintenance => 'Επόμενη συντήρηση';
-
-  @override
   String get developerNotificationNextRenewal => 'Επόμενη προσπάθεια ανανέωσης';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Δεν έχει προγραμματιστεί';
-
-  @override
-  String get developerNotificationTruncation => 'Περικοπή πλάνου';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'Παραλείφθηκαν $count λόγω του ορίου του πλάνου';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation =>
-      'Τελευταίος επανυπολογισμός';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2630,9 +2347,6 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Πλήρης επανυπολογισμός';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Συντήρηση';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Ανάκτηση';
@@ -2774,24 +2488,6 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Μη ασφαλής σύνδεση';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Άνοιγμα σύνδεσης στο σχολικό σύστημα;';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Η σύνδεση στο σχολικό σύστημα μπορεί να υποβάλει διαπιστευτήρια μέσω φορμών ή ανακατευθύνσεων διακομιστή στο σχολείο και στους παρόχους σύνδεσής του. Το Android δεν μπορεί να διακόπτει κάθε τέτοια μεταφορά για ξεχωριστή επιβεβαίωση προορισμού. Συνεχίστε μόνο αν τους εμπιστεύεστε για αυτήν την περίοδο εισαγωγής:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Άνοιγμα μη ασφαλούς σύνδεσης σχολείου;';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Αυτή η σύνδεση σχολείου χρησιμοποιεί HTTP. Όποιος μπορεί να παρακολουθήσει ή να αλλοιώσει αυτή τη σύνδεση μπορεί να διαβάσει ή να αλλάξει τα διαπιστευτήρια και το περιεχόμενο της σελίδας σας. Συνεχίστε μόνο αν αποδέχεστε αυτόν τον κίνδυνο για:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Υπενθυμίσεις και ειδοποιήσεις';
 
   @override
@@ -2928,27 +2624,6 @@ class AppLocalizationsEl extends AppLocalizations {
       'Όταν είναι απενεργοποιημένο, οι λεπτομέρειες ειδοποιήσεων αποκρύπτονται στην οθόνη κλειδώματος.';
 
   @override
-  String get notificationWidgets => 'Γραφικά στοιχεία αρχικής οθόνης';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Ανανεώστε τα γραφικά στοιχεία του Sked και μάθετε πώς να προσθέσετε ένα στην αρχική οθόνη.';
-
-  @override
-  String get notificationWidgetsDialogTitle =>
-      'Προσθήκη γραφικού στοιχείου Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Στην αρχική οθόνη της συσκευής, πατήστε παρατεταμένα σε μια κενή περιοχή, επιλέξτε «Γραφικά στοιχεία» και προσθέστε ένα γραφικό στοιχείο Sked. Θα εμφανίζει τα επόμενα μαθήματα ή συμβάντα σας.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Ανανέωση γραφικών στοιχείων';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Τα γραφικά στοιχεία ανανεώθηκαν';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Αυτή η πλατφόρμα δεν παρέχει εγγενείς ειδοποιήσεις.';
 
@@ -2985,19 +2660,7 @@ class AppLocalizationsEl extends AppLocalizations {
       'Ο χώρος εργασίας απενεργοποιήθηκε, αλλά οι υπενθυμίσεις δεν καταργήθηκαν. Δοκιμάστε ξανά την ανάκτηση ειδοποιήσεων.';
 
   @override
-  String get settingsSearch => 'Αναζήτηση ρυθμίσεων';
-
-  @override
-  String get settingsNoResults => 'Δεν βρέθηκαν αντίστοιχες ρυθμίσεις';
-
-  @override
   String get settingsDataPrivacy => 'Δεδομένα και απόρρητο';
-
-  @override
-  String get workspacePreferences => 'Εμφάνιση και αλληλεπίδραση';
-
-  @override
-  String get workspaceManage => 'Διαχείριση';
 
   @override
   String get selectedDayAgenda => 'Επιλεγμένη ημέρα';

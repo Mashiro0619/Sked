@@ -52,19 +52,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Razčlenjevanje ni uspelo';
 
   @override
-  String get schoolImportParsePageComplete => 'Razčlenjevanje končano';
-
-  @override
   String get schoolImportParsePageContinue => 'Nadaljuj';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Surov odgovor';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Razširi surov odgovor';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Strni surov odgovor';
 
   @override
   String get schoolImportExpandWarnings => 'Razširi opozorila o uvozu';
@@ -239,32 +227,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsTitle => 'Nastavitve';
 
   @override
-  String get settingsSectionTimetable => 'Urnik pouka';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Splošni urnik';
-
-  @override
   String get settingsSectionAppearance => 'Videz';
-
-  @override
-  String get settingsSectionApp => 'Aplikacija';
 
   @override
   String get settingsSectionWorkspace => 'Delovni prostor';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Videz in jezik';
-
-  @override
-  String get settingsSectionDataSecurity => 'Podatki in varnost';
-
-  @override
   String get settingsSectionAbout => 'O aplikaciji Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'Trenutno ni na voljo nobenega urnika za nastavitve.';
 
   @override
   String get semesterStartDate => 'Datum začetka semestra';
@@ -320,10 +289,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get showTimetableGridLines => 'Prikaži črte mreže urnika';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Nadzorujte, ali so vodoravne in navpične mrežne črte vidne v voznem redu.';
-
-  @override
   String get timetableHorizontalLayoutSection =>
       'Vodoravna postavitev in poteze';
 
@@ -338,22 +303,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Prilagodi tedenske stolpce zaslonu';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Če je mogoče, prikaže vseh sedem stolpcev urnika na zaslonu. Izklopite za nespremenljivo širino in vodoravno pomikanje.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Podrsnite za menjavo tedna';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Podrsnite levo ali desno za menjavo tedna. Pri nespremenljivi širini se najprej pomaknite do roba in nato povlecite naprej.';
-
-  @override
-  String get liveCourseOutlineColor => 'Barva orisa tečaja';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Izberite, ali so obrisi usmerjeni v trenutni/naslednji tečaj ali vse prikazane tečaje na trenutni strani.';
 
   @override
   String get liveCourseOutlineSettings => 'Opis tečaja';
@@ -391,22 +345,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get language => 'Jezik';
-
-  @override
-  String get languagePageDescription =>
-      'Izberite enega od jezikov, ki je resnično na voljo v aplikaciji.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'angleščina';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Odziv API';
 
   @override
   String get theme => 'Tema';
@@ -477,10 +415,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get appBackupTitle => 'Varnostna kopija in obnovitev aplikacije';
 
   @override
-  String get appBackupSubtitle =>
-      'Varnostno kopirajte ali obnovite urnike, razporede, nastavitve in šolska spletna mesta. Ključi API niso vključeni.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Popolna obnovitev zamenja trenutne podatke aplikacije. Ključi AI API so v varni shrambi in se ne zapišejo v datoteke varnostne kopije.';
 
@@ -548,22 +482,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get checkForUpdates => 'Preveri posodobitve';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => 'Posodobitve upravlja Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Prejemaj predizdaje';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Vključi različice Alpha, Beta in RC, ki so lahko nestabilne. Če je izklopljeno, so na voljo le stabilne različice.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Že na najnovejši različici ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Trenutna različica';
@@ -572,19 +495,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get newVersionAvailable => 'Na voljo je posodobitev';
 
   @override
-  String get latestVersionLabel => 'Najnovejša različica';
-
-  @override
-  String get updateContentLabel => 'Podrobnosti o posodobitvi';
-
-  @override
-  String get officialWebsite => 'Uradna spletna stran';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Pogon v oblaku';
 
   @override
   String get ignoreThisVersion => 'Prezri to različico';
@@ -594,10 +505,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Preverjanje posodobitve ni uspelo';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Najnovejše različice ni bilo mogoče pridobiti iz GitHuba. Še vedno lahko odprete spodnjo stran GitHub Releases.';
 
   @override
   String get githubRepository => 'Skladišče GitHub';
@@ -611,10 +518,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Podelite Skedu zvezdico na GitHubu!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Odprite repozitorij projekta in podelite Skedu zvezdico';
 
   @override
   String get openGithubFailed =>
@@ -943,56 +846,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Sked je orodje za urnike, ki daje prednost lokalni hrambi. Urniki, nabori obdobij in konfiguracija šolskega mesta so shranjeni samo v vaši napravi ali brskalniku in se nikoli ne naložijo samodejno. Aplikacija obdeluje podatke samo, ko izrecno sprožite dejanja, kot so uvoz, razčlenjevanje spletnih strani, deljenje ali odpiranje zunanjih povezav. Celotna politika zasebnosti je na voljo na spletu.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Lokalno shranjevanje';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Na izvornih platformah Sked shranjuje urnike pouka, splošne urnike, povezane nastavitve in nastavitve šolskih spletišč, ki jih je mogoče urejati, v imenik operacijskega sistema za podatke aplikacij. Različice za brskalnik uporabljajo shrambo brskalnika. Datoteke, ki so jih starejše različice zapisale v uporabnikov imenik Dokumenti, ostanejo tam, vendar se ne preberejo ali prenesejo samodejno. Če želite te podatke obdržati, pred nadgradnjo iz stare različice izvozite popolno varnostno kopijo aplikacije in jo po nadgradnji obnovite. Nastavitve za API umetne inteligence so shranjene lokalno. Lastni ključ API se shrani prek varne shrambe platforme, kadar je ta na voljo. Popolne varnostne kopije aplikacije ne vsebujejo lastnega ključa API. Aplikacija teh lokalnih podatkov ne nalaga samodejno na strežnik, ki ga nadzoruje razvijalec.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Uvoz in izvoz';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Aplikacija bere ali piše datoteke JSON urnika, datoteke JSON šolskega mesta in datoteke predloge obdobja samo, ko izrecno izberete datoteko ali začnete izvozno dejanje. Uvoz teh datotek je lokalna operacija, razen če izberete tudi razčlenitev spletne strani. Pridobivanje seznama modelov po meri je tudi izrecno omrežno dejanje in kontaktira le končno točko po meri, ki ste jo konfigurirali.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Delitev';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Ko izrecno uporabljate skupno rabo, program prenese izvoženo datoteko na list skupne rabe sistema ali ciljni program, ki ga izberete. Način uporabe te datoteke je odvisen od ciljne aplikacije ali storitve, ki ste jo izbrali.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Zunanje povezave';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Ko odprete zunanje povezave, kot je repozitorij GitHub, aplikacija prenese dejanje vašemu brskalniku ali drugi zunanji aplikaciji. Obdelavo podatkov po tej točki ureja tretja oseba, ki jo odprete.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Kaj aplikacija ne zbira';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Aplikacija ne zahteva računa Sked in ne omogoča analitike, oglaševalskih identifikatorjev ali varnostne kopije v oblaku. Prav tako ne zagotavlja namenskega polja za zbiranje gesel šolskih računov. Če se v aplikaciji vpišete na spletno mesto šole, se ta interakcija zgodi na strani šole, ki ste jo odprli.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Razčlenitev spletnih strani';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Ko uporabite uvoz šolske spletne strani ali analizirate prilepljeno besedilo urnika / HTML, aplikacija vsebino najprej pripravi in očisti lokalno, nato pa pošlje poslano besedilo urnika, besedilo strani ali vsebino HTML, izbirni naslov strani in URL, trenutni jezik aplikacije ter vsebino poziva parserja na končno točko, združljivo z OpenAI, ki ste jo nastavili. Pridobivanje seznama modelov prav tako zahteva isto končno točko. Sked ne ponuja vgrajene končne točke parserja in zahtev za analizo ne pošilja v zaledje parserja urnikov, ki bi ga nadzoroval razvijalec. Končna točka po meri in morebitne nadrejene storitve lahko podatke shranjujejo, posredujejo, omejujejo, brišejo ali drugače obdelujejo v skladu s pravili izbranega ponudnika storitev. Če uporabljate http:// Base URL, ga uporabljajte samo na zaupanja vrednih napravah, omrežjih in storitvah končne točke, ker vsebina in ključi API morda niso zaščiteni s transportnim šifriranjem.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Posodobitve pravilnika';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Trenutna različica politike zasebnosti je $version. Če poznejša različica spremeni način ravnanja s podatki, vas lahko aplikacija zahteva, da znova preberete posodobljeni pravilnik in se z njim strinjate.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Prosimo, strinjajte se s politiko zasebnosti pred uporabo aplikacije';
 
@@ -1014,13 +867,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Uvozi trenutno stran voznega reda s spletnega mesta šole.';
-
-  @override
-  String get schoolSitesManageEntry => 'Upravljanje šolskih spletnih mest';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Dodajanje, urejanje in brisanje šolskih prijavnih URL-jev z uvozom in izvozom JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Upravljanje šolskih lokacij';
@@ -1150,12 +996,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Razčleni časovni razpored iz vsebine strani';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'Izvorni URL (neobvezno)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Naslov strani (neobvezno)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Vsebina strani';
 
   @override
@@ -1171,9 +1011,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Vsebina pripravljena';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Najprej pripravite vsebino.';
 
   @override
   String get schoolHtmlImportSubmit => 'Razčlenitev in uvoz';
@@ -1193,9 +1030,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Nazaj na spletno stran';
 
   @override
-  String get schoolWebImportPageTitle => 'Uvoz spletne strani šole';
-
-  @override
   String get schoolWebImportPreview => 'Uvozi predogled';
 
   @override
@@ -1210,9 +1044,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Naslov strani';
-
-  @override
-  String get schoolWebImportParserUsed => 'Razčlenjevalnik';
 
   @override
   String get schoolWebImportWarnings => 'Uvozi opombe';
@@ -1233,15 +1064,8 @@ class AppLocalizationsSl extends AppLocalizations {
       'Vpišite se v šolsko spletno mesto v aplikaciji in se ročno pomaknite na stran s časovnim razporedom.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Nastavitve lastnega razčlenjevalnika niso popolne. Najprej vnesite osnovni URL, ključ API in model.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Ta platforma še ne podpira vdelane spletne prijave. Prosimo, uporabite platformo s podporo WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Izberite šolo';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1253,12 +1077,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Uvozi trenutno stran';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Nalaganje strani...';
-
-  @override
-  String get schoolWebImportParsing => 'Razčlenitev trenutne strani...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1297,14 +1115,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Po meri združljiv z OpenAI';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Razčlenjevalnik po meri, združljiv z OpenAI';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Poziv po meri';
@@ -1392,11 +1202,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Lokalni podatki so bili počiščeni, vendar se Sked ni mogel zapreti. Pred ponovno uporabo aplikacijo zaprite ročno.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Razčlenitev: po meri ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy =>
@@ -1580,12 +1385,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Upravljajte kategorije, dogodke, opomnike in podatke JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Začni z urnikom';
-
-  @override
-  String get firstLaunchStartGeneral => 'Začni z razporedom';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Z izbiro začetnega delovnega prostora potrjujete, da ste prebrali in sprejeli ';
 
@@ -1599,13 +1398,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get switchMode => 'Preklopi način';
 
   @override
-  String get generalScheduleComingSoon => 'Splošni urnik bo kmalu na voljo';
-
-  @override
   String get switchToStudentTimetable => 'Preklopi na urnik pouka';
-
-  @override
-  String get mySchedule => 'Moj urnik';
 
   @override
   String get today => 'Danes';
@@ -1651,15 +1444,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Končni datum';
-
-  @override
-  String get recurrenceNoEndDate => 'Brez končnega datuma';
-
-  @override
-  String get recurrenceSetEndDate => 'Nastavi';
-
-  @override
-  String get recurrenceChangeEndDate => 'Spremeni';
 
   @override
   String get repeatsWeekly => 'Se ponavlja tedensko';
@@ -1797,28 +1581,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Dogodek je podvojen';
-
-  @override
-  String get searchEvents => 'Poišči dogodke';
-
-  @override
-  String get clearSearch => 'Počisti iskanje';
-
-  @override
-  String get filterByColor => 'Filtriraj po barvi';
-
-  @override
-  String get allColors => 'Vse barve';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Prihajajoči: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Pretekli: $count';
-  }
 
   @override
   String get allDay => 'Ves dan';
@@ -1978,14 +1740,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get reminderUpcoming => 'Prihajajoče';
 
   @override
-  String get reminderOverdue => 'Preteklo';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Prilagodi teden zaslonu';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Prikaži celoten teden v strnjenih postavitvah. Izklopi za vodoravno pomikanje. Obsegi po meri nad 7 dni ostanejo pomični.';
 
   @override
   String get showWeekends => 'Prikaži konce tedna';
@@ -2199,9 +1954,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Gumb za menjavo pogleda';
-
-  @override
-  String get settingsWorkspaceMode => 'Aktivni delovni prostor';
 
   @override
   String get hideHomeWorkspaceNavigation =>
@@ -2436,22 +2188,9 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return 'Razporejeni: $scheduled, načrtovani: $planned';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Zadnja napaka: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Znova sestavi načrt obvestil';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Načrt obvestil je znova sestavljen.';
 
   @override
   String get developerNotificationTestChannel => 'Preizkusni kanal';
@@ -2543,26 +2282,8 @@ class AppLocalizationsSl extends AppLocalizations {
       'V trenutnem načrtu ni prihodnjih opomnikov';
 
   @override
-  String get developerNotificationNextMaintenance => 'Naslednje vzdrževanje';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Naslednja obnova po najboljših zmožnostih';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Ni načrtovano';
-
-  @override
-  String get developerNotificationTruncation => 'Omejitev načrta';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'Izpuščeno zaradi omejitve načrta: $count';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation =>
-      'Zadnji ponovni izračun';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2596,9 +2317,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Celoten ponovni izračun';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Vzdrževanje';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Obnovitev';
@@ -2740,24 +2458,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Nevarna povezava';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Želite odpreti prijavo v šolski sistem?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Prijava v šolski sistem lahko prek obrazcev ali preusmeritev strežnika pošlje poverilnice šoli in njenim ponudnikom prijave. Android ne more ustaviti vsakega takega prenosa za ločeno potrditev cilja. Nadaljujte le, če jim zaupate za to sejo uvoza:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Odprem nezaščiteno prijavo v šolski sistem?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Ta prijava v šolski sistem uporablja HTTP. Kdor lahko spremlja ali spreminja to povezavo, lahko prebere ali spremeni vaše poverilnice in vsebino strani. Nadaljujte le, če sprejemate to tveganje za:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Opomniki in obvestila';
 
   @override
@@ -2890,26 +2590,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ko je možnost izklopljena, so podrobnosti obvestil na zaklenjenem zaslonu skrite.';
 
   @override
-  String get notificationWidgets => 'Pripomočki na začetnem zaslonu';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Osvežite pripomočke Skeda in preverite, kako jih dodate iz zaganjalnika.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Dodaj pripomoček Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'V zaganjalniku naprave pridržite prazno območje, izberite Pripomočki in dodajte pripomoček Sked. Pripomoček prikazuje naslednje predmete ali dogodke.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Osveži pripomočke';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Pripomočki so osveženi';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Ta platforma ne podpira izvornih obvestil.';
 
@@ -2945,19 +2625,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Delovni prostor je izklopljen, vendar opomnikov ni bilo mogoče odstraniti. Poskusite znova obnoviti obvestila.';
 
   @override
-  String get settingsSearch => 'Iskanje nastavitev';
-
-  @override
-  String get settingsNoResults => 'Ni ustreznih nastavitev';
-
-  @override
   String get settingsDataPrivacy => 'Podatki in zasebnost';
-
-  @override
-  String get workspacePreferences => 'Prikaz in upravljanje';
-
-  @override
-  String get workspaceManage => 'Upravljaj';
 
   @override
   String get selectedDayAgenda => 'Izbrani dan';

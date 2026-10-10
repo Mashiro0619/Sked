@@ -52,19 +52,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analiza a eșuat';
 
   @override
-  String get schoolImportParsePageComplete => 'Analiză finalizată';
-
-  @override
   String get schoolImportParsePageContinue => 'Continuă';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Răspuns brut';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Extinde răspunsul brut';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Restrânge răspunsul brut';
 
   @override
   String get schoolImportExpandWarnings => 'Extinde avertismentele de import';
@@ -241,32 +229,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get settingsTitle => 'Setări';
 
   @override
-  String get settingsSectionTimetable => 'Orar';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Program general';
-
-  @override
   String get settingsSectionAppearance => 'Aspect';
-
-  @override
-  String get settingsSectionApp => 'Aplicație';
 
   @override
   String get settingsSectionWorkspace => 'Spațiu de lucru';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Aspect și limbă';
-
-  @override
-  String get settingsSectionDataSecurity => 'Date și securitate';
-
-  @override
   String get settingsSectionAbout => 'Despre Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'În prezent nu este disponibil niciun orar pentru setări.';
 
   @override
   String get semesterStartDate => 'Data începerii semestrului';
@@ -322,10 +291,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get showTimetableGridLines => 'Afișează liniile grilei de orar';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Controlați dacă liniile de rețea orizontale și verticale sunt vizibile în orar.';
-
-  @override
   String get timetableHorizontalLayoutSection => 'Aspect orizontal și gesturi';
 
   @override
@@ -340,22 +305,11 @@ class AppLocalizationsRo extends AppLocalizations {
       'Încadrează coloanele săptămânii pe ecran';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Afișează toate cele șapte coloane ale orarului pe ecran când este posibil; dezactivează pentru lățime fixă și derulare.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Schimbă săptămânile prin glisare';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Glisează la stânga sau la dreapta pentru altă săptămână. La lățime fixă, trage mai întâi dincolo de margine.';
-
-  @override
-  String get liveCourseOutlineColor => 'Culoarea conturului cursului';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Alegeți dacă conturile vizează cursul curent / următor sau toate cursurile afișate pe pagina curentă.';
 
   @override
   String get liveCourseOutlineSettings => 'Descriere curs';
@@ -393,22 +347,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get language => 'Limbă';
-
-  @override
-  String get languagePageDescription =>
-      'Alegeți una dintre limbile care sunt cu adevărat disponibile în aplicație.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'engleză';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Răspunsul API';
 
   @override
   String get theme => 'Tema';
@@ -479,10 +417,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get appBackupTitle => 'Backup și restaurare aplicație';
 
   @override
-  String get appBackupSubtitle =>
-      'Fă backup sau restaurează orare, programe, setări și site-uri școlare. Cheile API nu sunt incluse.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'O restaurare completă înlocuiește datele curente ale aplicației. Cheile AI API rămân în stocarea securizată și nu sunt scrise în fișierele de backup.';
 
@@ -550,23 +484,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get checkForUpdates => 'Verificați pentru actualizări';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'Actualizările sunt gestionate de Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Primește versiuni preliminare';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Include versiunile Alpha, Beta și RC, care pot fi instabile. Când este dezactivat, sunt oferite doar versiuni stabile.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Deja pe cea mai recentă versiune ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Versiunea curentă';
@@ -575,19 +497,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get newVersionAvailable => 'Actualizare disponibilă';
 
   @override
-  String get latestVersionLabel => 'Ultima versiune';
-
-  @override
-  String get updateContentLabel => 'Detalii de actualizare';
-
-  @override
-  String get officialWebsite => 'Site-ul oficial';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Drive în cloud';
 
   @override
   String get ignoreThisVersion => 'Ignoraţi această versiune';
@@ -597,10 +507,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Verificarea actualizării a eșuat';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Nu s-a putut obține cea mai recentă versiune de pe GitHub. Poți deschide GitHub Releases mai jos.';
 
   @override
   String get githubRepository => 'Repozitoriul GitHub';
@@ -613,10 +519,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Oferă o stea pentru Sked pe GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Deschide depozitul proiectului și oferă o stea pentru Sked';
 
   @override
   String get openGithubFailed =>
@@ -953,56 +855,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Sked este un instrument de orar care prioritizează stocarea locală. Orarele, seturile de perioade și configurația site-ului școlii sunt stocate numai pe dispozitivul dvs. sau în browser și nu sunt niciodată încărcate automat. Aplicația procesează datele numai atunci când declanșați explicit acțiuni precum importul, analizarea paginilor web, partajarea sau deschiderea linkurilor externe. Politica de confidențialitate completă este disponibilă online.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Depozitare locală';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Pe platformele native, Sked stochează datele orarului, programele generale, setările asociate și configurația editabilă a site-urilor școlare în directorul de suport al aplicațiilor din sistemul de operare; versiunile pentru browser folosesc stocarea browserului. Fișierele scrise de versiunile anterioare în directorul Documente al utilizatorului rămân acolo, dar nu sunt citite sau migrate automat. Pentru a păstra acele date, exportă o copie de siguranță completă din versiunea veche înainte de actualizare, apoi restaureaz-o. Setările API AI sunt stocate local; cheia API personalizată este stocată prin mecanismul securizat al platformei, când acesta este disponibil. Copiile de siguranță complete nu includ cheia API personalizată. Aplicația nu încarcă automat aceste date locale pe un server controlat de dezvoltator.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Import și export';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Aplicația citește sau scrie fișiere JSON de orar, fișiere JSON de site-ul școlii și fișiere de șablon de perioadă numai atunci când alegeți în mod explicit un fișier sau începeți o acțiune de export. Importarea acestor fișiere este o operație locală, cu excepția cazului în care alegeți și analizarea paginilor web. Obținerea unei liste de modele personalizate este, de asemenea, o acțiune de rețea explicită și contactează doar punctul final personalizat pe care l-ați configurat.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Partajare';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Când utilizați în mod explicit partajarea, aplicația trece fișierul exportat la foaia de partajare a sistemului sau la aplicația țintă pe care o alegeți. Modul în care fișierul este manipulat ulterior depinde de aplicația sau serviciul țintă selectat.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Legături externe';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Când deschideți link-uri externe, cum ar fi depozitul GitHub, aplicația transmite acțiunea browserului sau unei alte aplicații externe. Procesarea datelor după acest punct este guvernată de terța parte pe care o deschideți.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Ce nu colectează aplicația';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Aplicația nu necesită un cont Sked și nu permite analize, identificatori publicitari sau backup în cloud. De asemenea, nu oferă un câmp dedicat colectării parolelor contului școlii. Dacă vă conectați la un site web al școlii în interiorul aplicației, această interacțiune are loc pe pagina școlii pe care ați deschis-o.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Analizarea paginilor web';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Când folosești importul unei pagini web a școlii sau analizezi text de orar / HTML lipit, aplicația pregătește și curăță mai întâi conținutul local, apoi trimite textul de orar, textul paginii sau conținutul HTML trimis, titlul și URL-ul opțional al paginii, limba curentă a aplicației și conținutul promptului parserului către endpointul compatibil OpenAI pe care l-ai configurat. Obținerea listei de modele solicită același endpoint. Sked nu oferă un endpoint de parser integrat și nu trimite cereri de analiză către un backend de parser de orare controlat de dezvoltator. Endpointul personalizat și eventualele servicii upstream pot stoca, redirecționa, limita, șterge sau procesa datele în alt mod conform regulilor furnizorului de servicii ales. Dacă folosești un Base URL http://, utilizează-l numai pe dispozitive, rețele și servicii endpoint de încredere, deoarece conținutul și cheile API pot să nu fie protejate prin criptare de transport.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Actualizări ale politicii';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Versiunea actuală a politicii de confidențialitate este $version. Dacă o versiune ulterioară modifică modul în care sunt manipulate datele, aplicația vă poate cere să citiți și să acceptați din nou politica actualizată.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Vă rugăm să acceptați politica de confidențialitate înainte de a utiliza aplicația';
 
@@ -1024,13 +876,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Importați pagina de orar curent de pe site-ul școlii.';
-
-  @override
-  String get schoolSitesManageEntry => 'Gestionați site-urile școlii';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Adăugați, editați și ștergeți URL-urile de conectare la școală, cu import și export JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Managementul site-ului școlii';
@@ -1162,12 +1007,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Analiza programului din conținutul paginii';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'URL sursă (opțional)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Titlul paginii (opțional)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Conținutul paginii';
 
   @override
@@ -1183,9 +1022,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Conținut pregătit';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Pregătiți mai întâi conținutul.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analiza și import';
@@ -1205,9 +1041,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Înapoi la pagina web';
 
   @override
-  String get schoolWebImportPageTitle => 'Importul paginilor web ale școlii';
-
-  @override
   String get schoolWebImportPreview => 'Import previzualizare';
 
   @override
@@ -1222,9 +1055,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Titlul paginii';
-
-  @override
-  String get schoolWebImportParserUsed => 'Analizator';
 
   @override
   String get schoolWebImportWarnings => 'Import de note';
@@ -1244,15 +1074,8 @@ class AppLocalizationsRo extends AppLocalizations {
       'Conectați-vă la site-ul școlii în aplicație, apoi navigați manual la pagina de orar.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Configurația analizorului personalizat este incompletă. Completează mai întâi URL-ul de bază, cheia API și modelul.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Această platformă nu suportă încă autentificarea web încorporată. Vă rugăm să utilizați o platformă cu suport WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Alegeți școala';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1264,12 +1087,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importează pagina curentă';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Se încărcă pagina…';
-
-  @override
-  String get schoolWebImportParsing => 'Se analizează pagina curentă...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1308,14 +1125,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Compatibil cu OpenAI personalizat';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Parser compatibil cu OpenAI personalizat';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Prompt personalizat';
@@ -1404,11 +1213,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Datele locale au fost șterse, dar Sked nu s-a putut închide. Închide manual aplicația înainte de a o folosi din nou.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Analizator: Personalizat ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy =>
@@ -1593,12 +1397,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Gestionează categorii, evenimente, mementouri și date JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Începe cu orarul';
-
-  @override
-  String get firstLaunchStartGeneral => 'Începe cu programul';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Alegând un spațiu de lucru inițial, confirmi că ai citit și accepți ';
 
@@ -1612,14 +1410,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get switchMode => 'Schimbă modul';
 
   @override
-  String get generalScheduleComingSoon =>
-      'Programul general va fi disponibil în curând';
-
-  @override
   String get switchToStudentTimetable => 'Treci la orarul școlar';
-
-  @override
-  String get mySchedule => 'Programul meu';
 
   @override
   String get today => 'Astăzi';
@@ -1665,15 +1456,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Data de sfârșit';
-
-  @override
-  String get recurrenceNoEndDate => 'Fără dată de sfârșit';
-
-  @override
-  String get recurrenceSetEndDate => 'Setează';
-
-  @override
-  String get recurrenceChangeEndDate => 'Schimbă';
 
   @override
   String get repeatsWeekly => 'Se repetă săptămânal';
@@ -1812,28 +1594,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Eveniment duplicat';
-
-  @override
-  String get searchEvents => 'Caută evenimente';
-
-  @override
-  String get clearSearch => 'Golește căutarea';
-
-  @override
-  String get filterByColor => 'Filtrează după culoare';
-
-  @override
-  String get allColors => 'Toate culorile';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Viitoare: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Întârziate: $count';
-  }
 
   @override
   String get allDay => 'Toată ziua';
@@ -1994,14 +1754,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reminderUpcoming => 'Viitor';
 
   @override
-  String get reminderOverdue => 'Întârziat';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Potrivește săptămâna pe ecran';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Afișează întreaga săptămână în aspectele compacte. Dezactivează pentru derulare orizontală. Intervalele personalizate de peste 7 zile rămân derulabile.';
 
   @override
   String get showWeekends => 'Afișează weekendurile';
@@ -2216,9 +1969,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Buton de schimbare a vizualizării';
-
-  @override
-  String get settingsWorkspaceMode => 'Spațiu de lucru activ';
 
   @override
   String get hideHomeWorkspaceNavigation =>
@@ -2455,22 +2205,9 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled programate, $planned planificate';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Ultima eroare: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Reconstruiește planul de notificări';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Planul de notificări a fost reconstruit.';
 
   @override
   String get developerNotificationTestChannel => 'Canal de test';
@@ -2562,25 +2299,8 @@ class AppLocalizationsRo extends AppLocalizations {
       'Niciun memento viitor în planul curent';
 
   @override
-  String get developerNotificationNextMaintenance => 'Următoarea întreținere';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Următoarea încercare de reînnoire';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Neprogramată';
-
-  @override
-  String get developerNotificationTruncation => 'Trunchierea planului';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '$count omise din cauza limitei planului';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Ultima recalculare';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2614,9 +2334,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Recalculare completă';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Întreținere';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Recuperare';
@@ -2759,24 +2476,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Conexiune nesecurizată';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Deschideți autentificarea în sistemul școlii?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Autentificarea în sistemul școlii poate trimite date de conectare prin formulare sau redirecționări ale serverului către școală și furnizorii săi de autentificare. Android nu poate întrerupe fiecare astfel de transfer pentru o confirmare separată a destinației. Continuați numai dacă aveți încredere în aceștia pentru această sesiune de import:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Deschideți o autentificare școlară nesecurizată?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Această autentificare școlară folosește HTTP. Oricine poate monitoriza sau modifica această conexiune vă poate citi ori schimba datele de conectare și conținutul paginii. Continuați numai dacă acceptați acest risc pentru:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Mementouri și notificări';
 
   @override
@@ -2911,26 +2610,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Când este dezactivat, detaliile notificărilor rămân private pe ecranul de blocare.';
 
   @override
-  String get notificationWidgets => 'Widgeturi pe ecranul de pornire';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Reîmprospătează widgeturile Sked și află cum să adaugi unul din lansator.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Adaugă un widget Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'În lansatorul dispozitivului, apasă lung pe o zonă goală, alege Widgeturi și adaugă un widget Sked. Widgetul arată următoarele cursuri sau evenimente.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Reîmprospătează widgeturile';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Widgeturi reîmprospătate';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Această platformă nu oferă notificări native.';
 
@@ -2966,19 +2645,7 @@ class AppLocalizationsRo extends AppLocalizations {
       'Spațiul de lucru este dezactivat, dar mementourile nu au putut fi eliminate. Reîncearcă recuperarea notificărilor.';
 
   @override
-  String get settingsSearch => 'Caută în setări';
-
-  @override
-  String get settingsNoResults => 'Nicio setare corespunzătoare';
-
-  @override
   String get settingsDataPrivacy => 'Date și confidențialitate';
-
-  @override
-  String get workspacePreferences => 'Afișare și interacțiune';
-
-  @override
-  String get workspaceManage => 'Gestionează';
 
   @override
   String get selectedDayAgenda => 'Ziua selectată';

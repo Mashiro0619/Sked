@@ -52,19 +52,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analýza se nezdařila';
 
   @override
-  String get schoolImportParsePageComplete => 'Analýza dokončena';
-
-  @override
   String get schoolImportParsePageContinue => 'Pokračovat';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Nezpracovaná odpověď';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Rozbalit nezpracovanou odpověď';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Sbalit nezpracovanou odpověď';
 
   @override
   String get schoolImportExpandWarnings => 'Rozbalit upozornění k importu';
@@ -239,32 +227,13 @@ class AppLocalizationsCs extends AppLocalizations {
   String get settingsTitle => 'Nastavení';
 
   @override
-  String get settingsSectionTimetable => 'Rozvrh';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Obecný plán';
-
-  @override
   String get settingsSectionAppearance => 'Vzhled';
-
-  @override
-  String get settingsSectionApp => 'Aplikace';
 
   @override
   String get settingsSectionWorkspace => 'Pracovní prostor';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Vzhled a jazyk';
-
-  @override
-  String get settingsSectionDataSecurity => 'Data a zabezpečení';
-
-  @override
   String get settingsSectionAbout => 'O aplikaci Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'V současné době není k dispozici žádný časový rozvrh pro nastavení.';
 
   @override
   String get semesterStartDate => 'Datum zahájení semestru';
@@ -320,10 +289,6 @@ class AppLocalizationsCs extends AppLocalizations {
   String get showTimetableGridLines => 'Zobrazit řádky mřížky rozvrhu';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Ovládejte, zda jsou v rozvrhu viditelné vodorovné a svislé čáry mřížky.';
-
-  @override
   String get timetableHorizontalLayoutSection => 'Vodorovné rozložení a gesta';
 
   @override
@@ -337,22 +302,11 @@ class AppLocalizationsCs extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Přizpůsobit sloupce týdne obrazovce';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Pokud je to možné, zobrazí všech sedm sloupců rozvrhu na obrazovce. Vypnutím použijete pevnou šířku s posouváním.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Měnit týdny přejetím';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Přejetím doleva nebo doprava přejdete na jiný týden. Při pevné šířce nejprve posuňte obsah až k okraji.';
-
-  @override
-  String get liveCourseOutlineColor => 'Barva obrysu kurzu';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Zvolte, zda se obrysy zaměřují na aktuální/další kurz nebo na všechny kurzy zobrazené na aktuální stránce.';
 
   @override
   String get liveCourseOutlineSettings => 'Náčrt kurzu';
@@ -390,22 +344,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get language => 'Jazyk';
-
-  @override
-  String get languagePageDescription =>
-      'Vyberte si jeden z jazyků, který je opravdu k dispozici v aplikaci.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'angličtina';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Odpověď API';
 
   @override
   String get theme => 'Téma';
@@ -476,10 +414,6 @@ class AppLocalizationsCs extends AppLocalizations {
   String get appBackupTitle => 'Záloha a obnovení aplikace';
 
   @override
-  String get appBackupSubtitle =>
-      'Zálohujte nebo obnovte rozvrhy, plány, nastavení a školní weby. Klíče API nejsou zahrnuty.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Úplné obnovení nahradí aktuální data aplikace. Klíče AI API jsou uloženy v zabezpečeném úložišti a nezapisují se do záloh.';
 
@@ -547,22 +481,11 @@ class AppLocalizationsCs extends AppLocalizations {
   String get checkForUpdates => 'Zkontrolujte aktualizace';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => 'Aktualizace spravuje Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Přijímat předběžné aktualizace';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Zahrnout verze Alpha, Beta a RC, které mohou být nestabilní. Při vypnutí se nabízejí pouze stabilní verze.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Již v nejnovější verzi ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Aktuální verze';
@@ -571,19 +494,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get newVersionAvailable => 'Aktualizace k dispozici';
 
   @override
-  String get latestVersionLabel => 'Nejnovější verze';
-
-  @override
-  String get updateContentLabel => 'Aktualizace podrobností';
-
-  @override
-  String get officialWebsite => 'Oficiální webové stránky';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Cloud disk';
 
   @override
   String get ignoreThisVersion => 'Ignorovat tuto verzi';
@@ -593,10 +504,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Kontrola aktualizace selhala';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Nejnovější verzi se nepodařilo načíst z GitHubu. Níže můžete otevřít GitHub Releases ručně.';
 
   @override
   String get githubRepository => 'Úložiště GitHub';
@@ -609,10 +516,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Dejte Sked hvězdičku na GitHubu!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Otevřete repozitář projektu a dejte Sked hvězdičku';
 
   @override
   String get openGithubFailed => 'Nelze otevřít odkaz na úložiště GitHub';
@@ -939,56 +842,6 @@ class AppLocalizationsCs extends AppLocalizations {
       'Sked je rozvrhový nástroj upřednostňující lokální ukládání. Rozvrhy, časové sady a konfigurace školních stránek jsou uloženy pouze ve vašem zařízení nebo prohlížeči a nikdy nejsou automaticky nahrávány. Aplikace zpracovává data pouze tehdy, když výslovně spustíte akce jako import, analýzu webových stránek, sdílení nebo otevírání externích odkazů. Úplné zásady ochrany osobních údajů jsou k dispozici online.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Lokální skladování';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'V nativních verzích ukládá Sked rozvrhy, obecné plány, související nastavení a upravitelnou konfiguraci školních webů do složky podpory aplikace v operačním systému. Verze pro prohlížeč používá úložiště prohlížeče. Soubory, které starší verze uložily do uživatelské složky Dokumenty, zůstávají na místě, ale automaticky se nečtou ani nepřenášejí. Pokud je chcete zachovat, před aktualizací exportujte úplnou zálohu ze staré verze a poté ji obnovte. Nastavení AI API se ukládá místně. Vlastní klíč API se ukládá prostřednictvím zabezpečeného úložiště platformy, pokud je k dispozici. Úplné zálohy tento klíč neobsahují. Aplikace místní data automaticky neodesílá na server spravovaný vývojářem.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Import a export';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Aplikace čte nebo zapisuje soubory JSON časového rozvrhu, soubory JSON školních stránek a soubory šablon období pouze tehdy, když explicitně vyberete soubor nebo spustíte akci exportu. Import těchto souborů je lokální operací, pokud nevyberte také analýzu webových stránek. Nalezení vlastního seznamu modelů je také explicitní síťovou akci a kontaktuje pouze vlastní koncový bod, který jste nakonfigurovali.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Sdílení';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Když explicitně používáte sdílení, aplikace předá exportovaný soubor do listu sdílení systému nebo do cílové aplikace, kterou vyberete. Jak bude tento soubor následně zpracován, závisí na cílové aplikaci nebo službě, kterou jste vybrali.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Externí odkazy';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Když otevřete externí odkazy, jako je úložiště GitHub, aplikace předá akci vašemu prohlížeči nebo jiné externí aplikaci. Zpracování údajů po tomto bodě se řídí třetí stranou, kterou otevřete.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Co aplikace neshromažďuje';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Aplikace nevyžaduje účet Sked a neumožňuje analýzu, reklamní identifikátory ani cloudové zálohování. Také neposkytuje vyhrazené pole pro shromažďování hesel školních účtů. Pokud se přihlásíte na webové stránky školy uvnitř aplikace, dojde k této interakci na stránce školy, kterou jste otevřeli.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Analýza webových stránek';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Když použijete import školní webové stránky nebo analyzujete vložený text rozvrhu / HTML, aplikace obsah nejprve připraví a vyčistí lokálně a potom odešle zadaný text rozvrhu, text stránky nebo obsah HTML, volitelný název stránky a URL, aktuální jazyk aplikace a obsah pokynů pro parser do vámi nastaveného koncového bodu kompatibilního s OpenAI. Na stejný koncový bod se požaduje také načtení seznamu modelů. Sked neposkytuje vestavěný koncový bod parseru a neposílá požadavky na analýzu do backendu pro rozvrhy řízeného vývojářem. Vlastní koncový bod a případné nadřazené služby mohou data ukládat, přeposílat, omezovat, mazat nebo jinak zpracovávat podle pravidel vámi zvoleného poskytovatele služeb. Pokud používáte http:// Base URL, používejte jej pouze na důvěryhodných zařízeních, v důvěryhodných sítích a s důvěryhodnými službami koncového bodu, protože obsah a API klíče nemusí být chráněny transportním šifrováním.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Aktualizace zásad';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Aktuální verze zásad ochrany osobních údajů je $version. Pokud pozdější verze změní způsob zpracování dat, aplikace vás může požádat, abyste si znovu přečetli aktualizované zásady a souhlasili s nimi.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Souhlaste prosím se zásadami ochrany osobních údajů před použitím aplikace';
 
@@ -1010,13 +863,6 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Importujte aktuální časový rozvrh ze školních stránek.';
-
-  @override
-  String get schoolSitesManageEntry => 'Správa školních stránek';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Přidat, upravit a odstranit přihlašovací adresy školy pomocí importu a exportu JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Správa školních míst';
@@ -1146,12 +992,6 @@ class AppLocalizationsCs extends AppLocalizations {
       'Analyzovat časový rozvrh z obsahu stránky';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'Zdrojová adresa (volitelná)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Název stránky (volitelné)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Obsah stránky';
 
   @override
@@ -1167,9 +1007,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Obsah připraven';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Nejdřív připravte obsah.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analyzovat a importovat';
@@ -1189,9 +1026,6 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Zpět na stránku';
 
   @override
-  String get schoolWebImportPageTitle => 'Import školních webových stránek';
-
-  @override
   String get schoolWebImportPreview => 'Importovat náhled';
 
   @override
@@ -1206,9 +1040,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Název stránky';
-
-  @override
-  String get schoolWebImportParserUsed => 'Analyzátor';
 
   @override
   String get schoolWebImportWarnings => 'Importovat poznámky';
@@ -1229,15 +1060,8 @@ class AppLocalizationsCs extends AppLocalizations {
       'Přihlaste se na stránku školy v aplikaci a přejděte na stránku časového rozvrhu ručně.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Konfigurace vlastního analyzátoru není úplná. Nejprve vyplňte základní URL, klíč API a model.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Tato platforma zatím nepodporuje vložené webové přihlášení. Používejte platformu s podporou WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Vyberte si školu';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1249,12 +1073,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importovat aktuální stránku';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Načítání stránky…';
-
-  @override
-  String get schoolWebImportParsing => 'Analyzuje aktuální stránku...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1292,14 +1110,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'Kompatibilní s OpenAI';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Vlastní parser kompatibilní s OpenAI';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Vlastní výzva';
@@ -1387,11 +1197,6 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Místní data byla vymazána, ale Sked se nepodařilo ukončit. Před dalším použitím aplikaci ručně zavřete.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Parser: Vlastní ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy =>
@@ -1576,12 +1381,6 @@ class AppLocalizationsCs extends AppLocalizations {
       'Spravujte kategorie, události, připomenutí a data JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Začít s rozvrhem';
-
-  @override
-  String get firstLaunchStartGeneral => 'Začít s plánem';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Výběrem počátečního pracovního prostoru potvrzujete, že jste si přečetli a souhlasíte se ';
 
@@ -1595,13 +1394,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get switchMode => 'Přepnout režim';
 
   @override
-  String get generalScheduleComingSoon => 'Obecný plán připravujeme';
-
-  @override
   String get switchToStudentTimetable => 'Přepnout na studijní rozvrh';
-
-  @override
-  String get mySchedule => 'Můj plán';
 
   @override
   String get today => 'Dnes';
@@ -1647,15 +1440,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Datum konce';
-
-  @override
-  String get recurrenceNoEndDate => 'Bez data konce';
-
-  @override
-  String get recurrenceSetEndDate => 'Nastavit';
-
-  @override
-  String get recurrenceChangeEndDate => 'Změnit';
 
   @override
   String get repeatsWeekly => 'Opakuje se každý týden';
@@ -1792,28 +1576,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Událost byla duplikována';
-
-  @override
-  String get searchEvents => 'Hledat události';
-
-  @override
-  String get clearSearch => 'Vymazat hledání';
-
-  @override
-  String get filterByColor => 'Filtrovat podle barvy';
-
-  @override
-  String get allColors => 'Všechny barvy';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Nadcházející: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Po konci: $count';
-  }
 
   @override
   String get allDay => 'Celý den';
@@ -1973,14 +1735,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get reminderUpcoming => 'Nadcházející';
 
   @override
-  String get reminderOverdue => 'Po konci';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Přizpůsobit týden obrazovce';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Zobrazí celý týden v kompaktním rozložení. Vypnutím povolíte vodorovné posouvání. Vlastní rozsahy nad 7 dní se posouvají i nadále.';
 
   @override
   String get showWeekends => 'Zobrazit víkendy';
@@ -2197,9 +1952,6 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Tlačítko přepínání zobrazení';
-
-  @override
-  String get settingsWorkspaceMode => 'Aktivní pracovní prostor';
 
   @override
   String get hideHomeWorkspaceNavigation =>
@@ -2432,22 +2184,9 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return 'Naplánováno: $scheduled, v plánu: $planned';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Poslední chyba: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Znovu vytvořit plán oznámení';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Plán oznámení byl znovu vytvořen.';
 
   @override
   String get developerNotificationTestChannel => 'Testovací kanál';
@@ -2539,24 +2278,7 @@ class AppLocalizationsCs extends AppLocalizations {
       'V aktuálním plánu není žádné budoucí připomenutí';
 
   @override
-  String get developerNotificationNextMaintenance => 'Další údržba';
-
-  @override
   String get developerNotificationNextRenewal => 'Další pokus o obnovení';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Nenaplánováno';
-
-  @override
-  String get developerNotificationTruncation => 'Omezení plánu';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'Vynecháno kvůli limitu plánu: $count';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Poslední přepočítání';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2590,9 +2312,6 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Úplné přepočítání';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Údržba';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Obnova';
@@ -2732,24 +2451,6 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Nezabezpečené připojení';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Otevřít přihlášení do školního systému?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Přihlášení do školního systému může odeslat přihlašovací údaje prostřednictvím formulářů nebo přesměrování serveru škole a jejím poskytovatelům přihlášení. Android nemůže každé takové odeslání pozastavit a zobrazit samostatné potvrzení cíle. Pokračujte pouze tehdy, pokud jim pro tuto relaci importu důvěřujete:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Otevřít nezabezpečené přihlášení ke škole?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Toto přihlášení ke škole používá HTTP. Kdokoli, kdo může toto připojení sledovat nebo měnit, může přečíst či změnit vaše přihlašovací údaje a obsah stránky. Pokračujte pouze tehdy, pokud toto riziko přijímáte pro:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Připomenutí a oznámení';
 
   @override
@@ -2882,26 +2583,6 @@ class AppLocalizationsCs extends AppLocalizations {
       'Po vypnutí zůstanou podrobnosti oznámení na zamčené obrazovce skryté.';
 
   @override
-  String get notificationWidgets => 'Widgety na domovské obrazovce';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Obnovte widgety Sked a zjistěte, jak je přidat z domovské obrazovky.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Přidat widget Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Na domovské obrazovce podržte prázdné místo, vyberte Widgety a přidejte widget Sked. Zobrazuje nadcházející kurzy nebo události.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Obnovit widgety';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Widgety byly obnoveny';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Tato platforma neposkytuje nativní oznámení.';
 
@@ -2937,19 +2618,7 @@ class AppLocalizationsCs extends AppLocalizations {
       'Pracovní prostor je vypnutý, ale připomenutí se nepodařilo odstranit. Zkuste obnovení oznámení znovu.';
 
   @override
-  String get settingsSearch => 'Hledat v nastavení';
-
-  @override
-  String get settingsNoResults => 'Žádné odpovídající nastavení';
-
-  @override
   String get settingsDataPrivacy => 'Data a soukromí';
-
-  @override
-  String get workspacePreferences => 'Zobrazení a ovládání';
-
-  @override
-  String get workspaceManage => 'Spravovat';
 
   @override
   String get selectedDayAgenda => 'Vybraný den';

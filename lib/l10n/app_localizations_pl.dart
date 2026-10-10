@@ -52,19 +52,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analiza nie powiodła się';
 
   @override
-  String get schoolImportParsePageComplete => 'Analiza ukończona';
-
-  @override
   String get schoolImportParsePageContinue => 'Kontynuuj';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Surowa odpowiedź';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Rozwiń surową odpowiedź';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Zwiń surową odpowiedź';
 
   @override
   String get schoolImportExpandWarnings => 'Rozwiń ostrzeżenia importu';
@@ -240,32 +228,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get settingsTitle => 'Ustawienia';
 
   @override
-  String get settingsSectionTimetable => 'Plan zajęć';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Kalendarz ogólny';
-
-  @override
   String get settingsSectionAppearance => 'Wygląd';
-
-  @override
-  String get settingsSectionApp => 'Aplikacja';
 
   @override
   String get settingsSectionWorkspace => 'Obszar roboczy';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Wygląd i język';
-
-  @override
-  String get settingsSectionDataSecurity => 'Dane i bezpieczeństwo';
-
-  @override
   String get settingsSectionAbout => 'O Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'Nie ma obecnie dostępnego harmonogramu dla ustawień.';
 
   @override
   String get semesterStartDate => 'Data rozpoczęcia semestru';
@@ -322,10 +291,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get showTimetableGridLines => 'Pokaż linie siatki rozkładu';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Kontrola, czy poziome i pionowe linie siatki są widoczne w harmonogramie.';
-
-  @override
   String get timetableHorizontalLayoutSection => 'Układ poziomy i gesty';
 
   @override
@@ -339,22 +304,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Dopasuj kolumny tygodnia do ekranu';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'W miarę możliwości pokazuje wszystkie siedem kolumn planu na ekranie. Wyłącz, aby użyć stałej szerokości i przewijania.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Zmieniaj tygodnie przesunięciem';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Przesuń w lewo lub w prawo, aby zmienić tydzień. Przy stałej szerokości najpierw przeciągnij poza krawędź.';
-
-  @override
-  String get liveCourseOutlineColor => 'Kolor konturu kursu';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Wybierz, czy kontury są skierowane do bieżącego/następnego kursu lub wszystkich wyświetlanych kursów na bieżącej stronie.';
 
   @override
   String get liveCourseOutlineSettings => 'Okres kursu';
@@ -393,22 +347,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get language => 'Język';
-
-  @override
-  String get languagePageDescription =>
-      'Wybierz jeden z języków, który jest naprawdę dostępny w aplikacji.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'angielski';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Odpowiedź API';
 
   @override
   String get theme => 'Temat';
@@ -479,10 +417,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get appBackupTitle => 'Kopia zapasowa i przywracanie aplikacji';
 
   @override
-  String get appBackupSubtitle =>
-      'Twórz kopie lub przywracaj plany lekcji, harmonogramy, ustawienia i strony szkół. Klucze API nie są uwzględniane.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Pełne przywracanie zastępuje bieżące dane aplikacji. Klucze AI API są w bezpiecznej pamięci i nie są zapisywane w plikach kopii.';
 
@@ -550,22 +484,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get checkForUpdates => 'Sprawdź aktualizacje';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => 'Aktualizacjami zarządza Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Otrzymuj wersje przedpremierowe';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Uwzględniaj wersje Alpha, Beta i RC, które mogą być niestabilne. Po wyłączeniu oferowane są tylko wersje stabilne.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Już w najnowszej wersji ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Aktualna wersja';
@@ -574,19 +497,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get newVersionAvailable => 'Dostępna aktualizacja';
 
   @override
-  String get latestVersionLabel => 'Najnowsza wersja';
-
-  @override
-  String get updateContentLabel => 'Szczegóły aktualizacji';
-
-  @override
-  String get officialWebsite => 'Oficjalna strona internetowa';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Napęd w chmurze';
 
   @override
   String get ignoreThisVersion => 'Ignoruj tę wersję';
@@ -596,10 +507,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Nie udało się sprawdzić aktualizacji';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Nie udało się pobrać najnowszej wersji z GitHuba. Poniżej możesz otworzyć stronę GitHub Releases.';
 
   @override
   String get githubRepository => 'Repozytorium GitHub';
@@ -612,10 +519,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Daj Sked gwiazdkę na GitHubie!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Otwórz repozytorium projektu i daj Sked gwiazdkę';
 
   @override
   String get openGithubFailed =>
@@ -947,56 +850,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Sked to narzędzie do planów lekcji działające lokalnie. Plany lekcji, zestawy okresów i konfiguracja strony szkoły są przechowywane tylko na Twoim urządzeniu lub w przeglądarce i nigdy nie są automatycznie przesyłane. Aplikacja przetwarza dane tylko wtedy, gdy jawnie uruchamiasz działania takie jak import, analiza stron internetowych, udostępnianie lub otwieranie zewnętrznych linków. Pełna polityka prywatności jest dostępna online.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Lokalne przechowywanie';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Na platformach natywnych Sked przechowuje plany zajęć, kalendarze ogólne, powiązane ustawienia i edytowalną konfigurację witryn szkół w systemowym katalogu danych aplikacji; wersje przeglądarkowe korzystają z pamięci przeglądarki. Pliki zapisane przez starsze wersje w folderze Dokumenty użytkownika pozostają na miejscu, ale nie są automatycznie odczytywane ani przenoszone. Aby zachować te dane, przed aktualizacją wyeksportuj pełną kopię zapasową ze starej wersji aplikacji, a następnie ją przywróć. Ustawienia API AI są zapisywane lokalnie; niestandardowy klucz API jest przechowywany w bezpiecznym magazynie platformy, jeśli jest dostępny. Pełne kopie zapasowe aplikacji nie zawierają niestandardowego klucza API. Aplikacja nie przesyła automatycznie tych lokalnych danych na serwer zarządzany przez dewelopera.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Import i eksport';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Aplikacja odczytuje lub pisze pliki JSON harmonogramu, pliki JSON strony szkolnej i pliki szablonu okresu tylko wtedy, gdy wyraźnie wybierzesz plik lub rozpoczniesz akcję eksportu. Importowanie tych plików jest operacją lokalną, chyba że wybierzesz również analizowanie strony internetowej. Pobieranie niestandardowej listy modeli jest również wyraźną akcją sieciową i kontaktuje się tylko z skonfigurowanym przez Ciebie niestandardowym punktem końcowym.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Udostępnianie';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Kiedy wyraźnie używasz udostępniania, aplikacja przekazuje wyeksportowany plik do arkusza udostępniania systemu lub do wybranej aplikacji docelowej. Jak ten plik jest później obsługiwany zależy od wybranej aplikacji lub usługi docelowej.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Linki zewnętrzne';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Po otwarciu linków zewnętrznych, takich jak repozytorium GitHub, aplikacja przekazuje akcję przeglądarce lub innej aplikacji zewnętrznej. Przetwarzanie danych po tym momencie jest regulowane przez stronę trzecią, którą otwierasz.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Co aplikacja nie zbiera';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Aplikacja nie wymaga konta Sked i nie umożliwia analizy, identyfikatorów reklamowych ani tworzenia kopii zapasowych w chmurze. Nie zapewnia również dedykowanego pola do zbierania haseł do kont szkolnych. Jeśli zalogujesz się do strony internetowej szkoły w aplikacji, ta interakcja odbywa się na stronie szkoły, którą otworzyłeś.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Analiza strony internetowej';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Gdy używasz importu szkolnej strony internetowej albo analizujesz wklejony tekst planu zajęć / HTML, aplikacja najpierw przygotowuje i czyści treść lokalnie, a następnie wysyła przesłany tekst planu, tekst strony lub zawartość HTML, opcjonalny tytuł i URL strony, bieżący język aplikacji oraz treść polecenia parsera do skonfigurowanego przez Ciebie punktu końcowego zgodnego z OpenAI. Pobieranie listy modeli również wysyła żądanie do tego samego punktu końcowego. Sked nie udostępnia wbudowanego punktu końcowego parsera i nie wysyła żądań analizy do backendu parsera planów kontrolowanego przez dewelopera. Niestandardowy punkt końcowy i ewentualne usługi nadrzędne mogą przechowywać, przekazywać, ograniczać, usuwać lub w inny sposób przetwarzać dane zgodnie z zasadami wybranego przez Ciebie dostawcy usług. Jeśli używasz http:// Base URL, korzystaj z niego tylko na zaufanych urządzeniach, w zaufanych sieciach i z zaufanymi usługami punktu końcowego, ponieważ treść i klucze API mogą nie być chronione szyfrowaniem transportowym.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Aktualizacje polityki';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Aktualna wersja polityki prywatności to $version. Jeśli w późniejszej wersji zmieni się sposób przetwarzania danych, aplikacja może poprosić Cię o ponowne przeczytanie i zgodę na zaktualizowaną politykę.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Przed użyciem aplikacji zgadzaj się na politykę prywatności';
 
@@ -1018,13 +871,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Importuj bieżący harmonogram ze strony szkoły.';
-
-  @override
-  String get schoolSitesManageEntry => 'Zarządzanie witrynami szkolnymi';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Dodaj, edytuj i usuwaj adresy URL logowania szkoły za pomocą importu i eksportu JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Zarządzanie miejscem szkolnym';
@@ -1153,12 +999,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Analizuj harmonogram z zawartości strony';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'URL źródła (opcjonalne)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Tytuł strony (opcjonalnie)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Zawartość strony';
 
   @override
@@ -1174,9 +1014,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Treść przygotowana';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Najpierw przygotuj treść.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analizuj i importuj';
@@ -1196,9 +1033,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Powrót do strony internetowej';
 
   @override
-  String get schoolWebImportPageTitle => 'Import strony internetowej szkoły';
-
-  @override
   String get schoolWebImportPreview => 'Importuj podgląd';
 
   @override
@@ -1213,9 +1047,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Tytuł strony';
-
-  @override
-  String get schoolWebImportParserUsed => 'Parser';
 
   @override
   String get schoolWebImportWarnings => 'Importuj notatki';
@@ -1234,15 +1065,8 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zaloguj się na stronie szkoły w aplikacji, a następnie przejdź ręcznie do strony harmonogramu.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Konfiguracja niestandardowego parsera jest niepełna. Najpierw podaj bazowy URL, klucz API i model.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Ta platforma jeszcze nie obsługuje wbudowanego logowania internetowego. Proszę użyć platformy z obsługą WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Wybierz szkołę';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1254,12 +1078,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importuj bieżącą stronę';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Ładowanie strony…';
-
-  @override
-  String get schoolWebImportParsing => 'Analizuje bieżącą stronę...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1297,14 +1115,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'Kompatybilny z OpenAI';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Niestandardowy parser kompatybilny z OpenAI';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Niestandardowy prompt';
@@ -1393,11 +1203,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Dane lokalne zostały usunięte, ale Sked nie mógł się zamknąć. Zamknij aplikację ręcznie przed ponownym użyciem.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Parser: Niestandardowy ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Zobacz pełną politykę prywatności';
@@ -1581,12 +1386,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zarządzaj kategoriami, wydarzeniami, przypomnieniami oraz danymi JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Zacznij od planu lekcji';
-
-  @override
-  String get firstLaunchStartGeneral => 'Zacznij od harmonogramu';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Wybierając początkowy obszar roboczy, potwierdzasz, że znasz i akceptujesz ';
 
@@ -1600,13 +1399,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get switchMode => 'Zmień tryb';
 
   @override
-  String get generalScheduleComingSoon => 'Kalendarz ogólny już wkrótce';
-
-  @override
   String get switchToStudentTimetable => 'Przełącz na plan zajęć ucznia';
-
-  @override
-  String get mySchedule => 'Mój kalendarz';
 
   @override
   String get today => 'Dzisiaj';
@@ -1652,15 +1445,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Data zakończenia';
-
-  @override
-  String get recurrenceNoEndDate => 'Bez daty zakończenia';
-
-  @override
-  String get recurrenceSetEndDate => 'Ustaw';
-
-  @override
-  String get recurrenceChangeEndDate => 'Zmień';
 
   @override
   String get repeatsWeekly => 'Powtarza się co tydzień';
@@ -1797,28 +1581,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Wydarzenie zduplikowane';
-
-  @override
-  String get searchEvents => 'Szukaj wydarzeń';
-
-  @override
-  String get clearSearch => 'Wyczyść wyszukiwanie';
-
-  @override
-  String get filterByColor => 'Filtruj według koloru';
-
-  @override
-  String get allColors => 'Wszystkie kolory';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Nadchodzące: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Zaległe: $count';
-  }
 
   @override
   String get allDay => 'Całodniowe';
@@ -1978,14 +1740,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reminderUpcoming => 'Nadchodzące';
 
   @override
-  String get reminderOverdue => 'Zaległe';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Dopasuj widok tygodnia do ekranu';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Pokaż cały tydzień w układach kompaktowych. Wyłącz, aby przewijać poziomo. Własne zakresy ponad 7 dni nadal można przewijać.';
 
   @override
   String get showWeekends => 'Pokaż weekendy';
@@ -2200,9 +1955,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Przycisk zmiany widoku';
-
-  @override
-  String get settingsWorkspaceMode => 'Aktywny obszar roboczy';
 
   @override
   String get hideHomeWorkspaceNavigation =>
@@ -2436,21 +2188,9 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return 'Zaplanowane w systemie: $scheduled, w planie: $planned';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Ostatni błąd: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance => 'Odbuduj plan powiadomień';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Plan powiadomień został odbudowany.';
 
   @override
   String get developerNotificationTestChannel => 'Kanał testowy';
@@ -2543,24 +2283,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Brak przyszłych przypomnień w bieżącym planie';
 
   @override
-  String get developerNotificationNextMaintenance => 'Następna konserwacja';
-
-  @override
   String get developerNotificationNextRenewal => 'Następna próba odnowienia';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Nie zaplanowano';
-
-  @override
-  String get developerNotificationTruncation => 'Ograniczenie planu';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'Pominięto z powodu limitu planu: $count';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Ostatnie przeliczenie';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2594,9 +2317,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Pełne przeliczenie';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Konserwacja';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Odzyskiwanie';
@@ -2736,24 +2456,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Niezabezpieczone połączenie';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Otworzyć logowanie do systemu szkoły?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Logowanie do systemu szkoły może przesyłać dane logowania za pomocą formularzy lub przekierowań serwera do szkoły i jej dostawców logowania. Android nie może wstrzymać każdego takiego transferu, aby osobno potwierdzić miejsce docelowe. Kontynuuj tylko wtedy, gdy ufasz im w tej sesji importu:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Otworzyć niezabezpieczone logowanie do szkoły?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'To logowanie do szkoły używa protokołu HTTP. Każdy, kto może obserwować lub modyfikować to połączenie, może odczytać albo zmienić Twoje dane logowania i zawartość strony. Kontynuuj tylko, jeśli akceptujesz to ryzyko dla:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Przypomnienia i powiadomienia';
 
   @override
@@ -2887,26 +2589,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Po wyłączeniu szczegóły powiadomień pozostają ukryte na ekranie blokady.';
 
   @override
-  String get notificationWidgets => 'Widżety ekranu głównego';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Odśwież widżety Sked i dowiedz się, jak dodać je z ekranu głównego.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Dodaj widżet Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Na ekranie głównym urządzenia przytrzymaj puste miejsce, wybierz Widżety i dodaj widżet Sked. Widżet pokazuje następne zajęcia lub wydarzenia.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Odśwież widżety';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Widżety odświeżone';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Ta platforma nie zapewnia natywnych powiadomień.';
 
@@ -2942,19 +2624,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Obszar roboczy jest wyłączony, ale nie udało się usunąć przypomnień. Ponów odzyskiwanie powiadomień.';
 
   @override
-  String get settingsSearch => 'Szukaj ustawień';
-
-  @override
-  String get settingsNoResults => 'Brak pasujących ustawień';
-
-  @override
   String get settingsDataPrivacy => 'Dane i prywatność';
-
-  @override
-  String get workspacePreferences => 'Wyświetlanie i obsługa';
-
-  @override
-  String get workspaceManage => 'Zarządzaj';
 
   @override
   String get selectedDayAgenda => 'Wybrany dzień';

@@ -52,19 +52,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Ошибка разбора';
 
   @override
-  String get schoolImportParsePageComplete => 'Разбор завершён';
-
-  @override
   String get schoolImportParsePageContinue => 'Продолжить';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Исходный ответ';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Развернуть исходный ответ';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Свернуть исходный ответ';
 
   @override
   String get schoolImportExpandWarnings => 'Развернуть предупреждения импорта';
@@ -240,32 +228,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTitle => 'Настройки';
 
   @override
-  String get settingsSectionTimetable => 'Расписание';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Календарь';
-
-  @override
   String get settingsSectionAppearance => 'Оформление';
-
-  @override
-  String get settingsSectionApp => 'Приложение';
 
   @override
   String get settingsSectionWorkspace => 'Рабочая область';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Оформление и язык';
-
-  @override
-  String get settingsSectionDataSecurity => 'Данные и безопасность';
-
-  @override
   String get settingsSectionAbout => 'О Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'Для настройки сейчас нет доступного расписания.';
 
   @override
   String get semesterStartDate => 'Дата начала семестра';
@@ -322,10 +291,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get showTimetableGridLines => 'Показывать линии сетки расписания';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Управляет отображением горизонтальных и вертикальных линий сетки в расписании.';
-
-  @override
   String get timetableHorizontalLayoutSection =>
       'Горизонтальная компоновка и жесты';
 
@@ -340,22 +305,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Вместить столбцы недели на экране';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'По возможности показывает все семь столбцов расписания на экране. Отключите для фиксированной ширины и прокрутки.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Переключать недели смахиванием';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Смахните влево или вправо для перехода к другой неделе. При фиксированной ширине сначала протяните содержимое за край.';
-
-  @override
-  String get liveCourseOutlineColor => 'Цвет обводки занятия';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Выберите, должна ли обводка применяться к текущему/следующему занятию или ко всем отображаемым занятиям на текущей странице.';
 
   @override
   String get liveCourseOutlineSettings => 'Обводка занятия';
@@ -394,22 +348,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get language => 'Язык';
-
-  @override
-  String get languagePageDescription =>
-      'Выберите один из языков, которые действительно доступны в приложении.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'English';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Ответ API';
 
   @override
   String get theme => 'Тема';
@@ -481,10 +419,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Резервное копирование и восстановление приложения';
 
   @override
-  String get appBackupSubtitle =>
-      'Создавайте резервные копии или восстанавливайте расписания, графики, настройки и сайты школ. API-ключи не включаются.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Полное восстановление заменяет текущие данные приложения. Ключи AI API хранятся в защищенном хранилище и не записываются в файлы резервных копий.';
 
@@ -553,22 +487,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get checkForUpdates => 'Проверить обновления';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates => 'Обновлениями управляет Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Получать предварительные версии';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Включать версии Alpha, Beta и RC, которые могут быть нестабильными. Если выключено, предлагаются только стабильные версии.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Уже установлена последняя версия ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Текущая версия';
@@ -577,19 +500,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get newVersionAvailable => 'Доступно обновление';
 
   @override
-  String get latestVersionLabel => 'Последняя версия';
-
-  @override
-  String get updateContentLabel => 'Подробности обновления';
-
-  @override
-  String get officialWebsite => 'Официальный сайт';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Облачный диск';
 
   @override
   String get ignoreThisVersion => 'Игнорировать эту версию';
@@ -599,10 +510,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'Не удалось проверить обновления';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Не удалось получить последнюю версию с GitHub. Вы можете открыть GitHub Releases ниже.';
 
   @override
   String get githubRepository => 'Репозиторий GitHub';
@@ -615,10 +522,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Поставьте Sked звезду на GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Откройте репозиторий проекта и поставьте Sked звезду';
 
   @override
   String get openGithubFailed =>
@@ -950,56 +853,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Sked — это локально-ориентированный инструмент для расписаний. Расписания, наборы времени пар и конфигурация школьных сайтов хранятся только на вашем устройстве или в браузере и никогда не загружаются автоматически. Приложение обрабатывает данные только тогда, когда вы явно запускаете такие действия, как импорт, разбор веб-страниц, общий доступ или открытие внешних ссылок. Полная политика конфиденциальности доступна онлайн.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Локальное хранилище';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'На нативных платформах Sked хранит расписания занятий, календари, связанные настройки и редактируемую конфигурацию сайтов учебных заведений в системном каталоге данных приложения; браузерные версии используют хранилище браузера. Файлы, записанные предыдущими версиями в папку «Документы» пользователя, остаются на месте, но не читаются и не переносятся автоматически. Чтобы сохранить эти данные, перед обновлением экспортируйте полную резервную копию приложения из старой версии, а затем восстановите её. Настройки API ИИ хранятся локально; пользовательский API-ключ сохраняется в защищённом хранилище платформы, если оно доступно. Полные резервные копии приложения не содержат пользовательский API-ключ. Приложение не загружает эти локальные данные автоматически на сервер, управляемый разработчиком.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Импорт и экспорт';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Приложение читает или записывает JSON-файлы расписаний, JSON-файлы школьных сайтов и файлы шаблонов пар только тогда, когда вы явно выбираете файл или запускаете экспорт. Импорт этих файлов выполняется локально, если только вы дополнительно не выбираете разбор веб-страницы. Получение списка пользовательских моделей также является явным сетевым действием и обращается только к настроенной вами конечной точке.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Общий доступ';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Когда вы явно используете общий доступ, приложение передаёт экспортированный файл в системное меню общего доступа или в выбранное вами приложение. Дальнейшая обработка этого файла зависит от выбранного приложения или сервиса.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Внешние ссылки';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Когда вы открываете внешние ссылки, например репозиторий GitHub, приложение передаёт действие вашему браузеру или другому внешнему приложению. Обработка данных после этого регулируется третьей стороной, которую вы открываете.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Что приложение не собирает';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Приложению не требуется учётная запись Sked, и в нём не используются аналитика, рекламные идентификаторы или облачное резервное копирование. Также в нём нет отдельного поля для сбора паролей от школьных учётных записей. Если вы входите на школьный сайт внутри приложения, это взаимодействие происходит на открытой вами школьной странице.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Разбор веб-страниц';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Когда вы используете импорт школьной веб-страницы или анализируете вставленный текст расписания / HTML, приложение сначала подготавливает и очищает содержимое локально, а затем отправляет отправленный текст расписания, текст страницы или HTML-содержимое, необязательные заголовок и URL страницы, текущий язык приложения и содержимое prompt для парсера в настроенный вами OpenAI-совместимый endpoint. Получение списка моделей также обращается к этому же endpoint. Sked не предоставляет встроенный endpoint парсера и не отправляет запросы анализа на управляемый разработчиком backend парсера расписаний. Пользовательский endpoint и любые вышестоящие сервисы могут сохранять, пересылать, ограничивать, удалять или иным образом обрабатывать данные согласно правилам выбранного вами поставщика услуг. Если вы используете http:// Base URL, делайте это только на доверенных устройствах, в доверенных сетях и с доверенными endpoint-сервисами, поскольку содержимое и API-ключи могут не быть защищены транспортным шифрованием.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Обновления политики';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Текущая версия политики конфиденциальности — $version. Если в более поздней версии изменится способ обработки данных, приложение может попросить вас снова прочитать и принять обновлённую политику.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Пожалуйста, согласитесь с политикой конфиденциальности перед использованием приложения';
 
@@ -1021,13 +874,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Импортировать текущую страницу расписания с сайта учебного заведения.';
-
-  @override
-  String get schoolSitesManageEntry => 'Управление школьными сайтами';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Добавление, редактирование и удаление URL-адресов входа, а также импорт и экспорт JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Управление школьными сайтами';
@@ -1159,12 +1005,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Разобрать расписание из содержимого страницы';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'URL-источник (необязательно)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Заголовок страницы (необязательно)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Содержимое страницы';
 
   @override
@@ -1180,9 +1020,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Содержимое подготовлено';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Сначала подготовьте содержимое.';
 
   @override
   String get schoolHtmlImportSubmit => 'Разобрать и импортировать';
@@ -1202,9 +1039,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Назад к веб-странице';
 
   @override
-  String get schoolWebImportPageTitle => 'Импорт с веб-страницы школы';
-
-  @override
   String get schoolWebImportPreview => 'Предпросмотр импорта';
 
   @override
@@ -1219,9 +1053,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Заголовок страницы';
-
-  @override
-  String get schoolWebImportParserUsed => 'Парсер';
 
   @override
   String get schoolWebImportWarnings => 'Примечания к импорту';
@@ -1242,15 +1073,8 @@ class AppLocalizationsRu extends AppLocalizations {
       'Войдите на школьный сайт внутри приложения, затем вручную перейдите на страницу расписания.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Настройка пользовательского парсера не завершена. Сначала укажите базовый URL, API-ключ и модель.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Эта платформа пока не поддерживает встроенный вход через веб-интерфейс. Пожалуйста, используйте платформу с поддержкой WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Выберите учебное заведение';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1263,12 +1087,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get schoolWebImportImportCurrentPage =>
       'Импортировать текущую страницу';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Загрузка страницы…';
-
-  @override
-  String get schoolWebImportParsing => 'Разбор текущей страницы…';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1307,14 +1125,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Пользовательский OpenAI-совместимый';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Пользовательский OpenAI-совместимый парсер';
 
   @override
   String get schoolImportParserCustomPromptTitle =>
@@ -1404,11 +1214,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Локальные данные очищены, но Sked не удалось закрыть. Закройте приложение вручную перед дальнейшим использованием.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Парсер: пользовательский ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy =>
@@ -1593,12 +1398,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Управляйте категориями, событиями, напоминаниями и данными JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Начать с расписания';
-
-  @override
-  String get firstLaunchStartGeneral => 'Начать с графика';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'Выбирая начальное рабочее пространство, вы подтверждаете, что прочитали и принимаете ';
 
@@ -1612,13 +1411,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get switchMode => 'Переключить режим';
 
   @override
-  String get generalScheduleComingSoon => 'Календарь скоро появится';
-
-  @override
   String get switchToStudentTimetable => 'Перейти к учебному расписанию';
-
-  @override
-  String get mySchedule => 'Мой календарь';
 
   @override
   String get today => 'Сегодня';
@@ -1664,15 +1457,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Дата окончания';
-
-  @override
-  String get recurrenceNoEndDate => 'Без даты окончания';
-
-  @override
-  String get recurrenceSetEndDate => 'Установить';
-
-  @override
-  String get recurrenceChangeEndDate => 'Изменить';
 
   @override
   String get repeatsWeekly => 'Повторяется еженедельно';
@@ -1810,28 +1594,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Событие продублировано';
-
-  @override
-  String get searchEvents => 'Поиск событий';
-
-  @override
-  String get clearSearch => 'Очистить поиск';
-
-  @override
-  String get filterByColor => 'Фильтр по цвету';
-
-  @override
-  String get allColors => 'Все цвета';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Предстоящих: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Просроченных: $count';
-  }
 
   @override
   String get allDay => 'Весь день';
@@ -1991,14 +1753,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reminderUpcoming => 'Предстоит';
 
   @override
-  String get reminderOverdue => 'Просрочено';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Вместить неделю на экране';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Показывать всю неделю в компактном режиме. Отключите для горизонтальной прокрутки. Произвольные диапазоны свыше 7 дней по-прежнему прокручиваются.';
 
   @override
   String get showWeekends => 'Показывать выходные';
@@ -2213,9 +1968,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Кнопка переключения вида';
-
-  @override
-  String get settingsWorkspaceMode => 'Активная рабочая область';
 
   @override
   String get hideHomeWorkspaceNavigation => 'Скрыть навигацию рабочих областей';
@@ -2450,22 +2202,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return 'Запланировано: $scheduled, в плане: $planned';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Последняя ошибка: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Перестроить план уведомлений';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'План уведомлений перестроен.';
 
   @override
   String get developerNotificationTestChannel => 'Тестовый канал';
@@ -2558,25 +2297,8 @@ class AppLocalizationsRu extends AppLocalizations {
       'В текущем плане нет будущих напоминаний';
 
   @override
-  String get developerNotificationNextMaintenance => 'Следующее обслуживание';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Следующая попытка перепланирования';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Не запланировано';
-
-  @override
-  String get developerNotificationTruncation => 'Обрезка плана';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'Пропущено из-за лимита плана: $count';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation => 'Последний пересчёт';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2610,9 +2332,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Полный пересчёт';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Обслуживание';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Восстановление';
@@ -2753,24 +2472,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Незащищённое соединение';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Открыть вход в школьную систему?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'При входе в школьную систему учётные данные могут отправляться через формы или серверные перенаправления школе и её поставщикам входа. Android не может приостанавливать каждую такую передачу для отдельного подтверждения адреса. Продолжайте, только если доверяете им в рамках этого сеанса импорта:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Открыть небезопасный вход в школьную систему?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Этот вход в школьную систему использует HTTP. Любой, кто может просматривать или изменять это соединение, может прочитать либо изменить ваши учётные данные и содержимое страницы. Продолжайте, только если принимаете этот риск для:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Напоминания и уведомления';
 
   @override
@@ -2905,26 +2606,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Если отключено, подробности уведомлений скрыты на экране блокировки.';
 
   @override
-  String get notificationWidgets => 'Виджеты главного экрана';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Обновите виджеты Sked и узнайте, как добавить их через главный экран.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Добавить виджет Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'На главном экране устройства нажмите и удерживайте пустое место, выберите «Виджеты» и добавьте виджет Sked. Он покажет ближайшие занятия или события.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Обновить виджеты';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Виджеты обновлены';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Эта платформа не поддерживает нативные уведомления.';
 
@@ -2960,19 +2641,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Рабочее пространство отключено, но напоминания удалить не удалось. Повторите восстановление уведомлений.';
 
   @override
-  String get settingsSearch => 'Поиск настроек';
-
-  @override
-  String get settingsNoResults => 'Подходящие настройки не найдены';
-
-  @override
   String get settingsDataPrivacy => 'Данные и конфиденциальность';
-
-  @override
-  String get workspacePreferences => 'Отображение и управление';
-
-  @override
-  String get workspaceManage => 'Управление';
 
   @override
   String get selectedDayAgenda => 'Выбранный день';

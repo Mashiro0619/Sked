@@ -53,21 +53,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Анализът е неуспешен';
 
   @override
-  String get schoolImportParsePageComplete => 'Анализът завърши';
-
-  @override
   String get schoolImportParsePageContinue => 'Продължи';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Необработен отговор';
-
-  @override
-  String get schoolImportParsePageExpandRaw =>
-      'Разгъване на необработения отговор';
-
-  @override
-  String get schoolImportParsePageCollapseRaw =>
-      'Свиване на необработения отговор';
 
   @override
   String get schoolImportExpandWarnings =>
@@ -245,32 +231,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get settingsTitle => 'Настройки';
 
   @override
-  String get settingsSectionTimetable => 'Разписание';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Общ график';
-
-  @override
   String get settingsSectionAppearance => 'Облик';
-
-  @override
-  String get settingsSectionApp => 'Приложение';
 
   @override
   String get settingsSectionWorkspace => 'Работно пространство';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Облик и език';
-
-  @override
-  String get settingsSectionDataSecurity => 'Данни и сигурност';
-
-  @override
   String get settingsSectionAbout => 'Относно Sked';
-
-  @override
-  String get noTimetableSettings =>
-      'В момента няма наличен график за настройки.';
 
   @override
   String get semesterStartDate => 'Дата на начало на семестъра';
@@ -327,10 +294,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Показване на линиите на мрежата на графика';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Контролирайте дали хоризонталните и вертикалните линии на мрежата са видими в графика.';
-
-  @override
   String get timetableHorizontalLayoutSection =>
       'Хоризонтално оформление и жестове';
 
@@ -346,22 +309,11 @@ class AppLocalizationsBg extends AppLocalizations {
       'Седмичните колони да се побират на екрана';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Показва всичките седем колони на разписанието на екрана, когато е възможно. Изключете за фиксирана ширина и превъртане.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Смяна на седмицата с плъзгане';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Плъзнете наляво или надясно за друга седмица. При фиксирана ширина първо превъртете до края.';
-
-  @override
-  String get liveCourseOutlineColor => 'Цвят на очертанието на курса';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Изберете дали очертанията са насочени към текущия/следващия курс или всички показвани курсове на текущата страница.';
 
   @override
   String get liveCourseOutlineSettings => 'Описание на курса';
@@ -399,22 +351,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get language => 'Език';
-
-  @override
-  String get languagePageDescription =>
-      'Изберете един от езиците, които наистина са налични в приложението.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'Английски';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'Отговор на API';
 
   @override
   String get theme => 'Тема';
@@ -485,10 +421,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get appBackupTitle => 'Архивиране и възстановяване на приложението';
 
   @override
-  String get appBackupSubtitle =>
-      'Архивирайте или възстановете разписания, графици, настройки и училищни сайтове. API ключовете не са включени.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'Пълното възстановяване заменя текущите данни на приложението. AI API ключовете се съхраняват в защитено хранилище и не се записват във файловете за архив.';
 
@@ -556,23 +488,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get checkForUpdates => 'Проверете за актуализации';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'Актуализациите се управляват от Microsoft Store';
-
-  @override
   String get includePrereleaseUpdates => 'Получаване на предварителни версии';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Включва версии Alpha, Beta и RC, които може да са нестабилни. При изключване се предлагат само стабилни версии.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Вече на най-новата версия ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Текуща версия';
@@ -581,19 +501,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get newVersionAvailable => 'Актуализация на разположение';
 
   @override
-  String get latestVersionLabel => 'Последна версия';
-
-  @override
-  String get updateContentLabel => 'Подробности за актуализацията';
-
-  @override
-  String get officialWebsite => 'Официален сайт';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Облачно устройство';
 
   @override
   String get ignoreThisVersion => 'Игнориране на тази версия';
@@ -606,10 +514,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get updateCheckFailedTitle => 'Проверка на актуализацията не успя';
 
   @override
-  String get updateCheckFailedMessage =>
-      'Последната версия не може да се извлече от GitHub. Все пак можете да отворите GitHub Releases отдолу.';
-
-  @override
   String get githubRepository => 'GitHub хранилище';
 
   @override
@@ -620,10 +524,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Дайте звезда на Sked в GitHub!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Отворете хранилището на проекта и дайте звезда на Sked';
 
   @override
   String get openGithubFailed =>
@@ -960,56 +860,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Sked е локално-приоритетен инструмент за графици. Графиците, наборите от периоди и конфигурацията на училищния сайт се съхраняват само на вашето устройство или в браузъра ви и никога не се качват автоматично. Приложението обработва данни само когато изрично стартирате действия като импортиране, анализиране на уеб страници, споделяне или отваряне на външни връзки. Пълната политика за поверителност е достъпна онлайн.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Местно съхранение';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'В нативните версии Sked съхранява разписанията, общите графици, свързаните настройки и конфигурацията на училищните сайтове в служебната папка на приложението, предоставена от операционната система. Браузърната версия използва хранилището на браузъра. Файловете, записани от по-стари версии в папката Документи, остават там, но не се прочитат или прехвърлят автоматично. За да запазите тези данни, експортирайте пълен архив от старата версия преди актуализиране и го възстановете след това. Настройките за AI API се пазят локално. Персонализираният API ключ се записва чрез защитеното хранилище на платформата, когато е налично. Пълните архиви не включват този ключ. Приложението не качва автоматично локалните данни на сървър, управляван от разработчика.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Внос и износ';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Приложението чете или записва JSON файлове с график, JSON файлове с училищен сайт и файлове с шаблони за периоди само когато изрично изберете файл или започнете действие за експортиране. Импортирането на тези файлове е локална операция, освен ако не изберете и анализиране на уеб страници. Вземането на списък с персонализирани модели също е изрично мрежово действие и се свързва само с персонализираната крайна точка, която сте конфигурирали.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Споделяне';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Когато изрично използвате споделяне, приложението предава експортирания файл на листа за споделяне на системата или на избраното от вас целево приложение. Как се обработва този файл след това зависи от избраното от вас целево приложение или услуга.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Външни връзки';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Когато отворите външни връзки като хранилището на GitHub, приложението предава действието на вашия браузър или друго външно приложение. Обработката на данните след този момент се регулира от третата страна, която откривате.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle => 'Какво приложението не събира';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Приложението не изисква акаунт за Sked и не позволява анализи, рекламни идентификатори или резервно копиране в облака. Също така не предоставя специално поле за събиране на пароли за училищни акаунти. Ако влезете в училищен уебсайт в приложението, това взаимодействие се случва на страницата на училището, която сте отворили.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Парсиране на уеб страници';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Когато използвате импортиране от училищна уеб страница или анализирате поставен текст на разписание / HTML, приложението първо подготвя и почиства съдържанието локално, след което изпраща подадения текст на разписанието, текста на страницата или HTML съдържанието, незадължителното заглавие и URL на страницата, текущия език на приложението и инструкциите за анализатора към конфигурираната от вас OpenAI-съвместима крайна точка. Извличането на списъка с модели също заявява същата крайна точка. Sked не предоставя вградена крайна точка за анализ и не изпраща заявки за анализ към бекенд за разписания, контролиран от разработчика. Персонализираната крайна точка и всички услуги нагоре по веригата може да съхраняват, препращат, ограничават, изтриват или обработват данните по друг начин според правилата на избрания от вас доставчик. Ако използвате http:// Base URL, използвайте го само на надеждни устройства, мрежи и услуги за крайна точка, защото съдържанието и API ключовете може да не са защитени с транспортно криптиране.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Актуализации на политиката';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'Настоящата версия на политиката за поверителност е $version. Ако по-късна версия промени начина, по който се обработват данните, приложението може да ви помоли да прочетете и да се съгласите отново с актуализираната политика.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Моля, съгласете се с политиката за поверителност преди да използвате приложението';
 
@@ -1031,13 +881,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Импортирайте текущата страница с график от сайта на училището.';
-
-  @override
-  String get schoolSitesManageEntry => 'Управление на училищните сайтове';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Добавяне, редактиране и изтриване на URL адреси за влизане в училище, с импортиране и експортиране на JSON.';
 
   @override
   String get schoolSitesPageTitle => 'Управление на училището';
@@ -1168,13 +1011,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Анализиране на графика от съдържанието на страницата';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'URL на източника (незадължително)';
-
-  @override
-  String get schoolHtmlImportTitleLabel =>
-      'Заглавие на страницата (незадължително)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Съдържание на страницата';
 
   @override
@@ -1190,9 +1026,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Съдържанието е подготвено';
-
-  @override
-  String get schoolHtmlImportCompressFirst => 'Първо подгответе съдържанието.';
 
   @override
   String get schoolHtmlImportSubmit => 'Анализ и импортиране';
@@ -1212,9 +1045,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Обратно към уебсайта';
 
   @override
-  String get schoolWebImportPageTitle => 'Импортиране на училищни уеб страници';
-
-  @override
   String get schoolWebImportPreview => 'Импортиране на предварителен преглед';
 
   @override
@@ -1229,9 +1059,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Заглавие на страницата';
-
-  @override
-  String get schoolWebImportParserUsed => 'Парсер';
 
   @override
   String get schoolWebImportWarnings => 'Внос на бележки';
@@ -1252,15 +1079,8 @@ class AppLocalizationsBg extends AppLocalizations {
       'Влезте в сайта на училището в приложението, след което навигирайте ръчно към страницата с график.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Настройките на персонализирания анализатор са непълни. Първо въведете базов URL адрес, API ключ и модел.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Тази платформа все още не поддържа вградено уеб влизане. Моля, използвайте платформа с поддръжка на WebView.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Изберете училище';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1273,12 +1093,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get schoolWebImportImportCurrentPage =>
       'Импортиране на текуща страница';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Страница се зарежда…';
-
-  @override
-  String get schoolWebImportParsing => 'Анализиране на текущата страница...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1318,14 +1132,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Персонализиран OpenAI-съвместим';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Персонализиран OpenAI-съвместим анализатор';
 
   @override
   String get schoolImportParserCustomPromptTitle =>
@@ -1416,11 +1222,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'Локалните данни бяха изчистени, но Sked не успя да се затвори. Затворете приложението ръчно, преди да го използвате отново.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Парсер: Персонализиран ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy => 'Вижте пълната политика за поверителност';
@@ -1603,12 +1404,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Управлявайте категории, събития, напомняния и JSON / ICS данни.';
 
   @override
-  String get firstLaunchStartStudent => 'Започни с разписание';
-
-  @override
-  String get firstLaunchStartGeneral => 'Започни с график';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'С избора на начално работно пространство потвърждавате, че сте прочели и приемате ';
 
@@ -1622,13 +1417,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get switchMode => 'Смяна на режима';
 
   @override
-  String get generalScheduleComingSoon => 'Общият график идва скоро';
-
-  @override
   String get switchToStudentTimetable => 'Към учебното разписание';
-
-  @override
-  String get mySchedule => 'Моят график';
 
   @override
   String get today => 'Днес';
@@ -1674,15 +1463,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Крайна дата';
-
-  @override
-  String get recurrenceNoEndDate => 'Без крайна дата';
-
-  @override
-  String get recurrenceSetEndDate => 'Задаване';
-
-  @override
-  String get recurrenceChangeEndDate => 'Промяна';
 
   @override
   String get repeatsWeekly => 'Повтаря се всяка седмица';
@@ -1823,28 +1603,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Събитието е дублирано';
-
-  @override
-  String get searchEvents => 'Търсене на събития';
-
-  @override
-  String get clearSearch => 'Изчистване на търсенето';
-
-  @override
-  String get filterByColor => 'Филтриране по цвят';
-
-  @override
-  String get allColors => 'Всички цветове';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Предстоящи: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'С изтекъл краен час: $count';
-  }
 
   @override
   String get allDay => 'Целодневно';
@@ -2004,14 +1762,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get reminderUpcoming => 'Предстоящо';
 
   @override
-  String get reminderOverdue => 'С изтекъл краен час';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Седмицата се побира на екрана';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'Показва цялата седмица в компактен изглед. Изключете за хоризонтално превъртане. Периодите над 7 дни продължават да се превъртат.';
 
   @override
   String get showWeekends => 'Показване на събота и неделя';
@@ -2229,9 +1980,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Бутон за смяна на изгледа';
-
-  @override
-  String get settingsWorkspaceMode => 'Активно работно пространство';
 
   @override
   String get hideHomeWorkspaceNavigation =>
@@ -2465,22 +2213,9 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return 'Насрочени: $scheduled, планирани: $planned';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Последна грешка: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Повторно изграждане на плана за известия';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Планът за известия е изграден отново.';
 
   @override
   String get developerNotificationTestChannel => 'Тестов канал';
@@ -2573,25 +2308,7 @@ class AppLocalizationsBg extends AppLocalizations {
       'Няма бъдещо напомняне в текущия план';
 
   @override
-  String get developerNotificationNextMaintenance => 'Следваща поддръжка';
-
-  @override
   String get developerNotificationNextRenewal => 'Следващ опит за подновяване';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Не е насрочено';
-
-  @override
-  String get developerNotificationTruncation => 'Съкращаване на плана';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return 'Пропуснати поради лимита на плана: $count';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation =>
-      'Последно преизчисляване';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2625,9 +2342,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Пълно преизчисляване';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Поддръжка';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Възстановяване';
@@ -2770,24 +2484,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Незащитена връзка';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Да се отвори ли входът в училищната система?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Входът в училищната система може да изпрати идентификационни данни чрез формуляри или сървърни пренасочвания към училището и неговите доставчици за вход. Android не може да спре всяко такова предаване за отделно потвърждение на дестинацията. Продължете само ако имате доверие на тези страни за текущата сесия за импортиране:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Отваряне на незащитен вход за училището?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Този вход за училището използва HTTP. Всеки, който може да наблюдава или променя тази връзка, може да прочете или промени вашите идентификационни данни и съдържанието на страницата. Продължете само ако приемате този риск за:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Напомняния и известия';
 
   @override
@@ -2922,26 +2618,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Когато е изключено, подробностите в известията се скриват на заключения екран.';
 
   @override
-  String get notificationWidgets => 'Джаджи за началния екран';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Обновете джаджите на Sked и вижте как да добавите джаджа от началния екран.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Добавяне на джаджа на Sked';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'Задръжте върху празно място на началния екран, изберете „Джаджи“ и добавете джаджа на Sked. Тя показва следващите ви курсове или събития.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Обновяване на джаджите';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Джаджите са обновени';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Тази платформа не предоставя системни известия.';
 
@@ -2978,19 +2654,7 @@ class AppLocalizationsBg extends AppLocalizations {
       'Работното пространство е изключено, но напомнянията не бяха премахнати. Опитайте отново възстановяването на известията.';
 
   @override
-  String get settingsSearch => 'Търсене в настройките';
-
-  @override
-  String get settingsNoResults => 'Няма съответстващи настройки';
-
-  @override
   String get settingsDataPrivacy => 'Данни и поверителност';
-
-  @override
-  String get workspacePreferences => 'Изглед и взаимодействие';
-
-  @override
-  String get workspaceManage => 'Управление';
 
   @override
   String get selectedDayAgenda => 'Избран ден';

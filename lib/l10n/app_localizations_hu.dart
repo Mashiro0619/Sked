@@ -53,19 +53,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Az elemzés sikertelen';
 
   @override
-  String get schoolImportParsePageComplete => 'Az elemzés kész';
-
-  @override
   String get schoolImportParsePageContinue => 'Folytatás';
-
-  @override
-  String get schoolImportParsePageRawContent => 'Nyers válasz';
-
-  @override
-  String get schoolImportParsePageExpandRaw => 'Nyers válasz kibontása';
-
-  @override
-  String get schoolImportParsePageCollapseRaw => 'Nyers válasz összecsukása';
 
   @override
   String get schoolImportExpandWarnings =>
@@ -243,32 +231,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsTitle => 'Beállítások';
 
   @override
-  String get settingsSectionTimetable => 'Órarend';
-
-  @override
-  String get settingsSectionGeneralSchedule => 'Általános naptár';
-
-  @override
   String get settingsSectionAppearance => 'Megjelenés';
-
-  @override
-  String get settingsSectionApp => 'Alkalmazás';
 
   @override
   String get settingsSectionWorkspace => 'Munkaterület';
 
   @override
-  String get settingsSectionAppearanceLanguage => 'Megjelenés és nyelv';
-
-  @override
-  String get settingsSectionDataSecurity => 'Adatok és biztonság';
-
-  @override
   String get settingsSectionAbout => 'A Sked névjegye';
-
-  @override
-  String get noTimetableSettings =>
-      'Jelenleg nincs rendelkezésre álló menetrend a beállításokhoz.';
 
   @override
   String get semesterStartDate => 'A szemeszter kezdési dátuma';
@@ -326,10 +295,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get showTimetableGridLines => 'A menetrend rácsvonalak megjelenítése';
 
   @override
-  String get showTimetableGridLinesHint =>
-      'Ellenőrizze, hogy a vízszintes és függőleges rácsvonalak láthatók-e a menetrendben.';
-
-  @override
   String get timetableHorizontalLayoutSection =>
       'Vízszintes elrendezés és gesztusok';
 
@@ -344,22 +309,11 @@ class AppLocalizationsHu extends AppLocalizations {
   String get fitWeekColumnsToWidth => 'Heti oszlopok igazítása a képernyőhöz';
 
   @override
-  String get fitWeekColumnsToWidthHint =>
-      'Ha lehet, az órarend mind a hét oszlopa elfér a képernyőn; kikapcsolva rögzített szélességgel görgethető.';
-
-  @override
   String get enableWeekSwipeNavigation => 'Hétváltás lapozással';
 
   @override
   String get enableWeekSwipeNavigationHint =>
       'Balra vagy jobbra húzva válthat hetet. Rögzített szélesség esetén előbb húzza túl a tartalmat a szélén.';
-
-  @override
-  String get liveCourseOutlineColor => 'A tanfolyam vázlata színe';
-
-  @override
-  String get liveCourseOutlineColorHint =>
-      'Válassza ki, hogy a vázlatok az aktuális/következő tanfolyamot célozzák-e, vagy az aktuális oldalon megjelenő összes tanfolyamot.';
 
   @override
   String get liveCourseOutlineSettings => 'A tanfolyam vázlata';
@@ -399,22 +353,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get language => 'Nyelv';
-
-  @override
-  String get languagePageDescription =>
-      'Válasszon egy olyan nyelvet, amely valóban elérhető az alkalmazásban.';
-
-  @override
-  String get languageChinese => '中文';
-
-  @override
-  String get languageEnglish => 'Magyar';
-
-  @override
-  String get githubRepositoryUrl => 'github.com/Mashiro0619/Sked';
-
-  @override
-  String get apiResponseTitle => 'API válasz';
 
   @override
   String get theme => 'Téma';
@@ -486,10 +424,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'Alkalmazás biztonsági mentése és visszaállítása';
 
   @override
-  String get appBackupSubtitle =>
-      'Mentse vagy állítsa vissza az órarendeket, naptárakat, beállításokat és iskolai webhelyeket. Az API-kulcsok nem szerepelnek benne.';
-
-  @override
   String get appBackupSheetSubtitle =>
       'A teljes visszaállítás lecseréli az aktuális alkalmazásadatokat. Az AI API-kulcsok biztonságos tárhelyen vannak, és nem kerülnek a mentési fájlokba.';
 
@@ -557,23 +491,11 @@ class AppLocalizationsHu extends AppLocalizations {
   String get checkForUpdates => 'Ellenőrizze a frissítéseket';
 
   @override
-  String get checkForUpdatesDesc => 'GitHub';
-
-  @override
-  String get microsoftStoreUpdates =>
-      'A frissítéseket a Microsoft Store kezeli';
-
-  @override
   String get includePrereleaseUpdates => 'Előzetes frissítések fogadása';
 
   @override
   String get includePrereleaseUpdatesDesc =>
       'Az esetleg instabil Alpha, Beta és RC verziók is megjelennek. Kikapcsolva csak stabil verziókat kínál fel.';
-
-  @override
-  String alreadyLatestVersion(Object version) {
-    return 'Már a legújabb verzió ($version)';
-  }
 
   @override
   String get currentVersionLabel => 'Jelenlegi verzió';
@@ -582,19 +504,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get newVersionAvailable => 'Frissítés elérhető';
 
   @override
-  String get latestVersionLabel => 'Legújabb verzió';
-
-  @override
-  String get updateContentLabel => 'Frissítési részletek';
-
-  @override
-  String get officialWebsite => 'Hivatalos honlap';
-
-  @override
   String get googlePlay => 'Google Play';
-
-  @override
-  String get cloudDrive => 'Felhő meghajtó';
 
   @override
   String get ignoreThisVersion => 'Figyelmen kívül hagyja ezt a verziót';
@@ -604,10 +514,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get updateCheckFailedTitle => 'A frissítés ellenőrzése nem sikerült';
-
-  @override
-  String get updateCheckFailedMessage =>
-      'Nem sikerült lekérni a legújabb verziót a GitHubról. Alább továbbra is megnyithatja a GitHub Releases oldalt.';
 
   @override
   String get githubRepository => 'GitHub tároló';
@@ -620,10 +526,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get starSkedOnGithub => 'Csillagozza meg a Skedet a GitHubon!';
-
-  @override
-  String get starSkedOnGithubDesc =>
-      'Nyissa meg a projekt tárolóját, és adjon csillagot a Skednek';
 
   @override
   String get openGithubFailed =>
@@ -955,57 +857,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'A Sked egy helyi alapú órarend eszköz. Az órarendek, az időtartam-készletek és az iskolahely konfigurációja csak az Ön eszközén vagy böngészőjében tárolódik, és soha nem kerül automatikusan feltöltésre. Az alkalmazás csak akkor dolgoz fel adatokat, amikor kifejezetten olyan műveleteket indít, mint az importálás, a weboldal-elemzés, a megosztás vagy a külső hivatkozások megnyitása. A teljes adatvédelmi szabályzat online érhető el.';
 
   @override
-  String get privacyPolicyLocalStorageTitle => 'Helyi tárolás';
-
-  @override
-  String get privacyPolicyLocalStorageBody =>
-      'Natív platformokon a Sked az órarend adatait, az általános naptárakat, a kapcsolódó beállításokat és a szerkeszthető iskolai webhelykonfigurációt az operációs rendszer alkalmazástámogatási könyvtárában tárolja; a böngészős változat a böngésző tárhelyét használja. A korábbi verziók által a felhasználó Dokumentumok mappájába írt fájlok a helyükön maradnak, de az alkalmazás nem olvassa be és nem költözteti át őket automatikusan. Az adatok megőrzéséhez frissítés előtt exportáljon teljes alkalmazásmentést a régi verzióból, majd állítsa vissza az újban. Az AI API beállításai helyben tárolódnak; az egyéni API-kulcs a platform biztonságos tárolójába kerül, ha az elérhető. A teljes alkalmazásmentés nem tartalmazza az egyéni API-kulcsot. Az alkalmazás nem tölti fel automatikusan ezeket a helyi adatokat a fejlesztő által kezelt szerverre.';
-
-  @override
-  String get privacyPolicyImportExportTitle => 'Import és export';
-
-  @override
-  String get privacyPolicyImportExportBody =>
-      'Az alkalmazás csak akkor olvas vagy írja el az ütemterv JSON fájljait, az iskolai helyszín JSON fájljait és az időszak-sablon fájljait, ha kifejezetten kiválaszt egy fájlt vagy elkezd egy exportálási műveletet. Ezek a fájlok importálása helyi művelet, kivéve, ha a weboldal elemzését is választja. Az egyéni modelllista beszerzése is egy kifejezett hálózati művelet, és csak az Ön által konfigurált egyéni végponttal lép kapcsolatba.';
-
-  @override
-  String get privacyPolicySharingTitle => 'Megosztás';
-
-  @override
-  String get privacyPolicySharingBody =>
-      'Ha kifejezetten megosztást használ, az alkalmazás továbbítja az exportált fájlt a rendszermegosztási lapra vagy az Ön által kiválasztott célalkalmazásra. A fájl későbbi kezelése az Ön által kiválasztott célalkalmazástól vagy szolgáltatástól függ.';
-
-  @override
-  String get privacyPolicyExternalLinksTitle => 'Külső linkek';
-
-  @override
-  String get privacyPolicyExternalLinksBody =>
-      'Ha külső hivatkozásokat nyit, például a GitHub tárolót, az alkalmazás átadja a műveletet a böngészőjének vagy egy másik külső alkalmazásnak. Az e pont után történő adatkezelést az Ön által megnyitott harmadik fél szabályozza.';
-
-  @override
-  String get privacyPolicyNoCollectionTitle =>
-      'Amit az alkalmazás nem gyűjt össze';
-
-  @override
-  String get privacyPolicyNoCollectionBody =>
-      'Az alkalmazáshoz nincs szükség Sked fiókra, és nem engedélyezi az elemzést, a hirdetési azonosítókat vagy a felhő biztonsági mentését. Nem biztosít külön mezőt az iskola fiókjának jelszavai gyűjtésére. Ha bejelentkezik egy iskolai weboldalra az alkalmazáson belül, az interakció az Ön által megnyitott iskolai oldalon történik.';
-
-  @override
-  String get privacyPolicyFutureFeatureTitle => 'Weboldal elemzése';
-
-  @override
-  String get privacyPolicyFutureFeatureBody =>
-      'Amikor iskolai weboldal importálását használod, vagy beillesztett órarendszöveget / HTML-t elemeztetsz, az alkalmazás először helyben előkészíti és megtisztítja a tartalmat, majd elküldi a beküldött órarendszöveget, oldalszöveget vagy HTML-tartalmat, az opcionális oldal címet és URL-t, az alkalmazás aktuális nyelvét és az elemző prompt tartalmát az általad beállított OpenAI-kompatibilis végpontra. A modelllista lekérése is ugyanezt a végpontot hívja meg. A Sked nem biztosít beépített elemző végpontot, és nem küld elemzési kéréseket fejlesztő által vezérelt órarendelemző háttérrendszernek. Az egyéni végpont és az esetleges upstream szolgáltatások az általad választott szolgáltató szabályai szerint tárolhatják, továbbíthatják, korlátozhatják, törölhetik vagy más módon kezelhetik az adatokat. Ha http:// Base URL-t használsz, csak megbízható eszközökön, hálózatokon és végpontszolgáltatásokkal használd, mert a tartalom és az API-kulcsok nem feltétlenül védettek szállítási titkosítással.';
-
-  @override
-  String get privacyPolicyUpdatesTitle => 'Politikai frissítések';
-
-  @override
-  String privacyPolicyUpdatesBody(Object version) {
-    return 'A jelenlegi adatvédelmi szabályzat verziója $version. Ha egy későbbi verzió megváltoztatja az adatok kezelésének módját, az alkalmazás megkérheti Önt, hogy újra olvassa el és elfogadja a frissített szabályzatot.';
-  }
-
-  @override
   String get privacyGateTitle =>
       'Kérjük, elfogadja az adatvédelmi szabályzatot az alkalmazás használata előtt';
 
@@ -1027,13 +878,6 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get schoolWebImportEntryDesc =>
       'Importálja az aktuális menetrend oldalát az iskola webhelyéről.';
-
-  @override
-  String get schoolSitesManageEntry => 'Iskolai webhelyek kezelése';
-
-  @override
-  String get schoolSitesManageEntryDesc =>
-      'Hozzáadás, szerkesztés és törlés iskolai bejelentkezési URL-ek, JSON import és export.';
 
   @override
   String get schoolSitesPageTitle => 'Iskolai helyszín menedzsment';
@@ -1164,12 +1008,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'Időterv elemzése az oldal tartalmából';
 
   @override
-  String get schoolHtmlImportUrlLabel => 'Forrás URL (opcionális)';
-
-  @override
-  String get schoolHtmlImportTitleLabel => 'Oldal címe (opcionális)';
-
-  @override
   String get schoolHtmlImportHtmlLabel => 'Oldal tartalma';
 
   @override
@@ -1185,10 +1023,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolHtmlImportCompressed => 'Tartalom előkészítve';
-
-  @override
-  String get schoolHtmlImportCompressFirst =>
-      'Először készítse elő a tartalmat.';
 
   @override
   String get schoolHtmlImportSubmit => 'Elemzés és importálás';
@@ -1208,9 +1042,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolHtmlImportReturnToWebPage => 'Vissza a weboldalra';
 
   @override
-  String get schoolWebImportPageTitle => 'Iskolai weboldal importálása';
-
-  @override
   String get schoolWebImportPreview => 'Előnézet importálása';
 
   @override
@@ -1225,9 +1056,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolWebImportPageTitleLabel => 'Oldal címe';
-
-  @override
-  String get schoolWebImportParserUsed => 'Feldolgozó';
 
   @override
   String get schoolWebImportWarnings => 'Importáljon jegyzeteket';
@@ -1248,15 +1076,8 @@ class AppLocalizationsHu extends AppLocalizations {
       'Jelentkezzen be az iskola webhelyére az alkalmazásban, majd navigáljon a menetrend oldalára manuálisan.';
 
   @override
-  String get schoolWebImportConfigMissing =>
-      'Az egyéni feldolgozó beállítása hiányos. Előbb adja meg az alap URL-t, az API-kulcsot és a modellt.';
-
-  @override
   String get schoolWebImportUnsupportedPlatform =>
       'Ez a platform még nem támogatja a beágyazott webes bejelentkezést. Kérjük, használjon WebView támogatással rendelkező platformot.';
-
-  @override
-  String get schoolWebImportSelectSchool => 'Válasszon iskolát';
 
   @override
   String get schoolWebImportNoSchools =>
@@ -1268,12 +1089,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolWebImportImportCurrentPage => 'Aktuális oldal importálása';
-
-  @override
-  String get schoolWebImportLoadingPage => 'Oldal betöltése…';
-
-  @override
-  String get schoolWebImportParsing => 'Az aktuális oldal elemzése...';
 
   @override
   String get schoolWebImportLoadFailed =>
@@ -1312,14 +1127,6 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get schoolImportParserSourceCustomOpenAi =>
       'Egyéni OpenAI-kompatibilis';
-
-  @override
-  String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
-
-  @override
-  String get schoolImportParserCustomOpenAi =>
-      'Egyéni OpenAI-kompatibilis elemző';
 
   @override
   String get schoolImportParserCustomPromptTitle => 'Egyéni prompt';
@@ -1408,11 +1215,6 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get clearAppDataExitFailed =>
       'A helyi adatok törlődtek, de a Sked nem tudott kilépni. Újbóli használat előtt zárja be kézzel az alkalmazást.';
-
-  @override
-  String schoolImportParserCurrentSourceCustom(Object model) {
-    return 'Parser: Egyéni ($model)';
-  }
 
   @override
   String get privacyViewFullPolicy =>
@@ -1597,12 +1399,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'Kategóriák, események, emlékeztetők és JSON / ICS adatok kezelése.';
 
   @override
-  String get firstLaunchStartStudent => 'Kezdés órarenddel';
-
-  @override
-  String get firstLaunchStartGeneral => 'Kezdés naptárral';
-
-  @override
   String get firstLaunchPrivacyConsentBefore =>
       'A kezdő munkaterület kiválasztásával megerősíti, hogy elolvasta és elfogadja az ';
 
@@ -1616,14 +1412,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get switchMode => 'Módváltás';
 
   @override
-  String get generalScheduleComingSoon =>
-      'Az általános naptár hamarosan elérhető';
-
-  @override
   String get switchToStudentTimetable => 'Váltás a tanulói órarendre';
-
-  @override
-  String get mySchedule => 'Saját naptár';
 
   @override
   String get today => 'Ma';
@@ -1669,15 +1458,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get recurrenceEndDate => 'Záró dátum';
-
-  @override
-  String get recurrenceNoEndDate => 'Nincs záró dátum';
-
-  @override
-  String get recurrenceSetEndDate => 'Beállítás';
-
-  @override
-  String get recurrenceChangeEndDate => 'Módosítás';
 
   @override
   String get repeatsWeekly => 'Hetente ismétlődik';
@@ -1815,28 +1595,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get eventDuplicated => 'Esemény megkettőzve';
-
-  @override
-  String get searchEvents => 'Események keresése';
-
-  @override
-  String get clearSearch => 'Keresés törlése';
-
-  @override
-  String get filterByColor => 'Szűrés szín szerint';
-
-  @override
-  String get allColors => 'Minden szín';
-
-  @override
-  String upcomingEventsCount(int count) {
-    return 'Közelgő: $count';
-  }
-
-  @override
-  String overdueEventsCount(int count) {
-    return 'Lejárt: $count';
-  }
 
   @override
   String get allDay => 'Egész napos';
@@ -1998,14 +1756,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get reminderUpcoming => 'Közelgő';
 
   @override
-  String get reminderOverdue => 'Lejárt';
-
-  @override
   String get generalFitWeekColumnsToWidth => 'Heti nézet képernyőhöz igazítása';
-
-  @override
-  String get generalFitWeekColumnsToWidthHint =>
-      'A teljes hét megjelenítése kompakt elrendezésben. Kikapcsolva vízszintesen görgethető. A 7 napnál hosszabb egyéni tartományok továbbra is görgethetők.';
 
   @override
   String get showWeekends => 'Hétvégék megjelenítése';
@@ -2219,9 +1970,6 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get generalViewSwitchBehavior => 'Nézetváltó gomb';
-
-  @override
-  String get settingsWorkspaceMode => 'Aktív munkaterület';
 
   @override
   String get hideHomeWorkspaceNavigation => 'Munkaterület-navigáció elrejtése';
@@ -2454,22 +2202,9 @@ class AppLocalizationsHu extends AppLocalizations {
   }
 
   @override
-  String developerNotificationPlanSummary(int scheduled, int planned) {
-    return '$scheduled ütemezve, $planned tervezve';
-  }
-
-  @override
   String developerNotificationPlanError(Object message) {
     return 'Legutóbbi hiba: $message';
   }
-
-  @override
-  String get developerNotificationRunMaintenance =>
-      'Értesítési terv újraépítése';
-
-  @override
-  String get developerNotificationMaintenanceComplete =>
-      'Az értesítési terv újraépült.';
 
   @override
   String get developerNotificationTestChannel => 'Tesztcsatorna';
@@ -2562,26 +2297,8 @@ class AppLocalizationsHu extends AppLocalizations {
       'Nincs jövőbeli emlékeztető a jelenlegi tervben';
 
   @override
-  String get developerNotificationNextMaintenance => 'Következő karbantartás';
-
-  @override
   String get developerNotificationNextRenewal =>
       'Következő lehetőség szerinti megújítás';
-
-  @override
-  String get developerNotificationNoMaintenance => 'Nincs ütemezve';
-
-  @override
-  String get developerNotificationTruncation => 'Terv csonkolása';
-
-  @override
-  String developerNotificationTruncationCount(int count) {
-    return '$count kihagyva a tervkorlát miatt';
-  }
-
-  @override
-  String get developerNotificationLastReconciliation =>
-      'Legutóbbi újraszámítás';
 
   @override
   String get developerNotificationLastSynchronization =>
@@ -2615,9 +2332,6 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get developerNotificationReconcileModeAuthoritative =>
       'Teljes újraszámítás';
-
-  @override
-  String get developerNotificationReconcileModeMaintenance => 'Karbantartás';
 
   @override
   String get developerNotificationReconcileModeRecovery => 'Helyreállítás';
@@ -2756,24 +2470,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolWebImportInsecureConnection => 'Nem biztonságos kapcsolat';
 
   @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Megnyitja az iskolai bejelentkezést?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Az iskolai bejelentkezés űrlapokon vagy szerverátirányításokon keresztül hitelesítő adatokat küldhet az iskolának és bejelentkezési szolgáltatóinak. Az Android nem tud minden ilyen átvitelt külön célmegerősítéshez megállítani. Csak akkor folytassa, ha megbízik bennük ebben az importálási munkamenetben:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Megnyitja a nem biztonságos iskolai bejelentkezést?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Ez az iskolai bejelentkezés HTTP-t használ. Bárki, aki megfigyelheti vagy módosíthatja ezt a kapcsolatot, elolvashatja vagy megváltoztathatja a hitelesítő adatait és az oldal tartalmát. Csak akkor folytassa, ha elfogadja ezt a kockázatot ennél a helynél:\n\n$origin';
-  }
-
-  @override
   String get notificationSettingsSection => 'Emlékeztetők és értesítések';
 
   @override
@@ -2908,26 +2604,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'Kikapcsolva az értesítések részletei rejtve maradnak a zárolási képernyőn.';
 
   @override
-  String get notificationWidgets => 'Kezdőképernyős modulok';
-
-  @override
-  String get notificationWidgetsDesc =>
-      'Frissítse a Sked moduljait, és tudja meg, hogyan adhat hozzá egyet a kezdőképernyőről.';
-
-  @override
-  String get notificationWidgetsDialogTitle => 'Sked-modul hozzáadása';
-
-  @override
-  String get notificationWidgetsDialogMessage =>
-      'A készülék kezdőképernyőjén nyomjon meg hosszan egy üres területet, válassza a Modulok lehetőséget, majd adjon hozzá egy Sked-modult. A modul a következő tanórákat vagy eseményeket mutatja.';
-
-  @override
-  String get notificationWidgetsRefresh => 'Modulok frissítése';
-
-  @override
-  String get notificationWidgetsRefreshed => 'Modulok frissítve';
-
-  @override
   String get notificationPlatformUnsupported =>
       'Ez a platform nem támogat natív értesítéseket.';
 
@@ -2963,19 +2639,7 @@ class AppLocalizationsHu extends AppLocalizations {
       'A munkaterület ki van kapcsolva, de az emlékeztetőket nem sikerült eltávolítani. Próbálja újra az értesítések helyreállítását.';
 
   @override
-  String get settingsSearch => 'Beállítások keresése';
-
-  @override
-  String get settingsNoResults => 'Nincs megfelelő beállítás';
-
-  @override
   String get settingsDataPrivacy => 'Adatok és adatvédelem';
-
-  @override
-  String get workspacePreferences => 'Megjelenítés és kezelés';
-
-  @override
-  String get workspaceManage => 'Kezelés';
 
   @override
   String get selectedDayAgenda => 'Kiválasztott nap';
