@@ -12,7 +12,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
-import 'expressive_dialog.dart';
+import 'school_import_replace_confirmation.dart';
 import 'period_time_set_picker_dialog.dart';
 import 'school_import_week_range_confirmation.dart';
 import 'school_import_save_feedback.dart';
@@ -504,43 +504,19 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
         !widget.canReplaceCurrent) {
       return;
     }
-    final dataSession = widget.provider.dataSessionToken;
-    final replacementId = widget.provider.activeTimetableOrNull?.id;
     setState(() => _replaceConfirmationOpen = true);
-    bool? confirmed;
+    bool confirmed;
     try {
-      confirmed = await showExpressiveDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        waitForTransitionComplete: true,
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          return AlertDialog(
-            title: Text(l10n.replaceCurrentTimetableConfirmTitle),
-            content: Text(l10n.replaceCurrentTimetableConfirmMessage),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(l10n.confirm),
-              ),
-            ],
-          );
-        },
+      confirmed = await confirmSchoolImportReplacement(
+        context,
+        provider: widget.provider,
       );
     } finally {
       if (mounted) {
         setState(() => _replaceConfirmationOpen = false);
       }
     }
-    if (confirmed == true &&
-        mounted &&
-        !_hasPopped &&
-        identical(dataSession, widget.provider.dataSessionToken) &&
-        replacementId == widget.provider.activeTimetableOrNull?.id) {
+    if (confirmed && mounted && !_hasPopped) {
       await _submit(TimetableImportMode.replaceActive);
     }
   }

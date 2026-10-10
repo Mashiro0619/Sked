@@ -23,7 +23,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
 import '../theme/sked_expressive_theme.dart';
-import '../widgets/expressive_dialog.dart';
+import '../widgets/school_import_replace_confirmation.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import 'school_import_result_editor_page.dart';
@@ -753,32 +753,12 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         !widget.canReplaceCurrent) {
       return;
     }
-    final dataSession = widget.provider?.dataSessionToken;
-    final replacementId = widget.provider?.activeTimetableOrNull?.id;
     setState(() => _replaceConfirmationOpen = true);
-    bool? confirmed;
+    bool confirmed;
     try {
-      confirmed = await showExpressiveDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        waitForTransitionComplete: true,
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          return AlertDialog(
-            title: Text(l10n.replaceCurrentTimetableConfirmTitle),
-            content: Text(l10n.replaceCurrentTimetableConfirmMessage),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(l10n.confirm),
-              ),
-            ],
-          );
-        },
+      confirmed = await confirmSchoolImportReplacement(
+        context,
+        provider: widget.provider,
       );
     } finally {
       if (mounted) {
@@ -786,10 +766,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       }
     }
     if (!mounted) return;
-    if (confirmed == true &&
-        !_hasPopped &&
-        identical(dataSession, widget.provider?.dataSessionToken) &&
-        replacementId == widget.provider?.activeTimetableOrNull?.id) {
+    if (confirmed && !_hasPopped) {
       await _submitConfiguredImport(TimetableImportMode.replaceActive);
     }
   }
