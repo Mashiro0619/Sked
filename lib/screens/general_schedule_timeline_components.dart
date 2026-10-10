@@ -829,7 +829,7 @@ Color _timelineOccurrenceAccentColor(
   double minimumContrast = 4.5,
 }) {
   var candidate = color.withValues(alpha: 1);
-  if (_contrastRatio(candidate, fillColor) >= minimumContrast) {
+  if (colorContrastRatio(candidate, fillColor) >= minimumContrast) {
     return candidate;
   }
 
@@ -838,7 +838,7 @@ Color _timelineOccurrenceAccentColor(
       : Colors.black;
   for (final alpha in const [0.18, 0.32, 0.46, 0.60, 0.76, 0.88]) {
     candidate = Color.alphaBlend(target.withValues(alpha: alpha), color);
-    if (_contrastRatio(candidate, fillColor) >= minimumContrast) {
+    if (colorContrastRatio(candidate, fillColor) >= minimumContrast) {
       return candidate;
     }
   }
@@ -856,12 +856,4 @@ WidgetStateProperty<Color?> _timelineOccurrenceOverlayColor(Color accentColor) {
     }
     return null;
   });
-}
-
-double _contrastRatio(Color a, Color b) {
-  final aLuminance = a.computeLuminance();
-  final bLuminance = b.computeLuminance();
-  final lighter = math.max(aLuminance, bLuminance);
-  final darker = math.min(aLuminance, bLuminance);
-  return (lighter + 0.05) / (darker + 0.05);
 }

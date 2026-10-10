@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'color_contrast.dart';
+
 /// Large structural surfaces have two roles. Control/state colors remain owned
 /// by their components; this never rewrites the user's ColorScheme.
 enum SkedSurfaceRole {
@@ -96,17 +98,12 @@ Color skedReadableAccent(ColorScheme colors, {Color? surface}) {
     surface ?? colors.surface,
     colors.surface,
   );
-  final backgroundLuminance = background.computeLuminance();
-  bool readable(Color foreground) {
-    final luminance = Color.alphaBlend(
-      foreground,
-      background,
-    ).computeLuminance();
-    final contrast = luminance > backgroundLuminance
-        ? (luminance + .05) / (backgroundLuminance + .05)
-        : (backgroundLuminance + .05) / (luminance + .05);
-    return contrast >= 4.5;
-  }
+  bool readable(Color foreground) =>
+      colorContrastRatio(
+        Color.alphaBlend(foreground, background),
+        background,
+      ) >=
+      4.5;
 
   // Check the actual surface, including translucent selection fills. A fixed
   // tone chosen from brightness alone can still fail on a custom background.

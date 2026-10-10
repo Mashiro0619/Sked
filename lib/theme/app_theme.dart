@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/sked_floating_surface.dart';
 import 'app_motion.dart';
+import 'color_contrast.dart';
 import 'general_calendar_color_theme.dart';
 import 'sked_expressive_theme.dart';
 
@@ -602,15 +603,7 @@ ColorScheme _withTertiaryFamily(
 Color _opaque(Color color) => color.withValues(alpha: 1);
 
 Color _onColorFor(Color color) {
-  final blackContrast = _contrastRatio(color, Colors.black);
-  final whiteContrast = _contrastRatio(color, Colors.white);
+  final blackContrast = colorContrastRatio(color, Colors.black);
+  final whiteContrast = colorContrastRatio(color, Colors.white);
   return blackContrast >= whiteContrast ? Colors.black : Colors.white;
-}
-
-double _contrastRatio(Color a, Color b) {
-  final aLuminance = a.computeLuminance();
-  final bLuminance = b.computeLuminance();
-  final lighter = aLuminance > bLuminance ? aLuminance : bLuminance;
-  final darker = aLuminance > bLuminance ? bLuminance : aLuminance;
-  return (lighter + 0.05) / (darker + 0.05);
 }

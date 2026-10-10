@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../models/timetable_models.dart';
+import '../theme/color_contrast.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'timetable_entry.dart';
 import 'sked_calendar_day_label.dart';
@@ -1907,11 +1908,8 @@ class _TouchCourseTypography extends StatelessWidget {
   Color preferred,
   Color background,
 ) {
-  double contrast(Color foreground) {
-    final a = Color.alphaBlend(foreground, background).computeLuminance();
-    final b = background.computeLuminance();
-    return (math.max(a, b) + .05) / (math.min(a, b) + .05);
-  }
+  double contrast(Color foreground) =>
+      colorContrastRatio(Color.alphaBlend(foreground, background), background);
 
   final title = contrast(preferred) >= 4.5
       ? preferred
