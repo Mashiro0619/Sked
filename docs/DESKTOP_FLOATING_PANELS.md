@@ -316,3 +316,17 @@ foreach ($editorGroup in @('course', 'event', 'timetable')) {
 本次截图位于 `.scratch/compact-editor-visual/`，代表文件为 `course-zh-add-1.0x-floating.png`、`event-zh-add-1.0x-floating.png` 和 `timetable-zh-edit-1.0x-floating.png`；首轮截图保留在 `.scratch/hybrid-editor-visual/` 供比较。Windows 验证和普通调试构建在 `.scratch/hybrid-editor-check/` 的独立源码目录执行，避免正在运行的应用锁定原构建目录；截图与运行日志不提交。
 
 最终普通 Windows 调试构建成功，输出 `.scratch/hybrid-editor-check/build/windows/x64/runner/Debug/sked.exe`。联合回归、静态检查、三组视觉测试和构建日志分别为 `.scratch/compact-editor-regressions.log`、`.scratch/compact-editor-analyze.log`、`.scratch/compact-editor-visual-{course,event,timetable}.log` 和 `.scratch/compact-editor-windows-build.log`。
+
+## 课程详情间距与排版（2026-10-10）
+
+课程桌面详情去掉地点、时间透明卡片中重复的 14 dp 内边距，保留清楚的文字层级和分组。主信息之间为 12 dp，主信息到属性为 16 dp；正文左右 16 dp，首项距离正文顶部 12 dp（含忙碌指示器保留的 4 dp）。地点和时间使用 20 dp 图标、12 sp 次级标签及 14 sp 正文，长地点完整换行。
+
+教师、上课日、周次、学分、备注共用按当前字体及本地化测量的标签列，列间距 12 dp、行间距 8 dp；值列使用剩余全部宽度，备注不截断。窄窗／大字号下，值列不足 160 dp × 字号倍率时改为上置标签。自定义字段独立测量，长字段名不挤宽内置属性的标签列。
+
+标题使用 18 sp 半粗文字，与统一尺寸的编辑／关闭按钮垂直居中；320 dp 窄面板仍保持三个元素同排。标题拖动区域的文字也居中，按钮继续位于拖动区域之外。`WorkspaceViewPanel` 通过可选的头部配置启用这些变化，其他查看面板继续使用原默认值。移动端布局、课程数据和冲突处理不变。
+
+专项测试为 `test/widgets/course_details_spacing_test.dart`，覆盖间距、值列对齐、长备注滚动、窄窗标题操作、自定义字段及移动分支。实际字体入口为 `integration_test/course_details_spacing_visual_test.dart`，使用与反馈截图一致的独立内存课程数据，通过课程卡片的真实入口打开详情；支持 `SKED_VISUAL_GROUP=zh/en/rtl`，输出目录由 `SKED_VISUAL_OUTPUT` 指定。中文场景验证编辑返回、并排、320 dp、矮窗及滚动；另有长标题／地点、英文和暗色 RTL 2× 场景。
+
+最终 22 个相关测试文件共 **233 项通过**，含 8 项新增间距／排版专项及既有入口定位、拖动、窗口调宽和课程编辑回归；全项目静态分析、4 个变更 Dart 文件格式和差异空白检查通过。Windows 四个实际字体场景全部通过，生成并检查 **10 张截图**，保存在 `.scratch/course-details-spacing-visual/`。日志为 `.scratch/course-details-spacing-regressions.log`、`.scratch/course-details-spacing-analyze.log` 及 `.scratch/course-details-spacing-visual-{zh,en,rtl}.log`。原生鼠标验收范围不变。
+
+独立源码目录 `.scratch/hybrid-editor-check/` 的普通 Windows 调试构建成功，程序位于该目录的 `build/windows/x64/runner/Debug/sked.exe`，日志为 `.scratch/course-details-spacing-windows-build.log`。
