@@ -1,8 +1,6 @@
 package com.mashiro.sked.androidproductivity;
 
 import android.content.Context;
-import android.os.Build;
-import android.os.PowerManager;
 import androidx.annotation.NonNull;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.MethodCall;
@@ -36,7 +34,7 @@ public final class AndroidProductivityBackgroundPlugin
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
     if (METHOD_IS_IGNORING_BATTERY_OPTIMIZATIONS.equals(call.method)) {
-      result.success(isIgnoringBatteryOptimizations());
+      result.success(BatteryOptimizationStatus.isIgnoringOptimizations(applicationContext));
       return;
     }
     result.notImplemented();
@@ -51,21 +49,4 @@ public final class AndroidProductivityBackgroundPlugin
     applicationContext = null;
   }
 
-  private boolean isIgnoringBatteryOptimizations() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-      return true;
-    }
-    if (applicationContext == null) {
-      return false;
-    }
-    try {
-      final PowerManager powerManager =
-          applicationContext.getSystemService(PowerManager.class);
-      return powerManager != null
-          && powerManager.isIgnoringBatteryOptimizations(applicationContext.getPackageName());
-    } catch (SecurityException ignored) {
-      // Fail closed when an OEM rejects the system-level query.
-      return false;
-    }
-  }
 }

@@ -8,13 +8,13 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.Build
-import android.os.PowerManager
 import androidx.work.BackoffPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.mashiro.sked.androidproductivity.BatteryOptimizationStatus
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
@@ -145,16 +145,10 @@ class AgendaBackgroundReconcileWorker(
                 ).setMethodCallHandler { call, result ->
                     when (call.method) {
                         AndroidProductivityContract.METHOD_IS_IGNORING_BATTERY_OPTIMIZATIONS -> {
-                            val power = applicationContext
-                                .getSystemService(PowerManager::class.java)
                             result.success(
-                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                                    true
-                                } else {
-                                    power?.isIgnoringBatteryOptimizations(
-                                        applicationContext.packageName,
-                                    ) == true
-                                },
+                                BatteryOptimizationStatus.isIgnoringOptimizations(
+                                    applicationContext,
+                                ),
                             )
                         }
                         "scheduleAgendaReconciliation" -> {

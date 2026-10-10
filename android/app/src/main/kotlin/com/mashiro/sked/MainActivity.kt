@@ -12,10 +12,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
+import com.mashiro.sked.androidproductivity.BatteryOptimizationStatus
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodCall
@@ -337,17 +337,8 @@ class MainActivity : FlutterActivity() {
         result.success(canScheduleExactAlarms())
     }
 
-    private fun isIgnoringBatteryOptimizations(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
-        return try {
-            val manager = getSystemService(PowerManager::class.java) ?: return false
-            manager.isIgnoringBatteryOptimizations(packageName)
-        } catch (_: SecurityException) {
-            // A vendor may reject the query even when the public API exists.
-            // Treat that as not allowlisted so reminders remain blocked.
-            false
-        }
-    }
+    private fun isIgnoringBatteryOptimizations(): Boolean =
+        BatteryOptimizationStatus.isIgnoringOptimizations(this)
 
     private fun openBatteryOptimizationSettings(result: MethodChannel.Result) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
