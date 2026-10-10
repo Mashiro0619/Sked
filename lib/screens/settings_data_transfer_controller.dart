@@ -47,20 +47,6 @@ enum SettingsTransferDirection { import, export }
 class SettingsDataTransferController {
   const SettingsDataTransferController();
 
-  Future<void> runStudentFlow(
-    BuildContext context, {
-    required Future<void> Function(SettingsStudentDataAction action) onAction,
-  }) async {
-    final action = await _showActions<SettingsStudentDataAction>(
-      context,
-      icon: Icons.import_export,
-      buildSpec: _studentSpec,
-    );
-    if (action != null && context.mounted) {
-      await onAction(action);
-    }
-  }
-
   Future<void> runAppDataFlow(
     BuildContext context, {
     required bool Function() hasRecoveryArtifacts,
@@ -125,21 +111,6 @@ class SettingsDataTransferController {
           ],
         );
       },
-    );
-    if (action != null && context.mounted) {
-      await onAction(action);
-    }
-  }
-
-  Future<void> runGeneralFlow(
-    BuildContext context, {
-    required Future<void> Function(SettingsGeneralDataAction action) onAction,
-  }) async {
-    final action = await _showActions<SettingsGeneralDataAction>(
-      context,
-      icon: Icons.event_note_outlined,
-      constrainHeight: true,
-      buildSpec: _generalSpec,
     );
     if (action != null && context.mounted) {
       await onAction(action);

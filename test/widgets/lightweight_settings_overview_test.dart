@@ -456,8 +456,8 @@ void main() {
       await t.pumpAndSettle();
       await choose(t, 'notification-course-default-reminder', '10 min before');
       await choose(t, 'notification-general-default-reminder', '5 min before');
-      expect(p.courseDefaultReminderMinutesBefore, 10);
-      expect(p.generalDefaultReminderMinutesBefore, 5);
+      expect(p.courseDefaultMinutesBefore, 10);
+      expect(p.generalDefaultMinutesBefore, 5);
       await t.ensureVisible(k('notification-troubleshooting'));
       await t.pumpAndSettle();
       await t.tap(k('notification-troubleshooting'));

@@ -97,7 +97,7 @@ void main() {
     );
   }
 
-  testWidgets('student sheet resolves localization when its builder runs', (
+  testWidgets('student transfer page rebuilds its localized actions', (
     tester,
   ) async {
     late BuildContext pageContext;
@@ -115,27 +115,29 @@ void main() {
             home: Builder(
               builder: (context) {
                 pageContext = context;
-                return const Scaffold(body: SizedBox.shrink());
+                return Scaffold(
+                  body: const SettingsDataTransferController()
+                      .studentPageContent(
+                        context,
+                        onAction: (_) {},
+                        busy: false,
+                      ),
+                );
               },
             ),
           );
         },
       ),
     );
+    final englishTitle = AppLocalizations.of(pageContext).importTimetableFiles;
+    expect(find.text(englishTitle), findsOneWidget);
 
-    final flow = const SettingsDataTransferController().runStudentFlow(
-      pageContext,
-      onAction: (_) async {},
-    );
     rebuild(() => locale = const Locale('zh'));
     await tester.pumpAndSettle();
-
-    expect(find.text('导入导出数据'), findsOneWidget);
-    expect(find.text('Import and export data'), findsNothing);
-
-    Navigator.of(pageContext).pop();
-    await tester.pumpAndSettle();
-    await flow;
+    final chineseTitle = AppLocalizations.of(pageContext).importTimetableFiles;
+    expect(chineseTitle, isNot(englishTitle));
+    expect(find.text(chineseTitle), findsOneWidget);
+    expect(find.text(englishTitle), findsNothing);
   });
 
   testWidgets('backup sheet reads recovery availability when builder runs', (

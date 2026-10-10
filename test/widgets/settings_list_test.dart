@@ -257,7 +257,7 @@ void main() {
     },
   );
 
-  testWidgets('compact list tile keeps its indicator inline at 2x text', (
+  testWidgets('compact connected tile keeps its indicator inline at 2x text', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -269,7 +269,7 @@ void main() {
           data: const MediaQueryData(textScaler: TextScaler.linear(2)),
           child: Scaffold(
             body: SingleChildScrollView(
-              child: SettingsListTile(
+              child: SettingsConnectedTile(
                 leading: const Icon(Icons.palette_outlined),
                 title: 'Theme appearance and language preferences',
                 subtitle:

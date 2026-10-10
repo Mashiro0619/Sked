@@ -136,22 +136,6 @@ class ExpressiveDialogContent extends StatelessWidget {
   }
 }
 
-class ExpressiveDialogActions extends StatelessWidget {
-  const ExpressiveDialogActions({super.key, required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.end,
-      children: children,
-    );
-  }
-}
-
 class ExpressiveActionArea extends StatelessWidget {
   const ExpressiveActionArea({super.key, this.leading, required this.actions});
 

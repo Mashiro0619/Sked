@@ -329,30 +329,6 @@ class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
   }
 }
 
-/// Keeps a heading and its controls together when a settings body switches
-/// between one and two columns.
-class ResponsiveSettingsSection extends StatelessWidget {
-  const ResponsiveSettingsSection({
-    super.key,
-    required this.title,
-    required this.children,
-  });
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SettingsSectionHeader(title: title),
-        ...children,
-      ],
-    );
-  }
-}
-
 /// A small settings-only palette. Semantic accents and saved workspace colors
 /// are untouched; neutral surfaces establish hierarchy instead of colored icons.
 abstract final class SettingsVisuals {
@@ -911,97 +887,6 @@ class SettingsSectionHeader extends StatelessWidget {
   }
 }
 
-class SettingsListTile extends StatelessWidget {
-  const SettingsListTile({
-    super.key,
-    required this.leading,
-    required this.title,
-    this.subtitle,
-    this.trailing,
-    this.onTap,
-  });
-
-  final Widget leading;
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (_SettingsTonalGroup.of(context) ||
-        WorkbenchChromeMetrics.of(context).desktop) {
-      return SettingsConnectedTile(
-        leading: leading,
-        title: title,
-        subtitle: subtitle,
-        trailing: trailing,
-        onTap: onTap,
-      );
-    }
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final enabled = onTap != null;
-    final trailingWidget = trailing == null
-        ? null
-        : IconTheme.merge(
-            data: IconThemeData(
-              color: enabled
-                  ? colors.onSurfaceVariant
-                  : colors.onSurface.withValues(alpha: 0.38),
-            ),
-            child: trailing!,
-          );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: ExpressiveTap(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          decoration: ShapeDecoration(
-            color: SkedSurface.colorOf(context),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.zero,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 360;
-                return Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 12 : 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      _SettingsTileIcon(enabled: enabled, child: leading),
-                      SizedBox(width: compact ? 8 : 12),
-                      Expanded(
-                        child: _SettingsTileText(
-                          title: title,
-                          subtitle: subtitle,
-                          enabled: enabled,
-                        ),
-                      ),
-                      if (trailingWidget != null) ...[
-                        SizedBox(width: compact ? 4 : 8),
-                        _SettingsTileTrailing(child: trailingWidget),
-                      ],
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _SettingsTileIcon extends StatelessWidget {
   const _SettingsTileIcon({
     required this.child,
@@ -1069,50 +954,6 @@ class _SettingsTileTrailing extends StatelessWidget {
             : WorkbenchChromeMetrics.of(context).iconTarget,
       ),
       child: Center(child: child),
-    );
-  }
-}
-
-class _SettingsTileText extends StatelessWidget {
-  const _SettingsTileText({
-    required this.title,
-    this.subtitle,
-    this.enabled = true,
-  });
-
-  final String title;
-  final String? subtitle;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: enabled
-                ? colors.onSurface
-                : colors.onSurface.withValues(alpha: 0.38),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitle!,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: enabled
-                  ? colors.onSurfaceVariant
-                  : colors.onSurface.withValues(alpha: 0.38),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

@@ -270,9 +270,7 @@ void main() {
 
       expect(storage.saveCount, 1);
       expect(provider.notificationsEnabled, isTrue);
-      expect(provider.courseDefaultReminderMinutesBefore, 10);
       expect(provider.courseDefaultMinutesBefore, 10);
-      expect(provider.generalDefaultReminderMinutesBefore, 30);
       expect(provider.generalDefaultMinutesBefore, 30);
       expect(provider.lockScreenShowTitles, isTrue);
       expect(storage.data!.notificationSettings, provider.notificationSettings);

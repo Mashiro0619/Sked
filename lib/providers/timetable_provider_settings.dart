@@ -13,12 +13,6 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   bool get notificationsEnabled => _appData.notificationSettings.enabled;
 
-  int? get courseDefaultReminderMinutesBefore =>
-      _appData.notificationSettings.courseDefaultMinutesBefore;
-
-  int? get generalDefaultReminderMinutesBefore =>
-      _appData.notificationSettings.generalDefaultMinutesBefore;
-
   int? get courseDefaultMinutesBefore =>
       _appData.notificationSettings.courseDefaultMinutesBefore;
 

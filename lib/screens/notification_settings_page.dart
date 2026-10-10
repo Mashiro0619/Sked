@@ -361,7 +361,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               key: const ValueKey('notification-course-default-reminder'),
               label: l10n.notificationCourseDefaultReminder,
               icon: Icons.school_outlined,
-              value: provider.courseDefaultReminderMinutesBefore,
+              value: provider.courseDefaultMinutesBefore,
               l10n: l10n,
               onChanged: (minutes) => _updateSetting(
                 'Update course default reminder',
@@ -374,7 +374,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               key: const ValueKey('notification-general-default-reminder'),
               label: l10n.notificationGeneralDefaultReminder,
               icon: Icons.event_outlined,
-              value: provider.generalDefaultReminderMinutesBefore,
+              value: provider.generalDefaultMinutesBefore,
               l10n: l10n,
               onChanged: (minutes) => _updateSetting(
                 'Update general default reminder',

@@ -115,10 +115,10 @@ Offset positionSkedFloatingPanel({
       : placement;
   final x = rtl ? anchor.right - size.width : anchor.left;
   final candidates = <Offset>[
-    Offset(anchor.left - 6 - size.width, anchor.top),
-    Offset(anchor.right + 6, anchor.top),
-    Offset(x, anchor.bottom + 6),
-    Offset(x, anchor.top - 6 - size.height),
+    Offset(anchor.left - SkedFloatingStyle.anchorGap - size.width, anchor.top),
+    Offset(anchor.right + SkedFloatingStyle.anchorGap, anchor.top),
+    Offset(x, anchor.bottom + SkedFloatingStyle.anchorGap),
+    Offset(x, anchor.top - SkedFloatingStyle.anchorGap - size.height),
   ];
   final order = switch (effective) {
     SkedFloatingPlacement.left => [0, 1, 2, 3],
@@ -126,10 +126,10 @@ Offset positionSkedFloatingPanel({
     _ => [2, 3, 1, 0],
   };
   final rooms = [
-    anchor.left - 6 - bounds.left,
-    bounds.right - anchor.right - 6,
-    bounds.bottom - anchor.bottom - 6,
-    anchor.top - 6 - bounds.top,
+    anchor.left - SkedFloatingStyle.anchorGap - bounds.left,
+    bounds.right - anchor.right - SkedFloatingStyle.anchorGap,
+    bounds.bottom - anchor.bottom - SkedFloatingStyle.anchorGap,
+    anchor.top - SkedFloatingStyle.anchorGap - bounds.top,
   ];
   for (final side in order) {
     if (rooms[side] >= (side < 2 ? size.width : size.height)) {
