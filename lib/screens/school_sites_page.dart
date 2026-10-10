@@ -25,6 +25,7 @@ import '../services/school_site_store.dart';
 import '../services/text_file_picker.dart';
 import '../utils/platform_capabilities.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/export_save_flow.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/sked_popup_menu.dart';
@@ -1078,20 +1079,23 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     return merged;
   }
 
-  Future<void> _shareJson() async {
+  Future<void> _shareJson({ExportPayload? payload}) async {
     if (_jsonShareInProgress || !mounted) {
       return;
     }
     _setJsonShareInProgress(true);
     final l10n = AppLocalizations.of(context);
     try {
-      final content = await _siteService.exportSites(_sites);
+      final captured =
+          payload ??
+          ExportPayload(
+            fileName: l10n.schoolSitesJsonFileName,
+            content: await _siteService.exportSites(_sites),
+          );
       if (!mounted) {
         return;
       }
-      await _exportService.shareFile(
-        ExportPayload(fileName: l10n.schoolSitesJsonFileName, content: content),
-      );
+      await _exportService.shareFile(captured);
     } finally {
       _setJsonShareInProgress(false);
     }
@@ -1103,149 +1107,22 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     }
     _setJsonSaveInProgress(true);
     try {
-      await _saveJsonToFileInner();
+      final l10n = AppLocalizations.of(context);
+      final payload = ExportPayload(
+        fileName: l10n.schoolSitesJsonFileName,
+        content: await _siteService.exportSites(_sites),
+      );
+      if (!mounted) return;
+      await saveExportWithFeedback(
+        context: context,
+        service: _exportService,
+        payload: payload,
+        shareFile: (payload) => _shareJson(payload: payload),
+        isCurrent: () => routeWorkspaceEnabled,
+      );
     } finally {
       _setJsonSaveInProgress(false);
     }
-  }
-
-  Future<void> _saveJsonToFileInner() async {
-    final l10n = AppLocalizations.of(context);
-    final result = await _exportService.saveFile(
-      ExportPayload(
-        fileName: l10n.schoolSitesJsonFileName,
-        content: await _siteService.exportSites(_sites),
-      ),
-    );
-    if (!mounted) {
-      return;
-    }
-
-    switch (result.status) {
-      case ExportSaveStatus.saved:
-        _showMessage(
-          l10n.savedToPath(result.path ?? l10n.schoolSitesJsonFileName),
-        );
-        return;
-      case ExportSaveStatus.cancelled:
-        _showMessage(l10n.saveCancelled);
-        return;
-      case ExportSaveStatus.permissionDenied:
-        final retry = await _showPermissionDialog(
-          title: l10n.fileSaveRestrictedTitle,
-          message: l10n.fileSaveRestrictedRetryMessage,
-          confirmText: l10n.retrySave,
-        );
-        if (retry == true && mounted) {
-          await _saveJsonToFileInner();
-        }
-        return;
-      case ExportSaveStatus.permissionPermanentlyDenied:
-        final openSettings = await _showPermissionDialog(
-          title: l10n.fileSaveRestrictedTitle,
-          message: l10n.fileSaveRestrictedSettingsMessage,
-          confirmText: l10n.openSettings,
-        );
-        if (openSettings == true) {
-          await _exportService.openSettings();
-        }
-        return;
-      case ExportSaveStatus.unsupported:
-        final shouldShare = await _showFailureDialog(
-          title: l10n.browserDownloadRestrictedTitle,
-          message: l10n.browserDownloadRestrictedMessage,
-        );
-        if (shouldShare == true) {
-          await _shareJson();
-          if (mounted) {
-            _showMessage(l10n.exportSwitchedToShare);
-          }
-        }
-        return;
-      case ExportSaveStatus.failed:
-        final shouldShare = await _showFailureDialog(
-          title: _exportService.usesDesktopFileSaveErrors
-              ? l10n.fileSaveFailedTitle
-              : l10n.fileSaveRestrictedTitle,
-          message: _exportService.usesDesktopFileSaveErrors
-              ? l10n.fileSaveFailedWindowsMessage
-              : l10n.fileSaveFailedGenericMessage,
-        );
-        if (shouldShare == true) {
-          await _shareJson();
-          if (mounted) {
-            _showMessage(l10n.exportSwitchedToShare);
-          }
-        } else if (mounted) {
-          _showMessage(l10n.saveFailedRetry);
-        }
-        return;
-    }
-  }
-
-  Future<bool?> _showPermissionDialog({
-    required String title,
-    required String message,
-    required String confirmText,
-  }) {
-    return showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(bool value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(false),
-              child: Text(AppLocalizations.of(context).cancel),
-            ),
-            FilledButton(
-              onPressed: () => popWith(true),
-              child: Text(confirmText),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<bool?> _showFailureDialog({
-    required String title,
-    required String message,
-  }) {
-    return showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(bool value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(false),
-              child: Text(AppLocalizations.of(context).retryLater),
-            ),
-            FilledButton(
-              onPressed: () => popWith(true),
-              child: Text(AppLocalizations.of(context).switchToShare),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showMessage(String message) {

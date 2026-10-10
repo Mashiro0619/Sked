@@ -34,6 +34,7 @@ import '../services/update_service.dart';
 import '../services/update_distribution.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/export_save_flow.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
@@ -1555,137 +1556,11 @@ class _SettingsPageState extends State<SettingsPage>
     await _saveFileToDisk(ExportPayload(fileName: fileName, content: content));
   }
 
-  Future<void> _saveFileToDisk(ExportPayload payload) async {
-    final l10n = AppLocalizations.of(context);
-    final result = await _exportService.saveFile(payload);
-    if (!mounted) {
-      return;
-    }
-
-    switch (result.status) {
-      case ExportSaveStatus.saved:
-        _showMessage(l10n.savedToPath(result.path ?? payload.fileName));
-        return;
-      case ExportSaveStatus.cancelled:
-        _showMessage(l10n.saveCancelled);
-        return;
-      case ExportSaveStatus.permissionDenied:
-        final retry = await _showPermissionDialog(
-          title: l10n.fileSaveRestrictedTitle,
-          message: l10n.fileSaveRestrictedRetryMessage,
-          confirmText: l10n.retrySave,
-        );
-        if (retry == true && mounted) {
-          await _saveFileToDisk(payload);
-        }
-        return;
-      case ExportSaveStatus.permissionPermanentlyDenied:
-        final openSettings = await _showPermissionDialog(
-          title: l10n.fileSaveRestrictedTitle,
-          message: l10n.fileSaveRestrictedSettingsMessage,
-          confirmText: l10n.openSettings,
-        );
-        if (openSettings == true) {
-          await _exportService.openSettings();
-        }
-        return;
-      case ExportSaveStatus.unsupported:
-        final shouldShare = await _showFailureDialog(
-          title: l10n.browserDownloadRestrictedTitle,
-          message: l10n.browserDownloadRestrictedMessage,
-        );
-        if (shouldShare == true) {
-          await _shareFile(payload);
-          if (mounted) {
-            _showMessage(l10n.exportSwitchedToShare);
-          }
-        }
-        return;
-      case ExportSaveStatus.failed:
-        final shouldShare = await _showFailureDialog(
-          title: _exportService.usesDesktopFileSaveErrors
-              ? l10n.fileSaveFailedTitle
-              : l10n.fileSaveRestrictedTitle,
-          message: _exportService.usesDesktopFileSaveErrors
-              ? l10n.fileSaveFailedWindowsMessage
-              : l10n.fileSaveFailedGenericMessage,
-        );
-        if (shouldShare == true) {
-          await _shareFile(payload);
-          if (mounted) {
-            _showMessage(l10n.exportSwitchedToShare);
-          }
-        } else if (mounted) {
-          _showMessage(l10n.saveFailedRetry);
-        }
-        return;
-    }
-  }
-
-  Future<bool?> _showPermissionDialog({
-    required String title,
-    required String message,
-    required String confirmText,
-  }) {
-    return showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(bool value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(false),
-              child: Text(AppLocalizations.of(context).cancel),
-            ),
-            FilledButton(
-              onPressed: () => popWith(true),
-              child: Text(confirmText),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<bool?> _showFailureDialog({
-    required String title,
-    required String message,
-  }) {
-    return showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(bool value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(false),
-              child: Text(AppLocalizations.of(context).retryLater),
-            ),
-            FilledButton(
-              onPressed: () => popWith(true),
-              child: Text(AppLocalizations.of(context).switchToShare),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  Future<void> _saveFileToDisk(ExportPayload payload) => saveExportWithFeedback(
+    context: context,
+    service: _exportService,
+    payload: payload,
+  );
 
   void _showMessage(String message) {
     if (!mounted) {

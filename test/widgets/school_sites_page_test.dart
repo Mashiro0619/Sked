@@ -146,6 +146,35 @@ class _RecordingBytesExportService extends ExportService {
   }
 }
 
+class _VersionedSchoolSiteService extends SchoolSiteService {
+  _VersionedSchoolSiteService() : super(store: _MemorySchoolSiteStore('[]'));
+  int exports = 0;
+
+  @override
+  Future<String> exportSites(List<SchoolSite> sites) async =>
+      '{"snapshot":${++exports}}';
+}
+
+class _RetryThenShareExportService extends ExportService {
+  final saved = <ExportPayload>[];
+  final shared = <ExportPayload>[];
+
+  @override
+  Future<ExportSaveResult> saveFile(ExportPayload payload) async {
+    saved.add(payload);
+    return ExportSaveResult(
+      status: saved.length == 1
+          ? ExportSaveStatus.permissionDenied
+          : ExportSaveStatus.failed,
+    );
+  }
+
+  @override
+  Future<void> shareFile(ExportPayload payload) async {
+    shared.add(payload);
+  }
+}
+
 Future<TimetableProvider> _createProvider() async {
   final provider = TimetableProvider(
     storage: _MemoryTimetableStorage(
@@ -350,6 +379,38 @@ void main() {
       find.byType(SchoolHtmlImportPage, skipOffstage: false),
       findsOneWidget,
     );
+  });
+
+  testWidgets('JSON save retry and sharing keep the original site snapshot', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    final exportService = _RetryThenShareExportService();
+    final siteService = _VersionedSchoolSiteService();
+    await _pumpSchoolSitesPage(
+      tester,
+      provider,
+      exportService: exportService,
+      siteService: siteService,
+    );
+    final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
+    await tester.tap(find.byTooltip(l10n.importExport));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.schoolSitesSaveJson));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, l10n.retrySave));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, l10n.switchToShare));
+    await tester.pumpAndSettle();
+
+    expect(siteService.exports, 1);
+    expect(exportService.saved, hasLength(2));
+    expect(exportService.shared, hasLength(1));
+    expect(exportService.saved.first.content, '{"snapshot":1}');
+    expect(exportService.saved.last, same(exportService.saved.first));
+    expect(exportService.shared.single, same(exportService.saved.first));
+    expect(find.text(l10n.exportSwitchedToShare), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('JSON save ignores results after the page is disposed', (

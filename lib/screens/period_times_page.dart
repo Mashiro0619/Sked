@@ -16,6 +16,7 @@ import '../services/export_service.dart';
 import '../services/text_file_picker.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/export_save_flow.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/ui_command.dart';
@@ -940,73 +941,15 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     );
   }
 
-  Future<void> _saveTemplateToFile() async {
-    final l10n = AppLocalizations.of(context);
-    final result = await _exportService.saveFile(
-      ExportPayload(
-        fileName: 'Sked_period_times.json',
-        content: encodePeriodTimesEnvelope(_periodTimes),
-      ),
-    );
-    if (!mounted) {
-      return;
-    }
-
-    switch (result.status) {
-      case ExportSaveStatus.saved:
-        _showMessage(l10n.savedToPath(result.path ?? 'Sked_period_times.json'));
-        return;
-      case ExportSaveStatus.cancelled:
-        _showMessage(l10n.saveCancelled);
-        return;
-      case ExportSaveStatus.permissionDenied:
-        final retry = await _showPermissionDialog(
-          title: l10n.periodFilePermissionTitle,
-          message: l10n.androidFilePermissionMessage,
-          confirmText: l10n.reauthorize,
-        );
-        if (retry == true && mounted) {
-          await _saveTemplateToFile();
-        }
-        return;
-      case ExportSaveStatus.permissionPermanentlyDenied:
-        final openSettings = await _showPermissionDialog(
-          title: l10n.permissionPermanentlyDeniedTitle,
-          message: l10n.permissionSettingsExportMessage,
-          confirmText: l10n.openSettings,
-        );
-        if (openSettings == true) {
-          await _exportService.openSettings();
-        }
-        return;
-      case ExportSaveStatus.unsupported:
-        final shouldShare = await _showFailureDialog(
-          title: l10n.browserDownloadRestrictedTitle,
-          message: l10n.browserDownloadRestrictedMessage,
-        );
-        if (shouldShare == true) {
-          await _shareTemplate();
-          _showMessage(l10n.exportSwitchedToShare);
-        }
-        return;
-      case ExportSaveStatus.failed:
-        final shouldShare = await _showFailureDialog(
-          title: _exportService.usesDesktopFileSaveErrors
-              ? l10n.fileSaveFailedTitle
-              : l10n.fileSaveRestrictedTitle,
-          message: _exportService.usesDesktopFileSaveErrors
-              ? l10n.fileSaveFailedWindowsMessage
-              : l10n.fileSaveFailedGenericMessage,
-        );
-        if (shouldShare == true) {
-          await _shareTemplate();
-          _showMessage(l10n.exportSwitchedToShare);
-        } else {
-          _showMessage(l10n.saveFailedRetry);
-        }
-        return;
-    }
-  }
+  Future<void> _saveTemplateToFile() => saveExportWithFeedback(
+    context: context,
+    service: _exportService,
+    payload: ExportPayload(
+      fileName: 'Sked_period_times.json',
+      content: encodePeriodTimesEnvelope(_periodTimes),
+    ),
+    isCurrent: () => !_retired && routeWorkspaceEnabled,
+  );
 
   void _showMessage(String message) {
     if (!mounted) {
@@ -1014,71 +957,6 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     }
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<bool?> _showPermissionDialog({
-    required String title,
-    required String message,
-    required String confirmText,
-  }) {
-    return showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(bool value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(false),
-              child: Text(AppLocalizations.of(context).cancel),
-            ),
-            FilledButton(
-              onPressed: () => popWith(true),
-              child: Text(confirmText),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<bool?> _showFailureDialog({
-    required String title,
-    required String message,
-  }) {
-    return showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(bool value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(false),
-              child: Text(AppLocalizations.of(context).retryLater),
-            ),
-            FilledButton(
-              onPressed: () => popWith(true),
-              child: Text(AppLocalizations.of(context).switchToShare),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _pickPeriodTime(
