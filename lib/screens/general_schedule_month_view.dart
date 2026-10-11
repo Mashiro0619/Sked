@@ -231,149 +231,261 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
         (occurrencesByDay[_calendarDateKey(selectedDate)] ?? const [])
             .sortedForAgenda();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final sideBySide = workspaceMonthCanSplit(
-          context,
-          constraints.maxWidth,
-        );
-        final workspace = WorkspaceCanvasScope.maybeOf(context);
-        Widget calendar({bool inset = false, bool split = false}) =>
-            _MonthCalendarPanel(
-              sharedTopEdge: !inset && workspace != null,
-              sharedStartEdge: !inset && workspace?.resources == true,
-              // The legacy split supplies a real VerticalDivider; task panes
-              // only reserve space, so the calendar owns its trailing outline.
-              sharedEndEdge: !inset && split,
-              model: model,
-              selectedDate: selectedDate,
-              today: today,
-              occurrencesByDay: occurrencesByDay,
-              provider: widget.provider,
-              filter: widget.filter,
-              onPreviousMonth: _goToPreviousMonth,
-              onNextMonth: _goToNextMonth,
-              onDaySelected: _selectDay,
-            );
-        final agenda = _MonthAgendaPanel(
-          date: selectedDate,
-          occurrences: selectedOccurrences,
-          filtered: widget.filter.isActive,
-          onAddEvent: (anchor) => widget.onEmptySlotTap(
-            selectedDate,
-            WorkspaceEditorConfiguration(anchorContext: anchor).initialAnchor,
-          ),
-          onOccurrenceTap: widget.onOccurrenceTap,
-        );
-
-        if (workspace?.supporting == true || workspace?.dockedDetail == true) {
-          return calendar();
-        }
-        if (sideBySide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: calendar(split: true)),
-              const VerticalDivider(width: 1),
-              SizedBox(width: 320, child: agenda),
-            ],
-          );
-        }
-
-        final textScale = WorkbenchLayoutPolicy.textFactor(
-          MediaQuery.textScalerOf(context).scale(14) / 14,
-        );
-        final agendaHeight = 240.0 * textScale;
-        final minimumCalendarHeight =
-            model.rowCount *
-                _monthMinimumCellHeight(
+    return DesktopResizableRegion(
+      layoutKey: DesktopLayoutRegion.monthAgenda,
+      builder:
+          (
+            context,
+            preferredWidth,
+            updateWidth,
+            commitWidth,
+            resetWidth,
+          ) => DesktopResizableRegion(
+            layoutKey: DesktopLayoutRegion.monthAgendaBottom,
+            axis: Axis.vertical,
+            builder:
+                (
                   context,
-                  showLunarCalendar: _showMonthLunar(widget.provider),
-                ) +
-            48 * textScale;
-        if (constraints.hasBoundedHeight &&
-            constraints.maxWidth >= AppBreakpoints.minimumCanvas &&
-            constraints.maxHeight >= minimumCalendarHeight + agendaHeight + 1) {
-          // A portrait workbench has enough height for a real month canvas
-          // even when it cannot dock an agenda beside it. Do not leave half
-          // of that viewport unused by sizing the calendar like a phone card.
-          return Column(
-            children: [
-              Expanded(child: calendar()),
-              const Divider(height: 1),
-              SizedBox(
-                key: const ValueKey('general-month-stacked-agenda'),
-                height: agendaHeight,
-                child: agenda,
-              ),
-            ],
-          );
-        }
-
-        final l = AppLocalizations.of(context);
-        return CustomScrollView(
-          key: const ValueKey('general-month-compact-scroll'),
-          controller: _compactScrollController,
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-              sliver: SliverToBoxAdapter(child: calendar(inset: true)),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              sliver: SliverMainAxisGroup(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _MonthAgendaHeader(
-                      key: _generalMonthCompactAgendaKey,
+                  preferredHeight,
+                  updateHeight,
+                  commitHeight,
+                  resetHeight,
+                ) => LayoutBuilder(
+                  builder: (context, constraints) {
+                    final metrics = WorkbenchChromeMetrics.of(context);
+                    final textScale = metrics.textScale;
+                    final sideBySide = workspaceMonthCanSplit(
+                      context,
+                      constraints.maxWidth,
+                    );
+                    final workspace = WorkspaceCanvasScope.maybeOf(context);
+                    Widget calendar({bool inset = false, bool split = false}) =>
+                        _MonthCalendarPanel(
+                          sharedTopEdge: !inset && workspace != null,
+                          sharedStartEdge:
+                              !inset && workspace?.resources == true,
+                          // The legacy split supplies a real VerticalDivider; task panes
+                          // only reserve space, so the calendar owns its trailing outline.
+                          sharedEndEdge: !inset && split,
+                          model: model,
+                          selectedDate: selectedDate,
+                          today: today,
+                          occurrencesByDay: occurrencesByDay,
+                          provider: widget.provider,
+                          filter: widget.filter,
+                          onPreviousMonth: _goToPreviousMonth,
+                          onNextMonth: _goToNextMonth,
+                          onDaySelected: _selectDay,
+                        );
+                    final agenda = _MonthAgendaPanel(
                       date: selectedDate,
-                      count: selectedOccurrences.length,
+                      occurrences: selectedOccurrences,
                       filtered: widget.filter.isActive,
-                      compact: true,
                       onAddEvent: (anchor) => widget.onEmptySlotTap(
                         selectedDate,
                         WorkspaceEditorConfiguration(anchorContext: anchor)
                             .initialAnchor,
                       ),
-                    ),
-                  ),
-                  if (selectedOccurrences.isEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                        child: Text(
-                          widget.filter.isActive
-                              ? l.noMatchingEvents
-                              : l.monthNoEvents,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                      onOccurrenceTap: widget.onOccurrenceTap,
+                    );
+
+                    if (workspace?.supporting == true ||
+                        workspace?.dockedDetail == true) {
+                      return calendar();
+                    }
+                    if (sideBySide) {
+                      final maximumWidth = math.max(
+                        AppBreakpoints.minimumDetailPane * textScale,
+                        constraints.maxWidth -
+                            AppBreakpoints.minimumCanvas * textScale -
+                            1,
+                      );
+                      final agendaWidth = ((preferredWidth ?? 320) * textScale)
+                          .clamp(
+                            AppBreakpoints.minimumDetailPane * textScale,
+                            maximumWidth,
+                          );
+                      return Stack(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(child: calendar(split: true)),
+                              const VerticalDivider(width: 1),
+                              SizedBox(width: agendaWidth, child: agenda),
+                            ],
+                          ),
+                          if (metrics.desktop)
+                            PositionedDirectional(
+                              end: agendaWidth - 4,
+                              top: 0,
+                              bottom: 0,
+                              width: 9,
+                              child: SkedResizeHandle(
+                                key: const ValueKey(
+                                  'general-month-agenda-resize',
+                                ),
+                                reverse: true,
+                                onDelta: (delta) => updateWidth(
+                                  (agendaWidth + delta).clamp(
+                                        AppBreakpoints.minimumDetailPane *
+                                            textScale,
+                                        maximumWidth,
+                                      ) /
+                                      textScale,
+                                ),
+                                onEnd: commitWidth,
+                                onReset: resetWidth,
                               ),
-                        ),
-                      ),
-                    )
-                  else
-                    SliverList.builder(
-                      itemCount: selectedOccurrences.length,
-                      itemBuilder: (context, index) => Builder(
-                        builder: (anchor) => _MonthAgendaTile(
-                          occurrence: selectedOccurrences[index],
-                          onTap: () => widget.onOccurrenceTap(
-                            selectedOccurrences[index],
-                            anchor,
+                            ),
+                        ],
+                      );
+                    }
+
+                    final minimumAgendaHeight = metrics.desktop
+                        ? metrics.toolbarHeight + 2 * metrics.resourceRowHeight
+                        : 240.0 * textScale;
+                    final minimumCalendarHeight =
+                        model.rowCount *
+                            _monthMinimumCellHeight(
+                              context,
+                              showLunarCalendar: _showMonthLunar(
+                                widget.provider,
+                              ),
+                            ) +
+                        48 * textScale;
+                    if (constraints.hasBoundedHeight &&
+                        constraints.maxWidth >= AppBreakpoints.minimumCanvas &&
+                        constraints.maxHeight >=
+                            minimumCalendarHeight + minimumAgendaHeight + 1) {
+                      final maximumAgendaHeight =
+                          constraints.maxHeight - minimumCalendarHeight - 1;
+                      final agendaHeight =
+                          ((preferredHeight ?? 240) * textScale).clamp(
+                            minimumAgendaHeight,
+                            maximumAgendaHeight,
+                          );
+                      // A portrait workbench has enough height for a real month canvas
+                      // even when it cannot dock an agenda beside it. Do not leave half
+                      // of that viewport unused by sizing the calendar like a phone card.
+                      return Stack(
+                        children: [
+                          Column(
+                            children: [
+                              Expanded(child: calendar()),
+                              const Divider(height: 1),
+                              SizedBox(
+                                key: const ValueKey(
+                                  'general-month-stacked-agenda',
+                                ),
+                                height: agendaHeight,
+                                child: agenda,
+                              ),
+                            ],
+                          ),
+                          if (metrics.desktop)
+                            Positioned(
+                              bottom: agendaHeight - 4,
+                              left: 0,
+                              right: 0,
+                              height: 9,
+                              child: SkedResizeHandle(
+                                key: const ValueKey(
+                                  'general-month-agenda-height-resize',
+                                ),
+                                axis: Axis.vertical,
+                                reverse: true,
+                                onDelta: (delta) => updateHeight(
+                                  (agendaHeight + delta).clamp(
+                                        minimumAgendaHeight,
+                                        maximumAgendaHeight,
+                                      ) /
+                                      textScale,
+                                ),
+                                onEnd: commitHeight,
+                                onReset: resetHeight,
+                              ),
+                            ),
+                        ],
+                      );
+                    }
+
+                    final l = AppLocalizations.of(context);
+                    return CustomScrollView(
+                      key: const ValueKey('general-month-compact-scroll'),
+                      controller: _compactScrollController,
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                          sliver: SliverToBoxAdapter(
+                            child: calendar(inset: true),
                           ),
                         ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 88)),
-          ],
-        );
-      },
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                          sliver: SliverMainAxisGroup(
+                            slivers: [
+                              SliverToBoxAdapter(
+                                child: _MonthAgendaHeader(
+                                  key: _generalMonthCompactAgendaKey,
+                                  date: selectedDate,
+                                  count: selectedOccurrences.length,
+                                  filtered: widget.filter.isActive,
+                                  compact: true,
+                                  onAddEvent: (anchor) => widget.onEmptySlotTap(
+                                    selectedDate,
+                                    WorkspaceEditorConfiguration(
+                                      anchorContext: anchor,
+                                    ).initialAnchor,
+                                  ),
+                                ),
+                              ),
+                              if (selectedOccurrences.isEmpty)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      4,
+                                      0,
+                                      4,
+                                      12,
+                                    ),
+                                    child: Text(
+                                      widget.filter.isActive
+                                          ? l.noMatchingEvents
+                                          : l.monthNoEvents,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                SliverList.builder(
+                                  itemCount: selectedOccurrences.length,
+                                  itemBuilder: (context, index) => Builder(
+                                    builder: (anchor) => _MonthAgendaTile(
+                                      occurrence: selectedOccurrences[index],
+                                      onTap: () => widget.onOccurrenceTap(
+                                        selectedOccurrences[index],
+                                        anchor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 88)),
+                      ],
+                    );
+                  },
+                ),
+          ),
     );
   }
 }

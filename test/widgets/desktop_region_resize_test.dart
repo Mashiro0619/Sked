@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
+import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
@@ -16,6 +17,7 @@ import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
 
+import '../support/mobile_layout_data.dart';
 import '../support/workspace_harness.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
@@ -94,6 +96,40 @@ String _importDraft() => jsonEncode({
     },
   ],
 });
+
+Future<TimetableProvider> _calendarProvider({String view = generalViewWeek}) {
+  final base = mobileLayoutData(locale: 'en');
+  const calendar = 'resize-calendar';
+  return workspaceProvider(
+    storage: WorkspaceMemoryStorage(
+      base.copyWith(
+        activeMode: AppMode.general,
+        generalMode: base.generalMode.copyWith(
+          defaultView: view,
+          selectedDateIso: '2026-09-23',
+          activeScheduleId: calendar,
+          schedules: [
+            GeneralSchedule(
+              id: calendar,
+              name: 'Resize calendar',
+              events: [
+                for (var i = 0; i < 8; i++)
+                  GeneralEvent(
+                    id: 'resize-all-day-$i',
+                    calendarId: calendar,
+                    title: 'Resize all day $i',
+                    startDateTimeIso: '2026-09-22T00:00:00.000',
+                    endDateTimeIso: '2026-09-25T00:00:00.000',
+                    isAllDay: true,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
 void main() {
   for (final (home, region, handleKey, delta)
@@ -231,6 +267,50 @@ void main() {
         'Retained school draft',
       );
       expect(sites.source, isNot(contains('Retained school draft')));
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox.shrink());
+    },
+    variant: _windows,
+  );
+
+  testWidgets(
+    'month agenda height protects the calendar and restores after a short window',
+    (t) async {
+      _viewport(t, const Size(900, 1100));
+      final p = await _calendarProvider(view: generalViewMonth);
+      final preferences = DesktopLayoutPreferences.memory();
+      addTearDown(p.dispose);
+      addTearDown(preferences.dispose);
+      await _mount(t, p, preferences);
+      final agenda = _key('general-month-stacked-agenda');
+      final before = t.getSize(agenda).height;
+      await _drag(
+        t,
+        _key('general-month-agenda-height-resize'),
+        const Offset(0, -3000),
+      );
+      final after = t.getSize(agenda).height;
+      expect(after, greaterThan(before));
+      expect(
+        t.getSize(_key('general-month-calendar-panel')).height,
+        greaterThanOrEqualTo(388),
+      );
+      final saved = preferences
+          .preferenceFor(DesktopLayoutRegion.monthAgendaBottom)
+          ?.height;
+      expect(saved, isNotNull);
+      t.view.physicalSize = const Size(900, 700);
+      await t.pumpAndSettle();
+      expect(t.getSize(agenda).height, lessThan(after));
+      expect(
+        preferences
+            .preferenceFor(DesktopLayoutRegion.monthAgendaBottom)
+            ?.height,
+        saved,
+      );
+      t.view.physicalSize = const Size(900, 1100);
+      await t.pumpAndSettle();
+      expect(t.getSize(agenda).height, closeTo(after, .01));
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox.shrink());
     },
