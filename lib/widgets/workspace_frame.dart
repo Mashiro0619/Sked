@@ -475,8 +475,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   double _supportingWidth = AppBreakpoints.detailPane;
   bool _resizingResource = false, _resizingSupporting = false;
   DesktopLayoutPreferences? _dimensions;
-  _WorkspaceTaskRoute? _dockedEditorResizeTask;
-  WorkspacePanelDisplayMode? _dockedEditorResizeMode;
+  _WorkspaceTaskRoute? _dockedResizeTask;
+  WorkspacePanelDisplayMode? _dockedResizeMode;
   double? _bodyTop;
   bool _geometryScheduled = false;
   bool _assistantLast = false;
@@ -641,6 +641,18 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     }
   }
 
+  void _retireDockedResize() {
+    final task = _dockedResizeTask;
+    if (task == null) return;
+    _dockedResizeTask = null;
+    _dockedResizeMode = null;
+    // A mode or task change can remove the gesture target before pointer up.
+    // Commit only the old task, after the current build has finished.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _saveTaskDimensions(task, floating: false);
+    });
+  }
+
   void _resetTaskDimensions(
     _WorkspaceTaskRoute task, {
     required bool floating,
@@ -729,6 +741,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
 
   void _detailChanged() {
     final controller = widget.controller;
+    if (_dockedResizeTask != null &&
+        !identical(_dockedResizeTask, controller._tasks.lastOrNull)) {
+      _retireDockedResize();
+    }
     if (controller.hasPaneTasks || controller.hasModalTasks) {
       _closeResources(restoreFocus: false);
     }
@@ -754,6 +770,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   @override
   void didUpdateWidget(WorkspaceFrame oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller ||
+        oldWidget.panelDisplayMode != widget.panelDisplayMode ||
+        !widget.active) {
+      _retireDockedResize();
+    }
     if ((WorkspaceVisibilityScope.maybeOf(context) == null && !widget.active) ||
         oldWidget.contextSnapshot?.resourceId !=
             widget.contextSnapshot?.resourceId) {
@@ -789,7 +810,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     void Function(SkedResizeEdge, Offset)? onFloatingResize,
     VoidCallback? onFloatingEnd,
     VoidCallback? onFloatingReset,
-    bool holdingDockedEditor = false,
+    bool holdingDockedTask = false,
     VoidCallback? onDockedResizeStart,
     VoidCallback? onDockedResizeEnd,
   }) {
@@ -799,7 +820,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     final editing = metrics.desktop && controller.hasEditorPanel;
     final editingRoute = controller._tasks.lastOrNull?.route;
     final task = controller._tasks.lastOrNull;
-    final compact = (viewing && !policy.dockedDetail) || floatingEditor;
+    final compact =
+        (viewing && !policy.dockedDetail && !holdingDockedTask) ||
+        floatingEditor;
     controller.focusScope.traversalEdgeBehavior = floatingEditor
         ? TraversalEdgeBehavior.closedLoop
         : TraversalEdgeBehavior.parentScope;
@@ -821,8 +844,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           child: _PaneSurface(
             key: const ValueKey('workspace-detail-surface'),
             compact: compact,
-            floating: !policy.dockedDetail && !holdingDockedEditor,
-            role: policy.dockedDetail || holdingDockedEditor
+            floating: !policy.dockedDetail && !holdingDockedTask,
+            role: policy.dockedDetail || holdingDockedTask
                 ? SkedSurfaceRole.frame
                 : SkedSurfaceRole.content,
             child: SkedResizableFrame(
@@ -914,9 +937,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                           focusNode: _detailResizeFocus,
                           onActivate: () {
                             _assistantLast = false;
-                            if (editing) onDockedResizeStart?.call();
+                            if (editing || viewing) {
+                              onDockedResizeStart?.call();
+                            }
                           },
-                          onEnd: editing
+                          onEnd: editing || viewing
                               ? onDockedResizeEnd
                               : task == null
                               ? null
@@ -926,32 +951,51 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                               ? null
                               : () =>
                                     _resetTaskDimensions(task, floating: false),
-                          onResize: (dx) => setState(() {
-                            if (editing) {
-                              final task = controller._tasks.last;
-                              task.editorWidth = (policy.detailWidth - dx)
-                                  .clamp(
-                                    320.0,
-                                    math
-                                        .min(680.0, policy.maximumDetailWidth)
-                                        .clamp(320.0, 680.0),
-                                  );
-                              task.dockedWidth = task.editorWidth;
-                              task.dockedChanged = true;
+                          onResize: (dx) {
+                            if (!widget.active ||
+                                task == null ||
+                                !identical(
+                                  controller._tasks.lastOrNull,
+                                  task,
+                                ) ||
+                                !task.route.isCurrent ||
+                                ModalRoute.of(context)?.isCurrent == false ||
+                                ((editing || viewing) &&
+                                    (!identical(_dockedResizeTask, task) ||
+                                        _dockedResizeMode !=
+                                            widget.panelDisplayMode))) {
                               return;
                             }
-                            _detailWidth = _resizedPaneWidth(
-                              task?.dockedWidth ?? _detailWidth,
-                              dx,
-                              minimumWidth: AppBreakpoints.minimumDetailPane,
-                              maximumWidth: policy.maximumDetailWidth,
-                              textScale: metrics.textScale,
-                            );
-                            if (task != null) {
+                            setState(() {
+                              if (editing) {
+                                task.editorWidth = _resizedPaneWidth(
+                                  task.dockedWidth ?? task.editorWidth,
+                                  dx,
+                                  minimumWidth: 320,
+                                  maximumWidth: math.min(
+                                    680.0,
+                                    policy.maximumDetailWidth,
+                                  ),
+                                  textScale: 1,
+                                );
+                                task.dockedWidth = task.editorWidth;
+                                task.dockedChanged = true;
+                                return;
+                              }
+                              _detailWidth = _resizedPaneWidth(
+                                task.dockedWidth ??
+                                    (task.layoutKey == null
+                                        ? _detailWidth
+                                        : AppBreakpoints.detailPane),
+                                dx,
+                                minimumWidth: AppBreakpoints.minimumDetailPane,
+                                maximumWidth: policy.maximumDetailWidth,
+                                textScale: metrics.textScale,
+                              );
                               task.dockedWidth = _detailWidth;
                               task.dockedChanged = true;
-                            }
-                          }),
+                            });
+                          },
                         ),
                       ),
                     ),
@@ -1169,15 +1213,16 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                               ),
                             )
                           : policy.maximumResourceWidth;
-                      _resourceWidth =
-                          (width + delta).clamp(
-                            math.min(
-                              AppBreakpoints.resourcePane * metrics.textScale,
-                              maximum,
-                            ),
-                            maximum,
-                          ) /
-                          metrics.textScale;
+                      _resourceWidth = _resizedPaneWidth(
+                        _resourceWidth,
+                        -delta,
+                        minimumWidth: math.min(
+                          AppBreakpoints.resourcePane,
+                          maximum / metrics.textScale,
+                        ),
+                        maximumWidth: maximum,
+                        textScale: metrics.textScale,
+                      );
                     }),
                     onEnd: () {
                       if (!_resizingResource) return;
@@ -1234,10 +1279,15 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final metrics = WorkbenchChromeMetrics.of(context);
           final activeTask = controller._tasks.lastOrNull;
           _loadTaskDimensions(activeTask);
-          final holdingDockedEditor =
-              editingTask != null &&
-              identical(editingTask, _dockedEditorResizeTask) &&
-              _dockedEditorResizeMode == widget.panelDisplayMode;
+          final resizableTask =
+              metrics.desktop &&
+                  (controller.hasEditorPanel || controller.hasViewPanel)
+              ? activeTask
+              : null;
+          final holdingDockedTask =
+              resizableTask != null &&
+              identical(resizableTask, _dockedResizeTask) &&
+              _dockedResizeMode == widget.panelDisplayMode;
           WorkspaceLayout resolveLayout(bool assistantOpen) =>
               WorkspaceLayout.resolve(
                 constraints.maxWidth,
@@ -1298,19 +1348,20 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           }
 
           final policy = resolveCurrentLayout(
-            holdDockedHost: holdingDockedEditor,
+            holdDockedHost: holdingDockedTask,
           );
           final floatingEditor =
               editingTask != null &&
               policy.detailVisible &&
               !policy.dockedDetail &&
-              !holdingDockedEditor;
+              !holdingDockedTask;
           controller._setEditorFloating(floatingEditor && active);
           final compactView =
               policy.detailVisible &&
               metrics.desktop &&
               controller.hasViewPanel &&
-              !policy.dockedDetail;
+              !policy.dockedDetail &&
+              !holdingDockedTask;
           if (_resourceDrawerOpen &&
               policy.canExpandResources &&
               _layout?.canExpandResources != true) {
@@ -1515,25 +1566,32 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               : null;
 
           void beginDockedResize() {
-            if (editingTask == null ||
-                identical(_dockedEditorResizeTask, editingTask)) {
+            if (!active ||
+                resizableTask == null ||
+                !identical(controller._tasks.lastOrNull, resizableTask) ||
+                !resizableTask.route.isCurrent ||
+                ModalRoute.of(context)?.isCurrent == false ||
+                (identical(_dockedResizeTask, resizableTask) &&
+                    _dockedResizeMode == widget.panelDisplayMode)) {
               return;
             }
             setState(() {
-              _dockedEditorResizeTask = editingTask;
-              _dockedEditorResizeMode = widget.panelDisplayMode;
+              _dockedResizeTask = resizableTask;
+              _dockedResizeMode = widget.panelDisplayMode;
             });
           }
 
           void finishDockedResize() {
-            final task = _dockedEditorResizeTask;
+            final task = _dockedResizeTask;
             if (task == null) return;
             // Keyboard steps end before the next frame, so the prior rendered
             // policy/rectangle may still have the old width. Resolve the latest
             // task preference instead of measuring stale pixels here.
             final current =
-                identical(task, editingTask) &&
-                _dockedEditorResizeMode == widget.panelDisplayMode &&
+                widget.active &&
+                identical(task, resizableTask) &&
+                identical(controller._tasks.lastOrNull, task) &&
+                _dockedResizeMode == widget.panelDisplayMode &&
                 task.route.isCurrent;
             final finalPolicy = current
                 ? resolveCurrentLayout(holdDockedHost: true)
@@ -1544,8 +1602,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 finalPolicy?.dockedDetail == false;
             final restoreResizeFocus = _detailResizeFocus.hasFocus;
             setState(() {
-              _dockedEditorResizeTask = null;
-              _dockedEditorResizeMode = null;
+              _dockedResizeTask = null;
+              _dockedResizeMode = null;
               if (becomesFloating) {
                 final size = Size(
                   math.min(finalPolicy!.detailWidth, panelBounds.width),
@@ -1786,13 +1844,15 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                   increaseReversed: true,
                                   onStart: () => _resizingSupporting = true,
                                   onDelta: (delta) => setState(() {
-                                    _supportingWidth =
-                                        (policy.supportingWidth - delta).clamp(
-                                          AppBreakpoints.minimumDetailPane *
-                                              metrics.textScale,
+                                    _supportingWidth = _resizedPaneWidth(
+                                      _supportingWidth,
+                                      delta,
+                                      minimumWidth:
+                                          AppBreakpoints.minimumDetailPane,
+                                      maximumWidth:
                                           policy.maximumSupportingWidth,
-                                        ) /
-                                        metrics.textScale;
+                                      textScale: metrics.textScale,
+                                    );
                                   }),
                                   onEnd: () {
                                     if (!_resizingSupporting) return;
@@ -1859,7 +1919,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                 child: _detailPane(
                                   policy,
                                   floatingEditor: floatingEditor,
-                                  holdingDockedEditor: holdingDockedEditor,
+                                  holdingDockedTask: holdingDockedTask,
                                   onDockedResizeStart: beginDockedResize,
                                   onDockedResizeEnd: finishDockedResize,
                                   onEditorDrag: dragEditor,

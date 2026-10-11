@@ -225,11 +225,12 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
       builder: (context, constraints) {
         final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
         final factor = WorkbenchLayoutPolicy.textFactor(textScale);
+        final maximumWidth = math.max(
+          224 * factor,
+          constraints.maxWidth - 520 * factor - 1,
+        );
         final double navigationWidth = ((preferred ?? 224.0) * factor)
-            .clamp(
-              224 * factor,
-              math.max(224 * factor, constraints.maxWidth - 520 * factor - 1),
-            )
+            .clamp(224 * factor, maximumWidth)
             .toDouble();
         _wide = WorkbenchLayoutPolicy.formCanSplit(
           constraints.maxWidth,
@@ -331,18 +332,12 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                       top: 0,
                       bottom: 0,
                       width: 9,
-                      child: SkedResizeHandle(
+                      child: SkedExtentResizeHandle(
                         key: const ValueKey('settings-navigation-resize'),
-                        onDelta: (delta) => update(
-                          (navigationWidth + delta).clamp(
-                                224 * factor,
-                                math.max(
-                                  224 * factor,
-                                  constraints.maxWidth - 520 * factor - 1,
-                                ),
-                              ) /
-                              factor,
-                        ),
+                        extent: navigationWidth,
+                        minExtent: 224 * factor,
+                        maxExtent: maximumWidth,
+                        onChanged: (extent) => update(extent / factor),
                         onEnd: commit,
                         onReset: reset,
                       ),

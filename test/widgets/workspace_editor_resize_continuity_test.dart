@@ -57,6 +57,34 @@ Future<(TimetableProvider, DesktopLayoutPreferences)> _mount(
 }
 
 void main() {
+  testWidgets(
+    'docked editor accumulates same-frame mouse moves before saving',
+    (t) async {
+      final (_, preferences) = await _mount(t);
+      final surface = _key('workspace-detail-surface');
+      final pointer = await t.startGesture(
+        t.getCenter(_key('workspace-detail-resize')),
+        kind: PointerDeviceKind.mouse,
+      );
+      await pointer.moveBy(const Offset(-24, 0));
+      await t.pump();
+      expect(t.getSize(surface).width, 464);
+      await pointer.moveBy(const Offset(-40, 0));
+      await pointer.moveBy(const Offset(-40, 0));
+      await pointer.up();
+      await t.pumpAndSettle();
+      expect(t.getSize(surface).width, 544);
+      expect(
+        preferences.preferenceFor(DesktopLayoutRegion.courseEditor),
+        const PreferredRegionSize(width: 530, height: 540, dockedWidth: 544),
+      );
+      await t.pumpWidget(const SizedBox.shrink());
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   for (final rtl in [false, true]) {
     testWidgets(
       'course editor continuously crosses automatic docking, reverses and releases: rtl=$rtl',

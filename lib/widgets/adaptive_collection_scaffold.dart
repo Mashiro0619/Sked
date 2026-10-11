@@ -210,12 +210,12 @@ class _AdaptiveCollectionScaffoldState
                     top: 0,
                     bottom: 0,
                     width: 9,
-                    child: SkedResizeHandle(
+                    child: SkedExtentResizeHandle(
                       key: const ValueKey('period-time-sets-resize'),
-                      onDelta: (delta) => update(
-                        (listWidth + delta).clamp(224 * factor, maximumWidth) /
-                            factor,
-                      ),
+                      extent: listWidth,
+                      minExtent: 224 * factor,
+                      maxExtent: maximumWidth,
+                      onChanged: (extent) => update(extent / factor),
                       onEnd: commit,
                       onReset: reset,
                     ),

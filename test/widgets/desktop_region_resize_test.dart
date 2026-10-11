@@ -35,6 +35,7 @@ Future<void> _mount(
   DesktopLayoutPreferences preferences, {
   Widget? home,
   TextDirection direction = TextDirection.ltr,
+  double textScale = 1,
 }) async {
   await t.pumpWidget(
     ChangeNotifierProvider<DesktopLayoutPreferences>.value(
@@ -43,6 +44,7 @@ Future<void> _mount(
         provider: provider,
         home: home,
         textDirection: direction,
+        textScale: textScale,
       ),
     ),
   );
@@ -57,6 +59,25 @@ Future<void> _drag(WidgetTester t, Finder handle, Offset delta) async {
   await gesture.moveBy(delta / 2);
   await t.pump();
   await gesture.moveBy(delta / 2);
+  await t.pump();
+  await gesture.up();
+  await t.pumpAndSettle();
+}
+
+Future<void> _dragBeforeFrame(
+  WidgetTester t,
+  Finder handle,
+  Offset delta,
+) async {
+  final gesture = await t.startGesture(
+    t.getCenter(handle),
+    kind: PointerDeviceKind.mouse,
+  );
+  // Establish the drag, then deliver two pointer events before rendering.
+  await gesture.moveBy(delta / 2);
+  await t.pump();
+  await gesture.moveBy(delta / 4);
+  await gesture.moveBy(delta / 4);
   await t.pump();
   await gesture.up();
   await t.pumpAndSettle();
@@ -132,6 +153,55 @@ Future<TimetableProvider> _calendarProvider({String view = generalViewWeek}) {
 }
 
 void main() {
+  for (final direction in TextDirection.values) {
+    for (final textScale in [1.0, 1.5]) {
+      testWidgets(
+        'settings divider accumulates same-frame movement and saves logical width ($direction, $textScale)',
+        (t) async {
+          _viewport(t, const Size(1440, 900));
+          final p = await workspaceProvider();
+          final preferences = DesktopLayoutPreferences.memory();
+          addTearDown(p.dispose);
+          addTearDown(preferences.dispose);
+          await _mount(
+            t,
+            p,
+            preferences,
+            home: const SettingsPage(),
+            direction: direction,
+            textScale: textScale,
+          );
+          final handle = _key('settings-navigation-resize');
+          final before = t.getCenter(handle).dx;
+          final sign = direction == TextDirection.ltr ? 1.0 : -1.0;
+          await _dragBeforeFrame(t, handle, Offset(120 * sign, 0));
+          expect(t.getCenter(handle).dx - before, closeTo(120 * sign, .01));
+          final expectedWidth = 224 + 120 / textScale;
+          expect(
+            preferences
+                .preferenceFor(DesktopLayoutRegion.settingsNavigation)
+                ?.width,
+            closeTo(expectedWidth, .01),
+          );
+          final after = t.getCenter(handle).dx;
+          await t.pumpWidget(const SizedBox.shrink());
+          await _mount(
+            t,
+            p,
+            preferences,
+            home: const SettingsPage(),
+            direction: direction,
+            textScale: textScale,
+          );
+          expect(t.getCenter(handle).dx, closeTo(after, .01));
+          expect(t.takeException(), isNull);
+          await t.pumpWidget(const SizedBox.shrink());
+        },
+        variant: _windows,
+      );
+    }
+  }
+
   for (final (home, region, handleKey, delta)
       in <(Widget, DesktopLayoutRegion, String, Offset)>[
         (
@@ -206,8 +276,21 @@ void main() {
         final element = t.element(field);
         final draft = '  ${_importDraft()}\n';
         await t.enterText(field, draft);
+        final editable = t.widget<EditableText>(find.byType(EditableText));
+        final selection = editable.controller.selection;
+        expect(editable.focusNode.hasFocus, isTrue);
         final handle = _key('school-import-preview-resize');
         final sign = direction == TextDirection.ltr ? -1.0 : 1.0;
+        final originalWidth = t
+            .getSize(_key('school-import-json-preview'))
+            .width;
+        await _dragBeforeFrame(t, handle, Offset(80 * sign, 0));
+        expect(
+          t.getSize(_key('school-import-json-preview')).width,
+          closeTo(originalWidth + 80, .01),
+        );
+        expect(editable.controller.selection, selection);
+        expect(editable.focusNode.hasFocus, isTrue);
         await _drag(t, handle, Offset(3000 * sign, 0));
         expect(t.getSize(field).width, greaterThanOrEqualTo(624));
         final widthAtLimit = t
@@ -285,14 +368,18 @@ void main() {
       expect(find.text('Resize all day 3'), findsNothing);
       final strip = _key('general-all-day-timeline');
       final before = t.getSize(strip).height;
-      await _drag(t, _key('general-all-day-resize'), const Offset(0, 140));
+      await _dragBeforeFrame(
+        t,
+        _key('general-all-day-resize'),
+        const Offset(0, 140),
+      );
       final after = t.getSize(strip).height;
-      expect(after, greaterThan(before + 60));
+      expect(after, closeTo(before + 140, .01));
       expect(find.text('Resize all day 3').hitTestable(), findsOneWidget);
       final saved = preferences
           .preferenceFor(DesktopLayoutRegion.allDayTimeline)
           ?.height;
-      expect(saved, isNotNull);
+      expect(saved, closeTo(after, .01));
       await t.tap(_key('general-all-day-toggle'));
       await t.pumpAndSettle();
       expect(_key('general-all-day-collapsed-state'), findsOneWidget);
@@ -324,6 +411,18 @@ void main() {
       await _mount(t, p, preferences);
       final agenda = _key('general-month-stacked-agenda');
       final before = t.getSize(agenda).height;
+      await _dragBeforeFrame(
+        t,
+        _key('general-month-agenda-height-resize'),
+        const Offset(0, -80),
+      );
+      expect(t.getSize(agenda).height, closeTo(before + 80, .01));
+      expect(
+        preferences
+            .preferenceFor(DesktopLayoutRegion.monthAgendaBottom)
+            ?.height,
+        closeTo(before + 80, .01),
+      );
       await _drag(
         t,
         _key('general-month-agenda-height-resize'),

@@ -331,12 +331,12 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
                     top: 0,
                     bottom: 0,
                     width: 9,
-                    child: SkedResizeHandle(
+                    child: SkedExtentResizeHandle(
                       key: const ValueKey('school-site-editor-resize'),
-                      onDelta: (delta) => update(
-                        (listWidth + delta).clamp(280 * factor, maximumWidth) /
-                            factor,
-                      ),
+                      extent: listWidth,
+                      minExtent: 280 * factor,
+                      maxExtent: maximumWidth,
+                      onChanged: (extent) => update(extent / factor),
                       onEnd: commit,
                       onReset: reset,
                     ),
@@ -507,12 +507,12 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
               top: 0,
               bottom: 0,
               width: 9,
-              child: SkedResizeHandle(
+              child: SkedExtentResizeHandle(
                 key: const ValueKey('school-sites-resize'),
-                onDelta: (delta) => update(
-                  (listWidth + delta).clamp(280 * factor, maximumWidth) /
-                      factor,
-                ),
+                extent: listWidth,
+                minExtent: 280 * factor,
+                maxExtent: maximumWidth,
+                onChanged: (extent) => update(extent / factor),
                 onEnd: commit,
                 onReset: reset,
               ),

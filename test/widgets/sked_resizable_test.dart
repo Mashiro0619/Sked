@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/widgets/sked_resizable.dart';
 
 void main() {
+  _extentResizeHandleTests();
   for (final rtl in [false, true]) {
     testWidgets(
       'eight physical resize edges, cursors, limits and reset: rtl=$rtl',
@@ -210,4 +211,168 @@ void main() {
       variant: TargetPlatformVariant.only(TargetPlatform.windows),
     );
   }
+}
+
+void _extentResizeHandleTests() {
+  for (final (axis, reverse, direction, increase) in [
+    (Axis.horizontal, false, TextDirection.ltr, const Offset(1, 0)),
+    (Axis.horizontal, false, TextDirection.rtl, const Offset(-1, 0)),
+    (Axis.horizontal, true, TextDirection.ltr, const Offset(-1, 0)),
+    (Axis.vertical, false, TextDirection.ltr, const Offset(0, 1)),
+    (Axis.vertical, true, TextDirection.rtl, const Offset(0, -1)),
+  ]) {
+    testWidgets(
+      'divider accumulates same-frame moves and reverses at its limit: '
+      '$axis reverse=$reverse $direction',
+      (tester) async {
+        var extent = 300.0;
+        final committed = <double>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Directionality(
+              textDirection: direction,
+              child: Scaffold(
+                body: StatefulBuilder(
+                  builder: (context, setState) => Center(
+                    child: SizedBox(
+                      width: axis == Axis.horizontal ? 9 : 120,
+                      height: axis == Axis.horizontal ? 120 : 9,
+                      child: SkedExtentResizeHandle(
+                        extent: extent,
+                        minExtent: 200,
+                        maxExtent: 500,
+                        axis: axis,
+                        reverse: reverse,
+                        onChanged: (value) => setState(() => extent = value),
+                        onEnd: () => committed.add(extent),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final handle = find.byType(SkedExtentResizeHandle);
+        final original = tester.element(handle);
+        final gesture = await tester.startGesture(
+          tester.getCenter(handle),
+          kind: PointerDeviceKind.mouse,
+        );
+        await gesture.moveBy(increase * 40);
+        await tester.pump();
+        expect(extent, 340);
+
+        // Both events arrive before the parent can rebuild with the new size.
+        await gesture.moveBy(increase * 40);
+        await gesture.moveBy(increase * 40);
+        expect(extent, 420);
+        expect(committed, isEmpty);
+
+        // Reversing must respond immediately, even without rendering the cap.
+        await gesture.moveBy(increase * 200);
+        expect(extent, 500);
+        await gesture.moveBy(increase * -30);
+        expect(extent, 470);
+        await gesture.up();
+        expect(committed, [470]);
+        await tester.pumpAndSettle();
+        expect(tester.element(handle), same(original));
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
+  testWidgets(
+    'divider rebases on viewport caps and commits every keyboard or semantics step',
+    (tester) async {
+      var preferredExtent = 400.0;
+      var maximum = 600.0;
+      final committed = <double>[];
+      final focus = FocusNode();
+      addTearDown(focus.dispose);
+      late StateSetter rebuild;
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  rebuild = setState;
+                  return Center(
+                    child: SizedBox(
+                      width: 9,
+                      height: 120,
+                      child: SkedExtentResizeHandle(
+                        extent: preferredExtent.clamp(200, maximum),
+                        minExtent: 200,
+                        maxExtent: maximum,
+                        focusNode: focus,
+                        onChanged: (value) =>
+                            setState(() => preferredExtent = value),
+                        onEnd: () => committed.add(preferredExtent),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(SkedExtentResizeHandle)),
+          kind: PointerDeviceKind.mouse,
+        );
+        await gesture.moveBy(const Offset(40, 0));
+        await tester.pump();
+        expect(preferredExtent, 440);
+
+        rebuild(() => maximum = 300);
+        await tester.pump();
+        expect(preferredExtent, 440);
+        expect(committed, isEmpty);
+        await gesture.moveBy(const Offset(-30, 0));
+        await gesture.moveBy(const Offset(-30, 0));
+        expect(preferredExtent, 240);
+        await gesture.up();
+        expect(committed, [240]);
+
+        rebuild(() => maximum = 600);
+        focus.requestFocus();
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        expect(preferredExtent, 288);
+        expect(committed, [240, 264, 288]);
+        await tester.pump();
+
+        final node = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(SkedExtentResizeHandle),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        final owner = tester.binding.renderViews.single.owner!.semanticsOwner!;
+        owner.performAction(node.id, SemanticsAction.increase);
+        owner.performAction(node.id, SemanticsAction.increase);
+        expect(preferredExtent, 336);
+        expect(committed, [240, 264, 288, 312, 336]);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      } finally {
+        semantics.dispose();
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 }

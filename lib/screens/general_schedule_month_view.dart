@@ -321,19 +321,18 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                               top: 0,
                               bottom: 0,
                               width: 9,
-                              child: SkedResizeHandle(
+                              child: SkedExtentResizeHandle(
                                 key: const ValueKey(
                                   'general-month-agenda-resize',
                                 ),
                                 reverse: true,
-                                onDelta: (delta) => updateWidth(
-                                  (agendaWidth + delta).clamp(
-                                        AppBreakpoints.minimumDetailPane *
-                                            textScale,
-                                        maximumWidth,
-                                      ) /
-                                      textScale,
-                                ),
+                                extent: agendaWidth,
+                                minExtent:
+                                    AppBreakpoints.minimumDetailPane *
+                                    textScale,
+                                maxExtent: maximumWidth,
+                                onChanged: (extent) =>
+                                    updateWidth(extent / textScale),
                                 onEnd: commitWidth,
                                 onReset: resetWidth,
                               ),
@@ -389,19 +388,17 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                               left: 0,
                               right: 0,
                               height: 9,
-                              child: SkedResizeHandle(
+                              child: SkedExtentResizeHandle(
                                 key: const ValueKey(
                                   'general-month-agenda-height-resize',
                                 ),
                                 axis: Axis.vertical,
                                 reverse: true,
-                                onDelta: (delta) => updateHeight(
-                                  (agendaHeight + delta).clamp(
-                                        minimumAgendaHeight,
-                                        maximumAgendaHeight,
-                                      ) /
-                                      textScale,
-                                ),
+                                extent: agendaHeight,
+                                minExtent: minimumAgendaHeight,
+                                maxExtent: maximumAgendaHeight,
+                                onChanged: (extent) =>
+                                    updateHeight(extent / textScale),
                                 onEnd: commitHeight,
                                 onReset: resetHeight,
                               ),

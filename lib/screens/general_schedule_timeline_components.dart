@@ -242,12 +242,13 @@ class _AllDayTimelineState extends State<_AllDayTimeline> {
                 right: 0,
                 bottom: 0,
                 height: 9,
-                child: SkedResizeHandle(
+                child: SkedExtentResizeHandle(
                   key: const ValueKey('general-all-day-resize'),
                   axis: Axis.vertical,
-                  onDelta: (delta) => widget.onResize!(
-                    (height + delta).clamp(minimumHeight, maximumHeight),
-                  ),
+                  extent: height,
+                  minExtent: minimumHeight,
+                  maxExtent: maximumHeight,
+                  onChanged: widget.onResize!,
                   onEnd: widget.onResizeEnd,
                   onReset: () {
                     setState(() => _expanded = false);

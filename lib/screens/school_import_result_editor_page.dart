@@ -330,18 +330,16 @@ class _SchoolImportResultEditorPageState
                                     top: 0,
                                     bottom: 0,
                                     width: 9,
-                                    child: SkedResizeHandle(
+                                    child: SkedExtentResizeHandle(
                                       key: const ValueKey(
                                         'school-import-preview-resize',
                                       ),
                                       reverse: true,
-                                      onDelta: (delta) => update(
-                                        (previewWidth + delta).clamp(
-                                              320 * factor,
-                                              maximumWidth,
-                                            ) /
-                                            factor,
-                                      ),
+                                      extent: previewWidth,
+                                      minExtent: 320 * factor,
+                                      maxExtent: maximumWidth,
+                                      onChanged: (extent) =>
+                                          update(extent / factor),
                                       onEnd: commit,
                                       onReset: reset,
                                     ),

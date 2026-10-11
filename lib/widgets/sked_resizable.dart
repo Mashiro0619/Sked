@@ -136,6 +136,78 @@ class SkedResizeHandle extends StatelessWidget {
   }
 }
 
+/// An extent-based divider accumulates every input event before the next frame.
+/// The host supplies its displayed extent and bounds in the same units, then
+/// converts [onChanged] values to any persisted logical size.
+class SkedExtentResizeHandle extends StatefulWidget {
+  const SkedExtentResizeHandle({
+    super.key,
+    required this.extent,
+    required this.minExtent,
+    required this.maxExtent,
+    required this.onChanged,
+    this.axis = Axis.horizontal,
+    this.onStart,
+    this.onEnd,
+    this.onReset,
+    this.reverse = false,
+    this.directional = true,
+    this.increaseReversed = false,
+    this.focusNode,
+  }) : assert(minExtent <= maxExtent);
+
+  final double extent, minExtent, maxExtent;
+  final ValueChanged<double> onChanged;
+  final Axis axis;
+  final VoidCallback? onStart, onEnd, onReset;
+  final bool reverse, directional, increaseReversed;
+  final FocusNode? focusNode;
+
+  @override
+  State<SkedExtentResizeHandle> createState() => _SkedExtentResizeHandleState();
+}
+
+class _SkedExtentResizeHandleState extends State<SkedExtentResizeHandle> {
+  late double _extent;
+
+  double _clamp(double value) =>
+      value.clamp(widget.minExtent, widget.maxExtent);
+
+  @override
+  void initState() {
+    super.initState();
+    _extent = _clamp(widget.extent);
+  }
+
+  @override
+  void didUpdateWidget(SkedExtentResizeHandle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A viewport or content change can cap the displayed size. Adopt that
+    // geometry without persisting the cap as a new user preference.
+    _extent = _clamp(widget.extent);
+  }
+
+  void _resize(double delta) {
+    final next = _clamp(_extent + delta);
+    if (next == _extent) return;
+    _extent = next;
+    widget.onChanged(next);
+  }
+
+  @override
+  Widget build(BuildContext context) => SkedResizeHandle(
+    axis: widget.axis,
+    reverse: widget.reverse,
+    directional: widget.directional,
+    increaseReversed: widget.increaseReversed,
+    focusNode: widget.focusNode,
+    onDelta: _resize,
+    onStart: widget.onStart,
+    onEnd: widget.onEnd,
+    onReset: widget.onReset,
+  );
+}
+
 /// Opt-in frame for a measured floating surface; it never owns a route or size.
 class SkedResizableFrame extends StatelessWidget {
   const SkedResizableFrame({

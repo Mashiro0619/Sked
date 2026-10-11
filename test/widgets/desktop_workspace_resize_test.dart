@@ -25,6 +25,113 @@ Future<void> drag(WidgetTester tester, Offset start, Offset delta) async {
 }
 
 void main() {
+  for (final resource in [true, false]) {
+    testWidgets(
+      '${resource ? 'resource' : 'agenda'} resize accumulates same-frame moves and reverses from viewport caps',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(1600, 1000);
+        addTearDown(tester.view.reset);
+        final provider = await workspaceProvider();
+        final preferences = DesktopLayoutPreferences.memory();
+        final pane = WorkspacePaneController();
+        addTearDown(provider.dispose);
+        addTearDown(preferences.dispose);
+        addTearDown(pane.dispose);
+        final region = resource
+            ? DesktopLayoutRegion.resources
+            : DesktopLayoutRegion.monthAgenda;
+        Future<void> mount() async {
+          await tester.pumpWidget(
+            WorkspaceHarness(
+              provider: provider,
+              layoutPreferences: preferences,
+              home: Scaffold(
+                body: WorkspaceFrame(
+                  controller: pane,
+                  resources: const SizedBox.expand(),
+                  supporting: resource ? null : const Text('Permanent agenda'),
+                  canvas: const Column(
+                    children: [
+                      SizedBox(height: 48),
+                      Expanded(
+                        child: WorkspaceCanvasBody(child: SizedBox.expand()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        await mount();
+        final surface = key(
+          resource ? 'workspace-resource-surface' : 'workspace-supporting-pane',
+        );
+        final handle = key(
+          resource
+              ? 'workspace-resource-resize'
+              : 'workspace-supporting-resize',
+        );
+        final sign = resource ? 1.0 : -1.0;
+        final pointer = await tester.startGesture(
+          tester.getCenter(handle),
+          kind: PointerDeviceKind.mouse,
+        );
+        await pointer.moveBy(Offset(sign * 20, 0));
+        await tester.pump();
+        final before = tester.getSize(surface).width;
+        await pointer.moveBy(Offset(sign * 40, 0));
+        await pointer.moveBy(Offset(sign * 40, 0));
+        await tester.pump();
+        expect(tester.getSize(surface).width, closeTo(before + 80, .01));
+        final maximum = resource ? 799.0 : 774.0;
+        await pointer.moveBy(Offset(sign * 2000, 0));
+        await pointer.moveBy(Offset(-sign * 40, 0));
+        await tester.pump();
+        expect(tester.getSize(surface).width, closeTo(maximum - 40, .01));
+        await pointer.up();
+        await tester.pumpAndSettle();
+        expect(
+          preferences.preferenceFor(region)?.width,
+          closeTo(maximum - 40, .01),
+        );
+
+        tester.view.physicalSize = const Size(1200, 1000);
+        await tester.pumpAndSettle();
+        final cap = resource ? 399.0 : 374.0;
+        expect(tester.getSize(surface).width, closeTo(cap, .01));
+        expect(
+          preferences.preferenceFor(region)?.width,
+          closeTo(maximum - 40, .01),
+        );
+        final reverse = await tester.startGesture(
+          tester.getCenter(handle),
+          kind: PointerDeviceKind.mouse,
+        );
+        await reverse.moveBy(Offset(-sign * 20, 0));
+        await reverse.moveBy(Offset(-sign * 20, 0));
+        await reverse.up();
+        await tester.pumpAndSettle();
+        expect(tester.getSize(surface).width, closeTo(cap - 40, .01));
+        expect(
+          preferences.preferenceFor(region)?.width,
+          closeTo(cap - 40, .01),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await mount();
+        expect(tester.getSize(surface).width, closeTo(cap - 40, .01));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+      variant: desktop,
+    );
+  }
+
   testWidgets(
     'resource boundary resizes the same list and shares width with its drawer and next mount',
     (tester) async {
