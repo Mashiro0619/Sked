@@ -11,6 +11,9 @@ import '../widgets/workbench_resource_widgets.dart';
 import '../widgets/workbench_compact_calendar_bar.dart';
 
 import 'dart:async';
+
+import '../services/desktop_layout_preferences.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';

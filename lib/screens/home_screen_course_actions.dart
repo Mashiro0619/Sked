@@ -36,6 +36,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         context: context,
         workspacePane: _pane,
         panePresentation: WorkspacePanePresentation.view,
+        layoutKey: DesktopLayoutRegion.courseDetails,
         anchorRect: info.anchorRect,
         workspace: AppMode.student,
         isSessionCurrent:
@@ -116,6 +117,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       await showAppModalSheet<CourseEditorResult>(
         context: context,
         workspacePane: _pane,
+        layoutKey: DesktopLayoutRegion.courseEditor,
         editor:
             editor ??
             (emptySlot?.anchorRect != null

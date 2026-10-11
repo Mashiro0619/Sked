@@ -222,6 +222,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
       final result = await showAppModalSheet<String>(
         context: context,
         workspacePane: _pane,
+        layoutKey: DesktopLayoutRegion.timetableEditor,
         editor: (editor ?? _pane.takeEditorEntry()).withPreferredWidth(360),
         workspace: AppMode.student,
         isDismissible: false,

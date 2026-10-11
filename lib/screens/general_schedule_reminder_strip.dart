@@ -222,6 +222,7 @@ class _ReminderStripState extends State<_ReminderStrip>
                     isOwnerActive: widget.isOwnerActive,
                   ),
                   selectionId: 'general-reminders',
+                  layoutKey: DesktopLayoutRegion.reminderList,
                   presentation: WorkspacePanePresentation.view,
                   anchorRect: anchorRect,
                 );

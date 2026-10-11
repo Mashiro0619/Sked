@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
+import 'package:sked/widgets/workspace_frame.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -52,25 +53,20 @@ void main() {
         expect(p.activeMode, mode);
         expect(t.element(editor), same(element));
         expect(find.byType(AlertDialog), findsNothing);
+        final paneFocus = t
+            .widget<WorkspaceFrame>(find.byType(WorkspaceFrame))
+            .controller
+            .focusScope;
         for (var i = 0; i < 24; i++) {
           await t.sendKeyEvent(LogicalKeyboardKey.tab);
           await t.pump();
-          final focus = FocusManager.instance.primaryFocus?.context;
+          final focus = FocusManager.instance.primaryFocus;
           expect(focus, isNotNull);
-          var inEditor = identical(focus, element);
-          focus!.visitAncestorElements((ancestor) {
-            if (identical(ancestor, element) ||
-                ancestor.widget.key ==
-                    const ValueKey('workspace-detail-resize')) {
-              inEditor = true;
-            }
-            return !inEditor;
-          });
           expect(
-            inEditor,
+            identical(focus, paneFocus) || focus!.ancestors.contains(paneFocus),
             isTrue,
             reason:
-                'Tab $i: ${FocusManager.instance.primaryFocus}\n${focus.widget}',
+                'Tab $i must stay inside the editor and its resize border: $focus',
           );
         }
         await t.sendKeyEvent(LogicalKeyboardKey.escape);

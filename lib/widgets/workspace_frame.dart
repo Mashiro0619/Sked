@@ -13,7 +13,6 @@ import '../services/desktop_layout_preferences.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
-import '../l10n/app_localizations.dart';
 import 'ui_command.dart';
 import 'assistant_pane.dart';
 import 'workbench_layout_policy.dart';
@@ -135,6 +134,7 @@ class WorkspacePaneController extends ChangeNotifier {
     WorkspaceEditorConfiguration? editor,
     BuildContext? anchorContext,
     Rect? anchorRect,
+    DesktopLayoutRegion? layoutKey,
   }) async {
     final navigator = navigatorKey.currentState;
     if (navigator == null || _disposed) return null;
@@ -165,6 +165,7 @@ class WorkspacePaneController extends ChangeNotifier {
       presentation: presentation,
       editor: editor?.snapshotIfInside(movingHost),
       viewAnchor: viewAnchor?.snapshotIfInside(movingHost),
+      layoutKey: layoutKey,
       modal: false,
       selectionId: selectionId,
       dismissible: dismissOnCanvasTap,
@@ -195,6 +196,7 @@ class WorkspacePaneController extends ChangeNotifier {
     WorkspacePanePresentation presentation = WorkspacePanePresentation.standard,
     WorkspaceEditorConfiguration? editor,
     WorkspaceEditorConfiguration? viewAnchor,
+    DesktopLayoutRegion? layoutKey,
   }) async {
     if (_disposed || !navigator.mounted) return null;
     final task = _WorkspaceTaskRoute(
@@ -205,6 +207,7 @@ class WorkspacePaneController extends ChangeNotifier {
       presentation,
       editor,
       viewAnchor,
+      layoutKey,
     );
     _tasks.add(task);
     if (!modal) _activationRevision += 1;
@@ -276,13 +279,19 @@ class _WorkspaceTaskRoute {
     this.presentation,
     this.editor,
     this.viewAnchor,
+    this.layoutKey,
   ) : editorWidth = (editor?.preferredWidth ?? 440).clamp(320.0, 680.0);
   final Route<dynamic> route;
   final WorkspacePanePresentation presentation;
   final WorkspaceEditorConfiguration? editor;
   final WorkspaceEditorConfiguration? viewAnchor;
+  final DesktopLayoutRegion? layoutKey;
   final position = SkedFloatingPositionController();
   double editorWidth;
+  double? floatingWidth, floatingHeight, dockedWidth;
+  bool dimensionsLoaded = false;
+  bool floatingChanged = false, dockedChanged = false;
+  WorkspacePanelDisplayMode? resizedInMode;
   double? contentHeight;
   final bool modal, dismissible;
   final String? selectionId;
@@ -453,6 +462,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
       widget.assistantController ?? AssistantPaneController();
   final _assistantFocus = FocusScopeNode(debugLabel: 'Workspace assistant');
   final _workspaceFocus = FocusScopeNode(debugLabel: 'Workspace');
+  final _detailResizeFocus = FocusNode(debugLabel: 'Workspace pane resize');
   final _stackKey = GlobalKey();
   final _bodyKey = GlobalKey();
   bool _resourceDrawerOpen = false;
@@ -465,6 +475,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   double _supportingWidth = AppBreakpoints.detailPane;
   bool _resizingResource = false, _resizingSupporting = false;
   DesktopLayoutPreferences? _dimensions;
+  _WorkspaceTaskRoute? _dockedEditorResizeTask;
+  WorkspacePanelDisplayMode? _dockedEditorResizeMode;
   double? _bodyTop;
   bool _geometryScheduled = false;
   bool _assistantLast = false;
@@ -492,6 +504,13 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 .preferenceFor(DesktopLayoutRegion.monthAgenda)
                 ?.width ??
             AppBreakpoints.detailPane;
+      }
+      if (!_assistant.isOpen) {
+        _assistant.width =
+            _dimensions!
+                .preferenceFor(DesktopLayoutRegion.assistant)
+                ?.dockedWidth ??
+            AppBreakpoints.assistantPane;
       }
     }
     if (WorkspaceVisibilityScope.maybeOf(context) == false) {
@@ -588,6 +607,62 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     return (current - delta / textScale).clamp(minimumWidth, maximum);
   }
 
+  void _loadTaskDimensions(_WorkspaceTaskRoute? task) {
+    if (task == null || task.dimensionsLoaded || _dimensions?.ready != true) {
+      return;
+    }
+    final saved = task.layoutKey == null
+        ? null
+        : _dimensions!.preferenceFor(task.layoutKey!);
+    task.floatingWidth = saved?.width;
+    task.floatingHeight = saved?.height;
+    task.dockedWidth = saved?.dockedWidth;
+    task.dimensionsLoaded = true;
+  }
+
+  void _saveTaskDimensions(_WorkspaceTaskRoute task, {required bool floating}) {
+    if (floating ? !task.floatingChanged : !task.dockedChanged) return;
+    final key = task.layoutKey;
+    if (key != null) {
+      final previous = _dimensions?.preferenceFor(key);
+      _dimensions?.setPreferredSize(
+        key,
+        PreferredRegionSize(
+          width: floating ? task.floatingWidth : previous?.width,
+          height: floating ? task.floatingHeight : previous?.height,
+          dockedWidth: floating ? previous?.dockedWidth : task.dockedWidth,
+        ),
+      );
+    }
+    if (floating) {
+      task.floatingChanged = false;
+    } else {
+      task.dockedChanged = false;
+    }
+  }
+
+  void _resetTaskDimensions(
+    _WorkspaceTaskRoute task, {
+    required bool floating,
+  }) {
+    setState(() {
+      if (floating) {
+        task.floatingWidth = null;
+        task.floatingHeight = null;
+        task.floatingChanged = true;
+      } else {
+        task.dockedWidth = null;
+        task.editorWidth = (task.editor?.preferredWidth ?? 440).clamp(
+          320.0,
+          680.0,
+        );
+        _detailWidth = AppBreakpoints.detailPane;
+        task.dockedChanged = true;
+      }
+    });
+    _saveTaskDimensions(task, floating: floating);
+  }
+
   void _saveRegionWidth(DesktopLayoutRegion key, double? width) {
     final previous = _dimensions?.preferenceFor(key);
     _dimensions?.setPreferredSize(
@@ -596,6 +671,18 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
         width: width,
         height: previous?.height,
         dockedWidth: previous?.dockedWidth,
+      ),
+    );
+  }
+
+  void _saveAssistantWidth() {
+    final previous = _dimensions?.preferenceFor(DesktopLayoutRegion.assistant);
+    _dimensions?.setPreferredSize(
+      DesktopLayoutRegion.assistant,
+      PreferredRegionSize(
+        width: previous?.width,
+        height: previous?.height,
+        dockedWidth: _assistant.width,
       ),
     );
   }
@@ -687,6 +774,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     _assistant.removeListener(_assistantChanged);
     _assistantFocus.dispose();
     _workspaceFocus.dispose();
+    _detailResizeFocus.dispose();
     _resourceFocus.dispose();
     if (widget.assistantController == null) _assistant.dispose();
     super.dispose();
@@ -697,12 +785,20 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     ValueChanged<Offset>? onViewDragUpdate,
     bool floatingEditor = false,
     ValueChanged<Offset>? onEditorDrag,
+    double? explicitHeight,
+    void Function(SkedResizeEdge, Offset)? onFloatingResize,
+    VoidCallback? onFloatingEnd,
+    VoidCallback? onFloatingReset,
+    bool holdingDockedEditor = false,
+    VoidCallback? onDockedResizeStart,
+    VoidCallback? onDockedResizeEnd,
   }) {
     final controller = widget.controller;
     final metrics = WorkbenchChromeMetrics.of(context);
     final viewing = metrics.desktop && controller.hasViewPanel;
     final editing = metrics.desktop && controller.hasEditorPanel;
     final editingRoute = controller._tasks.lastOrNull?.route;
+    final task = controller._tasks.lastOrNull;
     final compact = (viewing && !policy.dockedDetail) || floatingEditor;
     controller.focusScope.traversalEdgeBehavior = floatingEditor
         ? TraversalEdgeBehavior.closedLoop
@@ -725,102 +821,142 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           child: _PaneSurface(
             key: const ValueKey('workspace-detail-surface'),
             compact: compact,
-            floating: !policy.dockedDetail,
-            role: policy.dockedDetail
+            floating: !policy.dockedDetail && !holdingDockedEditor,
+            role: policy.dockedDetail || holdingDockedEditor
                 ? SkedSurfaceRole.frame
                 : SkedSurfaceRole.content,
-            child: Stack(
-              children: [
-                WorkspaceViewViewport(
-                  contentHeight: compact
-                      ? controller.viewContentHeight ?? 0
-                      : null,
-                  child: WorkspaceEditorScope(
-                    enabled: editing,
-                    floating: floatingEditor,
-                    onHeight: (height) {
-                      final route = editingRoute;
-                      if (route != null) {
-                        controller._reportContentHeight(route, height);
-                      }
-                    },
-                    onDrag: onEditorDrag,
-                    child: WorkspaceViewLayoutScope(
-                      compact: compact,
-                      onDragUpdate: onViewDragUpdate,
-                      child: Column(
-                        children: [
-                          if (!viewing && !editing)
-                            Padding(
-                              key: const ValueKey('workspace-inspector-header'),
-                              padding: const EdgeInsets.all(AppSpacing.sm),
-                              child: Align(
-                                alignment: AlignmentDirectional.centerEnd,
-                                child: IconButton(
-                                  key: const ValueKey(
-                                    'workspace-inspector-close',
-                                  ),
-                                  tooltip: MaterialLocalizations.of(context)
-                                      .closeButtonTooltip,
-                                  icon: const Icon(Icons.close),
-                                  onPressed: controller.close,
-                                ),
-                              ),
-                            ),
-                          Expanded(
-                            child: Semantics(
-                              container: true,
-                              explicitChildNodes: true,
-                              child: Navigator(
-                                key: controller.navigatorKey,
-                                requestFocus: false,
-                                onGenerateRoute: (_) => MaterialPageRoute<void>(
-                                  builder: (_) => const SizedBox.shrink(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (policy.detailVisible)
-                  PositionedDirectional(
-                    key: const ValueKey('workspace-detail-resize-position'),
-                    start: 0,
-                    top: 0,
-                    bottom: metrics.desktop ? 0 : null,
-                    height: metrics.desktop ? null : 48,
-                    width: metrics.desktop ? 9 : 48,
-                    child: TextFieldTapRegion(
+            child: SkedResizableFrame(
+              enabled:
+                  compact &&
+                  interactive &&
+                  task?.route.isCurrent == true &&
+                  ModalRoute.of(context)?.isCurrent != false,
+              keyPrefix: 'workspace-floating-resize',
+              leadingHandleKey: const ValueKey('workspace-detail-resize'),
+              leadingFocusNode: _detailResizeFocus,
+              onStart: () => _assistantLast = false,
+              onResize: onFloatingResize ?? (_, _) {},
+              onEnd: onFloatingEnd,
+              onReset: onFloatingReset,
+              child: Stack(
+                children: [
+                  WorkspaceViewViewport(
+                    contentHeight: compact
+                        ? explicitHeight ?? controller.viewContentHeight ?? 0
+                        : null,
+                    child: WorkspaceEditorScope(
                       enabled: editing,
-                      child: _PaneResizeHandle(
-                        key: const ValueKey('workspace-detail-resize'),
-                        onActivate: () => _assistantLast = false,
-                        onResize: (dx) => setState(() {
-                          if (editing) {
-                            final task = controller._tasks.last;
-                            task.editorWidth = (task.editorWidth - dx).clamp(
-                              320.0,
-                              math
-                                  .min(680.0, policy.maximumDetailWidth)
-                                  .clamp(320.0, 680.0),
-                            );
-                            return;
-                          }
-                          _detailWidth = _resizedPaneWidth(
-                            _detailWidth,
-                            dx,
-                            minimumWidth: AppBreakpoints.minimumDetailPane,
-                            maximumWidth: policy.maximumDetailWidth,
-                            textScale: metrics.textScale,
-                          );
-                        }),
+                      floating: floatingEditor,
+                      explicitHeight: explicitHeight != null,
+                      onHeight: (height) {
+                        final route = editingRoute;
+                        if (route != null) {
+                          controller._reportContentHeight(route, height);
+                        }
+                      },
+                      onDrag: onEditorDrag,
+                      child: WorkspaceViewLayoutScope(
+                        compact: compact,
+                        explicitHeight: explicitHeight != null,
+                        onDragUpdate: onViewDragUpdate,
+                        child: Column(
+                          children: [
+                            if (!viewing && !editing)
+                              Padding(
+                                key: const ValueKey(
+                                  'workspace-inspector-header',
+                                ),
+                                padding: const EdgeInsets.all(AppSpacing.sm),
+                                child: Align(
+                                  alignment: AlignmentDirectional.centerEnd,
+                                  child: IconButton(
+                                    key: const ValueKey(
+                                      'workspace-inspector-close',
+                                    ),
+                                    tooltip: MaterialLocalizations.of(context)
+                                        .closeButtonTooltip,
+                                    icon: const Icon(Icons.close),
+                                    onPressed: controller.close,
+                                  ),
+                                ),
+                              ),
+                            Expanded(
+                              child: Semantics(
+                                container: true,
+                                explicitChildNodes: true,
+                                child: Navigator(
+                                  key: controller.navigatorKey,
+                                  requestFocus: false,
+                                  onGenerateRoute: (_) =>
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => const SizedBox.shrink(),
+                                      ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-              ],
+                  if (policy.detailVisible && !compact)
+                    PositionedDirectional(
+                      key: const ValueKey('workspace-detail-resize-position'),
+                      start: 0,
+                      top: 0,
+                      bottom: metrics.desktop ? 0 : null,
+                      height: metrics.desktop ? null : 48,
+                      width: metrics.desktop ? 9 : 48,
+                      child: TextFieldTapRegion(
+                        enabled: editing,
+                        child: _PaneResizeHandle(
+                          key: const ValueKey('workspace-detail-resize'),
+                          focusNode: _detailResizeFocus,
+                          onActivate: () {
+                            _assistantLast = false;
+                            if (editing) onDockedResizeStart?.call();
+                          },
+                          onEnd: editing
+                              ? onDockedResizeEnd
+                              : task == null
+                              ? null
+                              : () =>
+                                    _saveTaskDimensions(task, floating: false),
+                          onReset: task == null
+                              ? null
+                              : () =>
+                                    _resetTaskDimensions(task, floating: false),
+                          onResize: (dx) => setState(() {
+                            if (editing) {
+                              final task = controller._tasks.last;
+                              task.editorWidth = (policy.detailWidth - dx)
+                                  .clamp(
+                                    320.0,
+                                    math
+                                        .min(680.0, policy.maximumDetailWidth)
+                                        .clamp(320.0, 680.0),
+                                  );
+                              task.dockedWidth = task.editorWidth;
+                              task.dockedChanged = true;
+                              return;
+                            }
+                            _detailWidth = _resizedPaneWidth(
+                              task?.dockedWidth ?? _detailWidth,
+                              dx,
+                              minimumWidth: AppBreakpoints.minimumDetailPane,
+                              maximumWidth: policy.maximumDetailWidth,
+                              textScale: metrics.textScale,
+                            );
+                            if (task != null) {
+                              task.dockedWidth = _detailWidth;
+                              task.dockedChanged = true;
+                            }
+                          }),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1096,6 +1232,12 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               ? controller._tasks.lastOrNull
               : null;
           final metrics = WorkbenchChromeMetrics.of(context);
+          final activeTask = controller._tasks.lastOrNull;
+          _loadTaskDimensions(activeTask);
+          final holdingDockedEditor =
+              editingTask != null &&
+              identical(editingTask, _dockedEditorResizeTask) &&
+              _dockedEditorResizeMode == widget.panelDisplayMode;
           WorkspaceLayout resolveLayout(bool assistantOpen) =>
               WorkspaceLayout.resolve(
                 constraints.maxWidth,
@@ -1109,7 +1251,14 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                     ? metrics.captionWidth
                     : 0,
                 shortWindow: MediaQuery.sizeOf(context).height < 480,
-                panelDisplayMode: editingTask?.position.detached == true
+                panelDisplayMode:
+                    (editingTask?.position.detached == true &&
+                            (editingTask?.resizedInMode == null ||
+                                editingTask?.resizedInMode ==
+                                    widget.panelDisplayMode)) ||
+                        (controller.hasViewPanel &&
+                            activeTask?.resizedInMode ==
+                                widget.panelDisplayMode)
                     ? WorkspacePanelDisplayMode.overlay
                     : widget.panelDisplayMode,
                 partialDetailOverlay:
@@ -1117,8 +1266,12 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                     (controller.hasViewPanel || controller.hasEditorPanel),
                 minimumCanvas: widget.minimumCanvas,
                 preferredDetailWidth: editingTask == null
-                    ? _detailWidth
-                    : editingTask.editorWidth / metrics.textScale,
+                    ? activeTask?.dockedWidth ??
+                          (activeTask?.layoutKey == null
+                              ? _detailWidth
+                              : AppBreakpoints.detailPane)
+                    : (editingTask.dockedWidth ?? editingTask.editorWidth) /
+                          metrics.textScale,
                 minimumDetailWidth: editingTask == null
                     ? AppBreakpoints.minimumDetailPane
                     : 320 / metrics.textScale,
@@ -1133,16 +1286,25 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 // window, not typing in a pane, may compact the navigation.
                 resourcesCollapsed: widget.resourcesCollapsed,
               );
-          final editorLayout = resolveLayout(false);
-          final assistantOpen =
-              previewEnabled &&
-              _assistant.isOpen &&
-              (editingTask == null || editorLayout.dockedDetail);
-          final policy = assistantOpen ? resolveLayout(true) : editorLayout;
+          WorkspaceLayout resolveCurrentLayout({required bool holdDockedHost}) {
+            final editorLayout = resolveLayout(false);
+            final assistantOpen =
+                previewEnabled &&
+                _assistant.isOpen &&
+                (editingTask == null ||
+                    editorLayout.dockedDetail ||
+                    holdDockedHost);
+            return assistantOpen ? resolveLayout(true) : editorLayout;
+          }
+
+          final policy = resolveCurrentLayout(
+            holdDockedHost: holdingDockedEditor,
+          );
           final floatingEditor =
               editingTask != null &&
               policy.detailVisible &&
-              !policy.dockedDetail;
+              !policy.dockedDetail &&
+              !holdingDockedEditor;
           controller._setEditorFloating(floatingEditor && active);
           final compactView =
               policy.detailVisible &&
@@ -1188,7 +1350,16 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final viewTask = controller._tasks.lastOrNull;
           final detailWidth = (compactView || floatingEditor)
               ? math.min(
-                  policy.detailWidth,
+                  math.max(
+                    320.0,
+                    viewTask?.floatingWidth ??
+                        (floatingEditor
+                            ? editingTask.editor?.preferredWidth ?? 440
+                            : (viewTask?.layoutKey == null
+                                      ? _detailWidth
+                                      : AppBreakpoints.detailPane) *
+                                  metrics.textScale),
+                  ),
                   math.max(
                     0.0,
                     constraints.maxWidth -
@@ -1199,14 +1370,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               : policy.detailWidth;
           // Keep full Navigator constraints regardless of the dragged top, so
           // moving a panel never shrinks its list or loses its scroll position.
-          final detailMaxHeight = math.min(
-            floatingEditor ? 720.0 : double.infinity,
-            math.max(
-              0.0,
-              constraints.maxHeight -
-                  overlayInset -
-                  ((compactView || floatingEditor) ? 16 : 0),
-            ),
+          final detailMaxHeight = math.max(
+            0.0,
+            constraints.maxHeight -
+                overlayInset -
+                ((compactView || floatingEditor) ? 16 : 0),
           );
           final rtl = Directionality.of(context) == TextDirection.rtl;
           final panelBounds = Rect.fromLTRB(
@@ -1230,27 +1398,20 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           }
 
           final viewAnchor = localAnchor(viewTask?.viewAnchor);
+          final manualHeight = viewTask?.floatingHeight
+              ?.clamp(
+                math.min(120.0 * metrics.textScale, detailMaxHeight),
+                detailMaxHeight,
+              )
+              .toDouble();
           final viewSize = Size(
             detailWidth,
-            (controller.viewContentHeight ?? detailMaxHeight).clamp(
-              0.0,
-              detailMaxHeight,
-            ),
+            (manualHeight ?? controller.viewContentHeight ?? detailMaxHeight)
+                .clamp(0.0, detailMaxHeight),
           );
           var viewOverride = viewTask?.position.positionOverride(
             hasAnchor: viewAnchor != null,
           );
-          if (compactView &&
-              !rtl &&
-              viewTask!.position.detached &&
-              viewTask.position.size.width != viewSize.width) {
-            // The resize handle is on the leading edge. Keep a manually
-            // positioned panel's opposite edge fixed when its width changes.
-            viewOverride =
-                (viewTask.position.lastPosition ?? viewOverride!) +
-                Offset(viewTask.position.size.width - viewSize.width, 0);
-            viewTask.position.manualPosition = viewOverride;
-          }
           final viewOffset = viewOverride != null
               ? boundSkedFloatingPosition(viewOverride, viewSize, panelBounds)
               : viewAnchor == null
@@ -1286,10 +1447,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final anchor = localAnchor(config);
           final editorSize = Size(
             detailWidth,
-            (editingTask?.contentHeight ?? detailMaxHeight).clamp(
-              0,
-              detailMaxHeight,
-            ),
+            (manualHeight ?? editingTask?.contentHeight ?? detailMaxHeight)
+                .clamp(0, detailMaxHeight),
           );
           final editorOverride = editingTask?.position.positionOverride(
             hasAnchor: anchor != null,
@@ -1320,6 +1479,111 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               return;
             }
             setState(() => editingTask.position.drag(delta, panelBounds));
+          }
+
+          void resizeFloating(SkedResizeEdge edge, Offset delta) {
+            final task = floatingEditor ? editingTask : viewTask;
+            if (!active ||
+                task == null ||
+                task.route.isCurrent != true ||
+                ModalRoute.of(context)?.isCurrent == false) {
+              return;
+            }
+            setState(() {
+              final rect = resizeSkedFloatingRect(
+                rect:
+                    (task.position.lastPosition ?? panelBounds.topLeft) &
+                    task.position.size,
+                delta: delta,
+                edge: edge,
+                bounds: panelBounds,
+                minimumSize: Size(320, 120 * metrics.textScale),
+              );
+              task.position.manualPosition = rect.topLeft;
+              task.resizedInMode = widget.panelDisplayMode;
+              task.position.recordLayout(rect.topLeft, rect.size);
+              if (edge.horizontal) task.floatingWidth = rect.width;
+              if (edge.vertical) task.floatingHeight = rect.height;
+              task.floatingChanged = true;
+            });
+          }
+
+          final explicitHeight =
+              (compactView || floatingEditor) &&
+                  viewTask?.floatingHeight != null
+              ? manualHeight
+              : null;
+
+          void beginDockedResize() {
+            if (editingTask == null ||
+                identical(_dockedEditorResizeTask, editingTask)) {
+              return;
+            }
+            setState(() {
+              _dockedEditorResizeTask = editingTask;
+              _dockedEditorResizeMode = widget.panelDisplayMode;
+            });
+          }
+
+          void finishDockedResize() {
+            final task = _dockedEditorResizeTask;
+            if (task == null) return;
+            // Keyboard steps end before the next frame, so the prior rendered
+            // policy/rectangle may still have the old width. Resolve the latest
+            // task preference instead of measuring stale pixels here.
+            final current =
+                identical(task, editingTask) &&
+                _dockedEditorResizeMode == widget.panelDisplayMode &&
+                task.route.isCurrent;
+            final finalPolicy = current
+                ? resolveCurrentLayout(holdDockedHost: true)
+                : null;
+            final becomesFloating =
+                task.dockedChanged &&
+                finalPolicy?.detailVisible == true &&
+                finalPolicy?.dockedDetail == false;
+            final restoreResizeFocus = _detailResizeFocus.hasFocus;
+            setState(() {
+              _dockedEditorResizeTask = null;
+              _dockedEditorResizeMode = null;
+              if (becomesFloating) {
+                final size = Size(
+                  math.min(finalPolicy!.detailWidth, panelBounds.width),
+                  (task.floatingHeight ?? task.contentHeight ?? detailMaxHeight)
+                      .clamp(
+                        math.min(120 * metrics.textScale, panelBounds.height),
+                        panelBounds.height,
+                      ),
+                );
+                final origin = Offset(
+                  rtl ? 0 : constraints.maxWidth - size.width,
+                  overlayInset,
+                );
+                final position = boundSkedFloatingPosition(
+                  origin,
+                  size,
+                  panelBounds,
+                );
+                task.floatingWidth = size.width;
+                task.floatingChanged = true;
+                task.resizedInMode = widget.panelDisplayMode;
+                task.position.manualPosition = position;
+                task.position.recordLayout(position, size);
+              }
+            });
+            _saveTaskDimensions(task, floating: false);
+            if (becomesFloating) {
+              _saveTaskDimensions(task, floating: true);
+              if (restoreResizeFocus) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted &&
+                      identical(controller._tasks.lastOrNull, task) &&
+                      controller.focusScope.hasFocus) {
+                    _detailResizeFocus.requestFocus();
+                  }
+                });
+              }
+            }
           }
 
           final resizeExtent = metrics.desktop ? 9.0 : 48.0;
@@ -1363,7 +1627,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                   !active ||
                   (!_resourceDrawerOpen &&
                       !controller.hasPaneTasks &&
-                      !assistantOpen),
+                      !policy.assistantVisible),
               onPopInvokedWithResult: (didPop, _) {
                 if (!didPop && active) unawaited(dismiss());
               },
@@ -1590,12 +1854,29 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                               width: detailWidth,
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
-                                  maxHeight: detailMaxHeight,
+                                  maxHeight: explicitHeight ?? detailMaxHeight,
                                 ),
                                 child: _detailPane(
                                   policy,
                                   floatingEditor: floatingEditor,
+                                  holdingDockedEditor: holdingDockedEditor,
+                                  onDockedResizeStart: beginDockedResize,
+                                  onDockedResizeEnd: finishDockedResize,
                                   onEditorDrag: dragEditor,
+                                  explicitHeight: explicitHeight,
+                                  onFloatingResize: resizeFloating,
+                                  onFloatingEnd: viewTask == null
+                                      ? null
+                                      : () => _saveTaskDimensions(
+                                          viewTask,
+                                          floating: true,
+                                        ),
+                                  onFloatingReset: viewTask == null
+                                      ? null
+                                      : () => _resetTaskDimensions(
+                                          viewTask,
+                                          floating: true,
+                                        ),
                                   onViewDragUpdate: compactView && active
                                       ? dragView
                                       : null,
@@ -1625,6 +1906,22 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                     'workspace-assistant-resize',
                                   ),
                                   onActivate: () => _assistantLast = true,
+                                  onEnd: _saveAssistantWidth,
+                                  onReset: () {
+                                    _assistant.resize(
+                                      AppBreakpoints.assistantPane,
+                                    );
+                                    final previous = _dimensions?.preferenceFor(
+                                      DesktopLayoutRegion.assistant,
+                                    );
+                                    _dimensions?.setPreferredSize(
+                                      DesktopLayoutRegion.assistant,
+                                      PreferredRegionSize(
+                                        width: previous?.width,
+                                        height: previous?.height,
+                                      ),
+                                    );
+                                  },
                                   onResize: (dx) => _assistant.resize(
                                     _resizedPaneWidth(
                                       _assistant.width,
@@ -1690,52 +1987,21 @@ class _PaneResizeHandle extends StatelessWidget {
     super.key,
     required this.onResize,
     required this.onActivate,
+    this.onEnd,
+    this.onReset,
+    this.focusNode,
   });
   final ValueChanged<double> onResize;
   final VoidCallback onActivate;
-  void _resize(double delta) {
-    onActivate();
-    onResize(delta);
-  }
-
+  final VoidCallback? onEnd, onReset;
+  final FocusNode? focusNode;
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    explicitChildNodes: true,
-    label: AppLocalizations.of(context).resizePanel,
-    onIncrease: () => _resize(-24),
-    onDecrease: () => _resize(24),
-    child: Focus(
-      onFocusChange: (focused) {
-        if (focused) onActivate();
-      },
-      onKeyEvent: (_, event) {
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-          _resize(-24);
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          _resize(24);
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.resizeColumn,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragDown: (_) => onActivate(),
-          onHorizontalDragUpdate: (details) => _resize(
-            Directionality.of(context) == TextDirection.rtl
-                ? -details.delta.dx
-                : details.delta.dx,
-          ),
-          child: WorkbenchLayoutPolicy.pointerLayout(context)
-              ? null
-              : const Center(child: Icon(Icons.drag_indicator, size: 18)),
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => SkedResizeHandle(
+    focusNode: focusNode,
+    increaseReversed: true,
+    onStart: onActivate,
+    onDelta: onResize,
+    onEnd: onEnd,
+    onReset: onReset,
   );
 }

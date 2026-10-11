@@ -36,7 +36,7 @@ Future<void> _choose(WidgetTester t, String key, String label) async {
 void main() {
   for (final mode in AppMode.values) {
     testWidgets(
-      'real $mode editor uses its width limit while AI keeps its independent width',
+      'real $mode floating editor uses the work area while AI keeps its independent width',
       (t) async {
         _viewport(t, const Size(1920, 1000));
         final provider = await workspaceProvider(mode: mode);
@@ -54,6 +54,7 @@ void main() {
         final sidebar = t.getRect(_key('workspace-resource-width'));
         final canvas = t.getRect(_key('workspace-canvas-viewport'));
         final maximum = (1920 - sidebar.width - 1) * .8;
+        final floatingMaximum = 1920 - sidebar.width - 1 - 16;
         final l = AppLocalizations.of(t.element(find.byType(WorkspaceFrame)));
         await t.tap(
           mode == AppMode.general
@@ -73,9 +74,9 @@ void main() {
         await t.pumpAndSettle();
         expect(
           t.getSize(_key('workspace-detail-pane')).width,
-          closeTo(680, .01),
+          closeTo(floatingMaximum, .01),
         );
-        expect(t.getSize(editor).width, closeTo(680, .01));
+        expect(t.getSize(editor).width, closeTo(floatingMaximum, .01));
         expect(t.getRect(_key('workspace-resource-width')), sidebar);
         expect(t.getRect(_key('workspace-canvas-viewport')), canvas);
         expect(t.state(editor), same(state));

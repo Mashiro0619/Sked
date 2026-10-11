@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 
 import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
+import '../services/desktop_layout_preferences.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_panel_header.dart';
 
@@ -36,6 +37,7 @@ Future<T?> showAppModalSheet<T>({
   WorkspacePanePresentation panePresentation =
       WorkspacePanePresentation.standard,
   WorkspaceEditorConfiguration? editor,
+  DesktopLayoutRegion? layoutKey,
   BuildContext? anchorContext,
   Rect? anchorRect,
   String? selectionId,
@@ -75,6 +77,7 @@ Future<T?> showAppModalSheet<T>({
             ? panePresentation
             : WorkspacePanePresentation.editor,
         editor: editor,
+        layoutKey: layoutKey,
         anchorContext: anchorContext,
         anchorRect: anchorRect,
         selectionId: selectionId,

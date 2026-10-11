@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/widgets/workspace_frame.dart';
+import 'package:sked/widgets/workspace_editor.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -171,6 +172,91 @@ void main() {
         tester.getSize(key('workspace-supporting-pane')).width,
         closeTo(500, .01),
       );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+    variant: desktop,
+  );
+
+  testWidgets(
+    'floating editor uses manual height without losing draft focus and restores size after remount',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1600, 1200);
+      addTearDown(tester.view.reset);
+      final provider = await workspaceProvider();
+      final preferences = DesktopLayoutPreferences.memory();
+      addTearDown(provider.dispose);
+      addTearDown(preferences.dispose);
+      Future<void> open() async {
+        await tester.pumpWidget(
+          WorkspaceHarness(provider: provider, layoutPreferences: preferences),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(key('student-add-course'));
+        await tester.pumpAndSettle();
+      }
+
+      await open();
+      final panel = key('workspace-detail-surface');
+      final editor = tester.element(find.byType(WorkspaceEditorScaffold));
+      final initial = tester.getRect(panel);
+      await drag(
+        tester,
+        tester.getCenter(key('workspace-editor-drag')),
+        Offset(600 - initial.left, 100 - initial.top),
+      );
+      final input = find
+          .descendant(
+            of: find.byType(WorkspaceEditorScaffold),
+            matching: find.byType(TextField),
+          )
+          .first;
+      await tester.enterText(input, 'Draft stays while resizing');
+      await tester.pump();
+      final focus = FocusManager.instance.primaryFocus;
+      var before = tester.getRect(panel);
+      await drag(
+        tester,
+        before.centerLeft + const Offset(2, 0),
+        const Offset(-120, 0),
+      );
+      expect(tester.getSize(panel).width, closeTo(before.width + 120, .01));
+      before = tester.getRect(panel);
+      await drag(
+        tester,
+        before.bottomCenter - const Offset(0, 2),
+        const Offset(0, 70),
+      );
+      final resized = tester.getSize(panel);
+      expect(resized.height, closeTo(before.height + 70, .01));
+      expect(
+        tester.element(find.byType(WorkspaceEditorScaffold)),
+        same(editor),
+      );
+      expect(FocusManager.instance.primaryFocus, same(focus));
+      expect(find.text('Draft stays while resizing'), findsOneWidget);
+      final saved = preferences.preferenceFor(
+        DesktopLayoutRegion.courseEditor,
+      )!;
+      expect(saved.width, closeTo(resized.width, .01));
+      expect(saved.height, closeTo(resized.height, .01));
+      tester.view.physicalSize = const Size(660, 420);
+      await tester.pumpAndSettle();
+      expect(
+        preferences.preferenceFor(DesktopLayoutRegion.courseEditor),
+        saved,
+      );
+      expect(tester.getSize(panel).height, lessThan(resized.height));
+      expect(find.text('Draft stays while resizing'), findsOneWidget);
+      tester.view.physicalSize = const Size(1600, 1200);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel), resized);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      await open();
+      expect(tester.getSize(panel), resized);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

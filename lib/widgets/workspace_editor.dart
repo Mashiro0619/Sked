@@ -62,9 +62,11 @@ class WorkspaceEditorScope extends InheritedWidget {
     required this.floating,
     required this.onHeight,
     this.onDrag,
+    this.explicitHeight = false,
     required super.child,
   });
   final bool enabled, floating;
+  final bool explicitHeight;
   final ValueChanged<double> onHeight;
   final ValueChanged<Offset>? onDrag;
   static WorkspaceEditorScope? maybeOf(BuildContext context) =>
@@ -73,6 +75,7 @@ class WorkspaceEditorScope extends InheritedWidget {
   bool updateShouldNotify(WorkspaceEditorScope old) =>
       enabled != old.enabled ||
       floating != old.floating ||
+      explicitHeight != old.explicitHeight ||
       onDrag != old.onDrag ||
       onHeight != old.onHeight;
 }
@@ -95,14 +98,15 @@ class WorkspaceEditorScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = WorkspaceEditorScope.maybeOf(context)!;
+    final naturalHeight = scope.floating && !scope.explicitHeight;
     return Align(
       alignment: Alignment.topCenter,
-      heightFactor: scope.floating ? 1 : null,
+      heightFactor: naturalHeight ? 1 : null,
       child: LayoutBuilder(
         builder: (context, bounds) => _EditorSize(
           onHeight: scope.onHeight,
           child: Column(
-            mainAxisSize: scope.floating ? MainAxisSize.min : MainAxisSize.max,
+            mainAxisSize: naturalHeight ? MainAxisSize.min : MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ConstrainedBox(
@@ -122,7 +126,7 @@ class WorkspaceEditorScaffold extends StatelessWidget {
                 ),
               ),
               Flexible(
-                fit: scope.floating ? FlexFit.loose : FlexFit.tight,
+                fit: naturalHeight ? FlexFit.loose : FlexFit.tight,
                 child: SingleChildScrollView(
                   key: const PageStorageKey('workspace-editor-body'),
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),

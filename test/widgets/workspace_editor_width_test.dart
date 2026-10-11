@@ -84,60 +84,68 @@ void main() {
     ('event', AppMode.general, 480.0, 'general-add-event'),
     ('timetable', AppMode.student, 360.0, null),
   ]) {
-    testWidgets(
-      '$name opens at its own width and retains manual sizing when docked',
-      (tester) async {
-        tester.view.devicePixelRatio = 1;
-        tester.view.physicalSize = const Size(1920, 1100);
-        addTearDown(tester.view.reset);
-        final provider = await workspaceProvider(mode: mode);
-        addTearDown(provider.dispose);
-        await tester.pumpWidget(WorkspaceHarness(provider: provider));
-        await tester.pumpAndSettle();
-        final trigger = triggerKey == null
-            ? find
-                  .byTooltip(
-                    AppLocalizations.of(
-                      tester.element(find.byType(WorkspaceFrame)),
-                    ).createTimetable,
-                  )
-                  .hitTestable()
-            : find.byKey(ValueKey(triggerKey));
-        await tester.tap(trigger);
-        await tester.pumpAndSettle();
-        final panel = find.byKey(const ValueKey('workspace-detail-surface'));
-        final resize = find.byKey(const ValueKey('workspace-detail-resize'));
-        final editor = find.byType(WorkspaceEditorScaffold);
-        final element = tester.element(editor);
-        expect(tester.getSize(panel).width, width);
+    testWidgets('$name remembers floating and docked widths independently', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1920, 1100);
+      addTearDown(tester.view.reset);
+      final provider = await workspaceProvider(mode: mode);
+      addTearDown(provider.dispose);
+      await tester.pumpWidget(WorkspaceHarness(provider: provider));
+      await tester.pumpAndSettle();
+      final trigger = triggerKey == null
+          ? find
+                .byTooltip(
+                  AppLocalizations.of(
+                    tester.element(find.byType(WorkspaceFrame)),
+                  ).createTimetable,
+                )
+                .hitTestable()
+          : find.byKey(ValueKey(triggerKey));
+      await tester.tap(trigger);
+      await tester.pumpAndSettle();
+      final panel = find.byKey(const ValueKey('workspace-detail-surface'));
+      final resize = find.byKey(const ValueKey('workspace-detail-resize'));
+      final editor = find.byType(WorkspaceEditorScaffold);
+      final element = tester.element(editor);
+      expect(tester.getSize(panel).width, width);
 
-        await tester.drag(resize, const Offset(-40, 0));
-        await tester.pumpAndSettle();
-        expect(tester.getSize(panel).width, width + 40);
-        await provider.updateWorkspacePanelDisplayMode(
-          WorkspacePanelDisplayMode.sideBySide,
-        );
-        await tester.pumpAndSettle();
-        expect(tester.getSize(panel).width, width + 40);
-        expect(tester.element(editor), same(element));
+      final initialBounds = tester.getRect(panel);
+      await tester.drag(
+        find.byKey(const ValueKey('workspace-editor-drag')),
+        Offset(700 - initialBounds.left, 160 - initialBounds.top),
+      );
+      await tester.pumpAndSettle();
 
-        await tester.drag(resize, const Offset(-1000, 0));
-        await tester.pumpAndSettle();
-        expect(tester.getSize(panel).width, 680);
-        await tester.drag(resize, const Offset(1000, 0));
-        await tester.pumpAndSettle();
-        expect(tester.getSize(panel).width, 320);
-        await provider.updateWorkspacePanelDisplayMode(
-          WorkspacePanelDisplayMode.overlay,
-        );
-        await tester.pumpAndSettle();
-        expect(tester.getSize(panel).width, 320);
-        expect(tester.element(editor), same(element));
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox());
-        await tester.pumpAndSettle();
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.windows),
-    );
+      await tester.drag(resize, const Offset(-40, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel).width, closeTo(width + 40, .01));
+      await provider.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.sideBySide,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel).width, width);
+      expect(tester.element(editor), same(element));
+
+      await tester.drag(resize, const Offset(-1000, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel).width, 680);
+      await tester.drag(resize, const Offset(1000, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel).width, 320);
+      await provider.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.overlay,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel).width, closeTo(width + 40, .01));
+      await tester.drag(resize, const Offset(-1000, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel).width, greaterThan(680));
+      expect(tester.element(editor), same(element));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   }
 }

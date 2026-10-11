@@ -36,17 +36,21 @@ class WorkspaceViewLayoutScope extends InheritedWidget {
     super.key,
     required this.compact,
     this.onDragUpdate,
+    this.explicitHeight = false,
     required super.child,
   });
   final bool compact;
   final ValueChanged<Offset>? onDragUpdate;
+  final bool explicitHeight;
   static WorkspaceViewLayoutScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<WorkspaceViewLayoutScope>();
   static bool compactOf(BuildContext context) =>
       maybeOf(context)?.compact ?? false;
   @override
   bool updateShouldNotify(WorkspaceViewLayoutScope oldWidget) =>
-      compact != oldWidget.compact || onDragUpdate != oldWidget.onDragUpdate;
+      compact != oldWidget.compact ||
+      onDragUpdate != oldWidget.onDragUpdate ||
+      explicitHeight != oldWidget.explicitHeight;
 }
 
 /// Shared by desktop viewing tasks and the month view's permanent agenda.
@@ -82,13 +86,14 @@ class WorkspaceViewPanel extends StatelessWidget {
     final task = scope?.enabled == true;
     final layout = WorkspaceViewLayoutScope.maybeOf(context);
     final compact = task && layout?.compact == true;
+    final fitContent = compact && layout?.explicitHeight != true;
     final onDragUpdate = compact ? layout?.onDragUpdate : null;
     final metrics = WorkbenchChromeMetrics.of(context);
     return Align(
       // Navigator-backed panels are clipped by WorkspaceViewViewport. An
       // adjacent portal instead receives loose constraints and must size
       // its surface to this same content, not fill an empty window-height card.
-      heightFactor: compact ? 1 : null,
+      heightFactor: fitContent ? 1 : null,
       alignment: Alignment.topCenter,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -96,7 +101,7 @@ class WorkspaceViewPanel extends StatelessWidget {
               inlineHeaderAction ??
               constraints.maxWidth >= 360 * metrics.textScale;
           final content = Column(
-            mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+            mainAxisSize: fitContent ? MainAxisSize.min : MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Only very short/large-text windows scroll the header itself.
@@ -130,7 +135,7 @@ class WorkspaceViewPanel extends StatelessWidget {
               ),
               const Divider(height: 1),
               Flexible(
-                fit: compact ? FlexFit.loose : FlexFit.tight,
+                fit: fitContent ? FlexFit.loose : FlexFit.tight,
                 child: SizedBox(
                   key: bodyViewportKey,
                   child: SingleChildScrollView(

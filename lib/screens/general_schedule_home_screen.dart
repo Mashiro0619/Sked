@@ -18,6 +18,9 @@ import '../widgets/sked_calendar_day_label.dart';
 import '../utils/date_selection.dart';
 
 import 'dart:async';
+
+import '../services/desktop_layout_preferences.dart';
+
 import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
@@ -213,6 +216,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 _openDetails(context, provider, item, anchorContext: anchor),
           ),
           selectionId: 'general-reminders',
+          layoutKey: DesktopLayoutRegion.reminderList,
           presentation: WorkspacePanePresentation.view,
         ),
       );
@@ -1754,6 +1758,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     try {
       await _pane.show<void>(
         _buildSelectedDayAgenda,
+        layoutKey: DesktopLayoutRegion.dayAgenda,
         presentation: WorkspacePanePresentation.view,
         anchorContext: anchorContext,
       );
@@ -1974,6 +1979,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
         workspacePane: _pane,
+        layoutKey: DesktopLayoutRegion.eventEditor,
         editor: (editor ?? _pane.takeEditorEntry()).withPreferredWidth(480),
         workspace: AppMode.general,
         isSessionCurrent: () => provider.generalSchedules.any(
@@ -2061,6 +2067,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         workspacePane: _pane,
         panePresentation: WorkspacePanePresentation.view,
         anchorRect: anchorRect,
+        layoutKey: DesktopLayoutRegion.eventDetails,
         workspace: AppMode.general,
         // Keep our own pending deletion alive for error feedback and retry.
         // External moves, exclusions and deletions retire this exact instance.
@@ -2195,6 +2202,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         workspacePane: _pane,
         panePresentation: WorkspacePanePresentation.view,
         anchorRect: anchorRect,
+        layoutKey: DesktopLayoutRegion.occurrenceList,
         workspace: AppMode.general,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
