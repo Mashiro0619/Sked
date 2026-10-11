@@ -4,6 +4,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/sked_resizable.dart';
 import 'package:sked/widgets/workspace_editor_time_rows.dart';
 
 import '../support/workspace_harness.dart';
@@ -72,9 +73,13 @@ void main() {
               closeTo(mode == AppMode.general ? 480 : 440, .01),
             );
             final save = find.widgetWithText(FilledButton, l.save);
+            const actionInset = 12 + SkedResizableFrame.contentInset;
             expect(
               rtl ? t.getRect(save).left : t.getRect(save).right,
-              closeTo(rtl ? initial.left + 12 : initial.right - 12, .01),
+              closeTo(
+                rtl ? initial.left + actionInset : initial.right - actionInset,
+                .01,
+              ),
             );
             final dates = find.descendant(
               of: editor,

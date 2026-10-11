@@ -221,6 +221,7 @@ class SkedResizableFrame extends StatelessWidget {
     this.leadingHandleKey,
     this.leadingFocusNode,
     this.enabled = true,
+    this.reserveResizeSpace = true,
   });
   final Widget child;
   final void Function(SkedResizeEdge, Offset) onResize;
@@ -229,6 +230,14 @@ class SkedResizableFrame extends StatelessWidget {
   final Key? leadingHandleKey;
   final FocusNode? leadingFocusNode;
   final bool enabled;
+
+  /// Keep the viewport stable when a child task temporarily disables resizing.
+  /// Docked hosts can opt out when they use their own divider instead.
+  final bool reserveResizeSpace;
+
+  static const contentInset = 9.0;
+  static const _edgeExtent = contentInset;
+  static const _cornerExtent = 18.0;
 
   @override
   Widget build(BuildContext context) {
@@ -270,72 +279,109 @@ class SkedResizableFrame extends StatelessWidget {
         onReset: onReset,
       ),
     );
+    Widget corner(SkedResizeEdge edge) => ClipPath(
+      clipper: _ResizeCornerClipper(edge, _edgeExtent),
+      child: target(edge),
+    );
     // Keep this Stack and child slot even while docked or covered by a picker.
     return Stack(
       fit: StackFit.passthrough,
       children: [
-        child,
+        // Reserve space outside the entire viewport, not just its content or
+        // scrollbar thumb. Scrollbar tracks must not intercept resize gestures,
+        // and resizing must not intercept scrollbars or controls at the edge.
+        Padding(
+          padding: EdgeInsets.all(reserveResizeSpace ? contentInset : 0),
+          child: child,
+        ),
         if (enabled) ...[
           Positioned(
             left: 0,
             top: 0,
             bottom: 0,
-            width: 9,
+            width: _edgeExtent,
             child: target(SkedResizeEdge.left),
           ),
           Positioned(
             right: 0,
             top: 0,
             bottom: 0,
-            width: 9,
+            width: _edgeExtent,
             child: target(SkedResizeEdge.right),
           ),
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: 9,
+            height: _edgeExtent,
             child: target(SkedResizeEdge.top),
           ),
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            height: 9,
+            height: _edgeExtent,
             child: target(SkedResizeEdge.bottom),
           ),
           Positioned(
             left: 0,
             top: 0,
-            width: 18,
-            height: 18,
-            child: target(SkedResizeEdge.topLeft),
+            width: _cornerExtent,
+            height: _cornerExtent,
+            child: corner(SkedResizeEdge.topLeft),
           ),
           Positioned(
             right: 0,
             top: 0,
-            width: 18,
-            height: 18,
-            child: target(SkedResizeEdge.topRight),
+            width: _cornerExtent,
+            height: _cornerExtent,
+            child: corner(SkedResizeEdge.topRight),
           ),
           Positioned(
             left: 0,
             bottom: 0,
-            width: 18,
-            height: 18,
-            child: target(SkedResizeEdge.bottomLeft),
+            width: _cornerExtent,
+            height: _cornerExtent,
+            child: corner(SkedResizeEdge.bottomLeft),
           ),
           Positioned(
             right: 0,
             bottom: 0,
-            width: 18,
-            height: 18,
-            child: target(SkedResizeEdge.bottomRight),
+            width: _cornerExtent,
+            height: _cornerExtent,
+            child: corner(SkedResizeEdge.bottomRight),
           ),
         ],
       ],
     );
   }
+}
+
+/// Keep diagonal resize targets in the outer gutter, including at scroll ends.
+/// The inner square belongs to the viewport and its scrollbar track.
+class _ResizeCornerClipper extends CustomClipper<Path> {
+  const _ResizeCornerClipper(this.edge, this.gutter);
+
+  final SkedResizeEdge edge;
+  final double gutter;
+
+  @override
+  Path getClip(Size size) {
+    final inset = Rect.fromLTWH(
+      edge.movesLeft ? gutter : 0,
+      edge.movesTop ? gutter : 0,
+      math.max(0, size.width - gutter),
+      math.max(0, size.height - gutter),
+    );
+    return Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addRect(inset);
+  }
+
+  @override
+  bool shouldReclip(_ResizeCornerClipper oldClipper) =>
+      edge != oldClipper.edge || gutter != oldClipper.gutter;
 }
 
 class _ResizeTarget extends StatefulWidget {

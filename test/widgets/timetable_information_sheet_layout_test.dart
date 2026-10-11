@@ -7,6 +7,7 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/sked_resizable.dart';
 import 'package:sked/widgets/timetable_information_form.dart';
 import 'package:sked/widgets/workspace_editor.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
@@ -249,7 +250,14 @@ void main() {
         );
         final surface = _key('workspace-detail-surface');
         final initial = t.getRect(surface);
-        expect(initial.height, closeTo(t.getSize(_editor).height, .01));
+        // The surface includes the resize gutter outside the editor viewport.
+        expect(
+          initial.height,
+          closeTo(
+            t.getSize(_editor).height + 2 * SkedResizableFrame.contentInset,
+            .01,
+          ),
+        );
         expect(initial.height, lessThan(600));
         expect(initial.left, greaterThanOrEqualTo(8));
         expect(initial.right, lessThanOrEqualTo(1440 - 8));

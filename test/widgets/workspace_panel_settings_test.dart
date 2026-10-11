@@ -10,6 +10,7 @@ import 'package:sked/widgets/assistant_pane.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/settings_list.dart';
+import 'package:sked/widgets/sked_resizable.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../support/workspace_harness.dart';
@@ -76,7 +77,10 @@ void main() {
           t.getSize(_key('workspace-detail-pane')).width,
           closeTo(floatingMaximum, .01),
         );
-        expect(t.getSize(editor).width, closeTo(floatingMaximum, .01));
+        expect(
+          t.getSize(editor).width,
+          closeTo(floatingMaximum - 2 * SkedResizableFrame.contentInset, .01),
+        );
         expect(t.getRect(_key('workspace-resource-width')), sidebar);
         expect(t.getRect(_key('workspace-canvas-viewport')), canvas);
         expect(t.state(editor), same(state));

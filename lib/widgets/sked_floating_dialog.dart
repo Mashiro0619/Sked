@@ -228,15 +228,16 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
               placement: widget.options.placement,
               onLayout: _position.recordLayout,
             ),
-            child: SkedResizableFrame(
-              keyPrefix: 'floating-form-resize',
-              enabled: _canResize,
-              onStart: _startResize,
-              onResize: _resize,
-              onEnd: _finishResize,
-              onReset: _resetSize,
-              child: SkedFloatingSurface(
-                key: const ValueKey('floating-form-surface'),
+            child: SkedFloatingSurface(
+              key: const ValueKey('floating-form-surface'),
+              child: SkedResizableFrame(
+                keyPrefix: 'floating-form-resize',
+                reserveResizeSpace: widget.options.layoutKey != null,
+                enabled: _canResize,
+                onStart: _startResize,
+                onResize: _resize,
+                onEnd: _finishResize,
+                onReset: _resetSize,
                 child: SkedTaskDialogScope(
                   explicitHeight: height != null,
                   onDragUpdate: widget.options.draggable ? _drag : null,

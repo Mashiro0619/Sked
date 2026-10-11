@@ -808,20 +808,21 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
                         node: _focus,
                         canRequestFocus: true,
                         onKeyEvent: _handleKey,
-                        child: SkedResizableFrame(
-                          keyPrefix: 'workspace-companion-resize',
-                          enabled:
-                              session.independent &&
-                              !session.blocked &&
-                              _canInteract,
-                          onStart: _startResize,
-                          onResize: _resize,
-                          onEnd: _finishResize,
-                          onReset: _resetSize,
-                          child: SkedFloatingSurface(
-                            key: const ValueKey(
-                              'workspace-companion-view-surface',
-                            ),
+                        child: SkedFloatingSurface(
+                          key: const ValueKey(
+                            'workspace-companion-view-surface',
+                          ),
+                          child: SkedResizableFrame(
+                            keyPrefix: 'workspace-companion-resize',
+                            reserveResizeSpace: session.independent,
+                            enabled:
+                                session.independent &&
+                                !session.blocked &&
+                                _canInteract,
+                            onStart: _startResize,
+                            onResize: _resize,
+                            onEnd: _finishResize,
+                            onReset: _resetSize,
                             child: WorkspaceViewTaskScope(
                               enabled: true,
                               onClose: dismiss,

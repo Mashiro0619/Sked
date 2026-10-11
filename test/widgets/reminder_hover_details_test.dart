@@ -557,7 +557,7 @@ void main() {
     await t.pumpAndSettle();
     final surface = k('workspace-companion-view-surface');
     final panel = t.element(
-      find.ancestor(of: surface, matching: find.byType(SkedResizableFrame)),
+      find.descendant(of: surface, matching: find.byType(SkedResizableFrame)),
     );
     final resizeMouseRegion = find.descendant(
       of: k('workspace-companion-resize-left'),

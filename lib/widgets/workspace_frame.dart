@@ -849,6 +849,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 ? SkedSurfaceRole.frame
                 : SkedSurfaceRole.content,
             child: SkedResizableFrame(
+              reserveResizeSpace: compact,
               enabled:
                   compact &&
                   interactive &&
@@ -1455,9 +1456,21 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 detailMaxHeight,
               )
               .toDouble();
+          double naturalPanelHeight(double? report, {required bool floating}) {
+            // Reports measure content inside the resize gutter. Manual sizes
+            // and the viewport fallback already describe the outer surface.
+            if (report == null) return detailMaxHeight;
+            return report +
+                (floating ? 2 * SkedResizableFrame.contentInset : 0);
+          }
+
           final viewSize = Size(
             detailWidth,
-            (manualHeight ?? controller.viewContentHeight ?? detailMaxHeight)
+            (manualHeight ??
+                    naturalPanelHeight(
+                      controller.viewContentHeight,
+                      floating: compactView,
+                    ))
                 .clamp(0.0, detailMaxHeight),
           );
           var viewOverride = viewTask?.position.positionOverride(
@@ -1498,7 +1511,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final anchor = localAnchor(config);
           final editorSize = Size(
             detailWidth,
-            (manualHeight ?? editingTask?.contentHeight ?? detailMaxHeight)
+            (manualHeight ??
+                    naturalPanelHeight(
+                      editingTask?.contentHeight,
+                      floating: floatingEditor,
+                    ))
                 .clamp(0, detailMaxHeight),
           );
           final editorOverride = editingTask?.position.positionOverride(
@@ -1607,7 +1624,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               if (becomesFloating) {
                 final size = Size(
                   math.min(finalPolicy!.detailWidth, panelBounds.width),
-                  (task.floatingHeight ?? task.contentHeight ?? detailMaxHeight)
+                  (task.floatingHeight ??
+                          naturalPanelHeight(
+                            task.contentHeight,
+                            floating: true,
+                          ))
                       .clamp(
                         math.min(120 * metrics.textScale, panelBounds.height),
                         panelBounds.height,
