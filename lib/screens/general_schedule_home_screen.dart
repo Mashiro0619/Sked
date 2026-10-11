@@ -2260,6 +2260,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 waitForTransitionComplete: true,
                 routeSettings: const RouteSettings(name: 'category-manager'),
                 desktopFloating: SkedDesktopFloatingDialog(
+                  layoutKey: DesktopLayoutRegion.categoryManager,
                   anchorContext: anchorContext,
                   preferredWidth: 440,
                   maxWidth: 520,

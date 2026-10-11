@@ -24,15 +24,19 @@ class SkedTaskDialogScope extends InheritedWidget {
     super.key,
     this.onDragUpdate,
     this.onClose,
+    this.explicitHeight = false,
     required super.child,
   });
   final ValueChanged<Offset>? onDragUpdate;
   final VoidCallback? onClose;
+  final bool explicitHeight;
   static SkedTaskDialogScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SkedTaskDialogScope>();
   @override
   bool updateShouldNotify(SkedTaskDialogScope oldWidget) =>
-      onDragUpdate != oldWidget.onDragUpdate || onClose != oldWidget.onClose;
+      onDragUpdate != oldWidget.onDragUpdate ||
+      onClose != oldWidget.onClose ||
+      explicitHeight != oldWidget.explicitHeight;
 }
 
 /// The original AlertDialog remains untouched unless a desktop host opts in.
@@ -86,7 +90,9 @@ class SkedTaskDialog extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (context, bounds) => Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: scope.explicitHeight
+            ? MainAxisSize.max
+            : MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ConstrainedBox(
@@ -128,7 +134,7 @@ class SkedTaskDialog extends StatelessWidget {
           const Divider(height: 1),
           if (content != null)
             Flexible(
-              fit: FlexFit.loose,
+              fit: scope.explicitHeight ? FlexFit.tight : FlexFit.loose,
               child: desktopContentOwnsScroll
                   ? Padding(padding: const EdgeInsets.all(12), child: content!)
                   : SingleChildScrollView(

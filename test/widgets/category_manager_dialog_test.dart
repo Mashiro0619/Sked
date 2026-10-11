@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/widgets/adaptive_collection_scaffold.dart';
 import 'package:sked/widgets/sked_task_dialog.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
@@ -51,6 +53,7 @@ Future<(TimetableProvider, _RecordingStorage)> start(
   int count = 1,
   double scale = 1,
   TextDirection direction = TextDirection.ltr,
+  DesktopLayoutPreferences? layoutPreferences,
 }) async {
   final calendars = List.generate(
     count,
@@ -77,7 +80,14 @@ Future<(TimetableProvider, _RecordingStorage)> start(
     p.dispose();
   });
   await t.pumpWidget(
-    WorkspaceHarness(provider: p, textScale: scale, textDirection: direction),
+    ChangeNotifierProvider<DesktopLayoutPreferences?>.value(
+      value: layoutPreferences,
+      child: WorkspaceHarness(
+        provider: p,
+        textScale: scale,
+        textDirection: direction,
+      ),
+    ),
   );
   await t.pumpAndSettle();
   final resources = k('workspace-resource-open').hitTestable();
@@ -97,6 +107,149 @@ Future<void> rename(WidgetTester t, String id) async {
 }
 
 void main() {
+  testWidgets(
+    'small saved name editor sizes retain usable chrome at large text',
+    (t) async {
+      viewport(t, const Size(1440, 1000));
+      final layouts = DesktopLayoutPreferences.memory(
+        initialValues: const {
+          DesktopLayoutRegion.categoryNameEditor: PreferredRegionSize(
+            width: 1,
+            height: 1,
+          ),
+        },
+      );
+      addTearDown(layouts.dispose);
+      await start(t, scale: 2, layoutPreferences: layouts);
+      await rename(t, 'category-0');
+      expect(t.getSize(dialogSurface), const Size(320, 240));
+      expect(k('floating-form-close').last.hitTestable(), findsOneWidget);
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.categoryNameEditor),
+        const PreferredRegionSize(width: 1, height: 1),
+      );
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'name editor resizes its edges without losing the draft and remembers its purpose',
+    (t) async {
+      viewport(t, const Size(1440, 1000));
+      final layouts = DesktopLayoutPreferences.memory();
+      addTearDown(layouts.dispose);
+      final (_, storage) = await start(t, count: 2, layoutPreferences: layouts);
+      final manager = t.getRect(k('floating-form-surface').first);
+      await rename(t, 'category-0');
+      final input = k('rename-calendar-field');
+      final editorElement = t.element(input);
+      final controller = t.widget<TextField>(input).controller;
+      await t.drag(k('floating-form-resize-right').last, const Offset(40, 0));
+      await t.pumpAndSettle();
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.categoryNameEditor)?.height,
+        isNull,
+      );
+      await t.enterText(input, 'Resized category');
+      await t.pump();
+      final beforeDrag = t.getRect(dialogSurface);
+      await t.drag(
+        k('floating-form-drag-handle').last,
+        const Offset(300, 220) - beforeDrag.topLeft,
+      );
+      await t.pumpAndSettle();
+      final savedBefore = storage.saves;
+      final original = t.getRect(dialogSurface);
+      await t.drag(
+        k('floating-form-resize-bottomRight').last,
+        const Offset(300, 180),
+      );
+      await t.pumpAndSettle();
+      final corner = t.getRect(dialogSurface);
+      expect(corner.topLeft, original.topLeft);
+      expect(corner.width, closeTo(original.width + 300, 1));
+      expect(corner.height, closeTo(original.height + 180, 1));
+      await t.drag(k('floating-form-resize-left').last, const Offset(-80, 0));
+      await t.pumpAndSettle();
+      final wider = t.getRect(dialogSurface);
+      expect(wider.right, closeTo(corner.right, 1));
+      expect(wider.width, greaterThan(680));
+      await t.drag(k('floating-form-resize-top').last, const Offset(0, -60));
+      await t.pumpAndSettle();
+      final resized = t.getRect(dialogSurface);
+      expect(resized.bottom, closeTo(wider.bottom, 1));
+      expect(t.element(input), same(editorElement));
+      expect(t.widget<TextField>(input).controller, same(controller));
+      expect(controller!.text, 'Resized category');
+      expect(storage.saves, savedBefore);
+      expect(t.getRect(k('floating-form-surface').first), manager);
+      expect(saveButton.hitTestable(), findsOneWidget);
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.categoryNameEditor),
+        PreferredRegionSize(width: resized.width, height: resized.height),
+      );
+      await t.tap(saveButton);
+      await t.pumpAndSettle();
+      await rename(t, 'category-1');
+      expect(t.getSize(dialogSurface), resized.size);
+      final edge = k('floating-form-resize-right').last;
+      await t.tap(edge);
+      await t.pump(const Duration(milliseconds: 50));
+      await t.tap(edge);
+      await t.pumpAndSettle();
+      expect(t.getSize(dialogSurface).width, 360);
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.categoryNameEditor),
+        isNull,
+      );
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets('resizing category management grows the existing list viewport', (
+    t,
+  ) async {
+    viewport(t, const Size(1440, 1100));
+    final layouts = DesktopLayoutPreferences.memory();
+    addTearDown(layouts.dispose);
+    await start(t, count: 40, layoutPreferences: layouts);
+    final panel = k('floating-form-surface');
+    final originalPanel = t.getRect(panel);
+    await t.drag(
+      k('floating-form-drag-handle'),
+      const Offset(240, 100) - originalPanel.topLeft,
+    );
+    await t.pumpAndSettle();
+    final list = find.byKey(const PageStorageKey('calendar-manager-list'));
+    final scrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    await t.drag(list, const Offset(0, -180));
+    await t.pumpAndSettle();
+    final element = t.element(list);
+    final position = t.state<ScrollableState>(scrollable).position;
+    final offset = position.pixels;
+    final height = t.getSize(list).height;
+    await t.drag(k('floating-form-resize-bottom'), const Offset(0, 280));
+    await t.pumpAndSettle();
+    expect(t.element(list), same(element));
+    expect(t.state<ScrollableState>(scrollable).position, same(position));
+    expect(position.pixels, closeTo(offset, 1));
+    expect(t.getSize(list).height, closeTo(height + 280, 1));
+    expect(t.getSize(list).height, greaterThan(400));
+    expect(
+      layouts.preferenceFor(DesktopLayoutRegion.categoryManager)?.height,
+      t.getSize(panel).height,
+    );
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox());
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
   testWidgets(
     'anchored name form drags without losing draft and blocks background actions',
     (t) async {

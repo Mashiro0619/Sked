@@ -132,6 +132,8 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   Widget _buildDesktop(BuildContext context, TimetableProvider provider) {
     final l = AppLocalizations.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
+    final explicitHeight =
+        SkedTaskDialogScope.maybeOf(context)?.explicitHeight == true;
     return PopScope(
       canPop: !_actionsDisabled,
       child: LayoutBuilder(
@@ -163,10 +165,12 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                   ),
             closeEnabled: !_actionsDisabled,
             content: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 400),
+              constraints: BoxConstraints(
+                maxHeight: explicitHeight ? double.infinity : 400,
+              ),
               child: ListView.separated(
                 key: const PageStorageKey('calendar-manager-list'),
-                shrinkWrap: true,
+                shrinkWrap: !explicitHeight,
                 primary: false,
                 padding: EdgeInsets.zero,
                 itemCount: provider.generalSchedules.length,
@@ -791,6 +795,7 @@ Future<void> _showCalendarNameTask(
     context: context,
     waitForTransitionComplete: true,
     desktopFloating: SkedDesktopFloatingDialog(
+      layoutKey: DesktopLayoutRegion.categoryNameEditor,
       anchorContext: anchorContext,
       placement: placement,
     ),

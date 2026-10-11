@@ -4,9 +4,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
+import '../services/desktop_layout_preferences.dart';
 import 'sked_floating_anchor.dart';
 import 'sked_floating_surface.dart';
+import 'sked_resizable.dart';
 import 'sked_task_dialog.dart';
 import 'workbench_chrome_metrics.dart';
 
@@ -18,11 +21,13 @@ class SkedDesktopFloatingDialog {
     this.maxWidth = 360,
     this.draggable = true,
     this.placement = SkedFloatingPlacement.below,
+    this.layoutKey,
   });
   final BuildContext? anchorContext;
   final double preferredWidth, maxWidth;
   final bool draggable;
   final SkedFloatingPlacement placement;
+  final DesktopLayoutRegion? layoutKey;
 }
 
 class _FloatingDismissIntent extends Intent {
@@ -48,6 +53,101 @@ class SkedFloatingDialogHost extends StatefulWidget {
 class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
   final _position = SkedFloatingPositionController();
   Rect _bounds = Rect.zero;
+  DesktopLayoutPreferences? _preferences;
+  double? _preferredWidth, _preferredHeight;
+  bool _loadedPreferences = false, _resizeChanged = false;
+
+  bool get _canResize =>
+      mounted &&
+      widget.options.layoutKey != null &&
+      ModalRoute.of(context)?.isCurrent == true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loadedPreferences) return;
+    _loadedPreferences = true;
+    _preferences = Provider.of<DesktopLayoutPreferences?>(
+      context,
+      listen: false,
+    );
+    _restorePreferredSize();
+  }
+
+  @override
+  void didUpdateWidget(SkedFloatingDialogHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.options.layoutKey != widget.options.layoutKey) {
+      _restorePreferredSize();
+    }
+  }
+
+  void _restorePreferredSize() {
+    final region = widget.options.layoutKey;
+    final stored = region == null ? null : _preferences?.preferenceFor(region);
+    _preferredWidth = stored?.width;
+    _preferredHeight = stored?.height;
+    _resizeChanged = false;
+  }
+
+  void _startResize() {
+    if (!_canResize || _position.size.isEmpty) return;
+    _resizeChanged = false;
+    _position.manualPosition = _position.lastPosition;
+  }
+
+  void _resize(SkedResizeEdge edge, Offset delta) {
+    if (!_canResize || _position.size.isEmpty || _bounds.isEmpty) return;
+    final rect =
+        (_position.lastPosition ?? _position.manualPosition ?? Offset.zero) &
+        _position.size;
+    final resized = resizeSkedFloatingRect(
+      rect: rect,
+      delta: delta,
+      edge: edge,
+      bounds: _bounds,
+      minimumSize: Size(
+        320,
+        120 * WorkbenchChromeMetrics.of(context).textScale,
+      ),
+    );
+    setState(() {
+      if (edge.horizontal) _preferredWidth = resized.width;
+      if (edge.vertical) _preferredHeight = resized.height;
+      _position.manualPosition = resized.topLeft;
+      _position.recordLayout(resized.topLeft, resized.size);
+      _resizeChanged = true;
+    });
+  }
+
+  void _storePreferredSize() {
+    final region = widget.options.layoutKey;
+    if (region == null) return;
+    final previous = _preferences?.preferenceFor(region);
+    _preferences?.setPreferredSize(
+      region,
+      PreferredRegionSize(
+        width: _preferredWidth,
+        height: _preferredHeight,
+        dockedWidth: previous?.dockedWidth,
+      ),
+    );
+  }
+
+  void _finishResize() {
+    if (!_resizeChanged) return;
+    _resizeChanged = false;
+    _storePreferredSize();
+  }
+
+  void _resetSize() {
+    if (!_canResize) return;
+    setState(() {
+      _preferredWidth = _preferredHeight = null;
+      _resizeChanged = false;
+    });
+    _storePreferredSize();
+  }
 
   void _drag(Offset delta) {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
@@ -84,6 +184,23 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
       final anchor = measuredAnchor?.overlaps(viewport) == true
           ? measuredAnchor
           : null;
+      final width = _preferredWidth == null
+          ? math.min(
+              _bounds.width,
+              math.min(
+                widget.options.maxWidth,
+                widget.options.preferredWidth * metrics.textScale,
+              ),
+            )
+          : _preferredWidth!
+                .clamp(math.min(320.0, _bounds.width), _bounds.width)
+                .toDouble();
+      final height = _preferredHeight
+          ?.clamp(
+            math.min(120 * metrics.textScale, _bounds.height),
+            _bounds.height,
+          )
+          .toDouble();
       return Shortcuts(
         shortcuts: const {
           SingleActivator(LogicalKeyboardKey.escape): _FloatingDismissIntent(),
@@ -105,23 +222,27 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
               manualPosition: _position.positionOverride(
                 hasAnchor: anchor != null,
               ),
-              width: math.min(
-                _bounds.width,
-                math.min(
-                  widget.options.maxWidth,
-                  widget.options.preferredWidth * metrics.textScale,
-                ),
-              ),
+              width: width,
+              height: height,
               rtl: Directionality.of(context) == TextDirection.rtl,
               placement: widget.options.placement,
               onLayout: _position.recordLayout,
             ),
-            child: SkedFloatingSurface(
-              key: const ValueKey('floating-form-surface'),
-              child: SkedTaskDialogScope(
-                onDragUpdate: widget.options.draggable ? _drag : null,
-                onClose: () => Navigator.of(context).maybePop(),
-                child: widget.child,
+            child: SkedResizableFrame(
+              keyPrefix: 'floating-form-resize',
+              enabled: _canResize,
+              onStart: _startResize,
+              onResize: _resize,
+              onEnd: _finishResize,
+              onReset: _resetSize,
+              child: SkedFloatingSurface(
+                key: const ValueKey('floating-form-surface'),
+                child: SkedTaskDialogScope(
+                  explicitHeight: height != null,
+                  onDragUpdate: widget.options.draggable ? _drag : null,
+                  onClose: () => Navigator.of(context).maybePop(),
+                  child: widget.child,
+                ),
               ),
             ),
           ),
@@ -138,6 +259,7 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
     required this.anchor,
     required this.manualPosition,
     required this.width,
+    this.height,
     required this.rtl,
     required this.placement,
     required this.onLayout,
@@ -147,6 +269,7 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
   final Rect? anchor;
   final Offset? manualPosition;
   final double width;
+  final double? height;
   final bool rtl;
   final SkedFloatingPlacement placement;
   final void Function(Offset, Size) onLayout;
@@ -155,12 +278,15 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
       BoxConstraints(
         minWidth: width,
         maxWidth: width,
-        maxHeight: skedFloatingHeightLimit(
-          bounds,
-          anchor,
-          width,
-          anchorBounds: anchorBounds,
-        ),
+        minHeight: height ?? 0,
+        maxHeight:
+            height ??
+            skedFloatingHeightLimit(
+              bounds,
+              anchor,
+              width,
+              anchorBounds: anchorBounds,
+            ),
       );
   @override
   Offset getPositionForChild(Size size, Size childSize) {
