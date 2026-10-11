@@ -13,6 +13,11 @@ class _AllDayTimeline extends StatefulWidget {
     required this.onToggleCollapsed,
     required this.onCollapsedGroupTap,
     required this.onOccurrenceTap,
+    this.preferredHeight,
+    this.resizeMaximumHeight,
+    this.onResize,
+    this.onResizeEnd,
+    this.onResetSize,
   });
   final double timeColumnWidth;
   final double dayWidth;
@@ -26,6 +31,9 @@ class _AllDayTimeline extends StatefulWidget {
   final void Function(_AllDayCollapsedGroup group, BuildContext anchor)
   onCollapsedGroupTap;
   final _GeneralOccurrenceTap onOccurrenceTap;
+  final double? preferredHeight, resizeMaximumHeight;
+  final ValueChanged<double>? onResize;
+  final VoidCallback? onResizeEnd, onResetSize;
   @override
   State<_AllDayTimeline> createState() => _AllDayTimelineState();
 }
@@ -46,164 +54,209 @@ class _AllDayTimelineState extends State<_AllDayTimeline> {
     final m = WorkbenchChromeMetrics.of(context);
     final l = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    final full = _expanded && !widget.collapsed;
+    final manualHeight = widget.preferredHeight != null;
+    final full = (_expanded || manualHeight) && !widget.collapsed;
     final contentHeight = layout.heightFor(
       context,
       collapsed: widget.collapsed,
       expanded: full,
     );
-    final height = math.min(
+    final naturalHeight = math.min(
       contentHeight,
       math.max(laneHeight, widget.maxHeight),
     );
+    final minimumHeight = layout.heightFor(context, collapsed: true);
+    final maximumHeight = math.max(
+      minimumHeight,
+      math.min(
+        layout.heightFor(context, expanded: true),
+        widget.resizeMaximumHeight ?? widget.maxHeight,
+      ),
+    );
+    final height = manualHeight && !widget.collapsed
+        ? widget.preferredHeight!.clamp(minimumHeight, maximumHeight)
+        : naturalHeight;
     final toggleLabel = widget.collapsed
         ? l.expandAllDayTimeline
         : l.collapseAllDayTimeline;
     final hasOverflow = !widget.collapsed && !full && layout.hiddenCount > 0;
-    return SizedBox(
-      key: ValueKey(
-        widget.collapsed
-            ? 'general-all-day-collapsed-state'
-            : 'general-all-day-expanded-state',
-      ),
+    final motion = SkedMotionPolicy.of(context);
+    return AnimatedContainer(
+      duration: manualHeight || !motion.spatialAnimationsEnabled
+          ? Duration.zero
+          : motion.effects(SkedMotionSpeed.standard),
       height: height,
-      child: Stack(
-        key: const ValueKey('general-all-day-timeline'),
-        children: [
-          PositionedDirectional(
-            start: widget.timeColumnWidth,
-            top: 0,
-            bottom: 0,
-            width: widget.dayWidth * widget.dayCount,
-            child: SizedBox(
+      child: SizedBox(
+        key: ValueKey(
+          widget.collapsed
+              ? 'general-all-day-collapsed-state'
+              : 'general-all-day-expanded-state',
+        ),
+        child: Stack(
+          key: const ValueKey('general-all-day-timeline'),
+          children: [
+            PositionedDirectional(
+              start: widget.timeColumnWidth,
+              top: 0,
+              bottom: 0,
               width: widget.dayWidth * widget.dayCount,
-              child: Scrollbar(
-                controller: _scroll,
-                thumbVisibility: full,
-                child: SingleChildScrollView(
-                  key: const ValueKey('general-all-day-expanded-scroll'),
+              child: SizedBox(
+                width: widget.dayWidth * widget.dayCount,
+                child: Scrollbar(
                   controller: _scroll,
-                  primary: false,
-                  child: SizedBox(
-                    height: contentHeight,
-                    child: Stack(
-                      children: [
-                        for (var i = 1; i < widget.dayCount; i++)
-                          PositionedDirectional(
-                            start: i * widget.dayWidth,
-                            top: 0,
-                            bottom: 0,
-                            width: 1,
-                            child: ColoredBox(
-                              color: colors.outlineVariant.withValues(
-                                alpha: .55,
-                              ),
-                            ),
-                          ),
-                        if (widget.collapsed)
-                          for (final group in layout.collapsedGroups)
+                  thumbVisibility: full,
+                  child: SingleChildScrollView(
+                    key: const ValueKey('general-all-day-expanded-scroll'),
+                    controller: _scroll,
+                    primary: false,
+                    child: SizedBox(
+                      height: contentHeight,
+                      child: Stack(
+                        children: [
+                          for (var i = 1; i < widget.dayCount; i++)
                             PositionedDirectional(
-                              start: group.dayIndex * widget.dayWidth,
+                              start: i * widget.dayWidth,
                               top: 0,
-                              width: widget.dayWidth,
-                              height: contentHeight,
-                              child: Builder(
-                                builder: (anchor) => _AllDayCollapsedChip(
-                                  count: group.occurrences.length,
-                                  keySuffix: widget.dayCount > 1
-                                      ? group.dayIndex.toString()
-                                      : null,
-                                  onTap: () =>
-                                      widget.onCollapsedGroupTap(group, anchor),
+                              bottom: 0,
+                              width: 1,
+                              child: ColoredBox(
+                                color: colors.outlineVariant.withValues(
+                                  alpha: .55,
                                 ),
                               ),
-                            )
-                        else
-                          for (final segment
-                              in full
-                                  ? layout.segments
-                                  : layout.visibleSegments)
-                            PositionedDirectional(
-                              start: segment.startIndex * widget.dayWidth,
-                              top:
-                                  _AllDayTimelineLayout.verticalPadding +
-                                  segment.lane *
-                                      (laneHeight +
-                                          _AllDayTimelineLayout.laneGap),
-                              width:
-                                  (segment.endIndex - segment.startIndex + 1) *
-                                  widget.dayWidth,
-                              height: laneHeight,
-                              child: Builder(
-                                builder: (anchor) => _AllDayChip(
-                                  occurrence: segment.occurrence,
-                                  narrow: widget.dayWidth < 64,
-                                  onTap: () => widget.onOccurrenceTap(
-                                    segment.occurrence,
-                                    anchor,
+                            ),
+                          if (widget.collapsed)
+                            for (final group in layout.collapsedGroups)
+                              PositionedDirectional(
+                                start: group.dayIndex * widget.dayWidth,
+                                top: 0,
+                                width: widget.dayWidth,
+                                height: contentHeight,
+                                child: Builder(
+                                  builder: (anchor) => _AllDayCollapsedChip(
+                                    count: group.occurrences.length,
+                                    keySuffix: widget.dayCount > 1
+                                        ? group.dayIndex.toString()
+                                        : null,
+                                    onTap: () => widget.onCollapsedGroupTap(
+                                      group,
+                                      anchor,
+                                    ),
+                                  ),
+                                ),
+                              )
+                          else
+                            for (final segment
+                                in full
+                                    ? layout.segments
+                                    : layout.visibleSegments)
+                              PositionedDirectional(
+                                start: segment.startIndex * widget.dayWidth,
+                                top:
+                                    _AllDayTimelineLayout.verticalPadding +
+                                    segment.lane *
+                                        (laneHeight +
+                                            _AllDayTimelineLayout.laneGap),
+                                width:
+                                    (segment.endIndex -
+                                        segment.startIndex +
+                                        1) *
+                                    widget.dayWidth,
+                                height: laneHeight,
+                                child: Builder(
+                                  builder: (anchor) => _AllDayChip(
+                                    occurrence: segment.occurrence,
+                                    narrow: widget.dayWidth < 64,
+                                    onTap: () => widget.onOccurrenceTap(
+                                      segment.occurrence,
+                                      anchor,
+                                    ),
                                   ),
                                 ),
                               ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            _PinnedTimelineRail(
+              width: widget.timeColumnWidth,
+              child: SizedBox(
+                width: widget.timeColumnWidth,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    border: BorderDirectional(
+                      end: BorderSide(color: colors.outlineVariant),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    primary: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Tooltip(
+                          message: toggleLabel,
+                          child: TextButton(
+                            key: const ValueKey('general-all-day-toggle'),
+                            style: TextButton.styleFrom(
+                              minimumSize: Size(m.iconTarget, m.iconTarget),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
+                            onPressed: full && !manualHeight
+                                ? () => setState(() => _expanded = false)
+                                : widget.onToggleCollapsed,
+                            child: Text(
+                              widget.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                          ),
+                        ),
+                        if (hasOverflow)
+                          SizedBox(
+                            width: m.desktop ? 36 : 48,
+                            height: m.desktop ? 28 : 48,
+                            child: _AllDayMoreChip(
+                              count: layout.hiddenCount,
+                              onTap: () => setState(() => _expanded = true),
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          _PinnedTimelineRail(
-            width: widget.timeColumnWidth,
-            child: SizedBox(
-              width: widget.timeColumnWidth,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  border: BorderDirectional(
-                    end: BorderSide(color: colors.outlineVariant),
+            if (widget.onResize != null &&
+                !widget.collapsed &&
+                maximumHeight > minimumHeight)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 9,
+                child: SkedResizeHandle(
+                  key: const ValueKey('general-all-day-resize'),
+                  axis: Axis.vertical,
+                  onDelta: (delta) => widget.onResize!(
+                    (height + delta).clamp(minimumHeight, maximumHeight),
                   ),
-                ),
-                child: SingleChildScrollView(
-                  primary: false,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Tooltip(
-                        message: toggleLabel,
-                        child: TextButton(
-                          key: const ValueKey('general-all-day-toggle'),
-                          style: TextButton.styleFrom(
-                            minimumSize: Size(m.iconTarget, m.iconTarget),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          onPressed: full
-                              ? () => setState(() => _expanded = false)
-                              : widget.onToggleCollapsed,
-                          child: Text(
-                            widget.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ),
-                      ),
-                      if (hasOverflow)
-                        SizedBox(
-                          width: m.desktop ? 36 : 48,
-                          height: m.desktop ? 28 : 48,
-                          child: _AllDayMoreChip(
-                            count: layout.hiddenCount,
-                            onTap: () => setState(() => _expanded = true),
-                          ),
-                        ),
-                    ],
-                  ),
+                  onEnd: widget.onResizeEnd,
+                  onReset: () {
+                    setState(() => _expanded = false);
+                    widget.onResetSize?.call();
+                  },
                 ),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

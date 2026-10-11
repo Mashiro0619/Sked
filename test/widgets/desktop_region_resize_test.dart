@@ -274,6 +274,46 @@ void main() {
   );
 
   testWidgets(
+    'all-day mouse height reveals rows and survives collapse and reopening',
+    (t) async {
+      _viewport(t, const Size(1440, 1000));
+      final p = await _calendarProvider();
+      final preferences = DesktopLayoutPreferences.memory();
+      addTearDown(p.dispose);
+      addTearDown(preferences.dispose);
+      await _mount(t, p, preferences);
+      expect(find.text('Resize all day 3'), findsNothing);
+      final strip = _key('general-all-day-timeline');
+      final before = t.getSize(strip).height;
+      await _drag(t, _key('general-all-day-resize'), const Offset(0, 140));
+      final after = t.getSize(strip).height;
+      expect(after, greaterThan(before + 60));
+      expect(find.text('Resize all day 3').hitTestable(), findsOneWidget);
+      final saved = preferences
+          .preferenceFor(DesktopLayoutRegion.allDayTimeline)
+          ?.height;
+      expect(saved, isNotNull);
+      await t.tap(_key('general-all-day-toggle'));
+      await t.pumpAndSettle();
+      expect(_key('general-all-day-collapsed-state'), findsOneWidget);
+      expect(
+        preferences.preferenceFor(DesktopLayoutRegion.allDayTimeline)?.height,
+        saved,
+      );
+      await t.tap(_key('general-all-day-toggle'));
+      await t.pumpAndSettle();
+      expect(t.getSize(strip).height, closeTo(after, .01));
+      await t.pumpWidget(const SizedBox.shrink());
+      await _mount(t, p, preferences);
+      expect(t.getSize(strip).height, closeTo(after, .01));
+      expect(find.text('Resize all day 3').hitTestable(), findsOneWidget);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox.shrink());
+    },
+    variant: _windows,
+  );
+
+  testWidgets(
     'month agenda height protects the calendar and restores after a short window',
     (t) async {
       _viewport(t, const Size(900, 1100));
