@@ -49,6 +49,9 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   double? _independentHeightLimit;
   double? _lastHeightLimit;
   int? _deletingRevision;
+  DesktopLayoutPreferences? _layoutPreferences;
+  double? _preferredWidth, _preferredHeight;
+  bool _resizeChanged = false;
 
   bool get independent => session.independent;
   bool get _validData =>
@@ -80,6 +83,10 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _ownerRoute = ModalRoute.of(context);
+    _layoutPreferences = Provider.of<DesktopLayoutPreferences?>(
+      context,
+      listen: false,
+    );
     _scheduleSync();
   }
 
@@ -142,6 +149,8 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
       _pointerInDetail = false;
       _independentPosition = null;
       _independentHeightLimit = null;
+      _preferredWidth = _preferredHeight = null;
+      _resizeChanged = false;
     }
     _occurrences.removeWhere(
       (key, _) => !_rowSources.containsKey(key) && key != session.selectedKey,
@@ -336,6 +345,11 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
       _returnFocus =
           skedFloatingAnchorFocus(_anchors[_sourceKey]?.currentContext) ??
           FocusManager.instance.primaryFocus;
+      final size = _layoutPreferences?.preferenceFor(
+        DesktopLayoutRegion.eventDetails,
+      );
+      _preferredWidth = size?.width;
+      _preferredHeight = size?.height;
     }
     if (session.independent && !_panel.isEmpty) {
       _independentPosition = _panel.topLeft;
@@ -363,6 +377,67 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
       return true;
     }
     return false;
+  }
+
+  void _startResize() {
+    if (!session.independent || session.blocked || !_canInteract) return;
+    _resizeChanged = false;
+    session.position.manualPosition = _panel.topLeft;
+  }
+
+  void _resize(SkedResizeEdge edge, Offset delta) {
+    if (!session.independent ||
+        session.blocked ||
+        !_canInteract ||
+        _panel.isEmpty ||
+        _bounds.isEmpty) {
+      return;
+    }
+    final resized = resizeSkedFloatingRect(
+      rect: _panel,
+      delta: delta,
+      edge: edge,
+      bounds: _bounds,
+      minimumSize: Size(
+        320,
+        120 * WorkbenchChromeMetrics.of(context).textScale,
+      ),
+    );
+    if (edge.horizontal) _preferredWidth = resized.width;
+    if (edge.vertical) _preferredHeight = resized.height;
+    _resizeChanged = true;
+    _panel = resized;
+    _independentPosition = resized.topLeft;
+    session.position.recordLayout(resized.topLeft, resized.size);
+    session.moveTo(resized.topLeft);
+  }
+
+  void _storePreferredSize() {
+    final previous = _layoutPreferences?.preferenceFor(
+      DesktopLayoutRegion.eventDetails,
+    );
+    _layoutPreferences?.setPreferredSize(
+      DesktopLayoutRegion.eventDetails,
+      PreferredRegionSize(
+        width: _preferredWidth,
+        height: _preferredHeight,
+        dockedWidth: previous?.dockedWidth,
+      ),
+    );
+  }
+
+  void _finishResize() {
+    if (!_resizeChanged) return;
+    _resizeChanged = false;
+    _storePreferredSize();
+  }
+
+  void _resetSize() {
+    if (!session.independent || session.blocked || !_canInteract) return;
+    _preferredWidth = _preferredHeight = null;
+    _resizeChanged = false;
+    _storePreferredSize();
+    session.moveTo(_panel.topLeft);
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
@@ -650,14 +725,27 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
             ),
           );
           final anchor = _anchorRect();
-          final width = math.min(_bounds.width, 360 * metrics.textScale);
+          final width = session.independent && _preferredWidth != null
+              ? _preferredWidth!
+                    .clamp(math.min(320.0, _bounds.width), _bounds.width)
+                    .toDouble()
+              : math.min(_bounds.width, 360 * metrics.textScale);
+          final explicitHeight =
+              session.independent && _preferredHeight != null;
           final anchoredHeight = skedFloatingHeightLimit(
             _bounds,
             anchor,
             width,
           );
           if (session.independent) _independentHeightLimit ??= anchoredHeight;
-          final heightLimit = session.independent
+          final heightLimit = explicitHeight
+              ? _preferredHeight!
+                    .clamp(
+                      math.min(120 * metrics.textScale, _bounds.height),
+                      _bounds.height,
+                    )
+                    .toDouble()
+              : session.independent
               ? math.min(_bounds.height, _independentHeightLimit!)
               : anchoredHeight;
           _lastHeightLimit = heightLimit;
@@ -685,6 +773,7 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
                     anchor: anchor,
                     width: width,
                     heightLimit: heightLimit,
+                    explicitHeight: explicitHeight,
                     manual:
                         session.manualPosition ??
                         (session.independent ? _independentPosition : null),
@@ -713,32 +802,44 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
                         node: _focus,
                         canRequestFocus: true,
                         onKeyEvent: _handleKey,
-                        child: SkedFloatingSurface(
-                          key: const ValueKey(
-                            'workspace-companion-view-surface',
-                          ),
-                          child: WorkspaceViewTaskScope(
-                            enabled: true,
-                            onClose: dismiss,
-                            showClose: session.independent,
-                            onContentHeight: (_) {},
-                            child: WorkspaceViewLayoutScope(
-                              compact: true,
-                              onDragUpdate: !session.independent
-                                  ? null
-                                  : (delta) {
-                                      // Independent mode and busy policy belong to
-                                      // the session; the controller only clamps geometry.
-                                      if (session.blocked) return;
-                                      session.position.recordLayout(
-                                        _panel.topLeft,
-                                        _panel.size,
-                                      );
-                                      session.moveTo(
-                                        session.position.drag(delta, _bounds),
-                                      );
-                                    },
-                              child: _details(context),
+                        child: SkedResizableFrame(
+                          keyPrefix: 'workspace-companion-resize',
+                          enabled:
+                              session.independent &&
+                              !session.blocked &&
+                              _canInteract,
+                          onStart: _startResize,
+                          onResize: _resize,
+                          onEnd: _finishResize,
+                          onReset: _resetSize,
+                          child: SkedFloatingSurface(
+                            key: const ValueKey(
+                              'workspace-companion-view-surface',
+                            ),
+                            child: WorkspaceViewTaskScope(
+                              enabled: true,
+                              onClose: dismiss,
+                              showClose: session.independent,
+                              onContentHeight: (_) {},
+                              child: WorkspaceViewLayoutScope(
+                                compact: true,
+                                explicitHeight: explicitHeight,
+                                onDragUpdate: !session.independent
+                                    ? null
+                                    : (delta) {
+                                        // Independent mode and busy policy belong to
+                                        // the session; the controller only clamps geometry.
+                                        if (session.blocked) return;
+                                        session.position.recordLayout(
+                                          _panel.topLeft,
+                                          _panel.size,
+                                        );
+                                        session.moveTo(
+                                          session.position.drag(delta, _bounds),
+                                        );
+                                      },
+                                child: _details(context),
+                              ),
                             ),
                           ),
                         ),
@@ -821,6 +922,7 @@ class _ReminderDetailPosition extends SingleChildLayoutDelegate {
     required this.anchor,
     required this.width,
     required this.heightLimit,
+    this.explicitHeight = false,
     required this.manual,
     required this.lastPosition,
     required this.rtl,
@@ -831,10 +933,16 @@ class _ReminderDetailPosition extends SingleChildLayoutDelegate {
   final double width, heightLimit;
   final Offset? manual, lastPosition;
   final bool rtl;
+  final bool explicitHeight;
   final void Function(Offset, Size) onLayout;
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      BoxConstraints(minWidth: width, maxWidth: width, maxHeight: heightLimit);
+      BoxConstraints(
+        minWidth: width,
+        maxWidth: width,
+        minHeight: explicitHeight ? heightLimit : 0,
+        maxHeight: heightLimit,
+      );
   @override
   Offset getPositionForChild(Size size, Size childSize) {
     final position = manual != null || (anchor == null && lastPosition != null)

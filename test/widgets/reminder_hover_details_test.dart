@@ -9,6 +9,7 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
+import 'package:sked/widgets/sked_resizable.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../support/reminder_summary_harness.dart';
@@ -548,12 +549,27 @@ void main() {
     },
     variant: desktop,
   );
-  testWidgets('independent Tab stays within its own detail controls', (
+  testWidgets('independent Tab stays within its details and resize controls', (
     t,
   ) async {
     await mount(t);
     await t.tap(row('Study group'));
     await t.pumpAndSettle();
+    final surface = k('workspace-companion-view-surface');
+    final panel = t.element(
+      find.ancestor(of: surface, matching: find.byType(SkedResizableFrame)),
+    );
+    final resizeMouseRegion = find.descendant(
+      of: k('workspace-companion-resize-left'),
+      matching: find.byType(MouseRegion),
+    );
+    Focus.of(t.element(resizeMouseRegion)).requestFocus();
+    await t.pump();
+    final original = t.getRect(surface);
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await t.pump(const Duration(milliseconds: 300));
+    expect(t.getSize(surface).width, closeTo(original.width + 24, 1));
+    expect(t.getRect(surface).right, closeTo(original.right, 1));
     for (var i = 0; i < 18; i++) {
       await t.sendKeyEvent(LogicalKeyboardKey.tab);
       await t.pumpAndSettle();
@@ -561,7 +577,7 @@ void main() {
       expect(context, isNotNull);
       var allowed = false;
       context!.visitAncestorElements((element) {
-        if (element.widget is GeneralEventDetailsSheet) {
+        if (identical(element, panel)) {
           allowed = true;
         }
         return !allowed;

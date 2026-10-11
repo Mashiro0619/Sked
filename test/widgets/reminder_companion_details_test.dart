@@ -1,8 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
+import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/workspace_view_panel.dart';
@@ -24,6 +27,219 @@ void size(WidgetTester t, [Size value = const Size(1366, 900)]) {
 }
 
 void main() {
+  testWidgets(
+    'independent resize changes only the dragged axis after a viewport cap',
+    (t) async {
+      size(t);
+      final layouts = DesktopLayoutPreferences.memory(
+        initialValues: const {
+          DesktopLayoutRegion.eventDetails: PreferredRegionSize(
+            width: 740,
+            height: 620,
+            dockedWidth: 390,
+          ),
+        },
+      );
+      addTearDown(layouts.dispose);
+      final p = await workspaceProvider(
+        mode: AppMode.general,
+        storage: reminderSummaryStorage(),
+      );
+      addTearDown(p.dispose);
+      await t.pumpWidget(
+        ChangeNotifierProvider<DesktopLayoutPreferences>.value(
+          value: layouts,
+          child: reminderSummaryHarness(p, ReminderSummaryClock()),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(k('general-reminders-action'));
+      await t.pumpAndSettle();
+      await t.tap(inList(find.text('Study group')));
+      await t.pumpAndSettle();
+      final surface = k('workspace-companion-view-surface');
+      expect(t.getSize(surface), const Size(740, 620));
+
+      t.view.physicalSize = const Size(900, 420);
+      await t.pumpAndSettle();
+      expect(t.getSize(surface).height, lessThan(620));
+      await t.drag(k('workspace-companion-resize-left'), const Offset(40, 0));
+      await t.pumpAndSettle();
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.eventDetails),
+        const PreferredRegionSize(width: 700, height: 620, dockedWidth: 390),
+      );
+      t.view.physicalSize = const Size(1366, 900);
+      await t.pumpAndSettle();
+      expect(t.getSize(surface), const Size(700, 620));
+
+      t.view.physicalSize = const Size(500, 900);
+      await t.pumpAndSettle();
+      expect(t.getSize(surface).width, lessThan(700));
+      await t.drag(k('workspace-companion-resize-top'), const Offset(0, 40));
+      await t.pumpAndSettle();
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.eventDetails),
+        const PreferredRegionSize(width: 700, height: 580, dockedWidth: 390),
+      );
+      t.view.physicalSize = const Size(1366, 900);
+      await t.pumpAndSettle();
+      expect(t.getSize(surface), const Size(700, 580));
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: desktop,
+  );
+
+  testWidgets(
+    'small saved independent detail sizes retain usable chrome at large text',
+    (t) async {
+      size(t);
+      final layouts = DesktopLayoutPreferences.memory(
+        initialValues: const {
+          DesktopLayoutRegion.eventDetails: PreferredRegionSize(
+            width: 1,
+            height: 1,
+          ),
+        },
+      );
+      addTearDown(layouts.dispose);
+      final p = await workspaceProvider(
+        mode: AppMode.general,
+        storage: reminderSummaryStorage(),
+      );
+      addTearDown(p.dispose);
+      await t.pumpWidget(
+        ChangeNotifierProvider<DesktopLayoutPreferences>.value(
+          value: layouts,
+          child: reminderSummaryHarness(
+            p,
+            ReminderSummaryClock(),
+            scale: 2,
+            session: GeneralReminderStartupSession(),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      final entry = inList(find.text('Study group'));
+      await t.ensureVisible(entry);
+      await t.pumpAndSettle();
+      await t.tap(entry);
+      await t.pumpAndSettle();
+      expect(
+        t.getSize(k('workspace-companion-view-surface')),
+        const Size(320, 240),
+      );
+      expect(
+        inDetails(k('workspace-inspector-close')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.eventDetails),
+        const PreferredRegionSize(width: 1, height: 1),
+      );
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: desktop,
+  );
+
+  testWidgets(
+    'independent details resize and remember their purpose while previews stay content sized',
+    (t) async {
+      size(t);
+      final layouts = DesktopLayoutPreferences.memory(
+        initialValues: const {
+          DesktopLayoutRegion.eventDetails: PreferredRegionSize(
+            width: 500,
+            height: 460,
+            dockedWidth: 390,
+          ),
+        },
+      );
+      addTearDown(layouts.dispose);
+      final p = await workspaceProvider(
+        mode: AppMode.general,
+        storage: reminderSummaryStorage(),
+      );
+      addTearDown(p.dispose);
+      await t.pumpWidget(
+        ChangeNotifierProvider<DesktopLayoutPreferences>.value(
+          value: layouts,
+          child: reminderSummaryHarness(p, ReminderSummaryClock()),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(k('general-reminders-action'));
+      await t.pumpAndSettle();
+      final originalList = t.getRect(list);
+      final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: const Offset(1, 1));
+      await mouse.moveTo(t.getCenter(inList(find.text('Study group'))));
+      await t.pump(const Duration(milliseconds: 350));
+      await t.pumpAndSettle();
+      final surface = k('workspace-companion-view-surface');
+      expect(surface, findsOneWidget);
+      expect(t.getSize(surface).width, 360);
+      expect(t.getSize(surface).height, lessThan(460));
+      expect(k('workspace-companion-resize-right'), findsNothing);
+      await t.tap(inList(find.text('Study group')));
+      await t.pumpAndSettle();
+      await mouse.moveTo(const Offset(1, 1));
+      expect(t.getSize(surface), const Size(500, 460));
+      final element = t.element(details);
+      final original = t.getRect(surface);
+      await t.drag(
+        inDetails(k('workspace-view-drag-handle')),
+        const Offset(250, 160) - original.topLeft,
+      );
+      await t.pumpAndSettle();
+      final moved = t.getRect(surface);
+      await t.drag(
+        k('workspace-companion-resize-topLeft'),
+        const Offset(-40, -30),
+      );
+      await t.pumpAndSettle();
+      final resized = t.getRect(surface);
+      expect(resized.right, closeTo(moved.right, 1));
+      expect(resized.bottom, closeTo(moved.bottom, 1));
+      expect(resized.size, const Size(540, 490));
+      expect(t.element(details), same(element));
+      expect(t.getRect(list), originalList);
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.eventDetails),
+        const PreferredRegionSize(width: 540, height: 490, dockedWidth: 390),
+      );
+      await t.tap(inDetails(k('workspace-inspector-close')));
+      await t.pumpAndSettle();
+      await t.tap(inList(find.text('Bill day')));
+      await t.pumpAndSettle();
+      expect(t.getSize(surface), resized.size);
+      t.view.physicalSize = const Size(600, 360);
+      await t.pumpAndSettle();
+      final clamped = t.getRect(surface);
+      expect(clamped.left, greaterThanOrEqualTo(8));
+      expect(clamped.right, lessThanOrEqualTo(592));
+      expect(clamped.top, greaterThanOrEqualTo(56));
+      expect(clamped.bottom, lessThanOrEqualTo(352));
+      expect(
+        inDetails(k('workspace-inspector-close')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        layouts.preferenceFor(DesktopLayoutRegion.eventDetails),
+        const PreferredRegionSize(width: 540, height: 490, dockedWidth: 390),
+      );
+      t.view.physicalSize = const Size(1366, 900);
+      await t.pumpAndSettle();
+      expect(t.getSize(surface), resized.size);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: desktop,
+  );
+
   for (final automatic in [false, true]) {
     testWidgets(
       'reminder detail is additional; original list stays visible and mounted: auto=$automatic',
