@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 
 import '../services/desktop_layout_preferences.dart';
 import 'adaptive_navigation_scope.dart';
@@ -26,8 +27,8 @@ class CollectionItem {
   final Widget Function(bool selected, VoidCallback openDetail)? tileBuilder;
 }
 
-/// A stable detail navigator shared by settings-owned collections. Content
-/// keeps its own validation/flush guards while the surrounding panes reflow.
+/// One collection toolbar and a stable detail navigator. Embedded detail pages
+/// keep their validation/flush guards while the surrounding panes reflow.
 class AdaptiveCollectionScaffold extends StatefulWidget {
   const AdaptiveCollectionScaffold({
     super.key,
@@ -37,6 +38,7 @@ class AdaptiveCollectionScaffold extends StatefulWidget {
     this.actions = const [],
     this.busy = false,
     this.initialSelection,
+    this.empty,
   });
   final String title;
   final List<CollectionItem> items;
@@ -44,6 +46,7 @@ class AdaptiveCollectionScaffold extends StatefulWidget {
   final List<Widget> actions;
   final bool busy;
   final String? initialSelection;
+  final Widget? empty;
   @override
   State<AdaptiveCollectionScaffold> createState() =>
       _AdaptiveCollectionScaffoldState();
@@ -52,14 +55,30 @@ class AdaptiveCollectionScaffold extends StatefulWidget {
 class _AdaptiveCollectionScaffoldState
     extends State<AdaptiveCollectionScaffold> {
   final _navigator = GlobalKey<NavigatorState>();
+  final _observer = _CollectionNavigatorObserver();
+  final _pageExitGuards = <ModalRoute<dynamic>, Future<bool> Function()>{};
+  final _contentRevision = ValueNotifier(0);
   final _homeKey = GlobalKey();
   String? _selected;
+  Route<void>? _selectedRoute;
   bool _changing = false;
+  bool _closing = false;
+  bool _allowPop = false;
+  bool _wide = false;
   String? _requestedSelection;
   @override
   void didUpdateWidget(covariant AdaptiveCollectionScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _contentRevision.value++;
     _requestInitialSelection();
+    final selected = _selected;
+    if (selected != null && !_contains(selected)) {
+      final route = _selectedRoute;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _selected != selected || _contains(selected)) return;
+        if (route?.isActive == true) route!.navigator?.removeRoute(route);
+      });
+    }
   }
 
   @override
@@ -70,35 +89,108 @@ class _AdaptiveCollectionScaffoldState
 
   void _requestInitialSelection() {
     final id = widget.initialSelection;
-    if (id == null || id == _requestedSelection) return;
+    if (id == null || id == _requestedSelection || !_contains(id)) return;
     _requestedSelection = id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(_select(id));
     });
   }
 
-  Future<void> _select(String id) async {
-    if (_changing || _selected == id) return;
-    _changing = true;
+  @override
+  void dispose() {
+    _pageExitGuards.clear();
+    _contentRevision.dispose();
+    super.dispose();
+  }
+
+  bool _contains(String id) => widget.items.any((item) => item.id == id);
+
+  VoidCallback _registerPageExitGuard(
+    ModalRoute<dynamic> route,
+    Future<bool> Function() exit,
+  ) {
+    _pageExitGuards[route] = exit;
+    return () {
+      if (identical(_pageExitGuards[route], exit)) {
+        _pageExitGuards.remove(route);
+      }
+    };
+  }
+
+  Future<bool> _popCurrentPage(NavigatorState navigator) async {
+    final revision = _observer.revision;
+    final exit = _pageExitGuards[_observer.topRoute];
+    if (exit != null) {
+      await exit();
+    } else {
+      await navigator.maybePop();
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    return mounted && navigator.mounted && revision != _observer.revision;
+  }
+
+  Future<void> _back() async {
+    if (!mounted || _closing || _changing || widget.busy) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    setState(() => _closing = true);
     try {
-      if (_navigator.currentState!.canPop()) {
-        await _navigator.currentState!.maybePop();
-        await WidgetsBinding.instance.endOfFrame;
-        if (_navigator.currentState!.canPop()) return;
+      final navigator = _navigator.currentState!;
+      if (navigator.canPop()) {
+        final popped = await _popCurrentPage(navigator);
+        if (!popped || navigator.canPop() || !_wide) return;
       }
       if (!mounted) return;
-      setState(() => _selected = id);
+      // On a wide layout the list is already visible. Back leaves management;
+      // a compact detail first returns to the retained list.
+      setState(() => _allowPop = true);
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        await Navigator.of(context).maybePop();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _closing = false;
+          _allowPop = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _select(String id) async {
+    if (_changing ||
+        _closing ||
+        widget.busy ||
+        _selected == id ||
+        !_contains(id)) {
+      return;
+    }
+    setState(() => _changing = true);
+    try {
+      final navigator = _navigator.currentState!;
+      while (navigator.canPop()) {
+        if (!await _popCurrentPage(navigator)) return;
+      }
+      if (!mounted || !_contains(id)) return;
+      final route = MaterialPageRoute<void>(
+        builder: (_) => widget.detailBuilder(id),
+      );
+      setState(() {
+        _selected = id;
+        _selectedRoute = route;
+      });
       unawaited(
-        _navigator.currentState!
-            .push<void>(
-              MaterialPageRoute(builder: (_) => widget.detailBuilder(id)),
-            )
-            .then((_) {
-              if (mounted && _selected == id) setState(() => _selected = null);
-            }),
+        navigator.push<void>(route).then((_) {
+          if (mounted && identical(_selectedRoute, route)) {
+            setState(() {
+              _selected = null;
+              _selectedRoute = null;
+            });
+          }
+        }),
       );
     } finally {
-      _changing = false;
+      if (mounted) setState(() => _changing = false);
     }
   }
 
@@ -140,91 +232,150 @@ class _AdaptiveCollectionScaffoldState
           224 * factor,
           maximumWidth,
         );
-        final wide = WorkbenchLayoutPolicy.formCanSplit(
-          constraints.maxWidth,
-          MediaQuery.textScalerOf(context).scale(14) / 14,
-        );
+        final wide = _wide =
+            widget.items.isNotEmpty &&
+            WorkbenchLayoutPolicy.formCanSplit(
+              constraints.maxWidth,
+              MediaQuery.textScalerOf(context).scale(14) / 14,
+            );
         return PopScope(
-          canPop: _selected == null,
+          canPop:
+              _allowPop ||
+              (_selected == null && !widget.busy && !_changing && !_closing),
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) unawaited(_navigator.currentState!.maybePop());
+            if (!didPop) unawaited(_back());
           },
-          child: Scaffold(
-            appBar: WorkbenchAppBar(
-              title: Text(widget.title),
-              actions: widget.actions,
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(4),
-                child: UiCommandBusyIndicator(busy: widget.busy),
-              ),
-            ),
-            body: Stack(
-              children: [
-                Row(
-                  children: [
-                    SizedBox(
-                      width: wide ? listWidth : 0,
-                      child: Offstage(
-                        offstage: !wide,
-                        child: ExcludeFocus(excluding: !wide, child: _list()),
+          child: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.escape): () =>
+                  unawaited(_back()),
+            },
+            child: Scaffold(
+              appBar: WorkbenchAppBar(
+                key: const ValueKey('period-time-set-manager-app-bar'),
+                automaticallyImplyLeading: false,
+                leading: _selected != null || Navigator.of(context).canPop()
+                    ? BackButton(
+                        key: const ValueKey('period-time-set-manager-back'),
+                        onPressed: () => unawaited(_back()),
+                      )
+                    : null,
+                title: Text(widget.title),
+                actions: [
+                  for (final action in widget.actions)
+                    AbsorbPointer(
+                      absorbing: _changing || _closing,
+                      child: ExcludeFocus(
+                        excluding: _changing || _closing,
+                        child: action,
                       ),
                     ),
-                    SizedBox(
-                      width: wide ? 1 : 0,
-                      child: const VerticalDivider(width: 1),
-                    ),
-                    Expanded(
-                      child: AdaptiveNavigationScope(
-                        wide: wide,
-                        child: Semantics(
-                          container: true,
-                          explicitChildNodes: true,
-                          child: Navigator(
-                            key: _navigator,
-                            requestFocus: false,
-                            onGenerateRoute: (_) => MaterialPageRoute<void>(
-                              builder: (_) => LayoutBuilder(
-                                key: _homeKey,
-                                builder: (context, _) =>
-                                    AdaptiveNavigationScope.isWide(context)
-                                    ? Center(
-                                        child: Text(
-                                          widget.title,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge,
-                                        ),
-                                      )
-                                    : _list(),
+                ],
+              ),
+              body: Stack(
+                children: [
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: wide ? listWidth : 0,
+                        child: Offstage(
+                          offstage: !wide,
+                          child: ExcludeFocus(excluding: !wide, child: _list()),
+                        ),
+                      ),
+                      SizedBox(
+                        width: wide ? 1 : 0,
+                        child: const VerticalDivider(width: 1),
+                      ),
+                      Expanded(
+                        child: AdaptiveNavigationScope(
+                          wide: wide,
+                          registerPageExitGuard: _registerPageExitGuard,
+                          child: Semantics(
+                            container: true,
+                            explicitChildNodes: true,
+                            child: Navigator(
+                              key: _navigator,
+                              observers: [_observer],
+                              requestFocus: false,
+                              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                                builder: (_) => ValueListenableBuilder(
+                                  valueListenable: _contentRevision,
+                                  builder: (context, _, _) => LayoutBuilder(
+                                    key: _homeKey,
+                                    builder: (context, _) =>
+                                        widget.items.isEmpty &&
+                                            widget.empty != null
+                                        ? widget.empty!
+                                        : AdaptiveNavigationScope.isWide(
+                                            context,
+                                          )
+                                        ? Center(
+                                            child: Text(
+                                              widget.title,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleLarge,
+                                            ),
+                                          )
+                                        : _list(),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                if (wide && WorkbenchLayoutPolicy.pointerLayout(context))
-                  PositionedDirectional(
-                    start: listWidth - 4,
-                    top: 0,
-                    bottom: 0,
-                    width: 9,
-                    child: SkedExtentResizeHandle(
-                      key: const ValueKey('period-time-sets-resize'),
-                      extent: listWidth,
-                      minExtent: 224 * factor,
-                      maxExtent: maximumWidth,
-                      onChanged: (extent) => update(extent / factor),
-                      onEnd: commit,
-                      onReset: reset,
-                    ),
+                    ],
                   ),
-              ],
+                  if (wide && WorkbenchLayoutPolicy.pointerLayout(context))
+                    PositionedDirectional(
+                      start: listWidth - 4,
+                      top: 0,
+                      bottom: 0,
+                      width: 9,
+                      child: SkedExtentResizeHandle(
+                        key: const ValueKey('period-time-sets-resize'),
+                        extent: listWidth,
+                        minExtent: 224 * factor,
+                        maxExtent: maximumWidth,
+                        onChanged: (extent) => update(extent / factor),
+                        onEnd: commit,
+                        onReset: reset,
+                      ),
+                    ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: UiCommandBusyIndicator(busy: widget.busy),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
     ),
   );
+}
+
+class _CollectionNavigatorObserver extends NavigatorObserver {
+  int revision = 0;
+  Route<dynamic>? topRoute;
+
+  @override
+  void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
+    this.topRoute = topRoute;
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    revision++;
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    revision++;
+  }
 }

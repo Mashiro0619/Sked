@@ -10,6 +10,7 @@ class _PeriodEditorHeading extends StatelessWidget {
     required this.onChanged,
     required this.onSubmitted,
     required this.onRetry,
+    this.action,
   });
 
   final TextEditingController controller;
@@ -18,6 +19,7 @@ class _PeriodEditorHeading extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
   final VoidCallback? onRetry;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +72,7 @@ class _PeriodEditorHeading extends StatelessWidget {
         final inlineSummary =
             !sideBySide &&
             constraints.maxWidth >= countWidth + statusMinimum + 16;
-        final summary = inlineSummary
+        final summaryContent = inlineSummary
             ? Row(
                 children: [
                   count,
@@ -81,6 +83,15 @@ class _PeriodEditorHeading extends StatelessWidget {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [count, const SizedBox(height: 2), status],
+              );
+        final summary = action == null
+            ? summaryContent
+            : Row(
+                children: [
+                  Expanded(child: summaryContent),
+                  const SizedBox(width: 8),
+                  action!,
+                ],
               );
         if (!sideBySide) {
           return Column(

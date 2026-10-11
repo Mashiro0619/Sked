@@ -21,6 +21,9 @@ import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/adaptive_navigation_scope.dart';
+import '../widgets/expressive_empty_state.dart';
+import '../widgets/sked_task_session.dart';
 
 part 'period_times_editor.dart';
 
@@ -44,11 +47,13 @@ class PeriodTimesPage extends StatefulWidget {
   const PeriodTimesPage({
     super.key,
     required this.periodTimeSetId,
+    this.embedded = false,
     ExportService? exportService,
     this.textFilePicker = TextFilePicker.pickText,
   }) : exportService = exportService ?? const ExportService();
 
   final String periodTimeSetId;
+  final bool embedded;
   final ExportService exportService;
   final PeriodTimesTextPicker textFilePicker;
 
@@ -88,6 +93,9 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   int? _pendingAutoSaveRevision;
   int? _failedAutoSaveRevision;
   var _persistedAutoSaveRevision = 0;
+  VoidCallback? _unregisterPageExitGuard;
+  ModalRoute<dynamic>? _guardedRoute;
+  RegisterAdaptivePageExitGuard? _pageExitRegistrar;
 
   bool get _interactionBlocked =>
       _retired || _menuActionInProgress || _isHandlingPop;
@@ -106,6 +114,17 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final registrar = AdaptiveNavigationScope.maybeOf(context)
+        ?.registerPageExitGuard;
+    final route = ModalRoute.of(context);
+    if (registrar != _pageExitRegistrar || route != _guardedRoute) {
+      _unregisterPageExitGuard?.call();
+      _pageExitRegistrar = registrar;
+      _guardedRoute = route;
+      _unregisterPageExitGuard = registrar != null && route != null
+          ? registrar(route, _flushAndExit)
+          : null;
+    }
     if (_loading) {
       final provider = context.read<TimetableProvider>();
       final periodTimeSet = provider.periodTimeSetForId(widget.periodTimeSetId);
@@ -115,8 +134,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
             .map((item) => item.copyWith())
             .toList();
       } else {
-        _nameController.text = AppLocalizations.of(context).periodTimesTitle;
-        _periodTimes = buildPeriodTimesForCount(10);
+        _periodTimes = [];
       }
       _resetPeriodRowKeys();
       _loading = false;
@@ -126,6 +144,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _unregisterPageExitGuard?.call();
     _isDisposing = true;
     unawaited(
       _flushPendingAutoSave().catchError((Object error, StackTrace stackTrace) {
@@ -157,63 +176,47 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final exists =
+        context.watch<TimetableProvider>().periodTimeSetForId(
+          widget.periodTimeSetId,
+        ) !=
+        null;
+    if (!exists) {
+      return Scaffold(
+        appBar: widget.embedded
+            ? null
+            : WorkbenchAppBar(title: Text(l10n.periodTimesTitle)),
+        body: ExpressiveEmptyState(
+          icon: Icons.schedule,
+          title: l10n.noPeriodTimeAvailable,
+        ),
+      );
+    }
 
     final page = Scaffold(
-      appBar: WorkbenchAppBar(
-        title: Text(l10n.periodTimesTitle),
-        actions: [
-          SkedPopupMenuButton<_PeriodTimesMenuAction>(
-            tooltip: l10n.importExport,
-            enabled: !_menuBlocked,
-            onSelected: (action) {
-              unawaited(_handleMenuAction(action));
-            },
-            itemBuilder: (context) => [
-              SkedPopupMenuItem(
-                value: _PeriodTimesMenuAction.importTemplate,
-                child: Text(l10n.importPeriodTemplate),
-              ),
-              SkedPopupMenuItem(
-                value: _PeriodTimesMenuAction.importTemplateText,
-                child: Text(l10n.importPeriodTemplateText),
-              ),
-              SkedPopupMenuItem(
-                value: _PeriodTimesMenuAction.exportTemplate,
-                child: Text(l10n.sharePeriodTemplate),
-              ),
-              SkedPopupMenuItem(
-                value: _PeriodTimesMenuAction.saveTemplate,
-                child: Text(l10n.saveTemplateToFile),
-              ),
-              SkedPopupMenuItem(
-                value: _PeriodTimesMenuAction.exportTemplateText,
-                child: Text(l10n.exportPeriodTemplateText),
-              ),
-              SkedPopupMenuDivider(),
-              SkedPopupMenuItem(
-                value: _PeriodTimesMenuAction.deleteSet,
-                child: Text(
-                  l10n.deletePeriodTimeSet,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+      appBar: widget.embedded
+          ? null
+          : WorkbenchAppBar(
+              title: Text(l10n.periodTimesTitle),
+              actions: [_buildMenu(l10n)],
+            ),
       body: SafeArea(
         top: false,
-        child: Column(
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            UiCommandBusyIndicator(
-              busy: _menuActionInProgress || _autoSaveInProgress,
-              showDelay: const Duration(milliseconds: 250),
+            AbsorbPointer(
+              key: const ValueKey('period-times-editor-guard'),
+              absorbing: _interactionBlocked,
+              child: _buildEditorBody(l10n),
             ),
-            Expanded(
-              child: AbsorbPointer(
-                key: const ValueKey('period-times-editor-guard'),
-                absorbing: _interactionBlocked,
-                child: _buildEditorBody(l10n),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: UiCommandBusyIndicator(
+                busy: _menuActionInProgress || _autoSaveInProgress,
+                showDelay: const Duration(milliseconds: 250),
               ),
             ),
           ],
@@ -230,6 +233,44 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       child: page,
     );
   }
+
+  Widget _buildMenu(AppLocalizations l10n) =>
+      SkedPopupMenuButton<_PeriodTimesMenuAction>(
+        key: const ValueKey('period-time-set-menu'),
+        tooltip: l10n.importExport,
+        enabled: !_menuBlocked,
+        onSelected: (action) => unawaited(_handleMenuAction(action)),
+        itemBuilder: (context) => [
+          SkedPopupMenuItem(
+            value: _PeriodTimesMenuAction.importTemplate,
+            child: Text(l10n.importPeriodTemplate),
+          ),
+          SkedPopupMenuItem(
+            value: _PeriodTimesMenuAction.importTemplateText,
+            child: Text(l10n.importPeriodTemplateText),
+          ),
+          SkedPopupMenuItem(
+            value: _PeriodTimesMenuAction.exportTemplate,
+            child: Text(l10n.sharePeriodTemplate),
+          ),
+          SkedPopupMenuItem(
+            value: _PeriodTimesMenuAction.saveTemplate,
+            child: Text(l10n.saveTemplateToFile),
+          ),
+          SkedPopupMenuItem(
+            value: _PeriodTimesMenuAction.exportTemplateText,
+            child: Text(l10n.exportPeriodTemplateText),
+          ),
+          SkedPopupMenuDivider(),
+          SkedPopupMenuItem(
+            value: _PeriodTimesMenuAction.deleteSet,
+            child: Text(
+              l10n.deletePeriodTimeSet,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      );
 
   _PeriodEditorSaveState get _saveState {
     if (_hasInvalidPeriodTimes) return _PeriodEditorSaveState.invalid;
@@ -288,6 +329,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _PeriodEditorHeading(
+                        action: widget.embedded ? _buildMenu(l10n) : null,
                         controller: _nameController,
                         periodCount: _periodTimes.length,
                         saveState: _saveState,
@@ -577,6 +619,13 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   Future<bool> _flushPendingAutoSave() async {
+    final pendingProvider = _pendingAutoSaveProvider;
+    if (pendingProvider != null &&
+        pendingProvider.periodTimeSetForId(widget.periodTimeSetId) == null) {
+      // A removed shared resource cannot receive this page's delayed draft.
+      _discardPendingAutoSave();
+      return true;
+    }
     _autoSaveDebounce?.cancel();
     _autoSaveDebounce = null;
     if (_autoSaveFlushOperation == null &&
@@ -805,6 +854,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   Future<void> _deleteSet() async {
     final provider = context.read<TimetableProvider>();
     final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
     final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
@@ -840,7 +890,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     }
     try {
       await provider.deletePeriodTimeSet(widget.periodTimeSetId);
-      if (mounted) {
+      if (mounted && route?.isCurrent == true) {
         navigator.pop(true);
       }
     } on FormatException catch (error) {
@@ -883,41 +933,55 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
 
   Future<void> _importTemplateFromText() async {
     final l10n = AppLocalizations.of(context);
-    await Navigator.of(context).push(
+    final provider = context.read<TimetableProvider>();
+    final ownerRoute = ModalRoute.of(context);
+    await Navigator.of(context, rootNavigator: widget.embedded).push(
       MaterialPageRoute(
-        builder: (_) => TextImportPage(
-          title: l10n.importPeriodTemplateText,
-          onSubmit: (_, content) async {
-            if (!mounted) {
-              return false;
-            }
-            final provider = context.read<TimetableProvider>();
-            try {
-              final imported = provider.importPeriodTimesJson(content);
-              final count = imported.length;
-              if (count == 0) {
-                throw FormatException(
-                  noPeriodTimesInImportMessage(localeCode: provider.localeCode),
-                );
-              }
-              if (!mounted) {
+        builder: (_) => SkedTaskRouteGuard(
+          provider: provider,
+          workspace: AppMode.student,
+          isOwnerActive: () =>
+              mounted && !_retired && ownerRoute?.isActive != false,
+          isTargetCurrent: () =>
+              provider.periodTimeSetForId(widget.periodTimeSetId) != null,
+          child: TextImportPage(
+            title: l10n.importPeriodTemplateText,
+            onSubmit: (_, content) async {
+              if (!mounted || _retired) {
                 return false;
               }
-              setState(() {
-                _periodTimes = imported;
-                _resetPeriodRowKeys();
-              });
-              _scheduleAutoSave();
-              _showMessage(l10n.importedPeriodTimesCount(count));
-              return true;
-            } on FormatException catch (error) {
-              _showMessage(error.message);
-              return false;
-            } catch (_) {
-              _showMessage(l10n.importFailedCheckContent);
-              return false;
-            }
-          },
+              if (provider.periodTimeSetForId(widget.periodTimeSetId) == null) {
+                return false;
+              }
+              try {
+                final imported = provider.importPeriodTimesJson(content);
+                final count = imported.length;
+                if (count == 0) {
+                  throw FormatException(
+                    noPeriodTimesInImportMessage(
+                      localeCode: provider.localeCode,
+                    ),
+                  );
+                }
+                if (!mounted) {
+                  return false;
+                }
+                setState(() {
+                  _periodTimes = imported;
+                  _resetPeriodRowKeys();
+                });
+                _scheduleAutoSave();
+                _showMessage(l10n.importedPeriodTimesCount(count));
+                return true;
+              } on FormatException catch (error) {
+                _showMessage(error.message);
+                return false;
+              } catch (_) {
+                _showMessage(l10n.importFailedCheckContent);
+                return false;
+              }
+            },
+          ),
         ),
       ),
     );
