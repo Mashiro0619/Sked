@@ -23,7 +23,10 @@ class WorkbenchLayoutPolicy {
     required this.maximumDetailWidth,
     required this.maximumAssistantWidth,
     this.resourceWidth = AppBreakpoints.resourcePane,
+    this.expandedResourceWidth = AppBreakpoints.resourcePane,
+    this.maximumResourceWidth = AppBreakpoints.resourcePane,
     this.supportingWidth = AppBreakpoints.detailPane,
+    this.maximumSupportingWidth = AppBreakpoints.detailPane,
     this.dockedAssistant = false,
     this.assistantWidth = AppBreakpoints.assistantPane,
     this.detailVisible = false,
@@ -42,7 +45,10 @@ class WorkbenchLayoutPolicy {
   final double maximumDetailWidth;
   final double maximumAssistantWidth;
   final double resourceWidth;
+  final double expandedResourceWidth;
+  final double maximumResourceWidth;
   final double supportingWidth;
+  final double maximumSupportingWidth;
   final bool dockedAssistant;
   final double assistantWidth;
   final bool detailVisible;
@@ -88,11 +94,12 @@ class WorkbenchLayoutPolicy {
     double preferredDetailWidth = AppBreakpoints.detailPane,
     double minimumDetailWidth = AppBreakpoints.minimumDetailPane,
     double preferredAssistantWidth = AppBreakpoints.assistantPane,
+    double preferredResourceWidth = AppBreakpoints.resourcePane,
+    double preferredSupportingWidth = AppBreakpoints.detailPane,
   }) {
     final factor = textFactor(textScale);
     final canvas = minimumCanvas * factor;
-    final supportingWidth = AppBreakpoints.detailPane * factor;
-    final expandedResourceWidth = AppBreakpoints.resourcePane * factor;
+    final minimumResourceWidth = AppBreakpoints.resourcePane * factor;
     final compactResourceWidth =
         (pointer
             ? AppBreakpoints.pointerCompactResourcePane
@@ -108,7 +115,15 @@ class WorkbenchLayoutPolicy {
         : canvas;
     final canExpandResources =
         !shortWindow &&
-        width >= navigationCanvas + expandedResourceWidth + divider;
+        width >= navigationCanvas + minimumResourceWidth + divider;
+    final maximumResourceWidth = math.max(
+      minimumResourceWidth,
+      width - navigationCanvas - divider,
+    );
+    final expandedResourceWidth = (preferredResourceWidth * factor).clamp(
+      minimumResourceWidth,
+      maximumResourceWidth,
+    );
     final preferCompact = resourcesCollapsed || shortWindow;
     final resourcePresentation = pointer
         ? (!preferCompact && canExpandResources
@@ -137,6 +152,19 @@ class WorkbenchLayoutPolicy {
         : compactResourceWidth;
     final resourceSpace = resources ? resourceWidth + divider : 0.0;
     final contentWidth = math.max(0.0, width - resourceSpace);
+    final minimumSupportingWidth =
+        (pointer
+            ? AppBreakpoints.minimumDetailPane
+            : AppBreakpoints.detailPane) *
+        factor;
+    final maximumSupportingWidth = math.max(
+      minimumSupportingWidth,
+      contentWidth - canvas - divider,
+    );
+    final supportingWidth = (preferredSupportingWidth * factor).clamp(
+      minimumSupportingWidth,
+      maximumSupportingWidth,
+    );
     // Use the entire sidebar-free work area, including any supporting agenda
     // or other task. Keep default readable widths on small/large-text windows
     // rather than making an unresized pane narrower just to enforce the ratio.
@@ -203,7 +231,7 @@ class WorkbenchLayoutPolicy {
     final supporting =
         hasSupporting &&
         taskSpace == 0 &&
-        contentWidth >= canvas + supportingWidth + divider;
+        contentWidth >= canvas + minimumSupportingWidth + divider;
     return WorkbenchLayoutPolicy(
       resources: resources,
       resourcePresentation: resourcePresentation,
@@ -213,8 +241,11 @@ class WorkbenchLayoutPolicy {
           !resourcesCollapsed &&
           resourcePresentation != WorkspaceResourcePresentation.expanded,
       resourceWidth: resourceWidth,
+      expandedResourceWidth: expandedResourceWidth,
+      maximumResourceWidth: maximumResourceWidth,
       supporting: supporting,
       supportingWidth: supportingWidth,
+      maximumSupportingWidth: maximumSupportingWidth,
       dockedDetail: detail,
       detailWidth: requestedDetail,
       maximumDetailWidth: maximumDetailWidth,

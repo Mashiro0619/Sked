@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 
 import '../services/developer_ui_preferences.dart';
+import '../services/desktop_layout_preferences.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -25,6 +26,7 @@ import 'sked_floating_surface.dart';
 import 'sked_floating_position_controller.dart';
 import 'workspace_editor.dart';
 import 'desktop_window_drag_guard.dart';
+import 'sked_resizable.dart';
 
 export 'workspace_view_panel.dart'
     show WorkspacePanePresentation, WorkspaceViewPanel;
@@ -356,10 +358,12 @@ class WorkspaceResourceScope extends InheritedWidget {
     required this.canExpandInline,
     required this.open,
     required this.close,
+    this.expandedWidth,
     required super.child,
   });
   final bool drawerOpen;
   final bool canExpandInline;
+  final double? expandedWidth;
   final VoidCallback open;
   final VoidCallback close;
   static WorkspaceResourceScope? maybeOf(BuildContext context) =>
@@ -367,7 +371,8 @@ class WorkspaceResourceScope extends InheritedWidget {
   @override
   bool updateShouldNotify(WorkspaceResourceScope oldWidget) =>
       drawerOpen != oldWidget.drawerOpen ||
-      canExpandInline != oldWidget.canExpandInline;
+      canExpandInline != oldWidget.canExpandInline ||
+      expandedWidth != oldWidget.expandedWidth;
 }
 
 /// Keeps the visible toolbar reachable when a narrow overlay covers the body.
@@ -456,6 +461,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   FocusNode? _pendingResourceFocus;
   bool _resourceCloseScheduled = false;
   double _detailWidth = AppBreakpoints.detailPane;
+  double _resourceWidth = AppBreakpoints.resourcePane;
+  double _supportingWidth = AppBreakpoints.detailPane;
+  bool _resizingResource = false, _resizingSupporting = false;
+  DesktopLayoutPreferences? _dimensions;
   double? _bodyTop;
   bool _geometryScheduled = false;
   bool _assistantLast = false;
@@ -469,6 +478,22 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _dimensions = Provider.of<DesktopLayoutPreferences?>(context);
+    if (_dimensions?.ready == true &&
+        WorkbenchChromeMetrics.of(context).desktop) {
+      if (!_resizingResource) {
+        _resourceWidth =
+            _dimensions!.preferenceFor(DesktopLayoutRegion.resources)?.width ??
+            AppBreakpoints.resourcePane;
+      }
+      if (!_resizingSupporting) {
+        _supportingWidth =
+            _dimensions!
+                .preferenceFor(DesktopLayoutRegion.monthAgenda)
+                ?.width ??
+            AppBreakpoints.detailPane;
+      }
+    }
     if (WorkspaceVisibilityScope.maybeOf(context) == false) {
       _resourceDrawerOpen = false;
     }
@@ -561,6 +586,18 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     // first consume the off-screen portion of an earlier width preference.
     final current = preferredWidth.clamp(minimumWidth, maximum);
     return (current - delta / textScale).clamp(minimumWidth, maximum);
+  }
+
+  void _saveRegionWidth(DesktopLayoutRegion key, double? width) {
+    final previous = _dimensions?.preferenceFor(key);
+    _dimensions?.setPreferredSize(
+      key,
+      PreferredRegionSize(
+        width: width,
+        height: previous?.height,
+        dockedWidth: previous?.dockedWidth,
+      ),
+    );
   }
 
   void _requestAssistantFocus() {
@@ -868,8 +905,14 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               : 0.0;
           final width = drawer
               ? math.min(
-                  AppBreakpoints.resourcePane * metrics.textScale,
-                  constraints.maxWidth,
+                  _resourceWidth * metrics.textScale,
+                  math.min(
+                    constraints.maxWidth,
+                    math.max(
+                      AppBreakpoints.resourcePane * metrics.textScale,
+                      constraints.maxWidth * .8,
+                    ),
+                  ),
                 )
               : policy.resources
               ? policy.resourceWidth
@@ -896,13 +939,17 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                   ),
                 ),
               PositionedDirectional(
+                key: const ValueKey('workspace-resource-position'),
                 top: top,
                 bottom: 0,
                 start: 0,
                 child: TweenAnimationBuilder<double>(
                   tween: Tween(end: width),
                   duration:
-                      drawer || !visible || !motion.spatialAnimationsEnabled
+                      drawer ||
+                          _resizingResource ||
+                          !visible ||
+                          !motion.spatialAnimationsEnabled
                       ? Duration.zero
                       : motion.effects(SkedMotionSpeed.standard),
                   curve: motion.scheme.standardCurve,
@@ -942,7 +989,16 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                 explicitChildNodes: true,
                                 child: WorkspaceCanvasScope(
                                   layout: policy,
-                                  child: widget.resources,
+                                  child: WorkspaceResourceScope(
+                                    drawerOpen: drawer,
+                                    canExpandInline: policy.canExpandResources,
+                                    expandedWidth: drawer
+                                        ? width
+                                        : policy.expandedResourceWidth,
+                                    open: _openResources,
+                                    close: () => _closeResources(),
+                                    child: widget.resources,
+                                  ),
                                 ),
                               ),
                             ),
@@ -953,6 +1009,56 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                   ),
                 ),
               ),
+              if (metrics.desktop &&
+                  widget.active &&
+                  !blocked &&
+                  (drawer ||
+                      policy.resourcePresentation ==
+                          WorkspaceResourcePresentation.expanded))
+                PositionedDirectional(
+                  start: math.max(0, width - 5),
+                  top: top,
+                  bottom: 0,
+                  width: 9,
+                  child: SkedResizeHandle(
+                    key: const ValueKey('workspace-resource-resize'),
+                    onStart: () => setState(() => _resizingResource = true),
+                    onDelta: (delta) => setState(() {
+                      final maximum = drawer
+                          ? math.min(
+                              constraints.maxWidth,
+                              math.max(
+                                AppBreakpoints.resourcePane * metrics.textScale,
+                                constraints.maxWidth * .8,
+                              ),
+                            )
+                          : policy.maximumResourceWidth;
+                      _resourceWidth =
+                          (width + delta).clamp(
+                            math.min(
+                              AppBreakpoints.resourcePane * metrics.textScale,
+                              maximum,
+                            ),
+                            maximum,
+                          ) /
+                          metrics.textScale;
+                    }),
+                    onEnd: () {
+                      if (!_resizingResource) return;
+                      setState(() => _resizingResource = false);
+                      _saveRegionWidth(
+                        DesktopLayoutRegion.resources,
+                        _resourceWidth,
+                      );
+                    },
+                    onReset: () {
+                      setState(
+                        () => _resourceWidth = AppBreakpoints.resourcePane,
+                      );
+                      _saveRegionWidth(DesktopLayoutRegion.resources, null);
+                    },
+                  ),
+                ),
             ],
           );
         },
@@ -1017,6 +1123,12 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                     ? AppBreakpoints.minimumDetailPane
                     : 320 / metrics.textScale,
                 preferredAssistantWidth: _assistant.width,
+                preferredResourceWidth: metrics.desktop
+                    ? _resourceWidth
+                    : AppBreakpoints.resourcePane,
+                preferredSupportingWidth: metrics.desktop
+                    ? _supportingWidth
+                    : AppBreakpoints.detailPane,
                 // Scaffold shortens the body for the IME. Only an actual short
                 // window, not typing in a pane, may compact the navigation.
                 resourcesCollapsed: widget.resourcesCollapsed,
@@ -1303,7 +1415,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                 children: [
                                   TweenAnimationBuilder<double>(
                                     tween: Tween(end: policy.resourceWidth),
-                                    duration: motion.spatialAnimationsEnabled
+                                    duration:
+                                        motion.spatialAnimationsEnabled &&
+                                            !_resizingResource
                                         ? motion.effects(
                                             SkedMotionSpeed.standard,
                                           )
@@ -1395,6 +1509,47 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                 ),
                               ),
                             ),
+                            if (metrics.desktop && active && policy.supporting)
+                              PositionedDirectional(
+                                end: policy.supportingWidth - 5,
+                                top: overlayInset,
+                                bottom: 0,
+                                width: 9,
+                                child: SkedResizeHandle(
+                                  key: const ValueKey(
+                                    'workspace-supporting-resize',
+                                  ),
+                                  increaseReversed: true,
+                                  onStart: () => _resizingSupporting = true,
+                                  onDelta: (delta) => setState(() {
+                                    _supportingWidth =
+                                        (policy.supportingWidth - delta).clamp(
+                                          AppBreakpoints.minimumDetailPane *
+                                              metrics.textScale,
+                                          policy.maximumSupportingWidth,
+                                        ) /
+                                        metrics.textScale;
+                                  }),
+                                  onEnd: () {
+                                    if (!_resizingSupporting) return;
+                                    _resizingSupporting = false;
+                                    _saveRegionWidth(
+                                      DesktopLayoutRegion.monthAgenda,
+                                      _supportingWidth,
+                                    );
+                                  },
+                                  onReset: () {
+                                    setState(
+                                      () => _supportingWidth =
+                                          AppBreakpoints.detailPane,
+                                    );
+                                    _saveRegionWidth(
+                                      DesktopLayoutRegion.monthAgenda,
+                                      null,
+                                    );
+                                  },
+                                ),
+                              ),
                             if (floatingEditor && active)
                               Positioned.fill(
                                 child: ModalBarrier(

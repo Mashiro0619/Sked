@@ -174,9 +174,8 @@ class WorkspaceResourcePanel extends StatelessWidget {
     final drawer = resourceScope?.drawerOpen ?? false;
     final collapsed =
         !drawer &&
-        (layout?.resourceWidth ?? AppBreakpoints.resourcePane) <
-            AppBreakpoints.resourcePane *
-                WorkbenchLayoutPolicy.textFactor(m.textScale);
+        layout != null &&
+        layout.resourcePresentation != WorkspaceResourcePresentation.expanded;
     final forcedCompact =
         collapsed &&
         (resourceScope != null
@@ -209,7 +208,10 @@ class WorkspaceResourcePanel extends StatelessWidget {
             ? AppBreakpoints.pointerCompactResourcePane
             : AppBreakpoints.compactResourcePane) *
         factor;
-    final expandedWidth = AppBreakpoints.resourcePane * factor;
+    final expandedWidth =
+        resourceScope?.expandedWidth ??
+        layout?.expandedResourceWidth ??
+        AppBreakpoints.resourcePane * factor;
 
     return SkedSurface(
       key: const ValueKey('workspace-resource-panel'),
