@@ -4,12 +4,15 @@ import 'desktop_window_host.dart';
 import 'workbench_chrome_metrics.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/settings_catalog.dart';
 import '../models/settings_destination.dart';
+import '../services/desktop_layout_preferences.dart';
+import 'sked_resizable.dart';
 import 'workbench_layout_policy.dart';
 import 'adaptive_navigation_scope.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -216,106 +219,141 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-      _wide = WorkbenchLayoutPolicy.formCanSplit(
-        constraints.maxWidth,
-        textScale,
-      );
-      if (!widget.catalog.any(
-        (entry) => entry.category && entry.id == _highlightedGroup,
-      )) {
-        _highlightedGroup = widget.catalog
-            .where((entry) => entry.category)
-            .firstOrNull
-            ?.id;
-      }
-      for (final entry in widget.catalog) {
-        _sectionKeys.putIfAbsent(
-          entry.id,
-          () => GlobalKey(debugLabel: 'settings-section-${entry.id}'),
+  Widget build(BuildContext context) => DesktopResizableRegion(
+    layoutKey: DesktopLayoutRegion.settingsNavigation,
+    builder: (context, preferred, update, commit, reset) => LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final factor = WorkbenchLayoutPolicy.textFactor(textScale);
+        final double navigationWidth = ((preferred ?? 224.0) * factor)
+            .clamp(
+              224 * factor,
+              math.max(224 * factor, constraints.maxWidth - 520 * factor - 1),
+            )
+            .toDouble();
+        _wide = WorkbenchLayoutPolicy.formCanSplit(
+          constraints.maxWidth,
+          textScale,
         );
-      }
-      return PopScope(
-        canPop: _selected == null,
-        child: Scaffold(
-          body: SafeArea(
-            child: Row(
-              children: [
-                SizedBox(
-                  width: _wide
-                      ? 224 * WorkbenchLayoutPolicy.textFactor(textScale)
-                      : 0,
-                  child: Offstage(
-                    offstage: !_wide,
-                    child: ExcludeFocus(
-                      excluding: !_wide,
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: WorkbenchChromeMetrics.of(context)
-                                .toolbarHeight,
-                            child: WorkbenchAppBar(
-                              primary: false,
-                              reserveCaption: false,
-                              leading: BackButton(
-                                onPressed: () => unawaited(_back()),
-                              ),
-                              title: Text(
-                                AppLocalizations.of(context).settingsTitle,
-                              ),
+        if (!widget.catalog.any(
+          (entry) => entry.category && entry.id == _highlightedGroup,
+        )) {
+          _highlightedGroup = widget.catalog
+              .where((entry) => entry.category)
+              .firstOrNull
+              ?.id;
+        }
+        for (final entry in widget.catalog) {
+          _sectionKeys.putIfAbsent(
+            entry.id,
+            () => GlobalKey(debugLabel: 'settings-section-${entry.id}'),
+          );
+        }
+        return PopScope(
+          canPop: _selected == null,
+          child: Scaffold(
+            body: SafeArea(
+              child: Stack(
+                children: [
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: _wide ? navigationWidth : 0.0,
+                        child: Offstage(
+                          offstage: !_wide,
+                          child: ExcludeFocus(
+                            excluding: !_wide,
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  height: WorkbenchChromeMetrics.of(context)
+                                      .toolbarHeight,
+                                  child: WorkbenchAppBar(
+                                    primary: false,
+                                    reserveCaption: false,
+                                    leading: BackButton(
+                                      onPressed: () => unawaited(_back()),
+                                    ),
+                                    title: Text(
+                                      AppLocalizations.of(context)
+                                          .settingsTitle,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: SkedSurface(
+                                    role: SkedSurfaceRole.frame,
+                                    child: _navigation(sidebar: true),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Expanded(
-                            child: SkedSurface(
-                              role: SkedSurfaceRole.frame,
-                              child: _navigation(sidebar: true),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-                if (_wide) const VerticalDivider(width: 1),
-                Expanded(
-                  child: AdaptiveNavigationScope(
-                    wide: _wide,
-                    registerPageExitGuard: _registerPageExitGuard,
-                    child: Semantics(
-                      container: true,
-                      explicitChildNodes: true,
-                      child: NavigatorPopHandler<void>(
-                        onPopWithResult: (_) => unawaited(_back()),
-                        child: Navigator(
-                          key: _navigator,
-                          observers: [_observer],
-                          requestFocus: false,
-                          onGenerateRoute: (_) => MaterialPageRoute<void>(
-                            builder: (pageContext) => Scaffold(
-                              body: widget.overviewBuilder(
-                                pageContext,
-                                _overviewController,
-                                _sectionKeys,
-                                _openDestination,
-                                _SettingsOverviewAppBar(
-                                  onBack: () => unawaited(_back()),
+                      if (_wide) const VerticalDivider(width: 1),
+                      Expanded(
+                        child: AdaptiveNavigationScope(
+                          wide: _wide,
+                          registerPageExitGuard: _registerPageExitGuard,
+                          child: Semantics(
+                            container: true,
+                            explicitChildNodes: true,
+                            child: NavigatorPopHandler<void>(
+                              onPopWithResult: (_) => unawaited(_back()),
+                              child: Navigator(
+                                key: _navigator,
+                                observers: [_observer],
+                                requestFocus: false,
+                                onGenerateRoute: (_) => MaterialPageRoute<void>(
+                                  builder: (pageContext) => Scaffold(
+                                    body: widget.overviewBuilder(
+                                      pageContext,
+                                      _overviewController,
+                                      _sectionKeys,
+                                      _openDestination,
+                                      _SettingsOverviewAppBar(
+                                        onBack: () => unawaited(_back()),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-              ],
+                  if (_wide && WorkbenchLayoutPolicy.pointerLayout(context))
+                    PositionedDirectional(
+                      start: navigationWidth - 4,
+                      top: 0,
+                      bottom: 0,
+                      width: 9,
+                      child: SkedResizeHandle(
+                        key: const ValueKey('settings-navigation-resize'),
+                        onDelta: (delta) => update(
+                          (navigationWidth + delta).clamp(
+                                224 * factor,
+                                math.max(
+                                  224 * factor,
+                                  constraints.maxWidth - 520 * factor - 1,
+                                ),
+                              ) /
+                              factor,
+                        ),
+                        onEnd: commit,
+                        onReset: reset,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
+        );
+      },
+    ),
   );
 }
 

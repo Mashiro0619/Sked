@@ -1,10 +1,13 @@
 import 'desktop_window_host.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../services/desktop_layout_preferences.dart';
 import 'adaptive_navigation_scope.dart';
+import 'sked_resizable.dart';
 import 'workbench_layout_policy.dart';
 import 'ui_command.dart';
 
@@ -122,77 +125,106 @@ class _AdaptiveCollectionScaffoldState
     ],
   );
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final wide = WorkbenchLayoutPolicy.formCanSplit(
-        constraints.maxWidth,
-        MediaQuery.textScalerOf(context).scale(14) / 14,
-      );
-      return PopScope(
-        canPop: _selected == null,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) unawaited(_navigator.currentState!.maybePop());
-        },
-        child: Scaffold(
-          appBar: WorkbenchAppBar(
-            title: Text(widget.title),
-            actions: widget.actions,
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(4),
-              child: UiCommandBusyIndicator(busy: widget.busy),
+  Widget build(BuildContext context) => DesktopResizableRegion(
+    layoutKey: DesktopLayoutRegion.periodTimeSets,
+    builder: (context, preferred, update, commit, reset) => LayoutBuilder(
+      builder: (context, constraints) {
+        final factor = WorkbenchLayoutPolicy.textFactor(
+          MediaQuery.textScalerOf(context).scale(14) / 14,
+        );
+        final maximumWidth = math.max(
+          224 * factor,
+          constraints.maxWidth - 520 * factor - 1,
+        );
+        final listWidth = ((preferred ?? 224) * factor).clamp(
+          224 * factor,
+          maximumWidth,
+        );
+        final wide = WorkbenchLayoutPolicy.formCanSplit(
+          constraints.maxWidth,
+          MediaQuery.textScalerOf(context).scale(14) / 14,
+        );
+        return PopScope(
+          canPop: _selected == null,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) unawaited(_navigator.currentState!.maybePop());
+          },
+          child: Scaffold(
+            appBar: WorkbenchAppBar(
+              title: Text(widget.title),
+              actions: widget.actions,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(4),
+                child: UiCommandBusyIndicator(busy: widget.busy),
+              ),
             ),
-          ),
-          body: Row(
-            children: [
-              SizedBox(
-                width: wide
-                    ? 224 *
-                          WorkbenchLayoutPolicy.textFactor(
-                            MediaQuery.textScalerOf(context).scale(14) / 14,
-                          )
-                    : 0,
-                child: Offstage(
-                  offstage: !wide,
-                  child: ExcludeFocus(excluding: !wide, child: _list()),
-                ),
-              ),
-              SizedBox(
-                width: wide ? 1 : 0,
-                child: const VerticalDivider(width: 1),
-              ),
-              Expanded(
-                child: AdaptiveNavigationScope(
-                  wide: wide,
-                  child: Semantics(
-                    container: true,
-                    explicitChildNodes: true,
-                    child: Navigator(
-                      key: _navigator,
-                      requestFocus: false,
-                      onGenerateRoute: (_) => MaterialPageRoute<void>(
-                        builder: (_) => LayoutBuilder(
-                          key: _homeKey,
-                          builder: (context, _) =>
-                              AdaptiveNavigationScope.isWide(context)
-                              ? Center(
-                                  child: Text(
-                                    widget.title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge,
-                                  ),
-                                )
-                              : _list(),
+            body: Stack(
+              children: [
+                Row(
+                  children: [
+                    SizedBox(
+                      width: wide ? listWidth : 0,
+                      child: Offstage(
+                        offstage: !wide,
+                        child: ExcludeFocus(excluding: !wide, child: _list()),
+                      ),
+                    ),
+                    SizedBox(
+                      width: wide ? 1 : 0,
+                      child: const VerticalDivider(width: 1),
+                    ),
+                    Expanded(
+                      child: AdaptiveNavigationScope(
+                        wide: wide,
+                        child: Semantics(
+                          container: true,
+                          explicitChildNodes: true,
+                          child: Navigator(
+                            key: _navigator,
+                            requestFocus: false,
+                            onGenerateRoute: (_) => MaterialPageRoute<void>(
+                              builder: (_) => LayoutBuilder(
+                                key: _homeKey,
+                                builder: (context, _) =>
+                                    AdaptiveNavigationScope.isWide(context)
+                                    ? Center(
+                                        child: Text(
+                                          widget.title,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge,
+                                        ),
+                                      )
+                                    : _list(),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-            ],
+                if (wide && WorkbenchLayoutPolicy.pointerLayout(context))
+                  PositionedDirectional(
+                    start: listWidth - 4,
+                    top: 0,
+                    bottom: 0,
+                    width: 9,
+                    child: SkedResizeHandle(
+                      key: const ValueKey('period-time-sets-resize'),
+                      onDelta: (delta) => update(
+                        (listWidth + delta).clamp(224 * factor, maximumWidth) /
+                            factor,
+                      ),
+                      onEnd: commit,
+                      onReset: reset,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
+        );
+      },
+    ),
   );
 }
