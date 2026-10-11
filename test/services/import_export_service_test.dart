@@ -1782,6 +1782,7 @@ END:VCALENDAR
         source,
         timetableIds: const ['imported'],
         mode: TimetableImportMode.replaceActive,
+        replacementTimetableId: 'active',
         localeCode: defaultLocaleCode,
         importBundledPeriodTimeSets: false,
         targetPeriodTimeSetId: 'set2',
@@ -1824,6 +1825,7 @@ END:VCALENDAR
           source,
           timetableIds: const ['replacement'],
           mode: TimetableImportMode.replaceActive,
+          replacementTimetableId: 'active',
           localeCode: defaultLocaleCode,
         );
 

@@ -873,7 +873,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "覆盖当前课表时只能选择一个课表",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "当前没有可覆盖的课表",
+  "noActiveTimetableToReplaceMessage": "要覆盖的课表已不存在，请重新选择。",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "该节次时间仍被 {count} 个课表使用，请先改关联再删除",
   "@periodTimeSetInUseMessage": {
@@ -1209,7 +1209,7 @@
   "@pickDate": {},
   "pickTime": "选择时间",
   "@pickTime": {},
-  "reminder": "应用内提醒",
+  "reminder": "提醒",
   "@reminder": {},
   "reminderAtStart": "开始时",
   "@reminderAtStart": {},
@@ -1995,5 +1995,58 @@
   "backupRestoreInProgressTitle": "正在恢复备份…",
   "@backupRestoreInProgressTitle": {},
   "backupRestoreInProgressMessage": "恢复完成前，暂时无法修改数据和设置。你仍可查看内容。",
-  "@backupRestoreInProgressMessage": {}
+  "@backupRestoreInProgressMessage": {},
+  "managePeriodTimeSets": "管理节次时间集",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "{periodCount} 节 · {timetableCount} 个课表使用",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "导入为新课表，或覆盖“{name}”的课表信息和全部课程。",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "请至少选择一周",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "隐藏日程分类后仍提醒",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "同时影响应用内提醒和系统通知；系统通知仍受通知总开关控制。",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "跟随默认",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "自定义提醒",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "编辑重复日程",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "仅本次",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "本次及以后",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "整个系列",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "更改将应用于整个系列，包括过去的实例。",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "此日程已发生变化。草稿已保留，请重新打开日程核对最新内容。",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "已保存到隐藏分类“{name}”。",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "查看日程",
+  "@viewEvent": {}
 }

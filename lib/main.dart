@@ -1,3 +1,4 @@
+import 'widgets/general_event_edit_flow.dart';
 import 'widgets/update_prompt_scope.dart';
 
 import 'dart:async';
@@ -618,7 +619,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     AgendaTarget target,
   ) async {
     final courseId = target.courseId;
-    final timetable = widget.provider.activeTimetableOrNull;
+    final timetable = widget.provider.timetables
+        .where((item) => item.id == target.timetableId)
+        .firstOrNull;
     if (courseId == null || timetable == null) return;
     CourseItem? course;
     for (final candidate in timetable.courses) {
@@ -674,6 +677,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         .where((item) => item.id == timetableId)
         .firstOrNull;
     if (timetable == null || !context.mounted) return;
+    final currentCourse = timetable.courses
+        .where((item) => item.id == course.id)
+        .firstOrNull;
+    if (currentCourse == null) return;
     await showAppModalSheet<CourseEditorResult>(
       context: context,
       useRootNavigator: true,
@@ -683,8 +690,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       builder: (_) => CourseEditorSheet(
         periodTimes: widget.provider.periodTimesForTimetable(timetable),
         totalWeeks: timetable.config.totalWeeks,
-        initialCourse: course,
-        dayOfWeek: course.dayOfWeek,
+        initialCourse: currentCourse,
+        dayOfWeek: currentCourse.dayOfWeek,
         onSave: (value) =>
             widget.provider.saveCourse(value, timetableId: timetable.id),
         onDelete: () =>
@@ -697,70 +704,101 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     BuildContext context,
     AgendaTarget target,
   ) async {
-    final calendarId = target.calendarId;
-    final eventId = target.eventId;
-    final occurrenceKey = target.occurrenceKey;
-    final rawDate = target.dateIso;
-    if (calendarId == null ||
-        eventId == null ||
-        occurrenceKey == null ||
-        rawDate == null) {
-      return;
-    }
-    if (tryParseStrictIsoDateTime(rawDate) == null) return;
-    final selectedOccurrence = resolveNotificationOccurrence(
-      widget.provider,
-      target,
-    );
-    if (selectedOccurrence == null || !context.mounted) return;
+    final occurrence = resolveNotificationOccurrence(widget.provider, target);
+    if (occurrence == null || !context.mounted) return;
+    await _openGeneralOccurrenceDetails(context, occurrence);
+  }
+
+  GeneralEventOccurrence? _currentGeneralOccurrence(
+    GeneralEventOccurrence source,
+  ) {
+    final calendar = widget.provider.generalSchedules
+        .where((item) => item.id == source.calendar.id)
+        .firstOrNull;
+    final event = calendar?.events
+        .where((item) => item.id == source.event.id)
+        .firstOrNull;
+    if (calendar == null || event == null) return null;
+    return expandGeneralEventOccurrences(
+      calendar: calendar,
+      event: event,
+      startInclusive: source.start,
+      endExclusive: source.start.add(const Duration(microseconds: 1)),
+    ).where((item) => item.start.isAtSameMomentAs(source.start)).firstOrNull;
+  }
+
+  Future<void> _openGeneralOccurrenceDetails(
+    BuildContext context,
+    GeneralEventOccurrence occurrence,
+  ) async {
+    var mutating = false;
     await showAppModalSheet<void>(
       context: context,
       useRootNavigator: true,
+      workspace: AppMode.general,
+      isSessionCurrent: () =>
+          mutating || _currentGeneralOccurrence(occurrence) != null,
       isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
       enableDrag: false,
       maxWidth: appSheetWidthCompact,
-      builder: (sheetContext) => GeneralEventDetailsSheet(
-        occurrence: selectedOccurrence,
-        isReminderHandled: widget.provider.isGeneralReminderHandled(
-          selectedOccurrence,
-        ),
-        onEdit: () async {
-          if (sheetContext.mounted) {
-            await Navigator.of(sheetContext).maybePop();
+      builder: (sheetContext) => Consumer<TimetableProvider>(
+        builder: (_, provider, _) {
+          final current = _currentGeneralOccurrence(occurrence) ?? occurrence;
+          void close() {
+            final route = ModalRoute.of(sheetContext);
+            if (route?.isCurrent == true) route!.navigator?.pop();
           }
-          if (context.mounted) {
-            await _openAgendaGeneralEditor(context, selectedOccurrence);
+
+          Future<void> command(
+            Future<void> Function(GeneralEventOccurrence) action,
+          ) async {
+            final latest = _currentGeneralOccurrence(occurrence);
+            if (latest == null) {
+              close();
+              return;
+            }
+            mutating = true;
+            try {
+              await action(latest);
+              close();
+            } catch (_) {
+              mutating = false;
+              rethrow;
+            }
           }
-        },
-        onDismissReminder: () async {
-          await widget.provider.dismissGeneralReminder(selectedOccurrence);
-          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
-        },
-        onRestoreReminder: () async {
-          await widget.provider.restoreGeneralReminder(selectedOccurrence);
-          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
-        },
-        onDuplicate: () async {
-          await widget.provider.duplicateGeneralOccurrence(selectedOccurrence);
-          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
-        },
-        onDeleteThis: () async {
-          await widget.provider.deleteGeneralOccurrence(selectedOccurrence);
-          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
-        },
-        onDeleteFuture: selectedOccurrence.event.recurrenceRule.isRepeating
-            ? () async {
-                await widget.provider.deleteFutureGeneralOccurrences(
-                  selectedOccurrence,
-                );
-                if (sheetContext.mounted) {
-                  await Navigator.of(sheetContext).maybePop();
-                }
+
+          return GeneralEventDetailsSheet(
+            occurrence: current,
+            notificationSettings: provider.notificationSettings,
+            isReminderHandled: provider.isGeneralReminderHandled(current),
+            onBeforeAction: () => _currentGeneralOccurrence(occurrence) != null,
+            onShowCalendar: () => provider.updateGeneralScheduleVisibility(
+              current.calendar.id,
+              true,
+            ),
+            onEditScoped: (scope) async {
+              final latest = _currentGeneralOccurrence(occurrence);
+              if (latest == null) {
+                close();
+                return;
               }
-            : null,
-        onDeleteAll: () async {
-          await widget.provider.deleteGeneralEvent(selectedOccurrence.event.id);
-          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
+              close();
+              if (context.mounted) {
+                await _openAgendaGeneralEditor(context, latest, scope);
+              }
+            },
+            onDismissReminder: () => command(provider.dismissGeneralReminder),
+            onRestoreReminder: () => command(provider.restoreGeneralReminder),
+            onDuplicate: () => command((value) async {
+              await provider.duplicateGeneralOccurrence(value);
+            }),
+            onDeleteThis: () => command(provider.deleteGeneralOccurrence),
+            onDeleteFuture: current.event.recurrenceRule.isRepeating
+                ? () => command(provider.deleteFutureGeneralOccurrences)
+                : null,
+            onDeleteAll: () =>
+                command((value) => provider.deleteGeneralEvent(value.event.id)),
+          );
         },
       ),
     );
@@ -769,22 +807,93 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Future<void> _openAgendaGeneralEditor(
     BuildContext context,
     GeneralEventOccurrence occurrence,
+    GeneralEventEditScope scope,
   ) async {
     if (!context.mounted) return;
+    final initial = widget.provider.prepareGeneralOccurrenceEdit(
+      occurrence,
+      scope,
+    );
+    var mutating = false;
+    GeneralEvent? saved;
     await showAppModalSheet<GeneralEventEditorResult>(
       context: context,
       useRootNavigator: true,
+      workspace: AppMode.general,
+      isSessionCurrent: () =>
+          mutating || _currentGeneralOccurrence(occurrence) != null,
       isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
       enableDrag: false,
       maxWidth: appSheetWidthExpanded,
-      builder: (_) => GeneralEventEditorSheet(
-        initialEvent: occurrence.event,
-        initialDate: occurrence.calendarDisplayStart,
-        calendars: widget.provider.generalSchedules,
-        activeCalendarId: widget.provider.activeGeneralSchedule.id,
-        onSave: widget.provider.saveGeneralEvent,
-        onDelete: () => widget.provider.deleteGeneralEvent(occurrence.event.id),
+      builder: (sheetContext) => Consumer<TimetableProvider>(
+        builder: (_, provider, _) => GeneralEventEditorSheet(
+          initialEvent: initial,
+          editScope: occurrence.event.recurrenceRule.isRepeating ? scope : null,
+          calendars: provider.generalSchedules,
+          activeCalendarId: occurrence.calendar.id,
+          defaultReminderMinutesBefore: provider.generalDefaultMinutesBefore,
+          onSave: (draft) async {
+            mutating = true;
+            try {
+              saved = await provider.editGeneralOccurrence(
+                occurrence,
+                draft,
+                scope,
+              );
+            } on GeneralEventEditConflictException {
+              mutating = false;
+              if (!sheetContext.mounted) rethrow;
+              throw FormatException(
+                AppLocalizations.of(sheetContext).eventEditConflict,
+              );
+            } catch (_) {
+              mutating = false;
+              rethrow;
+            }
+          },
+          onDelete: () async {
+            mutating = true;
+            try {
+              await provider.deleteGeneralOccurrenceScope(occurrence, scope);
+            } catch (_) {
+              mutating = false;
+              rethrow;
+            }
+          },
+        ),
       ),
+    );
+    final event = saved;
+    if (!context.mounted) return;
+    if (event == null) {
+      if (!mutating && _currentGeneralOccurrence(occurrence) != null) {
+        await _openGeneralOccurrenceDetails(context, occurrence);
+      }
+      return;
+    }
+    final calendar = widget.provider.generalSchedules
+        .where((item) => item.id == event.calendarId)
+        .firstOrNull;
+    if (calendar == null || calendar.isVisible) return;
+    showHiddenCalendarSaveFeedback(
+      context,
+      calendar: calendar,
+      onView: () {
+        if (!context.mounted) return;
+        final date = tryParseStrictIsoDateTime(event.startDateTimeIso);
+        if (date == null) return;
+        final displayed = widget.provider
+            .generalOccurrencesForRange(
+              startInclusive: date,
+              endExclusive: addCalendarDays(date, 32),
+              onlyVisibleCalendars: false,
+            )
+            .where((item) => item.event.id == event.id)
+            .firstOrNull;
+        if (displayed != null) {
+          unawaited(_openGeneralOccurrenceDetails(context, displayed));
+        }
+      },
     );
   }
 }

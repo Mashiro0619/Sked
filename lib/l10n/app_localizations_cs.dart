@@ -1261,7 +1261,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Neexistuje žádný aktuální časový rozvrh k nahrazení.';
+      'Vybraný rozvrh není dostupný. Vyberte prosím znovu.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1702,7 +1702,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get pickTime => 'Vybrat čas';
 
   @override
-  String get reminder => 'Připomenutí v aplikaci';
+  String get reminder => 'Připomenutí';
 
   @override
   String get reminderAtStart => 'Při začátku';
@@ -2947,4 +2947,62 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Data a nastavení bude možné změnit po dokončení obnovy. Stále si je můžete prohlížet.';
+
+  @override
+  String get managePeriodTimeSets => 'Spravovat sady časů vyučovacích hodin';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Počet hodin: $periodCount · Použito v rozvrzích: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importovat jako nový rozvrh, nebo nahradit všechny údaje a předměty v rozvrhu „$name“.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Vyberte alespoň jeden týden.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Připomínat i skryté kategorie';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Platí pro připomenutí v aplikaci i systémová oznámení. Systémová oznámení se nadále řídí hlavním přepínačem oznámení.';
+
+  @override
+  String get generalReminderFollowDefault => 'Použít výchozí nastavení';
+
+  @override
+  String get generalReminderCustom => 'Vlastní připomenutí';
+
+  @override
+  String get eventEditScopeTitle => 'Upravit opakující se událost';
+
+  @override
+  String get eventEditThisOccurrence => 'Pouze tento výskyt';
+
+  @override
+  String get eventEditThisAndFollowing => 'Tento a následující výskyty';
+
+  @override
+  String get eventEditEntireSeries => 'Celá série';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Změny se projeví v celé sérii včetně minulých výskytů.';
+
+  @override
+  String get eventEditConflict =>
+      'Tato událost se změnila. Koncept zůstává zachován. Otevřete událost znovu a zkontrolujte její nejnovější verzi.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Uloženo do skryté kategorie „$name“.';
+  }
+
+  @override
+  String get viewEvent => 'Zobrazit událost';
 }

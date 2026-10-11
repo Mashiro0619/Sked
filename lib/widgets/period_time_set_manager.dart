@@ -9,6 +9,8 @@ import '../models/app_mode.dart';
 import 'workspace_route_lifecycle.dart';
 import '../screens/period_times_page.dart';
 import 'adaptive_collection_scaffold.dart';
+import 'desktop_window_host.dart';
+import 'expressive_empty_state.dart';
 import 'ui_command.dart';
 
 class PeriodTimeSetManagerPage extends StatefulWidget {
@@ -22,6 +24,8 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
     with
         UiCommandRunner<PeriodTimeSetManagerPage>,
         WorkspaceRouteLifecycle<PeriodTimeSetManagerPage> {
+  String? _newSetId;
+
   @override
   AppMode get routeWorkspace => AppMode.student;
   @override
@@ -30,57 +34,79 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
   Widget build(BuildContext context) {
     final p = context.watch<TimetableProvider>();
     final l = AppLocalizations.of(context);
-    return AdaptiveCollectionScaffold(
-      title: l.periodTimeSets,
-      busy: uiCommandBusy,
-      actions: [
-        IconButton(
-          tooltip: l.newPeriodTimeSetName,
-          icon: const Icon(Icons.add),
-          onPressed: uiCommandBusy
-              ? null
-              : () => unawaited(
-                  runUiCommand(
-                    debugLabel: 'Create period time set',
-                    command: () async {
-                      await p.addPeriodTimeSet();
-                    },
-                  ),
-                ),
-        ),
-      ],
-      items: [
-        for (final set in p.periodTimeSets)
-          CollectionItem(
-            id: set.id,
-            title: set.name,
-            subtitle: l.periodTimeSetSummary(set.name, set.periodTimes.length),
-            trailing: p.activeTimetableOrNull == null
-                ? null
-                : IconButton(
-                    tooltip: l.selectPeriodTimeSet,
-                    isSelected:
-                        p.activeTimetableOrNull!.config.periodTimeSetId ==
-                        set.id,
-                    icon: const Icon(Icons.radio_button_unchecked),
-                    selectedIcon: const Icon(Icons.radio_button_checked),
-                    onPressed: uiCommandBusy
-                        ? null
-                        : () => unawaited(
-                            runUiCommand(
-                              debugLabel: 'Assign period time set',
-                              command: () => p.assignPeriodTimeSetToTimetable(
-                                p.activeTimetable.id,
-                                set.id,
-                              ),
-                            ),
-                          ),
-                  ),
+    Future<void> createSet() async {
+      String? createdId;
+      final saved = await runUiCommand(
+        debugLabel: 'Create period time set',
+        command: () async {
+          createdId = (await p.addPeriodTimeSet()).id;
+        },
+      );
+      if (saved && mounted) setState(() => _newSetId = createdId);
+    }
+
+    final addAction = IconButton(
+      key: const ValueKey('period-time-set-create'),
+      tooltip: l.newPeriodTimeSetName,
+      icon: const Icon(Icons.add),
+      onPressed: uiCommandBusy ? null : () => unawaited(createSet()),
+    );
+    if (p.periodTimeSets.isEmpty) {
+      return PopScope(
+        canPop: !uiCommandBusy,
+        child: Scaffold(
+          appBar: WorkbenchAppBar(
+            title: Text(l.managePeriodTimeSets),
+            actions: [addAction],
           ),
-      ],
-      detailBuilder: (id) => ChangeNotifierProvider<TimetableProvider>.value(
-        value: p,
-        child: PeriodTimesPage(periodTimeSetId: id),
+          body: ExpressiveEmptyState(
+            icon: Icons.schedule,
+            title: l.noPeriodTimeAvailable,
+          ),
+        ),
+      );
+    }
+    return PopScope(
+      canPop: !uiCommandBusy,
+      child: AdaptiveCollectionScaffold(
+        title: l.managePeriodTimeSets,
+        busy: uiCommandBusy,
+        initialSelection: _newSetId,
+        actions: [addAction],
+        items: [
+          for (final set in p.periodTimeSets)
+            CollectionItem(
+              id: set.id,
+              title: set.name,
+              subtitle: l.periodTimeSetUsageSummary(
+                set.periodTimes.length,
+                p.timetablesUsingPeriodTimeSet(set.id).length,
+              ),
+              tileBuilder: (selected, openDetail) => Material(
+                type: MaterialType.transparency,
+                child: ListTile(
+                  key: ValueKey('period-time-set-${set.id}'),
+                  selected: selected,
+                  title: Text(set.name),
+                  subtitle: Text(
+                    l.periodTimeSetUsageSummary(
+                      set.periodTimes.length,
+                      p.timetablesUsingPeriodTimeSet(set.id).length,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onTap: uiCommandBusy ? null : openDetail,
+                ),
+              ),
+            ),
+        ],
+        detailBuilder: (id) => ChangeNotifierProvider<TimetableProvider>.value(
+          value: p,
+          child: PeriodTimesPage(periodTimeSetId: id),
+        ),
       ),
     );
   }

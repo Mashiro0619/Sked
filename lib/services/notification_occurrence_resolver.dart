@@ -33,7 +33,8 @@ GeneralEventOccurrence? resolveNotificationOccurrence(
   for (final occurrence in provider.generalOccurrencesForRange(
     startInclusive: addCalendarDays(searchDate, -2),
     endExclusive: addCalendarDays(searchDate, 3),
-    onlyVisibleCalendars: true,
+    onlyVisibleCalendars:
+        !provider.notificationSettings.remindHiddenGeneralCalendars,
   )) {
     if (occurrence.calendar.id == calendarId &&
         occurrence.event.id == eventId &&

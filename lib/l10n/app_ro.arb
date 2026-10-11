@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Înlocuirea orarului curent suportă doar selectarea unui singur orar.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Nu există un calendar actual de înlocuit.",
+  "noActiveTimetableToReplaceMessage": "Orarul selectat pentru înlocuire nu este disponibil. Selectează-l din nou.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Această perioadă de timp este încă utilizată de {count} orar(e). Realocați-le înainte de a le șterge.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Alege ora",
   "@pickTime": {},
-  "reminder": "Memento în aplicație",
+  "reminder": "Memento",
   "@reminder": {},
   "reminderAtStart": "La început",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Gestionează seturile de ore de curs",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Intervale: {periodCount} · Orare asociate: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importă ca orar nou sau înlocuiește toate detaliile și cursurile din „{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Selectează cel puțin o săptămână.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Păstrează mementourile pentru categoriile ascunse",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Se aplică mementourilor din aplicație și notificărilor de sistem. Notificările de sistem trebuie să fie activate și în setări.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Folosește valoarea implicită",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Mementouri personalizate",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Editează evenimentul recurent",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Doar această apariție",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Această apariție și următoarele",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Întreaga serie",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Modificările se aplică întregii serii, inclusiv aparițiilor din trecut.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Acest eveniment a fost modificat. Ciorna este păstrată; redeschide evenimentul pentru a verifica cea mai recentă versiune.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Salvat în categoria ascunsă „{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Vezi evenimentul",
+  "@viewEvent": {}
 }

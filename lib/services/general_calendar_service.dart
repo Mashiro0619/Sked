@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import '../models/general_event.dart';
+import '../models/general_event_edit_scope.dart';
 import '../models/general_event_occurrence.dart';
 import '../models/general_schedule.dart';
 import '../models/general_schedule_data.dart';
@@ -330,6 +333,158 @@ class GeneralCalendarService {
     );
   }
 
+  /// Builds a draft while retaining the original occurrence as the save target.
+  /// No new ID or data mutation is allocated until the user saves.
+  GeneralEvent prepareOccurrenceEdit(
+    GeneralEventOccurrence source,
+    GeneralEventEditScope scope,
+  ) {
+    final event = source.event;
+    if (!event.recurrenceRule.isRepeating ||
+        scope == GeneralEventEditScope.entireSeries ||
+        (scope == GeneralEventEditScope.thisAndFollowing &&
+            source.sequence == 0)) {
+      return event;
+    }
+    final rule = event.recurrenceRule;
+    final draft = event.copyWith(
+      startDateTimeIso: source.start.toIso8601String(),
+      endDateTimeIso: source.end.toIso8601String(),
+      recurrenceRule: scope == GeneralEventEditScope.thisOccurrence
+          ? const GeneralEventRecurrenceRule()
+          : rule.copyWith(
+              count: rule.count == null ? null : rule.count! - source.sequence,
+              monthlyAnchorDay:
+                  effectiveGeneralRecurrenceUnit(rule) ==
+                      GeneralEventRecurrenceUnit.month
+                  ? rule.monthlyAnchorDay ??
+                        tryParseStrictIsoDateTime(event.startDateTimeIso)!.day
+                  : null,
+            ),
+      recurrenceExceptionDateIso: const [],
+    );
+    return draft.copyWith(
+      recurrenceExceptionDateIso: remapGeneralRecurrenceExceptionDates(
+        source: event,
+        destination: draft,
+        sourceSequenceOffset: source.sequence,
+      ),
+    );
+  }
+
+  /// Computes every part of an occurrence edit before the provider saves once.
+  /// A stale draft must never restore an externally deleted/moved series.
+  GeneralEventMutationResult editOccurrence(
+    GeneralScheduleData data,
+    GeneralEventOccurrence source,
+    GeneralEvent draft,
+    GeneralEventEditScope scope, {
+    DateTime? now,
+  }) {
+    final current = _matchingOccurrenceInData(data, source);
+    if (current == null ||
+        jsonEncode(current.event.toJson()) !=
+            jsonEncode(source.event.toJson())) {
+      throw const GeneralEventEditConflictException();
+    }
+    final calendarId = draft.calendarId.trim();
+    if (_scheduleById(data, calendarId) == null) {
+      throw const GeneralEventEditConflictException(
+        'The destination calendar no longer exists.',
+      );
+    }
+    final start = tryParseStrictIsoDateTime(draft.startDateTimeIso);
+    final end = tryParseStrictIsoDateTime(draft.endDateTimeIso);
+    if (draft.title.trim().isEmpty ||
+        start == null ||
+        end == null ||
+        !end.isAfter(start)) {
+      throw ArgumentError(
+        'The event draft requires a title and a valid range.',
+      );
+    }
+    final entireSeries =
+        !current.event.recurrenceRule.isRepeating ||
+        scope == GeneralEventEditScope.entireSeries ||
+        (scope == GeneralEventEditScope.thisAndFollowing &&
+            current.sequence == 0);
+    final single =
+        !entireSeries && scope == GeneralEventEditScope.thisOccurrence;
+    final initial = prepareOccurrenceEdit(current, scope);
+    final initialStart = tryParseStrictIsoDateTime(initial.startDateTimeIso)!;
+    var rule = single
+        ? const GeneralEventRecurrenceRule()
+        : draft.recurrenceRule;
+    if (effectiveGeneralRecurrenceUnit(rule) ==
+            GeneralEventRecurrenceUnit.month &&
+        rule.isRepeating) {
+      // A content/time edit retains a clipped month's original anchor. Moving
+      // the civil start date deliberately chooses a new monthly anchor.
+      final keepAnchor =
+          initial.recurrenceRule.isRepeating &&
+          effectiveGeneralRecurrenceUnit(initial.recurrenceRule) ==
+              GeneralEventRecurrenceUnit.month &&
+          calendarDaysBetween(initialStart, start) == 0;
+      rule = rule.copyWith(
+        monthlyAnchorDay: keepAnchor
+            ? initial.recurrenceRule.monthlyAnchorDay
+            : null,
+      );
+    } else {
+      rule = rule.copyWith(monthlyAnchorDay: null);
+    }
+    final timestamp = (now ?? DateTime.now()).toIso8601String();
+    var edited = draft
+        .copyWith(
+          id: entireSeries ? current.event.id : _nextEventId(data),
+          calendarId: calendarId,
+          recurrenceRule: rule,
+          recurrenceExceptionDateIso: const [],
+          createdAtIso: entireSeries ? current.event.createdAtIso : timestamp,
+          updatedAtIso: timestamp,
+        )
+        .normalized(fallbackCalendarId: calendarId);
+    edited = edited.copyWith(
+      recurrenceExceptionDateIso: remapGeneralRecurrenceExceptionDates(
+        source: current.event,
+        destination: edited,
+        sourceSequenceOffset: entireSeries ? 0 : current.sequence,
+      ),
+    );
+
+    GeneralScheduleData next;
+    if (entireSeries) {
+      next = saveEvent(data, edited);
+    } else if (single) {
+      next = saveEvent(deleteOccurrence(data, current), edited);
+    } else {
+      next = deleteFutureOccurrences(data, current);
+      final prefix = _eventLocationById(next, current.event.id)!.event;
+      final prefixRule = prefix.recurrenceRule.copyWith(
+        count: current.sequence,
+      );
+      final prefixDraft = prefix.copyWith(
+        recurrenceRule: prefixRule,
+        updatedAtIso: timestamp,
+      );
+      next = saveEvent(
+        next,
+        prefixDraft.copyWith(
+          recurrenceExceptionDateIso: remapGeneralRecurrenceExceptionDates(
+            source: current.event,
+            destination: prefixDraft,
+          ),
+        ),
+        preserveEventReminderAcknowledgements: true,
+      );
+      next = saveEvent(next, edited);
+    }
+    return GeneralEventMutationResult(
+      data: next.copyWith(activeScheduleId: data.activeScheduleId),
+      event: _eventLocationById(next, edited.id)!.event,
+    );
+  }
+
   GeneralEventMutationResult duplicateOccurrence(
     GeneralScheduleData data,
     GeneralEventOccurrence occurrence, {
@@ -423,10 +578,13 @@ class GeneralCalendarService {
     GeneralScheduleData data,
     GeneralEventOccurrence occurrence, {
     DateTime? now,
+    int? defaultMinutesBefore,
   }) {
     final currentOccurrence = _matchingOccurrenceInData(data, occurrence);
     if (currentOccurrence == null ||
-        currentOccurrence.event.reminders.isEmpty) {
+        currentOccurrence.event
+            .resolveReminders(defaultMinutesBefore)
+            .isEmpty) {
       return data;
     }
     final anchor = now ?? DateTime.now();
@@ -465,7 +623,7 @@ class GeneralCalendarService {
         data,
         acknowledgement.occurrenceKey,
       );
-      if (occurrence == null || occurrence.event.reminders.isEmpty) {
+      if (occurrence == null || !occurrence.event.hasReminderConfiguration) {
         continue;
       }
       if (!occurrence.end.isBefore(cutoff)) {
@@ -545,6 +703,7 @@ bool _eventOccurrenceIdentityChanged(
 ) {
   return oldSchedule.id != newScheduleId ||
       oldEvent.startDateTimeIso != newEvent.startDateTimeIso ||
+      oldEvent.reminderBehavior != newEvent.reminderBehavior ||
       !_recurrenceRulesEqual(
         oldEvent.recurrenceRule,
         newEvent.recurrenceRule,
@@ -560,6 +719,7 @@ bool _recurrenceRulesEqual(
       a.normalizedInterval == b.normalizedInterval &&
       a.unit == b.unit &&
       a.untilDateIso == b.untilDateIso &&
+      a.monthlyAnchorDay == b.monthlyAnchorDay &&
       a.count == b.count;
 }
 

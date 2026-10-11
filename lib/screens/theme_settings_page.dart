@@ -793,9 +793,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                             title: schedule.name,
                                             previewTitle: l10n.calendars,
                                             initialColorValue:
-                                                effectiveGeneralCalendarColor(
+                                                schedule.colorValue,
+                                            resolvePreview: (value) =>
+                                                effectiveGeneralCalendarColorValue(
                                                   context,
-                                                  schedule,
+                                                  value,
                                                 ).toARGB32(),
                                             onApply: (colorValue) => provider
                                                 .updateGeneralScheduleColor(
@@ -953,6 +955,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     required String previewTitle,
     BuildContext? anchorContext,
     required int initialColorValue,
+    int Function(int)? resolvePreview,
     required Future<void> Function(int colorValue) onApply,
   }) async {
     final l10n = AppLocalizations.of(context);
@@ -976,6 +979,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           builder: (context, _) => StatefulBuilder(
             builder: (context, setState) {
               final colorValue = draft.value;
+              final previewValue =
+                  resolvePreview?.call(colorValue) ?? colorValue;
               return _PersistingThemeDialog(
                 busy: submission.busy,
                 popped: popped,
@@ -989,9 +994,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         if (SkedTaskDialogScope.maybeOf(context) == null)
                           _PreviewBanner(
                             title: previewTitle,
-                            value: formatSkedColorHex(colorValue),
+                            value: formatSkedColorHex(previewValue),
                             preview: _ThemeColorPreview(
-                              colorValue: colorValue,
+                              colorValue: previewValue,
                               selected: true,
                             ),
                           ),
@@ -1001,7 +1006,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                           padding: const EdgeInsets.all(12),
                           child: Center(
                             child: SkedCompactColorPicker(
-                              colorValue: colorValue,
+                              colorValue: previewValue,
                               invalidHexMessage: l10n.colorHexInvalid,
                               onValidityChanged: (valid) =>
                                   setState(() => draft.setValidity(valid)),
@@ -1029,6 +1034,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                 popped ||
                                 !draft.validHex ||
                                 !submission.isCurrent) {
+                              return;
+                            }
+                            if (!draft.changed) {
+                              popOnce();
                               return;
                             }
                             final submittedColorValue = colorValue;

@@ -1290,7 +1290,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Aucun emploi du temps actuel à remplacer.';
+      'L’emploi du temps sélectionné n’est plus disponible. Veuillez en sélectionner un à nouveau.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1741,7 +1741,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pickTime => 'Choisir une heure';
 
   @override
-  String get reminder => 'Rappel dans l’application';
+  String get reminder => 'Rappel';
 
   @override
   String get reminderAtStart => 'Au début';
@@ -3006,4 +3006,62 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Les données et les paramètres pourront être modifiés une fois la restauration terminée. Vous pouvez toujours les consulter.';
+
+  @override
+  String get managePeriodTimeSets => 'Gérer les ensembles d’horaires de cours';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Périodes : $periodCount · Emplois du temps qui l’utilisent : $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importer comme nouvel emploi du temps ou remplacer toutes les informations et tous les cours de « $name ».';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Sélectionnez au moins une semaine.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Conserver les rappels des catégories masquées';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'S’applique aux rappels dans l’application et aux notifications système. Les notifications système restent soumises au réglage général des notifications.';
+
+  @override
+  String get generalReminderFollowDefault => 'Utiliser le réglage par défaut';
+
+  @override
+  String get generalReminderCustom => 'Rappels personnalisés';
+
+  @override
+  String get eventEditScopeTitle => 'Modifier un événement récurrent';
+
+  @override
+  String get eventEditThisOccurrence => 'Cette occurrence uniquement';
+
+  @override
+  String get eventEditThisAndFollowing => 'Cette occurrence et les suivantes';
+
+  @override
+  String get eventEditEntireSeries => 'Toute la série';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Les modifications s’appliquent à toute la série, y compris aux occurrences passées.';
+
+  @override
+  String get eventEditConflict =>
+      'Cet événement a été modifié. Votre brouillon est conservé ; rouvrez l’événement pour consulter la dernière version.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Enregistré dans la catégorie masquée « $name ».';
+  }
+
+  @override
+  String get viewEvent => 'Voir l’événement';
 }

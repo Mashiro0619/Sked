@@ -10,6 +10,7 @@ class SettingsService {
     Object? courseDefaultMinutesBefore = NotificationSettings.keep,
     Object? generalDefaultMinutesBefore = NotificationSettings.keep,
     bool? lockScreenShowTitles,
+    bool? remindHiddenGeneralCalendars,
   }) {
     final current = data.notificationSettings;
     final next = current.copyWith(
@@ -17,6 +18,7 @@ class SettingsService {
       courseDefaultMinutesBefore: courseDefaultMinutesBefore,
       generalDefaultMinutesBefore: generalDefaultMinutesBefore,
       lockScreenShowTitles: lockScreenShowTitles,
+      remindHiddenGeneralCalendars: remindHiddenGeneralCalendars,
     );
     if (next == current) return data;
     return data.copyWith(notificationSettings: next);
@@ -42,6 +44,13 @@ class SettingsService {
 
   AppData updateLockScreenShowTitles(AppData data, bool value) {
     return updateNotificationSettings(data, lockScreenShowTitles: value);
+  }
+
+  AppData updateRemindHiddenGeneralCalendars(AppData data, bool value) {
+    return updateNotificationSettings(
+      data,
+      remindHiddenGeneralCalendars: value,
+    );
   }
 
   AppData updateHideHomeWorkspaceNavigation(AppData data, bool value) {

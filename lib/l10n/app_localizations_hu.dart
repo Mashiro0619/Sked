@@ -1279,7 +1279,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Nincs jelenlegi menetrend a cserélésre.';
+      'A kiválasztott órarend nem érhető el. Kérjük, válasszon újra.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1721,7 +1721,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get pickTime => 'Idő választása';
 
   @override
-  String get reminder => 'Alkalmazáson belüli emlékeztető';
+  String get reminder => 'Emlékeztető';
 
   @override
   String get reminderAtStart => 'Kezdéskor';
@@ -2965,4 +2965,62 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Az adatok és beállítások a visszaállítás befejezése után módosíthatók. Továbbra is megtekintheted őket.';
+
+  @override
+  String get managePeriodTimeSets => 'Csengetési rendek kezelése';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return '$periodCount tanóra · $timetableCount órarend használja';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importálás új órarendként, vagy az összes adat és tantárgy cseréje ebben az órarendben: „$name”.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Válasszon legalább egy hetet.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Rejtett kategóriák emlékeztetőinek megtartása';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Az alkalmazáson belüli emlékeztetőkre és a rendszerértesítésekre is érvényes. A rendszerértesítéseket továbbra is az értesítések főkapcsolója szabályozza.';
+
+  @override
+  String get generalReminderFollowDefault => 'Alapértelmezés használata';
+
+  @override
+  String get generalReminderCustom => 'Egyéni emlékeztetők';
+
+  @override
+  String get eventEditScopeTitle => 'Ismétlődő esemény szerkesztése';
+
+  @override
+  String get eventEditThisOccurrence => 'Csak ez az alkalom';
+
+  @override
+  String get eventEditThisAndFollowing => 'Ez és a következő alkalmak';
+
+  @override
+  String get eventEditEntireSeries => 'A teljes sorozat';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'A módosítások a teljes sorozatra vonatkoznak, a korábbi alkalmakra is.';
+
+  @override
+  String get eventEditConflict =>
+      'Ez az esemény időközben megváltozott. A piszkozat megmarad; a legfrissebb változat megtekintéséhez nyissa meg újra az eseményt.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Mentve a rejtett „$name” kategóriába.';
+  }
+
+  @override
+  String get viewEvent => 'Esemény megtekintése';
 }

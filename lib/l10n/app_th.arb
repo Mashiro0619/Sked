@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "การเปลี่ยนตารางเวลาปัจจุบันสนับสนุนการเลือกตารางเวลาหนึ่งเท่านั้น",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "ไม่มีตารางเวลาปัจจุบันที่จะแทนที่",
+  "noActiveTimetableToReplaceMessage": "ตารางเรียนที่เลือกไว้เพื่อแทนที่ไม่พร้อมใช้งาน โปรดเลือกอีกครั้ง",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "ช่วงเวลานี้ยังคงใช้โดยตารางเวลา {count} (s) จัดสรรมันใหม่ก่อนลบ",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "เลือกเวลา",
   "@pickTime": {},
-  "reminder": "การเตือนในแอป",
+  "reminder": "การแจ้งเตือน",
   "@reminder": {},
   "reminderAtStart": "เมื่อเริ่ม",
   "@reminderAtStart": {},
@@ -2025,5 +2025,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "จัดการชุดเวลาคาบเรียน",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "จำนวนคาบ: {periodCount} · ตารางเรียนที่ใช้: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "นำเข้าเป็นตารางเรียนใหม่ หรือแทนที่ข้อมูลตารางเรียนและรายวิชาทั้งหมดใน “{name}”",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "เลือกอย่างน้อยหนึ่งสัปดาห์",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "คงการแจ้งเตือนสำหรับหมวดหมู่ที่ซ่อนอยู่",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "ใช้กับการเตือนในแอปและการแจ้งเตือนของระบบ โดยการแจ้งเตือนของระบบยังต้องเปิดใช้งานในการตั้งค่า",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "ใช้ค่าเริ่มต้น",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "กำหนดการเตือนเอง",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "แก้ไขกิจกรรมที่เกิดซ้ำ",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "เฉพาะครั้งนี้",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "ครั้งนี้และครั้งถัดไปทั้งหมด",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "ทั้งชุด",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "การเปลี่ยนแปลงจะมีผลกับกิจกรรมทั้งชุด รวมถึงครั้งที่ผ่านมา",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "กิจกรรมนี้มีการเปลี่ยนแปลงแล้ว ฉบับร่างของคุณยังคงอยู่ โปรดเปิดกิจกรรมอีกครั้งเพื่อตรวจสอบข้อมูลล่าสุด",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "บันทึกไว้ในหมวดหมู่ที่ซ่อนอยู่ “{name}” แล้ว",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "ดูกิจกรรม",
+  "@viewEvent": {}
 }

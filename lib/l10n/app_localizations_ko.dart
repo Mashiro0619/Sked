@@ -1216,7 +1216,8 @@ class AppLocalizationsKo extends AppLocalizations {
       '현재 시간표를 교체하려면 시간표 하나만 선택할 수 있습니다.';
 
   @override
-  String get noActiveTimetableToReplaceMessage => '교체할 현재 시간표가 없습니다.';
+  String get noActiveTimetableToReplaceMessage =>
+      '바꾸기 대상으로 선택한 시간표를 사용할 수 없습니다. 다시 선택하세요.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1647,7 +1648,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pickTime => '시간 선택';
 
   @override
-  String get reminder => '앱 내 알림';
+  String get reminder => '알림';
 
   @override
   String get reminderAtStart => '시작 시';
@@ -2836,4 +2837,60 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       '복원이 완료되면 데이터와 설정을 변경할 수 있습니다. 내용은 계속 볼 수 있습니다.';
+
+  @override
+  String get managePeriodTimeSets => '교시 시간 세트 관리';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return '교시 $periodCount개 · 사용 중인 시간표 $timetableCount개';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return '새 시간표로 가져오거나 “$name”의 시간표 정보와 수업을 모두 바꿉니다.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => '주차를 하나 이상 선택하세요.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars => '숨겨진 카테고리의 알림 유지';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      '앱 내 알림과 시스템 알림에 적용됩니다. 시스템 알림을 받으려면 알림 설정도 켜져 있어야 합니다.';
+
+  @override
+  String get generalReminderFollowDefault => '기본값 사용';
+
+  @override
+  String get generalReminderCustom => '사용자 지정 알림';
+
+  @override
+  String get eventEditScopeTitle => '반복 일정 편집';
+
+  @override
+  String get eventEditThisOccurrence => '이번 일정만';
+
+  @override
+  String get eventEditThisAndFollowing => '이번 일정 및 이후 일정';
+
+  @override
+  String get eventEditEntireSeries => '전체 반복 일정';
+
+  @override
+  String get eventEditEntireSeriesHint => '지난 일정을 포함한 전체 반복 일정에 변경 사항이 적용됩니다.';
+
+  @override
+  String get eventEditConflict =>
+      '이 일정이 변경되었습니다. 작성 중인 내용은 유지됩니다. 일정을 다시 열어 최신 내용을 확인하세요.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return '숨겨진 카테고리 “$name”에 저장했습니다.';
+  }
+
+  @override
+  String get viewEvent => '일정 보기';
 }

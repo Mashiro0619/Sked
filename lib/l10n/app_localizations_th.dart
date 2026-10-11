@@ -1253,7 +1253,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'ไม่มีตารางเวลาปัจจุบันที่จะแทนที่';
+      'ตารางเรียนที่เลือกไว้เพื่อแทนที่ไม่พร้อมใช้งาน โปรดเลือกอีกครั้ง';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1692,7 +1692,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get pickTime => 'เลือกเวลา';
 
   @override
-  String get reminder => 'การเตือนในแอป';
+  String get reminder => 'การแจ้งเตือน';
 
   @override
   String get reminderAtStart => 'เมื่อเริ่ม';
@@ -2918,4 +2918,62 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'คุณจะเปลี่ยนข้อมูลและการตั้งค่าได้เมื่อการกู้คืนเสร็จสิ้น แต่ยังดูเนื้อหาได้ตามปกติ';
+
+  @override
+  String get managePeriodTimeSets => 'จัดการชุดเวลาคาบเรียน';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'จำนวนคาบ: $periodCount · ตารางเรียนที่ใช้: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'นำเข้าเป็นตารางเรียนใหม่ หรือแทนที่ข้อมูลตารางเรียนและรายวิชาทั้งหมดใน “$name”';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'เลือกอย่างน้อยหนึ่งสัปดาห์';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'คงการแจ้งเตือนสำหรับหมวดหมู่ที่ซ่อนอยู่';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'ใช้กับการเตือนในแอปและการแจ้งเตือนของระบบ โดยการแจ้งเตือนของระบบยังต้องเปิดใช้งานในการตั้งค่า';
+
+  @override
+  String get generalReminderFollowDefault => 'ใช้ค่าเริ่มต้น';
+
+  @override
+  String get generalReminderCustom => 'กำหนดการเตือนเอง';
+
+  @override
+  String get eventEditScopeTitle => 'แก้ไขกิจกรรมที่เกิดซ้ำ';
+
+  @override
+  String get eventEditThisOccurrence => 'เฉพาะครั้งนี้';
+
+  @override
+  String get eventEditThisAndFollowing => 'ครั้งนี้และครั้งถัดไปทั้งหมด';
+
+  @override
+  String get eventEditEntireSeries => 'ทั้งชุด';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'การเปลี่ยนแปลงจะมีผลกับกิจกรรมทั้งชุด รวมถึงครั้งที่ผ่านมา';
+
+  @override
+  String get eventEditConflict =>
+      'กิจกรรมนี้มีการเปลี่ยนแปลงแล้ว ฉบับร่างของคุณยังคงอยู่ โปรดเปิดกิจกรรมอีกครั้งเพื่อตรวจสอบข้อมูลล่าสุด';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'บันทึกไว้ในหมวดหมู่ที่ซ่อนอยู่ “$name” แล้ว';
+  }
+
+  @override
+  String get viewEvent => 'ดูกิจกรรม';
 }

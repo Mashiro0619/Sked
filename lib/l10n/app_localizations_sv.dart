@@ -1262,7 +1262,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Det finns ingen tidsplan att ersätta.';
+      'Schemat som valts för ersättning är inte tillgängligt. Välj ett schema igen.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1702,7 +1702,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get pickTime => 'Välj tid';
 
   @override
-  String get reminder => 'Påminnelse i appen';
+  String get reminder => 'Påminnelse';
 
   @override
   String get reminderAtStart => 'Vid start';
@@ -2947,4 +2947,62 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Data och inställningar kan ändras när återställningen är klar. Du kan fortfarande visa dem.';
+
+  @override
+  String get managePeriodTimeSets => 'Hantera uppsättningar av lektionstider';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Lektionspass: $periodCount · Kopplade scheman: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importera som ett nytt schema eller ersätt alla schemauppgifter och lektioner i ”$name”.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Välj minst en vecka.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Behåll påminnelser för dolda kategorier';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Gäller påminnelser i appen och systemaviseringar. Systemaviseringar måste också vara aktiverade i inställningarna.';
+
+  @override
+  String get generalReminderFollowDefault => 'Använd standard';
+
+  @override
+  String get generalReminderCustom => 'Anpassade påminnelser';
+
+  @override
+  String get eventEditScopeTitle => 'Redigera återkommande händelse';
+
+  @override
+  String get eventEditThisOccurrence => 'Bara detta tillfälle';
+
+  @override
+  String get eventEditThisAndFollowing => 'Detta och följande tillfällen';
+
+  @override
+  String get eventEditEntireSeries => 'Hela serien';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Ändringarna gäller hela serien, även tidigare tillfällen.';
+
+  @override
+  String get eventEditConflict =>
+      'Den här händelsen har ändrats. Utkastet finns kvar; öppna händelsen igen för att granska den senaste versionen.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Sparat i den dolda kategorin ”$name”.';
+  }
+
+  @override
+  String get viewEvent => 'Visa händelse';
 }

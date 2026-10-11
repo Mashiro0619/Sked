@@ -1266,7 +1266,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Không có lịch trình hiện tại để thay thế.';
+      'Thời khóa biểu được chọn để thay thế hiện không khả dụng. Vui lòng chọn lại.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1705,7 +1705,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pickTime => 'Chọn giờ';
 
   @override
-  String get reminder => 'Lời nhắc trong ứng dụng';
+  String get reminder => 'Lời nhắc';
 
   @override
   String get reminderAtStart => 'Khi bắt đầu';
@@ -2941,4 +2941,62 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Bạn có thể thay đổi dữ liệu và cài đặt sau khi khôi phục xong. Bạn vẫn có thể xem nội dung.';
+
+  @override
+  String get managePeriodTimeSets => 'Quản lý bộ giờ học theo tiết';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Số tiết: $periodCount · Số thời khóa biểu sử dụng: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Nhập thành thời khóa biểu mới hoặc thay thế toàn bộ thông tin và môn học trong “$name”.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Chọn ít nhất một tuần.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Giữ lời nhắc cho các danh mục bị ẩn';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Áp dụng cho lời nhắc trong ứng dụng và thông báo hệ thống. Thông báo hệ thống vẫn cần được bật trong phần cài đặt.';
+
+  @override
+  String get generalReminderFollowDefault => 'Dùng mặc định';
+
+  @override
+  String get generalReminderCustom => 'Lời nhắc tùy chỉnh';
+
+  @override
+  String get eventEditScopeTitle => 'Chỉnh sửa sự kiện lặp lại';
+
+  @override
+  String get eventEditThisOccurrence => 'Chỉ lần này';
+
+  @override
+  String get eventEditThisAndFollowing => 'Lần này và các lần sau';
+
+  @override
+  String get eventEditEntireSeries => 'Toàn bộ chuỗi';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Thay đổi sẽ áp dụng cho toàn bộ chuỗi, kể cả các lần đã qua.';
+
+  @override
+  String get eventEditConflict =>
+      'Sự kiện này đã thay đổi. Bản nháp của bạn vẫn được giữ lại; hãy mở lại sự kiện để xem phiên bản mới nhất.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Đã lưu vào danh mục bị ẩn “$name”.';
+  }
+
+  @override
+  String get viewEvent => 'Xem sự kiện';
 }

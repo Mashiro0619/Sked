@@ -875,7 +875,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "覆蓋當前課表時只能選擇一個課表",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "當前沒有可覆蓋的課表",
+  "noActiveTimetableToReplaceMessage": "要覆蓋的課表已不存在，請重新選擇。",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "該節次時間仍被 {count} 個課表使用，請先改關聯再刪除",
   "@periodTimeSetInUseMessage": {
@@ -1091,7 +1091,7 @@
   "@pickDate": {},
   "pickTime": "選擇時間",
   "@pickTime": {},
-  "reminder": "應用內提醒",
+  "reminder": "提醒",
   "@reminder": {},
   "reminderAtStart": "開始時",
   "@reminderAtStart": {},
@@ -1997,5 +1997,58 @@
   "updateRetry": "重試",
   "updatePrerelease": "預先發行",
   "updateNetworkFailure": "暫時無法檢查更新，請確認網路連線後重試。",
-  "updateNoNewerVersion": "未發現更新版本（目前：{version}）"
+  "updateNoNewerVersion": "未發現更新版本（目前：{version}）",
+  "managePeriodTimeSets": "管理節次時間集",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "{periodCount} 節 · {timetableCount} 個課表使用",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "匯入為新課表，或覆蓋「{name}」的課表資訊和全部課程。",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "請至少選擇一週",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "隱藏日程分類後仍提醒",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "同時影響應用程式內提醒和系統通知；系統通知仍受通知總開關控制。",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "跟隨預設",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "自訂提醒",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "編輯重複日程",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "僅本次",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "本次及以後",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "整個系列",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "變更將套用至整個系列，包括過去的實例。",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "此日程已發生變更。草稿已保留，請重新開啟日程核對最新內容。",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "已儲存至隱藏分類「{name}」。",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "查看日程",
+  "@viewEvent": {}
 }

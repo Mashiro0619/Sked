@@ -381,6 +381,22 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 () => provider.updateGeneralDefaultReminder(minutes),
               ),
             ),
+          if (provider.isWorkspaceEnabled(AppMode.general))
+            SettingsSwitchTile(
+              key: const ValueKey(
+                'notification-remind-hidden-general-calendars',
+              ),
+              icon: Icons.visibility_off_outlined,
+              title: l10n.notificationRemindHiddenGeneralCalendars,
+              subtitle: l10n.notificationRemindHiddenGeneralCalendarsHint,
+              value: provider.remindHiddenGeneralCalendars,
+              onChanged: uiCommandBusy
+                  ? null
+                  : (value) => _updateSetting(
+                      'Update hidden calendar reminders',
+                      () => provider.updateRemindHiddenGeneralCalendars(value),
+                    ),
+            ),
           SettingsSectionHeader(title: l10n.notificationPermission),
           SettingsConnectedTile(
             key: const ValueKey('notification-permission'),

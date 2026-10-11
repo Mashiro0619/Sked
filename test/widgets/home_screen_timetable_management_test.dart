@@ -4255,7 +4255,7 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('student-toolbar-more-button')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(tester.takeException(), isNull);
     },
@@ -4322,7 +4322,7 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('student-toolbar-more-button')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('student-settings-button')),
@@ -4383,7 +4383,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('student-toolbar-more-button')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('student-week-picker-button')),

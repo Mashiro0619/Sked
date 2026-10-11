@@ -190,8 +190,8 @@ class GeneralCalendarIcsService {
       lines.add('DTSTART;VALUE=DATE:${_formatDate(start)}');
       lines.add('DTEND;VALUE=DATE:${_formatDate(end)}');
     } else {
-      lines.add('DTSTART:${_formatUtcDateTime(start.toUtc())}');
-      lines.add('DTEND:${_formatUtcDateTime(end.toUtc())}');
+      lines.add('DTSTART:${_formatIcsDateTime(start)}');
+      lines.add('DTEND:${_formatIcsDateTime(end)}');
     }
     if (event.location.trim().isNotEmpty) {
       lines.add('LOCATION:${_escapeText(event.location.trim())}');
@@ -199,9 +199,14 @@ class GeneralCalendarIcsService {
     if (description.trim().isNotEmpty) {
       lines.add('DESCRIPTION:${_escapeText(description)}');
     }
-    final rule = _exportRRule(event.recurrenceRule);
+    final rule = _exportRRule(event, start);
     if (rule != null) {
       lines.add('RRULE:$rule');
+      final exceptions = _exportExceptionDates(event, start);
+      if (exceptions.isNotEmpty) {
+        final property = event.isAllDay ? 'EXDATE;VALUE=DATE' : 'EXDATE';
+        lines.add('$property:${exceptions.join(',')}');
+      }
     }
     lines.add('END:VEVENT');
     return lines;
@@ -215,6 +220,7 @@ class GeneralCalendarIcsService {
     final fields = <String, _IcsField>{};
     final duplicateFields = <String>{};
     final unsupportedComponents = <String>{};
+    final exceptionFields = <_IcsField>[];
     var nestedComponentDepth = 0;
     for (final line in lines) {
       final separator = _findIcsValueSeparator(line);
@@ -239,6 +245,10 @@ class GeneralCalendarIcsService {
         continue;
       }
       if (field.name == 'END') {
+        continue;
+      }
+      if (field.name == 'EXDATE') {
+        exceptionFields.add(field);
         continue;
       }
       if (fields.containsKey(field.name)) {
@@ -317,7 +327,7 @@ class GeneralCalendarIcsService {
     final description = fields['DESCRIPTION']?.value.trim() ?? '';
     final unsupportedFields = [
       ..._unsupportedFields(fields.keys),
-      ..._unsupportedFieldParameters(fields.values),
+      ..._unsupportedFieldParameters([...fields.values, ...exceptionFields]),
       ...unsupportedComponents,
       ...ignoredSupportedFields,
     ]..sort();
@@ -327,8 +337,16 @@ class GeneralCalendarIcsService {
     final recurrenceRule = _parseRRule(
       fields['RRULE']?.value,
       warnings,
+      eventStart: start,
       unsupportedParts: unsupportedRRuleParts,
       duplicateParts: duplicateRRuleParts,
+    );
+    final exceptionDates = _importExceptionDates(
+      exceptionFields,
+      start: start,
+      rule: recurrenceRule,
+      allDay: isAllDay,
+      unsupportedFields: unsupportedFields,
     );
     final notes = [
       if (description.isNotEmpty) description,
@@ -364,6 +382,7 @@ class GeneralCalendarIcsService {
       endDateTimeIso: end.toIso8601String(),
       isAllDay: isAllDay,
       recurrenceRule: recurrenceRule,
+      recurrenceExceptionDateIso: exceptionDates,
       location: fields['LOCATION']?.value.trim() ?? '',
       notes: notes,
       createdAtIso: now,
@@ -520,6 +539,74 @@ String _formatLocalDateTime(DateTime value) {
 
 String _formatUtcDateTime(DateTime value) => '${_formatLocalDateTime(value)}Z';
 
+String _formatIcsDateTime(DateTime value) =>
+    value.isUtc ? _formatUtcDateTime(value) : _formatLocalDateTime(value);
+
+List<String> _exportExceptionDates(GeneralEvent event, DateTime start) {
+  final values = <String>{};
+  for (final value in event.recurrenceExceptionDateIso) {
+    final date = tryParseStrictIsoDate(value);
+    if (date == null) continue;
+    final sequence = generalRecurrenceSequenceForDate(
+      start,
+      event.recurrenceRule,
+      date,
+    );
+    if (sequence == null) continue;
+    final candidate = generalRecurrenceStartAt(
+      start,
+      event.recurrenceRule,
+      sequence,
+    );
+    if (candidate == null) continue;
+    values.add(
+      event.isAllDay ? _formatDate(candidate) : _formatIcsDateTime(candidate),
+    );
+  }
+  return values.toList()..sort();
+}
+
+List<String> _importExceptionDates(
+  List<_IcsField> fields, {
+  required DateTime start,
+  required GeneralEventRecurrenceRule rule,
+  required bool allDay,
+  required List<String> unsupportedFields,
+}) {
+  final dates = <String>{};
+  for (final field in fields) {
+    for (final rawValue in field.value.split(',')) {
+      final single = _IcsField(
+        name: field.name,
+        params: field.params,
+        value: rawValue.trim(),
+      );
+      final parsed = _parseIcsDateTime(single);
+      if (parsed == null || _isIcsDateOnly(single) != allDay) {
+        unsupportedFields.add('EXDATE=${single.value}');
+        continue;
+      }
+      final date = allDay
+          ? parsed
+          : start.isUtc
+          ? parsed.toUtc()
+          : parsed.toLocal();
+      final sequence = generalRecurrenceSequenceForDate(start, rule, date);
+      if (sequence == null) continue;
+      final candidate = generalRecurrenceStartAt(start, rule, sequence);
+      if (candidate == null ||
+          (!allDay && !candidate.isAtSameMomentAs(parsed))) {
+        continue;
+      }
+      dates.add(
+        normalizeDateOnly(candidate).toIso8601String().split('T').first,
+      );
+    }
+  }
+  unsupportedFields.sort();
+  return dates.toList()..sort();
+}
+
 DateTime? _parseIcsDateTime(_IcsField field) {
   final value = field.value.trim();
   if (_isIcsDateOnly(field)) {
@@ -547,7 +634,7 @@ DateTime? _parseIcsDateTime(_IcsField field) {
       minute: minute,
       second: second,
       isUtc: true,
-    )?.toLocal();
+    );
   }
   if (offset != null && offset.isNotEmpty) {
     return _strictDateTimeWithOffset(
@@ -634,7 +721,7 @@ DateTime? _parseIsoDateTime(String value) {
     return local;
   }
   final parsed = DateTime.tryParse(value);
-  return parsed?.isUtc == true ? parsed!.toLocal() : parsed;
+  return parsed;
 }
 
 _IcsDuration? _parseIcsDuration(String value) {
@@ -764,13 +851,13 @@ DateTime? _strictDateTimeWithOffset({
   }
   final duration = Duration(hours: offsetHours, minutes: offsetMinutes);
   final utcBase = DateTime.utc(year, month, day, hour, minute, second);
-  return (match.group(1) == '+'
-          ? utcBase.subtract(duration)
-          : utcBase.add(duration))
-      .toLocal();
+  return match.group(1) == '+'
+      ? utcBase.subtract(duration)
+      : utcBase.add(duration);
 }
 
-String? _exportRRule(GeneralEventRecurrenceRule rule) {
+String? _exportRRule(GeneralEvent event, DateTime start) {
+  final rule = event.recurrenceRule;
   if (!rule.isRepeating) {
     return null;
   }
@@ -791,13 +878,27 @@ String? _exportRRule(GeneralEventRecurrenceRule rule) {
       rule.type == GeneralEventRecurrence.custom) {
     parts.add('INTERVAL=${rule.normalizedInterval}');
   }
-  if (rule.count != null && rule.count! > 0) {
-    parts.add('COUNT=${rule.count}');
-  } else if (rule.untilDateIso != null) {
-    final until = tryParseStrictIsoDate(rule.untilDateIso!);
-    if (until != null) {
-      parts.add('UNTIL=${_formatDate(until)}');
+  if (unit == GeneralEventRecurrenceUnit.month) {
+    final anchor = rule.monthlyAnchorDay ?? start.day;
+    final lastDay = DateTime.utc(start.year, start.month + 1, 0).day;
+    if (start.day != (anchor < lastDay ? anchor : lastDay)) {
+      throw const FormatException(
+        'This monthly start does not match its anchor; export JSON instead.',
+      );
     }
+    // Choosing the earlier of the nominal day and month end exactly matches
+    // Sked's month-end clamping, including a split starting on February 28.
+    parts.add('BYMONTHDAY=$anchor,-1');
+    parts.add('BYSETPOS=1');
+  }
+  final count = boundedGeneralRecurrenceCount(start, rule);
+  if (count != null) {
+    if (count < 1) {
+      throw const FormatException('Cannot export an empty recurring record.');
+    }
+    // RFC 5545 forbids COUNT and UNTIL together. Bound candidates before
+    // EXDATE so a shortened prefix never regains its removed suffix.
+    parts.add('COUNT=$count');
   }
   return parts.join(';');
 }
@@ -805,6 +906,7 @@ String? _exportRRule(GeneralEventRecurrenceRule rule) {
 GeneralEventRecurrenceRule _parseRRule(
   String? value,
   List<GeneralCalendarIcsImportWarning> warnings, {
+  required DateTime eventStart,
   List<String>? unsupportedParts,
   List<String>? duplicateParts,
 }) {
@@ -823,7 +925,14 @@ GeneralEventRecurrenceRule _parseRRule(
     parts[key] = part.substring(separator + 1).toUpperCase();
   }
   duplicateParts?.addAll(duplicates.toList()..sort());
-  const supportedParts = {'FREQ', 'INTERVAL', 'COUNT', 'UNTIL'};
+  const supportedParts = {
+    'FREQ',
+    'INTERVAL',
+    'COUNT',
+    'UNTIL',
+    'BYMONTHDAY',
+    'BYSETPOS',
+  };
   final unsupported =
       parts.keys
           .where((key) => !supportedParts.contains(key))
@@ -835,6 +944,36 @@ GeneralEventRecurrenceRule _parseRRule(
   }
   final freq = parts['FREQ'];
   final unsupportedValues = <String>[];
+  int? monthlyAnchorDay;
+  final monthDays = parts['BYMONTHDAY'];
+  final setPosition = parts['BYSETPOS'];
+  if (monthDays != null || setPosition != null) {
+    final days = monthDays?.split(',').map(int.tryParse).toList();
+    final positiveDays = days
+        ?.whereType<int>()
+        .where((day) => day > 0)
+        .toList();
+    if (freq == 'MONTHLY' &&
+        setPosition == '1' &&
+        days?.length == 2 &&
+        days!.contains(-1) &&
+        positiveDays?.length == 1 &&
+        positiveDays!.single <= 31) {
+      monthlyAnchorDay = positiveDays.single;
+      final lastDay = DateTime.utc(
+        eventStart.year,
+        eventStart.month + 1,
+        0,
+      ).day;
+      if (eventStart.day !=
+          (monthlyAnchorDay < lastDay ? monthlyAnchorDay : lastDay)) {
+        unsupportedValues.add('BYMONTHDAY=$monthDays');
+      }
+    } else {
+      if (monthDays != null) unsupportedValues.add('BYMONTHDAY=$monthDays');
+      if (setPosition != null) unsupportedValues.add('BYSETPOS=$setPosition');
+    }
+  }
   final rawInterval = parts['INTERVAL'];
   final parsedInterval = rawInterval == null ? null : int.tryParse(rawInterval);
   final interval = parsedInterval ?? 1;
@@ -893,6 +1032,7 @@ GeneralEventRecurrenceRule _parseRRule(
     unit: unit,
     untilDateIso: until?.toIso8601String().split('T').first,
     count: count == null || count < 1 ? null : count,
+    monthlyAnchorDay: monthlyAnchorDay,
   );
 }
 

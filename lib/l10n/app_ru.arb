@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Замена текущего расписания поддерживает выбор только одного расписания.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Нет текущего расписания для замены.",
+  "noActiveTimetableToReplaceMessage": "Расписание, выбранное для замены, недоступно. Выберите его заново.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Этот набор времени пар всё ещё используется в {count} расписании(ях). Перед удалением переназначьте их.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Выбрать время",
   "@pickTime": {},
-  "reminder": "Напоминание в приложении",
+  "reminder": "Напоминание",
   "@reminder": {},
   "reminderAtStart": "В момент начала",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Управление наборами времени пар",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Количество пар: {periodCount} · Связанных расписаний: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Импортируйте как новое расписание или замените все сведения и занятия в расписании «{name}».",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Выберите хотя бы одну неделю.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Сохранять напоминания для скрытых категорий",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Применяется к напоминаниям в приложении и системным уведомлениям. Для системных уведомлений также должен быть включён переключатель уведомлений.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Использовать по умолчанию",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Свои напоминания",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Редактировать повторяющееся событие",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Только это повторение",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Это и все последующие повторения",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Вся серия",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Изменения применяются ко всей серии, включая прошедшие повторения.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Это событие изменилось. Черновик сохранён; откройте событие заново, чтобы проверить актуальную версию.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Сохранено в скрытой категории «{name}».",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Посмотреть событие",
+  "@viewEvent": {}
 }

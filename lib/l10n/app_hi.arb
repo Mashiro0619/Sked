@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "वर्तमान टाइमटेबल बदलने के लिए केवल एक टाइमटेबल का चयन समर्थित है।",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "बदलने के लिए कोई वर्तमान टाइमटेबल नहीं है।",
+  "noActiveTimetableToReplaceMessage": "चुना गया टाइमटेबल उपलब्ध नहीं है। कृपया दोबारा चुनें।",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "यह अवधि समय सेट अभी भी {count} टाइमटेबल में उपयोग हो रहा है। हटाने से पहले उन्हें पुनः असाइन करें।",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "समय चुनें",
   "@pickTime": {},
-  "reminder": "ऐप के भीतर रिमाइंडर",
+  "reminder": "रिमाइंडर",
   "@reminder": {},
   "reminderAtStart": "शुरू होने पर",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "पीरियड के समय-सेट प्रबंधित करें",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "{periodCount} पीरियड · {timetableCount} टाइमटेबल में इस्तेमाल",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "नए टाइमटेबल के रूप में आयात करें, या “{name}” की सभी जानकारी और कक्षाएँ बदल दें।",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "कम से कम एक सप्ताह चुनें।",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "छिपी हुई श्रेणियों के रिमाइंडर जारी रखें",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "यह ऐप के अंदर के रिमाइंडर और सिस्टम सूचनाओं, दोनों पर लागू होता है। सिस्टम सूचनाएँ अब भी सूचना स्विच की सेटिंग के अनुसार चलेंगी।",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "डिफ़ॉल्ट का उपयोग करें",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "अपनी पसंद के रिमाइंडर",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "दोहराए जाने वाले इवेंट में बदलाव करें",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "केवल इस बार का इवेंट",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "इस बार और आगे के इवेंट",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "पूरी श्रृंखला",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "बदलाव पूरी श्रृंखला पर लागू होंगे, पहले हो चुके इवेंट पर भी।",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "इस इवेंट में बदलाव हो गया है। आपका ड्राफ़्ट सुरक्षित है। नवीनतम संस्करण देखने के लिए इवेंट दोबारा खोलें।",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "छिपी हुई श्रेणी “{name}” में सहेजा गया।",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "इवेंट देखें",
+  "@viewEvent": {}
 }

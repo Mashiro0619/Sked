@@ -316,7 +316,7 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
           startDateTimeIso: normalizedEventWithIds.startDateTimeIso,
           isRepeating: normalizedEventWithIds.recurrenceRule.isRepeating,
           recurrenceRule: normalizedEventWithIds.recurrenceRule,
-          hasReminders: normalizedEventWithIds.reminders.isNotEmpty,
+          hasReminders: normalizedEventWithIds.hasReminderConfiguration,
         ),
       );
       events.add(normalizedEventWithIds);
@@ -410,6 +410,7 @@ String _generalEventContentKey(GeneralSchedule schedule, GeneralEvent event) {
     'location': _normalizedGeneralText(normalizedEvent.location),
     'notes': _normalizedGeneralText(normalizedEvent.notes),
     'colorValue': normalizedEvent.colorValue,
+    'reminderBehavior': normalizedEvent.reminderBehavior.value,
     'reminders': reminderMinutes,
   });
 }

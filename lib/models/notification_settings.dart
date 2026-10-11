@@ -9,18 +9,21 @@ class NotificationSettings {
     this.courseDefaultMinutesBefore,
     this.generalDefaultMinutesBefore,
     this.lockScreenShowTitles = false,
+    this.remindHiddenGeneralCalendars = false,
   });
 
   final bool enabled;
   final int? courseDefaultMinutesBefore;
   final int? generalDefaultMinutesBefore;
   final bool lockScreenShowTitles;
+  final bool remindHiddenGeneralCalendars;
 
   Map<String, dynamic> toJson() => {
     'enabled': enabled,
     'courseDefaultMinutesBefore': courseDefaultMinutesBefore,
     'generalDefaultMinutesBefore': generalDefaultMinutesBefore,
     'lockScreenShowTitles': lockScreenShowTitles,
+    if (remindHiddenGeneralCalendars) 'remindHiddenGeneralCalendars': true,
   };
 
   factory NotificationSettings.fromJson(Map<String, dynamic> json) {
@@ -35,6 +38,9 @@ class NotificationSettings {
       lockScreenShowTitles: json['lockScreenShowTitles'] is bool
           ? json['lockScreenShowTitles'] as bool
           : false,
+      remindHiddenGeneralCalendars: json['remindHiddenGeneralCalendars'] is bool
+          ? json['remindHiddenGeneralCalendars'] as bool
+          : false,
     ).normalized();
   }
 
@@ -43,6 +49,7 @@ class NotificationSettings {
     Object? courseDefaultMinutesBefore = keep,
     Object? generalDefaultMinutesBefore = keep,
     bool? lockScreenShowTitles,
+    bool? remindHiddenGeneralCalendars,
   }) {
     return NotificationSettings(
       enabled: enabled ?? this.enabled,
@@ -53,6 +60,8 @@ class NotificationSettings {
           ? this.generalDefaultMinutesBefore
           : generalDefaultMinutesBefore as int?,
       lockScreenShowTitles: lockScreenShowTitles ?? this.lockScreenShowTitles,
+      remindHiddenGeneralCalendars:
+          remindHiddenGeneralCalendars ?? this.remindHiddenGeneralCalendars,
     ).normalized();
   }
 
@@ -66,6 +75,7 @@ class NotificationSettings {
         generalDefaultMinutesBefore,
       ),
       lockScreenShowTitles: lockScreenShowTitles,
+      remindHiddenGeneralCalendars: remindHiddenGeneralCalendars,
     );
   }
 
@@ -75,7 +85,8 @@ class NotificationSettings {
         other.enabled == enabled &&
         other.courseDefaultMinutesBefore == courseDefaultMinutesBefore &&
         other.generalDefaultMinutesBefore == generalDefaultMinutesBefore &&
-        other.lockScreenShowTitles == lockScreenShowTitles;
+        other.lockScreenShowTitles == lockScreenShowTitles &&
+        other.remindHiddenGeneralCalendars == remindHiddenGeneralCalendars;
   }
 
   @override
@@ -84,6 +95,7 @@ class NotificationSettings {
     courseDefaultMinutesBefore,
     generalDefaultMinutesBefore,
     lockScreenShowTitles,
+    remindHiddenGeneralCalendars,
   );
 }
 

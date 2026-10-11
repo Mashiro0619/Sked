@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -13,6 +12,7 @@ import 'package:sked/widgets/period_time_set_manager.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 
 import '../support/workspace_harness.dart';
+import '../support/period_time_assets.dart';
 
 Finder _key(String id) => find.byKey(ValueKey(id));
 void _viewport(WidgetTester t, Size size) {
@@ -49,44 +49,81 @@ Future<(TimetableProvider, _Storage)> _fixture() async {
 }
 
 void main() {
+  testWidgets(
+    'picker opens the shared manager and cancellation never assigns a timetable',
+    (t) async {
+      _viewport(t, const Size(600, 900));
+      final (p, storage) = await _fixture();
+      addTearDown(p.dispose);
+      final bindings = p.timetables
+          .map((item) => item.config.periodTimeSetId)
+          .toList();
+      final writes = storage.writes;
+      var completed = false;
+      String? selected;
+      await t.pumpWidget(
+        WorkspaceHarness(
+          provider: p,
+          textScale: 2,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  selected = await showPeriodTimeSetPickerDialog(
+                    context,
+                    provider: p,
+                    selectedPeriodTimeSetId: p.periodTimeSets.first.id,
+                  );
+                  completed = true;
+                },
+                child: const Text('Choose periods'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.text('Choose periods'));
+      await t.pumpAndSettle();
+      await _open(t, 'period-time-set-manage');
+      expect(find.byType(PeriodTimeSetManagerPage), findsOneWidget);
+      await t.pageBack();
+      await t.pumpAndSettle();
+      await t.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await t.pumpAndSettle();
+      expect(completed, isTrue);
+      expect(selected, isNull);
+      expect(
+        p.timetables.map((item) => item.config.periodTimeSetId).toList(),
+        bindings,
+      );
+      expect(storage.writes, writes);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.windows,
+      TargetPlatform.android,
+    }),
+  );
+
   for (final width in [393.0, 1280.0]) {
     testWidgets(
-      'period set entry uses the adaptive picker at $width, not a manager page',
+      'settings leave timetable period assignment in its owning form at $width',
       (t) async {
         _viewport(t, Size(width, 900));
-        final p = await workspaceProvider();
+        final (p, storage) = await _fixture();
         addTearDown(p.dispose);
         final before = p.activeTimetable.config.periodTimeSetId;
+        final writes = storage.writes;
         await t.pumpWidget(
           WorkspaceHarness(provider: p, home: const SettingsPage()),
         );
         await t.pumpAndSettle();
-        await _open(t, 'settings-period-times');
-        expect(find.byType(PeriodTimeSetPickerDialogView), findsOneWidget);
-        final view = find.byType(PeriodTimeSetPickerDialogView);
-        final route = ModalRoute.of(t.element(view))!;
-        expect(route, isNot(isA<PageRoute<dynamic>>()));
-        if (defaultTargetPlatform == TargetPlatform.windows) {
-          expect(find.byType(AlertDialog), findsNothing);
-          expect(find.byType(SkedFloatingSurface), findsOneWidget);
-          expect(_key('sked-picker-drag-handle'), findsOneWidget);
-          expect(route.barrierColor, Colors.transparent);
-        } else {
-          expect(find.byType(AlertDialog), findsOneWidget);
-          expect(find.byType(SkedFloatingSurface), findsNothing);
-          expect(_key('sked-picker-drag-handle'), findsNothing);
-          expect(route.barrierColor, isNot(Colors.transparent));
-        }
-        expect(find.byType(PeriodTimeSetManagerPage), findsNothing);
-        final picker = t.widget<PeriodTimeSetPickerDialogView>(
-          find.byType(PeriodTimeSetPickerDialogView),
-        );
-        expect(picker.selectedPeriodTimeSetId, before);
-        picker.onCancel();
-        await t.pumpAndSettle();
+        expect(_key('settings-period-times'), findsNothing);
+        expect(find.byType(PeriodTimeSetPickerDialogView), findsNothing);
         expect(p.activeTimetable.config.periodTimeSetId, before);
-        expect(_key('settings-period-times').hitTestable(), findsOneWidget);
-        expect(t.takeException(), isNull);
+        expect(storage.writes, writes);
       },
       variant: TargetPlatformVariant({
         TargetPlatform.windows,
@@ -95,28 +132,82 @@ void main() {
     );
   }
 
-  testWidgets('student resource menu selects a period set in a dialog', (
-    t,
-  ) async {
-    _viewport(t, const Size(1440, 900));
-    final p = await workspaceProvider();
-    addTearDown(p.dispose);
-    await t.pumpWidget(WorkspaceHarness(provider: p));
-    await t.pumpAndSettle();
-    await _open(t, 'student-resource-menu');
-    await t.tap(
-      find.byWidgetPredicate(
-        (w) => w is PopupMenuItem<String> && w.value == 'periods',
-      ),
+  testWidgets(
+    'student resource menu manages shared periods without assignment',
+    (t) async {
+      _viewport(t, const Size(1440, 900));
+      final p = await workspaceProvider();
+      addTearDown(p.dispose);
+      final other = await p.addPeriodTimeSet(
+        name: 'Evening',
+        periodTimes: buildDefaultPeriodTimes(),
+      );
+      final original = p.activeTimetable.config.periodTimeSetId;
+      await t.pumpWidget(WorkspaceHarness(provider: p));
+      await t.pumpAndSettle();
+      await _open(t, 'student-resource-menu');
+      await t.tap(
+        find.byWidgetPredicate(
+          (w) => w is PopupMenuItem<String> && w.value == 'periods',
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(PeriodTimeSetManagerPage), findsOneWidget);
+      expect(find.byType(PeriodTimeSetPickerDialogView), findsNothing);
+      expect(find.byIcon(Icons.radio_button_unchecked), findsNothing);
+      await t.tap(find.text(other.name));
+      await t.pumpAndSettle();
+      expect(find.byType(PeriodTimesPage), findsOneWidget);
+      await t.enterText(_key('period-times-name'), 'Renamed evening');
+      await t.pump(const Duration(milliseconds: 500));
+      await t.pumpAndSettle();
+      expect(p.periodTimeSetForId(other.id)!.name, 'Renamed evening');
+      expect(p.activeTimetable.config.periodTimeSetId, original);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  for (final empty in [false, true]) {
+    testWidgets(
+      'phone menu retains period management with empty timetable: $empty',
+      (t) async {
+        mockDefaultPeriodTimeAsset();
+        _viewport(t, const Size(393, 900));
+        final p = await workspaceProvider();
+        addTearDown(p.dispose);
+        if (empty) {
+          for (final timetable in p.timetables.toList()) {
+            await p.deleteTimetable(timetable.id);
+          }
+          for (final set in p.periodTimeSets.toList()) {
+            await p.deletePeriodTimeSet(set.id);
+          }
+        }
+        final before = p.activeTimetableOrNull?.config.periodTimeSetId;
+        await t.pumpWidget(WorkspaceHarness(provider: p));
+        await t.pumpAndSettle();
+        await _open(t, 'student-toolbar-more-button');
+        await _open(t, 'student-more-periods');
+        expect(find.byType(PeriodTimeSetManagerPage), findsOneWidget);
+        expect(find.byType(PeriodTimeSetPickerDialogView), findsNothing);
+        if (empty) {
+          expect(find.text('No available period time set'), findsOneWidget);
+          await _open(t, 'period-time-set-create');
+          expect(p.periodTimeSets, hasLength(1));
+          expect(find.byType(PeriodTimesPage), findsOneWidget);
+          expect(p.activeTimetableOrNull, isNull);
+        } else {
+          expect(p.activeTimetable.config.periodTimeSetId, before);
+        }
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
-    await t.pumpAndSettle();
-    expect(find.byType(PeriodTimeSetPickerDialogView), findsOneWidget);
-    expect(find.byType(PeriodTimeSetManagerPage), findsNothing);
-    expect(t.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  }
 
   testWidgets(
-    'period selection waits for one save, blocks back, and can retry failures',
+    'period selection returns a draft and cancellation never assigns',
     (t) async {
       _viewport(t, const Size(393, 900));
       final (p, storage) = await _fixture();
@@ -126,123 +217,83 @@ void main() {
         periodTimes: buildDefaultPeriodTimes(),
       );
       final original = p.activeTimetable.config.periodTimeSetId;
-      await t.pumpWidget(
-        WorkspaceHarness(provider: p, home: const SettingsPage()),
-      );
-      await t.pumpAndSettle();
-      await _open(t, 'settings-period-times');
-      final view = find.byType(PeriodTimeSetPickerDialogView);
-      var picker = t.widget<PeriodTimeSetPickerDialogView>(view);
-      storage.pending = Completer<void>();
-      storage.saveError = StateError('disk full');
       final writes = storage.writes;
-      picker.onSelect(other.id);
-      picker.onSelect(other.id);
-      await t.pump(const Duration(milliseconds: 200));
-      expect(storage.writes, writes + 1);
-      expect(t.widget<PeriodTimeSetPickerDialogView>(view).blocked, isTrue);
-      await t.binding.handlePopRoute();
-      await t.pump();
-      expect(view, findsOneWidget);
-      storage.pending!.complete();
-      await t.pumpAndSettle();
-      storage.pending = null;
-      expect(view, findsOneWidget);
-      expect(p.activeTimetable.config.periodTimeSetId, original);
-      picker = t.widget<PeriodTimeSetPickerDialogView>(view);
-      expect(picker.blocked, isFalse);
-      picker.onSelect(other.id);
-      await t.pumpAndSettle();
-      expect(p.activeTimetable.config.periodTimeSetId, other.id);
-      expect(view, findsNothing);
-      expect(storage.writes, writes + 2);
-      expect(t.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
-
-  testWidgets('period selection stays bound to its original timetable', (
-    t,
-  ) async {
-    _viewport(t, const Size(393, 900));
-    final p = await workspaceProvider();
-    addTearDown(p.dispose);
-    final original = p.activeTimetable.id;
-    final other = await p.addPeriodTimeSet(
-      name: 'Evening',
-      periodTimes: buildDefaultPeriodTimes(),
-    );
-    await p.addTimetable(
-      p.activeTimetable.config.copyWith(name: 'Another timetable'),
-    );
-    final second = p.activeTimetable.id;
-    final secondSet = p.activeTimetable.config.periodTimeSetId;
-    await p.switchTimetable(original);
-    await t.pumpWidget(
-      WorkspaceHarness(provider: p, home: const SettingsPage()),
-    );
-    await t.pumpAndSettle();
-    await _open(t, 'settings-period-times');
-    await p.switchTimetable(second);
-    await t.pumpAndSettle();
-    t
-        .widget<PeriodTimeSetPickerDialogView>(
-          find.byType(PeriodTimeSetPickerDialogView),
-        )
-        .onSelect(other.id);
-    await t.pumpAndSettle();
-    expect(
-      p.timetables
-          .firstWhere((table) => table.id == original)
-          .config
-          .periodTimeSetId,
-      other.id,
-    );
-    expect(p.activeTimetable.config.periodTimeSetId, secondSet);
-    expect(p.activeTimetable.id, second);
-    expect(t.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
-
-  testWidgets(
-    'period dialog retains editing even without an active timetable',
-    (t) async {
-      _viewport(t, const Size(393, 900));
-      final (seed, storage) = await _fixture();
-      storage.data = seed.appData.copyWith(
-        studentMode: seed.appData.studentMode.copyWith(
-          timetables: [],
-          activeTimetableId: '',
+      String? result;
+      await t.pumpWidget(
+        WorkspaceHarness(
+          provider: p,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  result = await showPeriodTimeSetPickerDialog(
+                    context,
+                    provider: p,
+                    selectedPeriodTimeSetId: original,
+                  );
+                },
+                child: const Text('Choose'),
+              ),
+            ),
+          ),
         ),
       );
-      seed.dispose();
-      final p = await workspaceProvider(storage: storage);
-      addTearDown(p.dispose);
-      await t.pumpWidget(
-        WorkspaceHarness(provider: p, home: const SettingsPage()),
-      );
+      await t.tap(find.text('Choose'));
       await t.pumpAndSettle();
-      await _open(t, 'settings-period-times');
-      final picker = t.widget<PeriodTimeSetPickerDialogView>(
-        find.byType(PeriodTimeSetPickerDialogView),
-      );
-      picker.onEdit(p.periodTimeSets.first);
-      await t.pumpAndSettle();
-      expect(find.byType(PeriodTimesPage), findsOneWidget);
-      await t.pageBack();
-      await t.pumpAndSettle();
-      expect(find.byType(PeriodTimeSetPickerDialogView), findsOneWidget);
       t
           .widget<PeriodTimeSetPickerDialogView>(
             find.byType(PeriodTimeSetPickerDialogView),
           )
-          .onSelect(p.periodTimeSets.first.id);
+          .onSelect(other.id);
       await t.pumpAndSettle();
-      expect(p.activeTimetableOrNull, isNull);
-      expect(find.byType(PeriodTimeSetPickerDialogView), findsNothing);
-      expect(t.takeException(), isNull);
+      expect(result, other.id);
+      expect(p.activeTimetable.config.periodTimeSetId, original);
+      expect(storage.writes, writes);
+      await t.tap(find.text('Choose'));
+      await t.pumpAndSettle();
+      t
+          .widget<PeriodTimeSetPickerDialogView>(
+            find.byType(PeriodTimeSetPickerDialogView),
+          )
+          .onCancel();
+      await t.pumpAndSettle();
+      expect(result, isNull);
+      expect(p.activeTimetable.config.periodTimeSetId, original);
+      expect(storage.writes, writes);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
+
+  testWidgets('creating a timetable requires an existing period set', (
+    t,
+  ) async {
+    _viewport(t, const Size(393, 900));
+    final (p, storage) = await _fixture();
+    addTearDown(p.dispose);
+    for (final table in p.timetables.toList()) {
+      await p.deleteTimetable(table.id);
+    }
+    for (final set in p.periodTimeSets.toList()) {
+      await p.deletePeriodTimeSet(set.id);
+    }
+    final writes = storage.writes;
+    await t.pumpWidget(WorkspaceHarness(provider: p));
+    await t.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      t.element(_key('student-workspace-toolbar')),
+    );
+    await t.tap(find.text(l10n.createTimetable));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Save'));
+    await t.pumpAndSettle();
+    expect(p.timetables, isEmpty);
+    expect(p.periodTimeSets, isEmpty);
+    expect(storage.writes, writes);
+    await t.tap(find.widgetWithText(TextButton, 'Cancel').last);
+    await t.pumpAndSettle();
+    expect(p.timetables, isEmpty);
+    expect(storage.writes, writes);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets(
     'language search survives resizing; wide selection stays on its independent page',

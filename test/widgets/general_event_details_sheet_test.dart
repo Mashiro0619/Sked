@@ -44,6 +44,7 @@ Future<void> _pumpDetails(
   WidgetTester tester, {
   required GeneralEventOccurrence occurrence,
   FutureOr<void> Function()? onEdit,
+  FutureOr<void> Function(GeneralEventEditScope)? onEditScoped,
   FutureOr<void> Function()? onDuplicate,
   bool isReminderHandled = false,
   FutureOr<void> Function()? onDismissReminder,
@@ -72,6 +73,7 @@ Future<void> _pumpDetails(
         body: GeneralEventDetailsSheet(
           occurrence: occurrence,
           onEdit: onEdit,
+          onEditScoped: onEditScoped,
           onDuplicate: onDuplicate,
           isReminderHandled: isReminderHandled,
           onDismissReminder: onDismissReminder,
@@ -99,6 +101,98 @@ Future<void> _pumpDialogTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'edit scope cancellation preserves details and a later selection runs once',
+    (tester) async {
+      final scopes = <GeneralEventEditScope>[];
+      var chooserMountedDuringEdit = true;
+      await _pumpDetails(
+        tester,
+        occurrence: _buildOccurrence(repeating: true, sequence: 2),
+        onEditScoped: (scope) {
+          chooserMountedDuringEdit = find
+              .byKey(const ValueKey('general-event-edit-scope-dialog'))
+              .evaluate()
+              .isNotEmpty;
+          scopes.add(scope);
+        },
+      );
+      final edit = find.byKey(const ValueKey('general-event-edit-action'));
+      await tester.tap(edit);
+      await _pumpDialogTransition(tester);
+      expect(
+        find.byKey(const ValueKey('event-edit-scope-thisOccurrence')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('event-edit-scope-thisAndFollowing')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('event-edit-scope-entireSeries')),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await _pumpDialogTransition(tester);
+      expect(scopes, isEmpty);
+      expect(find.byType(GeneralEventDetailsSheet), findsOneWidget);
+      await tester.tap(edit);
+      await _pumpDialogTransition(tester);
+      final following = find.byKey(
+        const ValueKey('event-edit-scope-thisAndFollowing'),
+      );
+      await tester.tap(following);
+      await tester.tap(following, warnIfMissed: false);
+      await _pumpDialogTransition(tester);
+      expect(scopes, [GeneralEventEditScope.thisAndFollowing]);
+      expect(chooserMountedDuringEdit, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('first occurrence avoids a duplicate following edit scope', (
+    tester,
+  ) async {
+    await _pumpDetails(
+      tester,
+      occurrence: _buildOccurrence(repeating: true),
+      onEditScoped: (_) {},
+    );
+    await tester.tap(find.byKey(const ValueKey('general-event-edit-action')));
+    await _pumpDialogTransition(tester);
+    expect(
+      find.byKey(const ValueKey('event-edit-scope-thisOccurrence')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('event-edit-scope-thisAndFollowing')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('event-edit-scope-entireSeries')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'nonrecurring edit invokes the full event without a scope prompt',
+    (tester) async {
+      final scopes = <GeneralEventEditScope>[];
+      await _pumpDetails(
+        tester,
+        occurrence: _buildOccurrence(),
+        onEditScoped: scopes.add,
+      );
+      await tester.tap(find.byKey(const ValueKey('general-event-edit-action')));
+      await _pumpDialogTransition(tester);
+      expect(scopes, [GeneralEventEditScope.entireSeries]);
+      expect(
+        find.byKey(const ValueKey('general-event-edit-scope-dialog')),
+        findsNothing,
+      );
+    },
+  );
+
   testWidgets('events without reminders do not expose reminder actions', (
     tester,
   ) async {

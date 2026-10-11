@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "La sostituzione dell'orario attuale supporta solo la selezione di un singolo orario.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Non c'è alcun orario attuale da sostituire.",
+  "noActiveTimetableToReplaceMessage": "L'orario selezionato per la sostituzione non è disponibile. Selezionalo di nuovo.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Questo set di orari dei periodi è ancora usato da {count} orario/i. Riassegnali prima di eliminarlo.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Scegli l’ora",
   "@pickTime": {},
-  "reminder": "Promemoria nell’app",
+  "reminder": "Promemoria",
   "@reminder": {},
   "reminderAtStart": "All’inizio",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Gestisci i set di orari delle lezioni",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Fasce orarie: {periodCount} · Orari associati: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importa come nuovo orario oppure sostituisci tutti i dettagli e le lezioni dell'orario «{name}».",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Seleziona almeno una settimana.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Mantieni i promemoria per le categorie nascoste",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Si applica ai promemoria nell'app e alle notifiche di sistema. Le notifiche di sistema devono comunque essere attivate.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Usa impostazione predefinita",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Promemoria personalizzati",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Modifica evento ricorrente",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Solo questa occorrenza",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Questa occorrenza e le successive",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Intera serie",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Le modifiche si applicano all'intera serie, comprese le occorrenze passate.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Questo evento è stato modificato. La bozza viene conservata; riapri l'evento per controllare la versione più recente.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Salvato nella categoria nascosta «{name}».",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Visualizza evento",
+  "@viewEvent": {}
 }

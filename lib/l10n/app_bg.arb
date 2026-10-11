@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Замяната на текущия график поддържа само избора на един график.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Няма актуален график за замена.",
+  "noActiveTimetableToReplaceMessage": "Избраното разписание не е налично. Моля, изберете отново.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Този период от време все още се използва от {count} график(и). Препоръчвайте ги преди да ги изтриете.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Избор на час",
   "@pickTime": {},
-  "reminder": "Напомняне в приложението",
+  "reminder": "Напомняне",
   "@reminder": {},
   "reminderAtStart": "При започване",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
       "result": {},
       "time": {}
     }
-  }
+  },
+  "managePeriodTimeSets": "Управление на набори с часове на занятията",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Учебни часове: {periodCount} · Разписания, които го използват: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Импортирайте като ново разписание или заменете всички данни и учебни занятия в „{name}“.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Изберете поне една седмица.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Напомняния и за скритите категории",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Важи за напомнянията в приложението и системните известия. Системните известия остават под контрола на общия превключвател за известия.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "По подразбиране",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Персонализирани напомняния",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Редактиране на повтарящо се събитие",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Само това повторение",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Това и следващите повторения",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Цялата поредица",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Промените важат за цялата поредица, включително за миналите повторения.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Това събитие е променено. Черновата ви е запазена; отворете събитието отново, за да прегледате последната версия.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Запазено в скритата категория „{name}“.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Преглед на събитието",
+  "@viewEvent": {}
 }

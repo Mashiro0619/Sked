@@ -15,44 +15,15 @@ import 'editor_exit_guard.dart';
 import 'sked_task_dialog.dart';
 import 'sked_adaptive_picker_dialog.dart';
 import 'ui_command.dart';
+import 'period_time_set_manager.dart';
 
-/// Selects for the timetable that opened the chooser, not whichever timetable
-/// happens to become active before confirmation. Editing/creating sets remains
-/// available even when the workspace has no timetable yet.
-Future<void> selectTimetablePeriodTimeSet(
-  BuildContext context, {
-  required TimetableProvider provider,
-  BuildContext? anchorContext,
-}) async {
-  if (!provider.isWorkspaceEnabled(AppMode.student)) return;
-  final timetableId = provider.activeTimetableOrNull?.id;
-  final dataSession = provider.dataSessionToken;
-  await showPeriodTimeSetPickerDialog(
-    context,
-    provider: provider,
-    anchorContext: anchorContext,
-    selectedPeriodTimeSetId: provider.activePeriodTimeSetOrNull?.id ?? '',
-    commitSelection: (selectedId) async {
-      if (!context.mounted ||
-          !identical(dataSession, provider.dataSessionToken) ||
-          !provider.isWorkspaceEnabled(AppMode.student) ||
-          timetableId == null ||
-          !provider.timetables.any((table) => table.id == timetableId) ||
-          provider.periodTimeSetForId(selectedId) == null) {
-        return;
-      }
-      await provider.assignPeriodTimeSetToTimetable(timetableId, selectedId);
-    },
-  );
-}
-
+/// Returns the choice to the owning form. Selecting never commits a binding.
 Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext context, {
   required TimetableProvider provider,
   BuildContext? anchorContext,
   Rect? anchorRect,
   required String selectedPeriodTimeSetId,
-  Future<void> Function(String id)? commitSelection,
 }) async {
   final session = SkedTaskSession(
     provider: provider,
@@ -126,6 +97,26 @@ Future<String?> showPeriodTimeSetPickerDialog(
               selectedPeriodTimeSetId: currentSelectedId,
               busy: busy,
               blocked: busy || popped,
+              onManage: () => unawaited(
+                runBusy(
+                  debugLabel: 'Manage period time sets',
+                  action: () async {
+                    await Navigator.of(dialogContext).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ChangeNotifierProvider<TimetableProvider>.value(
+                              value: provider,
+                              child: const PeriodTimeSetManagerPage(),
+                            ),
+                      ),
+                    );
+                    if (provider.periodTimeSetForId(currentSelectedId) ==
+                        null) {
+                      currentSelectedId = '';
+                    }
+                  },
+                ),
+              ),
               onCreate: () {
                 unawaited(
                   runBusy(
@@ -160,32 +151,14 @@ Future<String?> showPeriodTimeSetPickerDialog(
                       final stillExists =
                           provider.periodTimeSetForId(item.id) != null;
                       if (!stillExists && currentSelectedId == item.id) {
-                        currentSelectedId =
-                            provider.activePeriodTimeSetOrNull?.id ?? '';
+                        currentSelectedId = '';
                       }
                     },
                   ),
                 );
               },
               onSelect: (id) {
-                if (commitSelection == null) {
-                  popOnce(id);
-                  return;
-                }
-                unawaited(
-                  runBusy(
-                    debugLabel: 'Assign period time set',
-                    action: () async {
-                      final saved = await submission.run(
-                        context: dialogContext,
-                        debugLabel: 'Assign period time set',
-                        command: () => commitSelection(id),
-                      );
-                      if (!saved) return;
-                      if (dialogContext.mounted && isCurrent()) popOnce(id);
-                    },
-                  ),
-                );
+                if (provider.periodTimeSetForId(id) != null) popOnce(id);
               },
               onCancel: popOnce,
             );
@@ -211,6 +184,7 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
     required this.onEdit,
     required this.onSelect,
     required this.onCancel,
+    this.onManage,
   });
 
   final List<PeriodTimeSet> periodTimeSets;
@@ -221,6 +195,7 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
   final ValueChanged<PeriodTimeSet> onEdit;
   final ValueChanged<String> onSelect;
   final VoidCallback onCancel;
+  final VoidCallback? onManage;
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +206,12 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
     final horizontalInset = useCompactSpacing ? 16.0 : 24.0;
     final horizontalContentPadding = useCompactSpacing ? 12.0 : 20.0;
     final maxListHeight = (mediaQuery.size.height * 0.58).clamp(96.0, 480.0);
+    Widget manageAction() => IconButton(
+      key: const ValueKey('period-time-set-manage'),
+      tooltip: l10n.managePeriodTimeSets,
+      onPressed: blocked ? null : onManage,
+      icon: const Icon(Icons.settings_outlined),
+    );
 
     return PopScope(
       canPop: !blocked,
@@ -238,10 +219,16 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
         closeEnabled: !blocked,
         titleAction: SkedTaskDialogScope.maybeOf(context) == null
             ? null
-            : IconButton(
-                tooltip: l10n.newItem,
-                onPressed: blocked ? null : onCreate,
-                icon: const Icon(Icons.add),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onManage != null) manageAction(),
+                  IconButton(
+                    tooltip: l10n.newItem,
+                    onPressed: blocked ? null : onCreate,
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
               ),
         constraints: const BoxConstraints(maxWidth: 400),
         insetPadding: EdgeInsets.symmetric(
@@ -275,17 +262,31 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   UiCommandBusyIndicator(busy: busy),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      Expanded(child: Text(l10n.selectPeriodTimeSet)),
-                      IconButton(
-                        tooltip: l10n.newItem,
-                        onPressed: blocked ? null : onCreate,
-                        icon: const Icon(Icons.add),
-                      ),
-                    ],
-                  ),
+                  if (useCompactSpacing) ...[
+                    Text(l10n.selectPeriodTimeSet),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (onManage != null) manageAction(),
+                        IconButton(
+                          tooltip: l10n.newItem,
+                          onPressed: blocked ? null : onCreate,
+                          icon: const Icon(Icons.add),
+                        ),
+                      ],
+                    ),
+                  ] else
+                    Row(
+                      children: <Widget>[
+                        Expanded(child: Text(l10n.selectPeriodTimeSet)),
+                        if (onManage != null) manageAction(),
+                        IconButton(
+                          tooltip: l10n.newItem,
+                          onPressed: blocked ? null : onCreate,
+                          icon: const Icon(Icons.add),
+                        ),
+                      ],
+                    ),
                 ],
               ),
         content: Center(

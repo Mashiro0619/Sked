@@ -1267,7 +1267,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Er is geen huidig rooster om te vervangen.';
+      'Het rooster dat je wilt vervangen, is niet beschikbaar. Selecteer opnieuw een rooster.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1713,7 +1713,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get pickTime => 'Tijd kiezen';
 
   @override
-  String get reminder => 'Herinnering in de app';
+  String get reminder => 'Herinnering';
 
   @override
   String get reminderAtStart => 'Bij aanvang';
@@ -2965,4 +2965,62 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Gegevens en instellingen kunnen na het herstellen worden gewijzigd. Je kunt ze nog wel bekijken.';
+
+  @override
+  String get managePeriodTimeSets => 'Lestijdenschema\'s beheren';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Lesuren: $periodCount · Gekoppelde roosters: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importeer als nieuw rooster of vervang alle roostergegevens en lessen in ‘$name’.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Selecteer ten minste één week.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Herinneringen voor verborgen categorieën behouden';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Geldt voor herinneringen in de app en systeemmeldingen. Systeemmeldingen moeten ook ingeschakeld zijn.';
+
+  @override
+  String get generalReminderFollowDefault => 'Standaard gebruiken';
+
+  @override
+  String get generalReminderCustom => 'Aangepaste herinneringen';
+
+  @override
+  String get eventEditScopeTitle => 'Terugkerende afspraak bewerken';
+
+  @override
+  String get eventEditThisOccurrence => 'Alleen deze afspraak';
+
+  @override
+  String get eventEditThisAndFollowing => 'Deze en volgende afspraken';
+
+  @override
+  String get eventEditEntireSeries => 'Hele reeks';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Wijzigingen gelden voor de hele reeks, inclusief afspraken in het verleden.';
+
+  @override
+  String get eventEditConflict =>
+      'Deze afspraak is gewijzigd. Je concept blijft bewaard; open de afspraak opnieuw om de nieuwste versie te bekijken.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Opgeslagen in de verborgen categorie ‘$name’.';
+  }
+
+  @override
+  String get viewEvent => 'Afspraak bekijken';
 }

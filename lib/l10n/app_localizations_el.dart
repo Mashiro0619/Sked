@@ -1287,7 +1287,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Δεν υπάρχει τρέχον χρονοδιάγραμμα για αντικατάσταση.';
+      'Το επιλεγμένο πρόγραμμα δεν είναι διαθέσιμο. Επιλέξτε ξανά.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1731,7 +1731,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get pickTime => 'Επιλογή ώρας';
 
   @override
-  String get reminder => 'Υπενθύμιση στην εφαρμογή';
+  String get reminder => 'Υπενθύμιση';
 
   @override
   String get reminderAtStart => 'Στην έναρξη';
@@ -2994,4 +2994,62 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Τα δεδομένα και οι ρυθμίσεις μπορούν να αλλάξουν όταν ολοκληρωθεί η επαναφορά. Μπορείτε ακόμα να τα προβάλετε.';
+
+  @override
+  String get managePeriodTimeSets => 'Διαχείριση συνόλων ωρών μαθημάτων';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Διδακτικές ώρες: $periodCount · Προγράμματα που το χρησιμοποιούν: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Εισαγωγή ως νέο πρόγραμμα ή αντικατάσταση όλων των στοιχείων και μαθημάτων στο «$name».';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Επιλέξτε τουλάχιστον μία εβδομάδα.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Διατήρηση υπενθυμίσεων για κρυφές κατηγορίες';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Ισχύει για υπενθυμίσεις εντός της εφαρμογής και ειδοποιήσεις συστήματος. Οι ειδοποιήσεις συστήματος εξακολουθούν να ελέγχονται από τον διακόπτη ειδοποιήσεων.';
+
+  @override
+  String get generalReminderFollowDefault => 'Χρήση προεπιλογής';
+
+  @override
+  String get generalReminderCustom => 'Προσαρμοσμένες υπενθυμίσεις';
+
+  @override
+  String get eventEditScopeTitle => 'Επεξεργασία επαναλαμβανόμενου συμβάντος';
+
+  @override
+  String get eventEditThisOccurrence => 'Μόνο αυτή η εμφάνιση';
+
+  @override
+  String get eventEditThisAndFollowing => 'Αυτή και οι επόμενες εμφανίσεις';
+
+  @override
+  String get eventEditEntireSeries => 'Ολόκληρη η σειρά';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Οι αλλαγές ισχύουν για ολόκληρη τη σειρά, συμπεριλαμβανομένων των προηγούμενων εμφανίσεων.';
+
+  @override
+  String get eventEditConflict =>
+      'Αυτό το συμβάν έχει αλλάξει. Το πρόχειρό σας διατηρείται. Ανοίξτε ξανά το συμβάν για να δείτε την πιο πρόσφατη έκδοση.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Αποθηκεύτηκε στην κρυφή κατηγορία «$name».';
+  }
+
+  @override
+  String get viewEvent => 'Προβολή συμβάντος';
 }

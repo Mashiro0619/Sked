@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Nykyisen aikataulun korvaaminen tukee vain yhden aikataulun valintaa.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Nykyistä aikataulua ei ole korvattavana.",
+  "noActiveTimetableToReplaceMessage": "Valittu lukujärjestys ei ole käytettävissä. Valitse lukujärjestys uudelleen.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Tätä ajanjaksoa käyttää edelleen {count} aikataulu. Aseta ne uudelleen ennen poistamista.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Valitse aika",
   "@pickTime": {},
-  "reminder": "Sovelluksen sisäinen muistutus",
+  "reminder": "Muistutus",
   "@reminder": {},
   "reminderAtStart": "Alkaessa",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
       "result": {},
       "time": {}
     }
-  }
+  },
+  "managePeriodTimeSets": "Hallitse tuntiaikojen sarjoja",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Oppitunteja: {periodCount} · Käytössä lukujärjestyksissä: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Tuo uutena lukujärjestyksenä tai korvaa kaikki lukujärjestyksen ”{name}” tiedot ja kurssit.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Valitse vähintään yksi viikko.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Säilytä piilotettujen kategorioiden muistutukset",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Koskee sovelluksen sisäisiä muistutuksia ja järjestelmäilmoituksia. Järjestelmäilmoituksia ohjataan edelleen ilmoitusten pääkytkimellä.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Käytä oletusta",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Mukautetut muistutukset",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Muokkaa toistuvaa tapahtumaa",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Vain tämä tapahtumakerta",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Tämä ja tulevat tapahtumakerrat",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Koko sarja",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Muutokset koskevat koko sarjaa, myös aiempia tapahtumakertoja.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Tätä tapahtumaa on muutettu. Luonnoksesi säilyy. Avaa tapahtuma uudelleen tarkistaaksesi uusimman version.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Tallennettu piilotettuun kategoriaan ”{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Näytä tapahtuma",
+  "@viewEvent": {}
 }

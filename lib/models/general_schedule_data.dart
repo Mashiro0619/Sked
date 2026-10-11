@@ -26,7 +26,7 @@ const generalTimeGridHourHeightDefault = 72;
 const generalTimeGridHourHeightMin = 36;
 const generalTimeGridHourHeightMax = 120;
 const generalTimeGridHourHeightStep = 4;
-const generalScheduleSchemaVersion = 5;
+const generalScheduleSchemaVersion = 6;
 const generalCustomDayMinWidthDefault = 96;
 const generalCustomDayMinWidthMin = 64;
 const generalCustomDayMinWidthMax = 320;
@@ -689,7 +689,7 @@ class GeneralScheduleData {
             startDateTimeIso: normalizedEventWithIds.startDateTimeIso,
             isRepeating: normalizedEventWithIds.recurrenceRule.isRepeating,
             recurrenceRule: normalizedEventWithIds.recurrenceRule,
-            hasReminders: normalizedEventWithIds.reminders.isNotEmpty,
+            hasReminders: normalizedEventWithIds.hasReminderConfiguration,
           ),
         );
         normalizedEvents.add(normalizedEventWithIds);

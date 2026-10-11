@@ -23,7 +23,10 @@ import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
+import 'package:sked/widgets/period_time_set_manager.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
+
+import '../support/period_time_assets.dart';
 
 class _MemoryTimetableStorage
     implements TimetableStorage, TimetableRecoveryArtifactReader {
@@ -235,6 +238,7 @@ Future<void> _pumpSettingsPage(
   MicrosoftStoreUpdateService storeUpdateService =
       const MicrosoftStoreUpdateService(),
   SettingsDestination? destination,
+  Widget? content,
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
   EdgeInsets viewPadding = EdgeInsets.zero,
@@ -262,19 +266,22 @@ Future<void> _pumpSettingsPage(
               viewPadding: viewPadding,
               viewInsets: viewInsets,
             ),
-            child: SettingsPage(
-              packageInfoLoader: packageInfoLoader ?? PackageInfo.fromPlatform,
-              dataClearCoordinator: dataClearCoordinator,
-              urlLauncher: urlLauncher,
-              storeUpdateService: storeUpdateService,
-              updateDistribution: storeUpdateService.isEnabled
-                  ? UpdateDistribution(
-                      UpdateChannel.microsoftStore,
-                      storeService: storeUpdateService,
-                    )
-                  : null,
-              initialDestination: destination,
-            ),
+            child:
+                content ??
+                SettingsPage(
+                  packageInfoLoader:
+                      packageInfoLoader ?? PackageInfo.fromPlatform,
+                  dataClearCoordinator: dataClearCoordinator,
+                  urlLauncher: urlLauncher,
+                  storeUpdateService: storeUpdateService,
+                  updateDistribution: storeUpdateService.isEnabled
+                      ? UpdateDistribution(
+                          UpdateChannel.microsoftStore,
+                          storeService: storeUpdateService,
+                        )
+                      : null,
+                  initialDestination: destination,
+                ),
           ),
         ),
       ),
@@ -870,38 +877,41 @@ void main() {
     },
   );
 
-  testWidgets('period manager assignment rolls back after save failure', (
-    tester,
-  ) async {
-    final base = _buildStudentData();
-    final other = PeriodTimeSet(
-      id: 'alternative-period-set',
-      name: 'Alternative',
-      periodTimes: buildDefaultPeriodTimes(),
-    );
-    final data = base.copyWith(
-      studentMode: base.studentMode.copyWith(
-        periodTimeSets: [...base.studentMode.periodTimeSets, other],
-      ),
-    );
-    final storage = _MemoryTimetableStorage(data)..failSaves = true;
-    final p = await _createProvider(data, storage: storage);
-    await _pumpSettingsPage(
-      tester,
-      p,
-      destination: SettingsDestination.periods,
-    );
-    final select = find.byTooltip('Choose period time set').last;
-    await tester.tap(select);
-    await tester.pumpAndSettle();
-    expect(storage.saveCount, 1);
-    expect(p.activeTimetable.config.periodTimeSetId, defaultPeriodTimeSetId);
-    storage.failSaves = false;
-    await tester.tap(select);
-    await tester.pumpAndSettle();
-    expect(p.activeTimetable.config.periodTimeSetId, other.id);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'period management creation retries without changing timetable assignment',
+    (tester) async {
+      mockDefaultPeriodTimeAsset();
+      final base = _buildStudentData();
+      final other = PeriodTimeSet(
+        id: 'alternative-period-set',
+        name: 'Alternative',
+        periodTimes: buildDefaultPeriodTimes(),
+      );
+      final data = base.copyWith(
+        studentMode: base.studentMode.copyWith(
+          periodTimeSets: [...base.studentMode.periodTimeSets, other],
+        ),
+      );
+      final storage = _MemoryTimetableStorage(data)..failSaves = true;
+      final p = await _createProvider(data, storage: storage);
+      await _pumpSettingsPage(
+        tester,
+        p,
+        content: const PeriodTimeSetManagerPage(),
+      );
+      final select = find.byKey(const ValueKey('period-time-set-create'));
+      await tester.tap(select);
+      await tester.pumpAndSettle();
+      expect(storage.saveCount, 1);
+      expect(p.activeTimetable.config.periodTimeSetId, defaultPeriodTimeSetId);
+      storage.failSaves = false;
+      await tester.tap(select);
+      await tester.pumpAndSettle();
+      expect(p.activeTimetable.config.periodTimeSetId, defaultPeriodTimeSetId);
+      expect(p.periodTimeSets, hasLength(3));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('global categories do not depend on the current workspace', (
     tester,
@@ -1229,22 +1239,21 @@ void main() {
     );
   });
 
-  testWidgets(
-    'period set chooser uses a dialog indicator, not a page chevron',
-    (tester) async {
-      final p = await _createProvider(_buildStudentData());
-      await _pumpSettingsPage(tester, p);
-      final entry = find.byKey(const ValueKey('settings-period-times'));
-      expect(
-        find.descendant(of: entry, matching: find.byIcon(Icons.unfold_more)),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: entry, matching: find.byIcon(Icons.chevron_right)),
-        findsNothing,
-      );
-    },
-  );
+  testWidgets('settings do not expose per-timetable period assignment', (
+    tester,
+  ) async {
+    final p = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(tester, p);
+    final entry = find.byKey(const ValueKey('settings-period-times'));
+    expect(
+      find.descendant(of: entry, matching: find.byIcon(Icons.unfold_more)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: entry, matching: find.byIcon(Icons.chevron_right)),
+      findsNothing,
+    );
+  });
 
   testWidgets('app backup entry opens restore and export actions', (
     tester,
@@ -1337,7 +1346,7 @@ void main() {
     await _pumpSettingsPage(
       tester,
       p,
-      destination: SettingsDestination.periods,
+      content: const PeriodTimeSetManagerPage(),
     );
     expect(find.text(p.periodTimeSets.first.name), findsWidgets);
     expect(tester.takeException(), isNull);

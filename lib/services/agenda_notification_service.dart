@@ -3262,6 +3262,8 @@ class AgendaNotificationService extends ChangeNotifier {
           data,
           startInclusive: startInclusive,
           endExclusive: endExclusive,
+          includeHiddenGeneralSchedules:
+              data.notificationSettings.remindHiddenGeneralCalendars,
         ),
         hasUnboundedRecurrence: false,
         unboundedEndExclusive: endExclusive,
@@ -3299,9 +3301,18 @@ class AgendaNotificationService extends ChangeNotifier {
         in data.isWorkspaceEnabled(AppMode.general)
             ? data.generalMode.schedules
             : const <GeneralSchedule>[]) {
-      if (!calendar.isVisible) continue;
+      if (!calendar.isVisible &&
+          !data.notificationSettings.remindHiddenGeneralCalendars) {
+        continue;
+      }
       for (final event in calendar.events) {
-        if (event.reminders.isEmpty) continue;
+        if (event
+            .resolveReminders(
+              data.notificationSettings.generalDefaultMinutesBefore,
+            )
+            .isEmpty) {
+          continue;
+        }
         final identity = _generalEventIdentity(calendar.id, event.id);
         final finiteEnd = finiteGeneralEventEndExclusive(event);
         if (event.recurrenceRule.isRepeating && finiteEnd == null) {
@@ -3338,6 +3349,8 @@ class AgendaNotificationService extends ChangeNotifier {
         finiteGeneralData,
         startInclusive: startInclusive,
         endExclusive: finiteEndExclusive,
+        includeHiddenGeneralSchedules:
+            data.notificationSettings.remindHiddenGeneralCalendars,
       ),
     ];
     final unboundedEndExclusive = current.add(_unboundedReminderHorizon);
@@ -3347,6 +3360,8 @@ class AgendaNotificationService extends ChangeNotifier {
             _withGeneralEventIds(data, unboundedGeneralEventIds),
             startInclusive: startInclusive,
             endExclusive: unboundedEndExclusive,
+            includeHiddenGeneralSchedules:
+                data.notificationSettings.remindHiddenGeneralCalendars,
           );
     final byId = <String, AgendaOccurrence>{
       for (final occurrence in finiteOccurrences)

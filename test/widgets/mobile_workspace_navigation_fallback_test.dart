@@ -186,7 +186,11 @@ void main() {
         toolbarHiddenItemsBehaviorRemove,
       );
       await t.pumpAndSettle();
-      expect(_key('student-toolbar-more-button'), findsNothing);
+      expect(
+        _key('student-toolbar-more-button'),
+        findsOneWidget,
+        reason: 'The period-time management entry remains reachable.',
+      );
       expect(_key('student-settings-button').hitTestable(), findsOneWidget);
       await _selectGeneral(t);
       await t.pumpAndSettle();

@@ -82,6 +82,36 @@ class GeneralEventReminder {
   }
 }
 
+enum GeneralEventReminderBehavior {
+  inherit('inherit'),
+  disabled('disabled'),
+  custom('custom');
+
+  const GeneralEventReminderBehavior(this.value);
+  final String value;
+}
+
+GeneralEventReminderBehavior? _decodeReminderBehavior(
+  Map<String, dynamic> json,
+) {
+  if (!json.containsKey('reminderBehavior')) return null;
+  final value = json['reminderBehavior'];
+  for (final behavior in GeneralEventReminderBehavior.values) {
+    if (behavior.value == value) return behavior;
+  }
+  throw const FormatException('General event reminder behavior is invalid.');
+}
+
+int? _decodeMonthlyAnchorDay(Map<String, dynamic> json) {
+  final value = json['monthlyAnchorDay'];
+  if (value == null) return null;
+  if (value is num && value.isFinite && value % 1 == 0) {
+    final day = value.toInt();
+    if (day >= 1 && day <= 31) return day;
+  }
+  throw const FormatException('General event monthly anchor day is invalid.');
+}
+
 class GeneralEventRecurrenceRule {
   const GeneralEventRecurrenceRule({
     this.type = GeneralEventRecurrence.none,
@@ -89,6 +119,7 @@ class GeneralEventRecurrenceRule {
     this.unit = GeneralEventRecurrenceUnit.week,
     this.untilDateIso,
     this.count,
+    this.monthlyAnchorDay,
   });
 
   final GeneralEventRecurrence type;
@@ -96,6 +127,7 @@ class GeneralEventRecurrenceRule {
   final GeneralEventRecurrenceUnit unit;
   final String? untilDateIso;
   final int? count;
+  final int? monthlyAnchorDay;
 
   bool get isRepeating => type != GeneralEventRecurrence.none;
 
@@ -107,6 +139,7 @@ class GeneralEventRecurrenceRule {
     'unit': unit.value,
     if (untilDateIso != null) 'untilDate': untilDateIso,
     if (count != null) 'count': count,
+    if (monthlyAnchorDay != null) 'monthlyAnchorDay': monthlyAnchorDay,
   };
 
   factory GeneralEventRecurrenceRule.fromJson(Map<String, dynamic> json) {
@@ -125,6 +158,7 @@ class GeneralEventRecurrenceRule {
       unit: legacyUnit,
       untilDateIso: _nullableStringValue(json['untilDate']),
       count: _intValue(json['count']),
+      monthlyAnchorDay: _decodeMonthlyAnchorDay(json),
     );
   }
 
@@ -134,6 +168,7 @@ class GeneralEventRecurrenceRule {
     GeneralEventRecurrenceUnit? unit,
     Object? untilDateIso = _keepNullable,
     Object? count = _keepNullable,
+    Object? monthlyAnchorDay = _keepNullable,
   }) {
     return GeneralEventRecurrenceRule(
       type: type ?? this.type,
@@ -143,6 +178,9 @@ class GeneralEventRecurrenceRule {
           ? this.untilDateIso
           : untilDateIso as String?,
       count: identical(count, _keepNullable) ? this.count : count as int?,
+      monthlyAnchorDay: identical(monthlyAnchorDay, _keepNullable)
+          ? this.monthlyAnchorDay
+          : monthlyAnchorDay as int?,
     );
   }
 }
@@ -163,9 +201,15 @@ class GeneralEvent {
     this.notes = '',
     this.colorValue,
     this.reminders = const [],
+    GeneralEventReminderBehavior? reminderBehavior,
     this.createdAtIso,
     this.updatedAtIso,
-  }) : recurrenceRule =
+  }) : reminderBehavior =
+           reminderBehavior ??
+           (reminders.isEmpty
+               ? GeneralEventReminderBehavior.disabled
+               : GeneralEventReminderBehavior.custom),
+       recurrenceRule =
            recurrenceRule ??
            GeneralEventRecurrenceRule(
              type: recurrence,
@@ -190,12 +234,33 @@ class GeneralEvent {
   final String notes;
   final int? colorValue;
   final List<GeneralEventReminder> reminders;
+  final GeneralEventReminderBehavior reminderBehavior;
   final String? createdAtIso;
   final String? updatedAtIso;
 
   GeneralEventRecurrence get recurrence => recurrenceRule.type;
 
   String? get recurrenceEndDateIso => recurrenceRule.untilDateIso;
+
+  /// Whether this event can have reminders without changing its own policy.
+  /// Inherited reminders retain acknowledgements while the default is off.
+  bool get hasReminderConfiguration =>
+      reminderBehavior == GeneralEventReminderBehavior.inherit ||
+      (reminderBehavior == GeneralEventReminderBehavior.custom &&
+          reminders.any((item) => item.minutesBefore >= 0));
+
+  List<GeneralEventReminder> resolveReminders(int? defaultMinutesBefore) {
+    switch (reminderBehavior) {
+      case GeneralEventReminderBehavior.inherit:
+        return defaultMinutesBefore == null || defaultMinutesBefore < 0
+            ? const []
+            : [GeneralEventReminder(minutesBefore: defaultMinutesBefore)];
+      case GeneralEventReminderBehavior.disabled:
+        return const [];
+      case GeneralEventReminderBehavior.custom:
+        return reminders.where((item) => item.minutesBefore >= 0).toList();
+    }
+  }
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
@@ -209,6 +274,7 @@ class GeneralEvent {
       'recurrenceExceptionDates': recurrenceExceptionDateIso,
       'location': location,
       'notes': notes,
+      'reminderBehavior': reminderBehavior.value,
       'reminders': reminders.map((item) => item.toJson()).toList(),
     };
     if (colorValue != null) {
@@ -250,6 +316,7 @@ class GeneralEvent {
       location: _stringValue(json['location']),
       notes: _stringValue(json['notes']),
       colorValue: _intValue(json['colorValue']),
+      reminderBehavior: _decodeReminderBehavior(json),
       reminders: remindersJson
           .map(_asStringKeyedMap)
           .whereType<Map<String, dynamic>>()
@@ -275,6 +342,7 @@ class GeneralEvent {
     String? notes,
     Object? colorValue = _keepNullable,
     List<GeneralEventReminder>? reminders,
+    GeneralEventReminderBehavior? reminderBehavior,
     Object? createdAtIso = _keepNullable,
     Object? updatedAtIso = _keepNullable,
   }) {
@@ -309,6 +377,13 @@ class GeneralEvent {
           ? this.colorValue
           : colorValue as int?,
       reminders: reminders ?? this.reminders,
+      reminderBehavior:
+          reminderBehavior ??
+          (reminders == null
+              ? this.reminderBehavior
+              : reminders.isEmpty
+              ? GeneralEventReminderBehavior.disabled
+              : GeneralEventReminderBehavior.custom),
       createdAtIso: identical(createdAtIso, _keepNullable)
           ? this.createdAtIso
           : createdAtIso as String?,
@@ -353,6 +428,16 @@ class GeneralEvent {
       count: recurrenceRule.count != null && recurrenceRule.count! > 0
           ? recurrenceRule.count
           : null,
+      monthlyAnchorDay:
+          (recurrenceRule.type == GeneralEventRecurrence.monthly ||
+                  (recurrenceRule.type == GeneralEventRecurrence.custom &&
+                      recurrenceRule.unit ==
+                          GeneralEventRecurrenceUnit.month)) &&
+              recurrenceRule.monthlyAnchorDay != null &&
+              recurrenceRule.monthlyAnchorDay! >= 1 &&
+              recurrenceRule.monthlyAnchorDay! <= 31
+          ? recurrenceRule.monthlyAnchorDay
+          : null,
     );
     final normalizedExceptionDates =
         recurrenceExceptionDateIso
@@ -361,6 +446,10 @@ class GeneralEvent {
             .toSet()
             .toList()
           ..sort();
+    final normalizedReminders =
+        reminderBehavior == GeneralEventReminderBehavior.custom
+        ? reminders.where((item) => item.minutesBefore >= 0).toList()
+        : const <GeneralEventReminder>[];
     return copyWith(
       calendarId: calendarId.trim().isEmpty
           ? fallbackCalendarId
@@ -370,7 +459,12 @@ class GeneralEvent {
       endDateTimeIso: end.toIso8601String(),
       recurrenceRule: normalizedRecurrenceRule,
       recurrenceExceptionDateIso: normalizedExceptionDates,
-      reminders: reminders.where((item) => item.minutesBefore >= 0).toList(),
+      reminderBehavior:
+          reminderBehavior == GeneralEventReminderBehavior.custom &&
+              normalizedReminders.isEmpty
+          ? GeneralEventReminderBehavior.disabled
+          : reminderBehavior,
+      reminders: normalizedReminders,
       createdAtIso: _tryNormalizeDateTimeIso(createdAtIso),
       updatedAtIso: _tryNormalizeDateTimeIso(updatedAtIso),
     );

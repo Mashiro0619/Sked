@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Substituir o horário atual permite selecionar apenas um horário.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Não há horário atual para substituir.",
+  "noActiveTimetableToReplaceMessage": "O horário selecionado para substituição não está disponível. Selecione novamente.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Este conjunto de horários dos períodos ainda é usado por {count} horário(s). Reatribua-os antes de excluir.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Escolher hora",
   "@pickTime": {},
-  "reminder": "Lembrete no aplicativo",
+  "reminder": "Lembrete",
   "@reminder": {},
   "reminderAtStart": "No início",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Gerenciar conjuntos de horários de aula",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Períodos: {periodCount} · Horários associados: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importe como um novo horário ou substitua todas as informações e aulas do horário “{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Selecione pelo menos uma semana.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Manter lembretes de categorias ocultas",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Aplica-se aos lembretes no aplicativo e às notificações do sistema. As notificações do sistema também precisam estar ativadas nas configurações.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Usar padrão",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Lembretes personalizados",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Editar evento recorrente",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Somente esta ocorrência",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Esta e as próximas ocorrências",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Toda a série",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "As alterações se aplicam a toda a série, incluindo ocorrências passadas.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Este evento foi alterado. Seu rascunho foi mantido; reabra o evento para conferir a versão mais recente.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Salvo na categoria oculta “{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Ver evento",
+  "@viewEvent": {}
 }

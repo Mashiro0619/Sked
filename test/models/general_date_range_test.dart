@@ -53,76 +53,71 @@ void main() {
     expect(() => range.containing(DateTime(2200)), throwsFormatException);
     expect(range == Object(), isFalse);
   });
-  test(
-    'v4 migrates without a range and v5 retains strict corruption detection',
-    () {
-      Map<String, dynamic> snapshot() =>
-          jsonDecode(buildInitialAppData(buildDefaultPeriodTimes()).encode())
-              as Map<String, dynamic>;
-      final old = snapshot();
-      (old['generalMode'] as Map)['schemaVersion'] = 4;
-      final migrated = AppData.decodeStorageSnapshot(jsonEncode(old));
-      expect(migrated.generalMode.customDateRange, isNull);
-      expect(migrated.generalMode.toJson()['schemaVersion'], 5);
-      expect(migrated.toJson()['schemaVersion'], 4);
-      final range = GeneralDateRange(
-        DateTime(2026, 9, 9),
-        DateTime(2026, 9, 13),
-      );
-      final data = migrated.copyWith(
-        generalMode: migrated.generalMode.copyWith(customDateRange: range),
+  test('v4 migrates without a range and current data retains strict corruption detection', () {
+    Map<String, dynamic> snapshot() =>
+        jsonDecode(buildInitialAppData(buildDefaultPeriodTimes()).encode())
+            as Map<String, dynamic>;
+    final old = snapshot();
+    (old['generalMode'] as Map)['schemaVersion'] = 4;
+    final migrated = AppData.decodeStorageSnapshot(jsonEncode(old));
+    expect(migrated.generalMode.customDateRange, isNull);
+    expect(
+      migrated.generalMode.toJson()['schemaVersion'],
+      generalScheduleSchemaVersion,
+    );
+    expect(migrated.toJson()['schemaVersion'], 4);
+    final range = GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13));
+    final data = migrated.copyWith(
+      generalMode: migrated.generalMode.copyWith(customDateRange: range),
+    );
+    expect(
+      AppData.decodeStorageSnapshot(data.encode()).generalMode.customDateRange,
+      range,
+    );
+    expect(
+      data.generalMode.copyWith(showWeekends: false).customDateRange,
+      range,
+    );
+    expect(
+      data.generalMode.copyWith(customDateRange: null).customDateRange,
+      isNull,
+    );
+    for (final bad in [
+      false,
+      'bad',
+      {},
+      {'start': '2026-09-09'},
+      {'end': '2026-09-13'},
+      {'start': '2026-2-01', 'end': '2026-02-02'},
+      {'start': '2026-02-30', 'end': '2026-03-02'},
+      {'start': '2026-09-10', 'end': '2026-09-09'},
+      {'start': '2026-09-01', 'end': '2026-09-15'},
+      {'start': '1969-12-31', 'end': '1970-01-01'},
+      {'start': '2100-01-01', 'end': '2100-01-02'},
+    ]) {
+      final json = snapshot();
+      (json['generalMode'] as Map)['customDateRange'] = bad;
+      expect(
+        () => AppData.decodeStorageSnapshot(jsonEncode(json)),
+        throwsFormatException,
+        reason: '$bad',
       );
       expect(
-        AppData.decodeStorageSnapshot(data.encode())
-            .generalMode
-            .customDateRange,
-        range,
-      );
-      expect(
-        data.generalMode.copyWith(showWeekends: false).customDateRange,
-        range,
-      );
-      expect(
-        data.generalMode.copyWith(customDateRange: null).customDateRange,
-        isNull,
-      );
-      for (final bad in [
-        false,
-        'bad',
-        {},
-        {'start': '2026-09-09'},
-        {'end': '2026-09-13'},
-        {'start': '2026-2-01', 'end': '2026-02-02'},
-        {'start': '2026-02-30', 'end': '2026-03-02'},
-        {'start': '2026-09-10', 'end': '2026-09-09'},
-        {'start': '2026-09-01', 'end': '2026-09-15'},
-        {'start': '1969-12-31', 'end': '1970-01-01'},
-        {'start': '2100-01-01', 'end': '2100-01-02'},
-      ]) {
-        final json = snapshot();
-        (json['generalMode'] as Map)['customDateRange'] = bad;
-        expect(
-          () => AppData.decodeStorageSnapshot(jsonEncode(json)),
-          throwsFormatException,
-          reason: '$bad',
-        );
-        expect(
-          () => GeneralScheduleData.fromJson(
-            Map<String, dynamic>.from(json['generalMode'] as Map),
-          ),
-          throwsFormatException,
-        );
-      }
-      final corruptV4 = snapshot();
-      (corruptV4['generalMode'] as Map)
-        ..['schemaVersion'] = 4
-        ..['selectedDateIso'] = '2026-9-9';
-      expect(
-        () => AppData.decodeStorageSnapshot(jsonEncode(corruptV4)),
+        () => GeneralScheduleData.fromJson(
+          Map<String, dynamic>.from(json['generalMode'] as Map),
+        ),
         throwsFormatException,
       );
-    },
-  );
+    }
+    final corruptV4 = snapshot();
+    (corruptV4['generalMode'] as Map)
+      ..['schemaVersion'] = 4
+      ..['selectedDateIso'] = '2026-9-9';
+    expect(
+      () => AppData.decodeStorageSnapshot(jsonEncode(corruptV4)),
+      throwsFormatException,
+    );
+  });
   test('custom formatting uses actual endpoints rather than natural weeks', () {
     for (final (start, end, label) in [
       (DateTime(2026, 9, 9), DateTime(2026, 9, 13), '2026年9月9日–13日'),

@@ -1297,6 +1297,11 @@ void main() {
       await tester.pumpAndSettle();
       await edit?.call();
       await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('compact-color-picker-hex-field')),
+        '#234567',
+      );
+      await tester.pumpAndSettle();
 
       storage.blockNextSave();
       await tester.tap(find.widgetWithText(FilledButton, 'Apply settings'));

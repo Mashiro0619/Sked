@@ -49,6 +49,7 @@ import '../widgets/sked_mutation_confirmation_dialog.dart';
 import '../widgets/sked_adaptive_picker_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
+import '../widgets/period_time_set_manager.dart';
 import '../widgets/sked_expressive_components.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
@@ -132,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _timetableItemDialogOpen = false;
   bool _timetableSwitchInProgress = false;
   bool _settingsPageOpen = false;
-  bool _periodTimeSetPickerOpen = false;
+  bool _periodTimeSetManagerOpen = false;
   bool _fileImportInProgress = false;
   bool _textImportPageOpen = false;
   bool _schoolWebImportPageOpen = false;
@@ -328,14 +329,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         // Desktop chrome needs a drag surface even when the
                         // resource panel owns the settings action.
-                        if (desktop || showSettingsHere)
-                          _EmptyTimetableToolbar(
-                            key: const ValueKey('student-workspace-toolbar'),
-                            title: l10n.appTitle,
-                            showSettingsAction: showSettingsHere,
-                            settingsFocusNode: widget.settingsFocusNode,
-                            onOpenSettings: settingsAction,
-                          ),
+                        _EmptyTimetableToolbar(
+                          key: const ValueKey('student-workspace-toolbar'),
+                          title: l10n.appTitle,
+                          showSettingsAction: showSettingsHere,
+                          settingsFocusNode: widget.settingsFocusNode,
+                          onOpenSettings: settingsAction,
+                          onManagePeriodTimeSets: widget.interactive
+                              ? () => _managePeriodTimeSets(provider)
+                              : null,
+                        ),
                         Expanded(
                           child: WorkspaceCanvasBody(
                             child: _EmptyTimetableState(
@@ -468,6 +471,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     availableWidth: constraints.maxWidth,
                                     anchorContext: anchor,
                                   ),
+                            onManagePeriodTimeSets: widget.interactive
+                                ? () => _managePeriodTimeSets(provider)
+                                : null,
                             onOpenWeekPicker: _weekPickerOpen
                                 ? null
                                 : (anchor) => _showWeekPicker(
@@ -574,22 +580,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _selectPeriodTimeSet(
-    TimetableProvider provider, {
-    BuildContext? anchorContext,
-  }) async {
-    if (_periodTimeSetPickerOpen || _courseEditorOpen || !widget.interactive) {
+  Future<void> _managePeriodTimeSets(TimetableProvider provider) async {
+    if (_periodTimeSetManagerOpen || _courseEditorOpen || !widget.interactive) {
       return;
     }
-    _periodTimeSetPickerOpen = true;
+    _periodTimeSetManagerOpen = true;
     try {
-      await selectTimetablePeriodTimeSet(
-        context,
-        provider: provider,
-        anchorContext: anchorContext,
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: const PeriodTimeSetManagerPage(),
+          ),
+        ),
       );
     } finally {
-      _periodTimeSetPickerOpen = false;
+      _periodTimeSetManagerOpen = false;
     }
   }
 
@@ -651,7 +657,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     tooltip: l10n.more,
                     icon: const Icon(Icons.more_horiz),
                     onSelected: (value) => value == 'periods'
-                        ? _selectPeriodTimeSet(provider, anchorContext: anchor)
+                        ? _managePeriodTimeSets(provider)
                         : openWorkspaceTransfer(
                             context,
                             AppMode.student,
@@ -662,7 +668,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (_) => [
                       PopupMenuItem(
                         value: 'periods',
-                        child: Text(l10n.periodTimeSets),
+                        child: Text(l10n.managePeriodTimeSets),
                       ),
                       PopupMenuItem(
                         value: 'import',

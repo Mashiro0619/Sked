@@ -10,6 +10,7 @@ export 'student_mode_data.dart';
 export 'app_mode.dart';
 export 'workspace_panel_display_mode.dart';
 export 'general_event.dart';
+export 'general_event_edit_scope.dart';
 export 'general_schedule.dart';
 export 'general_schedule_data.dart';
 export 'general_date_range.dart';

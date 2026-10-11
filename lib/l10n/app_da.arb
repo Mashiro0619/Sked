@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Erstatning af den aktuelle tidsplan understøtter kun at vælge en tidsplan.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Der er ingen tidsplan til udskiftning.",
+  "noActiveTimetableToReplaceMessage": "Det valgte skema er ikke tilgængeligt. Vælg et skema igen.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Dette tidssæt anvendes stadig af {count} tidsplan(er). Tildele dem igen, før de slettes.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Vælg tidspunkt",
   "@pickTime": {},
-  "reminder": "Påmindelse i appen",
+  "reminder": "Påmindelse",
   "@reminder": {},
   "reminderAtStart": "Ved start",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
       "result": {},
       "time": {}
     }
-  }
+  },
+  "managePeriodTimeSets": "Administrer sæt af lektionstider",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Lektioner: {periodCount} · Skemaer, der bruger sættet: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importer som et nyt skema, eller erstat alle skemaoplysninger og fag i “{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Vælg mindst én uge.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Behold påmindelser for skjulte kategorier",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Gælder påmindelser i appen og systemnotifikationer. Systemnotifikationer styres stadig af notifikationskontakten.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Brug standardindstilling",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Brugerdefinerede påmindelser",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Rediger tilbagevendende begivenhed",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Kun denne forekomst",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Denne og følgende forekomster",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Hele serien",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Ændringerne gælder hele serien, også tidligere forekomster.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Denne begivenhed er blevet ændret. Din kladde er bevaret. Åbn begivenheden igen for at se den nyeste version.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Gemt i den skjulte kategori “{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Vis begivenhed",
+  "@viewEvent": {}
 }

@@ -22,11 +22,15 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   bool get lockScreenShowTitles =>
       _appData.notificationSettings.lockScreenShowTitles;
 
+  bool get remindHiddenGeneralCalendars =>
+      _appData.notificationSettings.remindHiddenGeneralCalendars;
+
   Future<void> updateNotificationSettings({
     bool? enabled,
     Object? courseDefaultMinutesBefore = NotificationSettings.keep,
     Object? generalDefaultMinutesBefore = NotificationSettings.keep,
     bool? lockScreenShowTitles,
+    bool? remindHiddenGeneralCalendars,
   }) async {
     final next = _settings.updateNotificationSettings(
       _appData,
@@ -34,6 +38,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
       courseDefaultMinutesBefore: courseDefaultMinutesBefore,
       generalDefaultMinutesBefore: generalDefaultMinutesBefore,
       lockScreenShowTitles: lockScreenShowTitles,
+      remindHiddenGeneralCalendars: remindHiddenGeneralCalendars,
     );
     if (identical(next, _appData)) return;
     _appData = next;
@@ -68,6 +73,14 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateLockScreenShowTitles(bool value) async {
     final next = _settings.updateLockScreenShowTitles(_appData, value);
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateRemindHiddenGeneralCalendars(bool value) async {
+    requireWorkspaceEnabled(AppMode.general);
+    final next = _settings.updateRemindHiddenGeneralCalendars(_appData, value);
     if (identical(next, _appData)) return;
     _appData = next;
     await _saveAndNotify();

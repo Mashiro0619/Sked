@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Η αντικατάσταση του τρέχοντος προγράμματος υποστηρίζει μόνο την επιλογή ενός προγράμματος.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Δεν υπάρχει τρέχον χρονοδιάγραμμα για αντικατάσταση.",
+  "noActiveTimetableToReplaceMessage": "Το επιλεγμένο πρόγραμμα δεν είναι διαθέσιμο. Επιλέξτε ξανά.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Αυτό το χρονοδιάγραμμα περιόδου εξακολουθεί να χρησιμοποιείται από το χρονοδιάγραμμα {count}. Αναπροσδιορίστε τους πριν διαγράψετε.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Επιλογή ώρας",
   "@pickTime": {},
-  "reminder": "Υπενθύμιση στην εφαρμογή",
+  "reminder": "Υπενθύμιση",
   "@reminder": {},
   "reminderAtStart": "Στην έναρξη",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
       "result": {},
       "time": {}
     }
-  }
+  },
+  "managePeriodTimeSets": "Διαχείριση συνόλων ωρών μαθημάτων",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Διδακτικές ώρες: {periodCount} · Προγράμματα που το χρησιμοποιούν: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Εισαγωγή ως νέο πρόγραμμα ή αντικατάσταση όλων των στοιχείων και μαθημάτων στο «{name}».",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Επιλέξτε τουλάχιστον μία εβδομάδα.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Διατήρηση υπενθυμίσεων για κρυφές κατηγορίες",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Ισχύει για υπενθυμίσεις εντός της εφαρμογής και ειδοποιήσεις συστήματος. Οι ειδοποιήσεις συστήματος εξακολουθούν να ελέγχονται από τον διακόπτη ειδοποιήσεων.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Χρήση προεπιλογής",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Προσαρμοσμένες υπενθυμίσεις",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Επεξεργασία επαναλαμβανόμενου συμβάντος",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Μόνο αυτή η εμφάνιση",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Αυτή και οι επόμενες εμφανίσεις",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Ολόκληρη η σειρά",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Οι αλλαγές ισχύουν για ολόκληρη τη σειρά, συμπεριλαμβανομένων των προηγούμενων εμφανίσεων.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Αυτό το συμβάν έχει αλλάξει. Το πρόχειρό σας διατηρείται. Ανοίξτε ξανά το συμβάν για να δείτε την πιο πρόσφατη έκδοση.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Αποθηκεύτηκε στην κρυφή κατηγορία «{name}».",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Προβολή συμβάντος",
+  "@viewEvent": {}
 }

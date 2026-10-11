@@ -62,6 +62,11 @@ class TimetableImportFlow {
     String source,
   ) async {
     final l10n = AppLocalizations.of(context);
+    final dataSession = provider.dataSessionToken;
+    bool isCurrent() =>
+        context.mounted &&
+        identical(dataSession, provider.dataSessionToken) &&
+        provider.isWorkspaceEnabled(AppMode.student);
 
     TimetableJsonImportPreview preview;
     try {
@@ -92,12 +97,17 @@ class TimetableImportFlow {
             confirmText: l10n.importAction,
             initialSelectedIds: candidates.map((item) => item.id).toList(),
           );
-    if (selectedIds == null || selectedIds.isEmpty || !context.mounted) {
+    if (selectedIds == null ||
+        selectedIds.isEmpty ||
+        !context.mounted ||
+        !isCurrent()) {
       return false;
     }
 
     var mode = TimetableImportMode.addAsNew;
-    if (selectedIds.length == 1 && provider.activeTimetableOrNull != null) {
+    String? replacementTimetableId;
+    final replacementTimetable = provider.activeTimetableOrNull;
+    if (selectedIds.length == 1 && replacementTimetable != null) {
       final pickedMode = await showExpressiveDialog<TimetableImportMode>(
         context: context,
         builder: (context) {
@@ -111,7 +121,11 @@ class TimetableImportFlow {
 
           return AlertDialog(
             title: Text(l10n.importTimetableDialogTitle),
-            content: Text(l10n.chooseImportMethod),
+            content: Text(
+              l10n.chooseTimetableImportMethod(
+                replacementTimetable.config.name,
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () => popOnce(TimetableImportMode.addAsNew),
@@ -129,9 +143,12 @@ class TimetableImportFlow {
         return false;
       }
       mode = pickedMode;
+      if (mode == TimetableImportMode.replaceActive) {
+        replacementTimetableId = replacementTimetable.id;
+      }
     }
 
-    if (!context.mounted) {
+    if (!context.mounted || !isCurrent()) {
       return false;
     }
     final importChoice = await _pickImportBundledPeriodTimeSets(
@@ -139,7 +156,7 @@ class TimetableImportFlow {
       provider,
       hasBundledPeriodTimeSets: preview.hasBundledPeriodTimeSets,
     );
-    if (importChoice == null) {
+    if (importChoice == null || !isCurrent()) {
       return false;
     }
 
@@ -152,6 +169,7 @@ class TimetableImportFlow {
           mode: mode,
           importBundledPeriodTimeSets: importChoice.importBundledPeriodTimeSets,
           targetPeriodTimeSetId: importChoice.targetPeriodTimeSetId,
+          replacementTimetableId: replacementTimetableId,
         ),
       );
       if (context.mounted) {
@@ -191,7 +209,7 @@ class TimetableImportFlow {
     required bool hasBundledPeriodTimeSets,
   }) async {
     if (!hasBundledPeriodTimeSets) {
-      return const _TimetableImportChoice(importBundledPeriodTimeSets: true);
+      return _pickExistingPeriodTimeSet(context, provider);
     }
     if (!context.mounted) {
       return null;
@@ -245,13 +263,27 @@ class TimetableImportFlow {
     if (!context.mounted) {
       return null;
     }
+    return _pickExistingPeriodTimeSet(
+      context,
+      provider,
+      anchorRect: discardAnchor,
+    );
+  }
+
+  static Future<_TimetableImportChoice?> _pickExistingPeriodTimeSet(
+    BuildContext context,
+    TimetableProvider provider, {
+    Rect? anchorRect,
+  }) async {
+    if (!context.mounted) return null;
     final selectedPeriodTimeSetId = await showPeriodTimeSetPickerDialog(
       context,
       provider: provider,
-      anchorRect: discardAnchor,
+      anchorRect: anchorRect,
       selectedPeriodTimeSetId:
           provider.activePeriodTimeSetOrNull?.id ??
-          provider.periodTimeSets.first.id,
+          provider.periodTimeSets.firstOrNull?.id ??
+          '',
     );
     if (selectedPeriodTimeSetId == null || selectedPeriodTimeSetId.isEmpty) {
       return null;

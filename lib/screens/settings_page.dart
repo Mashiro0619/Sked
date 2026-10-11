@@ -43,8 +43,6 @@ import '../widgets/adaptive_settings_scaffold.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 import '../models/settings_destination.dart';
 import '../models/settings_catalog.dart';
-import '../widgets/period_time_set_manager.dart';
-import '../widgets/period_time_set_picker_dialog.dart';
 import 'workspace_features_page.dart';
 import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
@@ -77,7 +75,6 @@ List<String> _defaultGeneralScheduleSelectionIds(
 
 enum _SettingsFlow {
   schoolSitesPage,
-  periodTimeSetPicker,
   parserSettingsPage,
   studentDataActions,
   generalDataActions,
@@ -308,25 +305,6 @@ class _SettingsPageState extends State<SettingsPage>
               SettingsDestination.studentPreferences,
               subtitle: l.timetableDisplaySettingsDesc,
             ),
-            Builder(
-              builder: (anchor) => SettingsConnectedTile(
-                key: const ValueKey('settings-period-times'),
-                title: l.periodTimeSets,
-                value: provider.activePeriodTimeSetOrNull?.name,
-                leading: const Icon(Icons.schedule),
-                trailing: const Icon(Icons.unfold_more, size: 20),
-                onTap: _isFlowOpen(_SettingsFlow.periodTimeSetPicker)
-                    ? null
-                    : () => _guardFlow(
-                        _SettingsFlow.periodTimeSetPicker,
-                        () => selectTimetablePeriodTimeSet(
-                          context,
-                          provider: provider,
-                          anchorContext: anchor,
-                        ),
-                      ),
-              ),
-            ),
           ]),
         if (provider.isWorkspaceEnabled(AppMode.general))
           group('general', l.generalSchedule, [
@@ -465,9 +443,6 @@ class _SettingsPageState extends State<SettingsPage>
     }
     if (destination == SettingsDestination.parser) {
       return const SchoolImportParserSettingsPage();
-    }
-    if (destination == SettingsDestination.periods) {
-      return const PeriodTimeSetManagerPage();
     }
     if (destination == SettingsDestination.notificationPermissions) {
       return NotificationSettingsPage(

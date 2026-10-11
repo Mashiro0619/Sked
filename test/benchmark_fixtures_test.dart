@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/app_backup.dart';
 import 'package:sked/models/app_data.dart';
 import 'package:sked/models/general_event_occurrence.dart';
+import 'package:sked/models/general_schedule_data.dart';
 import 'package:sked/services/general_occurrence_service.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
 
@@ -105,7 +106,11 @@ void main() {
     'schema and preference additions do not change fixture workload data',
     () {
       String asV4(String source) {
-        expect(RegExp('"schemaVersion":5').allMatches(source), hasLength(1));
+        expect(
+          RegExp('"schemaVersion":$generalScheduleSchemaVersion')
+              .allMatches(source),
+          hasLength(1),
+        );
         final root = jsonDecode(source) as Map<String, dynamic>;
         final app =
             (root['data'] == null
@@ -124,6 +129,18 @@ void main() {
           mode['hiddenToolbarNavigationIds'] = [];
         }
         final general = app['generalMode'] as Map<String, dynamic>;
+        for (final calendar in general['schedules'] as List<dynamic>) {
+          for (final event
+              in (calendar as Map<String, dynamic>)['events']
+                  as List<dynamic>) {
+            final value = event as Map<String, dynamic>;
+            final reminders = value['reminders'] as List<dynamic>;
+            expect(
+              value.remove('reminderBehavior'),
+              reminders.isEmpty ? 'disabled' : 'custom',
+            );
+          }
+        }
         expect(general.remove('fitWeekColumnsToWidth'), isTrue);
         general['schemaVersion'] = 4;
         return jsonEncode(root);

@@ -404,6 +404,110 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
   return results;
 }
 
+/// A candidate's position is counted before applying exception dates.
+/// This is the same COUNT semantics used by the recurrence expander and ICS.
+DateTime? generalRecurrenceStartAt(
+  DateTime eventStart,
+  GeneralEventRecurrenceRule rule,
+  int sequence,
+) {
+  if (sequence < 0 || (!rule.isRepeating && sequence != 0)) return null;
+  if (rule.isRepeating && rule.count != null && sequence >= rule.count!) {
+    return null;
+  }
+  final candidate = rule.isRepeating
+      ? _addRecurrenceSteps(eventStart, rule, sequence)
+      : eventStart;
+  final until = _parseUntil(rule.untilDateIso);
+  if (candidate == null ||
+      (rule.isRepeating &&
+          until != null &&
+          calendarDaysBetween(until, candidate) > 0)) {
+    return null;
+  }
+  return candidate;
+}
+
+/// Resolves a date-only exception without expanding all earlier occurrences.
+int? generalRecurrenceSequenceForDate(
+  DateTime eventStart,
+  GeneralEventRecurrenceRule rule,
+  DateTime date,
+) {
+  final boundary = dateTimeOnCalendarDate(date, eventStart);
+  if (calendarDaysBetween(eventStart, boundary) < 0) return null;
+  final sequence = rule.isRepeating
+      ? _firstCandidateIndex(
+          eventStart: eventStart,
+          rangeStart: boundary,
+          rule: rule,
+        )
+      : 0;
+  final candidate = generalRecurrenceStartAt(eventStart, rule, sequence);
+  return candidate != null && calendarDaysBetween(candidate, boundary) == 0
+      ? sequence
+      : null;
+}
+
+/// Returns the finite number of candidates, including excluded candidates.
+/// Null means that neither COUNT nor UNTIL limits this recurring record.
+int? boundedGeneralRecurrenceCount(
+  DateTime eventStart,
+  GeneralEventRecurrenceRule rule,
+) {
+  if (!rule.isRepeating) return 1;
+  final count = rule.count != null && rule.count! > 0 ? rule.count : null;
+  final until = _parseUntil(rule.untilDateIso);
+  if (until == null) return count;
+  if (calendarDaysBetween(eventStart, until) < 0) return 0;
+  final boundary = dateTimeOnCalendarDate(until, eventStart);
+  var lastSequence = _firstCandidateIndex(
+    eventStart: eventStart,
+    rangeStart: boundary,
+    rule: rule,
+  );
+  final last = _addRecurrenceSteps(eventStart, rule, lastSequence);
+  if (last == null || calendarDaysBetween(until, last) > 0) {
+    lastSequence -= 1;
+  }
+  final untilCount = lastSequence < 0 ? 0 : lastSequence + 1;
+  return count == null || untilCount < count ? untilCount : count;
+}
+
+/// Keeps excluded ordinal positions when a series moves or is split.
+List<String> remapGeneralRecurrenceExceptionDates({
+  required GeneralEvent source,
+  required GeneralEvent destination,
+  int sourceSequenceOffset = 0,
+}) {
+  if (!destination.recurrenceRule.isRepeating) return const [];
+  final oldStart = tryParseStrictIsoDateTime(source.startDateTimeIso);
+  final newStart = tryParseStrictIsoDateTime(destination.startDateTimeIso);
+  if (oldStart == null || newStart == null) return const [];
+  final mapped = <String>{};
+  for (final value in source.recurrenceExceptionDateIso) {
+    final date = tryParseStrictIsoDate(value);
+    if (date == null) continue;
+    final sequence = generalRecurrenceSequenceForDate(
+      oldStart,
+      source.recurrenceRule,
+      date,
+    );
+    if (sequence == null || sequence < sourceSequenceOffset) continue;
+    final candidate = generalRecurrenceStartAt(
+      newStart,
+      destination.recurrenceRule,
+      sequence - sourceSequenceOffset,
+    );
+    if (candidate != null) mapped.add(_dateIso(candidate));
+  }
+  return mapped.toList()..sort();
+}
+
+GeneralEventRecurrenceUnit effectiveGeneralRecurrenceUnit(
+  GeneralEventRecurrenceRule rule,
+) => _effectiveUnit(rule);
+
 /// Converts date-only exception keys produced by the legacy elapsed-day
 /// recurrence engine into the corresponding civil-date keys.
 ///
@@ -625,7 +729,11 @@ DateTime? _addRecurrenceSteps(
     return switch (_effectiveUnit(rule)) {
       GeneralEventRecurrenceUnit.day => addCalendarDays(start, amount),
       GeneralEventRecurrenceUnit.week => addCalendarDays(start, amount * 7),
-      GeneralEventRecurrenceUnit.month => _addMonths(start, amount),
+      GeneralEventRecurrenceUnit.month => _addMonths(
+        start,
+        amount,
+        anchorDay: rule.monthlyAnchorDay,
+      ),
     };
   } catch (_) {
     // DateTime and Duration throw when a corrupted count/interval projects
@@ -687,11 +795,14 @@ DateTime? _legacyElapsedRecurrenceStart(
 String _dateIso(DateTime value) =>
     normalizeDateOnly(value).toIso8601String().split('T').first;
 
-DateTime _addMonths(DateTime start, int months) {
+DateTime _addMonths(DateTime start, int months, {int? anchorDay}) {
+  if (months == 0) return start;
   final targetMonthZero = (start.month - 1) + months;
   final year = start.year + (targetMonthZero ~/ 12);
   final month = (targetMonthZero % 12) + 1;
-  final day = start.day.clamp(1, _daysInMonth(year, month)).toInt();
+  final day = (anchorDay ?? start.day)
+      .clamp(1, _daysInMonth(year, month))
+      .toInt();
   return dateTimeOnCalendarDate(DateTime.utc(year, month, day), start);
 }
 

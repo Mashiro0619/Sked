@@ -1293,7 +1293,16 @@ void main() {
     await tester.tap(reminderField);
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.byType(FilterChip), findsNWidgets(7));
+    expect(find.byType(FilterChip), findsNWidgets(6));
+    expect(
+      find.byKey(const ValueKey('general-reminder-inherit')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('general-reminder-none')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('general-reminder-custom')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -1677,7 +1686,7 @@ void main() {
     await tester.ensureVisible(field);
     await tester.tap(field);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilterChip, l10n.none));
+    await tester.tap(find.byKey(const ValueKey('general-reminder-none')));
     await tester.tap(_dialogTextButton(l10n.cancel));
     await tester.pumpAndSettle();
     expect(find.text(l10n.reminderHourBefore), findsOneWidget);
@@ -1685,7 +1694,7 @@ void main() {
     await tester.ensureVisible(field);
     await tester.tap(field);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilterChip, l10n.none));
+    await tester.tap(find.byKey(const ValueKey('general-reminder-none')));
     await tester.tap(find.widgetWithText(FilledButton, l10n.confirm));
     await tester.pumpAndSettle();
     expect(find.text(l10n.none), findsOneWidget);
@@ -1693,36 +1702,43 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, l10n.save));
     await tester.pumpAndSettle();
     expect(savedEvent?.reminders, isEmpty);
+    expect(savedEvent?.reminderBehavior, GeneralEventReminderBehavior.disabled);
   });
 
-  testWidgets('new events inherit the configured default reminder', (
-    tester,
-  ) async {
-    GeneralEvent? savedEvent;
-    await tester.pumpWidget(
-      _localizedApp(
-        GeneralEventEditorSheet(
-          calendars: const [
-            GeneralSchedule(id: 'work', name: 'Work', events: []),
-          ],
-          activeCalendarId: 'work',
-          defaultReminderMinutesBefore: 15,
-          onSave: (event) async => savedEvent = event,
+  testWidgets(
+    'new events inherit the configured reminder without freezing it',
+    (tester) async {
+      GeneralEvent? savedEvent;
+      await tester.pumpWidget(
+        _localizedApp(
+          GeneralEventEditorSheet(
+            calendars: const [
+              GeneralSchedule(id: 'work', name: 'Work', events: []),
+            ],
+            activeCalendarId: 'work',
+            defaultReminderMinutesBefore: 15,
+            onSave: (event) async => savedEvent = event,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(GeneralEventEditorSheet)),
-    );
-    await tester.enterText(find.byType(TextFormField).first, 'Planning');
-    await tester.tap(find.widgetWithText(FilledButton, l10n.save));
-    await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(GeneralEventEditorSheet)),
+      );
+      await tester.enterText(find.byType(TextFormField).first, 'Planning');
+      await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+      await tester.pumpAndSettle();
 
-    expect(savedEvent?.reminders, hasLength(1));
-    expect(savedEvent?.reminders.single.minutesBefore, 15);
-  });
+      expect(
+        savedEvent?.reminderBehavior,
+        GeneralEventReminderBehavior.inherit,
+      );
+      expect(savedEvent?.reminders, isEmpty);
+      expect(savedEvent?.resolveReminders(15).single.minutesBefore, 15);
+      expect(savedEvent?.resolveReminders(30).single.minutesBefore, 30);
+    },
+  );
 
   testWidgets('editing an event keeps an explicitly empty reminder list', (
     tester,
@@ -1756,6 +1772,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(savedEvent?.reminders, isEmpty);
+    expect(savedEvent?.reminderBehavior, GeneralEventReminderBehavior.disabled);
   });
 
   testWidgets('rapid taps open only one selection dialog', (tester) async {

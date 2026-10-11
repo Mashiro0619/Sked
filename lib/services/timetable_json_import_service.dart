@@ -19,6 +19,7 @@ class TimetableJsonImportRequest {
     required this.mode,
     required this.importBundledPeriodTimeSets,
     this.targetPeriodTimeSetId,
+    this.replacementTimetableId,
   });
 
   final String source;
@@ -26,6 +27,7 @@ class TimetableJsonImportRequest {
   final TimetableImportMode mode;
   final bool importBundledPeriodTimeSets;
   final String? targetPeriodTimeSetId;
+  final String? replacementTimetableId;
 }
 
 class TimetableJsonImportService {
@@ -53,6 +55,7 @@ class TimetableJsonImportService {
       mode: request.mode,
       importBundledPeriodTimeSets: request.importBundledPeriodTimeSets,
       targetPeriodTimeSetId: request.targetPeriodTimeSetId,
+      replacementTimetableId: request.replacementTimetableId,
     );
   }
 }

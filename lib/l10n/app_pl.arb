@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Zastąpienie bieżącego harmonogramu obsługuje tylko wybór jednego harmonogramu.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Nie ma obecnego harmonogramu do zastąpienia.",
+  "noActiveTimetableToReplaceMessage": "Plan zajęć wybrany do zastąpienia jest niedostępny. Wybierz go ponownie.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Ten zestaw czasu okresu jest nadal używany przez harmonogram {count}. Przeznacz je przed usunięciem.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Wybierz godzinę",
   "@pickTime": {},
-  "reminder": "Przypomnienie w aplikacji",
+  "reminder": "Przypomnienie",
   "@reminder": {},
   "reminderAtStart": "Na początku",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Zarządzaj zestawami godzin lekcyjnych",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Liczba lekcji: {periodCount} · Powiązane plany: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Zaimportuj jako nowy plan zajęć lub zastąp wszystkie informacje i zajęcia w planie „{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Wybierz co najmniej jeden tydzień.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Zachowaj przypomnienia dla ukrytych kategorii",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Dotyczy przypomnień w aplikacji i powiadomień systemowych. Powiadomienia systemowe muszą być również włączone w ustawieniach.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Użyj ustawień domyślnych",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Własne przypomnienia",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Edytuj wydarzenie cykliczne",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Tylko to wystąpienie",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "To i kolejne wystąpienia",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Cała seria",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Zmiany obejmą całą serię, również minione wystąpienia.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "To wydarzenie zostało zmienione. Wersja robocza została zachowana; otwórz wydarzenie ponownie, aby sprawdzić jego najnowszą wersję.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Zapisano w ukrytej kategorii „{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Wyświetl wydarzenie",
+  "@viewEvent": {}
 }

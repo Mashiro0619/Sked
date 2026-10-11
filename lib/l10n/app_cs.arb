@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Nahrazení aktuálního harmonogramu podporuje pouze výběr jednoho harmonogramu.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Neexistuje žádný aktuální časový rozvrh k nahrazení.",
+  "noActiveTimetableToReplaceMessage": "Vybraný rozvrh není dostupný. Vyberte prosím znovu.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Toto časové období je stále používáno časovým rozvrhem {count}. Před smazáním je znovu přiřaďte.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Vybrat čas",
   "@pickTime": {},
-  "reminder": "Připomenutí v aplikaci",
+  "reminder": "Připomenutí",
   "@reminder": {},
   "reminderAtStart": "Při začátku",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
       "result": {},
       "time": {}
     }
-  }
+  },
+  "managePeriodTimeSets": "Spravovat sady časů vyučovacích hodin",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Počet hodin: {periodCount} · Použito v rozvrzích: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importovat jako nový rozvrh, nebo nahradit všechny údaje a předměty v rozvrhu „{name}“.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Vyberte alespoň jeden týden.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Připomínat i skryté kategorie",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Platí pro připomenutí v aplikaci i systémová oznámení. Systémová oznámení se nadále řídí hlavním přepínačem oznámení.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Použít výchozí nastavení",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Vlastní připomenutí",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Upravit opakující se událost",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Pouze tento výskyt",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Tento a následující výskyty",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Celá série",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Změny se projeví v celé sérii včetně minulých výskytů.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Tato událost se změnila. Koncept zůstává zachován. Otevřete událost znovu a zkontrolujte její nejnovější verzi.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Uloženo do skryté kategorie „{name}“.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Zobrazit událost",
+  "@viewEvent": {}
 }

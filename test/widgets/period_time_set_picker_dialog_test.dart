@@ -630,7 +630,7 @@ void main() {
   });
 
   testWidgets(
-    'returning from edit falls back when the selected set was deleted',
+    'deleting the draft selection leaves no silently selected replacement',
     (tester) async {
       final initialData = buildInitialAppData(buildDefaultPeriodTimes());
       final activeSet = initialData.studentMode.periodTimeSets.first;
@@ -694,7 +694,7 @@ void main() {
             .getSemanticsData()
             .flagsCollection
             .isSelected,
-        ui.Tristate.isTrue,
+        ui.Tristate.isFalse,
       );
     },
   );

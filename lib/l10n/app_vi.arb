@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Thay thế lịch trình hiện tại chỉ hỗ trợ chọn một lịch trình.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Không có lịch trình hiện tại để thay thế.",
+  "noActiveTimetableToReplaceMessage": "Thời khóa biểu được chọn để thay thế hiện không khả dụng. Vui lòng chọn lại.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Bộ thời gian giai đoạn này vẫn được sử dụng bởi {count} lịch trình (s). Đặt lại trước khi xóa.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Chọn giờ",
   "@pickTime": {},
-  "reminder": "Lời nhắc trong ứng dụng",
+  "reminder": "Lời nhắc",
   "@reminder": {},
   "reminderAtStart": "Khi bắt đầu",
   "@reminderAtStart": {},
@@ -2025,5 +2025,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Quản lý bộ giờ học theo tiết",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Số tiết: {periodCount} · Số thời khóa biểu sử dụng: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Nhập thành thời khóa biểu mới hoặc thay thế toàn bộ thông tin và môn học trong “{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Chọn ít nhất một tuần.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Giữ lời nhắc cho các danh mục bị ẩn",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Áp dụng cho lời nhắc trong ứng dụng và thông báo hệ thống. Thông báo hệ thống vẫn cần được bật trong phần cài đặt.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Dùng mặc định",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Lời nhắc tùy chỉnh",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Chỉnh sửa sự kiện lặp lại",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Chỉ lần này",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Lần này và các lần sau",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Toàn bộ chuỗi",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Thay đổi sẽ áp dụng cho toàn bộ chuỗi, kể cả các lần đã qua.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Sự kiện này đã thay đổi. Bản nháp của bạn vẫn được giữ lại; hãy mở lại sự kiện để xem phiên bản mới nhất.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Đã lưu vào danh mục bị ẩn “{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Xem sự kiện",
+  "@viewEvent": {}
 }

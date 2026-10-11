@@ -102,6 +102,7 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
     required String localeCode,
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
+    String? replacementTimetableId,
   }) {
     final imported = decodeStudentImportCandidate(
       source,
@@ -132,7 +133,10 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
           replaceActiveRequiresSingleTimetableMessage(localeCode: localeCode),
         );
       }
-      final current = _activeTimetable(data);
+      final targetId = replacementTimetableId?.trim();
+      final current = data.timetables
+          .where((item) => item.id == targetId)
+          .firstOrNull;
       if (current == null) {
         throw FormatException(
           noActiveTimetableToReplaceMessage(localeCode: localeCode),

@@ -2341,7 +2341,7 @@ abstract class AppLocalizations {
   /// No description provided for @noActiveTimetableToReplaceMessage.
   ///
   /// In en, this message translates to:
-  /// **'There is no current timetable to replace.'**
+  /// **'The timetable selected for replacement is unavailable. Please choose again.'**
   String get noActiveTimetableToReplaceMessage;
 
   /// No description provided for @periodTimeSetInUseMessage.
@@ -3151,7 +3151,7 @@ abstract class AppLocalizations {
   /// No description provided for @reminder.
   ///
   /// In en, this message translates to:
-  /// **'In-app reminder'**
+  /// **'Reminder'**
   String get reminder;
 
   /// No description provided for @reminderAtStart.
@@ -5255,6 +5255,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Data and settings can be changed when the restore finishes. You can still view them.'**
   String get backupRestoreInProgressMessage;
+
+  /// No description provided for @managePeriodTimeSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage period time sets'**
+  String get managePeriodTimeSets;
+
+  /// No description provided for @periodTimeSetUsageSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{periodCount} periods · Used by {timetableCount} timetables'**
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount);
+
+  /// No description provided for @chooseTimetableImportMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Import as a new timetable, or replace all timetable details and courses in “{name}”.'**
+  String chooseTimetableImportMethod(String name);
+
+  /// No description provided for @selectAtLeastOneWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one week.'**
+  String get selectAtLeastOneWeek;
+
+  /// No description provided for @notificationRemindHiddenGeneralCalendars.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep reminders for hidden calendars'**
+  String get notificationRemindHiddenGeneralCalendars;
+
+  /// No description provided for @notificationRemindHiddenGeneralCalendarsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies to in-app reminders and system notifications. System notifications still follow the notification switch.'**
+  String get notificationRemindHiddenGeneralCalendarsHint;
+
+  /// No description provided for @generalReminderFollowDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Use default'**
+  String get generalReminderFollowDefault;
+
+  /// No description provided for @generalReminderCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom reminders'**
+  String get generalReminderCustom;
+
+  /// No description provided for @eventEditScopeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit recurring event'**
+  String get eventEditScopeTitle;
+
+  /// No description provided for @eventEditThisOccurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Only this occurrence'**
+  String get eventEditThisOccurrence;
+
+  /// No description provided for @eventEditThisAndFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'This and following occurrences'**
+  String get eventEditThisAndFollowing;
+
+  /// No description provided for @eventEditEntireSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Entire series'**
+  String get eventEditEntireSeries;
+
+  /// No description provided for @eventEditEntireSeriesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes apply to the entire series, including past occurrences.'**
+  String get eventEditEntireSeriesHint;
+
+  /// No description provided for @eventEditConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This event has changed. Your draft is kept; reopen the event to review the latest version.'**
+  String get eventEditConflict;
+
+  /// No description provided for @eventSavedToHiddenCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to hidden calendar “{name}”.'**
+  String eventSavedToHiddenCalendar(String name);
+
+  /// No description provided for @viewEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'View event'**
+  String get viewEvent;
 }
 
 class _AppLocalizationsDelegate

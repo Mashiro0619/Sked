@@ -265,7 +265,6 @@ void main() {
           'settings-theme-seed',
           'settings-language',
           'settings-student-display',
-          'settings-period-times',
           'settings-general-display',
           'notification-settings-enabled',
           'settings-notifications',

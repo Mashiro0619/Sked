@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Praeguse ajakava asendamine toetab ainult ühe ajakava valikut.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Praegust ajakava asendamiseks ei ole.",
+  "noActiveTimetableToReplaceMessage": "Valitud tunniplaan pole saadaval. Palun vali uuesti.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Seda perioodi ajaseadet kasutab endiselt {count} ajakava(d). Andke need enne kustutamist uuesti.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Vali kellaaeg",
   "@pickTime": {},
-  "reminder": "Rakendusesisene meeldetuletus",
+  "reminder": "Meeldetuletus",
   "@reminder": {},
   "reminderAtStart": "Algusajal",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
       "result": {},
       "time": {}
     }
-  }
+  },
+  "managePeriodTimeSets": "Halda tunniaegade komplekte",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Tunde: {periodCount} · Kasutusel tunniplaanides: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Impordi uue tunniplaanina või asenda kõik tunniplaani „{name}“ andmed ja õppeained.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Vali vähemalt üks nädal.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Jätka peidetud kategooriate meeldetuletusi",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Kehtib rakendusesisestele meeldetuletustele ja süsteemiteavitustele. Süsteemiteavitusi juhib endiselt teavituste lüliti.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Kasuta vaikeväärtust",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Kohandatud meeldetuletused",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Muuda korduvat sündmust",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Ainult see kord",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "See ja järgmised korrad",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Kogu sari",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Muudatused rakenduvad kogu sarjale, sealhulgas varasematele kordadele.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Seda sündmust on muudetud. Mustand säilib; ava sündmus uuesti, et vaadata uusimat versiooni.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Salvestatud peidetud kategooriasse „{name}“.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Vaata sündmust",
+  "@viewEvent": {}
 }

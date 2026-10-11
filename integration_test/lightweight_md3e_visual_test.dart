@@ -12,7 +12,6 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/general_display_settings_page.dart';
 import 'package:sked/screens/language_settings_page.dart';
-import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 import 'package:sked/widgets/workbench_chrome_metrics.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
@@ -315,18 +314,7 @@ void main() {
             await capture('settings-language-page');
             await t.tap(find.byType(BackButton).hitTestable().first);
             await t.pumpAndSettle();
-            await t.ensureVisible(k('settings-period-times'));
-            await t.pumpAndSettle();
-            await t.tap(k('settings-period-times'));
-            await t.pumpAndSettle();
-            expect(find.byType(PeriodTimeSetPickerDialogView), findsOneWidget);
-            await capture('settings-period-dialog');
-            t
-                .widget<PeriodTimeSetPickerDialogView>(
-                  find.byType(PeriodTimeSetPickerDialogView),
-                )
-                .onCancel();
-            await t.pumpAndSettle();
+            expect(k('settings-period-times'), findsNothing);
             final section = k('settings-overview-general');
             await Scrollable.ensureVisible(t.element(section), alignment: 0);
             await t.pumpAndSettle();

@@ -11,13 +11,16 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart'
     show
         CourseItem,
+        CoursePeriodTime,
         TimetableData,
+        buildTimeRange,
         buildConflictKeyForCourses,
         compareDisplayedCourseChoice,
         formatDayOfWeekLabel,
         formatSemesterWeeksValue,
         isFullConflictGroup,
-        pickDisplayedCourseForConflict;
+        pickDisplayedCourseForConflict,
+        resolveCourseTimeRange;
 import '../providers/timetable_provider.dart';
 import 'ui_command.dart';
 import 'workbench_chrome_metrics.dart';
@@ -104,6 +107,8 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
           _notifyMissing();
           return const SizedBox.shrink();
         }
+        final periodTimes = provider.periodTimesForTimetable(timetable);
+        final timeLabel = _effectiveTimeLabel(course, periodTimes);
 
         final resolvedConflictCourses = _resolveConflictCourses(
           provider: provider,
@@ -166,8 +171,8 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
               icon: Icons.schedule,
               label: l10n.time,
               value: course.periods.isEmpty
-                  ? course.timeRange
-                  : '${course.timeRange} · ${_formatPeriodsLabel(l10n, course.periods)}',
+                  ? timeLabel
+                  : '$timeLabel · ${_formatPeriodsLabel(l10n, course.periods)}',
             ),
             SizedBox(height: viewTask ? 16 : 12),
             _DetailFields(
@@ -219,7 +224,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                   child: _ConflictCourseCard(
                     title: item.name,
                     subtitle:
-                        '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${item.timeRange}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
+                        '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${_effectiveTimeLabel(item, periodTimes)}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
                     actions: [
                       if (widget.onSelectDisplayedCourse != null)
                         IconButton(
@@ -297,6 +302,16 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
     return PopScope<void>(canPop: !_actionInProgress, child: content);
   }
 
+  String _effectiveTimeLabel(
+    CourseItem course,
+    List<CoursePeriodTime> periodTimes,
+  ) {
+    final range = resolveCourseTimeRange(course, periodTimes);
+    return range == null
+        ? AppLocalizations.of(context).notFilled
+        : buildTimeRange(range.startMinutes, range.endMinutes);
+  }
+
   List<CourseItem> _resolveConflictCourses({
     required TimetableProvider provider,
     required TimetableData timetable,
@@ -306,14 +321,28 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
       return [course];
     }
 
+    final periodTimes = provider.periodTimesForTimetable(timetable);
+    CourseItem effectiveCourse(CourseItem item) {
+      final range = resolveCourseTimeRange(item, periodTimes);
+      return range == null
+          ? item
+          : item.copyWith(
+              startMinutes: range.startMinutes,
+              endMinutes: range.endMinutes,
+            );
+    }
+
+    final resolvedCourse = effectiveCourse(course);
+
     final sameWeekdayCourses = timetable.courses
         .where((item) => item.dayOfWeek == widget.weekday)
+        .map(effectiveCourse)
         .toList();
     final exactRangeCourses = sameWeekdayCourses
         .where(
           (item) =>
-              item.startMinutes == course.startMinutes &&
-              item.endMinutes == course.endMinutes,
+              item.startMinutes == resolvedCourse.startMinutes &&
+              item.endMinutes == resolvedCourse.endMinutes,
         )
         .toList();
     if (exactRangeCourses.length > 1 &&
@@ -324,8 +353,8 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
     final containingCourses = sameWeekdayCourses
         .where(
           (item) =>
-              item.startMinutes <= course.startMinutes &&
-              item.endMinutes >= course.endMinutes,
+              item.startMinutes <= resolvedCourse.startMinutes &&
+              item.endMinutes >= resolvedCourse.endMinutes,
         )
         .toList();
     if (containingCourses.length > 1 &&

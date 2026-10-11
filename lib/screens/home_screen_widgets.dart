@@ -51,6 +51,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     required this.onJumpToToday,
     required this.onViewChanged,
     required this.onOpenSettings,
+    this.onManagePeriodTimeSets,
     this.onAddCourse,
     this.onStep,
     this.showAddLabel = false,
@@ -73,6 +74,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   final VoidCallback? onJumpToToday;
   final ValueChanged<_StudentTimetableView>? onViewChanged;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onManagePeriodTimeSets;
   final ValueChanged<BuildContext>? onAddCourse;
   final ValueChanged<int>? onStep;
   final bool showAddLabel;
@@ -357,6 +359,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           : hiddenNavigationIds.where((id) => id != 'settings').toList(),
       hiddenBehavior: hiddenItemsBehavior,
       defaultOrder: studentToolbarNavigationDefaultOrder,
+      hasFixedMenuItems:
+          !timetableInResources && onManagePeriodTimeSets != null,
       availableIds: {
         if (!timetableInResources) 'timetable',
         'week',
@@ -397,6 +401,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 );
               case 'settings':
                 onOpenSettings?.call();
+              case 'periods':
+                onManagePeriodTimeSets?.call();
               case 'student':
                 selectWorkspace(context, AppMode.student);
               case 'general':
@@ -404,6 +410,12 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             }
           },
           itemBuilder: (_) => [
+            if (!timetableInResources && onManagePeriodTimeSets != null)
+              SkedPopupMenuItem<String>(
+                key: const ValueKey('student-more-periods'),
+                value: 'periods',
+                child: Text(l10n.managePeriodTimeSets),
+              ),
             for (final id in placement.menuIds)
               if (id == 'workspace')
                 ...workspaceMenuItems<String>(
@@ -1668,6 +1680,7 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
     final realCurrentWeek = currentWeekFor(widget.config);
     final liveCourseTarget = currentOrNextCourseTargetFor(
       timetable: widget.timetable,
+      periodTimes: widget.provider.periodTimesForTimetable(widget.timetable),
       selectedWeek: pageWeek,
       realCurrentWeek: realCurrentWeek,
       now: _now(),
@@ -1912,12 +1925,14 @@ class _EmptyTimetableToolbar extends StatelessWidget {
     required this.showSettingsAction,
     required this.settingsFocusNode,
     required this.onOpenSettings,
+    this.onManagePeriodTimeSets,
   });
 
   final String title;
   final bool showSettingsAction;
   final FocusNode? settingsFocusNode;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onManagePeriodTimeSets;
 
   @override
   Widget build(BuildContext context) {
@@ -1978,6 +1993,7 @@ class _EmptyTimetableToolbar extends StatelessWidget {
         hiddenIds: p.studentHiddenToolbarNavigationIds,
         hiddenBehavior: p.studentToolbarHiddenItemsBehavior,
         defaultOrder: studentToolbarNavigationDefaultOrder,
+        hasFixedMenuItems: onManagePeriodTimeSets != null,
         availableIds: {
           if (needsMobileWorkspaceMenu(context)) 'workspace',
           if (showSettingsAction) 'settings',
@@ -2015,6 +2031,8 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                     switch (id) {
                       case 'settings':
                         onOpenSettings?.call();
+                      case 'periods':
+                        onManagePeriodTimeSets?.call();
                       case 'student':
                         selectWorkspace(context, AppMode.student);
                       case 'general':
@@ -2022,6 +2040,12 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                     }
                   },
                   itemBuilder: (_) => [
+                    if (onManagePeriodTimeSets != null)
+                      SkedPopupMenuItem<String>(
+                        key: const ValueKey('student-more-periods'),
+                        value: 'periods',
+                        child: Text(l10n.managePeriodTimeSets),
+                      ),
                     for (final id in placement.menuIds)
                       if (id == 'workspace')
                         ...workspaceMenuItems<String>(
@@ -2076,6 +2100,13 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                     ),
             ),
             if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
+            if (onManagePeriodTimeSets != null)
+              IconButton(
+                key: const ValueKey('student-manage-periods'),
+                onPressed: onManagePeriodTimeSets,
+                tooltip: l10n.managePeriodTimeSets,
+                icon: const Icon(Icons.schedule_outlined),
+              ),
             if (showSettingsAction)
               SizedBox.square(
                 dimension: metrics.desktop ? metrics.iconTarget : 48,

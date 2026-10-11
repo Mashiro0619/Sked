@@ -121,6 +121,9 @@ Future<TimetableProvider> _mount(
       _key('general-event-edit-action'),
     ),
   );
+  if (_key('general-event-edit-scope-dialog').evaluate().isNotEmpty) {
+    await _tap(tester, _key('event-edit-scope-entireSeries'));
+  }
   expect(_editor, findsOneWidget);
   return provider;
 }

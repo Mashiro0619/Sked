@@ -436,7 +436,6 @@ IconData _icon(SettingsDestination destination) => switch (destination) {
   SettingsDestination.studentPreferences => Icons.school_outlined,
   SettingsDestination.generalPreferences => Icons.event_note_outlined,
   SettingsDestination.parser => Icons.code,
-  SettingsDestination.periods => Icons.schedule,
   SettingsDestination.notificationPermissions =>
     Icons.health_and_safety_outlined,
 };

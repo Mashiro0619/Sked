@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Le remplacement de l'emploi du temps actuel ne permet de sélectionner qu'un seul emploi du temps.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Aucun emploi du temps actuel à remplacer.",
+  "noActiveTimetableToReplaceMessage": "L’emploi du temps sélectionné n’est plus disponible. Veuillez en sélectionner un à nouveau.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Ce jeu d'horaires des périodes est encore utilisé par {count} emploi(s) du temps. Réaffectez-les avant de le supprimer.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Choisir une heure",
   "@pickTime": {},
-  "reminder": "Rappel dans l’application",
+  "reminder": "Rappel",
   "@reminder": {},
   "reminderAtStart": "Au début",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Gérer les ensembles d’horaires de cours",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Périodes : {periodCount} · Emplois du temps qui l’utilisent : {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importer comme nouvel emploi du temps ou remplacer toutes les informations et tous les cours de « {name} ».",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Sélectionnez au moins une semaine.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Conserver les rappels des catégories masquées",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "S’applique aux rappels dans l’application et aux notifications système. Les notifications système restent soumises au réglage général des notifications.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Utiliser le réglage par défaut",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Rappels personnalisés",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Modifier un événement récurrent",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Cette occurrence uniquement",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Cette occurrence et les suivantes",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Toute la série",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Les modifications s’appliquent à toute la série, y compris aux occurrences passées.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Cet événement a été modifié. Votre brouillon est conservé ; rouvrez l’événement pour consulter la dernière version.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Enregistré dans la catégorie masquée « {name} ».",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Voir l’événement",
+  "@viewEvent": {}
 }

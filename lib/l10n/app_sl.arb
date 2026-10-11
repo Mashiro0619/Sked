@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Zamenjava sedanjega voznega reda podpira samo izbiro enega voznega reda.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Trenutnega časovnega razporeda ni za nadomestitev.",
+  "noActiveTimetableToReplaceMessage": "Urnik, izbran za zamenjavo, ni na voljo. Izberi ga znova.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "To določeno obdobje še vedno uporabljajo {count} urniki. Prerazporedite jih preden izbrišete.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Izberite čas",
   "@pickTime": {},
-  "reminder": "Opomnik v aplikaciji",
+  "reminder": "Opomnik",
   "@reminder": {},
   "reminderAtStart": "Ob začetku",
   "@reminderAtStart": {},
@@ -2025,5 +2025,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Upravljaj nabore časov učnih ur",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Število učnih ur: {periodCount} · Povezani urniki: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Uvozi kot nov urnik ali zamenjaj vse podatke in predavanja v urniku »{name}«.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Izberi vsaj en teden.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Ohrani opomnike za skrite kategorije",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Velja za opomnike v aplikaciji in sistemska obvestila. Sistemska obvestila morajo biti omogočena tudi v nastavitvah.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Uporabi privzeto",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Opomniki po meri",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Uredi ponavljajoči se dogodek",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Samo ta ponovitev",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Ta in naslednje ponovitve",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Celoten niz",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Spremembe veljajo za celoten niz, vključno s preteklimi ponovitvami.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Ta dogodek se je spremenil. Osnutek je ohranjen; znova odpri dogodek in preveri najnovejšo različico.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Shranjeno v skriti kategoriji »{name}«.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Prikaži dogodek",
+  "@viewEvent": {}
 }

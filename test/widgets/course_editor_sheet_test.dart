@@ -81,6 +81,116 @@ Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
 }
 
 void main() {
+  CourseItem legacyCourse() => CourseItem(
+    id: 'legacy',
+    name: 'Legacy course',
+    teacher: '',
+    location: '',
+    dayOfWeek: 1,
+    semesterWeeks: const [],
+    periods: const [2],
+    startMinutes: 0,
+    endMinutes: 0,
+    timeRange: buildTimeRange(0, 0),
+    credit: 0,
+    remarks: '',
+    customFields: const {},
+  );
+
+  testWidgets(
+    'renaming a legacy course does not store its displayed period time',
+    (tester) async {
+      CourseItem? saved;
+      final source = legacyCourse();
+      await _pumpEditorHost(
+        tester,
+        initialCourse: source,
+        onSave: (course) async => saved = course,
+      );
+      final name = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.controller?.text == source.name,
+      );
+      expect(
+        find.text(formatMinutes(buildDefaultPeriodTimes()[1].startMinutes)),
+        findsWidgets,
+      );
+      await tester.enterText(name, 'Renamed course');
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(saved?.name, 'Renamed course');
+      expect(saved?.startMinutes, 0);
+      expect(saved?.endMinutes, 0);
+      expect(saved?.periods, [2]);
+      expect(saved?.semesterWeeks, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'editing a legacy course time explicitly stores the chosen time',
+    (tester) async {
+      CourseItem? saved;
+      await _pumpEditorHost(
+        tester,
+        initialCourse: legacyCourse(),
+        onSave: (course) async => saved = course,
+      );
+      await tester.tap(find.byKey(const ValueKey('course-end-time-action')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('sked-time-hour-input')),
+        '11',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('sked-time-minute-input')),
+        '00',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('sked-time-confirm')));
+      await tester.pumpAndSettle();
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(saved?.startMinutes, buildDefaultPeriodTimes()[1].startMinutes);
+      expect(saved?.endMinutes, 11 * 60);
+    },
+  );
+
+  testWidgets('clearing semester weeks cannot confirm or silently select all', (
+    tester,
+  ) async {
+    CourseItem? saved;
+    await _pumpEditorHost(
+      tester,
+      initialCourse: legacyCourse(),
+      onSave: (course) async => saved = course,
+    );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(CourseEditorSheet)),
+    );
+    await tester.tap(find.text(l10n.semesterWeeks));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, l10n.clear));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.selectAtLeastOneWeek), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, l10n.confirm))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.widgetWithText(TextButton, l10n.cancel).last);
+    await tester.pumpAndSettle();
+    final save = find.widgetWithText(FilledButton, l10n.save);
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(saved?.semesterWeeks, isEmpty);
+  });
+
   testWidgets(
     'collapsed reminder overrides survive editing without opening More',
     (tester) async {

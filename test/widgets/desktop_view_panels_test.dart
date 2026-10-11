@@ -58,7 +58,7 @@ void main() {
     final movedReminders = t.getRect(_key('workspace-detail-surface'));
     await t.tap(find.byTooltip('Mark handled').last);
     await t.pumpAndSettle();
-    expect(find.text('In-app reminder · 2'), findsOneWidget);
+    expect(find.text('Reminder · 2'), findsOneWidget);
     final updatedReminders = t.getRect(_key('workspace-detail-surface'));
     expect(updatedReminders.topLeft, movedReminders.topLeft);
     expect(updatedReminders.height, lessThan(movedReminders.height));
@@ -179,15 +179,15 @@ void main() {
       await t.tap(_key('general-reminders-action'));
       await t.pumpAndSettle();
       final original = t.getSize(_key('workspace-detail-surface')).height;
-      expect(find.text('In-app reminder · 3'), findsOneWidget);
+      expect(find.text('Reminder · 3'), findsOneWidget);
       storage.saveError = StateError('intentional test save failure');
       await t.tap(find.byTooltip('Mark handled').first);
       await t.pumpAndSettle();
-      expect(find.text('In-app reminder · 3'), findsOneWidget);
+      expect(find.text('Reminder · 3'), findsOneWidget);
       expect(_key('ui-command-failure-notice'), findsOneWidget);
       await t.tap(find.byTooltip('Mark handled').last);
       await t.pumpAndSettle();
-      expect(find.text('In-app reminder · 2'), findsOneWidget);
+      expect(find.text('Reminder · 2'), findsOneWidget);
       expect(
         t.getSize(_key('workspace-detail-surface')).height,
         lessThan(original),
@@ -196,7 +196,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.byTooltip('Mark handled').last);
       await t.pumpAndSettle();
-      expect(find.text('In-app reminder · 0'), findsOneWidget);
+      expect(find.text('Reminder · 0'), findsOneWidget);
       expect(_key('workspace-inspector-close'), findsOneWidget);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());

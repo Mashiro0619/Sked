@@ -1,3 +1,4 @@
+import '../widgets/general_event_edit_flow.dart';
 import '../widgets/update_prompt_scope.dart';
 import '../widgets/calendar_management_actions.dart';
 import '../widgets/sked_color_draft.dart';
@@ -691,7 +692,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       provider: provider,
       pane: _pane,
       isOwnerActive: () => mounted && widget.active && widget.interactive,
-      onEdit: (item) => _openEditor(context, provider, event: item.event),
+      onEdit: (item, scope) =>
+          _openEditor(context, provider, occurrence: item, editScope: scope),
       canEdit: () => !_editorSheetOpen,
       child: _wrapStandalone(body),
     );
@@ -1957,16 +1959,17 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     DateTime? initialDate,
     DateTime? initialStart,
     WorkspaceEditorConfiguration? editor,
-    GeneralEvent? event,
+    GeneralEventOccurrence? occurrence,
+    GeneralEventEditScope? editScope,
   }) async {
-    if (_editorSheetOpen || !widget.interactive) {
-      return;
-    }
+    if (_editorSheetOpen || !widget.interactive) return;
+    final scope = editScope ?? GeneralEventEditScope.entireSeries;
+    final event = occurrence == null
+        ? null
+        : provider.prepareGeneralOccurrenceEdit(occurrence, scope);
     _setUiBusyFlag(() => _editorSheetOpen = true);
-    final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
-    final calendarId = event?.calendarId.isNotEmpty == true
-        ? event!.calendarId
-        : provider.activeGeneralSchedule.id;
+    final calendarId =
+        occurrence?.calendar.id ?? provider.activeGeneralSchedule.id;
     final start =
         initialStart ??
         defaultGeneralEventStart(
@@ -1975,7 +1978,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           dayStartHour: provider.generalDayStartHour,
           dayEndHour: provider.generalDayEndHour,
         );
-    var deletingEvent = false;
+    var mutatingEvent = false;
+    GeneralEvent? savedEvent;
     try {
       await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
@@ -1983,45 +1987,115 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         layoutKey: DesktopLayoutRegion.eventEditor,
         editor: (editor ?? _pane.takeEditorEntry()).withPreferredWidth(480),
         workspace: AppMode.general,
-        isSessionCurrent: () => provider.generalSchedules.any(
-          (calendar) =>
-              calendar.id == calendarId &&
-              (event == null ||
-                  deletingEvent ||
-                  calendar.events.any((item) => item.id == event.id)),
-        ),
+        isSessionCurrent: () =>
+            mutatingEvent ||
+            provider.generalSchedules.any(
+              (calendar) =>
+                  calendar.id == calendarId &&
+                  (occurrence == null ||
+                      calendar.events.any(
+                        (item) => item.id == occurrence.event.id,
+                      )),
+            ),
         selectionId: event == null
             ? null
             : _pane.selectedId ?? 'event:${event.id}',
-        isDismissible: canDismiss,
+        isDismissible: provider.closeGeneralEventPopupOnOutsideTap,
         enableDrag: false,
         maxWidth: appSheetWidthMedium,
-        builder: (sheetContext) => GeneralEventEditorSheet(
-          initialEvent: event,
-          initialDate: start,
-          calendars: provider.generalSchedules,
-          activeCalendarId: calendarId,
-          defaultReminderMinutesBefore: event == null
-              ? provider.generalDefaultMinutesBefore
-              : null,
-          onSave: provider.saveGeneralEvent,
-          onDelete: event == null
-              ? null
-              : () async {
-                  // An optimistic delete temporarily removes the target.
-                  // Retain this editor until persistence or rollback settles.
-                  deletingEvent = true;
-                  try {
-                    await provider.deleteGeneralEvent(event.id);
-                  } finally {
-                    deletingEvent = false;
-                  }
-                },
+        builder: (sheetContext) => Consumer<TimetableProvider>(
+          builder: (_, current, _) => GeneralEventEditorSheet(
+            initialEvent: event,
+            initialDate: start,
+            editScope: occurrence?.event.recurrenceRule.isRepeating == true
+                ? scope
+                : null,
+            calendars: current.generalSchedules,
+            activeCalendarId: calendarId,
+            defaultReminderMinutesBefore: current.generalDefaultMinutesBefore,
+            onSave: (draft) async {
+              mutatingEvent = true;
+              try {
+                if (occurrence == null) {
+                  await provider.saveGeneralEvent(draft);
+                  savedEvent = draft;
+                } else {
+                  savedEvent = await provider.editGeneralOccurrence(
+                    occurrence,
+                    draft,
+                    scope,
+                  );
+                }
+              } on GeneralEventEditConflictException {
+                mutatingEvent = false;
+                if (!sheetContext.mounted) rethrow;
+                throw FormatException(
+                  AppLocalizations.of(sheetContext).eventEditConflict,
+                );
+              } catch (_) {
+                mutatingEvent = false;
+                rethrow;
+              }
+            },
+            onDelete: occurrence == null
+                ? null
+                : () async {
+                    mutatingEvent = true;
+                    try {
+                      await provider.deleteGeneralOccurrenceScope(
+                        occurrence,
+                        scope,
+                      );
+                    } catch (_) {
+                      mutatingEvent = false;
+                      rethrow;
+                    }
+                  },
+          ),
         ),
       );
     } finally {
       _setUiBusyFlag(() => _editorSheetOpen = false);
     }
+    final saved = savedEvent;
+    if (!mounted || !context.mounted) return;
+    if (saved == null) {
+      if (!mutatingEvent && occurrence != null) {
+        await _openDetails(
+          context,
+          provider,
+          occurrence,
+          anchorContext: context,
+        );
+      }
+      return;
+    }
+    final calendar = provider.generalSchedules
+        .where((item) => item.id == saved.calendarId)
+        .firstOrNull;
+    if (calendar == null || calendar.isVisible) return;
+    showHiddenCalendarSaveFeedback(
+      context,
+      calendar: calendar,
+      onView: () {
+        if (!mounted || !context.mounted) return;
+        final date = tryParseStrictIsoDateTime(saved.startDateTimeIso);
+        if (date == null) return;
+        final displayed = provider
+            .generalOccurrencesForRange(
+              startInclusive: date,
+              endExclusive: addCalendarDays(date, 32),
+              onlyVisibleCalendars: false,
+            )
+            .where((item) => item.event.id == saved.id)
+            .firstOrNull;
+        if (displayed != null) {
+          unawaited(
+            _openDetails(context, provider, displayed, anchorContext: context),
+          );
+        }
+      },
+    );
   }
 
   Future<void> _openDetails(
@@ -2126,6 +2200,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           final l10n = AppLocalizations.of(sheetContext);
           return GeneralEventDetailsSheet(
             occurrence: displayedOccurrence,
+            notificationSettings: detailProvider.notificationSettings,
+            onShowCalendar: () =>
+                detailProvider.updateGeneralScheduleVisibility(
+                  displayedOccurrence.calendar.id,
+                  true,
+                ),
             isReminderHandled: detailProvider.isGeneralReminderHandled(
               displayedOccurrence,
             ),
@@ -2137,11 +2217,16 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     anchorContext: anchor,
                   ).initialAnchor,
                 ),
-            onEdit: () async {
+            onEditScoped: (scope) async {
               final latest = currentOccurrence();
               if (latest == null) return;
               closeDetails();
-              await _openEditor(context, provider, event: latest.event);
+              await _openEditor(
+                context,
+                provider,
+                occurrence: latest,
+                editScope: scope,
+              );
             },
             onDismissReminder: () => command(
               detailProvider.dismissGeneralReminder,

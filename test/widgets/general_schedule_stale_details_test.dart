@@ -103,6 +103,7 @@ Future<void> _renameThroughAgenda(WidgetTester tester) async {
   final agenda = _key('general-selected-day-agenda');
   await _tap(tester, _inside(agenda, find.text('Weekly review')));
   await _tap(tester, _inside(_detail, _key('general-event-edit-action')));
+  await _tap(tester, _key('event-edit-scope-entireSeries'));
   await tester.enterText(
     _inside(_editor, find.byType(EditableText)).first,
     'Updated through day agenda',
@@ -176,7 +177,11 @@ void main() {
     final edited = opened.occurrence.event.copyWith(title: 'Updated elsewhere');
     await provider.saveGeneralEvent(edited);
 
-    unawaited(Future<void>.sync(() => opened.onEdit!()));
+    unawaited(
+      Future<void>.sync(
+        () => opened.onEditScoped!(GeneralEventEditScope.entireSeries),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(_editor, findsOneWidget);

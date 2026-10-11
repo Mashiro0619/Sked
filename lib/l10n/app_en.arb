@@ -875,7 +875,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Replacing the current timetable only supports selecting one timetable.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "There is no current timetable to replace.",
+  "noActiveTimetableToReplaceMessage": "The timetable selected for replacement is unavailable. Please choose again.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "This period time set is still used by {count} timetable(s). Reassign them before deleting.",
   "@periodTimeSetInUseMessage": {
@@ -1211,7 +1211,7 @@
   "@pickDate": {},
   "pickTime": "Pick time",
   "@pickTime": {},
-  "reminder": "In-app reminder",
+  "reminder": "Reminder",
   "@reminder": {},
   "reminderAtStart": "At start",
   "@reminderAtStart": {},
@@ -2013,5 +2013,58 @@
   "backupRestoreInProgressTitle": "Restoring backup…",
   "@backupRestoreInProgressTitle": {},
   "backupRestoreInProgressMessage": "Data and settings can be changed when the restore finishes. You can still view them.",
-  "@backupRestoreInProgressMessage": {}
+  "@backupRestoreInProgressMessage": {},
+  "managePeriodTimeSets": "Manage period time sets",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "{periodCount} periods · Used by {timetableCount} timetables",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Import as a new timetable, or replace all timetable details and courses in “{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Select at least one week.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Keep reminders for hidden calendars",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Applies to in-app reminders and system notifications. System notifications still follow the notification switch.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Use default",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Custom reminders",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Edit recurring event",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Only this occurrence",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "This and following occurrences",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Entire series",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Changes apply to the entire series, including past occurrences.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "This event has changed. Your draft is kept; reopen the event to review the latest version.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Saved to hidden calendar “{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "View event",
+  "@viewEvent": {}
 }

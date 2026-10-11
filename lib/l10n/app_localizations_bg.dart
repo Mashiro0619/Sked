@@ -1284,7 +1284,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Няма актуален график за замена.';
+      'Избраното разписание не е налично. Моля, изберете отново.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1729,7 +1729,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get pickTime => 'Избор на час';
 
   @override
-  String get reminder => 'Напомняне в приложението';
+  String get reminder => 'Напомняне';
 
   @override
   String get reminderAtStart => 'При започване';
@@ -2989,4 +2989,63 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Данните и настройките могат да се променят след края на възстановяването. Все още можете да ги преглеждате.';
+
+  @override
+  String get managePeriodTimeSets =>
+      'Управление на набори с часове на занятията';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Учебни часове: $periodCount · Разписания, които го използват: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Импортирайте като ново разписание или заменете всички данни и учебни занятия в „$name“.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Изберете поне една седмица.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Напомняния и за скритите категории';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Важи за напомнянията в приложението и системните известия. Системните известия остават под контрола на общия превключвател за известия.';
+
+  @override
+  String get generalReminderFollowDefault => 'По подразбиране';
+
+  @override
+  String get generalReminderCustom => 'Персонализирани напомняния';
+
+  @override
+  String get eventEditScopeTitle => 'Редактиране на повтарящо се събитие';
+
+  @override
+  String get eventEditThisOccurrence => 'Само това повторение';
+
+  @override
+  String get eventEditThisAndFollowing => 'Това и следващите повторения';
+
+  @override
+  String get eventEditEntireSeries => 'Цялата поредица';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Промените важат за цялата поредица, включително за миналите повторения.';
+
+  @override
+  String get eventEditConflict =>
+      'Това събитие е променено. Черновата ви е запазена; отворете събитието отново, за да прегледате последната версия.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Запазено в скритата категория „$name“.';
+  }
+
+  @override
+  String get viewEvent => 'Преглед на събитието';
 }

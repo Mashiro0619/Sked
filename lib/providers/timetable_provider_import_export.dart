@@ -154,6 +154,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     required TimetableImportMode mode,
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
+    String? replacementTimetableId,
   }) async {
     requireWorkspaceEnabled(AppMode.student);
     final mutation = _importExportService.importSelectedTimetablesJson(
@@ -164,6 +165,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       localeCode: _appData.localeCode,
       importBundledPeriodTimeSets: importBundledPeriodTimeSets,
       targetPeriodTimeSetId: targetPeriodTimeSetId,
+      replacementTimetableId: replacementTimetableId,
     );
     _appData = _appData.copyWith(studentMode: mutation.data);
     final selectedTimetable = mutation.selectedTimetable;
@@ -735,6 +737,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     required TimetableImportMode mode,
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
+    String? replacementTimetableId,
   }) async {
     requireWorkspaceEnabled(AppMode.student);
     final imported = _importExportService.decodeStudentImportCandidate(
@@ -753,6 +756,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       mode: mode,
       importBundledPeriodTimeSets: importBundledPeriodTimeSets,
       targetPeriodTimeSetId: targetPeriodTimeSetId,
+      replacementTimetableId: replacementTimetableId,
     );
     return selected.config.name;
   }

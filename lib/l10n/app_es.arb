@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Reemplazar el horario actual solo permite seleccionar un horario.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "No hay un horario actual para reemplazar.",
+  "noActiveTimetableToReplaceMessage": "El horario seleccionado no está disponible. Selecciona un horario de nuevo.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Este conjunto de horarios de periodos todavía está siendo usado por {count} horario(s). Reasígnalos antes de eliminarlo.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Elegir hora",
   "@pickTime": {},
-  "reminder": "Recordatorio en la aplicación",
+  "reminder": "Recordatorio",
   "@reminder": {},
   "reminderAtStart": "Al inicio",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Gestionar conjuntos de horarios de clase",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Periodos: {periodCount} · Horarios que lo usan: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importa como un horario nuevo o reemplaza todos los datos y las clases de «{name}».",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Selecciona al menos una semana.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Mantener los recordatorios de las categorías ocultas",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Se aplica a los recordatorios de la aplicación y a las notificaciones del sistema. Estas últimas siguen dependiendo del interruptor de notificaciones.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Usar valor predeterminado",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Recordatorios personalizados",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Editar evento recurrente",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Solo este evento",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Este y los siguientes eventos",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Toda la serie",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Los cambios se aplican a toda la serie, incluidos los eventos pasados.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Este evento ha cambiado. Tu borrador se conserva; vuelve a abrir el evento para revisar la versión más reciente.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Guardado en la categoría oculta «{name}».",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Ver evento",
+  "@viewEvent": {}
 }

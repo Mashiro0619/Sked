@@ -109,6 +109,34 @@ Future<void> save(WidgetTester t) async {
 
 void main() {
   testWidgets(
+    'inherited desktop reminders expose time choices only after custom is selected',
+    (t) async {
+      GeneralEvent? saved;
+      await mount(
+        t,
+        initial: event(reminders: const [])
+            .copyWith(reminderBehavior: GeneralEventReminderBehavior.inherit),
+        onSave: (value) async => saved = value,
+      );
+      await open(t, 'reminder');
+      expect(k('general-reminder-inherit'), findsOneWidget);
+      expect(k('general-reminder-choice-5'), findsNothing);
+      await tap(t, k('general-reminder-custom'));
+      expect(k('general-reminder-choice-5'), findsOneWidget);
+      await tap(t, k('general-reminder-choice-5'));
+      await tap(t, k('general-reminder-choice-0'));
+      await tap(t, k('general-reminder-confirm'));
+      expect(saved, isNull);
+      await save(t);
+      expect(saved?.reminderBehavior, GeneralEventReminderBehavior.custom);
+      expect(saved?.reminders.map((item) => item.minutesBefore), [5]);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: desktop,
+  );
+
+  testWidgets(
     'multi-step mouse title drag never reverses and body choices do not move the panel',
     (t) async {
       await mount(t);

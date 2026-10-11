@@ -2198,23 +2198,8 @@ String _semanticLabelForGeometry(_CourseGeometry geometry) {
     return (startMinutes: entry.startMinutes, endMinutes: entry.endMinutes);
   }
   final course = layout.course!;
-  if (course.endMinutes > course.startMinutes) {
-    return (startMinutes: course.startMinutes, endMinutes: course.endMinutes);
-  }
-
-  final periodIndexes = course.periods.toSet();
-  final matchedSlots = verticalLayout.slots
-      .where((slot) => periodIndexes.contains(slot.index))
-      .toList();
-  if (matchedSlots.isNotEmpty) {
-    return (
-      startMinutes: matchedSlots
-          .map((slot) => slot.startMinutes)
-          .reduce(math.min),
-      endMinutes: matchedSlots.map((slot) => slot.endMinutes).reduce(math.max),
-    );
-  }
-  return (startMinutes: course.startMinutes, endMinutes: course.endMinutes);
+  return resolveCourseTimeRange(course, verticalLayout.slots) ??
+      (startMinutes: course.startMinutes, endMinutes: course.endMinutes);
 }
 
 class CourseLayout {
@@ -2456,15 +2441,12 @@ CourseItem _courseWithResolvedPeriodTime(
   if (periodTimes.isEmpty) {
     return course;
   }
-  final matched = course.periods.isEmpty
-      ? const <CoursePeriodTime>[]
-      : periodTimes
-            .where((slot) => course.periods.contains(slot.index))
-            .toList();
-  if (matched.isNotEmpty && course.endMinutes <= course.startMinutes) {
+  final range = resolveCourseTimeRange(course, periodTimes);
+  if (range != null && course.endMinutes <= course.startMinutes) {
     return course.copyWith(
-      startMinutes: matched.map((slot) => slot.startMinutes).reduce(math.min),
-      endMinutes: matched.map((slot) => slot.endMinutes).reduce(math.max),
+      startMinutes: range.startMinutes,
+      endMinutes: range.endMinutes,
+      timeRange: buildTimeRange(range.startMinutes, range.endMinutes),
     );
   }
   if (preserveGaps || course.endMinutes <= course.startMinutes) {

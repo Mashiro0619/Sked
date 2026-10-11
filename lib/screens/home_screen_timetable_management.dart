@@ -275,6 +275,14 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                   if (!(formKey.currentState?.validate() ?? false)) {
                     return;
                   }
+                  if (provider.periodTimeSetForId(selectedPeriodTimeSetId) ==
+                      null) {
+                    showUiFailureFeedback(
+                      context: context,
+                      message: l10n.noPeriodTimeAvailable,
+                    );
+                    return;
+                  }
                   final totalWeeks = normalizeTimetableWeeks(
                     int.tryParse(weeksController.text) ??
                         initialConfig.totalWeeks,
@@ -500,20 +508,11 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                       selectedPeriodTimeSetId:
                                           selectedPeriodTimeSetId,
                                     );
-                                if (!context.mounted) return;
-                                final fallbackId =
-                                    provider
-                                        .periodTimeSetForId(
-                                          selectedPeriodTimeSetId,
-                                        )
-                                        ?.id ??
-                                    provider.activePeriodTimeSetOrNull?.id ??
-                                    (provider.periodTimeSets.isEmpty
-                                        ? ''
-                                        : provider.periodTimeSets.first.id);
+                                if (!context.mounted || selected == null) {
+                                  return;
+                                }
                                 setDialogState(
-                                  () => selectedPeriodTimeSetId =
-                                      selected ?? fallbackId,
+                                  () => selectedPeriodTimeSetId = selected,
                                 );
                               } finally {
                                 if (context.mounted) {

@@ -14,7 +14,8 @@ class _EventListDetailsHost extends StatefulWidget {
   final TimetableProvider provider;
   final WorkspacePaneController pane;
   final bool Function() isOwnerActive;
-  final Future<void> Function(GeneralEventOccurrence) onEdit;
+  final Future<void> Function(GeneralEventOccurrence, GeneralEventEditScope)
+  onEdit;
   final bool Function() canEdit;
   final Widget child;
   @override
@@ -640,6 +641,11 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
       key: ValueKey('reminder-detail-session-$version'),
       builder: (_) => GeneralEventDetailsSheet(
         occurrence: occurrence,
+        notificationSettings: widget.provider.notificationSettings,
+        onShowCalendar: () => widget.provider.updateGeneralScheduleVisibility(
+          occurrence.calendar.id,
+          true,
+        ),
         isReminderHandled: widget.provider.isGeneralReminderHandled(occurrence),
         onBeforeAction: () => currentOccurrence() != null && detach(),
         canEdit: () => _canInteract && widget.canEdit(),
@@ -668,11 +674,11 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
               ),
         onEditAnchor: (anchor) => widget.pane.editorEntry =
             WorkspaceEditorConfiguration(anchorContext: anchor),
-        onEdit: () async {
+        onEditScoped: (scope) async {
           final latest = currentOccurrence();
           if (latest == null) return;
           session.close(force: true);
-          await widget.onEdit(latest);
+          await widget.onEdit(latest, scope);
         },
         onDismissReminder: () => command(
           widget.provider.dismissGeneralReminder,

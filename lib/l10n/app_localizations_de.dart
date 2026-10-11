@@ -1277,7 +1277,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Es gibt keinen aktuellen Stundenplan zum Ersetzen.';
+      'Der ausgewählte Stundenplan ist nicht verfügbar. Bitte wählen Sie erneut einen Stundenplan aus.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1722,7 +1722,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pickTime => 'Uhrzeit auswählen';
 
   @override
-  String get reminder => 'Erinnerung in der App';
+  String get reminder => 'Erinnerung';
 
   @override
   String get reminderAtStart => 'Bei Beginn';
@@ -2979,4 +2979,62 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Daten und Einstellungen können nach der Wiederherstellung geändert werden. Du kannst sie weiterhin ansehen.';
+
+  @override
+  String get managePeriodTimeSets => 'Stundenzeiten-Sets verwalten';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Unterrichtsstunden: $periodCount · Zugeordnete Stundenpläne: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Als neuen Stundenplan importieren oder alle Angaben und Kurse in „$name“ ersetzen.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Wählen Sie mindestens eine Woche aus.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Erinnerungen für ausgeblendete Kategorien beibehalten';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Gilt für Erinnerungen in der App und Systembenachrichtigungen. Für Systembenachrichtigungen gilt weiterhin der Benachrichtigungsschalter.';
+
+  @override
+  String get generalReminderFollowDefault => 'Standard verwenden';
+
+  @override
+  String get generalReminderCustom => 'Benutzerdefinierte Erinnerungen';
+
+  @override
+  String get eventEditScopeTitle => 'Wiederkehrenden Termin bearbeiten';
+
+  @override
+  String get eventEditThisOccurrence => 'Nur diesen Termin';
+
+  @override
+  String get eventEditThisAndFollowing => 'Diesen und folgende Termine';
+
+  @override
+  String get eventEditEntireSeries => 'Gesamte Serie';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Änderungen gelten für die gesamte Serie, einschließlich vergangener Termine.';
+
+  @override
+  String get eventEditConflict =>
+      'Dieser Termin wurde geändert. Ihr Entwurf bleibt erhalten. Öffnen Sie den Termin erneut, um die aktuelle Version zu prüfen.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'In der ausgeblendeten Kategorie „$name“ gespeichert.';
+  }
+
+  @override
+  String get viewEvent => 'Termin anzeigen';
 }

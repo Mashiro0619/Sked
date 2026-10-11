@@ -12,6 +12,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/timetable_import_flow.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
+import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -104,6 +105,156 @@ Future<void> _pumpImportButton(
 }
 
 void main() {
+  String withoutPeriodTimes(TimetableProvider provider) =>
+      encodeTimetableDataEnvelope(
+        TimetableExportData(
+          timetables: [
+            provider.activeTimetable.copyWith(
+              id: 'incoming',
+              config: provider.activeTimetable.config.copyWith(
+                name: 'Imported',
+              ),
+            ),
+          ],
+          periodTimeSets: const [],
+        ),
+      );
+
+  testWidgets(
+    'missing bundled times require an explicit choice and cancel cleanly',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final before = provider.appData.toJson();
+      final existingSet = provider.periodTimeSets.single.id;
+      await _pumpImportButton(
+        tester,
+        provider,
+        source: withoutPeriodTimes(provider),
+      );
+      final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+
+      Future<void> openChoice() async {
+        await tester.tap(find.text('Import'));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.widgetWithText(TextButton, l10n.importAsNewTimetable),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(PeriodTimeSetPickerDialogView), findsOneWidget);
+      }
+
+      await openChoice();
+      expect(provider.appData.toJson(), before);
+      tester
+          .widget<PeriodTimeSetPickerDialogView>(
+            find.byType(PeriodTimeSetPickerDialogView),
+          )
+          .onCancel();
+      await tester.pumpAndSettle();
+      expect(provider.appData.toJson(), before);
+      await openChoice();
+      tester
+          .widget<PeriodTimeSetPickerDialogView>(
+            find.byType(PeriodTimeSetPickerDialogView),
+          )
+          .onSelect(existingSet);
+      await tester.pumpAndSettle();
+      expect(provider.timetables, hasLength(2));
+      expect(provider.periodTimeSets, hasLength(1));
+      expect(provider.activeTimetable.config.periodTimeSetId, existingSet);
+      expect(provider.activeTimetable.config.name, 'Imported');
+    },
+  );
+
+  testWidgets('JSON replacement displays and retains the original target', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final original = provider.activeTimetable;
+    await provider.addTimetable(
+      original.config.copyWith(name: 'Other timetable'),
+    );
+    final other = provider.activeTimetable;
+    await provider.switchTimetable(original.id);
+    await _pumpImportButton(
+      tester,
+      provider,
+      source: withoutPeriodTimes(provider),
+    );
+    final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(l10n.chooseTimetableImportMethod(original.config.name)),
+      findsOneWidget,
+    );
+    await provider.switchTimetable(other.id);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, l10n.replaceCurrentTimetable),
+    );
+    await tester.pumpAndSettle();
+    tester
+        .widget<PeriodTimeSetPickerDialogView>(
+          find.byType(PeriodTimeSetPickerDialogView),
+        )
+        .onSelect(original.config.periodTimeSetId);
+    await tester.pumpAndSettle();
+    expect(provider.timetables, hasLength(2));
+    expect(
+      provider.timetables
+          .singleWhere((table) => table.id == original.id)
+          .config
+          .name,
+      'Imported',
+    );
+    expect(
+      provider.timetables.singleWhere((table) => table.id == other.id).toJson(),
+      other.toJson(),
+    );
+    expect(provider.periodTimeSets, hasLength(1));
+  });
+
+  testWidgets(
+    'deleting a confirmed replacement target never overwrites another table',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final original = provider.activeTimetable;
+      await provider.addTimetable(
+        original.config.copyWith(name: 'Keep this table'),
+      );
+      final other = provider.activeTimetable;
+      await provider.switchTimetable(original.id);
+      await _pumpImportButton(
+        tester,
+        provider,
+        source: withoutPeriodTimes(provider),
+      );
+      final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+      await tester.tap(find.text('Import'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(FilledButton, l10n.replaceCurrentTimetable),
+      );
+      await tester.pumpAndSettle();
+      await provider.deleteTimetable(original.id);
+      await tester.pumpAndSettle();
+      tester
+          .widget<PeriodTimeSetPickerDialogView>(
+            find.byType(PeriodTimeSetPickerDialogView),
+          )
+          .onSelect(other.config.periodTimeSetId);
+      await tester.pumpAndSettle();
+      expect(provider.timetables.single.toJson(), other.toJson());
+      expect(provider.periodTimeSets, hasLength(1));
+      expect(find.text(l10n.noActiveTimetableToReplaceMessage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'discarding bundled periods anchors the next picker to the closed dialog action',
     (tester) async {

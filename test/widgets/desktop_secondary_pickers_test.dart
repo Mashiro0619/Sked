@@ -131,61 +131,57 @@ void main() {
     );
   }
 
-  testWidgets(
-    'period-time selection keeps pending commit alive across resize and Escape',
-    (t) async {
-      viewport(t);
-      final p = await workspaceProvider();
-      addTearDown(p.dispose);
-      final gate = Completer<void>();
-      var commits = 0;
-      await t.pumpWidget(
-        WorkspaceHarness(
-          provider: p,
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: Builder(
-                builder: (anchor) => TextButton(
-                  onPressed: () => unawaited(
-                    showPeriodTimeSetPickerDialog(
-                      anchor,
-                      provider: p,
-                      anchorContext: anchor,
-                      selectedPeriodTimeSetId: p.periodTimeSets.first.id,
-                      commitSelection: (_) async {
-                        commits++;
-                        await gate.future;
-                      },
-                    ),
-                  ),
-                  child: const Text('Open'),
-                ),
+  testWidgets('period-time choice stays a draft across resize and Escape', (
+    t,
+  ) async {
+    viewport(t);
+    final p = await workspaceProvider();
+    addTearDown(p.dispose);
+    final before = p.appData.toJson();
+    String? selection;
+    await t.pumpWidget(
+      WorkspaceHarness(
+        provider: p,
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: Builder(
+              builder: (anchor) => TextButton(
+                onPressed: () async {
+                  selection = await showPeriodTimeSetPickerDialog(
+                    anchor,
+                    provider: p,
+                    anchorContext: anchor,
+                    selectedPeriodTimeSetId: p.periodTimeSets.first.id,
+                  );
+                },
+                child: const Text('Open'),
               ),
             ),
           ),
         ),
-      );
-      await t.pumpAndSettle();
-      await t.tap(find.text('Open'));
-      await t.pumpAndSettle();
-      expect(find.byType(SkedFloatingSurface), findsOneWidget);
-      await t.tap(find.text(p.periodTimeSets.first.name));
-      await t.pump();
-      t.view.physicalSize = const Size(700, 600);
-      await t.pump();
-      await t.sendKeyEvent(LogicalKeyboardKey.escape);
-      await t.pump();
-      expect(find.byType(SkedFloatingSurface), findsOneWidget);
-      expect(commits, 1);
-      gate.complete();
-      await t.pumpAndSettle();
-      expect(find.byType(SkedFloatingSurface), findsNothing);
-      expect(t.takeException(), isNull);
-      await t.pumpWidget(const SizedBox());
-    },
-    variant: desktop,
-  );
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.text('Open'));
+    await t.pumpAndSettle();
+    expect(find.byType(SkedFloatingSurface), findsOneWidget);
+    t.view.physicalSize = const Size(700, 600);
+    await t.pumpAndSettle();
+    await t.sendKeyEvent(LogicalKeyboardKey.escape);
+    await t.pumpAndSettle();
+    expect(find.byType(SkedFloatingSurface), findsNothing);
+    expect(selection, isNull);
+    expect(p.appData.toJson(), before);
+    await t.tap(find.text('Open'));
+    await t.pumpAndSettle();
+    await t.tap(find.text(p.periodTimeSets.first.name));
+    await t.pumpAndSettle();
+    expect(selection, p.periodTimeSets.first.id);
+    expect(p.appData.toJson(), before);
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox());
+  }, variant: desktop);
 
   testWidgets(
     'theme color opens as a non-draggable floating choice and cancels unchanged',

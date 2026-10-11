@@ -1261,7 +1261,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'बदलने के लिए कोई वर्तमान टाइमटेबल नहीं है।';
+      'चुना गया टाइमटेबल उपलब्ध नहीं है। कृपया दोबारा चुनें।';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1703,7 +1703,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get pickTime => 'समय चुनें';
 
   @override
-  String get reminder => 'ऐप के भीतर रिमाइंडर';
+  String get reminder => 'रिमाइंडर';
 
   @override
   String get reminderAtStart => 'शुरू होने पर';
@@ -2933,4 +2933,62 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'बहाली पूरी होने के बाद डेटा और सेटिंग बदली जा सकती हैं। आप उन्हें अभी भी देख सकते हैं।';
+
+  @override
+  String get managePeriodTimeSets => 'पीरियड के समय-सेट प्रबंधित करें';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return '$periodCount पीरियड · $timetableCount टाइमटेबल में इस्तेमाल';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'नए टाइमटेबल के रूप में आयात करें, या “$name” की सभी जानकारी और कक्षाएँ बदल दें।';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'कम से कम एक सप्ताह चुनें।';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'छिपी हुई श्रेणियों के रिमाइंडर जारी रखें';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'यह ऐप के अंदर के रिमाइंडर और सिस्टम सूचनाओं, दोनों पर लागू होता है। सिस्टम सूचनाएँ अब भी सूचना स्विच की सेटिंग के अनुसार चलेंगी।';
+
+  @override
+  String get generalReminderFollowDefault => 'डिफ़ॉल्ट का उपयोग करें';
+
+  @override
+  String get generalReminderCustom => 'अपनी पसंद के रिमाइंडर';
+
+  @override
+  String get eventEditScopeTitle => 'दोहराए जाने वाले इवेंट में बदलाव करें';
+
+  @override
+  String get eventEditThisOccurrence => 'केवल इस बार का इवेंट';
+
+  @override
+  String get eventEditThisAndFollowing => 'इस बार और आगे के इवेंट';
+
+  @override
+  String get eventEditEntireSeries => 'पूरी श्रृंखला';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'बदलाव पूरी श्रृंखला पर लागू होंगे, पहले हो चुके इवेंट पर भी।';
+
+  @override
+  String get eventEditConflict =>
+      'इस इवेंट में बदलाव हो गया है। आपका ड्राफ़्ट सुरक्षित है। नवीनतम संस्करण देखने के लिए इवेंट दोबारा खोलें।';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'छिपी हुई श्रेणी “$name” में सहेजा गया।';
+  }
+
+  @override
+  String get viewEvent => 'इवेंट देखें';
 }

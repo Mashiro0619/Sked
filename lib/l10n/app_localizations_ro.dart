@@ -1277,7 +1277,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Nu există un calendar actual de înlocuit.';
+      'Orarul selectat pentru înlocuire nu este disponibil. Selectează-l din nou.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1722,7 +1722,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get pickTime => 'Alege ora';
 
   @override
-  String get reminder => 'Memento în aplicație';
+  String get reminder => 'Memento';
 
   @override
   String get reminderAtStart => 'La început';
@@ -2979,4 +2979,62 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Datele și setările pot fi modificate după încheierea restaurării. Le poți consulta în continuare.';
+
+  @override
+  String get managePeriodTimeSets => 'Gestionează seturile de ore de curs';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Intervale: $periodCount · Orare asociate: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importă ca orar nou sau înlocuiește toate detaliile și cursurile din „$name”.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Selectează cel puțin o săptămână.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Păstrează mementourile pentru categoriile ascunse';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Se aplică mementourilor din aplicație și notificărilor de sistem. Notificările de sistem trebuie să fie activate și în setări.';
+
+  @override
+  String get generalReminderFollowDefault => 'Folosește valoarea implicită';
+
+  @override
+  String get generalReminderCustom => 'Mementouri personalizate';
+
+  @override
+  String get eventEditScopeTitle => 'Editează evenimentul recurent';
+
+  @override
+  String get eventEditThisOccurrence => 'Doar această apariție';
+
+  @override
+  String get eventEditThisAndFollowing => 'Această apariție și următoarele';
+
+  @override
+  String get eventEditEntireSeries => 'Întreaga serie';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Modificările se aplică întregii serii, inclusiv aparițiilor din trecut.';
+
+  @override
+  String get eventEditConflict =>
+      'Acest eveniment a fost modificat. Ciorna este păstrată; redeschide evenimentul pentru a verifica cea mai recentă versiune.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Salvat în categoria ascunsă „$name”.';
+  }
+
+  @override
+  String get viewEvent => 'Vezi evenimentul';
 }

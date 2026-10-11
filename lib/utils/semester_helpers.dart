@@ -4,6 +4,31 @@ import '../models/course_item.dart';
 import '../models/timetable_data.dart';
 import 'time_utils.dart';
 
+/// Resolves a course's effective time without changing the stored course.
+/// Explicit times remain authoritative; legacy unknown times use their periods.
+({int startMinutes, int endMinutes})? resolveCourseTimeRange(
+  CourseItem course,
+  List<CoursePeriodTime> periodTimes,
+) {
+  if (course.endMinutes > course.startMinutes) {
+    return (startMinutes: course.startMinutes, endMinutes: course.endMinutes);
+  }
+  if (course.startMinutes != 0 || course.endMinutes != 0) return null;
+  final selected = course.periods.toSet();
+  final matched = periodTimes
+      .where((period) => selected.contains(period.index))
+      .toList();
+  if (matched.isEmpty) return null;
+  return (
+    startMinutes: matched
+        .map((period) => period.startMinutes)
+        .reduce((a, b) => a < b ? a : b),
+    endMinutes: matched
+        .map((period) => period.endMinutes)
+        .reduce((a, b) => a > b ? a : b),
+  );
+}
+
 bool matchesSemesterWeek(CourseItem course, int selectedWeek) {
   return course.semesterWeeks.isEmpty ||
       course.semesterWeeks.contains(selectedWeek);
@@ -103,6 +128,7 @@ DateTime startOfWeekFor(TimetableConfig config, int week) {
 
 TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
   required TimetableData timetable,
+  List<CoursePeriodTime> periodTimes = const [],
   required int selectedWeek,
   required int realCurrentWeek,
   required DateTime now,
@@ -113,6 +139,7 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
   final nowMinutes = (now.hour * 60) + now.minute;
   final todayTarget = _courseTargetForDay(
     timetable: timetable,
+    periodTimes: periodTimes,
     targetWeek: realCurrentWeek,
     weekday: weekday,
     displayedCourseIdForConflict: displayedCourseIdForConflict,
@@ -130,6 +157,7 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
   final tomorrowWeekday = normalizeDayOfWeek(tomorrow.weekday);
   final tomorrowTarget = _courseTargetForDay(
     timetable: timetable,
+    periodTimes: periodTimes,
     targetWeek: tomorrowWeek,
     weekday: tomorrowWeekday,
     displayedCourseIdForConflict: displayedCourseIdForConflict,
@@ -142,6 +170,7 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
 
 TimetableLiveCourseTarget? _courseTargetForDay({
   required TimetableData timetable,
+  required List<CoursePeriodTime> periodTimes,
   required int targetWeek,
   required int weekday,
   required String? Function(String conflictKey)? displayedCourseIdForConflict,
@@ -154,6 +183,16 @@ TimetableLiveCourseTarget? _courseTargetForDay({
                 course.dayOfWeek == weekday &&
                 matchesSemesterWeek(course, targetWeek),
           )
+          .map((course) {
+            final range = resolveCourseTimeRange(course, periodTimes);
+            return range == null
+                ? null
+                : course.copyWith(
+                    startMinutes: range.startMinutes,
+                    endMinutes: range.endMinutes,
+                  );
+          })
+          .whereType<CourseItem>()
           .toList()
         ..sort(_compareCoursesByStart);
   if (dayCourses.isEmpty) {

@@ -109,6 +109,12 @@ extension _HomeScreenCourseActions on _HomeScreenState {
     if (_courseEditorOpen || !mounted || timetable == null) {
       return;
     }
+    // Grid layouts may contain display-only copies (for collapsed gaps or
+    // legacy period times). Editors always begin with the latest stored data.
+    final initialCourse = course == null
+        ? null
+        : timetable.courses.where((item) => item.id == course.id).firstOrNull;
+    if (course != null && initialCourse == null) return;
     _setCourseEditorOpen(true);
     try {
       final periodTimes = provider.periodTimesForTimetable(timetable);
@@ -139,8 +145,9 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         builder: (sheetContext) => CourseEditorSheet(
           periodTimes: periodTimes,
           totalWeeks: totalWeeks,
-          initialCourse: course,
-          dayOfWeek: weekday ?? emptySlot?.weekday ?? course?.dayOfWeek ?? 1,
+          initialCourse: initialCourse,
+          dayOfWeek:
+              weekday ?? emptySlot?.weekday ?? initialCourse?.dayOfWeek ?? 1,
           initialStartMinutes: emptySlot?.startMinutes,
           initialEndMinutes: emptySlot?.endMinutes,
           initialPeriods: emptySlot?.periods,

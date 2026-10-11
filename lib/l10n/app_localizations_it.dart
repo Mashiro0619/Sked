@@ -1279,7 +1279,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Non c\'è alcun orario attuale da sostituire.';
+      'L\'orario selezionato per la sostituzione non è disponibile. Selezionalo di nuovo.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1724,7 +1724,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get pickTime => 'Scegli l’ora';
 
   @override
-  String get reminder => 'Promemoria nell’app';
+  String get reminder => 'Promemoria';
 
   @override
   String get reminderAtStart => 'All’inizio';
@@ -2980,4 +2980,62 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Potrai modificare dati e impostazioni al termine del ripristino. Puoi continuare a consultarli.';
+
+  @override
+  String get managePeriodTimeSets => 'Gestisci i set di orari delle lezioni';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Fasce orarie: $periodCount · Orari associati: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importa come nuovo orario oppure sostituisci tutti i dettagli e le lezioni dell\'orario «$name».';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Seleziona almeno una settimana.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Mantieni i promemoria per le categorie nascoste';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Si applica ai promemoria nell\'app e alle notifiche di sistema. Le notifiche di sistema devono comunque essere attivate.';
+
+  @override
+  String get generalReminderFollowDefault => 'Usa impostazione predefinita';
+
+  @override
+  String get generalReminderCustom => 'Promemoria personalizzati';
+
+  @override
+  String get eventEditScopeTitle => 'Modifica evento ricorrente';
+
+  @override
+  String get eventEditThisOccurrence => 'Solo questa occorrenza';
+
+  @override
+  String get eventEditThisAndFollowing => 'Questa occorrenza e le successive';
+
+  @override
+  String get eventEditEntireSeries => 'Intera serie';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Le modifiche si applicano all\'intera serie, comprese le occorrenze passate.';
+
+  @override
+  String get eventEditConflict =>
+      'Questo evento è stato modificato. La bozza viene conservata; riapri l\'evento per controllare la versione più recente.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Salvato nella categoria nascosta «$name».';
+  }
+
+  @override
+  String get viewEvent => 'Visualizza evento';
 }

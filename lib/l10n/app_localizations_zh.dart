@@ -1184,7 +1184,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get replaceActiveRequiresSingleTimetableMessage => '覆盖当前课表时只能选择一个课表';
 
   @override
-  String get noActiveTimetableToReplaceMessage => '当前没有可覆盖的课表';
+  String get noActiveTimetableToReplaceMessage => '要覆盖的课表已不存在，请重新选择。';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1613,7 +1613,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pickTime => '选择时间';
 
   @override
-  String get reminder => '应用内提醒';
+  String get reminder => '提醒';
 
   @override
   String get reminderAtStart => '开始时';
@@ -2743,6 +2743,61 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backupRestoreInProgressMessage => '恢复完成前，暂时无法修改数据和设置。你仍可查看内容。';
+
+  @override
+  String get managePeriodTimeSets => '管理节次时间集';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return '$periodCount 节 · $timetableCount 个课表使用';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return '导入为新课表，或覆盖“$name”的课表信息和全部课程。';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => '请至少选择一周';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars => '隐藏日程分类后仍提醒';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      '同时影响应用内提醒和系统通知；系统通知仍受通知总开关控制。';
+
+  @override
+  String get generalReminderFollowDefault => '跟随默认';
+
+  @override
+  String get generalReminderCustom => '自定义提醒';
+
+  @override
+  String get eventEditScopeTitle => '编辑重复日程';
+
+  @override
+  String get eventEditThisOccurrence => '仅本次';
+
+  @override
+  String get eventEditThisAndFollowing => '本次及以后';
+
+  @override
+  String get eventEditEntireSeries => '整个系列';
+
+  @override
+  String get eventEditEntireSeriesHint => '更改将应用于整个系列，包括过去的实例。';
+
+  @override
+  String get eventEditConflict => '此日程已发生变化。草稿已保留，请重新打开日程核对最新内容。';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return '已保存到隐藏分类“$name”。';
+  }
+
+  @override
+  String get viewEvent => '查看日程';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3923,7 +3978,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get replaceActiveRequiresSingleTimetableMessage => '覆蓋當前課表時只能選擇一個課表';
 
   @override
-  String get noActiveTimetableToReplaceMessage => '當前沒有可覆蓋的課表';
+  String get noActiveTimetableToReplaceMessage => '要覆蓋的課表已不存在，請重新選擇。';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -4352,7 +4407,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get pickTime => '選擇時間';
 
   @override
-  String get reminder => '應用內提醒';
+  String get reminder => '提醒';
 
   @override
   String get reminderAtStart => '開始時';
@@ -5485,4 +5540,59 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupRestoreInProgressMessage => '還原完成前，暫時無法修改資料和設定。你仍可查看內容。';
+
+  @override
+  String get managePeriodTimeSets => '管理節次時間集';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return '$periodCount 節 · $timetableCount 個課表使用';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return '匯入為新課表，或覆蓋「$name」的課表資訊和全部課程。';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => '請至少選擇一週';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars => '隱藏日程分類後仍提醒';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      '同時影響應用程式內提醒和系統通知；系統通知仍受通知總開關控制。';
+
+  @override
+  String get generalReminderFollowDefault => '跟隨預設';
+
+  @override
+  String get generalReminderCustom => '自訂提醒';
+
+  @override
+  String get eventEditScopeTitle => '編輯重複日程';
+
+  @override
+  String get eventEditThisOccurrence => '僅本次';
+
+  @override
+  String get eventEditThisAndFollowing => '本次及以後';
+
+  @override
+  String get eventEditEntireSeries => '整個系列';
+
+  @override
+  String get eventEditEntireSeriesHint => '變更將套用至整個系列，包括過去的實例。';
+
+  @override
+  String get eventEditConflict => '此日程已發生變更。草稿已保留，請重新開啟日程核對最新內容。';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return '已儲存至隱藏分類「$name」。';
+  }
+
+  @override
+  String get viewEvent => '查看日程';
 }

@@ -41,6 +41,40 @@ Future<TimetableProvider> _provider() async {
 
 void main() {
   testWidgets(
+    'hidden calendar reminder switch persists independently of defaults',
+    (tester) async {
+      final provider = await _provider();
+      addTearDown(provider.dispose);
+      final service = AgendaNotificationService(enabled: false);
+      addTearDown(service.dispose);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: NotificationSettingsPage(notificationService: service),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final toggle = find.byKey(
+        const ValueKey('notification-remind-hidden-general-calendars'),
+      );
+      await tester.ensureVisible(toggle);
+      expect(provider.remindHiddenGeneralCalendars, isFalse);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(provider.remindHiddenGeneralCalendars, isTrue);
+      expect(provider.generalDefaultMinutesBefore, isNull);
+      expect(provider.notificationsEnabled, isFalse);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(provider.remindHiddenGeneralCalendars, isFalse);
+    },
+  );
+
+  testWidgets(
     'uses the application coordinator notification service when available',
     (tester) async {
       final provider = await _provider();

@@ -71,6 +71,7 @@ class GeneralOccurrenceCache {
     Duration upcomingHorizon = const Duration(hours: 24),
     Duration overdueWindow = defaultGeneralReminderOverdueWindow,
     GeneralOccurrenceQuery? occurrenceFilter,
+    NotificationSettings notificationSettings = const NotificationSettings(),
   }) {
     final anchor = now ?? DateTime.now();
     final candidates = occurrencesForRange(
@@ -79,12 +80,14 @@ class GeneralOccurrenceCache {
         boundedGeneralReminderLookback(overdueWindow),
       ),
       endExclusive: anchor.add(upcomingHorizon),
+      onlyVisibleCalendars: !notificationSettings.remindHiddenGeneralCalendars,
     );
     return _service.reminderItemsFromOccurrences(
       general,
       candidates,
       now: anchor,
       occurrenceFilter: occurrenceFilter,
+      notificationSettings: notificationSettings,
     );
   }
 

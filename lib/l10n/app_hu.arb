@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "A jelenlegi menetrend cseréje csak egy menetrend kiválasztását támogatja.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Nincs jelenlegi menetrend a cserélésre.",
+  "noActiveTimetableToReplaceMessage": "A kiválasztott órarend nem érhető el. Kérjük, válasszon újra.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Ezt az időszakot a {count} menetrend(ek) még mindig használja. A törlés előtt újratörölje őket.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Idő választása",
   "@pickTime": {},
-  "reminder": "Alkalmazáson belüli emlékeztető",
+  "reminder": "Emlékeztető",
   "@reminder": {},
   "reminderAtStart": "Kezdéskor",
   "@reminderAtStart": {},
@@ -2010,5 +2010,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Csengetési rendek kezelése",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "{periodCount} tanóra · {timetableCount} órarend használja",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importálás új órarendként, vagy az összes adat és tantárgy cseréje ebben az órarendben: „{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Válasszon legalább egy hetet.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Rejtett kategóriák emlékeztetőinek megtartása",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Az alkalmazáson belüli emlékeztetőkre és a rendszerértesítésekre is érvényes. A rendszerértesítéseket továbbra is az értesítések főkapcsolója szabályozza.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Alapértelmezés használata",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Egyéni emlékeztetők",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Ismétlődő esemény szerkesztése",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Csak ez az alkalom",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Ez és a következő alkalmak",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "A teljes sorozat",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "A módosítások a teljes sorozatra vonatkoznak, a korábbi alkalmakra is.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Ez az esemény időközben megváltozott. A piszkozat megmarad; a legfrissebb változat megtekintéséhez nyissa meg újra az eseményt.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Mentve a rejtett „{name}” kategóriába.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Esemény megtekintése",
+  "@viewEvent": {}
 }

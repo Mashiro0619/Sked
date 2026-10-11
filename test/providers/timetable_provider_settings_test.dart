@@ -39,6 +39,38 @@ Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
 
 void main() {
   test(
+    'hidden calendar reminder preference saves, deduplicates and rolls back',
+    () async {
+      final storage = _ControllableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _providerFor(storage);
+      addTearDown(provider.dispose);
+      expect(provider.remindHiddenGeneralCalendars, isFalse);
+      await provider.updateRemindHiddenGeneralCalendars(false);
+      expect(storage.saveCount, 0);
+      await provider.updateRemindHiddenGeneralCalendars(true);
+      expect(provider.remindHiddenGeneralCalendars, isTrue);
+      expect(
+        storage.data!.notificationSettings.remindHiddenGeneralCalendars,
+        isTrue,
+      );
+      await provider.updateRemindHiddenGeneralCalendars(true);
+      expect(storage.saveCount, 1);
+      storage.nextSaveError = StateError('save failed');
+      await expectLater(
+        provider.updateRemindHiddenGeneralCalendars(false),
+        throwsStateError,
+      );
+      expect(provider.remindHiddenGeneralCalendars, isTrue);
+      expect(
+        storage.data!.notificationSettings.remindHiddenGeneralCalendars,
+        isTrue,
+      );
+    },
+  );
+
+  test(
     'panel display preference is global, durable and rolls back on failure',
     () async {
       final storage = _ControllableStorage(

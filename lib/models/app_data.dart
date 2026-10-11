@@ -803,6 +803,18 @@ void _validateStorageGeneralEvent(
       'count',
       errorMessage: 'Stored general event recurrence rule is invalid.',
     );
+    _validateNullableStorageIntegerField(
+      recurrenceRule,
+      'monthlyAnchorDay',
+      errorMessage: 'Stored general event monthly anchor day is invalid.',
+    );
+    final monthlyAnchorDay = recurrenceRule['monthlyAnchorDay'];
+    if (monthlyAnchorDay != null &&
+        ((monthlyAnchorDay as num) < 1 || monthlyAnchorDay > 31)) {
+      throw const FormatException(
+        'Stored general event monthly anchor day is invalid.',
+      );
+    }
     if (validateCurrentSemantics &&
         recurrenceRule.containsKey('count') &&
         (recurrenceRule['count'] as num) < 1) {
@@ -830,6 +842,14 @@ void _validateStorageGeneralEvent(
     }
   }
 
+  if (event.containsKey('reminderBehavior') &&
+      !GeneralEventReminderBehavior.values.any(
+        (value) => value.value == event['reminderBehavior'],
+      )) {
+    throw const FormatException(
+      'Stored general event reminder behavior is invalid.',
+    );
+  }
   final reminders = _storageObjectListField(
     event,
     'reminders',
@@ -1150,7 +1170,11 @@ void _validateStorageNotificationSettings(Map<String, dynamic> json) {
     errorMessage: 'Stored notification settings are invalid.',
   );
   if (settings == null) return;
-  for (final key in const ['enabled', 'lockScreenShowTitles']) {
+  for (final key in const [
+    'enabled',
+    'lockScreenShowTitles',
+    'remindHiddenGeneralCalendars',
+  ]) {
     _validateStorageBooleanField(
       settings,
       key,
@@ -1441,7 +1465,8 @@ void _validateStorageGeneralMode(Map<String, dynamic> json) {
     return;
   }
   final currentSchemaVersion = schemaVersion!;
-  // v5 adds viewport state; keep v4's strict semantic checks.
+  // v5 adds viewport state and v6 adds reminder policy/month anchors; retain
+  // v4's strict semantic checks while accepting absent optional legacy fields.
   final validateCurrentSemantics = currentSchemaVersion >= 4;
   if (generalMode['customDateRange'] != null) {
     GeneralDateRange.fromJson(generalMode['customDateRange']);

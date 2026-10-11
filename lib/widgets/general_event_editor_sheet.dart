@@ -3,6 +3,7 @@ import '../theme/sked_surface.dart';
 import 'workspace_editor.dart';
 import 'workspace_editor_form.dart';
 import 'workspace_editor_time_rows.dart';
+import 'general_event_edit_flow.dart';
 import 'sked_task_session.dart';
 import 'sked_time_picker.dart';
 
@@ -44,6 +45,7 @@ class GeneralEventEditorSheet extends StatefulWidget {
     this.calendars = const [],
     this.activeCalendarId,
     this.defaultReminderMinutesBefore,
+    this.editScope,
     this.onSave,
     this.onDelete,
   });
@@ -53,9 +55,9 @@ class GeneralEventEditorSheet extends StatefulWidget {
   final List<GeneralSchedule> calendars;
   final String? activeCalendarId;
 
-  /// Applied only when creating a new event. Existing events keep their
-  /// explicit reminder list, including an intentionally empty list.
+  /// Live preview for inherited reminders; never copied into a saved override.
   final int? defaultReminderMinutesBefore;
+  final GeneralEventEditScope? editScope;
   final Future<void> Function(GeneralEvent)? onSave;
   final Future<void> Function()? onDelete;
 
@@ -82,6 +84,8 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   int? _repeatCount;
   int? _colorValue;
   late List<int> _reminders;
+  late GeneralEventReminderBehavior _reminderBehavior;
+  late final ValueNotifier<int?> _defaultReminderPreview;
   late List<GeneralSchedule> _calendarOptions;
   bool _hasPopped = false;
   bool _pickerOpen = false;
@@ -98,7 +102,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   Timer? _timeErrorReveal;
 
   bool get _isEditing => widget.initialEvent != null;
-  bool get _showCalendarPicker => _calendarOptions.length > 1;
+  GeneralSchedule get _selectedCalendar =>
+      _calendarOptions.firstWhere((item) => item.id == _calendarId);
+  bool get _showCalendarPicker =>
+      _calendarOptions.length > 1 || !_selectedCalendar.isVisible;
   SkedTaskSession? _editorSession;
 
   @override
@@ -124,6 +131,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     _repeatCount,
     _colorValue,
     _reminders,
+    _reminderBehavior.name,
   ]);
   @override
   bool get exitBlocked => _blocked;
@@ -138,10 +146,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   @override
   void initState() {
     super.initState();
+    _defaultReminderPreview = ValueNotifier(
+      widget.defaultReminderMinutesBefore,
+    );
     _calendarOptions = _buildCalendarOptions();
     final event = widget.initialEvent;
     final initial = widget.initialDate ?? DateTime.now();
-    final startDt = event != null
+    final rawStartDt = event != null
         ? tryParseStrictIsoDateTime(event.startDateTimeIso) ?? initial
         : DateTime(
             initial.year,
@@ -150,10 +161,12 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
             initial.hour,
             initial.minute,
           );
-    final endDt = event != null
+    final rawEndDt = event != null
         ? tryParseStrictIsoDateTime(event.endDateTimeIso) ??
-              startDt.add(const Duration(hours: 1))
-        : startDt.add(const Duration(hours: 1));
+              rawStartDt.add(const Duration(hours: 1))
+        : rawStartDt.add(const Duration(hours: 1));
+    final startDt = event?.isAllDay == true ? rawStartDt : rawStartDt.toLocal();
+    final endDt = event?.isAllDay == true ? rawEndDt : rawEndDt.toLocal();
     var displayEndDt = event?.isAllDay == true
         ? previousCalendarDate(endDt)
         : endDt;
@@ -182,17 +195,25 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       _untilDate = _startDate;
     }
     _colorValue = event?.colorValue;
+    _reminderBehavior =
+        event?.reminderBehavior ?? GeneralEventReminderBehavior.inherit;
     _reminders =
-        event?.reminders.map((item) => item.minutesBefore).toList() ??
-        (widget.defaultReminderMinutesBefore == null
-            ? const []
-            : [widget.defaultReminderMinutesBefore!]);
+        event?.reminders.map((item) => item.minutesBefore).toList() ?? [];
     initializeDraftGuard();
   }
 
   @override
   void didUpdateWidget(covariant GeneralEventEditorSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_defaultReminderPreview.value != widget.defaultReminderMinutesBefore) {
+      // The open picker is a sibling route, so notify after this build rather
+      // than marking that route dirty while its owner is rebuilding.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _defaultReminderPreview.value = widget.defaultReminderMinutesBefore;
+        }
+      });
+    }
     if (oldWidget.calendars == widget.calendars &&
         oldWidget.activeCalendarId == widget.activeCalendarId) {
       return;
@@ -226,6 +247,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     _titleController.dispose();
     _locationController.dispose();
     _notesController.dispose();
+    _defaultReminderPreview.dispose();
     _timeErrorReveal?.cancel();
     _timeExpansion.dispose();
     super.dispose();
@@ -256,29 +278,32 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     return _calendarOptions.first.id;
   }
 
-  DateTime _buildStartDateTime() {
-    if (_isAllDay) {
-      return normalizeDateOnly(_startDate);
+  bool get _preserveUtc =>
+      tryParseStrictIsoDateTime(widget.initialEvent?.startDateTimeIso)?.isUtc ??
+      false;
+
+  DateTime _buildDateTime(DateTime date, [TimeOfDay? time]) {
+    if (time == null) {
+      return _preserveUtc
+          ? DateTime.utc(date.year, date.month, date.day)
+          : DateTime(date.year, date.month, date.day);
     }
-    return DateTime(
-      _startDate.year,
-      _startDate.month,
-      _startDate.day,
-      _startTime.hour,
-      _startTime.minute,
+    final local = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
     );
+    return _preserveUtc ? local.toUtc() : local;
   }
 
-  DateTime _buildEndDateTime() {
-    if (_isAllDay) return calendarDateEndExclusive(_endDate);
-    return DateTime(
-      _endDate.year,
-      _endDate.month,
-      _endDate.day,
-      _endTime.hour,
-      _endTime.minute,
-    );
-  }
+  DateTime _buildStartDateTime() =>
+      _buildDateTime(_startDate, _isAllDay ? null : _startTime);
+
+  DateTime _buildEndDateTime() => _isAllDay
+      ? _buildDateTime(nextCalendarDate(_endDate))
+      : _buildDateTime(_endDate, _endTime);
 
   bool get _hasInvalidTimeRange =>
       !_buildEndDateTime().isAfter(_buildStartDateTime());
@@ -344,9 +369,11 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       location: _locationController.text.trim(),
       notes: _notesController.text.trim(),
       colorValue: _colorValue,
+      reminderBehavior: _reminderBehavior,
       reminders: [
-        for (final minutes in _reminders.toSet().toList()..sort())
-          GeneralEventReminder(minutesBefore: minutes),
+        if (_reminderBehavior == GeneralEventReminderBehavior.custom)
+          for (final minutes in _reminders.toSet().toList()..sort())
+            GeneralEventReminder(minutesBefore: minutes),
       ],
       createdAtIso: widget.initialEvent?.createdAtIso ?? now,
       updatedAtIso: now,
@@ -389,7 +416,11 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         waitForTransitionComplete: true,
         builder: (dialogContext) => AlertDialog(
           key: const ValueKey('editor-delete-confirmation'),
-          title: Text(repeating ? l.deleteAllOccurrences : l.deleteEventTitle),
+          title: Text(switch (widget.editScope) {
+            GeneralEventEditScope.thisOccurrence => l.deleteThisOccurrence,
+            GeneralEventEditScope.thisAndFollowing => l.deleteFutureOccurrences,
+            _ => repeating ? l.deleteAllOccurrences : l.deleteEventTitle,
+          }),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,8 +502,42 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
           ? null
           : normalizeDateOnly(_untilDate!).toIso8601String().split('T').first,
       count: repeatCount == null || repeatCount < 1 ? null : repeatCount,
+      monthlyAnchorDay: _retainedMonthlyAnchorDay,
     );
   }
+
+  int? get _retainedMonthlyAnchorDay {
+    final initial = widget.initialEvent;
+    if (initial == null) return null;
+    final originalStart = tryParseStrictIsoDateTime(initial.startDateTimeIso);
+    final monthly =
+        _recurrence == GeneralEventRecurrence.monthly ||
+        (_recurrence == GeneralEventRecurrence.custom &&
+            _customUnit == GeneralEventRecurrenceUnit.month);
+    if (!monthly ||
+        originalStart == null ||
+        !DateUtils.isSameDay(
+          initial.isAllDay ? originalStart : originalStart.toLocal(),
+          _startDate,
+        )) {
+      return null;
+    }
+    return initial.recurrenceRule.monthlyAnchorDay;
+  }
+
+  String _currentReminderSummary(AppLocalizations l10n) =>
+      _reminderBehavior == GeneralEventReminderBehavior.inherit
+      ? l10n.courseReminderInherit(
+          widget.defaultReminderMinutesBefore == null
+              ? l10n.none
+              : _reminderLabel(widget.defaultReminderMinutesBefore!, l10n),
+        )
+      : _reminderSummary(
+          _reminderBehavior == GeneralEventReminderBehavior.disabled
+              ? const []
+              : _reminders,
+          l10n,
+        );
 
   String _generateId() => 'evt_${DateTime.now().microsecondsSinceEpoch}';
 
@@ -532,6 +597,20 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (widget.editScope != null) ...[
+                Text(
+                  generalEventEditScopeLabel(widget.editScope!, l10n),
+                  key: const ValueKey('event-editor-edit-scope'),
+                  style: theme.textTheme.labelLarge,
+                ),
+                if (widget.editScope == GeneralEventEditScope.entireSeries &&
+                    widget.initialEvent?.recurrenceRule.isRepeating == true)
+                  Text(
+                    l10n.eventEditEntireSeriesHint,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                const SizedBox(height: 8),
+              ],
               if (desktop) ...[
                 if (_actionInProgress) const UiCommandBusyIndicator(busy: true),
               ] else ...[
@@ -697,7 +776,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
             workspaceEditorMinimumFieldWidth(
               context,
               label: l10n.reminder,
-              value: _reminderSummary(_reminders, l10n),
+              value: _currentReminderSummary(l10n),
               minimumWidth: 160,
             ),
           ],
@@ -810,7 +889,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     icon: Icons.repeat,
     label: l10n.eventRecurrence,
     value: _currentRecurrenceSummary(l10n),
-    onTap: _blocked
+    onTap: _blocked || widget.editScope == GeneralEventEditScope.thisOccurrence
         ? null
         : (anchor) => unawaited(_openRecurrenceDialog(anchor)),
   );
@@ -819,7 +898,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     key: const ValueKey('event-reminder-field'),
     icon: Icons.notifications_outlined,
     label: l10n.reminder,
-    value: _reminderSummary(_reminders, l10n),
+    value: _currentReminderSummary(l10n),
     onTap: _blocked ? null : (anchor) => unawaited(_openReminderDialog(anchor)),
   );
 
@@ -849,7 +928,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         for (final calendar in _calendarOptions)
           DropdownMenuEntry(
             value: calendar.id,
-            label: calendar.name,
+            label: calendar.isVisible
+                ? calendar.name
+                : '${calendar.name} · ${l10n.categoryHidden}',
             labelWidget: _CalendarDropdownItem(calendar: calendar),
           ),
       ],
@@ -981,9 +1062,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         _calendarId == sourceCalendar;
     setState(() => _selectionDialogOpen = true);
     _dismissActiveInputFocus();
-    List<int>? result;
+    _ReminderDialogValue? result;
     try {
-      result = await showSkedAdaptivePickerDialog<List<int>>(
+      result = await showSkedAdaptivePickerDialog<_ReminderDialogValue>(
         context: context,
         routeName: 'general-reminder-picker',
         anchorContext: anchorContext,
@@ -992,7 +1073,14 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         workspace: AppMode.general,
         isSessionCurrent: sessionCurrent,
         waitForTransitionComplete: true,
-        builder: (_) => _ReminderPickerDialog(initialReminders: _reminders),
+        builder: (_) => ValueListenableBuilder<int?>(
+          valueListenable: _defaultReminderPreview,
+          builder: (_, currentDefault, _) => _ReminderPickerDialog(
+            initialReminders: _reminders,
+            initialBehavior: _reminderBehavior,
+            defaultMinutesBefore: currentDefault,
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -1002,7 +1090,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       }
     }
     if (!sessionCurrent() || result == null) return;
-    setState(() => _reminders = result!);
+    setState(() {
+      _reminders = result!.reminders;
+      _reminderBehavior = result.behavior;
+    });
   }
 
   Future<T?> _runPicker<T>(Future<T?> Function() picker) async {
@@ -1546,146 +1637,189 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
   }
 }
 
+class _ReminderDialogValue {
+  const _ReminderDialogValue(this.behavior, this.reminders);
+  final GeneralEventReminderBehavior behavior;
+  final List<int> reminders;
+}
+
 class _ReminderPickerDialog extends StatefulWidget {
-  const _ReminderPickerDialog({required this.initialReminders});
-
+  const _ReminderPickerDialog({
+    required this.initialReminders,
+    required this.initialBehavior,
+    this.defaultMinutesBefore,
+  });
   final List<int> initialReminders;
-
+  final GeneralEventReminderBehavior initialBehavior;
+  final int? defaultMinutesBefore;
   @override
   State<_ReminderPickerDialog> createState() => _ReminderPickerDialogState();
 }
 
 class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
   late Set<int> _reminders;
+  late GeneralEventReminderBehavior _behavior;
   bool _hasPopped = false;
-
   @override
   void initState() {
     super.initState();
     _reminders = widget.initialReminders.toSet();
+    _behavior = widget.initialBehavior;
   }
 
-  Widget _desktopPanel(BuildContext context) {
+  void _selectBehavior(GeneralEventReminderBehavior value) => setState(() {
+    _behavior = value;
+    if (value == GeneralEventReminderBehavior.custom && _reminders.isEmpty) {
+      _reminders.add(widget.defaultMinutesBefore ?? 0);
+    }
+  });
+
+  void _toggle(int minutes) => setState(() {
+    if (!_reminders.add(minutes)) _reminders.remove(minutes);
+    _behavior = _reminders.isEmpty
+        ? GeneralEventReminderBehavior.disabled
+        : GeneralEventReminderBehavior.custom;
+  });
+
+  Widget _body(BuildContext context, bool desktop) {
     final l = AppLocalizations.of(context);
-    // Keep imported/non-preset reminders visible and editable without adding a
-    // new custom-time feature or silently dropping them on confirmation.
-    final options = {..._reminderOptions, ...widget.initialReminders}.toList()
-      ..sort();
-    return PopScope(
-      canPop: !_hasPopped,
-      child: SkedTaskDialog(
-        key: const ValueKey('general-reminder-panel'),
-        title: Text(l.reminder),
-        closeEnabled: !_hasPopped,
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 360),
-          child: SingleChildScrollView(
-            key: const ValueKey('general-reminder-body'),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    final options = {
+      ..._reminderOptions,
+      ...widget.initialReminders,
+      ..._reminders,
+    }.toList()..sort();
+    final modes = [
+      (
+        GeneralEventReminderBehavior.inherit,
+        'inherit',
+        l.courseReminderInherit(
+          widget.defaultMinutesBefore == null
+              ? l.none
+              : _reminderLabel(widget.defaultMinutesBefore!, l),
+        ),
+      ),
+      (GeneralEventReminderBehavior.disabled, 'none', l.none),
+      (GeneralEventReminderBehavior.custom, 'custom', l.generalReminderCustom),
+    ];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final mode in modes)
+          if (desktop)
+            _DesktopEventChoice(
+              key: ValueKey('general-reminder-${mode.$2}'),
+              label: mode.$3,
+              selected: _behavior == mode.$1,
+              onPressed: _hasPopped ? null : () => _selectBehavior(mode.$1),
+            )
+          else
+            ListTile(
+              key: ValueKey('general-reminder-${mode.$2}'),
+              title: Text(mode.$3),
+              leading: Icon(
+                _behavior == mode.$1
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+              ),
+              selected: _behavior == mode.$1,
+              onTap: _hasPopped ? null : () => _selectBehavior(mode.$1),
+            ),
+        if (_behavior == GeneralEventReminderBehavior.custom) ...[
+          const SizedBox(height: 8),
+          if (desktop)
+            _DesktopEventChoiceGrid(
+              maxColumns: 2,
+              choices: [
+                for (final minutes in options)
+                  _DesktopEventChoice(
+                    key: ValueKey('general-reminder-choice-$minutes'),
+                    label: _reminderLabel(minutes, l),
+                    selected: _reminders.contains(minutes),
+                    onPressed: _hasPopped ? null : () => _toggle(minutes),
+                  ),
+              ],
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                _DesktopEventChoice(
-                  key: const ValueKey('general-reminder-none'),
-                  label: l.none,
-                  selected: _reminders.isEmpty,
-                  onPressed: _hasPopped
-                      ? null
-                      : () => setState(_reminders.clear),
-                ),
-                const SizedBox(height: 8),
-                _DesktopEventChoiceGrid(
-                  maxColumns: 2,
-                  choices: [
-                    for (final minutes in options)
-                      _DesktopEventChoice(
-                        key: ValueKey('general-reminder-choice-$minutes'),
-                        label: _reminderLabel(minutes, l),
-                        selected: _reminders.contains(minutes),
-                        onPressed: _hasPopped
-                            ? null
-                            : () => setState(() {
-                                if (!_reminders.add(minutes)) {
-                                  _reminders.remove(minutes);
-                                }
-                              }),
-                      ),
-                  ],
-                ),
+                for (final minutes in options)
+                  FilterChip(
+                    key: ValueKey('general-reminder-choice-$minutes'),
+                    label: Text(_reminderLabel(minutes, l)),
+                    selected: _reminders.contains(minutes),
+                    onSelected: _hasPopped ? null : (_) => _toggle(minutes),
+                  ),
               ],
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            key: const ValueKey('general-reminder-cancel'),
-            onPressed: _hasPopped ? null : () => _popOnce(),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            key: const ValueKey('general-reminder-confirm'),
-            onPressed: _hasPopped
-                ? null
-                : () => _popOnce(_reminders.toList()..sort()),
-            child: Text(l.confirm),
-          ),
         ],
-      ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (SkedTaskDialogScope.maybeOf(context) != null) {
-      return _desktopPanel(context);
-    }
-    final l10n = AppLocalizations.of(context);
-    final mediaQuery = MediaQuery.of(context);
+    final l = AppLocalizations.of(context);
+    final desktop = SkedTaskDialogScope.maybeOf(context) != null;
+    final actions = [
+      TextButton(
+        key: const ValueKey('general-reminder-cancel'),
+        onPressed: _hasPopped ? null : () => _popOnce(),
+        child: Text(l.cancel),
+      ),
+      FilledButton(
+        key: const ValueKey('general-reminder-confirm'),
+        onPressed: _hasPopped
+            ? null
+            : () => _popOnce(
+                _ReminderDialogValue(
+                  _behavior,
+                  _behavior == GeneralEventReminderBehavior.custom
+                      ? (_reminders.toList()..sort())
+                      : const [],
+                ),
+              ),
+        child: Text(l.confirm),
+      ),
+    ];
+    final content = ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 400),
+      child: SingleChildScrollView(
+        key: const ValueKey('general-reminder-body'),
+        child: _body(context, desktop),
+      ),
+    );
     return PopScope(
       canPop: !_hasPopped,
-      child: AlertDialog(
-        scrollable: true,
-        constraints: const BoxConstraints(maxWidth: expressiveDialogMaxWidth),
-        insetPadding: _eventDialogInsetPadding(mediaQuery.size.width),
-        title: Text(l10n.reminder),
-        contentPadding: EdgeInsetsDirectional.fromSTEB(
-          mediaQuery.size.width < 480 ? 16 : 24,
-          12,
-          mediaQuery.size.width < 480 ? 16 : 24,
-          0,
-        ),
-        content: SizedBox(
-          width: expressiveDialogMaxWidth,
-          child: _ReminderPicker(
-            reminders: _reminders.toList()..sort(),
-            onOptionChanged: (minutes, selected) => setState(() {
-              if (minutes == null) {
-                _reminders.clear();
-              } else if (selected) {
-                _reminders.add(minutes);
-              } else {
-                _reminders.remove(minutes);
-              }
-            }),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _hasPopped ? null : () => _popOnce(),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: _hasPopped
-                ? null
-                : () => _popOnce(_reminders.toList()..sort()),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
+      child: desktop
+          ? SkedTaskDialog(
+              key: const ValueKey('general-reminder-panel'),
+              title: Text(l.reminder),
+              closeEnabled: !_hasPopped,
+              content: content,
+              actions: actions,
+            )
+          : AlertDialog(
+              title: Text(l.reminder),
+              scrollable: true,
+              constraints: const BoxConstraints(
+                maxWidth: expressiveDialogMaxWidth,
+              ),
+              insetPadding: _eventDialogInsetPadding(
+                MediaQuery.sizeOf(context).width,
+              ),
+              content: SizedBox(
+                width: expressiveDialogMaxWidth,
+                child: content,
+              ),
+              actions: actions,
+            ),
     );
   }
 
-  void _popOnce([List<int>? value]) {
+  void _popOnce([_ReminderDialogValue? value]) {
     if (_hasPopped) return;
     setState(() => _hasPopped = true);
     Navigator.of(context).pop(value);
@@ -2397,38 +2531,6 @@ class _RecurrenceIntervalStepperState
   }
 }
 
-class _ReminderPicker extends StatelessWidget {
-  const _ReminderPicker({
-    required this.reminders,
-    required this.onOptionChanged,
-  });
-
-  final List<int> reminders;
-  final void Function(int? minutes, bool selected) onOptionChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        FilterChip(
-          label: Text(l10n.none),
-          selected: reminders.isEmpty,
-          onSelected: (selected) => onOptionChanged(null, selected),
-        ),
-        for (final option in _reminderOptions)
-          FilterChip(
-            label: Text(_reminderLabel(option, l10n)),
-            selected: reminders.contains(option),
-            onSelected: (selected) => onOptionChanged(option, selected),
-          ),
-      ],
-    );
-  }
-}
-
 class _ColorOption extends StatelessWidget {
   const _ColorOption({
     required this.colorValue,
@@ -2483,10 +2585,17 @@ class _CalendarDropdownItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = Text(
-      calendar.name,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+    final label = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(calendar.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        if (!calendar.isVisible)
+          Text(
+            AppLocalizations.of(context).categoryHidden,
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+      ],
     );
     return Row(
       mainAxisSize: MainAxisSize.min,

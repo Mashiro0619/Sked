@@ -1261,7 +1261,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Praegust ajakava asendamiseks ei ole.';
+      'Valitud tunniplaan pole saadaval. Palun vali uuesti.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1701,7 +1701,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get pickTime => 'Vali kellaaeg';
 
   @override
-  String get reminder => 'Rakendusesisene meeldetuletus';
+  String get reminder => 'Meeldetuletus';
 
   @override
   String get reminderAtStart => 'Algusajal';
@@ -2940,4 +2940,62 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Andmeid ja seadeid saab muuta pärast taastamise lõppu. Neid saab endiselt vaadata.';
+
+  @override
+  String get managePeriodTimeSets => 'Halda tunniaegade komplekte';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Tunde: $periodCount · Kasutusel tunniplaanides: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Impordi uue tunniplaanina või asenda kõik tunniplaani „$name“ andmed ja õppeained.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Vali vähemalt üks nädal.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Jätka peidetud kategooriate meeldetuletusi';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Kehtib rakendusesisestele meeldetuletustele ja süsteemiteavitustele. Süsteemiteavitusi juhib endiselt teavituste lüliti.';
+
+  @override
+  String get generalReminderFollowDefault => 'Kasuta vaikeväärtust';
+
+  @override
+  String get generalReminderCustom => 'Kohandatud meeldetuletused';
+
+  @override
+  String get eventEditScopeTitle => 'Muuda korduvat sündmust';
+
+  @override
+  String get eventEditThisOccurrence => 'Ainult see kord';
+
+  @override
+  String get eventEditThisAndFollowing => 'See ja järgmised korrad';
+
+  @override
+  String get eventEditEntireSeries => 'Kogu sari';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Muudatused rakenduvad kogu sarjale, sealhulgas varasematele kordadele.';
+
+  @override
+  String get eventEditConflict =>
+      'Seda sündmust on muudetud. Mustand säilib; ava sündmus uuesti, et vaadata uusimat versiooni.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Salvestatud peidetud kategooriasse „$name“.';
+  }
+
+  @override
+  String get viewEvent => 'Vaata sündmust';
 }

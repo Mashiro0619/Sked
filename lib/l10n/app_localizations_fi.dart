@@ -1266,7 +1266,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Nykyistä aikataulua ei ole korvattavana.';
+      'Valittu lukujärjestys ei ole käytettävissä. Valitse lukujärjestys uudelleen.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1707,7 +1707,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get pickTime => 'Valitse aika';
 
   @override
-  String get reminder => 'Sovelluksen sisäinen muistutus';
+  String get reminder => 'Muistutus';
 
   @override
   String get reminderAtStart => 'Alkaessa';
@@ -2951,4 +2951,62 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Tietoja ja asetuksia voi muuttaa palautuksen valmistuttua. Voit edelleen tarkastella niitä.';
+
+  @override
+  String get managePeriodTimeSets => 'Hallitse tuntiaikojen sarjoja';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Oppitunteja: $periodCount · Käytössä lukujärjestyksissä: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Tuo uutena lukujärjestyksenä tai korvaa kaikki lukujärjestyksen ”$name” tiedot ja kurssit.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Valitse vähintään yksi viikko.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Säilytä piilotettujen kategorioiden muistutukset';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Koskee sovelluksen sisäisiä muistutuksia ja järjestelmäilmoituksia. Järjestelmäilmoituksia ohjataan edelleen ilmoitusten pääkytkimellä.';
+
+  @override
+  String get generalReminderFollowDefault => 'Käytä oletusta';
+
+  @override
+  String get generalReminderCustom => 'Mukautetut muistutukset';
+
+  @override
+  String get eventEditScopeTitle => 'Muokkaa toistuvaa tapahtumaa';
+
+  @override
+  String get eventEditThisOccurrence => 'Vain tämä tapahtumakerta';
+
+  @override
+  String get eventEditThisAndFollowing => 'Tämä ja tulevat tapahtumakerrat';
+
+  @override
+  String get eventEditEntireSeries => 'Koko sarja';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Muutokset koskevat koko sarjaa, myös aiempia tapahtumakertoja.';
+
+  @override
+  String get eventEditConflict =>
+      'Tätä tapahtumaa on muutettu. Luonnoksesi säilyy. Avaa tapahtuma uudelleen tarkistaaksesi uusimman version.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Tallennettu piilotettuun kategoriaan ”$name”.';
+  }
+
+  @override
+  String get viewEvent => 'Näytä tapahtuma';
 }

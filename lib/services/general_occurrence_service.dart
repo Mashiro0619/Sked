@@ -1,5 +1,6 @@
 import '../models/general_event_occurrence.dart';
 import '../models/general_schedule_data.dart';
+import '../models/notification_settings.dart';
 
 const defaultGeneralReminderOverdueWindow = Duration(hours: 24);
 const maximumGeneralReminderLookback = Duration(days: 30);
@@ -74,11 +75,17 @@ class GeneralOccurrenceService {
   ///
   /// 窗口定义为 `[start - max(minutesBefore), start)`；事件已经开始或结束后
   /// 都不算 upcoming（属于 overdue 分支，见 [reminderItems]）。
-  bool isInReminderWindow(GeneralEventOccurrence occurrence, DateTime now) {
+  bool isInReminderWindow(
+    GeneralEventOccurrence occurrence,
+    DateTime now, {
+    int? defaultMinutesBefore,
+  }) {
     if (!now.isBefore(occurrence.start)) {
       return false;
     }
-    for (final reminder in occurrence.event.reminders) {
+    for (final reminder in occurrence.event.resolveReminders(
+      defaultMinutesBefore,
+    )) {
       final reminderAt = occurrence.start.subtract(
         Duration(minutes: reminder.minutesBefore),
       );
@@ -91,7 +98,7 @@ class GeneralOccurrenceService {
 
   /// 应用内提醒条的数据源。
   ///
-  /// 不会触发系统通知/锁屏推送（本轮明确不做）；仅返回此刻应该在 UI 上展示的
+  /// 不会触发系统通知/锁屏推送；仅返回此刻应该在 UI 上展示的
   /// upcoming / in-progress / overdue 列表。已被用户标记 handled 的 occurrence 被排除。
   List<GeneralReminderItem> reminderItems(
     GeneralScheduleData general, {
@@ -99,6 +106,7 @@ class GeneralOccurrenceService {
     Duration upcomingHorizon = const Duration(hours: 24),
     Duration overdueWindow = defaultGeneralReminderOverdueWindow,
     GeneralOccurrenceQuery? occurrenceFilter,
+    NotificationSettings notificationSettings = const NotificationSettings(),
   }) {
     final anchor = now ?? DateTime.now();
     final lookback = boundedGeneralReminderLookback(overdueWindow);
@@ -106,12 +114,14 @@ class GeneralOccurrenceService {
       general,
       startInclusive: anchor.subtract(lookback),
       endExclusive: anchor.add(upcomingHorizon),
+      onlyVisibleCalendars: !notificationSettings.remindHiddenGeneralCalendars,
     );
     return reminderItemsFromOccurrences(
       general,
       candidates,
       now: anchor,
       occurrenceFilter: occurrenceFilter,
+      notificationSettings: notificationSettings,
     );
   }
 
@@ -120,17 +130,29 @@ class GeneralOccurrenceService {
     Iterable<GeneralEventOccurrence> occurrences, {
     required DateTime now,
     GeneralOccurrenceQuery? occurrenceFilter,
+    NotificationSettings notificationSettings = const NotificationSettings(),
   }) {
     final items = <GeneralReminderItem>[];
     for (final occurrence in occurrences) {
-      if (occurrence.event.reminders.isEmpty ||
+      if ((!occurrence.calendar.isVisible &&
+              !notificationSettings.remindHiddenGeneralCalendars) ||
+          occurrence.event
+              .resolveReminders(
+                notificationSettings.generalDefaultMinutesBefore,
+              )
+              .isEmpty ||
           !(occurrenceFilter?.matches(occurrence) ?? true) ||
           isReminderHandled(general, occurrence)) {
         continue;
       }
       GeneralReminderStatus? status;
       if (occurrence.start.isAfter(now)) {
-        if (isInReminderWindow(occurrence, now)) {
+        if (isInReminderWindow(
+          occurrence,
+          now,
+          defaultMinutesBefore:
+              notificationSettings.generalDefaultMinutesBefore,
+        )) {
           status = GeneralReminderStatus.upcoming;
         }
       } else if (occurrence.end.isAfter(now)) {

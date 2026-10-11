@@ -6,6 +6,7 @@ import 'sked_task_session.dart';
 import 'sked_mutation_confirmation_dialog.dart';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 
 import 'sked_floating_surface.dart';
 import 'workbench_chrome_metrics.dart';
@@ -91,6 +92,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late List<int> _selectedPeriods;
+  late ({int startMinutes, int endMinutes}) _initialDisplayRange;
+  late List<int> _initialPeriodSelection;
+  late List<int> _initialWeekSelection;
   bool _hasPopped = false;
   bool _pickerOpen = false;
   bool _actionInProgress = false;
@@ -146,6 +150,11 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
 
   bool get _blocked => _hasPopped || _pickerOpen || _actionInProgress;
 
+  bool get _timeDraftChanged =>
+      _minutesFromTimeOfDay(_startTime) != _initialDisplayRange.startMinutes ||
+      _minutesFromTimeOfDay(_endTime) != _initialDisplayRange.endMinutes ||
+      !listEquals(_selectedPeriods, _initialPeriodSelection);
+
   @override
   void initState() {
     super.initState();
@@ -184,12 +193,21 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     );
     _selectedDayOfWeek = initial?.dayOfWeek ?? widget.dayOfWeek;
     _selectedSemesterWeeks = normalizeSemesterWeeks(
-      initial?.semesterWeeks ?? buildAllSemesterWeeks(widget.totalWeeks),
+      initial == null || initial.semesterWeeks.isEmpty
+          ? buildAllSemesterWeeks(widget.totalWeeks)
+          : initial.semesterWeeks,
     );
+    final initialRange = initial == null
+        ? null
+        : resolveCourseTimeRange(initial, widget.periodTimes);
     _startTime = _timeOfDayFromMinutes(
-      initial?.startMinutes ?? defaultStartMinutes,
+      initialRange?.startMinutes ??
+          initial?.startMinutes ??
+          defaultStartMinutes,
     );
-    _endTime = _timeOfDayFromMinutes(initial?.endMinutes ?? defaultEndMinutes);
+    _endTime = _timeOfDayFromMinutes(
+      initialRange?.endMinutes ?? initial?.endMinutes ?? defaultEndMinutes,
+    );
     _selectedPeriods = _normalizeSelectedPeriods(
       initial?.periods.isNotEmpty == true
           ? initial!.periods
@@ -201,6 +219,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
               initial?.endMinutes ?? defaultEndMinutes,
             ),
     );
+    _initialDisplayRange = (
+      startMinutes: _minutesFromTimeOfDay(_startTime),
+      endMinutes: _minutesFromTimeOfDay(_endTime),
+    );
+    _initialPeriodSelection = List.of(_selectedPeriods);
+    _initialWeekSelection = List.of(_selectedSemesterWeeks);
     _scheduleSectionExpanded = true;
     _detailsSectionExpanded =
         _teacherController.text.trim().isNotEmpty ||
@@ -795,6 +819,13 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                       ),
                       if (desktop)
                         Text('${draft.length} / ${widget.totalWeeks}'),
+                      if (draft.isEmpty)
+                        Text(
+                          l10n.selectAtLeastOneWeek,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
                       const SizedBox(height: 8),
                       Flexible(
                         child: GridView.builder(
@@ -884,8 +915,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                     child: Text(l10n.cancel),
                   ),
                   FilledButton(
-                    onPressed: () =>
-                        popWith(normalizeSemesterWeeks(draft.toList())),
+                    onPressed: draft.isEmpty
+                        ? null
+                        : () => popWith(normalizeSemesterWeeks(draft.toList())),
                     child: Text(l10n.confirm),
                   ),
                 ],
@@ -894,13 +926,11 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           );
         },
       );
-      if (!mounted || result == null) {
+      if (!mounted || result == null || result.isEmpty) {
         return;
       }
       setState(() {
-        _selectedSemesterWeeks = result.isEmpty
-            ? buildAllSemesterWeeks(widget.totalWeeks)
-            : result;
+        _selectedSemesterWeeks = result;
       });
     } finally {
       _setPickerOpen(false);
@@ -1076,10 +1106,26 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
 
   Future<void> _submit() async {
     if (_blocked) return;
-    final startMinutes = _minutesFromTimeOfDay(_startTime);
-    final endMinutes = _minutesFromTimeOfDay(_endTime);
+    final initial = widget.initialCourse;
+    final preserveInitialTime = initial != null && !_timeDraftChanged;
+    final startMinutes = preserveInitialTime
+        ? initial.startMinutes
+        : _minutesFromTimeOfDay(_startTime);
+    final endMinutes = preserveInitialTime
+        ? initial.endMinutes
+        : _minutesFromTimeOfDay(_endTime);
+    final preserveUnknownTime =
+        preserveInitialTime && startMinutes == 0 && endMinutes == 0;
     final l10n = AppLocalizations.of(context);
-    if (_nameController.text.trim().isEmpty || startMinutes >= endMinutes) {
+    if (_selectedSemesterWeeks.isEmpty) {
+      showUiFailureFeedback(
+        context: context,
+        message: l10n.selectAtLeastOneWeek,
+      );
+      return;
+    }
+    if (_nameController.text.trim().isEmpty ||
+        (!preserveUnknownTime && startMinutes >= endMinutes)) {
       showUiFailureFeedback(
         context: context,
         message: _nameController.text.trim().isEmpty
@@ -1138,9 +1184,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       return;
     }
 
-    final periods = _normalizeSelectedPeriods(
-      _selectedPeriods.isEmpty ? _matchedPeriods : _selectedPeriods,
-    );
+    final periods = preserveInitialTime
+        ? initial.periods
+        : _normalizeSelectedPeriods(_selectedPeriods);
     final course = CourseItem(
       id:
           widget.initialCourse?.id ??
@@ -1149,11 +1195,17 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       teacher: _teacherController.text.trim(),
       location: _locationController.text.trim(),
       dayOfWeek: _selectedDayOfWeek,
-      semesterWeeks: normalizeSemesterWeeks(_selectedSemesterWeeks),
+      semesterWeeks:
+          initial != null &&
+              listEquals(_selectedSemesterWeeks, _initialWeekSelection)
+          ? initial.semesterWeeks
+          : normalizeSemesterWeeks(_selectedSemesterWeeks),
       periods: periods,
       startMinutes: startMinutes,
       endMinutes: endMinutes,
-      timeRange: buildTimeRange(startMinutes, endMinutes),
+      timeRange: preserveInitialTime
+          ? initial.timeRange
+          : buildTimeRange(startMinutes, endMinutes),
       credit: _parseCredit(_creditController.text),
       remarks: _remarksController.text.trim(),
       customFields: customFields,

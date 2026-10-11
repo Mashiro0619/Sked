@@ -10,7 +10,6 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
-import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 
 import '../test/support/workspace_harness.dart';
 
@@ -254,15 +253,10 @@ void main() {
             await t.pumpAndSettle();
             expect(controller.hasClients, isTrue);
           }
-          await open('settings-period-times');
-          expect(find.byType(PeriodTimeSetPickerDialogView), findsOneWidget);
-          await capture('period-dialog');
-          t
-              .widget<PeriodTimeSetPickerDialogView>(
-                find.byType(PeriodTimeSetPickerDialogView),
-              )
-              .onCancel();
-          await t.pumpAndSettle();
+          expect(
+            find.byKey(const ValueKey('settings-period-times')),
+            findsNothing,
+          );
           await t.pumpWidget(const SizedBox.shrink());
           p.dispose();
         }

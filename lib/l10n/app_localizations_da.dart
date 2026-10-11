@@ -1255,7 +1255,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Der er ingen tidsplan til udskiftning.';
+      'Det valgte skema er ikke tilgængeligt. Vælg et skema igen.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1695,7 +1695,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get pickTime => 'Vælg tidspunkt';
 
   @override
-  String get reminder => 'Påmindelse i appen';
+  String get reminder => 'Påmindelse';
 
   @override
   String get reminderAtStart => 'Ved start';
@@ -2936,4 +2936,62 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Data og indstillinger kan ændres, når gendannelsen er færdig. Du kan stadig se dem.';
+
+  @override
+  String get managePeriodTimeSets => 'Administrer sæt af lektionstider';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Lektioner: $periodCount · Skemaer, der bruger sættet: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Importer som et nyt skema, eller erstat alle skemaoplysninger og fag i “$name”.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Vælg mindst én uge.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Behold påmindelser for skjulte kategorier';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Gælder påmindelser i appen og systemnotifikationer. Systemnotifikationer styres stadig af notifikationskontakten.';
+
+  @override
+  String get generalReminderFollowDefault => 'Brug standardindstilling';
+
+  @override
+  String get generalReminderCustom => 'Brugerdefinerede påmindelser';
+
+  @override
+  String get eventEditScopeTitle => 'Rediger tilbagevendende begivenhed';
+
+  @override
+  String get eventEditThisOccurrence => 'Kun denne forekomst';
+
+  @override
+  String get eventEditThisAndFollowing => 'Denne og følgende forekomster';
+
+  @override
+  String get eventEditEntireSeries => 'Hele serien';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Ændringerne gælder hele serien, også tidligere forekomster.';
+
+  @override
+  String get eventEditConflict =>
+      'Denne begivenhed er blevet ændret. Din kladde er bevaret. Åbn begivenheden igen for at se den nyeste version.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Gemt i den skjulte kategori “$name”.';
+  }
+
+  @override
+  String get viewEvent => 'Vis begivenhed';
 }

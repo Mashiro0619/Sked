@@ -827,7 +827,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Zum Ersetzen des aktuellen Stundenplans kann nur ein einzelner Stundenplan ausgewählt werden.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Es gibt keinen aktuellen Stundenplan zum Ersetzen.",
+  "noActiveTimetableToReplaceMessage": "Der ausgewählte Stundenplan ist nicht verfügbar. Bitte wählen Sie erneut einen Stundenplan aus.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Dieses Stundenzeiten-Set wird noch von {count} Stundenplan/Stundenplänen verwendet. Weisen Sie diese vor dem Löschen neu zu.",
   "@periodTimeSetInUseMessage": {
@@ -1043,7 +1043,7 @@
   "@pickDate": {},
   "pickTime": "Uhrzeit auswählen",
   "@pickTime": {},
-  "reminder": "Erinnerung in der App",
+  "reminder": "Erinnerung",
   "@reminder": {},
   "reminderAtStart": "Bei Beginn",
   "@reminderAtStart": {},
@@ -2008,5 +2008,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Stundenzeiten-Sets verwalten",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Unterrichtsstunden: {periodCount} · Zugeordnete Stundenpläne: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Als neuen Stundenplan importieren oder alle Angaben und Kurse in „{name}“ ersetzen.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Wählen Sie mindestens eine Woche aus.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Erinnerungen für ausgeblendete Kategorien beibehalten",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Gilt für Erinnerungen in der App und Systembenachrichtigungen. Für Systembenachrichtigungen gilt weiterhin der Benachrichtigungsschalter.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Standard verwenden",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Benutzerdefinierte Erinnerungen",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Wiederkehrenden Termin bearbeiten",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Nur diesen Termin",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Diesen und folgende Termine",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Gesamte Serie",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Änderungen gelten für die gesamte Serie, einschließlich vergangener Termine.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Dieser Termin wurde geändert. Ihr Entwurf bleibt erhalten. Öffnen Sie den Termin erneut, um die aktuelle Version zu prüfen.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "In der ausgeblendeten Kategorie „{name}“ gespeichert.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Termin anzeigen",
+  "@viewEvent": {}
 }

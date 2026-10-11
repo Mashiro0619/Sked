@@ -397,6 +397,12 @@ class StudentAgendaSource implements AgendaSource {
     if (!endDate.isAfter(startDate)) return;
 
     final config = timetable.config;
+    final periodTimes =
+        data.studentMode.periodTimeSets
+            .where((set) => set.id == config.periodTimeSetId)
+            .firstOrNull
+            ?.periodTimes ??
+        const <CoursePeriodTime>[];
     final semesterStart = normalizeDateOnly(config.startDate.toLocal());
     final semesterEnd = addCalendarDays(
       startOfWeekFor(config, config.totalWeeks),
@@ -411,12 +417,10 @@ class StudentAgendaSource implements AgendaSource {
               course.dayOfWeek != date.weekday) {
             continue;
           }
-          final startMinutes = course.startMinutes;
-          final endMinutes = course.endMinutes;
-          if (endMinutes <= startMinutes ||
-              (startMinutes == 0 && endMinutes == 0)) {
-            continue;
-          }
+          final time = resolveCourseTimeRange(course, periodTimes);
+          if (time == null) continue;
+          final startMinutes = time.startMinutes;
+          final endMinutes = time.endMinutes;
           final start = DateTime(
             date.year,
             date.month,
@@ -567,7 +571,9 @@ class GeneralAgendaSource implements AgendaSource {
           dateIso: occurrence.exceptionDateIso,
         ),
         reminders: [
-          for (final reminder in occurrence.event.reminders)
+          for (final reminder in occurrence.event.resolveReminders(
+            data.notificationSettings.generalDefaultMinutesBefore,
+          ))
             if (reminder.minutesBefore >= 0)
               AgendaReminder(minutesBefore: reminder.minutesBefore),
         ],

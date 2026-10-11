@@ -274,6 +274,8 @@ bool agendaNotificationPayloadMatchesProjection({
     startInclusive: start,
     endExclusive: end,
     timetableId: payload.target.timetableId,
+    includeHiddenGeneralSchedules:
+        data.notificationSettings.remindHiddenGeneralCalendars,
   );
   for (final occurrence in occurrences) {
     if (occurrence.sourceType != payload.target.sourceType ||
@@ -489,7 +491,9 @@ class AgendaActionRouter {
     if (scheduleId == null || eventId == null) return false;
     GeneralSchedule? schedule;
     for (final candidate in provider.generalSchedules) {
-      if (candidate.id == scheduleId && candidate.isVisible) {
+      if (candidate.id == scheduleId &&
+          (candidate.isVisible ||
+              provider.notificationSettings.remindHiddenGeneralCalendars)) {
         schedule = candidate;
         break;
       }

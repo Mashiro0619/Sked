@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../utils/general_schedule_colors.dart';
 import 'expressive_dialog.dart';
+import 'general_event_edit_flow.dart';
 import 'ui_command.dart';
 import 'workbench_chrome_metrics.dart';
 import 'workspace_view_panel.dart';
@@ -17,6 +18,7 @@ class GeneralEventDetailsSheet extends StatefulWidget {
     super.key,
     required this.occurrence,
     this.onEdit,
+    this.onEditScoped,
     this.onEditAnchor,
     this.onDuplicate,
     this.isReminderHandled = false,
@@ -30,9 +32,13 @@ class GeneralEventDetailsSheet extends StatefulWidget {
     this.onBusyChanged,
     this.onChildRouteChanged,
     this.headerAction,
+    this.notificationSettings = const NotificationSettings(),
+    this.onShowCalendar,
   });
 
   final GeneralEventOccurrence occurrence;
+  final NotificationSettings notificationSettings;
+  final FutureOr<void> Function()? onShowCalendar;
 
   /// Optional host promotion/validity guard, before any busy state or write.
   final bool Function()? onBeforeAction;
@@ -42,6 +48,7 @@ class GeneralEventDetailsSheet extends StatefulWidget {
   final Widget? headerAction;
   final ValueChanged<BuildContext>? onEditAnchor;
   final FutureOr<void> Function()? onEdit;
+  final FutureOr<void> Function(GeneralEventEditScope)? onEditScoped;
   final FutureOr<void> Function()? onDuplicate;
   final bool isReminderHandled;
   final FutureOr<void> Function()? onDismissReminder;
@@ -57,37 +64,62 @@ class GeneralEventDetailsSheet extends StatefulWidget {
 
 class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
   var _actionTriggered = false;
-  void _setBusy(bool value) {
-    setState(() => _actionTriggered = value);
-    widget.onBusyChanged?.call(value);
+  var _editScopeOpen = false;
+  bool get _blocked => _actionTriggered || _editScopeOpen;
+
+  void _setEditScopeOpen(bool value) {
+    setState(() => _editScopeOpen = value);
+    widget.onBusyChanged?.call(_blocked);
   }
 
-  void _edit(BuildContext anchor) {
+  void _setBusy(bool value) {
+    setState(() => _actionTriggered = value);
+    widget.onBusyChanged?.call(_blocked);
+  }
+
+  Future<void> _edit(BuildContext anchor) async {
     // The background may already own another editor. Refuse before promotion,
     // busy state or dismissal, including callbacks invoked before a rebuild.
-    if (widget.canEdit?.call() == false) return;
+    if (_blocked || widget.canEdit?.call() == false) return;
     widget.onEditAnchor?.call(anchor);
-    unawaited(_runAction(widget.onEdit));
+    final scoped = widget.onEditScoped;
+    if (scoped == null) {
+      await _runAction(widget.onEdit);
+      return;
+    }
+    _setEditScopeOpen(true);
+    GeneralEventEditScope? scope;
+    try {
+      scope = await showGeneralEventEditScopeDialog(
+        context,
+        widget.occurrence,
+        onChildRouteChanged: widget.onChildRouteChanged,
+      );
+    } finally {
+      if (mounted) _setEditScopeOpen(false);
+    }
+    if (!mounted || scope == null || widget.canEdit?.call() == false) return;
+    await _runAction(() => scoped(scope!));
   }
 
   Future<void> _runAction(FutureOr<void> Function()? action) async {
-    if (_actionTriggered || action == null) {
+    if (_blocked || action == null) {
       return;
     }
     if (widget.onBeforeAction?.call() == false) return;
     _setBusy(true);
-    final succeeded = await runUiCommandWithFeedback(
+    await runUiCommandWithFeedback(
       context: context,
       debugLabel: 'Run general event action',
       command: () async => action(),
     );
-    if (!succeeded && mounted) {
+    if (mounted) {
       _setBusy(false);
     }
   }
 
   Future<void> _confirmDelete() async {
-    if (_actionTriggered) {
+    if (_blocked) {
       return;
     }
     if (widget.onBeforeAction?.call() == false) return;
@@ -223,6 +255,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     final l10n = AppLocalizations.of(context);
     final event = widget.occurrence.event;
     final color = effectiveGeneralOccurrenceColor(context, widget.occurrence);
+    final reminders = event.resolveReminders(
+      widget.notificationSettings.generalDefaultMinutesBefore,
+    );
     final isRepeating = event.recurrenceRule.isRepeating;
     final canDelete = isRepeating
         ? widget.onDeleteThis != null ||
@@ -235,29 +270,29 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
         _EventIconButton(
           key: const ValueKey('general-event-duplicate-action'),
           tooltip: l10n.duplicateEvent,
-          onPressed: _actionTriggered
+          onPressed: _blocked
               ? null
               : () => unawaited(_runAction(widget.onDuplicate)),
           icon: Icons.content_copy_outlined,
         ),
-      if (event.reminders.isNotEmpty &&
+      if (reminders.isNotEmpty &&
           !widget.isReminderHandled &&
           widget.onDismissReminder != null)
         _EventIconButton(
           key: const ValueKey('general-event-reminder-action'),
           tooltip: l10n.markReminderHandled,
-          onPressed: _actionTriggered
+          onPressed: _blocked
               ? null
               : () => unawaited(_runAction(widget.onDismissReminder)),
           icon: Icons.check_circle_outline,
         ),
-      if (event.reminders.isNotEmpty &&
+      if (reminders.isNotEmpty &&
           widget.isReminderHandled &&
           widget.onRestoreReminder != null)
         _EventIconButton(
           key: const ValueKey('general-event-reminder-action'),
           tooltip: l10n.restoreReminder,
-          onPressed: _actionTriggered
+          onPressed: _blocked
               ? null
               : () => unawaited(_runAction(widget.onRestoreReminder)),
           icon: Icons.restore_outlined,
@@ -267,14 +302,30 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
           key: const ValueKey('general-event-delete-action'),
           tooltip: l10n.delete,
           color: theme.colorScheme.error,
-          onPressed: _actionTriggered
-              ? null
-              : () => unawaited(_confirmDelete()),
+          onPressed: _blocked ? null : () => unawaited(_confirmDelete()),
           icon: Icons.delete_outline,
         ),
     ];
 
     final info = <Widget>[
+      if (!widget.occurrence.calendar.isVisible) ...[
+        _InfoRow(
+          icon: Icons.visibility_off_outlined,
+          value: l10n.categoryHidden,
+        ),
+        if (widget.onShowCalendar != null)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('general-event-show-calendar'),
+              onPressed: _blocked
+                  ? null
+                  : () => unawaited(_runAction(widget.onShowCalendar)),
+              icon: const Icon(Icons.visibility_outlined),
+              label: Text(l10n.showCalendar),
+            ),
+          ),
+      ],
       _InfoRow(
         icon: Icons.access_time,
         value: _formatOccurrenceTime(widget.occurrence, l10n),
@@ -284,12 +335,24 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
           icon: Icons.repeat,
           value: _repeatSummary(event.recurrenceRule, l10n),
         ),
-      if (event.reminders.isNotEmpty)
+      if (reminders.isNotEmpty ||
+          event.reminderBehavior == GeneralEventReminderBehavior.inherit)
         _InfoRow(
           icon: Icons.notifications_outlined,
-          value: event.reminders
-              .map((item) => _reminderLabel(item.minutesBefore, l10n))
-              .join(', '),
+          value: event.reminderBehavior == GeneralEventReminderBehavior.inherit
+              ? l10n.courseReminderInherit(
+                  reminders.isEmpty
+                      ? l10n.none
+                      : reminders
+                            .map(
+                              (item) =>
+                                  _reminderLabel(item.minutesBefore, l10n),
+                            )
+                            .join(', '),
+                )
+              : reminders
+                    .map((item) => _reminderLabel(item.minutesBefore, l10n))
+                    .join(', '),
         ),
       if (event.location.isNotEmpty)
         _InfoRow(icon: Icons.location_on_outlined, value: event.location),
@@ -307,7 +370,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     ];
     if (WorkspaceViewTaskScope.maybeOf(context)?.enabled == true) {
       return PopScope<void>(
-        canPop: !_actionTriggered,
+        canPop: !_blocked,
         child: WorkspaceViewPanel(
           prominentTitle: true,
           headerAction: widget.headerAction,
@@ -359,12 +422,11 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  if (widget.onEdit != null)
+                  if (widget.onEdit != null || widget.onEditScoped != null)
                     Builder(
                       builder: (anchor) => FilledButton.tonalIcon(
                         key: const ValueKey('general-event-edit-action'),
-                        onPressed:
-                            _actionTriggered || widget.canEdit?.call() == false
+                        onPressed: _blocked || widget.canEdit?.call() == false
                             ? null
                             : () => _edit(anchor),
                         icon: const Icon(Icons.edit_outlined, size: 18),
@@ -431,13 +493,12 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                     ],
                   ),
                 ),
-                if (widget.onEdit != null)
+                if (widget.onEdit != null || widget.onEditScoped != null)
                   Builder(
                     builder: (anchor) => _EventIconButton(
                       key: const ValueKey('general-event-edit-action'),
                       tooltip: l10n.editEvent,
-                      onPressed:
-                          _actionTriggered || widget.canEdit?.call() == false
+                      onPressed: _blocked || widget.canEdit?.call() == false
                           ? null
                           : () => _edit(anchor),
                       icon: Icons.edit_outlined,
@@ -448,7 +509,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
             const SizedBox(height: 12),
             ...info,
             if (widget.onDuplicate != null ||
-                (event.reminders.isNotEmpty &&
+                (reminders.isNotEmpty &&
                     (widget.onDismissReminder != null ||
                         widget.onRestoreReminder != null)) ||
                 canDelete) ...[
@@ -459,7 +520,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
         ),
       ),
     );
-    return PopScope<void>(canPop: !_actionTriggered, child: content);
+    return PopScope<void>(canPop: !_blocked, child: content);
   }
 }
 

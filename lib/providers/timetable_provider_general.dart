@@ -320,6 +320,41 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
+  GeneralEvent prepareGeneralOccurrenceEdit(
+    GeneralEventOccurrence occurrence,
+    GeneralEventEditScope scope,
+  ) => _calendarService.prepareOccurrenceEdit(occurrence, scope);
+
+  Future<GeneralEvent> editGeneralOccurrence(
+    GeneralEventOccurrence occurrence,
+    GeneralEvent draft,
+    GeneralEventEditScope scope,
+  ) async {
+    requireWorkspaceEnabled(AppMode.general);
+    final result = _calendarService.editOccurrence(
+      _appData.generalMode,
+      occurrence,
+      draft,
+      scope,
+    );
+    _appData = _appData.copyWith(generalMode: result.data);
+    await _saveAndNotify();
+    return result.event;
+  }
+
+  Future<void> deleteGeneralOccurrenceScope(
+    GeneralEventOccurrence occurrence,
+    GeneralEventEditScope scope,
+  ) => switch (scope) {
+    GeneralEventEditScope.thisOccurrence => deleteGeneralOccurrence(occurrence),
+    GeneralEventEditScope.thisAndFollowing => deleteFutureGeneralOccurrences(
+      occurrence,
+    ),
+    GeneralEventEditScope.entireSeries => deleteGeneralEvent(
+      occurrence.event.id,
+    ),
+  };
+
   Future<void> deleteGeneralEvent(String eventId) async {
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
@@ -413,6 +448,8 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       generalMode: _calendarService.dismissReminder(
         _appData.generalMode,
         occurrence,
+        defaultMinutesBefore:
+            _appData.notificationSettings.generalDefaultMinutesBefore,
       ),
     );
     await _saveAndNotify();
@@ -437,6 +474,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   }) {
     return _generalOccurrenceCache.reminderItems(
       _appData.generalMode,
+      notificationSettings: _appData.notificationSettings,
       now: now,
       upcomingHorizon: upcomingHorizon,
       overdueWindow: overdueWindow,

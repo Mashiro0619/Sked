@@ -825,7 +825,7 @@
   "@noExportableTimetableMessage": {},
   "replaceActiveRequiresSingleTimetableMessage": "Att byta ut den aktuella tidtabellen stöder bara att välja en tidtabell.",
   "@replaceActiveRequiresSingleTimetableMessage": {},
-  "noActiveTimetableToReplaceMessage": "Det finns ingen tidsplan att ersätta.",
+  "noActiveTimetableToReplaceMessage": "Schemat som valts för ersättning är inte tillgängligt. Välj ett schema igen.",
   "@noActiveTimetableToReplaceMessage": {},
   "periodTimeSetInUseMessage": "Denna tidsinställning används fortfarande av {count} tidtabell(er). Omdela dem innan du raderar dem.",
   "@periodTimeSetInUseMessage": {
@@ -1041,7 +1041,7 @@
   "@pickDate": {},
   "pickTime": "Välj tid",
   "@pickTime": {},
-  "reminder": "Påminnelse i appen",
+  "reminder": "Påminnelse",
   "@reminder": {},
   "reminderAtStart": "Vid start",
   "@reminderAtStart": {},
@@ -2025,5 +2025,58 @@
         "type": "String"
       }
     }
-  }
+  },
+  "managePeriodTimeSets": "Hantera uppsättningar av lektionstider",
+  "@managePeriodTimeSets": {},
+  "periodTimeSetUsageSummary": "Lektionspass: {periodCount} · Kopplade scheman: {timetableCount}",
+  "@periodTimeSetUsageSummary": {
+    "placeholders": {
+      "periodCount": {
+        "type": "int"
+      },
+      "timetableCount": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseTimetableImportMethod": "Importera som ett nytt schema eller ersätt alla schemauppgifter och lektioner i ”{name}”.",
+  "@chooseTimetableImportMethod": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectAtLeastOneWeek": "Välj minst en vecka.",
+  "@selectAtLeastOneWeek": {},
+  "notificationRemindHiddenGeneralCalendars": "Behåll påminnelser för dolda kategorier",
+  "@notificationRemindHiddenGeneralCalendars": {},
+  "notificationRemindHiddenGeneralCalendarsHint": "Gäller påminnelser i appen och systemaviseringar. Systemaviseringar måste också vara aktiverade i inställningarna.",
+  "@notificationRemindHiddenGeneralCalendarsHint": {},
+  "generalReminderFollowDefault": "Använd standard",
+  "@generalReminderFollowDefault": {},
+  "generalReminderCustom": "Anpassade påminnelser",
+  "@generalReminderCustom": {},
+  "eventEditScopeTitle": "Redigera återkommande händelse",
+  "@eventEditScopeTitle": {},
+  "eventEditThisOccurrence": "Bara detta tillfälle",
+  "@eventEditThisOccurrence": {},
+  "eventEditThisAndFollowing": "Detta och följande tillfällen",
+  "@eventEditThisAndFollowing": {},
+  "eventEditEntireSeries": "Hela serien",
+  "@eventEditEntireSeries": {},
+  "eventEditEntireSeriesHint": "Ändringarna gäller hela serien, även tidigare tillfällen.",
+  "@eventEditEntireSeriesHint": {},
+  "eventEditConflict": "Den här händelsen har ändrats. Utkastet finns kvar; öppna händelsen igen för att granska den senaste versionen.",
+  "@eventEditConflict": {},
+  "eventSavedToHiddenCalendar": "Sparat i den dolda kategorin ”{name}”.",
+  "@eventSavedToHiddenCalendar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewEvent": "Visa händelse",
+  "@viewEvent": {}
 }

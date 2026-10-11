@@ -1265,7 +1265,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get noActiveTimetableToReplaceMessage =>
-      'Trenutnega časovnega razporeda ni za nadomestitev.';
+      'Urnik, izbran za zamenjavo, ni na voljo. Izberi ga znova.';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1707,7 +1707,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get pickTime => 'Izberite čas';
 
   @override
-  String get reminder => 'Opomnik v aplikaciji';
+  String get reminder => 'Opomnik';
 
   @override
   String get reminderAtStart => 'Ob začetku';
@@ -2956,4 +2956,62 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       'Podatke in nastavitve lahko spremenite po končani obnovitvi. Še vedno si jih lahko ogledate.';
+
+  @override
+  String get managePeriodTimeSets => 'Upravljaj nabore časov učnih ur';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return 'Število učnih ur: $periodCount · Povezani urniki: $timetableCount';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return 'Uvozi kot nov urnik ali zamenjaj vse podatke in predavanja v urniku »$name«.';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => 'Izberi vsaj en teden.';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars =>
+      'Ohrani opomnike za skrite kategorije';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'Velja za opomnike v aplikaciji in sistemska obvestila. Sistemska obvestila morajo biti omogočena tudi v nastavitvah.';
+
+  @override
+  String get generalReminderFollowDefault => 'Uporabi privzeto';
+
+  @override
+  String get generalReminderCustom => 'Opomniki po meri';
+
+  @override
+  String get eventEditScopeTitle => 'Uredi ponavljajoči se dogodek';
+
+  @override
+  String get eventEditThisOccurrence => 'Samo ta ponovitev';
+
+  @override
+  String get eventEditThisAndFollowing => 'Ta in naslednje ponovitve';
+
+  @override
+  String get eventEditEntireSeries => 'Celoten niz';
+
+  @override
+  String get eventEditEntireSeriesHint =>
+      'Spremembe veljajo za celoten niz, vključno s preteklimi ponovitvami.';
+
+  @override
+  String get eventEditConflict =>
+      'Ta dogodek se je spremenil. Osnutek je ohranjen; znova odpri dogodek in preveri najnovejšo različico.';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return 'Shranjeno v skriti kategoriji »$name«.';
+  }
+
+  @override
+  String get viewEvent => 'Prikaži dogodek';
 }

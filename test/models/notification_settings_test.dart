@@ -4,6 +4,30 @@ import 'package:sked/models/notification_settings.dart';
 
 void main() {
   group('NotificationSettings', () {
+    test(
+      'hidden calendar reminders default off and survive copy and storage',
+      () {
+        const initial = NotificationSettings(generalDefaultMinutesBefore: 15);
+        expect(
+          NotificationSettings.fromJson(const {}).remindHiddenGeneralCalendars,
+          isFalse,
+        );
+        expect(
+          initial.toJson(),
+          isNot(contains('remindHiddenGeneralCalendars')),
+        );
+        final enabled = initial.copyWith(remindHiddenGeneralCalendars: true);
+        expect(enabled, isNot(initial));
+        expect(enabled.normalized().remindHiddenGeneralCalendars, isTrue);
+        expect(NotificationSettings.fromJson(enabled.toJson()), enabled);
+        expect(
+          enabled.copyWith(enabled: true).remindHiddenGeneralCalendars,
+          isTrue,
+        );
+        expect(enabled.copyWith(remindHiddenGeneralCalendars: false), initial);
+      },
+    );
+
     test('round trips configured defaults and lock-screen privacy', () {
       const settings = NotificationSettings(
         enabled: true,

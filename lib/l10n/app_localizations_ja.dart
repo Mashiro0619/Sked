@@ -1216,7 +1216,8 @@ class AppLocalizationsJa extends AppLocalizations {
       '現在の時間割の置き換えでは、1つの時間割のみ選択できます。';
 
   @override
-  String get noActiveTimetableToReplaceMessage => '置き換える現在の時間割がありません。';
+  String get noActiveTimetableToReplaceMessage =>
+      '置き換え先として選択した時間割は利用できません。選び直してください。';
 
   @override
   String periodTimeSetInUseMessage(int count) {
@@ -1647,7 +1648,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pickTime => '時刻を選択';
 
   @override
-  String get reminder => 'アプリ内リマインダー';
+  String get reminder => 'リマインダー';
 
   @override
   String get reminderAtStart => '開始時';
@@ -2828,4 +2829,60 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get backupRestoreInProgressMessage =>
       '復元が完了するまで、データや設定は変更できません。引き続き内容を閲覧できます。';
+
+  @override
+  String get managePeriodTimeSets => '時限時間セットを管理';
+
+  @override
+  String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
+    return '$periodCount時限 · $timetableCount件の時間割で使用';
+  }
+
+  @override
+  String chooseTimetableImportMethod(String name) {
+    return '新しい時間割としてインポートするか、「$name」の時間割情報と授業をすべて置き換えます。';
+  }
+
+  @override
+  String get selectAtLeastOneWeek => '少なくとも1つの週を選択してください。';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendars => '非表示のカテゴリもリマインドする';
+
+  @override
+  String get notificationRemindHiddenGeneralCalendarsHint =>
+      'アプリ内のリマインダーとシステム通知に適用されます。システム通知を受け取るには、通知をオンにする必要があります。';
+
+  @override
+  String get generalReminderFollowDefault => 'デフォルト設定を使用';
+
+  @override
+  String get generalReminderCustom => 'リマインダーをカスタマイズ';
+
+  @override
+  String get eventEditScopeTitle => '繰り返しの予定を編集';
+
+  @override
+  String get eventEditThisOccurrence => 'この予定のみ';
+
+  @override
+  String get eventEditThisAndFollowing => 'この予定以降';
+
+  @override
+  String get eventEditEntireSeries => 'すべての予定';
+
+  @override
+  String get eventEditEntireSeriesHint => '過去の予定を含む、同じ繰り返しのすべての予定に変更が適用されます。';
+
+  @override
+  String get eventEditConflict =>
+      'この予定は変更されています。編集中の内容は保持されています。予定を開き直して最新の内容を確認してください。';
+
+  @override
+  String eventSavedToHiddenCalendar(String name) {
+    return '非表示のカテゴリ「$name」に保存しました。';
+  }
+
+  @override
+  String get viewEvent => '予定を表示';
 }

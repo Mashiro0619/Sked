@@ -377,9 +377,11 @@ void main() {
     },
   );
 
-  test('ordinary ICS import keeps its existing local-time conversion', () {
-    final result = const GeneralCalendarIcsService().importSchedules(
-      '''BEGIN:VCALENDAR
+  test(
+    'ICS import preserves UTC recurrence while calendar display stays local',
+    () {
+      final result = const GeneralCalendarIcsService().importSchedules(
+        '''BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
 UID:review-probe
@@ -389,24 +391,25 @@ RRULE:FREQ=DAILY
 SUMMARY:Imported daily
 END:VEVENT
 END:VCALENDAR''',
-    );
-    final calendar = result.schedules.single;
-    final imported = calendar.events.single;
-    expect(
-      imported.startDateTimeIso,
-      DateTime.utc(2026, 9, 1, 23, 30).toLocal().toIso8601String(),
-    );
-    final expected = DateTime.utc(2026, 9, 9, 23, 30).toLocal();
-    expect(
-      expandGeneralEventOccurrences(
-        calendar: calendar,
-        event: imported,
-        startInclusive: expected.subtract(const Duration(hours: 1)),
-        endExclusive: expected.add(const Duration(hours: 1)),
-      ).map((item) => item.start),
-      [expected],
-    );
-  });
+      );
+      final calendar = result.schedules.single;
+      final imported = calendar.events.single;
+      expect(
+        imported.startDateTimeIso,
+        DateTime.utc(2026, 9, 1, 23, 30).toIso8601String(),
+      );
+      final expected = DateTime.utc(2026, 9, 9, 23, 30).toLocal();
+      expect(
+        expandGeneralEventOccurrences(
+          calendar: calendar,
+          event: imported,
+          startInclusive: expected.subtract(const Duration(hours: 1)),
+          endExclusive: expected.add(const Duration(hours: 1)),
+        ).map((item) => item.calendarDisplayStart),
+        [expected],
+      );
+    },
+  );
 
   test('persisted UTC recurrence is found through a non-midnight local provider query', () async {
     final utcEvent = GeneralEvent(
