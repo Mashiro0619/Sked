@@ -517,6 +517,12 @@ class AppLocalizationsEt extends AppLocalizations {
   String get openGooglePlayFailed => 'Google Play avamine nurjus';
 
   @override
+  String get microsoftStoreDesc => 'Vaata Skedi Microsoft Store’is';
+
+  @override
+  String get openMicrosoftStoreFailed => 'Microsoft Store’i avamine nurjus';
+
+  @override
   String get starSkedOnGithub => 'Lisa Skedile GitHubis täht!';
 
   @override

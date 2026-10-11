@@ -518,6 +518,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get openGooglePlayFailed => 'Không thể mở Google Play';
 
   @override
+  String get microsoftStoreDesc => 'Xem Sked trong Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed => 'Không thể mở Microsoft Store';
+
+  @override
   String get starSkedOnGithub => 'Tặng Sked một sao trên GitHub!';
 
   @override

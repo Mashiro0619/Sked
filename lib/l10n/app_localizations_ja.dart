@@ -502,6 +502,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get openGooglePlayFailed => 'Google Play を開けませんでした';
 
   @override
+  String get microsoftStoreDesc => 'Microsoft Store で Sked を表示';
+
+  @override
+  String get openMicrosoftStoreFailed => 'Microsoft Store を開けませんでした';
+
+  @override
   String get starSkedOnGithub => 'GitHub で Sked にスターを！';
 
   @override

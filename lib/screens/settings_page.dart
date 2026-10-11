@@ -84,6 +84,7 @@ enum _SettingsFlow {
   updateCheck,
   developerModePage,
   googlePlay,
+  microsoftStore,
   githubRepo,
   clearAppData,
 }
@@ -658,6 +659,16 @@ class _SettingsPageState extends State<SettingsPage>
         onTap: _isFlowOpen(_SettingsFlow.googlePlay) ? null : _openGooglePlay,
       ),
       SettingsConnectedTile(
+        key: const ValueKey('settings-microsoft-store'),
+        leading: const FaIcon(FontAwesomeIcons.microsoft),
+        title: l10n.microsoftStoreUpdateButton,
+        subtitle: l10n.microsoftStoreDesc,
+        trailing: const Icon(Icons.open_in_new),
+        onTap: _isFlowOpen(_SettingsFlow.microsoftStore)
+            ? null
+            : _openMicrosoftStore,
+      ),
+      SettingsConnectedTile(
         leading: const FaIcon(FontAwesomeIcons.github),
         title: l10n.githubRepository,
         subtitle: l10n.starSkedOnGithub,
@@ -927,6 +938,23 @@ class _SettingsPageState extends State<SettingsPage>
       }
       if (!opened && mounted) {
         _showMessage(AppLocalizations.of(context).openGooglePlayFailed);
+      }
+    });
+  }
+
+  Future<void> _openMicrosoftStore() async {
+    await _guardFlow(_SettingsFlow.microsoftStore, () async {
+      const productId = '9NWRR6ZP6K6T';
+      final opened = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
+          ? await MicrosoftStoreUpdateService(
+              productId: productId,
+              urlLauncher: widget.urlLauncher,
+            ).openProductPage()
+          : await _tryLaunchExternal(
+              Uri.https('apps.microsoft.com', '/detail/$productId'),
+            );
+      if (!opened && mounted) {
+        _showMessage(AppLocalizations.of(context).openMicrosoftStoreFailed);
       }
     });
   }

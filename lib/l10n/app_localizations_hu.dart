@@ -525,6 +525,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get openGooglePlayFailed => 'Nem sikerült megnyitni a Google Playt';
 
   @override
+  String get microsoftStoreDesc => 'Sked megtekintése a Microsoft Store-ban';
+
+  @override
+  String get openMicrosoftStoreFailed =>
+      'Nem sikerült megnyitni a Microsoft Store-t';
+
+  @override
   String get starSkedOnGithub => 'Csillagozza meg a Skedet a GitHubon!';
 
   @override

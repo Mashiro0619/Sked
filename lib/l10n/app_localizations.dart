@@ -1075,6 +1075,18 @@ abstract class AppLocalizations {
   /// **'Unable to open Google Play'**
   String get openGooglePlayFailed;
 
+  /// No description provided for @microsoftStoreDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View Sked in Microsoft Store'**
+  String get microsoftStoreDesc;
+
+  /// No description provided for @openMicrosoftStoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open Microsoft Store'**
+  String get openMicrosoftStoreFailed;
+
   /// No description provided for @starSkedOnGithub.
   ///
   /// In en, this message translates to:

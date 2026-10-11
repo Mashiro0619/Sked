@@ -516,6 +516,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get openGooglePlayFailed => 'Google Play नहीं खुल सका';
 
   @override
+  String get microsoftStoreDesc => 'Microsoft Store में Sked देखें';
+
+  @override
+  String get openMicrosoftStoreFailed => 'Microsoft Store नहीं खुल सका';
+
+  @override
   String get starSkedOnGithub => 'GitHub पर Sked को स्टार दें!';
 
   @override

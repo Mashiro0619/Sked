@@ -523,6 +523,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get openGooglePlayFailed => 'Google Play не може да се отвори';
 
   @override
+  String get microsoftStoreDesc => 'Преглед на Sked в Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed => 'Microsoft Store не може да се отвори';
+
+  @override
   String get starSkedOnGithub => 'Дайте звезда на Sked в GitHub!';
 
   @override

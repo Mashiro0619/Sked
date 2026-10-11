@@ -515,6 +515,13 @@ class AppLocalizationsCs extends AppLocalizations {
   String get openGooglePlayFailed => 'Google Play se nepodařilo otevřít';
 
   @override
+  String get microsoftStoreDesc => 'Zobrazit Sked v obchodě Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed =>
+      'Microsoft Store se nepodařilo otevřít';
+
+  @override
   String get starSkedOnGithub => 'Dejte Sked hvězdičku na GitHubu!';
 
   @override

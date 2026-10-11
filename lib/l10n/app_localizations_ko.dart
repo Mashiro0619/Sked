@@ -502,6 +502,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get openGooglePlayFailed => 'Google Play를 열 수 없습니다';
 
   @override
+  String get microsoftStoreDesc => 'Microsoft Store에서 Sked 보기';
+
+  @override
+  String get openMicrosoftStoreFailed => 'Microsoft Store를 열 수 없습니다';
+
+  @override
   String get starSkedOnGithub => 'GitHub에서 Sked에 스타를 남겨 주세요!';
 
   @override

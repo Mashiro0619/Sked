@@ -517,6 +517,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get openGooglePlayFailed => 'Google Playn avaaminen epäonnistui';
 
   @override
+  String get microsoftStoreDesc => 'Näytä Sked Microsoft Storessa';
+
+  @override
+  String get openMicrosoftStoreFailed =>
+      'Microsoft Storen avaaminen epäonnistui';
+
+  @override
   String get starSkedOnGithub => 'Anna Skedille tähti GitHubissa!';
 
   @override

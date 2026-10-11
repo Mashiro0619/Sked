@@ -493,6 +493,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openGooglePlayFailed => '无法打开 Google Play';
 
   @override
+  String get microsoftStoreDesc => '在微软商店中查看 Sked';
+
+  @override
+  String get openMicrosoftStoreFailed => '无法打开微软商店';
+
+  @override
   String get starSkedOnGithub => '为 Sked 点亮 Star！';
 
   @override
@@ -3286,6 +3292,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get openGooglePlayFailed => '無法開啟 Google Play';
+
+  @override
+  String get microsoftStoreDesc => '在微軟商店中查看 Sked';
+
+  @override
+  String get openMicrosoftStoreFailed => '無法開啟微軟商店';
 
   @override
   String get starSkedOnGithub => '為 Sked 點亮 Star！';

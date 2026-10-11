@@ -518,6 +518,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get openGooglePlayFailed => 'Nu s-a putut deschide Google Play';
 
   @override
+  String get microsoftStoreDesc => 'Vezi Sked în Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed =>
+      'Nu s-a putut deschide Microsoft Store';
+
+  @override
   String get starSkedOnGithub => 'Oferă o stea pentru Sked pe GitHub!';
 
   @override

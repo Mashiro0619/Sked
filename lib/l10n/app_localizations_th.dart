@@ -517,6 +517,12 @@ class AppLocalizationsTh extends AppLocalizations {
   String get openGooglePlayFailed => 'ไม่สามารถเปิด Google Play ได้';
 
   @override
+  String get microsoftStoreDesc => 'ดู Sked ใน Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed => 'ไม่สามารถเปิด Microsoft Store ได้';
+
+  @override
   String get starSkedOnGithub => 'ให้ดาว Sked บน GitHub!';
 
   @override

@@ -516,6 +516,12 @@ class AppLocalizationsDa extends AppLocalizations {
   String get openGooglePlayFailed => 'Kunne ikke åbne Google Play';
 
   @override
+  String get microsoftStoreDesc => 'Se Sked i Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed => 'Kunne ikke åbne Microsoft Store';
+
+  @override
   String get starSkedOnGithub => 'Giv Sked en stjerne på GitHub!';
 
   @override

@@ -517,6 +517,14 @@ class AppLocalizationsSl extends AppLocalizations {
   String get openGooglePlayFailed => 'Trgovine Google Play ni mogoče odpreti';
 
   @override
+  String get microsoftStoreDesc =>
+      'Ogled aplikacije Sked v trgovini Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed =>
+      'Trgovine Microsoft Store ni mogoče odpreti';
+
+  @override
   String get starSkedOnGithub => 'Podelite Skedu zvezdico na GitHubu!';
 
   @override

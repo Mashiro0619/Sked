@@ -527,6 +527,13 @@ class AppLocalizationsEl extends AppLocalizations {
       'Δεν ήταν δυνατό το άνοιγμα του Google Play';
 
   @override
+  String get microsoftStoreDesc => 'Προβολή του Sked στο Microsoft Store';
+
+  @override
+  String get openMicrosoftStoreFailed =>
+      'Δεν ήταν δυνατό το άνοιγμα του Microsoft Store';
+
+  @override
   String get starSkedOnGithub => 'Δώστε ένα αστέρι στο Sked στο GitHub!';
 
   @override
