@@ -3,8 +3,8 @@ description: Background Android capability bridge for Sked.
 publish_to: none
 
 environment:
-  sdk: ^3.13.0
-  flutter: ">=3.47.0"
+  sdk: ^3.13.5
+  flutter: ">=3.47.7"
 
 dependencies:
   flutter:

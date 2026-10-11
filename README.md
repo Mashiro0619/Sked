@@ -9,7 +9,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/Mashiro0619/Sked?color=black&label=Stable&logo=github)](https://github.com/Mashiro0619/Sked/releases/latest/)
 [![GitHub downloads](https://img.shields.io/github/downloads/Mashiro0619/Sked/total?label=Downloads&logo=github)](https://github.com/Mashiro0619/Sked/releases/)
 [![GitHub stars](https://img.shields.io/github/stars/Mashiro0619/Sked?color=informational&label=Stars)](https://github.com/Mashiro0619/Sked/stargazers)
-[![Flutter](https://img.shields.io/badge/Flutter-%E2%89%A53.47.0-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Flutter](https://img.shields.io/badge/Flutter-%E2%89%A53.47.7-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-A42E2B?logo=gnu)](LICENSE)
 [![GitHub Releases](https://img.shields.io/badge/GitHub_Releases-%E4%B8%8B%E8%BD%BD-181717?logo=github&logoColor=white)](https://github.com/Mashiro0619/Sked/releases)
 </div>

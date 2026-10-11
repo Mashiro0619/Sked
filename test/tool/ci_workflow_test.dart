@@ -25,7 +25,7 @@ void main() {
       );
       if (flutterSetup.isEmpty) continue;
       final setup = flutterSetup.single['with'] as YamlMap;
-      expect(setup['flutter-version'], '3.47.0', reason: job);
+      expect(setup['flutter-version'], '3.47.7', reason: job);
       expect(setup['channel'], 'stable', reason: job);
       expect(
         steps.any(

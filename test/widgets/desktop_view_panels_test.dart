@@ -153,8 +153,20 @@ void main() {
       await t.pumpAndSettle();
       expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
       final bounds = t.getRect(_key('workspace-detail-surface'));
-      expect(bounds.bottom, lessThanOrEqualTo(892));
-      expect(bounds.height, lessThanOrEqualTo(720));
+      final frame = t.getRect(find.byType(WorkspaceFrame));
+      final toolbar = t.getRect(_key('general-workspace-toolbar'));
+      expect(bounds.top, greaterThanOrEqualTo(toolbar.bottom + 8));
+      expect(bounds.bottom, lessThanOrEqualTo(frame.bottom - 8));
+      expect(_key('workspace-editor-close').hitTestable(), findsOneWidget);
+      expect(
+        find
+            .descendant(
+              of: find.byType(GeneralEventEditorSheet),
+              matching: find.text('Save'),
+            )
+            .hitTestable(),
+        findsOneWidget,
+      );
       expect(_key('workspace-editor-drag'), findsOneWidget);
       expect(_key('workspace-editor-barrier'), findsOneWidget);
       expect(p.selectedGeneralDate, DateTime(2026, 9, 28));

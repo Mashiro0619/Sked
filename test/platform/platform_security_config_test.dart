@@ -589,7 +589,7 @@ void main() {
     );
     expect(RegExp(r'NuGet/setup-nuget@v4').allMatches(workflow), hasLength(1));
     expect(
-      RegExp(r"flutter-version: '3\.47\.0'").allMatches(workflow),
+      RegExp(r"flutter-version: '3\.47\.7'").allMatches(workflow),
       hasLength(4),
     );
     expect(workflow, isNot(contains('actions/checkout@v4')));

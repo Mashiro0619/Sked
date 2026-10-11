@@ -462,7 +462,7 @@ void main() {
   }
 
   testWidgets(
-    'editing from companion and cancelling returns to original reminders',
+    'cancelling companion editing returns to details before original reminders',
     (t) async {
       size(t);
       final p = await workspaceProvider(
@@ -489,6 +489,19 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(find.byType(GeneralEventEditorSheet), findsNothing);
+      expect(details, findsOneWidget);
+      expect(
+        t.element(
+          find.byKey(
+            const ValueKey('general-reminders-list'),
+            skipOffstage: false,
+          ),
+        ),
+        same(element),
+      );
+      await t.tap(inDetails(k('workspace-inspector-close')));
+      await t.pumpAndSettle();
+      expect(details, findsNothing);
       expect(t.element(list), same(element));
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());

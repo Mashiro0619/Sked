@@ -489,11 +489,13 @@ void _registerNestedEditorTests() {
         await tester.enterText(title, 'Retained anchor draft');
         await tester.pumpAndSettle();
         expect(tester.getRect(_key('workspace-detail-surface')), panel);
-        // Both sizes retain enough room at the original captured position.
+        // Keep the height when narrowing a course editor: its natural content
+        // can fill the available work area, so reducing the height would
+        // require clamping rather than exercising unchanged-anchor behavior.
         // Resizing the shared Navigator must not make its hidden source chase
         // the new editor, and returning to the old size must not move it again.
         for (final size in [
-          student ? const Size(1500, 1000) : const Size(1100, 950),
+          student ? const Size(1500, 1100) : const Size(1100, 950),
           originalSize,
         ]) {
           tester.view.physicalSize = size;
