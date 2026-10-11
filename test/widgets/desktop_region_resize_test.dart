@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
@@ -53,6 +55,28 @@ Future<void> _drag(WidgetTester t, Finder handle, Offset delta) async {
   await t.pumpAndSettle();
 }
 
+String _importDraft() => jsonEncode({
+  'name': 'Resize timetable',
+  'startDate': '2026-09-07',
+  'totalWeeks': 16,
+  'periodTimeSet': {
+    'name': 'Periods',
+    'periodTimes': [
+      {'index': 1, 'startMinutes': 480, 'endMinutes': 525},
+    ],
+  },
+  'courses': [
+    {
+      'name': 'Retained course',
+      'dayOfWeek': 1,
+      'semesterWeeks': [1, 2],
+      'periods': [1],
+      'startMinutes': 480,
+      'endMinutes': 525,
+    },
+  ],
+});
+
 void main() {
   for (final (home, region, handleKey, delta)
       in <(Widget, DesktopLayoutRegion, String, Offset)>[
@@ -101,6 +125,51 @@ void main() {
         await t.pumpWidget(const SizedBox.shrink());
         await _mount(t, p, preferences, home: home);
         expect(t.getCenter(handle).dx, closeTo(after.dx, .01));
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox.shrink());
+      },
+      variant: _windows,
+    );
+  }
+
+  for (final direction in TextDirection.values) {
+    testWidgets(
+      'JSON preview boundary retains exact draft and caps content ($direction)',
+      (t) async {
+        _viewport(t, const Size(1440, 900));
+        final p = await workspaceProvider();
+        final preferences = DesktopLayoutPreferences.memory();
+        addTearDown(p.dispose);
+        addTearDown(preferences.dispose);
+        await _mount(
+          t,
+          p,
+          preferences,
+          home: SchoolImportResultEditorPage(initialText: _importDraft()),
+          direction: direction,
+        );
+        final field = find.byType(TextField);
+        final element = t.element(field);
+        final draft = '  ${_importDraft()}\n';
+        await t.enterText(field, draft);
+        final handle = _key('school-import-preview-resize');
+        final sign = direction == TextDirection.ltr ? -1.0 : 1.0;
+        await _drag(t, handle, Offset(3000 * sign, 0));
+        expect(t.getSize(field).width, greaterThanOrEqualTo(624));
+        final widthAtLimit = t
+            .getSize(_key('school-import-json-preview'))
+            .width;
+        await _drag(t, handle, Offset(-80 * sign, 0));
+        expect(
+          t.getSize(_key('school-import-json-preview')).width,
+          lessThan(widthAtLimit),
+        );
+        expect(t.element(field), same(element));
+        expect(t.widget<TextField>(field).controller!.text, draft);
+        t.view.physicalSize = const Size(650, 800);
+        await t.pumpAndSettle();
+        expect(t.element(field), same(element));
+        expect(t.widget<TextField>(field).controller!.text, draft);
         expect(t.takeException(), isNull);
         await t.pumpWidget(const SizedBox.shrink());
       },

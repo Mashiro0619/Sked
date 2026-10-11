@@ -2,10 +2,13 @@ import '../widgets/desktop_window_host.dart';
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/school_import_summary_preview.dart';
 import '../widgets/workbench_layout_policy.dart';
+import '../widgets/sked_resizable.dart';
+import '../services/desktop_layout_preferences.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
@@ -219,79 +222,134 @@ class _SchoolImportResultEditorPageState
                     ),
                   ),
                 Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final scale =
-                          MediaQuery.textScalerOf(context).scale(14) / 14;
-                      final split = WorkbenchLayoutPolicy.formCanSplit(
-                        constraints.maxWidth,
-                        scale,
-                        navigation: 360,
-                        content: 624,
-                      );
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color:
-                                    theme.colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: TextField(
-                                controller: _controller,
-                                focusNode: _focusNode,
-                                enabled: !_isSubmitting,
-                                autofocus: false,
-                                onChanged: _updatePreview,
-                                expands: true,
-                                maxLines: null,
-                                minLines: null,
-                                inputFormatters: [
-                                  Utf16CodeUnitLimitingTextInputFormatter(
-                                    widget.maxEditableCodeUnits,
-                                  ),
-                                ],
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontFamily: 'monospace',
-                                  height: 1.5,
-                                ),
-                                textAlignVertical: TextAlignVertical.top,
-                                decoration: InputDecoration(
-                                  labelText: l10n.schoolImportResultEditorTitle,
-                                  alignLabelWithHint: true,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.all(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: split ? 24 : 0),
-                          SizedBox(
-                            width: split
-                                ? 360 * WorkbenchLayoutPolicy.textFactor(scale)
-                                : 0,
-                            child: Offstage(
-                              offstage: !split,
-                              child: ExcludeFocus(
-                                excluding: !split,
-                                child: SingleChildScrollView(
-                                  key: const ValueKey(
-                                    'school-import-json-preview',
-                                  ),
-                                  child: _preview == null
-                                      ? Text(l10n.noImportableTimetables)
-                                      : SchoolImportSummaryPreview(
-                                          response: _preview!,
+                  child: DesktopResizableRegion(
+                    layoutKey: DesktopLayoutRegion.importPreview,
+                    builder: (context, preferred, update, commit, reset) =>
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final scale =
+                                MediaQuery.textScalerOf(context).scale(14) / 14;
+                            final split = WorkbenchLayoutPolicy.formCanSplit(
+                              constraints.maxWidth,
+                              scale,
+                              navigation: 360,
+                              content: 624,
+                            );
+                            final factor = WorkbenchLayoutPolicy.textFactor(
+                              scale,
+                            );
+                            final maximumWidth = math.max(
+                              320 * factor,
+                              constraints.maxWidth - 624 * factor - 24,
+                            );
+                            final previewWidth = ((preferred ?? 360) * factor)
+                                .clamp(320 * factor, maximumWidth);
+                            return Stack(
+                              children: [
+                                Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: theme
+                                              .colorScheme
+                                              .surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
+                                        child: TextField(
+                                          controller: _controller,
+                                          focusNode: _focusNode,
+                                          enabled: !_isSubmitting,
+                                          autofocus: false,
+                                          onChanged: _updatePreview,
+                                          expands: true,
+                                          maxLines: null,
+                                          minLines: null,
+                                          inputFormatters: [
+                                            Utf16CodeUnitLimitingTextInputFormatter(
+                                              widget.maxEditableCodeUnits,
+                                            ),
+                                          ],
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                fontFamily: 'monospace',
+                                                height: 1.5,
+                                              ),
+                                          textAlignVertical:
+                                              TextAlignVertical.top,
+                                          decoration: InputDecoration(
+                                            labelText: l10n
+                                                .schoolImportResultEditorTitle,
+                                            alignLabelWithHint: true,
+                                            border: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.all(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: split ? 24 : 0,
+                                      child: const Center(
+                                        child: VerticalDivider(width: 1),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: split ? previewWidth : 0,
+                                      child: Offstage(
+                                        offstage: !split,
+                                        child: ExcludeFocus(
+                                          excluding: !split,
+                                          child: SingleChildScrollView(
+                                            key: const ValueKey(
+                                              'school-import-json-preview',
+                                            ),
+                                            child: _preview == null
+                                                ? Text(
+                                                    l10n.noImportableTimetables,
+                                                  )
+                                                : SchoolImportSummaryPreview(
+                                                    response: _preview!,
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                                if (split &&
+                                    WorkbenchLayoutPolicy.pointerLayout(
+                                      context,
+                                    ))
+                                  PositionedDirectional(
+                                    end: previewWidth + 7.5,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: 9,
+                                    child: SkedResizeHandle(
+                                      key: const ValueKey(
+                                        'school-import-preview-resize',
+                                      ),
+                                      reverse: true,
+                                      onDelta: (delta) => update(
+                                        (previewWidth + delta).clamp(
+                                              320 * factor,
+                                              maximumWidth,
+                                            ) /
+                                            factor,
+                                      ),
+                                      onEnd: commit,
+                                      onReset: reset,
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                   ),
                 ),
               ],
