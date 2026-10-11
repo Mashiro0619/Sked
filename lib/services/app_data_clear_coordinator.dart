@@ -4,6 +4,7 @@ import 'agenda_notification_runtime_store.dart';
 import 'agenda_notification_service.dart';
 import 'app_data_clear_service.dart';
 import 'app_exit_controller.dart';
+import 'desktop_layout_preferences.dart';
 
 class AppDataClearCoordinator {
   AppDataClearCoordinator({
@@ -12,6 +13,7 @@ class AppDataClearCoordinator {
     AgendaNotificationProjectionFenceStore? projectionFenceStore,
     this.notificationService,
     this.agendaCoordinator,
+    this.desktopLayoutPreferences,
   }) : _clearService = clearService ?? AppDataClearService(),
        _exitController = exitController ?? AppExitController(),
        _projectionFenceStore =
@@ -23,52 +25,66 @@ class AppDataClearCoordinator {
   final AgendaNotificationProjectionFenceStore _projectionFenceStore;
   final AgendaNotificationService? notificationService;
   final AgendaCoordinator? agendaCoordinator;
+  final DesktopLayoutPreferences? desktopLayoutPreferences;
 
-  Future<void> clearAndExit(TimetableProvider provider) {
-    return provider.runExclusiveDataClear(
-      clear: () async {
-        // Platform runtime state belongs to the application-scoped
-        // coordinator. Do not construct one here: a data-clear caller may run
-        // before platform plugins have been initialized (for example in an
-        // isolated test or a recovery path).
-        // Write the cross-engine notification tombstone before deleting
-        // AppData. A headless WorkManager pass may have loaded the old file in
-        // another isolate and must be fenced before runtime/platform cleanup.
-        final agenda = agendaCoordinator;
-        if (agenda != null) {
-          await agenda.beginDataClear();
-        } else {
-          // Recovery/test callers may run before a foreground coordinator has
-          // constructed its plugin service. The persistent runtime store is
-          // sufficient to invalidate headless projection in that case.
-          await _projectionFenceStore.blockProjectionForDataClear();
-          // A standalone/recovery caller can still provide the application's
-          // already-owned service without constructing a second plugin
-          // instance. The mounted Settings path always injects this service;
-          // callers without one use a short-lived cleanup owner so platform
-          // notifications do not outlive deleted AppData. Platform teardown
-          // is best effort here because recovery can run before plugin
-          // registration; the durable fence still blocks headless projection.
-          final service = notificationService ?? AgendaNotificationService();
-          try {
-            await service.initialize();
-            await service.clearRuntime();
-          } catch (_) {
-            // Preserve the clear path's durable/fence semantics when Android
-            // notification initialization is unavailable during recovery.
+  Future<void> clearAndExit(TimetableProvider provider) async {
+    final layout = desktopLayoutPreferences ?? DesktopLayoutPreferences();
+    var layoutFrozen = false;
+    var dataCleared = false;
+    try {
+      await provider.runExclusiveDataClear(
+        clear: () async {
+          // This queue is intentionally separate from business persistence.
+          // Drain it before deleting files so a late resize cannot recreate them.
+          layoutFrozen = true;
+          await layout.clearForDataClear();
+          // Platform runtime state belongs to the application-scoped
+          // coordinator. Do not construct one here: a data-clear caller may run
+          // before platform plugins have been initialized (for example in an
+          // isolated test or a recovery path).
+          // Write the cross-engine notification tombstone before deleting
+          // AppData. A headless WorkManager pass may have loaded the old file in
+          // another isolate and must be fenced before runtime/platform cleanup.
+          final agenda = agendaCoordinator;
+          if (agenda != null) {
+            await agenda.beginDataClear();
+          } else {
+            // Recovery/test callers may run before a foreground coordinator has
+            // constructed its plugin service. The persistent runtime store is
+            // sufficient to invalidate headless projection in that case.
+            await _projectionFenceStore.blockProjectionForDataClear();
+            // A standalone/recovery caller can still provide the application's
+            // already-owned service without constructing a second plugin
+            // instance. The mounted Settings path always injects this service;
+            // callers without one use a short-lived cleanup owner so platform
+            // notifications do not outlive deleted AppData. Platform teardown
+            // is best effort here because recovery can run before plugin
+            // registration; the durable fence still blocks headless projection.
+            final service = notificationService ?? AgendaNotificationService();
+            try {
+              await service.initialize();
+              await service.clearRuntime();
+            } catch (_) {
+              // Preserve the clear path's durable/fence semantics when Android
+              // notification initialization is unavailable during recovery.
+            }
           }
-        }
-        try {
-          await _clearService.clear();
-        } catch (_) {
-          // A failed clear can have removed only part of AppData. Leave the
-          // fence blocked rather than trusting the old in-memory snapshot. The
-          // next successful durable AppData commit reactivates it through
-          // AgendaCoordinator's committed-data listener.
-          rethrow;
-        }
-      },
-      exit: _exitController.exitApp,
-    );
+          try {
+            await _clearService.clear();
+            dataCleared = true;
+          } catch (_) {
+            // A failed clear can have removed only part of AppData. Leave the
+            // fence blocked rather than trusting the old in-memory snapshot. The
+            // next successful durable AppData commit reactivates it through
+            // AgendaCoordinator's committed-data listener.
+            rethrow;
+          }
+        },
+        exit: _exitController.exitApp,
+      );
+    } finally {
+      if (layoutFrozen && !dataCleared) layout.resumeAfterFailedDataClear();
+      if (desktopLayoutPreferences == null) layout.dispose();
+    }
   }
 }

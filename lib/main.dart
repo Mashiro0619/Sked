@@ -28,6 +28,7 @@ import 'widgets/sked_expressive_loading_indicator.dart';
 import 'widgets/material_ui_compatibility.dart';
 import 'widgets/desktop_window_host.dart';
 import 'services/desktop_window_bridge.dart';
+import 'services/desktop_layout_preferences.dart';
 import 'services/developer_ui_preferences.dart';
 
 Future<void> main() async {
@@ -74,6 +75,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
   late final TimetableProviderFactory _providerFactory;
   var _status = _AppBootstrapStatus.acquiring;
   TimetableProvider? _provider;
+  DesktopLayoutPreferences? _desktopLayout;
   Future<void>? _providerLoad;
   Future<void>? _acquireOperation;
   var _attemptInProgress = false;
@@ -117,6 +119,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
       try {
         final provider = _providerFactory();
         _provider = provider;
+        _desktopLayout = DesktopLayoutPreferences();
+        unawaited(_desktopLayout!.load());
         final load = provider.load();
         _providerLoad = load;
         unawaited(
@@ -196,9 +200,28 @@ class _AppBootstrapState extends State<AppBootstrap> {
       debugPrint('App provider shutdown failed: $error\n$stackTrace');
     } finally {
       try {
-        await _releaseLeaseIfOwned();
+        final layout = _desktopLayout;
+        if (layout != null) {
+          try {
+            if (!await layout.flush()) {
+              debugPrint(
+                'Desktop layout preference save failed during shutdown',
+              );
+            }
+          } finally {
+            layout.dispose();
+          }
+        }
       } catch (error, stackTrace) {
-        debugPrint('App instance lease release failed: $error\n$stackTrace');
+        debugPrint(
+          'Desktop layout preference shutdown failed: $error\n$stackTrace',
+        );
+      } finally {
+        try {
+          await _releaseLeaseIfOwned();
+        } catch (error, stackTrace) {
+          debugPrint('App instance lease release failed: $error\n$stackTrace');
+        }
       }
     }
   }
@@ -207,7 +230,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
   Widget build(BuildContext context) {
     final provider = _provider;
     if (_status == _AppBootstrapStatus.ready && provider != null) {
-      return MyApp(provider: provider, providerReady: _providerLoad);
+      return MyApp(
+        provider: provider,
+        providerReady: _providerLoad,
+        desktopLayoutPreferences: _desktopLayout,
+      );
     }
     return _AppBootstrapGate(
       status: _status,
@@ -330,10 +357,16 @@ class _AppBootstrapGateState extends State<_AppBootstrapGate> {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, required this.provider, this.providerReady});
+  const MyApp({
+    super.key,
+    required this.provider,
+    this.providerReady,
+    this.desktopLayoutPreferences,
+  });
 
   final TimetableProvider provider;
   final Future<void>? providerReady;
+  final DesktopLayoutPreferences? desktopLayoutPreferences;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -342,15 +375,25 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late AgendaCoordinator _agendaCoordinator;
   final _developerUi = DeveloperUiPreferences();
+  late final DesktopLayoutPreferences _desktopLayout;
+  late final bool _ownsDesktopLayout;
   final _windowModals = DesktopWindowModalObserver();
   final _updatePrompts = UpdatePromptController();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  var _layoutSaveErrorShown = false;
+  var _layoutFeedbackScheduled = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     DesktopWindowBridge.instance.prepareClose = _prepareWindowClose;
+    _ownsDesktopLayout = widget.desktopLayoutPreferences == null;
+    _desktopLayout =
+        widget.desktopLayoutPreferences ?? DesktopLayoutPreferences();
+    _desktopLayout.addListener(_onDesktopLayoutChanged);
+    unawaited(_desktopLayout.load());
     unawaited(_developerUi.load());
     _agendaCoordinator = AgendaCoordinator(
       provider: widget.provider,
@@ -360,8 +403,52 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
   }
 
+  void _onDesktopLayoutChanged() {
+    if (!_desktopLayout.hasError) {
+      _layoutSaveErrorShown = false;
+      return;
+    }
+    if (!_desktopLayout.hasUnsavedChanges ||
+        _layoutSaveErrorShown ||
+        _layoutFeedbackScheduled) {
+      return;
+    }
+    _layoutFeedbackScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _layoutFeedbackScheduled = false;
+      if (!mounted ||
+          !_desktopLayout.hasError ||
+          !_desktopLayout.hasUnsavedChanges) {
+        return;
+      }
+      final context = _navigatorKey.currentContext;
+      final messenger = _scaffoldMessengerKey.currentState;
+      if (context == null || messenger == null) return;
+      final l10n = AppLocalizations.of(context);
+      _layoutSaveErrorShown = true;
+      messenger.showSnackBar(
+        SnackBar(
+          key: const ValueKey('desktop-layout-save-error'),
+          content: Text(l10n.saveFailedRetry),
+          action: SnackBarAction(
+            key: const ValueKey('desktop-layout-save-retry'),
+            label: l10n.retrySave,
+            onPressed: () {
+              _layoutSaveErrorShown = false;
+              unawaited(_desktopLayout.retry());
+            },
+          ),
+        ),
+      );
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
   Future<bool> _prepareWindowClose() async {
     try {
+      if (!await _desktopLayout.flush()) {
+        debugPrint('Desktop layout preference save failed during close');
+      }
       if (!await _developerUi.waitForPendingSave()) {
         throw StateError('Developer UI preference save failed');
       }
@@ -409,6 +496,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.detached) {
       _agendaCoordinator.setForegroundActive(false);
       _flushPendingUiStateSaves(widget.provider);
+      _flushDesktopLayoutPreferences(_desktopLayout);
     }
     if (state == AppLifecycleState.resumed) {
       _agendaCoordinator.setForegroundActive(true);
@@ -428,6 +516,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _agendaCoordinator.setForegroundActive(false);
     _agendaCoordinator.dispose();
     _developerUi.dispose();
+    _desktopLayout.removeListener(_onDesktopLayoutChanged);
+    _flushDesktopLayoutPreferences(
+      _desktopLayout,
+      disposeWhenComplete: _ownsDesktopLayout,
+    );
     _windowModals.dispose();
     _updatePrompts.dispose();
     _flushPendingUiStateSaves(widget.provider);
@@ -452,10 +545,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 ChangeNotifierProvider<DeveloperUiPreferences>.value(
                   value: _developerUi,
                 ),
+                ChangeNotifierProvider<DesktopLayoutPreferences>.value(
+                  value: _desktopLayout,
+                ),
               ],
               child: MaterialApp(
                 debugShowCheckedModeBanner: false,
                 navigatorKey: _navigatorKey,
+                scaffoldMessengerKey: _scaffoldMessengerKey,
                 navigatorObservers: [_windowModals, _updatePrompts.observer],
                 onGenerateTitle: (context) =>
                     AppLocalizations.of(context).appTitle,
@@ -486,7 +583,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   themeColorMode: snapshot.themeColorMode,
                   colorfulUiColorValues: snapshot.colorfulUiColorValues,
                 ),
-                home: const AppHomeScreen(),
+                home: Selector<DesktopLayoutPreferences, bool>(
+                  selector: (_, preferences) => preferences.ready,
+                  builder: (_, ready, _) => ready
+                      ? const AppHomeScreen()
+                      : const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        ),
+                ),
               ),
             );
           },
@@ -690,6 +794,22 @@ void _flushPendingUiStateSaves(TimetableProvider provider) {
     provider.flushPendingUiStateSaves().onError((error, stackTrace) {
       debugPrint('Lifecycle UI state flush failed: $error\n$stackTrace');
     }),
+  );
+}
+
+void _flushDesktopLayoutPreferences(
+  DesktopLayoutPreferences preferences, {
+  bool disposeWhenComplete = false,
+}) {
+  unawaited(
+    preferences
+        .flush()
+        .then((saved) {
+          if (!saved) debugPrint('Desktop layout preference flush failed');
+        })
+        .whenComplete(() {
+          if (disposeWhenComplete) preferences.dispose();
+        }),
   );
 }
 

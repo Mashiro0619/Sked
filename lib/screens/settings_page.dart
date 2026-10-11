@@ -25,6 +25,7 @@ import '../services/app_update_coordinator.dart';
 import '../services/microsoft_store_update_service.dart';
 import '../services/app_version_service.dart';
 import '../services/app_data_clear_coordinator.dart';
+import '../services/desktop_layout_preferences.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
@@ -154,7 +155,13 @@ class _SettingsPageState extends State<SettingsPage>
   AppDataClearCoordinator get _dataClearCoordinator {
     final coordinator = widget.dataClearCoordinator;
     if (coordinator != null) return coordinator;
-    return AppDataClearCoordinator(agendaCoordinator: _agendaCoordinator);
+    return AppDataClearCoordinator(
+      agendaCoordinator: _agendaCoordinator,
+      desktopLayoutPreferences: Provider.of<DesktopLayoutPreferences?>(
+        context,
+        listen: false,
+      ),
+    );
   }
 
   AgendaCoordinator? get _agendaCoordinator {

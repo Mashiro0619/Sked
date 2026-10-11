@@ -3,8 +3,18 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
+import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/app_data_clear_coordinator.dart';
+import 'package:sked/services/app_data_clear_service.dart';
+import 'package:sked/services/app_exit_controller.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
+import 'package:sked/services/school_site_service.dart';
+import 'package:sked/services/school_site_store.dart';
+import 'package:sked/services/secret_store.dart';
 
 const _resources = DesktopLayoutRegion.resources;
 const _editor = DesktopLayoutRegion.eventEditor;
@@ -12,6 +22,50 @@ const _dayAgenda = DesktopLayoutRegion.dayAgenda;
 
 String _record(Map<String, Object?> regions) =>
     jsonEncode({'version': 1, 'regions': regions});
+
+class _MemoryStorage implements TimetableStorage {
+  AppData data = buildInitialAppData(buildDefaultPeriodTimes());
+  @override
+  Future<StorageLoadResult> load() async =>
+      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
+  @override
+  Future<void> save(AppData value) async => data = value;
+  @override
+  Future<String?> filePath() async => 'memory://desktop-layout-data';
+}
+
+class _Sites extends SchoolSiteStore {
+  _Sites() : super.base();
+  @override
+  Future<String?> load() async => '[]';
+  @override
+  Future<void> save(String source) async {}
+  @override
+  Future<String?> filePath() async => 'memory://desktop-layout-sites';
+}
+
+class _Secrets implements SecretStore {
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => '';
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {}
+}
+
+class _ClearService implements AppDataClearService {
+  _ClearService(this.action);
+  final Future<void> Function() action;
+  @override
+  Future<void> clear() => action();
+}
+
+class _ExitController implements AppExitController {
+  _ExitController({this.error});
+  final Object? error;
+  @override
+  Future<void> exitApp() async {
+    if (error != null) throw error!;
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -392,4 +446,47 @@ void main() {
     expect(p.ready, isTrue);
     expect(removes, 1);
   });
+
+  for (final clearFails in [false, true]) {
+    test(
+      'app clear ${clearFails ? 'failure releases' : 'commit retains'} the layout write freeze',
+      () async {
+        final p = DesktopLayoutPreferences.memory(
+          initialValues: {_resources: const PreferredRegionSize(width: 300)},
+        );
+        addTearDown(p.dispose);
+        final provider = TimetableProvider(
+          storage: _MemoryStorage(),
+          secretStore: _Secrets(),
+          schoolSiteService: SchoolSiteService(
+            store: _Sites(),
+            coordinator: SchoolSiteStorageCoordinator(),
+          ),
+        );
+        await provider.load();
+        addTearDown(provider.dispose);
+        final notifications = AgendaNotificationService(
+          enabled: false,
+          gateway: MemoryAgendaNotificationGateway(),
+          runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+        );
+        addTearDown(notifications.dispose);
+        final coordinator = AppDataClearCoordinator(
+          desktopLayoutPreferences: p,
+          notificationService: notifications,
+          projectionFenceStore: MemoryAgendaNotificationRuntimeStore(),
+          clearService: _ClearService(() async {
+            expect(p.preferenceFor(_resources), isNull);
+            if (clearFails) throw StateError('clear failed');
+          }),
+          exitController: _ExitController(error: StateError('exit failed')),
+        );
+        await expectLater(coordinator.clearAndExit(provider), throwsStateError);
+        p.setPreferredSize(_resources, const PreferredRegionSize(width: 360));
+        expect(await p.flush(), isTrue);
+        expect(p.preferenceFor(_resources)?.width, clearFails ? 360 : null);
+        expect(provider.isDataClearCommitted, !clearFails);
+      },
+    );
+  }
 }

@@ -14,6 +14,7 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
+import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
@@ -132,6 +133,7 @@ class WorkspaceHarness extends StatefulWidget {
     required this.provider,
     this.home,
     this.developerUiPreferences,
+    this.layoutPreferences,
     this.textScale = 1,
     this.textDirection,
     this.locale = const Locale('en'),
@@ -142,6 +144,7 @@ class WorkspaceHarness extends StatefulWidget {
   final TimetableProvider provider;
   final Widget? home;
   final DeveloperUiPreferences? developerUiPreferences;
+  final DesktopLayoutPreferences? layoutPreferences;
   final double? textScale;
   final TextDirection? textDirection;
   final Locale locale;
@@ -182,6 +185,10 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
     );
     return MultiProvider(
       providers: [
+        if (widget.layoutPreferences != null)
+          ChangeNotifierProvider<DesktopLayoutPreferences>.value(
+            value: widget.layoutPreferences!,
+          ),
         ChangeNotifierProvider<AgendaNotificationService>(
           create: (_) => AgendaNotificationService(
             enabled: false,
