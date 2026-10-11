@@ -4,11 +4,16 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
+import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/models/school_site_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
+import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
+import 'package:sked/services/school_site_service.dart';
+import 'package:sked/services/school_site_store.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
 
 import '../support/workspace_harness.dart';
@@ -53,6 +58,19 @@ Future<void> _drag(WidgetTester t, Finder handle, Offset delta) async {
   await t.pump();
   await gesture.up();
   await t.pumpAndSettle();
+}
+
+class _SiteStore extends SchoolSiteStore {
+  _SiteStore() : super.base();
+  String source = encodeSchoolSites(const [
+    SchoolSite(name: 'Resize school', loginUrl: 'https://school.example'),
+  ]);
+  @override
+  Future<String?> load() async => source;
+  @override
+  Future<void> save(String value) async => source = value;
+  @override
+  Future<String?> filePath() async => 'memory://resize-sites';
 }
 
 String _importDraft() => jsonEncode({
@@ -176,4 +194,46 @@ void main() {
       variant: _windows,
     );
   }
+
+  testWidgets(
+    'school browser and editor share a boundary without replacing the draft',
+    (t) async {
+      _viewport(t, const Size(1440, 900));
+      final p = await workspaceProvider();
+      final preferences = DesktopLayoutPreferences.memory();
+      final sites = _SiteStore();
+      addTearDown(p.dispose);
+      addTearDown(preferences.dispose);
+      await _mount(
+        t,
+        p,
+        preferences,
+        home: SchoolSitesPage(siteService: SchoolSiteService(store: sites)),
+      );
+      await _drag(t, _key('school-sites-resize'), const Offset(100, 0));
+      final browserBoundary = t.getCenter(_key('school-sites-resize')).dx;
+      final l = AppLocalizations.of(t.element(find.byType(SchoolSitesPage)));
+      await t.tap(find.widgetWithText(OutlinedButton, l.schoolSitesEdit));
+      await t.pumpAndSettle();
+      expect(
+        t.getCenter(_key('school-site-editor-resize')).dx,
+        closeTo(browserBoundary, .01),
+      );
+      final name = find.byType(TextField).first;
+      final element = t.element(name);
+      await t.enterText(name, 'Retained school draft');
+      await _drag(t, _key('school-site-editor-resize'), const Offset(80, 0));
+      t.view.physicalSize = const Size(650, 800);
+      await t.pumpAndSettle();
+      expect(t.element(name), same(element));
+      expect(
+        t.widget<TextField>(name).controller!.text,
+        'Retained school draft',
+      );
+      expect(sites.source, isNot(contains('Retained school draft')));
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox.shrink());
+    },
+    variant: _windows,
+  );
 }
