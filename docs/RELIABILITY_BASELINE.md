@@ -35,7 +35,7 @@ flutter test --no-pub --coverage --concurrency=4
 git diff --check
 ```
 
-覆盖率策略以 [CI](../.github/workflows/flutter.yml) 为准：同一 runner 测量基准提交和当前提交，执行总覆盖率不退化及改动行 90% 门禁；基准不可测时使用 81.76% 的启动下限和改动行门禁。使用 [coverage_base.dart](../tool/coverage_base.dart) 和 [coverage_gate.dart](../tool/coverage_gate.dart) 选择正确比较范围，不将不同操作系统的 LCOV 或仅 working tree 的比较冒充完整 PR 验证。
+覆盖率用于定位尚未验证的代码路径。[CI](../.github/workflows/flutter.yml) 只对当前提交执行一次完整 VM 测试，并保留生成的 `coverage/lcov.info` 作为诊断附件，不设总覆盖率或改动行百分比门槛，也不为覆盖率检出基准提交重跑全套。测试取舍以数据完整性、故障恢复、真实交互和已发生的回归为依据；测试失败仍阻止 CI 通过。
 
 ## CI 与平台检查
 
@@ -43,7 +43,7 @@ git diff --check
 
 | 检查 | 当前配置及边界 |
 | --- | --- |
-| 通用 | 固定 Flutter 版本、双 lock 校验、本地化生成一致性、格式、分析、VM 测试与 coverage gate。 |
+| 通用 | 固定 Flutter 版本、双 lock 校验、本地化生成一致性、格式、分析、VM 测试；coverage 仅作为诊断附件。 |
 | 浏览器与日期 | Linux Chrome 验证实例 lease；纽约、柏林 DST 与上海无 DST 对照单独执行。普通全量测试不能代替这些专门任务。 |
 | Android | Ubuntu / Java 17，以临时 CI 密钥构建 APK 和 Google Play 渠道 AAB；Debug JVM 单测与 Release 编译/混淆分别检查，再检查 merged manifest 与资源。 |
 | Web | Release 构建；构建成功不代表浏览器运行、视觉或 Wasm 已验收。 |

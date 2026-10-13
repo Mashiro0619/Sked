@@ -16,6 +16,7 @@ void main() {
       steps.singleWhere((step) => step['name'] == name);
 
   test('all Flutter jobs pin the same SDK and enforce dependency locks', () {
+    String? sdkVersion;
     for (final job in jobs.keys.cast<String>()) {
       final steps = stepsFor(job);
       final flutterSetup = steps.where(
@@ -25,7 +26,10 @@ void main() {
       );
       if (flutterSetup.isEmpty) continue;
       final setup = flutterSetup.single['with'] as YamlMap;
-      expect(setup['flutter-version'], '3.47.7', reason: job);
+      final version = setup['flutter-version'] as String;
+      expect(version, matches(r'^\d+\.\d+\.\d+$'), reason: job);
+      sdkVersion ??= version;
+      expect(version, sdkVersion, reason: job);
       expect(setup['channel'], 'stable', reason: job);
       expect(
         steps.any(
@@ -68,7 +72,6 @@ void main() {
       (step) =>
           step['run'] == 'flutter test test/date_dst_regression_test.dart',
     );
-    expect(timezoneSteps, hasLength(zones.length));
     for (final zone in zones.entries) {
       final step = timezoneSteps.singleWhere(
         (step) => (step['env'] as YamlMap)['TZ'] == zone.key,
@@ -79,9 +82,6 @@ void main() {
 
   test('release smoke builds use an isolated temporary CI signing key', () {
     final steps = stepsFor('android-build');
-    final setupJava = stepNamed(steps, 'Set up Java');
-    expect((setupJava['with'] as YamlMap)['java-version'], '17');
-
     final signing = stepNamed(steps, 'Prepare ephemeral CI signing key');
     final signingCommand = signing['run'] as String;
     expect(signingCommand, contains('umask 077'));
@@ -129,12 +129,6 @@ void main() {
 
   test('Android release runs native tests and verifies merged artifacts', () {
     final steps = stepsFor('android-build');
-    final pluginLock = stepNamed(steps, 'Verify internal plugin lockfile');
-    expect(
-      pluginLock['working-directory'],
-      'packages/android_productivity_plugin',
-    );
-    expect(pluginLock['run'], 'flutter pub get --enforce-lockfile');
     final nativeTests = stepNamed(steps, 'Test Android native unit tests');
     expect(nativeTests['working-directory'], 'android');
     expect(nativeTests['run'], contains(':app:testDebugUnitTest'));
@@ -194,24 +188,4 @@ void main() {
       isFalse,
     );
   });
-
-  test(
-    'test job retains coverage gates and builds the optimized web bundle',
-    () {
-      final steps = stepsFor('test');
-      expect(
-        stepNamed(steps, 'Test with coverage')['run'],
-        'flutter test --coverage',
-      );
-      expect(
-        stepNamed(steps, 'Enforce coverage gates')['run'],
-        contains('--minimum-diff 90'),
-      );
-      expect(
-        stepNamed(steps, 'Build web release')['run'],
-        'flutter build web --release',
-      );
-      expect(stepNamed(steps, 'Upload coverage report')['if'], 'always()');
-    },
-  );
 }

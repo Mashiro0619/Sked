@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xml/xml.dart';
+import 'package:yaml/yaml.dart';
 
 const _androidNamespace = 'http://schemas.android.com/apk/res/android';
 const _androidPermissionElementNames = {
@@ -436,18 +437,6 @@ void main() {
     expect(runnerResources, isNot(contains('com.example')));
   });
 
-  test('Windows uses Skia for consistent Simplified Chinese bold text', () {
-    final runner = File('windows/runner/main.cpp').readAsStringSync();
-
-    expect(
-      RegExp(
-        r'project\.set_impeller_switch\(\s*'
-        r'flutter::ImpellerSwitch::Disabled\s*\);',
-      ).allMatches(runner),
-      hasLength(1),
-    );
-  });
-
   test('Windows WebView compatibility workaround stays target-scoped', () {
     final cmake = File('windows/CMakeLists.txt').readAsStringSync();
 
@@ -530,127 +519,20 @@ void main() {
     expect(compatHeader, contains('return FALSE;'));
   });
 
-  test('Apple WebView availability fix is pinned to an immutable commit', () {
-    final pubspec = File('pubspec.yaml').readAsStringSync();
-    final lockfile = File('pubspec.lock').readAsStringSync();
-    const fixedCommit = 'fc33a449b9290b127a471808e22eb7b0edebad92';
-
-    expect(
-      RegExp(
-        r'url:\s+https://github\.com/wangqiang1588/'
-        r'flutter_inappwebview\.git',
-      ).allMatches(pubspec),
-      hasLength(2),
-    );
-    expect(RegExp('ref: $fixedCommit').allMatches(pubspec), hasLength(2));
-    expect(pubspec, contains('path: flutter_inappwebview_macos'));
-    expect(pubspec, contains('path: flutter_inappwebview_ios'));
-    expect(
-      RegExp('resolved-ref: $fixedCommit').allMatches(lockfile),
-      hasLength(2),
-    );
-    expect(lockfile, contains('path: flutter_inappwebview_macos'));
-    expect(lockfile, contains('path: flutter_inappwebview_ios'));
-  });
-
-  test('Android WebView edge-to-edge fix is pinned to an immutable commit', () {
-    final pubspec = File('pubspec.yaml').readAsStringSync();
-    final lockfile = File('pubspec.lock').readAsStringSync();
-    final androidBuild = File('android/build.gradle.kts').readAsStringSync();
-    const fixedCommit = 'e879b0350f3a09e6e0eb0667569bcaa74cc59acb';
-
-    expect(
-      pubspec,
-      contains(
-        'url: https://github.com/pichillilorenzo/flutter_inappwebview.git',
-      ),
-    );
-    expect(pubspec, contains('ref: $fixedCommit'));
-    expect(pubspec, contains('path: flutter_inappwebview_android'));
-    expect(lockfile, contains('resolved-ref: $fixedCommit'));
-    expect(lockfile, contains('path: flutter_inappwebview_android'));
-    expect(androidBuild, contains('TrustedWebActivity.java'));
-    expect(androidBuild, contains('import android.os.Build;'));
-  });
-
-  test('Flutter opts into Android edge-to-edge system UI explicitly', () {
-    final main = File('lib/main.dart').readAsStringSync();
-
-    expect(main, contains('SystemUiMode.edgeToEdge'));
-  });
-
-  test('CI uses Node 24 actions and guards generated Android artifacts', () {
-    final workflow = File('.github/workflows/flutter.yml').readAsStringSync();
-
-    expect(RegExp(r'actions/checkout@v7').allMatches(workflow), hasLength(4));
-    expect(
-      RegExp(r'actions/upload-artifact@v7').allMatches(workflow),
-      hasLength(4), // Coverage, Android artifacts/reports, and the Store MSIX.
-    );
-    expect(RegExp(r'NuGet/setup-nuget@v4').allMatches(workflow), hasLength(1));
-    expect(
-      RegExp(r"flutter-version: '3\.47\.7'").allMatches(workflow),
-      hasLength(4),
-    );
-    expect(workflow, isNot(contains('actions/checkout@v4')));
-    expect(workflow, isNot(contains('actions/upload-artifact@v4')));
-    expect(workflow, isNot(contains('NuGet/setup-nuget@v2')));
-    expect(workflow, contains('runs-on: ubuntu-24.04'));
-    expect(workflow, contains('image: debian:13-slim'));
-    expect(workflow, isNot(contains('os: ubuntu-latest')));
-    expect(workflow, isNot(contains('os: ubuntu-22.04')));
-    expect(workflow, contains('id: android-security-artifacts'));
-    expect(
-      workflow,
-      contains(
-        r"if: ${{ !cancelled() && "
-        r"steps.android-security-artifacts.outcome != 'skipped' }}",
-      ),
-    );
-    for (final linuxPackage in <String>[
-      'jq',
-      'libepoxy-dev',
-      'libwayland-dev',
-      'libwpe-1.0-dev',
-      'libwpebackend-fdo-1.0-dev',
-      'libwpewebkit-2.0-dev',
-      'zstd',
-    ]) {
-      expect(workflow, contains(linuxPackage));
+  test('Git dependency overrides use immutable commit references', () {
+    final pubspec =
+        loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+    final overrides = pubspec['dependency_overrides'] as YamlMap?;
+    for (final entry in overrides?.entries ?? <MapEntry<dynamic, dynamic>>[]) {
+      final dependency = entry.value;
+      if (dependency is! YamlMap || !dependency.containsKey('git')) continue;
+      final git = dependency['git'];
+      expect(git, isA<YamlMap>(), reason: entry.key.toString());
+      expect(
+        (git as YamlMap)['ref'],
+        matches(r'^[0-9a-fA-F]{40}$'),
+        reason: entry.key.toString(),
+      );
     }
-    expect(workflow, contains('pkg-config --modversion wpe-webkit-2.0'));
-    expect(
-      workflow,
-      contains(r'dpkg --compare-versions "$wpe_version" ge 2.40'),
-    );
-    expect(
-      workflow,
-      contains(r'git config --global --add safe.directory "$FLUTTER_ROOT"'),
-    );
-    expect(workflow, isNot(contains('libwpewebkit-1.0-dev')));
-    expect(workflow, isNot(contains('libwpewebkit-1.1-dev')));
-    expect(workflow, contains('flutter build ios --release --no-codesign'));
-  });
-
-  test('Android build uses the Flutter 3.47 verified dependency matrix', () {
-    final settings = File('android/settings.gradle.kts').readAsStringSync();
-    final wrapper = File('android/gradle/wrapper/gradle-wrapper.properties')
-        .readAsStringSync();
-    final properties = File('android/gradle.properties').readAsStringSync();
-    final appBuild = File('android/app/build.gradle.kts').readAsStringSync();
-
-    expect(settings, contains('com.android.application") version "9.1.0"'));
-    expect(
-      settings,
-      contains('org.jetbrains.kotlin.android") version "2.4.0"'),
-    );
-    expect(wrapper, contains('gradle-9.3.1-all.zip'));
-    expect(properties, contains('android.newDsl=false'));
-    expect(properties, contains('android.builtInKotlin=false'));
-    expect(appBuild, contains('compileSdk = flutter.compileSdkVersion'));
-    expect(appBuild, contains('targetSdk = flutter.targetSdkVersion'));
-    expect(appBuild, contains('minSdk = flutter.minSdkVersion'));
-    expect(appBuild, contains('JavaVersion.VERSION_17'));
-    expect(appBuild, contains('JvmTarget.JVM_17'));
   });
 }

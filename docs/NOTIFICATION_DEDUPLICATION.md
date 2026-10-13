@@ -24,16 +24,18 @@
 - 只操作确认归属的 ID，不清空整队列，不碰其他 ID 或独立开发测试。每次取消后重新查询，数量没有下降或查询失败即停止，不继续追加。原有近到期恢复保护保留。
 - 非 MSIX 已显示卡片可能无法撤回；不为掩盖问题改成静音、延时去抖或应用内定时器。
 
-## 自动验证结果
+## 自动验证历史记录
 
 基线：`5376c91`，版本仍为 `2.3.0+14`。新增 **38 项单元回归**，覆盖录屏序列、固定补发时刻、跨服务／重启、存储失败、结果不明、并发、旧数据迁移、偏移独立性、清理隔离、稍后动作以及 Windows 真实队列语义。
+
+以下结果属于 2026-09-15 的修复记录，不表示当前提交已通过。当前测试与覆盖率策略见[可靠性验证指南](RELIABILITY_BASELINE.md)。
 
 | 检查 | 结果 |
 | --- | --- |
 | `flutter analyze --no-pub` | 无问题 |
 | `flutter test --no-pub --coverage --concurrency=2 --reporter expanded` | **2757 通过，1 项既有 DST 条件跳过**；需专用 CI 设置 `SKED_DST_TEST_ZONE`／`TZ` |
-| 现有覆盖率门禁，对比 HEAD | **PASS**；整体 **37769/41604（90.7821%）**，门槛 81.7600%；改动行 **453/483（93.7888%）**，门槛 90% |
-| Windows FFI 覆盖边界 | 沿用现有门禁的原生后端排除规则，未降低门槛；另执行真实 Windows 原生队列测试 |
+| 当时的覆盖率统计 | 整体 **37769/41604（90.7821%）**，改动行 **453/483（93.7888%）**；仅保留为历史记录 |
+| Windows FFI 覆盖边界 | VM 覆盖率不能证明原生后端行为；另执行真实 Windows 原生队列测试 |
 | Windows 非 MSIX 原生队列 | **PASS**：三副本 → 一副本；独立 ID 保留；系统到期取走请求后，恢复和重建 Dart 服务的新增登记数为 0 |
 
 Windows 测试使用独立 AUMID `Mashiro.Sked.NotificationQA`、独立激活 GUID 和测试专用内存偏好，不接触生产日程及通知。该测试确实调用 Windows 原生排程／查询／取消，不是仅用 fake 验证；但重建 Dart 服务不等于测试真实冷进程启动，空的非 MSIX active 列表也不能用来统计横幅。
@@ -43,7 +45,6 @@ Windows 测试使用独立 AUMID `Mashiro.Sked.NotificationQA`、独立激活 GU
 ```powershell
 flutter test --no-pub test/services/agenda_notification_deduplication_test.dart test/services/agenda_notification_registration_store_test.dart test/services/windows_notification_queue_test.dart
 flutter test integration_test/notification_queue_native_test.dart -d windows --no-pub --dart-define=SKED_NOTIFICATION_NATIVE_TEST=true
-dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/notification-coverage-final.md
 ```
 
 原生测试默认不运行；显式启用后可能显示一条“Sked notification QA”测试通知。测试仅清理自己的受管 ID，不调用全局清空。MSIX 构建不能运行这个独立 AUMID 测试，以免借用生产包身份。
