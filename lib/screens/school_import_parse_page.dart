@@ -1,3 +1,5 @@
+import '../widgets/sked_detail_row.dart';
+import '../widgets/workspace_editor_form.dart';
 import '../theme/sked_surface.dart';
 
 import '../widgets/desktop_window_host.dart';
@@ -975,17 +977,17 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (nameController != null)
-                  TextField(
-                    key: const ValueKey('school-import-parse-timetable-name'),
+                  SkedEditorTextField(
+                    label: l10n.timetableName,
+                    controlKey: const ValueKey(
+                      'school-import-parse-timetable-name',
+                    ),
                     controller: nameController,
                     enabled: !_isApplying,
                     minLines: 1,
                     maxLines: 2,
-                    decoration: InputDecoration(
-                      labelText: l10n.timetableName,
-                      alignLabelWithHint: true,
-                      prefixIcon: const Icon(Icons.table_chart_outlined),
-                    ),
+                    icon: Icons.table_chart_outlined,
+                    headline: true,
                   ),
                 const SizedBox(height: 12),
                 LayoutBuilder(
@@ -1123,7 +1125,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                 selected.periodTimes.length,
               ),
         icon: Icons.schedule_outlined,
-        trailing: Icons.keyboard_arrow_down,
         onTap: _periodTimeSets.isEmpty || !canSaveSchoolImport(widget.provider)
             ? null
             : _pickPeriodTimeSet,
@@ -1141,26 +1142,24 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         ? l10n.schoolImportTotalWeeksTooShort(_maxParsedCourseWeek)
         : null;
     final colors = Theme.of(context).colorScheme;
-    return TextField(
-      key: const ValueKey('school-import-parse-total-weeks'),
+    return SkedEditorTextField(
+      label: l10n.totalWeeks,
+      controlKey: const ValueKey('school-import-parse-total-weeks'),
       controller: controller,
       enabled: !_isApplying,
       keyboardType: TextInputType.number,
       textInputAction: TextInputAction.done,
-      decoration: InputDecoration(
-        labelText: l10n.totalWeeks,
-        prefixIcon: const Icon(Icons.date_range_outlined),
-        suffixIcon: warning
-            ? Tooltip(
-                message: warningText ?? '',
-                child: Semantics(
-                  label: warningText ?? '',
-                  liveRegion: true,
-                  child: Icon(Icons.warning_amber_rounded, color: colors.error),
-                ),
-              )
-            : null,
-      ),
+      icon: Icons.date_range_outlined,
+      suffixIcon: warning
+          ? Tooltip(
+              message: warningText ?? '',
+              child: Semantics(
+                label: warningText ?? '',
+                liveRegion: true,
+                child: Icon(Icons.warning_amber_rounded, color: colors.error),
+              ),
+            )
+          : null,
     );
   }
 
@@ -1421,84 +1420,20 @@ class _ParseImportActionRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
-    this.trailing,
     this.onTap,
   });
 
-  final String title;
-  final String subtitle;
+  final String title, subtitle;
   final IconData icon;
-  final IconData? trailing;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final enabled = onTap != null;
-    final muted = colors.onSurface.withValues(alpha: 0.38);
-    return Semantics(
-      button: enabled,
-      enabled: enabled,
-      label: '$title, $subtitle',
-      container: true,
-      excludeSemantics: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    color: enabled
-                        ? skedReadableAccent(
-                            colors,
-                            surface: colors.primary.withValues(alpha: 0.12),
-                          )
-                        : muted,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: enabled ? colors.onSurface : muted,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: enabled ? colors.onSurfaceVariant : muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (trailing != null)
-                    Icon(
-                      trailing,
-                      color: enabled ? colors.onSurfaceVariant : muted,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SkedEditorValueField(
+    label: title,
+    value: subtitle,
+    icon: icon,
+    onPressed: onTap == null ? null : (_) => onTap!(),
+  );
 }
 
 class _ParseImportChoiceRow extends StatelessWidget {
@@ -1592,28 +1527,14 @@ class _ParseImportInfoRow extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 52),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: skedReadableAccent(
-                colors,
-                surface: SkedSurface.colorOf(context),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text(text)),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: 52),
+    child: SkedDetailRow(
+      icon: icon,
+      value: text,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+    ),
+  );
 }
 
 class _SummaryRow extends StatelessWidget {
@@ -1628,45 +1549,14 @@ class _SummaryRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 56),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: skedReadableAccent(
-                colors,
-                surface: SkedSurface.colorOf(context),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  if (value.trim().isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(value),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: 56),
+    child: SkedDetailRow(
+      icon: icon,
+      label: label,
+      value: value,
+      stacked: true,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    ),
+  );
 }

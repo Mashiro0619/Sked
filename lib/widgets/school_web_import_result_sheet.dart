@@ -1,3 +1,10 @@
+import 'sked_detail_row.dart';
+import 'workspace_editor_form.dart';
+import 'editor_exit_guard.dart';
+import 'sked_task_session.dart';
+
+import 'dart:async';
+
 import '../theme/sked_surface.dart';
 
 import '../widgets/expressive_motion.dart';
@@ -18,7 +25,6 @@ import 'school_import_week_range_confirmation.dart';
 import 'school_import_save_feedback.dart';
 import 'sked_task_route.dart';
 import 'workspace_route_lifecycle.dart';
-import 'workbench_chrome_metrics.dart';
 
 class SchoolWebImportResultSheet extends StatefulWidget {
   const SchoolWebImportResultSheet({
@@ -36,7 +42,7 @@ class SchoolWebImportResultSheet extends StatefulWidget {
   final TimetableProvider provider;
 
   /// When supplied, persistence runs before returning the configured request.
-  /// Hosts should disable barrier and drag dismissal for this saveable sheet.
+  /// The task's exit guard protects edited configuration and in-flight writes.
   final Future<void> Function(SchoolImportApplyRequest request)? onApply;
 
   @override
@@ -45,12 +51,34 @@ class SchoolWebImportResultSheet extends StatefulWidget {
 }
 
 class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
-    with WorkspaceRouteLifecycle<SchoolWebImportResultSheet> {
+    with
+        WorkspaceRouteLifecycle<SchoolWebImportResultSheet>,
+        EditorExitGuard<SchoolWebImportResultSheet> {
   @override
   AppMode get routeWorkspace => AppMode.student;
 
   @override
-  Future<bool> prepareWorkspaceDisable() async => !_isApplying;
+  Future<bool> prepareWorkspaceDisable() async => !_blocked;
+
+  @override
+  AppMode get editorWorkspace => AppMode.student;
+
+  @override
+  bool get exitBlocked => _blocked;
+
+  @override
+  String get draftFingerprint =>
+      '${_nameController.text}|${_startDate.toIso8601String()}|'
+      '$_selectedPeriodTimeSetId|$_importBundledPeriodTimeSet';
+
+  @override
+  Widget guardDiscardConfirmation(Widget dialog) => SkedTaskRouteGuard(
+    parent: SkedTaskSessionScope.maybeOf(context)?.session,
+    provider: widget.provider,
+    workspace: AppMode.student,
+    isOwnerActive: () => mounted && !_hasPopped,
+    child: dialog,
+  );
 
   late final TextEditingController _nameController;
   late DateTime _startDate;
@@ -103,6 +131,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
       widget.initialPeriodTimeSetId,
     );
     _importBundledPeriodTimeSet = _hasBundledPeriodTimeSet;
+    initializeDraftGuard();
     widget.provider.addListener(_handlePeriodTimeSetsChanged);
   }
 
@@ -147,27 +176,17 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
     final l10n = AppLocalizations.of(context);
     final timetable = widget.response.timetable;
     final warnings = widget.response.meta.warnings;
-    final mediaQuery = MediaQuery.of(context);
-    final keyboardVisible = mediaQuery.viewInsets.bottom > 0;
-    final sheetHeightFactor = keyboardVisible
-        ? 1.0
-        : mediaQuery.size.height < 700
-        ? 0.96
-        : 0.84;
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
     final existingPeriodTimeSetSelector = _CompactActionRow(
       key: _periodTimeSetAnchor,
-      title: Text(l10n.selectPeriodTimeSet),
-      subtitle: Text(
-        selectedPeriodTimeSet == null
-            ? l10n.noPeriodTimeAvailable
-            : l10n.periodTimeSetSummary(
-                selectedPeriodTimeSet.name,
-                selectedPeriodTimeSet.periodTimes.length,
-              ),
-      ),
+      title: l10n.selectPeriodTimeSet,
+      subtitle: selectedPeriodTimeSet == null
+          ? l10n.noPeriodTimeAvailable
+          : l10n.periodTimeSetSummary(
+              selectedPeriodTimeSet.name,
+              selectedPeriodTimeSet.periodTimes.length,
+            ),
       leadingIcon: Icons.schedule_outlined,
-      trailingIcon: Icons.keyboard_arrow_down,
       enabled:
           _periodTimeSets.isNotEmpty &&
           !_blocked &&
@@ -239,12 +258,21 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
         : existingPeriodTimeSetSelector;
 
     return PopScope(
-      canPop: !_isApplying,
-      child: AppSheetScaffold(
-        heightFactor: sheetHeightFactor,
-        contentPadding: WorkbenchChromeMetrics.of(context).desktop
-            ? const EdgeInsets.fromLTRB(16, 8, 16, 12)
-            : const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      canPop: _hasPopped,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_blocked) unawaited(requestEditorExit());
+      },
+      child: AppSheetScaffold.editor(
+        onClose: _cancel,
+        closeEnabled: !_blocked,
+        busy: _isApplying,
+        editorActions: SkedEditorActions(
+          onCancel: _cancel,
+          onSubmit: _canSubmitImport
+              ? () => unawaited(_submit(TimetableImportMode.addAsNew))
+              : null,
+          enabled: !_blocked,
+        ),
         title: Text(l10n.schoolWebImportPreview),
         footer: Column(
           mainAxisSize: MainAxisSize.min,
@@ -278,16 +306,14 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                SkedEditorTextField(
+                  label: l10n.timetableName,
                   controller: _nameController,
                   enabled: !_isApplying,
                   minLines: 1,
                   maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: l10n.timetableName,
-                    alignLabelWithHint: true,
-                    prefixIcon: const Icon(Icons.table_chart_outlined),
-                  ),
+                  icon: Icons.table_chart_outlined,
+                  headline: true,
                 ),
                 const SizedBox(height: 12),
                 _ImportFormSummary(
@@ -295,10 +321,9 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
                     key: _startDateAnchor,
                     child: _CompactActionRow(
                       key: const ValueKey('school-import-start-date-tile'),
-                      title: Text(l10n.semesterStartDate),
-                      subtitle: Text(_formatDate(_startDate)),
+                      title: l10n.semesterStartDate,
+                      subtitle: _formatDate(_startDate),
                       leadingIcon: Icons.calendar_today_outlined,
-                      trailingIcon: Icons.chevron_right,
                       enabled: !_blocked,
                       onTap: _blocked ? null : _pickStartDate,
                     ),
@@ -522,6 +547,11 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
   }
 
   void _cancel() {
+    if (!_blocked) unawaited(requestEditorExit());
+  }
+
+  @override
+  void closeEditor() {
     if (_blocked) {
       return;
     }
@@ -916,23 +946,12 @@ class _ParserDetailRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(value, style: theme.textTheme.bodyMedium),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => SkedDetailRow(
+    label: label,
+    value: value,
+    stacked: true,
+    padding: EdgeInsets.zero,
+  );
 }
 
 class _ImportWarningsGroup extends StatefulWidget {
@@ -1067,97 +1086,23 @@ class _CompactActionRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.leadingIcon,
-    this.trailingIcon,
     this.enabled = true,
     this.onTap,
   });
 
-  final Widget title;
-  final Widget subtitle;
+  final String title, subtitle;
   final IconData leadingIcon;
-  final IconData? trailingIcon;
   final bool enabled;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final active = enabled && onTap != null;
-    // Material's disabled emphasis. Keep every element of the row on the same
-    // token so a disabled row reads as disabled at a glance.
-    final disabledColor = colors.onSurface.withValues(alpha: 0.38);
-    final iconColor = enabled
-        ? skedReadableAccent(
-            colors,
-            surface: colors.primary.withValues(alpha: 0.12),
-          )
-        : disabledColor;
-    final titleStyle = theme.textTheme.titleSmall?.copyWith(
-      color: enabled ? colors.onSurface : disabledColor,
-    );
-    final subtitleStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: enabled ? colors.onSurfaceVariant : disabledColor,
-    );
-    return Semantics(
-      button: active,
-      enabled: enabled,
-      child: Material(
-        color: Colors.transparent,
-        child: Ink(
-          child: InkWell(
-            onTap: active ? onTap : null,
-            borderRadius: BorderRadius.circular(12),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 56),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: Icon(leadingIcon, color: iconColor),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: DefaultTextStyle.merge(
-                        style: titleStyle,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            title,
-                            const SizedBox(height: 2),
-                            DefaultTextStyle.merge(
-                              style: subtitleStyle,
-                              child: subtitle,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (trailingIcon != null) ...[
-                      const SizedBox(width: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5),
-                        child: Icon(
-                          trailingIcon,
-                          color: enabled
-                              ? colors.onSurfaceVariant
-                              : disabledColor,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SkedEditorValueField(
+    label: title,
+    value: subtitle,
+    icon: leadingIcon,
+    enabled: enabled,
+    onPressed: onTap == null ? null : (_) => onTap!(),
+  );
 }
 
 class _ImportPreviewActions extends StatelessWidget {

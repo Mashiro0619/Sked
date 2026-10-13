@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../utils/time_utils.dart';
+import 'expressive_dialog.dart';
 
 class SchoolImportSummaryPreview extends StatelessWidget {
   const SchoolImportSummaryPreview({super.key, required this.response});
@@ -34,7 +35,10 @@ class SchoolImportSummaryPreview extends StatelessWidget {
               final course = timetable.courses[index];
               final day = DateFormat.E(l.localeName)
                   .format(DateTime(2024, 1, course.dayOfWeek.clamp(1, 7)));
-              return ListTile(
+              return ExpressiveDialogOption(
+                onTap: null,
+                titleMaxLines: null,
+                subtitleMaxLines: null,
                 contentPadding: EdgeInsets.zero,
                 title: Text(course.name),
                 subtitle: Text(

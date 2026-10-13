@@ -23,6 +23,7 @@ import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
+import 'package:sked/widgets/sked_confirmation_dialog.dart';
 
 class _Storage implements TimetableStorage {
   _Storage(this.data);
@@ -301,7 +302,7 @@ Future<void> _pumpReview(WidgetTester tester, {required bool legacy}) async {
     return;
   }
   // A legacy sheet leaves its source's parsing indicator visible underneath.
-  // Advance both route transitions without waiting for that busy animation.
+  // Advance route/confirmation transitions without waiting for that animation.
   await tester.pump();
   for (var frame = 0; frame < 4; frame++) {
     await tester.pump(const Duration(milliseconds: 500));
@@ -537,15 +538,61 @@ void main() {
                 'Nested school correction',
               );
             case 'cancel':
-              await tester.tap(
-                legacy
-                    ? find.descendant(
-                        of: review,
-                        matching: find.widgetWithText(TextButton, 'Cancel'),
-                      )
-                    : find.byTooltip('Cancel'),
-              );
-              await tester.pumpAndSettle();
+              final reviewState = tester.state(review);
+              final reviewRoute = ModalRoute.of(tester.element(review))!;
+              final l10n = AppLocalizations.of(tester.element(review));
+              final cancel = legacy
+                  ? find.descendant(
+                      of: review,
+                      matching: find.widgetWithText(TextButton, l10n.cancel),
+                    )
+                  : find.byTooltip(l10n.cancel);
+              await tester.tap(cancel);
+              await _pumpReview(tester, legacy: legacy);
+              if (legacy) {
+                final confirmation = find.byType(SkedDiscardDraftDialog);
+                expect(confirmation, findsOneWidget);
+                expect(reviewRoute.isActive, isTrue);
+                expect(storage.attempts, writes + 1);
+                await tester.tap(
+                  find.descendant(
+                    of: confirmation,
+                    matching: find.widgetWithText(TextButton, l10n.cancel),
+                  ),
+                );
+                await _pumpReview(tester, legacy: true);
+                expect(confirmation, findsNothing);
+                expect(tester.state(review), same(reviewState));
+                expect(reviewRoute.isCurrent, isTrue);
+                expect(
+                  tester.widget<TextField>(name).controller!.text,
+                  'Nested school correction',
+                );
+                expect(
+                  tester.state(
+                    find.byType(SchoolWebImportPage, skipOffstage: false),
+                  ),
+                  same(browser),
+                );
+                expect(provider.canWrite, isFalse);
+                expect(storage.attempts, writes + 1);
+
+                await tester.tap(cancel);
+                await _pumpReview(tester, legacy: true);
+                expect(confirmation, findsOneWidget);
+                await tester.tap(
+                  find.descendant(
+                    of: confirmation,
+                    matching: find.widgetWithText(
+                      FilledButton,
+                      l10n.discardChangesAndExit,
+                    ),
+                  ),
+                );
+                await _pumpReview(tester, legacy: true);
+                expect(confirmation, findsNothing);
+                expect(reviewRoute.isActive, isFalse);
+              }
             case 'session':
               provider.replaceDataSession();
               await tester.pumpAndSettle();

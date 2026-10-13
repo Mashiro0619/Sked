@@ -11,6 +11,7 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
+import 'package:sked/widgets/workspace_editor_form.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -200,13 +201,27 @@ void main() {
         response: _buildResponse(),
       );
       await _openPreviewSheet(tester);
-      final field = find.widgetWithText(
-        InkWell,
-        _sheetL10n(tester).selectPeriodTimeSet,
+      final l10n = _sheetL10n(tester);
+      final field = find.descendant(
+        of: find.byType(SchoolWebImportResultSheet),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is SkedEditorValueField &&
+              widget.label == l10n.selectPeriodTimeSet,
+        ),
       );
+      expect(field, findsOneWidget);
+      expect(tester.widget<SkedEditorValueField>(field).enabled, isTrue);
       await tester.ensureVisible(field);
+      await tester.pumpAndSettle();
       final trigger = tester.getRect(field);
-      await tester.tap(field);
+      final button = find.descendant(
+        of: field,
+        matching: find.byType(TextButton),
+      );
+      expect(button.hitTestable(), findsOneWidget);
+      expect(tester.widget<TextButton>(button).onPressed, isNotNull);
+      await tester.tap(button);
       await tester.pumpAndSettle();
       final panel = tester.getRect(find.byType(SkedFloatingSurface));
       expect(panel.overlaps(trigger), isFalse);
