@@ -153,4 +153,61 @@ void main() {
     expect(provider.isRestoringAppBackup, isFalse);
     expect(notifications, 0);
   });
+
+  test(
+    'queued identical restores retain their own committed generations',
+    () async {
+      final original = buildInitialAppData(buildDefaultPeriodTimes());
+      final storage = _Storage(original);
+      final provider = await workspaceProvider(storage: storage);
+      addTearDown(provider.dispose);
+      final commits = <AppDataCommit>[];
+      final subscription = provider.committedData.listen(commits.add);
+      addTearDown(subscription.cancel);
+      final earlierSave = _SaveGate();
+      final firstRestore = _SaveGate();
+      final secondRestore = _SaveGate();
+      storage.gates.addAll([earlierSave, firstRestore, secondRestore]);
+      final saving = provider.updateGeneralDisplaySettings(showWeekends: false);
+      await earlierSave.started.future;
+      final backup = encodeAppBackup(provider.appData, []);
+      final first = provider.importAppDataJson(
+        backup,
+        mode: AppImportMode.replaceAll,
+      );
+      final second = provider.importAppDataJson(
+        backup,
+        mode: AppImportMode.replaceAll,
+      );
+      expect(provider.isRestoringAppBackup, isTrue);
+
+      earlierSave.release.complete();
+      await saving;
+      await firstRestore.started.future;
+      expect(commits, hasLength(1));
+      expect(commits.single.affectsAgenda, isFalse);
+      expect(commits.single.versions.dataSession, 0);
+
+      firstRestore.release.complete();
+      await first;
+      await secondRestore.started.future;
+      expect(commits, hasLength(2));
+      expect(commits.last.changedDomains, {
+        AppDataDomain.agenda,
+        AppDataDomain.dataSession,
+      });
+      expect(commits.last.versions.dataSession, 1);
+
+      secondRestore.release.complete();
+      await second;
+      await Future<void>.delayed(Duration.zero);
+      expect(commits, hasLength(3));
+      expect(commits.last.changedDomains, {
+        AppDataDomain.agenda,
+        AppDataDomain.dataSession,
+      });
+      expect(commits.last.versions.dataSession, 2);
+      expect(commits.last.versions.agenda, 2);
+    },
+  );
 }

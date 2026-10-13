@@ -10,6 +10,7 @@ class _MemoryStorage implements TimetableStorage {
 
   AppData? data;
   Object? nextError;
+  Future<void> Function()? beforeNextSave;
   var saveCount = 0;
 
   @override
@@ -18,6 +19,9 @@ class _MemoryStorage implements TimetableStorage {
 
   @override
   Future<void> save(AppData data) async {
+    final gate = beforeNextSave;
+    beforeNextSave = null;
+    await gate?.call();
     saveCount += 1;
     final error = nextError;
     nextError = null;
@@ -55,6 +59,10 @@ void main() {
       expect(commits.single.revision, 1);
       expect(commits.single.snapshot.generalMode.showWeekends, isFalse);
       expect(commits.single.data, same(commits.single.snapshot));
+      expect(commits.single.changedDomains, {AppDataDomain.general});
+      expect(commits.single.versions.general, 1);
+      expect(commits.single.versions.agenda, 0);
+      expect(commits.single.affectsAgenda, isFalse);
 
       await provider.setSelectedGeneralDate(DateTime(2026, 8, 3));
       await provider.flushPendingUiStateSaves();
@@ -68,8 +76,57 @@ void main() {
       );
       await Future<void>.delayed(Duration.zero);
       expect(commits, hasLength(1));
+      expect(provider.committedDataVersions.general, 1);
+      expect(provider.committedDataVersions.agenda, 0);
     },
   );
+
+  test('queued saves compare consecutive durable snapshots', () async {
+    final storage = _MemoryStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => 'en',
+    );
+    addTearDown(provider.dispose);
+    await provider.load();
+    final commits = <AppDataCommit>[];
+    final subscription = provider.committedData.listen(commits.add);
+    addTearDown(subscription.cancel);
+    final started = Completer<void>();
+    final release = Completer<void>();
+    addTearDown(() {
+      if (!release.isCompleted) release.complete();
+    });
+    storage.beforeNextSave = () async {
+      started.complete();
+      await release.future;
+    };
+
+    final notificationSave = provider.updateNotificationsEnabled(true);
+    await started.future;
+    final themeSave = provider.updateThemeMode(
+      'dark',
+      workspace: AppMode.student,
+    );
+    expect(commits, isEmpty);
+    expect(provider.committedDataVersions.agenda, 0);
+    release.complete();
+    await Future.wait([notificationSave, themeSave]);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(commits, hasLength(2));
+    expect(commits.first.changedDomains, {
+      AppDataDomain.settings,
+      AppDataDomain.agenda,
+    });
+    expect(commits.last.changedDomains, {AppDataDomain.student});
+    expect(commits.map((commit) => commit.versions.agenda), [1, 1]);
+    expect(commits.map((commit) => commit.revision), [1, 2]);
+    expect(storage.data!.notificationSettings.enabled, isTrue);
+    expect(storage.data!.studentMode.themeMode, 'dark');
+  });
 
   test('closing the provider closes committed stream', () async {
     final provider = TimetableProvider(
@@ -80,6 +137,44 @@ void main() {
     provider.committedData.listen((_) {}, onDone: done.complete);
     provider.dispose();
     await expectLater(done.future, completes);
+  });
+
+  test('an uncertain save does not advance agenda versions or the durable baseline', () async {
+    final storage = _MemoryStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => 'en',
+    );
+    addTearDown(provider.dispose);
+    await provider.load();
+    final commits = <AppDataCommit>[];
+    final subscription = provider.committedData.listen(commits.add);
+    addTearDown(subscription.cancel);
+    storage.nextError = StorageWriteStateUnknownException(
+      writeError: StateError('write result unknown'),
+      rollbackError: StateError('rollback result unknown'),
+      recoveryArtifacts: const ['memory://recoverable-snapshot'],
+    );
+    await expectLater(
+      provider.updateNotificationsEnabled(true),
+      throwsA(isA<StorageWriteStateUnknownException>()),
+    );
+    expect(provider.canWrite, isFalse);
+    expect(provider.isStorageWriteStateUnknown, isTrue);
+    expect(provider.committedDataVersions.agenda, 0);
+    expect(commits, isEmpty);
+
+    await provider.retryStorageLoad();
+    await provider.updateIncludePrereleaseUpdates(
+      !provider.includePrereleaseUpdates,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(commits, hasLength(1));
+    expect(commits.single.changedDomains, {AppDataDomain.settings});
+    expect(commits.single.versions.agenda, 0);
+    expect(commits.single.snapshot.notificationSettings.enabled, isFalse);
   });
 
   test('load emits the durable normalized snapshot after write-back', () async {

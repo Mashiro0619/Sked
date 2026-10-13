@@ -9,6 +9,7 @@ import '../data/timetable_storage.dart';
 import '../l10n/app_locale.dart' as app_locale;
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
+import '../models/app_data_commit.dart';
 import '../services/app_backup_restore_journal.dart';
 import '../services/agenda_runtime_mutation_lock.dart';
 import '../services/general_calendar_service.dart';
@@ -23,6 +24,8 @@ import '../services/school_site_store.dart';
 import '../services/secret_store.dart';
 import '../services/settings_service.dart';
 import '../services/student_timetable_service.dart' as student_timetable;
+
+export '../models/app_data_commit.dart';
 
 part 'timetable_provider_general.dart';
 part 'timetable_provider_import_export.dart';
@@ -51,17 +54,10 @@ class AppBackupRestoreInProgressException implements Exception {
       'a complete backup restore is queued or running.';
 }
 
-/// A notification emitted after an AppData snapshot has been accepted by the
-/// repository. Consumers such as agenda notifications and widgets can observe
-/// this stream without reacting to transient provider rebuilds.
-class AppDataCommit {
-  const AppDataCommit({required this.snapshot, required this.revision});
+class _AppDataSessionToken {
+  _AppDataSessionToken(this.revision);
 
-  final AppData snapshot;
   final int revision;
-
-  /// Alias used by consumers that refer to the committed value as `data`.
-  AppData get data => snapshot;
 }
 
 String resolveFirstLaunchLocaleCode(Locale? locale) {
@@ -81,8 +77,12 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   final StreamController<AppDataCommit> _committedDataController =
       StreamController<AppDataCommit>.broadcast();
   var _committedDataRevision = 0;
+  AppData? _lastCommittedSnapshot;
+  var _committedDataVersions = const AppDataVersions();
+  var _committedDataSessionRevision = 0;
 
   Stream<AppDataCommit> get committedData => _committedDataController.stream;
+  AppDataVersions get committedDataVersions => _committedDataVersions;
 
   Future<void> _pendingSecretWrite = Future<void>.value();
   String _lastPersistedCustomSchoolImportApiKey = '';
@@ -104,7 +104,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   /// UI-only intent: explicit date jumps reveal their column; range paging
   /// leaves the user's horizontal/time viewport where it was.
   int get generalDateFocusRevision => _generalDateFocusRevision;
-  Object _dataSessionToken = Object();
+  _AppDataSessionToken _dataSessionToken = _AppDataSessionToken(0);
 
   /// Invalidates UI selection sessions when a complete data replacement is
   /// reserved, including a restore that keeps the same workspace enabled.
@@ -201,7 +201,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   });
   // ignore: unused_element_parameter
   Future<void> _save({bool emitCommit = true});
-  void emitAppDataCommit(AppData snapshot);
+  void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision});
   void _scheduleUiStateSave();
   bool _cancelScheduledUiStateSave();
   void _startDeferredUiStateSave();
@@ -222,11 +222,12 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
       _startDeferredUiStateSave();
     }
     _appBackupRestoreReservationCount += 1;
-    _dataSessionToken = Object();
+    final token = _AppDataSessionToken(_dataSessionToken.revision + 1);
+    _dataSessionToken = token;
     if (_appBackupRestoreReservationCount == 1 && !_isDisposed) {
       notifyListeners();
     }
-    return Object();
+    return token;
   }
 
   void _releaseAppBackupRestore() {
@@ -1001,10 +1002,20 @@ class TimetableProvider extends _TimetableProviderBase
     );
     _appData = normalized;
     final attemptEpoch = _appDataMutationEpoch;
+    _lastCommittedSnapshot ??= _repository.persisted;
+    // A restore can reserve a new UI session while this save is in flight.
+    // Its generation belongs to the restore's own successful write, not this
+    // older snapshot. Queued restores also keep their individual lease token.
+    final restoreToken = _activeAppBackupRestoreToken;
+    final dataSessionRevision =
+        (restoreToken is _AppDataSessionToken
+                ? restoreToken
+                : _dataSessionToken)
+            .revision;
     try {
       await _repository.save(normalized);
       if (emitCommit) {
-        emitAppDataCommit(normalized);
+        emitAppDataCommit(normalized, dataSessionRevision: dataSessionRevision);
       }
     } catch (error) {
       // A write rejected before enqueue keeps the unsaved mutation visible
@@ -1242,11 +1253,25 @@ class TimetableProvider extends _TimetableProviderBase
   Future<void> _runDeferredUiStateSave() => _save(emitCommit: false);
 
   @override
-  void emitAppDataCommit(AppData snapshot) {
+  void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision}) {
     if (_committedDataController.isClosed || _isDisposed) return;
+    final sessionRevision = dataSessionRevision ?? _dataSessionToken.revision;
+    final domains = changedAppDataDomains(
+      _lastCommittedSnapshot,
+      snapshot,
+      dataSessionChanged: sessionRevision != _committedDataSessionRevision,
+    );
+    _lastCommittedSnapshot = snapshot;
+    _committedDataSessionRevision = sessionRevision;
+    _committedDataVersions = _committedDataVersions.advance(domains);
     _committedDataRevision += 1;
     _committedDataController.add(
-      AppDataCommit(snapshot: snapshot, revision: _committedDataRevision),
+      AppDataCommit(
+        snapshot: snapshot,
+        revision: _committedDataRevision,
+        changedDomains: domains,
+        versions: _committedDataVersions,
+      ),
     );
   }
 

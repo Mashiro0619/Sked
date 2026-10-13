@@ -448,6 +448,16 @@ class AgendaCoordinator {
 
   void _onCommit(AppDataCommit commit) {
     if (_disposed) return;
+    // Only the built-in sources have the dependency contract represented by
+    // AppDataDomain.agenda. An injected source may read other AppData fields,
+    // so retain the conservative policy for that extension point.
+    final builtInSources = _notificationService.projection.registry.sources
+        .every(
+          (source) =>
+              source.runtimeType == StudentAgendaSource ||
+              source.runtimeType == GeneralAgendaSource,
+        );
+    if (!commit.affectsAgenda && builtInSources) return;
     _projectionEpoch += 1;
     _clearNotificationRetry();
     _pendingCommit = commit;

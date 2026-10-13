@@ -9,6 +9,7 @@ import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/agenda_projection_service.dart';
 import 'package:sked/services/agenda_runtime_mutation_lock.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/services/school_site_service.dart';
@@ -46,6 +47,7 @@ class _RecordingBridge extends AndroidProductivityBridge {
   );
   int scheduleCount = 0;
   int cancelCount = 0;
+  VoidCallback? onSchedule;
 
   @override
   bool get isSupported => true;
@@ -59,6 +61,7 @@ class _RecordingBridge extends AndroidProductivityBridge {
   @override
   Future<void> scheduleAgendaReconciliation(DateTime? at) async {
     scheduleCount += 1;
+    onSchedule?.call();
   }
 
   @override
@@ -72,6 +75,16 @@ class _RecordingBridge extends AndroidProductivityBridge {
   void dispose() {
     unawaited(_intents.close());
     super.dispose();
+  }
+}
+
+class _CountingGateway extends MemoryAgendaNotificationGateway {
+  int planReads = 0;
+
+  @override
+  Future<Map<String, DateTime>> pendingPlan() async {
+    planReads += 1;
+    return super.pendingPlan();
   }
 }
 
@@ -270,6 +283,137 @@ void main() {
     },
   );
 
+  test('presentation saves skip platform work while language still refreshes notifications', () async {
+    final anchor = DateTime(2026, 8, 3, 8);
+    final provider = await _providerWithData(_dataWithEvent());
+    addTearDown(provider.dispose);
+    final gateway = _CountingGateway();
+    final bridge = _RecordingBridge();
+    final coordinator = AgendaCoordinator(
+      provider: provider,
+      notificationService: AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(clock: () => anchor),
+        now: () => anchor,
+      ),
+      productivityBridge: bridge,
+      clock: () => anchor,
+    );
+    addTearDown(coordinator.dispose);
+    await coordinator.start();
+    final initialReads = gateway.planReads;
+    final initialVersion = provider.committedDataVersions.agenda;
+
+    await provider.updateThemeMode('dark', workspace: AppMode.student);
+    await provider.updateGeneralDisplaySettings(showWeekends: false);
+    await provider.updateWorkspacePanelDisplayMode(
+      WorkspacePanelDisplayMode.sideBySide,
+    );
+    await provider.updateIncludePrereleaseUpdates(
+      !provider.includePrereleaseUpdates,
+    );
+    await provider.setSelectedGeneralDate(DateTime(2026, 8, 4));
+    await provider.flushPendingUiStateSaves();
+    final event = provider.generalSchedules.single.events.single;
+    await provider.saveGeneralEvent(event.copyWith(colorValue: 0xff123456));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(gateway.planReads, initialReads);
+    expect(bridge.scheduleCount, 1);
+    expect(provider.committedDataVersions.agenda, initialVersion);
+    final refreshed = Completer<void>();
+    bridge.onSchedule = () => refreshed.complete();
+    await provider.updateLocaleCode('zh');
+    await refreshed.future.timeout(const Duration(seconds: 5));
+    expect(gateway.planReads, greaterThan(initialReads));
+    expect(bridge.scheduleCount, 2);
+    expect(provider.committedDataVersions.agenda, initialVersion + 1);
+  });
+
+  test(
+    'an unrelated save does not supersede an in-flight notification commit',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final provider = await _providerWithData(_dataWithEvent());
+      addTearDown(provider.dispose);
+      final gateway = _BlockingScheduleGateway();
+      final bridge = _RecordingBridge();
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          runtimeStore: MemoryAgendaNotificationRuntimeStore(
+            clock: () => anchor,
+          ),
+          now: () => anchor,
+        ),
+        productivityBridge: bridge,
+        clock: () => anchor,
+      );
+      addTearDown(coordinator.dispose);
+      addTearDown(() {
+        if (!gateway.allowSchedule.isCompleted) {
+          gateway.allowSchedule.complete();
+        }
+      });
+      await coordinator.start();
+      final refreshed = Completer<void>();
+      bridge.onSchedule = () => refreshed.complete();
+      gateway.blockNextSchedule = true;
+      final committed = provider.committedData.firstWhere(
+        (commit) => commit.affectsAgenda,
+      );
+      await provider.updateLockScreenShowTitles(true);
+      final notificationCommit = await committed;
+      await gateway.scheduleStarted.future;
+      await provider.updateThemeMode('dark', workspace: AppMode.student);
+      await Future<void>.delayed(Duration.zero);
+      gateway.allowSchedule.complete();
+      await refreshed.future.timeout(const Duration(seconds: 5));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(bridge.scheduleCount, 2);
+      expect(coordinator.lastPublishedRevision, notificationCommit.revision);
+    },
+  );
+
+  test(
+    'an injected agenda source retains conservative commit handling',
+    () async {
+      final provider = await _provider();
+      addTearDown(provider.dispose);
+      final bridge = _RecordingBridge();
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: AgendaNotificationService(
+          enabled: true,
+          gateway: MemoryAgendaNotificationGateway(),
+          runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+          projection: AgendaProjectionService(
+            registry: AgendaSourceRegistry(
+              sources: [
+                CallbackAgendaSource(
+                  id: 'extension',
+                  builder: (_, _) => const [],
+                ),
+              ],
+            ),
+          ),
+        ),
+        productivityBridge: bridge,
+      );
+      addTearDown(coordinator.dispose);
+      await coordinator.start();
+      final refreshed = Completer<void>();
+      bridge.onSchedule = () => refreshed.complete();
+      await provider.updateGeneralDisplaySettings(showWeekends: false);
+      await refreshed.future.timeout(const Duration(seconds: 5));
+      expect(bridge.scheduleCount, 2);
+    },
+  );
+
   test(
     'uses its owned service for notification diagnostics and developer tests',
     () async {
@@ -389,47 +533,44 @@ void main() {
     },
   );
 
-  test(
-    'a durable commit reactivates the clear fence after a failed data reset',
-    () async {
-      final anchor = DateTime(2026, 8, 3, 8);
-      final provider = await _providerWithData(_dataWithEvent());
-      addTearDown(provider.dispose);
-      final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
-      final coordinator = AgendaCoordinator(
-        provider: provider,
-        notificationService: AgendaNotificationService(
-          enabled: true,
-          gateway: MemoryAgendaNotificationGateway(),
-          runtimeStore: runtime,
-          now: () => anchor,
-        ),
-        productivityBridge: AndroidProductivityBridge(enabled: false),
-        clock: () => anchor,
-      );
-      addTearDown(coordinator.dispose);
-      await coordinator.start();
+  test('a durable presentation commit reactivates the clear fence after a failed data reset', () async {
+    final anchor = DateTime(2026, 8, 3, 8);
+    final provider = await _providerWithData(_dataWithEvent());
+    addTearDown(provider.dispose);
+    final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+    final coordinator = AgendaCoordinator(
+      provider: provider,
+      notificationService: AgendaNotificationService(
+        enabled: true,
+        gateway: MemoryAgendaNotificationGateway(),
+        runtimeStore: runtime,
+        now: () => anchor,
+      ),
+      productivityBridge: AndroidProductivityBridge(enabled: false),
+      clock: () => anchor,
+    );
+    addTearDown(coordinator.dispose);
+    await coordinator.start();
 
-      await expectLater(
-        provider.runExclusiveDataClear(
-          clear: () async {
-            await coordinator.beginDataClear();
-            throw StateError('synthetic clear failure');
-          },
-          exit: () async {},
-        ),
-        throwsStateError,
-      );
-      expect((await runtime.readProjectionFence()).blocked, isTrue);
+    await expectLater(
+      provider.runExclusiveDataClear(
+        clear: () async {
+          await coordinator.beginDataClear();
+          throw StateError('synthetic clear failure');
+        },
+        exit: () async {},
+      ),
+      throwsStateError,
+    );
+    expect((await runtime.readProjectionFence()).blocked, isTrue);
 
-      await provider.updateLocaleCode('zh');
-      await Future<void>.delayed(Duration.zero);
-      // The complete commit now runs inside the serialized runtime queue.
-      await coordinator.reconcileRecovery();
+    await provider.updateHomeWorkspaceNavigationCollapsed(true);
+    await Future<void>.delayed(Duration.zero);
+    // The complete commit now runs inside the serialized runtime queue.
+    await coordinator.reconcileRecovery();
 
-      expect((await runtime.readProjectionFence()).blocked, isFalse);
-    },
-  );
+    expect((await runtime.readProjectionFence()).blocked, isFalse);
+  });
 
   test('startup does not reactivate a fence left by a failed clear', () async {
     final anchor = DateTime(2026, 8, 3, 8);
