@@ -1,3 +1,5 @@
+import 'controllers/course_task_controller.dart';
+import 'widgets/course_task_editor.dart';
 import 'controllers/general_event_task_controller.dart';
 import 'widgets/general_event_task_editor.dart';
 import 'widgets/sked_confirmation_dialog.dart';
@@ -685,22 +687,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         .where((item) => item.id == course.id)
         .firstOrNull;
     if (currentCourse == null) return;
+    final task = CourseTaskController(
+      provider: widget.provider,
+      timetable: timetable,
+      initialCourse: currentCourse,
+    );
     await showAppModalSheet<CourseEditorResult>(
       context: context,
       useRootNavigator: true,
+      workspace: AppMode.student,
+      isSessionCurrent: () => task.isCurrent,
       isDismissible: widget.provider.closeCoursePopupOnOutsideTap,
       enableDrag: true,
       maxWidth: appSheetWidthExpanded,
-      builder: (_) => CourseEditorSheet(
-        periodTimes: widget.provider.periodTimesForTimetable(timetable),
-        totalWeeks: timetable.config.totalWeeks,
-        initialCourse: currentCourse,
-        dayOfWeek: currentCourse.dayOfWeek,
-        onSave: (value) =>
-            widget.provider.saveCourse(value, timetableId: timetable.id),
-        onDelete: () =>
-            widget.provider.deleteCourse(course.id, timetableId: timetable.id),
-      ),
+      builder: (_) => CourseTaskEditor(task: task),
     );
   }
 

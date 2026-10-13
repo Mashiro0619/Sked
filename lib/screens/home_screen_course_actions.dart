@@ -115,10 +115,13 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         ? null
         : timetable.courses.where((item) => item.id == course.id).firstOrNull;
     if (course != null && initialCourse == null) return;
+    final task = CourseTaskController(
+      provider: provider,
+      timetable: timetable,
+      initialCourse: initialCourse,
+    );
     _setCourseEditorOpen(true);
     try {
-      final periodTimes = provider.periodTimesForTimetable(timetable);
-      final totalWeeks = timetable.config.totalWeeks;
       final canDismiss = provider.closeCoursePopupOnOutsideTap;
       await showAppModalSheet<CourseEditorResult>(
         context: context,
@@ -132,31 +135,17 @@ extension _HomeScreenCourseActions on _HomeScreenState {
                   )
                 : _pane.takeEditorEntry()),
         workspace: AppMode.student,
-        isSessionCurrent: () => provider.timetables.any(
-          (item) =>
-              item.id == timetable.id &&
-              (course == null ||
-                  item.courses.any((value) => value.id == course.id)),
-        ),
+        isSessionCurrent: () => task.isCurrent,
         selectionId: course == null ? null : 'course:${course.id}',
         isDismissible: canDismiss,
         enableDrag: true,
         maxWidth: appSheetWidthExpanded,
-        builder: (sheetContext) => CourseEditorSheet(
-          periodTimes: periodTimes,
-          totalWeeks: totalWeeks,
-          initialCourse: initialCourse,
-          dayOfWeek:
-              weekday ?? emptySlot?.weekday ?? initialCourse?.dayOfWeek ?? 1,
+        builder: (_) => CourseTaskEditor(
+          task: task,
+          dayOfWeek: weekday ?? emptySlot?.weekday,
           initialStartMinutes: emptySlot?.startMinutes,
           initialEndMinutes: emptySlot?.endMinutes,
           initialPeriods: emptySlot?.periods,
-          onSave: (value) =>
-              provider.saveCourse(value, timetableId: timetable.id),
-          onDelete: course == null
-              ? null
-              : () =>
-                    provider.deleteCourse(course.id, timetableId: timetable.id),
         ),
       );
     } finally {
