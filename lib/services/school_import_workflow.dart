@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show compute;
 
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
@@ -10,19 +11,31 @@ typedef SchoolImportStreamPresenter = Future<SchoolImportResponse?> Function(
   Stream<SchoolImportStreamEvent> stream,
 );
 
+typedef SchoolImportContentPreparer =
+    Future<SchoolImportSanitizationResult> Function(String source);
+
+Future<SchoolImportSanitizationResult> _prepareInBackground(String source) =>
+    compute(
+      SchoolImportContentSanitizer.sanitizeWithResult,
+      source,
+      debugLabel: 'sked.import.prepare',
+    );
+
 class SchoolImportWorkflow {
   SchoolImportWorkflow({
     this._api = const SchoolImportApi(),
+    SchoolImportContentPreparer? contentPreparer,
     http.Client Function()? httpClientFactory,
-  }) : _httpClientFactory = httpClientFactory ?? http.Client.new;
+  }) : contentPreparer = contentPreparer ?? _prepareInBackground,
+       _httpClientFactory = httpClientFactory ?? http.Client.new;
 
   final SchoolImportApi _api;
+  final SchoolImportContentPreparer contentPreparer;
   final http.Client Function() _httpClientFactory;
   _SchoolImportParseSession? _activeParseSession;
 
-  SchoolImportSanitizationResult prepareContent(String source) {
-    return SchoolImportContentSanitizer.sanitizeWithResult(source);
-  }
+  Future<SchoolImportSanitizationResult> prepareContent(String source) =>
+      contentPreparer(source);
 
   Future<SchoolImportResponse?> parse({
     required SchoolImportPagePayload payload,

@@ -44,6 +44,7 @@ class SchoolHtmlImportPage extends StatefulWidget {
     this.api,
     this.httpConsentStore,
     this.httpClientFactory,
+    this.contentPreparer,
   });
 
   final String initialContent;
@@ -54,6 +55,7 @@ class SchoolHtmlImportPage extends StatefulWidget {
   final SchoolImportApi? api;
   final SchoolImportHttpConsentStore? httpConsentStore;
   final http.Client Function()? httpClientFactory;
+  final SchoolImportContentPreparer? contentPreparer;
 
   @override
   State<SchoolHtmlImportPage> createState() => _SchoolHtmlImportPageState();
@@ -64,7 +66,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   @override
   AppMode get routeWorkspace => AppMode.student;
   @override
-  void workspaceDisabled() => _workflow.cancelActiveParse();
+  void workspaceDisabled() {
+    _submissionGeneration += 1;
+    _workflow.cancelActiveParse();
+  }
 
   @override
   Future<bool> prepareWorkspaceDisable() async =>
@@ -78,6 +83,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   final TextEditingController _htmlController = TextEditingController();
 
   bool _isSubmitting = false;
+  bool _isPreparingContent = false;
   bool _isApplying = false;
   SkedTaskSession? _reviewOwner;
   bool _isContentPrepared = false;
@@ -96,6 +102,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     _workflow = SchoolImportWorkflow(
       api: widget.api ?? const SchoolImportApi(),
       httpClientFactory: widget.httpClientFactory,
+      contentPreparer: widget.contentPreparer,
     );
     _codeUnitInputFormatter = const Utf16CodeUnitLimitingTextInputFormatter(
       SchoolImportContentSanitizer.maxInputLength,
@@ -194,7 +201,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                                     height: editorHeight,
                                     child: TextField(
                                       controller: _htmlController,
-                                      enabled: !_isSubmitting,
+                                      enabled:
+                                          !_isSubmitting &&
+                                          !_isPreparingContent,
                                       inputFormatters: [_boundedInputFormatter],
                                       onChanged: _handleContentChanged,
                                       expands: true,
@@ -326,12 +335,20 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     required bool useHorizontalLayout,
   }) {
     final prepareButton = FilledButton.tonalIcon(
-      onPressed: _isSubmitting || _isApplying ? null : _prepareContent,
-      icon: Icon(
-        _isContentPrepared
-            ? Icons.check_circle_outline
-            : Icons.auto_fix_high_outlined,
-      ),
+      onPressed: _isSubmitting || _isApplying || _isPreparingContent
+          ? null
+          : _prepareContent,
+      icon: _isPreparingContent
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              _isContentPrepared
+                  ? Icons.check_circle_outline
+                  : Icons.auto_fix_high_outlined,
+            ),
       label: Text(
         _isContentPrepared
             ? l10n.schoolHtmlImportCompressed
@@ -339,7 +356,11 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       ),
     );
     final submitButton = FilledButton.icon(
-      onPressed: _isSubmitting || _isApplying || !canSaveSchoolImport(provider)
+      onPressed:
+          _isSubmitting ||
+              _isApplying ||
+              _isPreparingContent ||
+              !canSaveSchoolImport(provider)
           ? null
           : _submit,
       icon: _isSubmitting
@@ -378,31 +399,56 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     );
   }
 
-  bool _prepareContent() {
+  Future<bool> _prepareContent() async {
+    if (_isPreparingContent) return false;
     final l10n = AppLocalizations.of(context);
     final sourceContent = _htmlController.text.trim();
     if (sourceContent.isEmpty) {
       _showMessage(l10n.schoolHtmlImportEmpty);
       return false;
     }
-    final sanitization = _workflow.prepareContent(sourceContent);
-    final sanitizedContent = sanitization.content;
-    if (sanitizedContent.isEmpty) {
-      _showMessage(l10n.schoolHtmlImportEmpty);
-      return false;
-    }
-    _htmlController.value = TextEditingValue(
-      text: sanitizedContent,
-      selection: TextSelection.collapsed(offset: sanitizedContent.length),
+    final provider = context.read<TimetableProvider>();
+    final generation = _submissionGeneration;
+    final owner = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.student,
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () => mounted && generation == _submissionGeneration,
     );
-    final wasTruncated = sanitization.wasTruncated;
-    if (!_isContentPrepared || (wasTruncated && !_contentWasTruncated)) {
-      setState(() {
-        _isContentPrepared = true;
-        _contentWasTruncated = _contentWasTruncated || wasTruncated;
-      });
+    setState(() => _isPreparingContent = true);
+    try {
+      final sanitization = await _workflow.prepareContent(sourceContent);
+      if (!mounted ||
+          !owner.isCurrent ||
+          sourceContent != _htmlController.text.trim()) {
+        return false;
+      }
+      final sanitizedContent = sanitization.content;
+      if (sanitizedContent.isEmpty) {
+        _showMessage(l10n.schoolHtmlImportEmpty);
+        return false;
+      }
+      _htmlController.value = TextEditingValue(
+        text: sanitizedContent,
+        selection: TextSelection.collapsed(offset: sanitizedContent.length),
+      );
+      final wasTruncated = sanitization.wasTruncated;
+      if (!_isContentPrepared || (wasTruncated && !_contentWasTruncated)) {
+        setState(() {
+          _isContentPrepared = true;
+          _contentWasTruncated = _contentWasTruncated || wasTruncated;
+        });
+      }
+      return true;
+    } catch (_) {
+      if (mounted && owner.isCurrent) {
+        _showMessage(l10n.importFailedCheckContent);
+      }
+      return false;
+    } finally {
+      owner.dispose();
+      if (mounted) setState(() => _isPreparingContent = false);
     }
-    return true;
   }
 
   TextEditingValue _formatBoundedInput(
@@ -503,7 +549,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   }
 
   Future<void> _submit() async {
-    if (_isSubmitting) {
+    if (_isSubmitting || _isPreparingContent) {
       return;
     }
     final submissionGeneration = ++_submissionGeneration;
@@ -514,9 +560,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       _showMessage(validationMessage);
       return;
     }
-    if (!_isContentPrepared && !_prepareContent()) {
+    if (!_isContentPrepared && !await _prepareContent()) {
       return;
     }
+    if (!mounted || submissionGeneration != _submissionGeneration) return;
 
     final localeCode = provider.localeCode;
     final canReplaceCurrent = provider.activeTimetableOrNull != null;

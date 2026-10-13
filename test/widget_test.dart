@@ -1,3 +1,5 @@
+import 'support/school_import_preparation.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -2132,7 +2134,9 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: SchoolHtmlImportPage(),
+            home: SchoolHtmlImportPage(
+              contentPreparer: prepareSchoolImportContentForTest,
+            ),
           ),
         ),
       );
@@ -2331,7 +2335,9 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: SchoolHtmlImportPage(),
+            home: SchoolHtmlImportPage(
+              contentPreparer: prepareSchoolImportContentForTest,
+            ),
           ),
         ),
       );
@@ -2370,7 +2376,9 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: SchoolHtmlImportPage(),
+            home: SchoolHtmlImportPage(
+              contentPreparer: prepareSchoolImportContentForTest,
+            ),
           ),
         ),
       );
@@ -2405,7 +2413,9 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: SchoolHtmlImportPage(),
+            home: SchoolHtmlImportPage(
+              contentPreparer: prepareSchoolImportContentForTest,
+            ),
           ),
         ),
       );
@@ -2659,7 +2669,10 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: SchoolHtmlImportPage(api: fakeApi),
+            home: SchoolHtmlImportPage(
+              contentPreparer: prepareSchoolImportContentForTest,
+              api: fakeApi,
+            ),
           ),
         ),
       );
@@ -2749,7 +2762,11 @@ void main() {
                         builder: (_) =>
                             ChangeNotifierProvider<TimetableProvider>.value(
                               value: provider,
-                              child: SchoolHtmlImportPage(api: fakeApi),
+                              child: SchoolHtmlImportPage(
+                                contentPreparer:
+                                    prepareSchoolImportContentForTest,
+                                api: fakeApi,
+                              ),
                             ),
                       ),
                     ),

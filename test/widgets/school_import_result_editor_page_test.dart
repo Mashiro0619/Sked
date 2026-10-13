@@ -1,3 +1,5 @@
+import '../support/school_import_preparation.dart';
+
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -51,7 +53,10 @@ void main() {
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: p,
-          home: const SchoolHtmlImportPage(initialContent: 'Original source'),
+          home: const SchoolHtmlImportPage(
+            contentPreparer: prepareSchoolImportContentForTest,
+            initialContent: 'Original source',
+          ),
         ),
       );
       await tester.pumpAndSettle();

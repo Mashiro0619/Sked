@@ -71,19 +71,22 @@ class _TrackingClient extends http.BaseClient {
 }
 
 void main() {
-  test('prepares a bounded canonical source with the shared sanitizer', () {
-    final workflow = SchoolImportWorkflow();
+  test(
+    'prepares a bounded canonical source with the shared sanitizer',
+    () async {
+      final workflow = SchoolImportWorkflow();
 
-    final result = workflow.prepareContent(
-      '<script>leak()</script><table><tr><td>Math</td></tr></table>',
-    );
+      final result = await workflow.prepareContent(
+        '<script>leak()</script><table><tr><td>Math</td></tr></table>',
+      );
 
-    expect(
-      result.content,
-      '<table><tbody><tr><td>Math</td></tr></tbody></table>',
-    );
-    expect(result.wasTruncated, isFalse);
-  });
+      expect(
+        result.content,
+        '<table><tbody><tr><td>Math</td></tr></tbody></table>',
+      );
+      expect(result.wasTruncated, isFalse);
+    },
+  );
 
   test('parse forwards its snapshot and closes the client once', () async {
     final api = _RecordingApi();

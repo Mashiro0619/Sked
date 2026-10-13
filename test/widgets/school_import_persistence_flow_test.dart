@@ -1,3 +1,5 @@
+import '../support/school_import_preparation.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -205,6 +207,7 @@ Future<GlobalKey<NavigatorState>> _openHtmlReview(
                     onPressed: () => Navigator.of(context).push<void>(
                       MaterialPageRoute(
                         builder: (_) => SchoolHtmlImportPage(
+                          contentPreparer: prepareSchoolImportContentForTest,
                           initialContent: 'Monday period 1 Mathematics',
                           showReturnToWebPageButton: true,
                           api: api,
@@ -259,6 +262,7 @@ Future<GlobalKey<NavigatorState>> _openHtmlReview(
       sourceNavigator.push<void>(
         MaterialPageRoute(
           builder: (_) => SchoolHtmlImportPage(
+            contentPreparer: prepareSchoolImportContentForTest,
             initialContent: 'Monday period 1 Mathematics',
             showReturnToWebPageButton: true,
             api: api,

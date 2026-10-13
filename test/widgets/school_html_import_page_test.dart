@@ -1,3 +1,5 @@
+import '../support/school_import_preparation.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -205,6 +207,7 @@ Future<void> _pumpSchoolHtmlImportPage(
   SchoolImportApi? api,
   SchoolImportHttpConsentStore? httpConsentStore,
   http.Client Function()? httpClientFactory,
+  Future<SchoolImportSanitizationResult> Function(String)? contentPreparer,
   String initialContent = '',
   bool initialContentTruncated = false,
 }) async {
@@ -216,6 +219,7 @@ Future<void> _pumpSchoolHtmlImportPage(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SchoolHtmlImportPage(
+          contentPreparer: contentPreparer ?? prepareSchoolImportContentForTest,
           initialContent: initialContent,
           initialContentTruncated: initialContentTruncated,
           api: api,
@@ -247,6 +251,7 @@ Future<void> _pumpSchoolHtmlImportPageHost(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const SchoolHtmlImportPage(
+                        contentPreparer: prepareSchoolImportContentForTest,
                         showReturnToWebPageButton: true,
                       ),
                     ),
@@ -269,6 +274,44 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'closing during content preparation cannot apply the late result',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final pending = Completer<SchoolImportSanitizationResult>();
+      var preparations = 0;
+      await _pumpSchoolHtmlImportPage(
+        tester,
+        provider,
+        initialContent: '<p>Original source</p>',
+        contentPreparer: (_) {
+          preparations++;
+          return pending.future;
+        },
+      );
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SchoolHtmlImportPage)),
+      );
+      final prepare = find.text(l10n.schoolHtmlImportCompress);
+      await tester.ensureVisible(prepare);
+      await tester.tap(prepare);
+      await tester.pump();
+      await tester.tap(prepare);
+      expect(preparations, 1);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      pending.complete(
+        const SchoolImportSanitizationResult(
+          content: '<p>Late result</p>',
+          wasTruncated: false,
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('mapSchoolImportApplyError returns FormatException message', (
     tester,
   ) async {
