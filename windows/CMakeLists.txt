@@ -55,6 +55,8 @@ add_subdirectory("runner")
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
+set(CMAKE_PROJECT_flutter_inappwebview_windows_INCLUDE
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/flutter_inappwebview_windows_compat.cmake")
 include(flutter/generated_plugins.cmake)
 
 # MSVC 14.51 requires an explicit opt-in while this plugin still depends on
