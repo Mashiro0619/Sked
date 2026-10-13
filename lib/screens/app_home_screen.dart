@@ -1,3 +1,5 @@
+import '../widgets/sked_confirmation_dialog.dart';
+import '../widgets/sked_task_route.dart';
 import '../theme/sked_surface.dart';
 
 import '../services/app_update_coordinator.dart';
@@ -138,7 +140,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         if (!mounted || _lastProvider != provider || provider.canWrite) {
           return;
         }
-        Navigator.of(context, rootNavigator: true).popUntil((route) {
+        retireSkedTaskRoutesUntil(Navigator.of(context, rootNavigator: true), (
+          route,
+        ) {
           if (route.isFirst) return true;
           final draft = route.settings.arguments;
           if (draft is! SchoolImportRecoveryDraft ||
@@ -249,7 +253,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           builder: (context, setDialogState) {
             return PopScope(
               canPop: false,
-              child: AlertDialog(
+              child: SkedConfirmationDialog(
                 title: Text(l10n.privacyGateTitle),
                 content: SingleChildScrollView(
                   child: ConstrainedBox(
@@ -407,7 +411,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       barrierDismissible: false,
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.dataRecoveryStartFreshConfirmTitle),
           content: Text(l10n.dataRecoveryStartFreshConfirmMessage),
           actions: [
@@ -464,7 +468,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       context: context,
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.dataRecoveryArtifactsAction),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 620, maxHeight: 360),

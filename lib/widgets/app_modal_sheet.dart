@@ -14,6 +14,7 @@ import '../providers/timetable_provider.dart';
 import '../services/desktop_layout_preferences.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_panel_header.dart';
+import 'sked_guarded_bottom_sheet_route.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -30,6 +31,7 @@ Future<T?> showAppModalSheet<T>({
   double maxWidth = appSheetWidthMedium,
   bool isDismissible = true,
   bool enableDrag = true,
+  bool? showDragHandle,
   bool useRootNavigator = false,
   bool useSafeArea = false,
   RouteSettings? routeSettings,
@@ -103,7 +105,7 @@ Future<T?> showAppModalSheet<T>({
     rootNavigator: useRootNavigator || workspacePane != null,
   );
   final l = MaterialLocalizations.of(context);
-  final route = ModalBottomSheetRoute<T>(
+  final route = SkedGuardedBottomSheetRoute<T>(
     capturedThemes: InheritedTheme.capture(
       from: context,
       to: navigator.context,
@@ -113,7 +115,7 @@ Future<T?> showAppModalSheet<T>({
     isScrollControlled: true,
     isDismissible: isDismissible,
     enableDrag: enableDrag,
-    showDragHandle: enableDrag,
+    showDragHandle: showDragHandle ?? enableDrag,
     useSafeArea: bottomTask || useSafeArea,
     settings: routeSettings,
     constraints: BoxConstraints(maxWidth: maxWidth),
