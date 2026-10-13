@@ -1,3 +1,5 @@
+import '../widgets/sked_confirmation_dialog.dart';
+import '../widgets/workspace_editor_form.dart';
 import '../widgets/sked_time_picker.dart';
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_route_lifecycle.dart';
@@ -815,7 +817,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       waitForTransitionComplete: true,
       builder: (context) {
         final l10n = AppLocalizations.of(context);
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.periodTimesUnsavedExitTitle),
           content: Text(
             canRetry
@@ -869,7 +871,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
           Navigator.of(context).pop(value);
         }
 
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.deletePeriodTimeSetTitle),
           content: Text(l10n.deletePeriodTimeSetMessage(name)),
           actions: [

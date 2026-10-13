@@ -47,13 +47,13 @@ class _PeriodEditorHeading extends StatelessWidget {
         );
         final sideBySide =
             constraints.maxWidth >= nameMinimum + statusMinimum + 24;
-        final name = TextField(
-          key: const ValueKey('period-times-name'),
+        final name = SkedEditorTextField(
+          label: l.periodTimeSetName,
+          controlKey: const ValueKey('period-times-name'),
           controller: controller,
           onChanged: onChanged,
           onSubmitted: onSubmitted,
           textInputAction: TextInputAction.done,
-          decoration: InputDecoration(labelText: l.periodTimeSetName),
         );
         final count = Text(
           l.periodTimesCount(periodCount),

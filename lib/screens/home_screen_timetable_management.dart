@@ -20,7 +20,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
               anchorContext: pickerContext,
             ).initialAnchor,
           );
-          Navigator.of(pickerContext).pop();
+          completeSkedTaskRoute(pickerContext);
           await WidgetsBinding.instance.endOfFrame;
           if (!context.mounted) return false;
           return _openTimetableItemDialog(
@@ -36,7 +36,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
               anchorContext: pickerContext,
             ).initialAnchor,
           );
-          Navigator.of(pickerContext).pop();
+          completeSkedTaskRoute(pickerContext);
           await WidgetsBinding.instance.endOfFrame;
           if (!context.mounted) return false;
           return _openCreateTimetableDialog(context, provider, editor: editor);
@@ -359,8 +359,6 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                   }
                 }
 
-                final desktopEditor =
-                    WorkspaceEditorScope.maybeOf(context)?.enabled == true;
                 void requestClose() => unawaited(
                   context
                       .findAncestorStateOfType<
@@ -375,25 +373,9 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                     onClose: requestClose,
                     closeEnabled: !blocked,
                     busy: busy,
-                    title: desktopEditor
-                        ? Text(
-                            creating
-                                ? l10n.createTimetable
-                                : l10n.editTimetable,
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              UiCommandBusyIndicator(busy: busy),
-                              const SizedBox(height: 16),
-                              Text(
-                                creating
-                                    ? l10n.createTimetable
-                                    : l10n.editTimetable,
-                              ),
-                            ],
-                          ),
+                    title: Text(
+                      creating ? l10n.createTimetable : l10n.editTimetable,
+                    ),
                     form: TimetableInformationForm(
                       startDateAnchorKey: startDateAnchor,
                       periodTimeSetAnchorKey: periodTimeSetAnchor,
@@ -525,45 +507,19 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                               }
                             },
                     ),
-                    leading: creating
-                        ? null
-                        : TextButton(
-                            onPressed: blocked
-                                ? null
-                                : () => unawaited(confirmDelete()),
-                            child: Text(l10n.delete),
-                          ),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: blocked ? null : requestClose,
-                        child: Text(l10n.cancel),
-                      ),
-                      FilledButton(
-                        onPressed: blocked
-                            ? null
-                            : () => unawaited(saveChanges()),
-                        child: Text(l10n.save),
-                      ),
-                    ],
+                    editorActions: SkedEditorActions(
+                      enabled: !blocked,
+                      busy: busy,
+                      onCancel: requestClose,
+                      onSubmit: () => unawaited(saveChanges()),
+                      showDelete: !creating,
+                      onDelete: creating
+                          ? null
+                          : () => unawaited(confirmDelete()),
+                    ),
                   ),
                 );
-                return PopScope(
-                  canPop: !blocked && !popped,
-                  child: desktopEditor
-                      ? form
-                      // The modal host already avoids the keyboard. Short
-                      // touch forms only add the remaining system safe area.
-                      : SafeArea(
-                          top: false,
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            heightFactor: WorkspaceTaskScope.contains(context)
-                                ? null
-                                : 1,
-                            child: SingleChildScrollView(child: form),
-                          ),
-                        ),
-                );
+                return PopScope(canPop: !blocked && !popped, child: form);
               },
             ),
           );

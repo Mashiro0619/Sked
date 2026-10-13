@@ -30,9 +30,10 @@ Finder _valueButton(String label) => find.descendant(
   ),
   matching: find.byType(TextButton),
 );
-Finder get _scroll => find
-    .ancestor(of: _form, matching: find.byType(SingleChildScrollView))
-    .first;
+Finder get _scroll => find.descendant(
+  of: _form,
+  matching: find.byKey(const PageStorageKey('app-sheet-body')),
+);
 Finder get _surface =>
     find.ancestor(of: _form, matching: _key('app-bottom-task-surface')).first;
 
@@ -118,7 +119,7 @@ void main() {
   for (final editing in [false, true]) {
     for (final locale in ['en', 'zh']) {
       testWidgets(
-        'phone timetable editing=$editing $locale sheet wraps its form',
+        'phone timetable editing=$editing $locale uses the shared editor regions',
         (t) async {
           _viewport(t, const Size(393, 852));
           final provider = await _open(t, editing: editing, locale: locale);
@@ -128,11 +129,23 @@ void main() {
             isA<ModalBottomSheetRoute<dynamic>>(),
           );
           final surface = t.getRect(_surface);
-          final form = t.getRect(_form);
+          final header = _key('app-sheet-header');
+          final actions = _key('app-sheet-actions');
+          expect(header, findsOneWidget);
+          expect(_scroll, findsOneWidget);
+          expect(actions, findsOneWidget);
+          expect(t.getRect(header).top, greaterThanOrEqualTo(surface.top));
           expect(
-            surface.height,
-            closeTo(form.height + 24, .01),
-            reason: 'Only the bottom safe area may extend past a short form.',
+            t.getRect(header).bottom,
+            lessThanOrEqualTo(t.getRect(_scroll).top),
+          );
+          expect(
+            t.getRect(_scroll).bottom,
+            lessThanOrEqualTo(t.getRect(actions).top),
+          );
+          expect(
+            t.getRect(actions).bottom,
+            lessThanOrEqualTo(surface.bottom - 24),
           );
           expect(surface.bottom, 852);
           expect(surface.top, greaterThan(24 + 100));
@@ -179,11 +192,24 @@ void main() {
           expect(t.widget<TextField>(field).controller, same(controller));
           final surface = t.getRect(_surface);
           final viewport = t.getRect(_scroll);
+          final actions = t.getRect(_key('app-sheet-actions'));
           expect(surface.bottom, closeTo(size.height - keyboard, .01));
           expect(
             viewport.bottom,
-            closeTo(surface.bottom, .01),
-            reason: 'The modal host already removes the IME; no second inset.',
+            lessThanOrEqualTo(actions.top),
+            reason: 'Only the content scrolls underneath the fixed commands.',
+          );
+          final actionViewport = t.getRect(
+            find
+                .ancestor(
+                  of: _key('app-sheet-actions'),
+                  matching: find.byType(SingleChildScrollView),
+                )
+                .first,
+          );
+          expect(
+            actionViewport.bottom,
+            lessThanOrEqualTo(size.height - keyboard),
           );
           expect(surface.top, greaterThanOrEqualTo(24));
           final l = AppLocalizations.of(t.element(_form));
@@ -194,9 +220,18 @@ void main() {
           await t.ensureVisible(save);
           await t.pumpAndSettle();
           expect(save.hitTestable(), findsOneWidget);
+          final visibleActions = t.getRect(
+            find
+                .ancestor(
+                  of: _key('app-sheet-actions'),
+                  matching: find.byType(SingleChildScrollView),
+                )
+                .first,
+          );
+          expect(t.getRect(save).top, greaterThanOrEqualTo(visibleActions.top));
           expect(
             t.getRect(save).bottom,
-            lessThanOrEqualTo(size.height - keyboard),
+            lessThanOrEqualTo(visibleActions.bottom),
           );
           expect(t.takeException(), isNull);
           t.view.viewInsets = const FakeViewPadding();

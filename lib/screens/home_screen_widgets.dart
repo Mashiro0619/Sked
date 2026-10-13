@@ -138,7 +138,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           ),
         ],
         actions: [
-          PopupMenuButton<_StudentTimetableView>(
+          SkedPopupMenuButton<_StudentTimetableView>(
             key: const ValueKey('student-view-toggle'),
             tooltip: l10n.defaultView,
             onSelected: onViewChanged,
@@ -1023,7 +1023,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
     final completed = await command();
     if (!mounted) return;
     if (completed) {
-      Navigator.of(context).pop();
+      completeSkedTaskRoute(context);
     } else {
       setState(() => _busy = false);
     }
@@ -1050,7 +1050,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
       }
     }
     if (mounted && closePanel) {
-      Navigator.of(context).pop();
+      completeSkedTaskRoute(context);
     }
   }
 
@@ -1074,7 +1074,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                 key: const ValueKey('timetable-picker-heading'),
                 padding: floating
                     ? skedPanelHeaderPadding
-                    : const EdgeInsets.fromLTRB(24, 16, 12, 8),
+                    : const EdgeInsets.fromLTRB(16, 16, 12, 8),
                 child: Row(
                   children: [
                     Expanded(
@@ -1082,14 +1082,8 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                         alignment: floating
                             ? AlignmentDirectional.centerStart
                             : AlignmentDirectional.topStart,
-                        child: Semantics(
-                          header: true,
-                          child: Text(
-                            l10n.multiTimetableSwitch,
-                            style: floating
-                                ? skedPanelTitleStyle(context)
-                                : Theme.of(context).textTheme.headlineSmall,
-                          ),
+                        child: SkedTaskHeader(
+                          title: Text(l10n.multiTimetableSwitch),
                         ),
                       ),
                     ),
@@ -1191,114 +1185,23 @@ class _TimetableDrawerItem extends StatelessWidget {
   final ValueChanged<BuildContext>? onEdit;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final accent = skedReadableAccent(
-      colors,
-      surface: colors.primary.withValues(alpha: 0.12),
-    );
-    final contentColor = enabled
-        ? (selected ? accent : colors.onSurface)
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondaryColor = enabled
-        ? (selected ? accent : colors.onSurfaceVariant)
-        : colors.onSurface.withValues(alpha: 0.38);
-    if (SkedTaskDialogScope.maybeOf(context) != null) {
-      return ListTile(
-        key: ValueKey('timetable-picker-item-${timetable.id}'),
-        dense: true,
-        selected: selected,
-        enabled: enabled,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-        leading: SizedBox(
-          width: 20,
-          child: selected ? const Icon(Icons.check, size: 18) : null,
-        ),
-        title: Text(timetable.config.name),
-        subtitle: Text(selected ? currentLabel : switchLabel),
-        trailing: Builder(
-          builder: (anchor) => IconButton(
-            tooltip: editTooltip,
-            onPressed: enabled && onEdit != null ? () => onEdit!(anchor) : null,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-          ),
-        ),
-        onTap: enabled ? onTap : null,
-      );
-    }
-    return Semantics(
-      key: ValueKey('timetable-picker-item-${timetable.id}'),
-      container: true,
-      selected: selected,
-      enabled: enabled,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Material(
-          color: selected
-              ? colors.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: enabled ? onTap : null,
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-              child: Row(
-                children: [
-                  Icon(
-                    selected ? Icons.check_circle : Icons.calendar_view_week,
-                    color: secondaryColor,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          timetable.config.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: contentColor,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          selected ? currentLabel : switchLabel,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: secondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Builder(
-                    builder: (anchor) => IconButton(
-                      tooltip: editTooltip,
-                      icon: const Icon(Icons.edit_outlined),
-                      color: secondaryColor,
-                      onPressed: enabled && onEdit != null
-                          ? () => onEdit!(anchor)
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) => ExpressiveDialogOption(
+    key: ValueKey('timetable-picker-item-${timetable.id}'),
+    selected: selected,
+    enabled: enabled,
+    leading: Icon(selected ? Icons.check_circle : Icons.calendar_view_week),
+    title: Text(timetable.config.name),
+    subtitle: Text(selected ? currentLabel : switchLabel),
+    trailing: Builder(
+      builder: (anchor) => IconButton(
+        tooltip: editTooltip,
+        style: WorkbenchChromeMetrics.of(context).iconStyle,
+        icon: const Icon(Icons.edit_outlined),
+        onPressed: enabled && onEdit != null ? () => onEdit!(anchor) : null,
       ),
-    );
-  }
+    ),
+    onTap: enabled ? onTap : null,
+  );
 }
 
 class _TimetableWeekPager extends StatefulWidget {

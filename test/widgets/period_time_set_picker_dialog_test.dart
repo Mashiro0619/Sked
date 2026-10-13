@@ -147,8 +147,22 @@ void main() {
       findsOneWidget,
     );
     final titleRect = tester.getRect(find.text(l10n.selectPeriodTimeSet));
-    final addRect = tester.getRect(find.byTooltip(l10n.newItem));
-    expect(addRect.top, lessThan(titleRect.bottom + 20));
+    final addButton = find.ancestor(
+      of: find.byTooltip(l10n.newItem),
+      matching: find.byType(IconButton),
+    );
+    // IconButton includes the padded touch target outside its visual tooltip.
+    final addRect = tester.getRect(addButton);
+    expect(titleRect.bottom, lessThanOrEqualTo(listRect.top));
+    expect(addRect.top, greaterThanOrEqualTo(listRect.bottom));
+    expect(addRect.height, greaterThanOrEqualTo(48));
+    expect(addRect.width, greaterThanOrEqualTo(48));
+    expect(addButton.hitTestable(), findsOneWidget);
+    final cancel = find.widgetWithText(TextButton, l10n.cancel);
+    expect(cancel.hitTestable(), findsOneWidget);
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -429,6 +443,12 @@ void main() {
 
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.byType(ExpressiveDialogOption), findsWidgets);
+      expect(tester.takeException(), isNull);
+
+      final firstOption = find.byType(ExpressiveDialogOption).first;
+      await tester.ensureVisible(firstOption);
+      await tester.pumpAndSettle();
+      expect(firstOption.hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.tap(

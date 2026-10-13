@@ -33,11 +33,12 @@ import '../previews/sked_preview_support.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_modal_sheet.dart';
+import '../widgets/sked_task_header.dart';
 import '../widgets/workspace_frame.dart';
-import '../widgets/workspace_editor.dart';
 import '../widgets/assistant_pane.dart' show AssistantPaneScope;
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/editor_exit_guard.dart';
+import '../widgets/sked_task_route.dart';
 import '../widgets/workspace_navigation.dart';
 import '../widgets/course_details_sheet.dart';
 import '../widgets/course_editor_sheet.dart';
@@ -650,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Builder(
-                  builder: (anchor) => PopupMenuButton<String>(
+                  builder: (anchor) => SkedPopupMenuButton<String>(
                     key: const ValueKey('student-resource-menu'),
                     // Popup defaults otherwise override the compact icon theme.
                     style: WorkbenchChromeMetrics.of(context).iconStyle,

@@ -678,7 +678,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<WorkspaceEditorValue>(_key('course-start-time-action'))
+            .widget<SkedEditorValueAction>(_key('course-start-time-action'))
             .value,
         '08:05',
       );

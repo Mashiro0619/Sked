@@ -10,6 +10,7 @@ import 'workspace_route_lifecycle.dart';
 import '../screens/period_times_page.dart';
 import 'adaptive_collection_scaffold.dart';
 import 'expressive_empty_state.dart';
+import 'expressive_dialog.dart';
 import 'ui_command.dart';
 
 class PeriodTimeSetManagerPage extends StatefulWidget {
@@ -68,24 +69,19 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
               set.periodTimes.length,
               p.timetablesUsingPeriodTimeSet(set.id).length,
             ),
-            tileBuilder: (selected, openDetail) => Material(
-              type: MaterialType.transparency,
-              child: ListTile(
-                key: ValueKey('period-time-set-${set.id}'),
-                selected: selected,
-                title: Text(set.name),
-                subtitle: Text(
-                  l.periodTimeSetUsageSummary(
-                    set.periodTimes.length,
-                    p.timetablesUsingPeriodTimeSet(set.id).length,
-                  ),
+            tileBuilder: (selected, openDetail) => ExpressiveDialogOption(
+              key: ValueKey('period-time-set-${set.id}'),
+              selected: selected,
+              title: Text(set.name),
+              subtitle: Text(
+                l.periodTimeSetUsageSummary(
+                  set.periodTimes.length,
+                  p.timetablesUsingPeriodTimeSet(set.id).length,
                 ),
-                trailing: const Icon(Icons.chevron_right),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                onTap: uiCommandBusy ? null : openDetail,
               ),
+              trailing: const Icon(Icons.chevron_right),
+              enabled: !uiCommandBusy,
+              onTap: uiCommandBusy ? null : openDetail,
             ),
           ),
       ],
