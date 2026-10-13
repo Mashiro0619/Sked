@@ -14,6 +14,8 @@ import 'sked_panel_header.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_task_route.dart';
 import 'sked_task_session.dart';
+import 'sked_task_actions.dart';
+import 'sked_task_header.dart';
 
 /// Only HTTPS release-note links may leave the app. Images never load remotely.
 Uri? resolveUpdateNoteLink(String? href, String releaseUrl) {
@@ -181,12 +183,8 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       onPressed: _busy ? null : _open,
       child: Text(widget.distribution.label(l10n)),
     );
-    final actions = Wrap(
-      alignment: WrapAlignment.end,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: [
+    final actions = SkedActionArea(
+      actions: [
         secondary,
         if (failed) ...[
           OutlinedButton(
@@ -463,13 +461,14 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          failed
-              ? l10n.updateCheckFailedTitle
-              : found
-              ? l10n.updateFoundTitle
-              : l10n.updateNoNewerVersion(result.localVersion),
-          style: theme.textTheme.titleLarge,
+        SkedTaskHeader(
+          title: Text(
+            failed
+                ? l10n.updateCheckFailedTitle
+                : found
+                ? l10n.updateFoundTitle
+                : l10n.updateNoNewerVersion(result.localVersion),
+          ),
         ),
         if (found) ...[
           const SizedBox(height: 12),
@@ -513,12 +512,9 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
         ],
       ],
     );
-    final actions = Wrap(
-      alignment: WrapAlignment.end,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
+    final actions = SkedActionArea(
       runSpacing: 4,
-      children: [
+      actions: [
         TextButton(
           onPressed: _busy ? null : _close,
           child: Text(widget.startup ? l10n.updateLater : l10n.cancel),

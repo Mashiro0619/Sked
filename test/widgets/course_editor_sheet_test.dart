@@ -281,8 +281,11 @@ void main() {
       for (final invalid in ['', '-1', '1.5', 'oops']) {
         await tester.ensureVisible(minutes);
         await tester.enterText(minutes, invalid);
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('More'));
         await tester.pumpAndSettle();
+        expect(find.text('More').hitTestable(), findsOneWidget);
         await tester.tap(find.text('More'));
         await tester.pumpAndSettle();
         expect(minutes, findsNothing);
@@ -297,8 +300,11 @@ void main() {
         expect(tester.widget<TextField>(minutes).focusNode!.hasFocus, isTrue);
       }
       await tester.enterText(minutes, '0');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('More'));
       await tester.pumpAndSettle();
+      expect(find.text('More').hitTestable(), findsOneWidget);
       await tester.tap(find.text('More'));
       await tester.pumpAndSettle();
       await tester.tap(save);
@@ -431,7 +437,7 @@ void main() {
     expect(title, findsOneWidget);
     expect(
       tester.getTopLeft(title).dy - tester.getRect(sheet).top,
-      greaterThanOrEqualTo(20),
+      closeTo(16, .1),
     );
     expect(tester.takeException(), isNull);
   });
@@ -456,7 +462,7 @@ void main() {
     await tester.pump();
 
     final titleTop = tester.getTopLeft(find.text('Add course')).dy;
-    expect(titleTop, greaterThanOrEqualTo(20));
+    expect(titleTop, closeTo(16, .1));
     expect(tester.takeException(), isNull);
   });
 
@@ -704,7 +710,7 @@ void main() {
     final editor = find.byType(CourseEditorSheet);
     final scrollView = find.descendant(
       of: editor,
-      matching: find.byType(SingleChildScrollView),
+      matching: find.byKey(const PageStorageKey('app-sheet-body')),
     );
     expect(scrollView, findsOneWidget);
     expect(tester.getSize(scrollView).height, greaterThanOrEqualTo(48));

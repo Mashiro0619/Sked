@@ -463,10 +463,10 @@ void main() {
     );
     await tester.pump();
 
-    final scrollView = tester.widget<SingleChildScrollView>(
-      find.byType(SingleChildScrollView).first,
+    final bodyPadding = tester.widget<Padding>(
+      find.byKey(const ValueKey('sked-task-content')),
     );
-    expect(scrollView.padding, const EdgeInsets.fromLTRB(16, 20, 16, 12));
+    expect(bodyPadding.padding, const EdgeInsets.fromLTRB(16, 20, 16, 12));
     expect(find.byType(Divider), findsOneWidget);
     expect(find.byTooltip('Pick date'), findsNWidgets(2));
     expect(find.byTooltip('Pick time'), findsNWidgets(2));

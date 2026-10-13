@@ -1,9 +1,11 @@
 import 'sked_task_session.dart';
 import 'workspace_editor.dart';
 export 'workspace_editor.dart' show WorkspaceEditorConfiguration;
+export 'sked_task_actions.dart' show SkedEditorActions, SkedActionArea;
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,8 +15,10 @@ import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 import '../services/desktop_layout_preferences.dart';
 import 'workbench_chrome_metrics.dart';
-import 'sked_panel_header.dart';
 import 'sked_guarded_bottom_sheet_route.dart';
+import 'sked_task_actions.dart';
+import 'sked_task_body.dart';
+import 'sked_task_header.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -211,21 +215,40 @@ class AppSheetScaffold extends StatelessWidget {
     this.heightFactor,
     this.contentPadding = const EdgeInsets.fromLTRB(16, 0, 16, 12),
     this.actionPadding,
-  });
+    this.busy = false,
+  }) : editorActions = null,
+       compact = true,
+       _editor = false;
 
-  final Widget title;
-  final Widget? subtitle;
-  final Widget child;
-  final Widget? leading;
+  /// Editors share one height, title, field spacing and action contract.
+  /// Short forms opt into natural height; long forms retain a scroll viewport.
+  const AppSheetScaffold.editor({
+    super.key,
+    required this.title,
+    required this.child,
+    required this.onClose,
+    required this.editorActions,
+    this.closeEnabled = true,
+    this.busy = false,
+    this.compact = false,
+    this.subtitle,
+    this.footer,
+    this.contentPadding = const EdgeInsets.fromLTRB(16, 0, 16, 12),
+    this.actionPadding,
+  }) : actions = const [],
+       leading = null,
+       heightFactor = null,
+       _editor = true;
+
+  final Widget title, child;
+  final Widget? subtitle, leading;
   final VoidCallback? onClose;
-  final bool closeEnabled;
+  final bool closeEnabled, busy, compact, _editor;
   final List<Widget> actions;
+  final SkedEditorActions? editorActions;
 
-  /// A custom fixed footer that replaces the standard leading/actions layout.
-  ///
-  /// The footer uses the same safe-area and keyboard-aware placement as the
-  /// standard action area, so callers only provide its responsive contents.
-  /// When it is present, [leading] and [actions] are ignored.
+  /// Custom commands, e.g. importing as new/replacing a timetable, retain the
+  /// same fixed position and are forwarded intact to desktop hosts.
   final Widget? footer;
   final double? heightFactor;
   final EdgeInsetsGeometry contentPadding;
@@ -233,124 +256,85 @@ class AppSheetScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewInsets = MediaQuery.viewInsetsOf(context);
+    final media = MediaQuery.of(context);
     final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final editor = WorkspaceEditorScope.maybeOf(context);
-    if (editor?.enabled == true && onClose != null) {
+    final resolvedActions = editorActions?.trailing(context) ?? actions;
+    final resolvedLeading = editorActions?.leading(context) ?? leading;
+    final status = busy ? const UiCommandBusyIndicator(busy: true) : null;
+    if ((editor?.enabled == true || (_editor && desktop)) && onClose != null) {
       return WorkspaceEditorScaffold(
         title: title,
+        subtitle: subtitle,
         onClose: onClose!,
         closeEnabled: closeEnabled,
-        actions: actions,
-        leading: leading,
+        actions: resolvedActions,
+        leading: resolvedLeading,
+        footer: footer,
+        status: status,
         child: child,
       );
     }
     final inTaskPane = WorkspaceTaskScope.contains(context);
     final keyboardHandled =
         inTaskPane || _AppBottomSheetScope.contains(context);
+    final resolvedPadding = contentPadding.resolve(Directionality.of(context));
+    // Outlined touch inputs paint their floating label above the border. Keep
+    // that first label inside the independent body viewport, including at 2x.
+    final bodyPadding = _editor && !desktop
+        ? resolvedPadding.copyWith(
+            top: math.max(
+              resolvedPadding.top,
+              8 * MediaQuery.textScalerOf(context).scale(14) / 14,
+            ),
+          )
+        : contentPadding;
     final body = SafeArea(
       top: false,
-      child: Column(
-        mainAxisSize: inTaskPane ? MainAxisSize.max : MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Flexible(
-            fit: inTaskPane ? FlexFit.tight : FlexFit.loose,
-            child: SingleChildScrollView(
-              padding: contentPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (desktop)
-                    SkedPanelHeader(
-                      title: title,
-                      subtitle: subtitle,
-                      showClose: false,
-                    )
-                  else ...[
-                    DefaultTextStyle.merge(
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      child: title,
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 4),
-                      DefaultTextStyle.merge(
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        child: subtitle!,
-                      ),
-                    ],
-                  ],
-                  const SizedBox(height: 16),
-                  child,
-                ],
-              ),
+      child: SkedTaskBody(
+        status: status,
+        fillHeight: inTaskPane,
+        header: SkedTaskHeader(
+          key: const ValueKey('app-sheet-header'),
+          title: title,
+          subtitle: subtitle,
+        ),
+        bodyKey: const PageStorageKey('app-sheet-body'),
+        headerPadding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        contentPadding: bodyPadding,
+        footerPadding:
+            actionPadding ??
+            EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              (keyboardHandled ? 0 : media.viewInsets.bottom) + 16,
             ),
-          ),
-          Padding(
-            padding:
-                actionPadding ??
-                // The hosting Scaffold already removes the IME from a task
-                // pane's constraints. Only modal sheets need a second inset.
-                EdgeInsets.fromLTRB(
-                  16,
-                  8,
-                  16,
-                  (keyboardHandled ? 0 : viewInsets.bottom) + 16,
-                ),
-            child:
-                footer ?? _AppSheetActions(leading: leading, actions: actions),
-          ),
-        ],
+        footer:
+            footer != null ||
+                resolvedLeading != null ||
+                resolvedActions.isNotEmpty
+            ? KeyedSubtree(
+                key: const ValueKey('app-sheet-actions'),
+                child:
+                    footer ??
+                    SkedActionArea(
+                      leading: resolvedLeading,
+                      actions: resolvedActions,
+                    ),
+              )
+            : null,
+        child: child,
       ),
     );
-
-    if (inTaskPane || heightFactor == null) {
-      return body;
-    }
-    return FractionallySizedBox(heightFactor: heightFactor, child: body);
-  }
-}
-
-class _AppSheetActions extends StatelessWidget {
-  const _AppSheetActions({required this.actions, this.leading});
-
-  final Widget? leading;
-  final List<Widget> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final actionWrap = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.end,
-      children: actions,
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (leading != null && constraints.maxWidth >= 420) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              leading!,
-              const Spacer(),
-              Flexible(child: actionWrap),
-            ],
-          );
-        }
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.end,
-          children: [?leading, ...actions],
-        );
-      },
-    );
+    final factor = _editor && !compact
+        ? media.viewInsets.bottom > 0
+              ? 1.0
+              : media.size.height < 700
+              ? .96
+              : .72
+        : heightFactor;
+    if (inTaskPane || factor == null) return body;
+    return FractionallySizedBox(heightFactor: factor, child: body);
   }
 }

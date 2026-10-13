@@ -1,4 +1,5 @@
 import 'sked_panel_header.dart';
+import 'sked_task_body.dart';
 
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
@@ -63,6 +64,7 @@ class WorkspaceViewPanel extends StatelessWidget {
     this.subtitle,
     this.headerAction,
     this.toolbar,
+    this.status,
     this.bodyViewportKey,
     this.contentPadding = const EdgeInsets.fromLTRB(12, 10, 12, 12),
     this.headerPadding = skedPanelHeaderPadding,
@@ -71,7 +73,7 @@ class WorkspaceViewPanel extends StatelessWidget {
     this.prominentTitle = false,
   });
   final Widget title;
-  final Widget? subtitle, headerAction, toolbar;
+  final Widget? subtitle, headerAction, toolbar, status;
   final Widget child;
   final Key? bodyViewportKey;
   final EdgeInsetsGeometry contentPadding;
@@ -100,52 +102,36 @@ class WorkspaceViewPanel extends StatelessWidget {
           final inlineAction =
               inlineHeaderAction ??
               constraints.maxWidth >= 360 * metrics.textScale;
-          final content = Column(
-            mainAxisSize: fitContent ? MainAxisSize.min : MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Only very short/large-text windows scroll the header itself.
-              // Normal panels keep the title and actions outside the body scroll.
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: constraints.maxHeight * .7,
-                ),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    key: const ValueKey('workspace-view-header'),
-                    padding: headerPadding,
-                    child: SkedPanelHeader(
-                      title: title,
-                      subtitle: subtitle,
-                      prominentTitle: prominentTitle,
-                      verticalAlignment: headerVerticalAlignment,
-                      action: headerAction,
-                      inlineAction: inlineAction,
-                      actionGap: 8,
-                      closeGap: 4,
-                      onDrag: onDragUpdate,
-                      dragKey: const ValueKey('workspace-view-drag-handle'),
-                      showClose: task && scope!.showClose,
-                      onClose: scope?.onClose,
-                      closeKey: const ValueKey('workspace-inspector-close'),
-                      toolbar: toolbar,
-                    ),
-                  ),
-                ),
+          final content = SkedTaskBody(
+            status: status,
+            fillHeight: !fitContent,
+            headerDivider: true,
+            headerHeightFraction: .7,
+            headerPadding: EdgeInsets.zero,
+            contentPadding: contentPadding,
+            viewportKey: bodyViewportKey,
+            bodyKey: const ValueKey('workspace-view-body'),
+            header: Padding(
+              key: const ValueKey('workspace-view-header'),
+              padding: headerPadding,
+              child: SkedPanelHeader(
+                title: title,
+                subtitle: subtitle,
+                prominentTitle: prominentTitle,
+                verticalAlignment: headerVerticalAlignment,
+                action: headerAction,
+                inlineAction: inlineAction,
+                actionGap: 8,
+                closeGap: 4,
+                onDrag: onDragUpdate,
+                dragKey: const ValueKey('workspace-view-drag-handle'),
+                showClose: task && scope!.showClose,
+                onClose: scope?.onClose,
+                closeKey: const ValueKey('workspace-inspector-close'),
+                toolbar: toolbar,
               ),
-              const Divider(height: 1),
-              Flexible(
-                fit: fitContent ? FlexFit.loose : FlexFit.tight,
-                child: SizedBox(
-                  key: bodyViewportKey,
-                  child: SingleChildScrollView(
-                    key: const ValueKey('workspace-view-body'),
-                    padding: contentPadding,
-                    child: child,
-                  ),
-                ),
-              ),
-            ],
+            ),
+            child: child,
           );
           return _ReportPanelSize(
             onHeight: task ? scope!.onContentHeight : null,

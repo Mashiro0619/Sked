@@ -7,6 +7,8 @@ import 'sked_floating_anchor.dart';
 import 'sked_floating_surface.dart';
 import 'sked_panel_header.dart';
 import 'workspace_editor_form.dart';
+import 'sked_task_actions.dart';
+import 'sked_task_body.dart';
 
 /// Captured before a menu or details route closes; never looks up a dead context.
 class WorkspaceEditorConfiguration {
@@ -89,96 +91,48 @@ class WorkspaceEditorScaffold extends StatelessWidget {
     required this.closeEnabled,
     required this.actions,
     this.leading,
+    this.subtitle,
+    this.footer,
+    this.status,
   });
   final Widget title, child;
-  final Widget? leading;
+  final Widget? leading, subtitle, footer, status;
   final VoidCallback onClose;
   final bool closeEnabled;
   final List<Widget> actions;
   @override
   Widget build(BuildContext context) {
-    final scope = WorkspaceEditorScope.maybeOf(context)!;
-    final naturalHeight = scope.floating && !scope.explicitHeight;
+    final scope = WorkspaceEditorScope.maybeOf(context);
+    final naturalHeight =
+        scope == null || (scope.floating && !scope.explicitHeight);
+    final body = SkedTaskBody(
+      status: status,
+      fillHeight: !naturalHeight,
+      divider: true,
+      bodyKey: const PageStorageKey('workspace-editor-body'),
+      headerPadding: skedPanelHeaderPadding,
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      footerPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      header: SkedPanelHeader(
+        title: title,
+        subtitle: subtitle,
+        onDrag: scope?.floating == true ? scope?.onDrag : null,
+        dragKey: const ValueKey('workspace-editor-drag'),
+        onClose: onClose,
+        closeEnabled: closeEnabled,
+        closeKey: const ValueKey('workspace-editor-close'),
+      ),
+      footer:
+          footer ??
+          SkedActionArea(leading: leading, actions: actions, runSpacing: 4),
+      child: child,
+    );
     return Align(
       alignment: Alignment.topCenter,
       heightFactor: naturalHeight ? 1 : null,
-      child: LayoutBuilder(
-        builder: (context, bounds) => _EditorSize(
-          onHeight: scope.onHeight,
-          child: Column(
-            mainAxisSize: naturalHeight ? MainAxisSize.min : MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: bounds.maxHeight * .3),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: skedPanelHeaderPadding,
-                    child: SkedPanelHeader(
-                      title: title,
-                      onDrag: scope.floating ? scope.onDrag : null,
-                      dragKey: const ValueKey('workspace-editor-drag'),
-                      onClose: onClose,
-                      closeEnabled: closeEnabled,
-                      closeKey: const ValueKey('workspace-editor-close'),
-                    ),
-                  ),
-                ),
-              ),
-              Flexible(
-                fit: naturalHeight ? FlexFit.loose : FlexFit.tight,
-                child: SingleChildScrollView(
-                  key: const PageStorageKey('workspace-editor-body'),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: child,
-                ),
-              ),
-              const Divider(height: 1),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: bounds.maxHeight * .35),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final trailing = Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          alignment: WrapAlignment.end,
-                          children: actions,
-                        );
-                        return constraints.maxWidth >=
-                                420 * MediaQuery.textScalerOf(context).scale(1)
-                            ? Row(
-                                children: [
-                                  ?leading,
-                                  Expanded(
-                                    child: Align(
-                                      alignment: AlignmentDirectional.centerEnd,
-                                      heightFactor: 1,
-                                      child: trailing,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                alignment: WrapAlignment.end,
-                                children: [?leading, ...actions],
-                              );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: scope == null
+          ? body
+          : _EditorSize(onHeight: scope.onHeight, child: body),
     );
   }
 }

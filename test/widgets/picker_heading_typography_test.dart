@@ -123,7 +123,12 @@ void _expectHeader(
   required bool rtl,
 }) {
   final title = _headingTitle(heading);
-  final style = tester.widget<Text>(title).style!;
+  final style = tester
+      .widget<RichText>(
+        find.descendant(of: title, matching: find.byType(RichText)),
+      )
+      .text
+      .style!;
   expect(style.fontSize, 16);
   expect(style.fontWeight, FontWeight.w600);
   expect(style.height, 1.35);
