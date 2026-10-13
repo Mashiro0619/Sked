@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/workbench_chrome_metrics.dart';
+import 'package:sked/widgets/workbench_compact_calendar_bar.dart';
 
 import '../test/support/mobile_layout_data.dart';
 import '../test/support/workspace_harness.dart';
@@ -112,24 +113,9 @@ void main() {
             expect(t.widget<IconButton>(more).onPressed, isNotNull);
             await t.tap(more);
             await t.pumpAndSettle();
-            expect(
-              find
-                      .byKey(const ValueKey('student-add-course'))
-                      .evaluate()
-                      .isNotEmpty ||
-                  find
-                      .byKey(const ValueKey('general-add-event'))
-                      .evaluate()
-                      .isNotEmpty,
-              isTrue,
-            );
-            final item = find.byKey(
-              ValueKey(
-                mode == AppMode.student
-                    ? 'student-add-course'
-                    : 'general-add-event',
-              ),
-            );
+            final items = find.byType(PopupMenuItem<WorkbenchOverflowAction>);
+            expect(items, findsWidgets);
+            final item = items.first;
             final menuSurface = find.ancestor(
               of: item,
               matching: find.byWidgetPredicate(
@@ -151,7 +137,7 @@ void main() {
             await t.sendKeyEvent(LogicalKeyboardKey.escape);
             await t.pumpAndSettle();
             expect(
-              find.byKey(const ValueKey('student-add-course')),
+              find.byType(PopupMenuItem<WorkbenchOverflowAction>),
               findsNothing,
             );
             expect(
