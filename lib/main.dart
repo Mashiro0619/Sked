@@ -1,3 +1,5 @@
+import 'controllers/general_event_task_controller.dart';
+import 'widgets/general_event_task_editor.dart';
 import 'widgets/sked_confirmation_dialog.dart';
 import 'widgets/sked_task_route.dart';
 import 'widgets/general_event_edit_flow.dart';
@@ -713,21 +715,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   GeneralEventOccurrence? _currentGeneralOccurrence(
     GeneralEventOccurrence source,
-  ) {
-    final calendar = widget.provider.generalSchedules
-        .where((item) => item.id == source.calendar.id)
-        .firstOrNull;
-    final event = calendar?.events
-        .where((item) => item.id == source.event.id)
-        .firstOrNull;
-    if (calendar == null || event == null) return null;
-    return expandGeneralEventOccurrences(
-      calendar: calendar,
-      event: event,
-      startInclusive: source.start,
-      endExclusive: source.start.add(const Duration(microseconds: 1)),
-    ).where((item) => item.start.isAtSameMomentAs(source.start)).firstOrNull;
-  }
+  ) => resolveCurrentGeneralOccurrence(widget.provider, source);
 
   Future<void> _openGeneralOccurrenceDetails(
     BuildContext context,
@@ -812,63 +800,25 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     GeneralEventEditScope scope,
   ) async {
     if (!context.mounted) return;
-    final initial = widget.provider.prepareGeneralOccurrenceEdit(
-      occurrence,
-      scope,
+    final task = GeneralEventTaskController(
+      provider: widget.provider,
+      occurrence: occurrence,
+      scope: scope,
     );
-    var mutating = false;
-    GeneralEvent? saved;
     await showAppModalSheet<GeneralEventEditorResult>(
       context: context,
       useRootNavigator: true,
       workspace: AppMode.general,
-      isSessionCurrent: () =>
-          mutating || _currentGeneralOccurrence(occurrence) != null,
+      isSessionCurrent: () => task.isCurrent,
       isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
       enableDrag: true,
       maxWidth: appSheetWidthExpanded,
-      builder: (sheetContext) => Consumer<TimetableProvider>(
-        builder: (_, provider, _) => GeneralEventEditorSheet(
-          initialEvent: initial,
-          editScope: occurrence.event.recurrenceRule.isRepeating ? scope : null,
-          calendars: provider.generalSchedules,
-          activeCalendarId: occurrence.calendar.id,
-          defaultReminderMinutesBefore: provider.generalDefaultMinutesBefore,
-          onSave: (draft) async {
-            mutating = true;
-            try {
-              saved = await provider.editGeneralOccurrence(
-                occurrence,
-                draft,
-                scope,
-              );
-            } on GeneralEventEditConflictException {
-              mutating = false;
-              if (!sheetContext.mounted) rethrow;
-              throw FormatException(
-                AppLocalizations.of(sheetContext).eventEditConflict,
-              );
-            } catch (_) {
-              mutating = false;
-              rethrow;
-            }
-          },
-          onDelete: () async {
-            mutating = true;
-            try {
-              await provider.deleteGeneralOccurrenceScope(occurrence, scope);
-            } catch (_) {
-              mutating = false;
-              rethrow;
-            }
-          },
-        ),
-      ),
+      builder: (_) => GeneralEventTaskEditor(task: task),
     );
-    final event = saved;
+    final event = task.savedEvent;
     if (!context.mounted) return;
     if (event == null) {
-      if (!mutating && _currentGeneralOccurrence(occurrence) != null) {
+      if (!task.committed && task.isCurrent) {
         await _openGeneralOccurrenceDetails(context, occurrence);
       }
       return;
