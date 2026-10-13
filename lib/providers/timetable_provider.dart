@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/app_session.dart';
+import '../controllers/student_commands.dart';
+import '../controllers/student_view_state.dart';
 import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../l10n/app_locale.dart' as app_locale;
@@ -24,7 +26,6 @@ import '../services/school_site_service.dart';
 import '../services/school_site_store.dart';
 import '../services/secret_store.dart';
 import '../services/settings_service.dart';
-import '../services/student_timetable_service.dart' as student_timetable;
 
 export '../models/app_data_commit.dart';
 
@@ -32,13 +33,11 @@ part 'timetable_provider_general.dart';
 part 'timetable_provider_import_export.dart';
 part 'timetable_provider_lifecycle.dart';
 part 'timetable_provider_settings.dart';
-part 'timetable_provider_student.dart';
 part 'timetable_provider_developer.dart';
 
 const _calendarService = GeneralCalendarService();
 const _occurrenceService = GeneralOccurrenceService();
 const _importExportService = ImportExportService();
-const _studentTimetableService = student_timetable.StudentTimetableService();
 
 enum AppImportMode { replaceAll, addAll }
 
@@ -184,7 +183,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   PeriodTimeSet get activePeriodTimeSet;
 
   int _currentWeekForActiveTimetable();
-  Future<List<CoursePeriodTime>> _loadDefaultPeriodTimes();
   Future<AppData> _buildDefaultAppData();
   Future<void> _resumePendingAppBackupRestore();
   Future<void> _startFreshAfterCorruptAppBackupRestoreJournal();
@@ -193,7 +191,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Future<void> _saveAndNotify({
     // ignore: unused_element_parameter
     bool emitCommit = true,
-    int? rollbackSelectedWeek,
   });
   // ignore: unused_element_parameter
   Future<void> _save({bool emitCommit = true});
@@ -449,7 +446,6 @@ class _SecretWriteVerificationException implements Exception {
 class TimetableProvider extends _TimetableProviderBase
     with
         _TimetableProviderGeneral,
-        _TimetableProviderStudent,
         _TimetableProviderImportExport,
         _TimetableProviderLifecycle,
         _TimetableProviderSettings,
@@ -488,10 +484,21 @@ class TimetableProvider extends _TimetableProviderBase
             current.aiApiSettings.customApiKey,
           ),
     );
+    _studentView = StudentViewState(_session);
+    _studentCommands = StudentCommands(
+      session: _session,
+      view: _studentView,
+      persist: ({int? rollbackSelectedWeek}) =>
+          _saveAndNotify(rollbackSelectedWeek: rollbackSelectedWeek),
+      loadDefaultPeriodTimes: _loadDefaultPeriodTimes,
+      notifyViewChanged: notifyListeners,
+    );
   }
 
   @override
   late final AppSession _session;
+  late final StudentViewState _studentView;
+  late final StudentCommands _studentCommands;
   @override
   AppRepository get _repository => _session.repository;
   @override
@@ -567,18 +574,75 @@ class TimetableProvider extends _TimetableProviderBase
     );
   }
 
-  int _selectedWeekValue = 1;
-  int _selectedWeekMutationEpoch = 0;
+  StudentCommands get studentCommands => _studentCommands;
+  StudentViewState get studentView => _studentView;
+  int get _selectedWeekMutationEpoch => _studentView.selectionEpoch;
 
   @override
-  int get _selectedWeek => _selectedWeekValue;
+  int get _selectedWeek => _studentView.selectedWeek;
 
   @override
   set _selectedWeek(int value) {
-    if (_selectedWeekValue == value) return;
-    _selectedWeekValue = value;
-    _selectedWeekMutationEpoch += 1;
+    _studentView.selectedWeek = value;
   }
+
+  @override
+  TimetableData? get activeTimetableOrNull =>
+      _studentView.activeTimetableOrNull;
+  TimetableData get activeTimetable => _studentView.activeTimetable;
+  @override
+  PeriodTimeSet? get activePeriodTimeSetOrNull =>
+      _studentView.activePeriodTimeSetOrNull;
+  @override
+  PeriodTimeSet get activePeriodTimeSet => _studentView.activePeriodTimeSet;
+  @override
+  int _currentWeekForActiveTimetable() => _studentView.currentWeek();
+  PeriodTimeSet? periodTimeSetForId(String id) =>
+      _studentView.periodTimeSetForId(id);
+  List<TimetableData> timetablesUsingPeriodTimeSet(String id) =>
+      _studentView.timetablesUsingPeriodTimeSet(id);
+  int dailyPeriodsForTimetable(TimetableData timetable) =>
+      _studentView.dailyPeriodsForTimetable(timetable);
+  List<CoursePeriodTime> periodTimesForTimetable(TimetableData timetable) =>
+      _studentView.periodTimesForTimetable(timetable);
+  String? displayedCourseIdForConflict(String key) =>
+      _studentView.displayedCourseIdForConflict(key);
+
+  Future<void> switchTimetable(String id) =>
+      _studentCommands.switchTimetable(id);
+  Future<void> setSelectedWeek(int week) =>
+      _studentCommands.setSelectedWeek(week);
+  Future<void> updateTimetableConfig(TimetableConfig config) =>
+      _studentCommands.updateTimetableConfig(config);
+  Future<void> updateTimetableConfigFor(String id, TimetableConfig config) =>
+      _studentCommands.updateTimetableConfigFor(id, config);
+  Future<void> saveCourse(CourseItem course, {String? timetableId}) =>
+      _studentCommands.saveCourse(course, timetableId: timetableId);
+  Future<void> deleteCourse(String courseId, {String? timetableId}) =>
+      _studentCommands.deleteCourse(courseId, timetableId: timetableId);
+  Future<void> addTimetable(TimetableConfig config) =>
+      _studentCommands.addTimetable(config);
+  Future<void> deleteTimetable(String id) =>
+      _studentCommands.deleteTimetable(id);
+  Future<PeriodTimeSet> addPeriodTimeSet({
+    String? name,
+    List<CoursePeriodTime>? periodTimes,
+  }) => _studentCommands.addPeriodTimeSet(name: name, periodTimes: periodTimes);
+  Future<void> updatePeriodTimeSet(PeriodTimeSet value) =>
+      _studentCommands.updatePeriodTimeSet(value);
+  Future<void> deletePeriodTimeSet(String id) =>
+      _studentCommands.deletePeriodTimeSet(id);
+  Future<void> assignPeriodTimeSetToTimetable(
+    String timetableId,
+    String periodTimeSetId,
+  ) => _studentCommands.assignPeriodTimeSetToTimetable(
+    timetableId,
+    periodTimeSetId,
+  );
+  Future<void> setDisplayedCourseForConflict(
+    String conflictKey,
+    String courseId,
+  ) => _studentCommands.setDisplayedCourseForConflict(conflictKey, courseId);
 
   @override
   bool _isLoaded = false;
@@ -601,10 +665,10 @@ class TimetableProvider extends _TimetableProviderBase
   /// platform projection should prefer [committedData] so failed writes are
   /// never exposed as durable state.
   AppData get appData => _visibleAppData;
-  bool get hasTimetables => _appData.studentMode.timetables.isNotEmpty;
-  bool get hasPeriodTimeSets => _appData.studentMode.periodTimeSets.isNotEmpty;
-  List<TimetableData> get timetables => _appData.studentMode.timetables;
-  List<PeriodTimeSet> get periodTimeSets => _appData.studentMode.periodTimeSets;
+  bool get hasTimetables => _studentView.hasTimetables;
+  bool get hasPeriodTimeSets => _studentView.hasPeriodTimeSets;
+  List<TimetableData> get timetables => _studentView.timetables;
+  List<PeriodTimeSet> get periodTimeSets => _studentView.periodTimeSets;
   int get selectedWeek => _selectedWeek;
   String? get storagePath => _storagePath;
 

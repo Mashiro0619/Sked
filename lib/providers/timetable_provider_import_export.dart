@@ -785,7 +785,6 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     );
   }
 
-  @override
   Future<List<CoursePeriodTime>> _loadDefaultPeriodTimes() async {
     try {
       final source = await rootBundle.loadString(defaultPeriodTimesAssetPath);
