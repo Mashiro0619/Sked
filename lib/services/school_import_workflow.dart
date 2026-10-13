@@ -4,7 +4,6 @@ import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import 'school_import_api.dart';
-import 'school_import_apply_service.dart';
 import 'school_import_content_sanitizer.dart';
 
 typedef SchoolImportStreamPresenter = Future<SchoolImportResponse?> Function(
@@ -14,12 +13,10 @@ typedef SchoolImportStreamPresenter = Future<SchoolImportResponse?> Function(
 class SchoolImportWorkflow {
   SchoolImportWorkflow({
     this._api = const SchoolImportApi(),
-    this._applyService = const SchoolImportApplyService(),
     http.Client Function()? httpClientFactory,
   }) : _httpClientFactory = httpClientFactory ?? http.Client.new;
 
   final SchoolImportApi _api;
-  final SchoolImportApplyService _applyService;
   final http.Client Function() _httpClientFactory;
   _SchoolImportParseSession? _activeParseSession;
 
@@ -56,7 +53,7 @@ class SchoolImportWorkflow {
     TimetableProvider provider,
     SchoolImportApplyRequest request,
   ) {
-    return _applyService.apply(provider, request);
+    return provider.applySchoolImportRequest(request);
   }
 
   void cancelActiveParse() {

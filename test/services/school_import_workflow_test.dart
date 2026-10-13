@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/school_import_api.dart';
-import 'package:sked/services/school_import_apply_service.dart';
 import 'package:sked/services/school_import_workflow.dart';
 
 const _payload = SchoolImportPagePayload(
@@ -71,66 +68,6 @@ class _TrackingClient extends http.BaseClient {
   void close() {
     closeCount += 1;
   }
-}
-
-class _MemoryStorage implements TimetableStorage {
-  AppData data = buildInitialAppData(buildDefaultPeriodTimes());
-
-  @override
-  Future<String?> filePath() async => 'memory://school-import-workflow';
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-}
-
-class _RecordingApplyService extends SchoolImportApplyService {
-  TimetableProvider? provider;
-  SchoolImportApplyRequest? request;
-  Object? error;
-  var calls = 0;
-
-  @override
-  Future<void> apply(
-    TimetableProvider provider,
-    SchoolImportApplyRequest request,
-  ) async {
-    calls += 1;
-    this.provider = provider;
-    this.request = request;
-    final failure = error;
-    if (failure != null) throw failure;
-  }
-}
-
-SchoolImportApplyRequest _applyRequest() {
-  return SchoolImportApplyRequest(
-    response: SchoolImportResponse(
-      meta: const SchoolImportMeta(
-        sourceUrl: 'https://school.example.edu/timetable',
-        pageTitle: 'Timetable',
-        parser: 'custom-openai:test-model',
-        warnings: [],
-      ),
-      timetable: SchoolImportTimetableDraft(
-        name: 'Spring',
-        startDate: DateTime(2026, 2, 23),
-        totalWeeks: 18,
-        periodTimeSet: const ImportedPeriodTimeSetDraft(
-          name: '',
-          periodTimes: [],
-        ),
-        courses: const [],
-      ),
-    ),
-    mode: TimetableImportMode.addAsNew,
-    importBundledPeriodTimeSet: false,
-  );
 }
 
 void main() {
@@ -237,26 +174,6 @@ void main() {
         presentStream: (_) async => null,
       );
       expect(secondClient.closeCount, 1);
-    },
-  );
-
-  test(
-    'apply invokes its commit seam exactly once and propagates failure',
-    () async {
-      final applyService = _RecordingApplyService();
-      final workflow = SchoolImportWorkflow(applyService: applyService);
-      final provider = TimetableProvider(storage: _MemoryStorage());
-      final request = _applyRequest();
-
-      await workflow.apply(provider, request);
-
-      expect(applyService.calls, 1);
-      expect(applyService.provider, same(provider));
-      expect(applyService.request, same(request));
-
-      applyService.error = StateError('synthetic apply failure');
-      await expectLater(workflow.apply(provider, request), throwsStateError);
-      expect(applyService.calls, 2);
     },
   );
 }
