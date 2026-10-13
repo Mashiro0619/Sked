@@ -971,18 +971,26 @@ END:VCALENDAR
       );
     });
 
-    test('rejects future envelope version encoded as a string', () {
-      final source = jsonEncode({
-        'schema': periodTimesSchema,
-        'version': '${importExportVersion + 99}',
-        'data': {'periodTimes': []},
-      });
-
-      expect(
-        () => decodePeriodTimesEnvelope(source),
-        throwsA(isA<FormatException>()),
-      );
-    });
+    test(
+      'rejects foreign schemas and future numeric or string envelope versions',
+      () {
+        for (final (schema, version) in <(String, Object)>[
+          ('wrong', importExportVersion),
+          (periodTimesSchema, importExportVersion + 99),
+          (periodTimesSchema, '${importExportVersion + 99}'),
+        ]) {
+          final source = jsonEncode({
+            'schema': schema,
+            'version': version,
+            'data': {'periodTimes': []},
+          });
+          expect(
+            () => decodePeriodTimesEnvelope(source),
+            throwsFormatException,
+          );
+        }
+      },
+    );
 
     test('rejects malformed envelope version values', () {
       for (final version in ['future', '1.0', 1.5, 0, -1, null]) {

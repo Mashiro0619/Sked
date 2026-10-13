@@ -3,6 +3,31 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
 
 void main() {
+  test(
+    'legacy AppData defaults missing fields and repairs timetable selection',
+    () {
+      final empty = AppData.fromJson({});
+      expect(empty.studentMode.timetables, isEmpty);
+      expect(empty.studentMode.periodTimeSets, isEmpty);
+      expect(empty.studentMode.activeTimetableId, '');
+      for (final id in [null, 'nonexistent']) {
+        final data = AppData.fromJson({
+          'activeTimetableId': ?id,
+          'timetables': [
+            {
+              'id': 't1',
+              'config': {'name': 'Test', 'totalWeeks': 20},
+              'courses': [],
+            },
+          ],
+        });
+        expect(data.studentMode.timetables, hasLength(1));
+        expect(data.studentMode.timetables.single.config.name, 'Test');
+        expect(data.studentMode.activeTimetableId, 't1');
+      }
+    },
+  );
+
   group('student timetable model decoding', () {
     test(
       'ignores legacy date exception JSON and keeps legacy courses compatible',

@@ -6,6 +6,27 @@ import 'package:sked/models/general_schedule_data.dart';
 import 'package:sked/services/general_calendar_service.dart';
 
 void main() {
+  test('date selection preserves every unrelated general display setting', () {
+    final initial = GeneralScheduleData.createDefault().copyWith(
+      customDayMinWidth: 160,
+    );
+    final next = const GeneralCalendarService().setSelectedDate(
+      initial,
+      DateTime(2030, 1, 2),
+    );
+    expect(
+      next.toJson(),
+      initial.copyWith(selectedDateIso: '2030-01-02').toJson(),
+    );
+    expect(
+      const GeneralCalendarService().setSelectedDate(
+        next,
+        DateTime(2030, 1, 2),
+      ),
+      same(next),
+    );
+  });
+
   const service = GeneralCalendarService();
 
   GeneralScheduleData buildData({

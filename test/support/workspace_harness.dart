@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -24,26 +23,9 @@ import 'package:sked/services/secret_store.dart';
 import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/desktop_window_host.dart';
 
-class WorkspaceMemoryStorage implements TimetableStorage {
-  WorkspaceMemoryStorage(this.data);
-  AppData data;
-  Object? saveError;
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-  @override
-  Future<void> save(AppData value) async {
-    if (saveError != null) {
-      final error = saveError!;
-      saveError = null;
-      throw error;
-    }
-    data = value;
-  }
+import 'timetable_storage_fakes.dart';
 
-  @override
-  Future<String?> filePath() async => 'memory://adaptive-workspaces';
-}
+export 'timetable_storage_fakes.dart' show WorkspaceMemoryStorage;
 
 class _Secrets implements SecretStore {
   String key = '';

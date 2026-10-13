@@ -9,6 +9,36 @@ import '../support/workspace_harness.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test(
+    'date navigation and clearing a weekend range retain column width',
+    () async {
+      final data = buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: 'en',
+      );
+      final storage = WorkspaceMemoryStorage(
+        data.copyWith(
+          generalMode: data.generalMode.copyWith(
+            customDayMinWidth: 160,
+            showWeekends: false,
+          ),
+        ),
+      );
+      final provider = await workspaceProvider(storage: storage);
+      addTearDown(provider.dispose);
+      await provider.setSelectedGeneralDate(DateTime(2030, 1, 2));
+      await provider.flushPendingUiStateSaves();
+      expect(provider.generalCustomDayMinWidth, 160);
+      await provider.setGeneralDateRange(
+        GeneralDateRange(DateTime(2030, 1, 5), DateTime(2030, 1, 6)),
+        focusedDate: DateTime(2030, 1, 6),
+      );
+      await provider.clearGeneralDateRange();
+      expect(provider.selectedGeneralDate, DateTime(2030, 1, 4));
+      expect(storage.data.generalMode.customDayMinWidth, 160);
+    },
+  );
+
   test('optional column width keeps old schemas automatic and roundtrips through copies', () {
     final original = GeneralScheduleData.createDefault();
     expect(original.customDayMinWidth, isNull);

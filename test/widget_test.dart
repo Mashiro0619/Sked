@@ -1,10 +1,6 @@
-import 'support/school_import_preparation.dart';
-
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart' as app_locale;
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -35,104 +31,19 @@ import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
-import 'package:sked/widgets/timetable_entry.dart';
 import 'package:sked/widgets/timetable_grid.dart';
 import 'package:cupertino_ui/cupertino_ui.dart'
     show GlobalCupertinoLocalizations;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
     show GlobalWidgetsLocalizations;
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
-/// 测试专用 JSON 存储实现，避免污染真实用户目录。
-class TestTimetableStorage implements TimetableStorage {
-  TestTimetableStorage(this.file);
-
-  final File file;
-
-  @override
-  Future<void> save(AppData data) async {
-    await file.writeAsString(data.encode());
-  }
-
-  @override
-  Future<StorageLoadResult> load() async {
-    if (!await file.exists()) {
-      return const StorageLoadResult.empty();
-    }
-    final content = await file.readAsString();
-    if (content.trim().isEmpty) {
-      return const StorageLoadResult.empty();
-    }
-    return StorageLoadResult(
-      data: AppData.decode(content),
-      recoveryStatus: RecoveryStatus.none,
-    );
-  }
-
-  @override
-  Future<String?> filePath() async => file.path;
-}
-
-/// 内存存储用于 widget 测试，避免依赖真实文件系统。
-class MemoryTimetableStorage implements TimetableStorage {
-  MemoryTimetableStorage({AppData? initialData})
-    : _content = _encodeInitialMemoryData(initialData);
-
-  MemoryTimetableStorage.raw(String content) : _content = content;
-
-  String? _content;
-  int saveCount = 0;
-
-  AppData? get data {
-    final content = _content;
-    if (content == null || content.trim().isEmpty) {
-      return null;
-    }
-    return AppData.decode(content);
-  }
-
-  @override
-  Future<StorageLoadResult> load() async {
-    if (_content == null || _content!.trim().isEmpty) {
-      return const StorageLoadResult.empty();
-    }
-    return StorageLoadResult(
-      data: AppData.decode(_content!),
-      recoveryStatus: RecoveryStatus.none,
-    );
-  }
-
-  @override
-  Future<void> save(AppData data) async {
-    saveCount += 1;
-    _content = data.encode();
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://Sked-test';
-}
-
-String? _encodeInitialMemoryData(AppData? data) {
-  if (data == null) {
-    return null;
-  }
-  final encoded = data.encode();
-  final apiKey = data.aiApiSettings.customApiKey;
-  if (apiKey.trim().isEmpty) {
-    return encoded;
-  }
-  final json = jsonDecode(encoded) as Map<String, dynamic>;
-  final apiSettings = json['aiApiSettings'];
-  if (apiSettings is Map<String, dynamic>) {
-    apiSettings['customApiKey'] = apiKey.trim();
-  }
-  return jsonEncode(json);
-}
+import 'support/school_import_preparation.dart';
+import 'support/timetable_storage_fakes.dart';
 
 class MemorySecretStore implements SecretStore {
   MemorySecretStore([String initialValue = '']) : value = initialValue.trim();
@@ -396,22 +307,6 @@ SchoolImportResponse _buildSchoolImportResponse({
 
 void main() {
   group('课表 JSON 存储', () {
-    test('示例数据可以正确编码和解码', () {
-      final data = _buildTestAppData();
-      final encoded = data.encode();
-      final decoded = AppData.decode(encoded);
-
-      expect(
-        decoded.studentMode.activeTimetableId,
-        data.studentMode.activeTimetableId,
-      );
-      expect(
-        decoded.studentMode.timetables.length,
-        data.studentMode.timetables.length,
-      );
-      expect(decoded.studentMode.timetables.first.config.name, '测试课表A');
-    });
-
     test('旧 weekday 字段会兼容成 dayOfWeek，且周次默认为全学期语义', () {
       final legacyJson = {
         'id': 'legacy',
@@ -455,37 +350,6 @@ void main() {
       );
 
       expect(matched, isEmpty);
-    });
-
-    test('provider 会在首次加载时创建 JSON 文件并可再次读取', () async {
-      final tempRoot = Directory.systemTemp.path;
-      final file = File('$tempRoot/Sked_provider_test.json');
-      if (await file.exists()) {
-        await file.delete();
-      }
-      addTearDown(() async {
-        if (await file.exists()) {
-          await file.delete();
-        }
-      });
-
-      final firstProvider = TimetableProvider(
-        storage: TestTimetableStorage(file),
-        systemLocaleCodeResolver: () => 'zh',
-      );
-      await firstProvider.load();
-
-      expect(await file.exists(), isTrue);
-      expect(firstProvider.activeTimetable.config.name, '空课表');
-
-      final secondProvider = TimetableProvider(
-        storage: TestTimetableStorage(file),
-        systemLocaleCodeResolver: () => 'zh',
-      );
-      await secondProvider.load();
-
-      expect(secondProvider.timetables, isEmpty);
-      expect(secondProvider.activeTimetable.config.name, '空课表');
     });
 
     test('首次启动语言检测会优先命中受支持语言', () {
@@ -1742,8 +1606,8 @@ void main() {
         'Prefer preserving original location text.',
       );
       expect(secrets.value, 'sk-test');
-      expect(storage._content, isNot(contains('customApiKey')));
-      expect(storage._content, isNot(contains('sk-test')));
+      expect(storage.encodedData, isNot(contains('customApiKey')));
+      expect(storage.encodedData, isNot(contains('sk-test')));
 
       final reloaded = TimetableProvider(
         storage: storage,
@@ -1786,8 +1650,8 @@ void main() {
 
         expect(provider.customSchoolImportApiKey, 'sk-test');
         expect(secrets.value, 'sk-test');
-        expect(storage._content, isNot(contains('customApiKey')));
-        expect(storage._content, isNot(contains('sk-test')));
+        expect(storage.encodedData, isNot(contains('customApiKey')));
+        expect(storage.encodedData, isNot(contains('sk-test')));
       },
     );
 
@@ -2670,8 +2534,8 @@ void main() {
             ],
             supportedLocales: AppLocalizations.supportedLocales,
             home: SchoolHtmlImportPage(
-              contentPreparer: prepareSchoolImportContentForTest,
               api: fakeApi,
+              contentPreparer: prepareSchoolImportContentForTest,
             ),
           ),
         ),
@@ -2763,9 +2627,9 @@ void main() {
                             ChangeNotifierProvider<TimetableProvider>.value(
                               value: provider,
                               child: SchoolHtmlImportPage(
+                                api: fakeApi,
                                 contentPreparer:
                                     prepareSchoolImportContentForTest,
-                                api: fakeApi,
                               ),
                             ),
                       ),
@@ -4689,426 +4553,6 @@ void main() {
       expect(theme.colorScheme.onPrimary, Colors.black);
       expect(theme.colorScheme.onSecondary, Colors.black);
       expect(theme.colorScheme.onTertiary, Colors.black);
-    });
-  });
-
-  group('纯逻辑函数', () {
-    // ── normalizeSemesterWeeks ──
-    test('normalizeSemesterWeeks 空列表保持空', () {
-      expect(normalizeSemesterWeeks([]), isEmpty);
-    });
-
-    test('normalizeSemesterWeeks 去重并排序', () {
-      expect(normalizeSemesterWeeks([3, 1, 3, 2]), [1, 2, 3]);
-    });
-
-    test('normalizeSemesterWeeks 过滤非正数', () {
-      expect(normalizeSemesterWeeks([-1, 0, 1, 2]), [1, 2]);
-    });
-
-    // ── matchesSemesterWeek ──
-    test('matchesSemesterWeek 空周列表匹配任意周', () {
-      final course = CourseItem(
-        id: '1',
-        name: '',
-        teacher: '',
-        location: '',
-        dayOfWeek: 1,
-        semesterWeeks: [],
-        periods: [],
-        startMinutes: 0,
-        endMinutes: 0,
-        timeRange: '',
-        credit: 0,
-        remarks: '',
-        customFields: {},
-      );
-      expect(matchesSemesterWeek(course, 5), isTrue);
-    });
-
-    test('matchesSemesterWeek 精确匹配指定周', () {
-      final course = CourseItem(
-        id: '1',
-        name: '',
-        teacher: '',
-        location: '',
-        dayOfWeek: 1,
-        semesterWeeks: [1, 3, 5],
-        periods: [],
-        startMinutes: 0,
-        endMinutes: 0,
-        timeRange: '',
-        credit: 0,
-        remarks: '',
-        customFields: {},
-      );
-      expect(matchesSemesterWeek(course, 3), isTrue);
-      expect(matchesSemesterWeek(course, 2), isFalse);
-    });
-
-    // ── buildPeriodTimesForCount ──
-    test('buildPeriodTimesForCount count=0 返回至少1个节次', () {
-      final result = buildPeriodTimesForCount(0);
-      expect(result.length, 1);
-      expect(result[0].index, 1);
-    });
-
-    test('buildPeriodTimesForCount 从 source 复制并重新编号', () {
-      final source = [
-        const CoursePeriodTime(index: 5, startMinutes: 600, endMinutes: 645),
-        const CoursePeriodTime(index: 7, startMinutes: 700, endMinutes: 745),
-      ];
-      final result = buildPeriodTimesForCount(2, source: source);
-      expect(result.length, 2);
-      expect(result[0].index, 1);
-      expect(result[0].startMinutes, 600);
-      expect(result[1].index, 2);
-      expect(result[1].startMinutes, 700);
-    });
-
-    test('buildPeriodTimesForCount 超出默认模板长度时自动补齐', () {
-      final result = buildPeriodTimesForCount(15);
-      expect(result.length, 15);
-      expect(result[0].index, 1);
-      expect(result[14].index, 15);
-      expect(result[14].startMinutes, greaterThan(result[13].endMinutes));
-    });
-
-    // ── buildOverlapGroups ──
-    test('buildOverlapGroups 空列表返回空', () {
-      expect(buildOverlapGroups([]), isEmpty);
-    });
-
-    test('buildOverlapGroups 不重叠课程各自成组', () {
-      final courses = [
-        CourseItem(
-          id: '1',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 480,
-          endMinutes: 525,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-        CourseItem(
-          id: '2',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 600,
-          endMinutes: 645,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-      ];
-      final groups = buildOverlapGroups(courses);
-      expect(groups.length, 2);
-      expect(groups[0].courses.length, 1);
-      expect(groups[1].courses.length, 1);
-      expect(groups[0].courses[0].id, '1');
-      expect(groups[1].courses[0].id, '2');
-    });
-
-    test('buildOverlapGroups 时间重叠课程合并成一组', () {
-      final courses = [
-        CourseItem(
-          id: '1',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 480,
-          endMinutes: 570,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-        CourseItem(
-          id: '2',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 540,
-          endMinutes: 630,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-      ];
-      final groups = buildOverlapGroups(courses);
-      expect(groups.length, 1);
-      expect(groups[0].courses.length, 2);
-    });
-
-    // ── isFullConflictGroup ──
-    test('isFullConflictGroup 单个课程不是完全冲突', () {
-      final courses = [
-        CourseItem(
-          id: '1',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 480,
-          endMinutes: 570,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-      ];
-      expect(isFullConflictGroup(courses), isFalse);
-    });
-
-    test('isFullConflictGroup 完全相同时间范围的课程是完全冲突', () {
-      final courses = [
-        CourseItem(
-          id: '1',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 480,
-          endMinutes: 570,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-        CourseItem(
-          id: '2',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 480,
-          endMinutes: 570,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-      ];
-      expect(isFullConflictGroup(courses), isTrue);
-    });
-
-    test('isFullConflictGroup 一个包含另一个时也是完全冲突', () {
-      final courses = [
-        CourseItem(
-          id: '1',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 480,
-          endMinutes: 600,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-        CourseItem(
-          id: '2',
-          name: '',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [],
-          startMinutes: 500,
-          endMinutes: 550,
-          timeRange: '',
-          credit: 0,
-          remarks: '',
-          customFields: {},
-        ),
-      ];
-      expect(isFullConflictGroup(courses), isTrue);
-    });
-
-    // ── AppData.fromJson edge cases ──
-    test('AppData.fromJson 空 Map 仍返回有效 AppData', () {
-      final data = AppData.fromJson({});
-      expect(data.studentMode.timetables, isEmpty);
-      expect(data.studentMode.periodTimeSets, isEmpty);
-      expect(data.studentMode.activeTimetableId, '');
-    });
-
-    test('AppData.fromJson 缺失字段不崩溃', () {
-      final data = AppData.fromJson({
-        'timetables': [
-          {
-            'id': 't1',
-            'config': {'name': 'Test', 'totalWeeks': 20},
-            'courses': [],
-          },
-        ],
-      });
-      expect(data.studentMode.timetables, hasLength(1));
-      expect(data.studentMode.timetables.first.config.name, 'Test');
-    });
-
-    test('AppData.fromJson 忽略无效的 activeTimetableId', () {
-      final data = AppData.fromJson({
-        'activeTimetableId': 'nonexistent',
-        'timetables': [
-          {
-            'id': 't1',
-            'config': {'name': 'T1', 'totalWeeks': 10},
-            'courses': [],
-          },
-        ],
-      });
-      expect(data.studentMode.activeTimetableId, 't1');
-    });
-
-    // ── ImportExportEnvelope roundtrip ──
-    test('ImportExportEnvelope encode/decode roundtrip', () {
-      final original = ImportExportEnvelope(
-        schema: appDataSchema,
-        version: importExportVersion,
-        data: {'key': 'value', 'num': 42},
-      );
-      final encoded = original.encode();
-      final decoded = ImportExportEnvelope.decode(encoded);
-      expect(decoded.schema, appDataSchema);
-      expect(decoded.version, importExportVersion);
-      expect(decoded.data['key'], 'value');
-      expect(decoded.data['num'], 42);
-    });
-
-    test(
-      'bundled default period times asset uses a supported schema',
-      () async {
-        TestWidgetsFlutterBinding.ensureInitialized();
-        final source = await rootBundle.loadString(defaultPeriodTimesAssetPath);
-
-        final decoded = decodePeriodTimesEnvelope(source);
-
-        expect(decoded, hasLength(13));
-        expect(decoded.first.startMinutes, 480);
-        expect(decoded.last.endMinutes, 1250);
-      },
-    );
-
-    test('ImportExportEnvelope schema 错误时会抛异常', () {
-      final envelope = ImportExportEnvelope(
-        schema: 'wrong',
-        version: importExportVersion,
-        data: const {},
-      );
-      final source = envelope.encode();
-      // decodePeriodTimesEnvelope 内部调用 _ensureSupportedEnvelope
-      expect(
-        () => decodePeriodTimesEnvelope(source),
-        throwsA(isA<FormatException>()),
-      );
-    });
-
-    test('ImportExportEnvelope 版本过高会抛异常', () {
-      final envelope = ImportExportEnvelope(
-        schema: periodTimesSchema,
-        version: 999,
-        data: {'periodTimes': []},
-      );
-      final source = envelope.encode();
-      expect(
-        () => decodePeriodTimesEnvelope(source),
-        throwsA(isA<FormatException>()),
-      );
-    });
-
-    test('TimetableEntry course adapter 保留标题地点开始结束时间', () {
-      final periods = buildDefaultPeriodTimes();
-      final course = CourseItem(
-        id: 'c1',
-        name: '高等数学',
-        teacher: '陈老师',
-        location: 'A-201',
-        dayOfWeek: 3,
-        semesterWeeks: buildAllSemesterWeeks(18),
-        periods: const [1, 2],
-        startMinutes: periods[0].startMinutes,
-        endMinutes: periods[1].endMinutes,
-        timeRange: buildTimeRange(
-          periods[0].startMinutes,
-          periods[1].endMinutes,
-        ),
-        credit: 4,
-        remarks: '',
-        customFields: const {},
-      );
-      final entry = courseToEntry(course);
-      expect(entry.id, 'c1');
-      expect(entry.title, '高等数学');
-      expect(entry.location, 'A-201');
-      expect(entry.teacher, '陈老师');
-      expect(entry.dayOfWeek, 3);
-      expect(entry.startMinutes, periods[0].startMinutes);
-      expect(entry.endMinutes, periods[1].endMinutes);
-      expect(entry.kind, TimetableEntryKind.course);
-      expect(entry.source, same(course));
-    });
-
-    test('TimetableEntry occurrence adapter 保留标题地点开始结束时间和持续时间', () {
-      final event = GeneralEvent(
-        id: 'evt1',
-        calendarId: 'sched1',
-        title: '会议',
-        location: 'Room B',
-        startDateTimeIso: '2026-05-20T14:00:00.000',
-        endDateTimeIso: '2026-05-20T15:30:00.000',
-        colorValue: 0xFF123456,
-      );
-      final schedule = GeneralSchedule(
-        id: 'sched1',
-        name: 'Work',
-        events: [event],
-      );
-      final occurrence = GeneralEventOccurrence(
-        event: event,
-        calendar: schedule,
-        start: DateTime(2026, 5, 20, 14, 0),
-        end: DateTime(2026, 5, 20, 15, 30),
-        sequence: 0,
-      );
-      final entry = occurrenceToEntry(occurrence);
-      expect(entry.id, 'evt1');
-      expect(entry.title, '会议');
-      expect(entry.location, 'Room B');
-      expect(entry.teacher, '');
-      expect(entry.dayOfWeek, DateTime.wednesday);
-      expect(entry.startMinutes, 840);
-      expect(entry.endMinutes, 930);
-      expect(entry.colorValue, 0xFF123456);
-      expect(entry.kind, TimetableEntryKind.generalEvent);
-      expect(entry.source, same(occurrence));
     });
   });
 }

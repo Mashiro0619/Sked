@@ -64,6 +64,46 @@ TimetableWeekProjection _project(
 );
 
 void main() {
+  test(
+    'separates isolated, transitive-overlap and complete-conflict groups',
+    () {
+      final layouts = _project(
+        TimetableWeekProjectionCache(),
+        _timetable([
+          _course('a'),
+          _course('b', start: 520, end: 580),
+          _course('c', start: 570, end: 610),
+          _course('isolated', start: 630, end: 660),
+          _course('duplicate-a', start: 700, end: 740),
+          _course('duplicate-b', start: 700, end: 740),
+        ]),
+      ).resolveLayouts(null);
+      expect(layouts[1]!.map((layout) => layout.course!.id), [
+        'a',
+        'b',
+        'c',
+        'isolated',
+        'duplicate-a',
+      ]);
+      expect(layouts[1]!.map((layout) => layout.priorityDepth), [
+        0,
+        1,
+        2,
+        0,
+        0,
+      ]);
+      expect(layouts[1]!.map((layout) => layout.isFullConflict), [
+        false,
+        false,
+        false,
+        false,
+        true,
+      ]);
+      expect(layouts[1]!.last.conflictCourses, hasLength(2));
+      expect(layouts[2], isEmpty);
+    },
+  );
+
   test('unchanged week reuses preparation and includes every weekday', () {
     final cache = TimetableWeekProjectionCache();
     final timetable = _timetable([
@@ -198,22 +238,52 @@ void main() {
   test('hybrid entries retain overlap order and refresh when replaced', () {
     final cache = TimetableWeekProjectionCache();
     final timetable = _timetable([_course('ignored-course')]);
-    final entries = [
-      courseToEntry(_course('course')),
-      const TimetableEntry(
-        id: 'event',
-        kind: TimetableEntryKind.generalEvent,
-        title: 'Event',
-        dayOfWeek: 1,
-        startMinutes: 500,
-        endMinutes: 560,
-        source: 'event-source',
+    final course = _course('course')
+        .copyWith(teacher: 'Teacher', location: 'Room A');
+    final event = GeneralEvent(
+      id: 'event',
+      title: 'Event',
+      location: 'Room B',
+      startDateTimeIso: '2026-01-05T08:20:00',
+      endDateTimeIso: '2026-01-05T09:50:00',
+      colorValue: 0xff123456,
+    );
+    final occurrence = GeneralEventOccurrence(
+      event: event,
+      calendar: GeneralSchedule(
+        id: 'calendar',
+        name: 'Calendar',
+        events: [event],
       ),
-    ];
+      start: DateTime(2026, 1, 5, 8, 20),
+      end: DateTime(2026, 1, 5, 9, 50),
+      sequence: 0,
+    );
+    final entries = [courseToEntry(course), occurrenceToEntry(occurrence)];
     final projection = _project(cache, timetable, entries: entries);
     final layouts = projection.resolveLayouts(null)[1]!;
     expect(layouts.map((layout) => layout.entry!.id), ['course', 'event']);
     expect(layouts.map((layout) => layout.priorityDepth), [0, 1]);
+    final courseEntry = layouts.first.entry!;
+    expect(
+      (courseEntry.title, courseEntry.location, courseEntry.teacher),
+      ('course', 'Room A', 'Teacher'),
+    );
+    expect((courseEntry.startMinutes, courseEntry.endMinutes), (480, 540));
+    expect(courseEntry.source, same(course));
+    expect(courseEntry.kind, TimetableEntryKind.course);
+    final eventEntry = layouts.last.entry!;
+    expect(
+      (eventEntry.title, eventEntry.location, eventEntry.teacher),
+      ('Event', 'Room B', ''),
+    );
+    expect(
+      (eventEntry.dayOfWeek, eventEntry.startMinutes, eventEntry.endMinutes),
+      (1, 500, 590),
+    );
+    expect(eventEntry.colorValue, 0xff123456);
+    expect(eventEntry.source, same(occurrence));
+    expect(eventEntry.kind, TimetableEntryKind.generalEvent);
     expect(projection.courseSpacing, isFalse);
     expect(
       _project(cache, timetable, entries: entries, week: 2, past: false),

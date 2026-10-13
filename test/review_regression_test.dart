@@ -7,10 +7,10 @@ import 'package:flutter/widgets.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
-import 'support/workspace_harness.dart';
+import 'support/workspace_harness.dart' show WorkspaceHarness;
+import 'support/timetable_storage_fakes.dart';
 
 import 'package:path/path.dart' as paths;
-import 'package:sked/services/general_calendar_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/data/app_repository.dart';
@@ -29,9 +29,8 @@ import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
 
-class ProbeStorage implements TimetableStorage {
-  ProbeStorage(this.data);
-  AppData data;
+class ProbeStorage extends WorkspaceMemoryStorage {
+  ProbeStorage(super.data);
   bool readOnly = false;
   Object? nextSaveError;
   Completer<void>? saveGate;
@@ -54,7 +53,7 @@ class ProbeStorage implements TimetableStorage {
     final error = nextSaveError;
     nextSaveError = null;
     if (error != null) throw error;
-    data = value;
+    await super.save(value);
   }
 
   @override
@@ -250,53 +249,6 @@ Future<Directory> storageDirectory() async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  test('date selection preserves every unrelated general display setting', () {
-    final initial = GeneralScheduleData.createDefault().copyWith(
-      customDayMinWidth: 160,
-    );
-    final next = const GeneralCalendarService().setSelectedDate(
-      initial,
-      DateTime(2030, 1, 2),
-    );
-    expect(
-      next.toJson(),
-      initial.copyWith(selectedDateIso: '2030-01-02').toJson(),
-    );
-    expect(
-      const GeneralCalendarService().setSelectedDate(
-        next,
-        DateTime(2030, 1, 2),
-      ),
-      same(next),
-    );
-  });
-
-  test(
-    'provider date navigation and clearing a weekend range retain column width',
-    () async {
-      final data = baseData();
-      final storage = ProbeStorage(
-        data.copyWith(
-          generalMode: data.generalMode.copyWith(
-            customDayMinWidth: 160,
-            showWeekends: false,
-          ),
-        ),
-      );
-      final provider = await providerFor(storage);
-      await provider.setSelectedGeneralDate(DateTime(2030, 1, 2));
-      await provider.flushPendingUiStateSaves();
-      expect(provider.generalCustomDayMinWidth, 160);
-      await provider.setGeneralDateRange(
-        GeneralDateRange(DateTime(2030, 1, 5), DateTime(2030, 1, 6)),
-        focusedDate: DateTime(2030, 1, 6),
-      );
-      await provider.clearGeneralDateRange();
-      expect(provider.selectedGeneralDate, DateTime(2030, 1, 4));
-      expect(storage.data.generalMode.customDayMinWidth, 160);
-    },
-  );
 
   test(
     'confirmed failed secret write does not poison close or workspace disable',
