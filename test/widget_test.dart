@@ -4639,7 +4639,7 @@ void main() {
           materialApp.theme!.navigationBarTheme.indicatorColor,
           const Color(0xFF6750A4).withValues(alpha: 0.12),
         );
-        expect(materialApp.theme!.bottomSheetTheme.showDragHandle, isTrue);
+        expect(materialApp.theme!.bottomSheetTheme.showDragHandle, isFalse);
       },
     );
 

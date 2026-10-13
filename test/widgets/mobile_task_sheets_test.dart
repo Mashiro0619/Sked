@@ -110,6 +110,7 @@ void _assertBottom(WidgetTester t, Finder task) {
   final rect = t.getRect(surface);
   final sheet = find.byType(BottomSheet).last;
   expect(rect.top, greaterThan(24));
+  expect(rect.top, closeTo(t.getRect(sheet).top, .1));
   expect(rect.bottom, closeTo(t.view.physicalSize.height, 1));
   final pane = t
       .widget<WorkspaceFrame>(find.byType(WorkspaceFrame).first)
@@ -121,7 +122,7 @@ void _assertBottom(WidgetTester t, Finder task) {
     t.widget<BottomSheet>(find.byType(BottomSheet).last).enableDrag,
     isTrue,
   );
-  expect(t.widget<BottomSheet>(sheet).showDragHandle, isTrue);
+  expect(t.widget<BottomSheet>(sheet).showDragHandle, isFalse);
 }
 
 Future<void> _nativeDismiss(

@@ -408,7 +408,6 @@ void main() {
               unawaited(
                 showAppModalSheet<void>(
                   context: context,
-                  enableDrag: false,
                   builder: (_) => CourseEditorSheet(
                     periodTimes: buildDefaultPeriodTimes().take(4).toList(),
                     totalWeeks: 18,
@@ -429,6 +428,7 @@ void main() {
     final sheet = find.byType(BottomSheet);
     expect(sheet, findsOneWidget);
     final sheetWidget = tester.widget<BottomSheet>(sheet);
+    expect(sheetWidget.enableDrag, isTrue);
     expect(sheetWidget.showDragHandle, isFalse);
     final title = find.descendant(
       of: find.byType(CourseEditorSheet),

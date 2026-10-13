@@ -200,7 +200,7 @@ void main() {
             of: root,
             matching: find.widgetWithText(FilledButton, l.save),
           );
-          expect(tester.widget<BottomSheet>(sheet).showDragHandle, isTrue);
+          expect(tester.widget<BottomSheet>(sheet).showDragHandle, isFalse);
           await tester.enterText(input, '横屏键盘中保留的草稿');
           tester.view.padding = const FakeViewPadding(top: 24);
           tester.view.viewInsets = const FakeViewPadding(bottom: 214);
@@ -237,7 +237,7 @@ void main() {
           tester.view.viewInsets = const FakeViewPadding();
           tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
           await tester.pumpAndSettle();
-          expect(tester.widget<BottomSheet>(sheet).showDragHandle, isTrue);
+          expect(tester.widget<BottomSheet>(sheet).showDragHandle, isFalse);
           expect(tester.element(root), same(element));
           expect(tester.widget<TextField>(input).controller, same(controller));
           expect(controller.text, '横屏键盘中保留的草稿');

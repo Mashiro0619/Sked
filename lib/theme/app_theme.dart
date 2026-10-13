@@ -247,7 +247,7 @@ ThemeData buildAppTheme({
       backgroundColor: colorScheme.surface,
       modalBackgroundColor: colorScheme.surface,
       surfaceTintColor: Colors.transparent,
-      showDragHandle: true,
+      showDragHandle: false,
       constraints: const BoxConstraints(minWidth: 280),
       dragHandleColor: colorScheme.outlineVariant,
       shape: shapes.bottomSheet,
