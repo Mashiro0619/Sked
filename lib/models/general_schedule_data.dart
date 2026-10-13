@@ -569,15 +569,31 @@ class GeneralScheduleData {
     Map<String, int>? colorfulUiColorValues,
     List<GeneralReminderAcknowledgement>? reminderAcknowledgements,
   }) {
-    return GeneralScheduleData(
-      activeScheduleId: activeScheduleId ?? this.activeScheduleId,
-      schedules: schedules ?? this.schedules,
-      selectedDateIso: identical(selectedDateIso, _keepNullable)
-          ? this.selectedDateIso
-          : selectedDateIso as String?,
-      customDateRange: identical(customDateRange, _keepNullable)
-          ? this.customDateRange
-          : customDateRange as GeneralDateRange?,
+    final nextSchedules = schedules ?? this.schedules;
+    final requestedActiveId = activeScheduleId ?? this.activeScheduleId;
+    final active = nextSchedules
+        .where((schedule) => schedule.id == requestedActiveId)
+        .firstOrNull;
+    final nextActiveId = active?.isVisible ?? false
+        ? active!.id
+        : nextSchedules
+                  .where((schedule) => schedule.isVisible)
+                  .firstOrNull
+                  ?.id ??
+              nextSchedules.firstOrNull?.id ??
+              requestedActiveId;
+    final nextRange = identical(customDateRange, _keepNullable)
+        ? this.customDateRange
+        : customDateRange as GeneralDateRange?;
+    final nextDate = identical(selectedDateIso, _keepNullable)
+        ? this.selectedDateIso
+        : selectedDateIso as String?;
+    final start = (dayStartHour ?? this.dayStartHour).clamp(0, 23);
+    final updated = GeneralScheduleData(
+      activeScheduleId: nextActiveId,
+      schedules: nextSchedules,
+      selectedDateIso: nextDate ?? _dateIso(nextRange?.start ?? DateTime.now()),
+      customDateRange: nextRange,
       defaultView: normalizeGeneralView(defaultView ?? this.defaultView),
       viewSwitchBehavior: normalizeGeneralViewSwitchBehavior(
         viewSwitchBehavior ?? this.viewSwitchBehavior,
@@ -595,10 +611,14 @@ class GeneralScheduleData {
           : normalizeGeneralCustomDayMinWidth(customDayMinWidth as int?),
       showWeekends: showWeekends ?? this.showWeekends,
       showLunarCalendar: showLunarCalendar ?? this.showLunarCalendar,
-      dayStartHour: dayStartHour ?? this.dayStartHour,
-      dayEndHour: dayEndHour ?? this.dayEndHour,
-      timeGridMinutes: timeGridMinutes ?? this.timeGridMinutes,
-      timeGridHourHeight: timeGridHourHeight ?? this.timeGridHourHeight,
+      dayStartHour: start,
+      dayEndHour: (dayEndHour ?? this.dayEndHour).clamp(start + 1, 24),
+      timeGridMinutes: _normalizeGridMinutes(
+        timeGridMinutes ?? this.timeGridMinutes,
+      ),
+      timeGridHourHeight: _normalizeTimeGridHourHeight(
+        timeGridHourHeight ?? this.timeGridHourHeight,
+      ),
       closeEventPopupOnOutsideTap:
           closeEventPopupOnOutsideTap ?? this.closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab ?? this.showAddEventFab,
@@ -627,7 +647,14 @@ class GeneralScheduleData {
           colorfulUiColorValues ?? this.colorfulUiColorValues,
       reminderAcknowledgements:
           reminderAcknowledgements ?? this.reminderAcknowledgements,
-    ).normalized();
+    );
+    // Navigation and presentation changes do not alter events or their reminder
+    // identities. Keep that immutable branch so warmed queries remain valid.
+    return schedules == null &&
+            reminderAcknowledgements == null &&
+            nextSchedules.isNotEmpty
+        ? updated
+        : updated.normalized();
   }
 
   GeneralScheduleData normalized({

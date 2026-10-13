@@ -138,6 +138,28 @@ void main() {
     expect(service.callCount, 2);
   });
 
+  test('navigation and display changes retain warmed occurrence queries', () {
+    final service = _CountingOccurrenceService();
+    final cache = GeneralOccurrenceCache(service: service);
+    final original = dataFor(schedules()).normalized();
+    cache.occurrencesForQuery(original, query(0));
+
+    final navigated = original.copyWith(selectedDateIso: '2026-01-02');
+    final displayed = navigated.copyWith(
+      showWeekends: false,
+      showLunarCalendar: false,
+    );
+    cache.occurrencesForQuery(navigated, query(0));
+    cache.occurrencesForQuery(displayed, query(0));
+    expect(service.callCount, 1);
+
+    final changed = displayed.copyWith(
+      schedules: [displayed.schedules.single.copyWith(isVisible: false)],
+    );
+    cache.occurrencesForQuery(changed, query(0));
+    expect(service.callCount, 2);
+  });
+
   test('does not cache failures or evict a valid entry on failure', () {
     final service = _CountingOccurrenceService();
     final cache = GeneralOccurrenceCache(service: service);
