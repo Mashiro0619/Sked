@@ -431,7 +431,7 @@ void main() {
                 ),
                 child: SkedTaskDialog(
                   title: const Text('Scrollable categories'),
-                  desktopContentOwnsScroll: true,
+                  contentOwnsScroll: true,
                   content: ScrollConfiguration(
                     behavior: const MaterialScrollBehavior().copyWith(
                       scrollbars: false,

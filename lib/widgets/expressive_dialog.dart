@@ -14,6 +14,7 @@ import 'sked_floating_dialog.dart';
 import 'sked_floating_surface.dart';
 import 'sked_task_dialog.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_task_actions.dart';
 
 export 'sked_floating_dialog.dart' show SkedDesktopFloatingDialog;
 
@@ -143,34 +144,8 @@ class ExpressiveActionArea extends StatelessWidget {
   final List<Widget> actions;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final actionWrap = Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.end,
-          children: actions,
-        );
-        if (leading != null && constraints.maxWidth >= 420) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              leading!,
-              const Spacer(),
-              Flexible(child: actionWrap),
-            ],
-          );
-        }
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.end,
-          children: [?leading, ...actions],
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) =>
+      SkedActionArea(leading: leading, actions: actions);
 }
 
 class ExpressiveDialogOption extends StatelessWidget {
@@ -183,10 +158,9 @@ class ExpressiveDialogOption extends StatelessWidget {
     this.trailing,
     this.selected = false,
     this.enabled = true,
-    this.contentPadding = const EdgeInsets.symmetric(
-      horizontal: 14,
-      vertical: 12,
-    ),
+    this.titleMaxLines = 2,
+    this.subtitleMaxLines = 3,
+    this.contentPadding,
   });
 
   final Widget title;
@@ -196,7 +170,8 @@ class ExpressiveDialogOption extends StatelessWidget {
   final VoidCallback? onTap;
   final bool selected;
   final bool enabled;
-  final EdgeInsetsGeometry contentPadding;
+  final int? titleMaxLines, subtitleMaxLines;
+  final EdgeInsetsGeometry? contentPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -224,6 +199,41 @@ class ExpressiveDialogOption extends StatelessWidget {
               )
             : null);
 
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      return ListTile(
+        dense: true,
+        selected: selected,
+        enabled: enabled,
+        contentPadding:
+            contentPadding ?? const EdgeInsets.symmetric(horizontal: 4),
+        minVerticalPadding: 8,
+        leading: leading == null
+            ? null
+            : IconTheme.merge(
+                data: IconThemeData(size: 20, color: secondaryColor),
+                child: leading!,
+              ),
+        title: DefaultTextStyle.merge(
+          maxLines: titleMaxLines,
+          overflow: titleMaxLines == null
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
+          child: title,
+        ),
+        subtitle: subtitle == null
+            ? null
+            : DefaultTextStyle.merge(
+                maxLines: subtitleMaxLines,
+                overflow: subtitleMaxLines == null
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
+                child: subtitle!,
+              ),
+        trailing: trailingWidget,
+        onTap: enabled ? onTap : null,
+      );
+    }
+
     return Semantics(
       selected: selected,
       enabled: enabled,
@@ -239,7 +249,9 @@ class ExpressiveDialogOption extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48),
             child: Padding(
-              padding: contentPadding,
+              padding:
+                  contentPadding ??
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final leadingWidget = leading == null
@@ -259,8 +271,10 @@ class ExpressiveDialogOption extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DefaultTextStyle.merge(
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: titleMaxLines,
+                        overflow: titleMaxLines == null
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: textColor,
                           fontWeight: FontWeight.w500,
@@ -270,8 +284,10 @@ class ExpressiveDialogOption extends StatelessWidget {
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),
                         DefaultTextStyle.merge(
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: subtitleMaxLines,
+                          overflow: subtitleMaxLines == null
+                              ? TextOverflow.visible
+                              : TextOverflow.ellipsis,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: secondaryColor,
                           ),

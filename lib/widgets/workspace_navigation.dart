@@ -115,7 +115,7 @@ class WorkspaceModeMenu extends StatelessWidget {
       );
     }
     final metrics = WorkbenchChromeMetrics.of(context);
-    return PopupMenuButton<AppMode>(
+    return SkedPopupMenuButton<AppMode>(
       style: metrics.desktop ? metrics.iconStyle : null,
       padding: EdgeInsets.all(metrics.desktop ? 6 : 8),
       iconSize: metrics.desktop ? 18 : null,

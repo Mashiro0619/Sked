@@ -20,6 +20,8 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
     this.offset = Offset.zero,
     this.position = PopupMenuPosition.under,
     this.constraints,
+    this.style,
+    this.iconSize,
   });
 
   final PopupMenuItemBuilder<T> itemBuilder;
@@ -36,6 +38,8 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   final Offset offset;
   final PopupMenuPosition position;
   final BoxConstraints? constraints;
+  final ButtonStyle? style;
+  final double? iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +58,8 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
         offset: offset,
         position: position,
         constraints: constraints,
+        style: style,
+        iconSize: iconSize,
         menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         clipBehavior: Clip.antiAlias,
         popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
@@ -73,6 +79,8 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       offset: offset,
       position: position,
       constraints: constraints,
+      style: style,
+      iconSize: iconSize,
       menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       clipBehavior: Clip.antiAlias,
       popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
@@ -99,6 +107,8 @@ class _FocusedPopupMenuButton<T> extends PopupMenuButton<T> {
     super.offset,
     super.position,
     super.constraints,
+    super.style,
+    super.iconSize,
     super.menuPadding,
     super.clipBehavior,
     super.popUpAnimationStyle,
@@ -126,6 +136,8 @@ class _FocusedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
     }
     return IconButton(
       focusNode: button.focusNode,
+      style: button.style,
+      iconSize: button.iconSize,
       padding: button.padding,
       tooltip:
           button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,

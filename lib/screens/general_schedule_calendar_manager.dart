@@ -152,7 +152,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
           );
           return SkedTaskDialog(
             key: const ValueKey('category-manager-panel'),
-            desktopContentOwnsScroll: true,
+            contentOwnsScroll: true,
             title: Text(
               '${l.categoryManagerTitle} · ${provider.generalSchedules.length}',
             ),

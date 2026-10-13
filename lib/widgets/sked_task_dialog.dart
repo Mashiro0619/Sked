@@ -1,8 +1,12 @@
 import 'sked_panel_header.dart';
 
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_floating_surface.dart';
+import 'sked_confirmation_dialog.dart';
+import 'sked_task_actions.dart';
 
 /// Dialog builders sometimes hold transactional state outside StatefulBuilder.
 /// Keep that closure alive across host/viewport rebuilds, just like a route page.
@@ -39,7 +43,7 @@ class SkedTaskDialogScope extends InheritedWidget {
       explicitHeight != oldWidget.explicitHeight;
 }
 
-/// The original AlertDialog remains untouched unless a desktop host opts in.
+/// Short tasks share the confirmation shell on touch and panel chrome on desktop.
 class SkedTaskDialog extends StatelessWidget {
   const SkedTaskDialog({
     super.key,
@@ -49,7 +53,7 @@ class SkedTaskDialog extends StatelessWidget {
     this.content,
     this.actions,
     this.scrollable = false,
-    this.desktopContentOwnsScroll = false,
+    this.contentOwnsScroll = false,
     this.closeEnabled = true,
     this.constraints,
     this.insetPadding,
@@ -60,11 +64,14 @@ class SkedTaskDialog extends StatelessWidget {
   });
   final Widget? title, content, titleAction, titleBottom;
   final List<Widget>? actions;
+
+  /// Eager form content may share a scroll viewport with its title. Lazy lists
+  /// keep their own bounded viewport and must not enter intrinsic sizing.
   final bool scrollable;
 
-  /// Pass bounded space to a desktop list instead of nesting scroll views.
-  /// Touch AlertDialog behavior is unaffected.
-  final bool desktopContentOwnsScroll;
+  /// Pass bounded space to a lazy list instead of nesting scroll views.
+  /// The header can scroll independently when large text consumes its budget.
+  final bool contentOwnsScroll;
   final bool closeEnabled;
   final BoxConstraints? constraints;
   final EdgeInsets? insetPadding;
@@ -75,11 +82,30 @@ class SkedTaskDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = SkedTaskDialogScope.maybeOf(context);
     if (scope == null) {
-      return AlertDialog(
-        title: title,
+      final media = MediaQuery.of(context);
+      final effectiveInset =
+          insetPadding ??
+          DialogTheme.of(context).insetPadding ??
+          const EdgeInsets.symmetric(horizontal: 40, vertical: 24);
+      final availableHeight = math.max(
+        0.0,
+        media.size.height -
+            media.viewInsets.vertical -
+            media.padding.vertical -
+            effectiveInset.vertical,
+      );
+      return SkedConfirmationDialog(
+        title: title == null || !contentOwnsScroll
+            ? title
+            : ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: availableHeight * .35),
+                child: SingleChildScrollView(child: title),
+              ),
         content: content,
-        actions: actions,
-        scrollable: scrollable,
+        actions: actions?.isNotEmpty == true
+            ? [SkedActionArea(actions: actions!)]
+            : actions,
+        scrollable: scrollable && !contentOwnsScroll,
         constraints: constraints,
         insetPadding: insetPadding,
         titlePadding: titlePadding,
@@ -135,7 +161,7 @@ class SkedTaskDialog extends StatelessWidget {
           if (content != null)
             Flexible(
               fit: scope.explicitHeight ? FlexFit.tight : FlexFit.loose,
-              child: desktopContentOwnsScroll
+              child: contentOwnsScroll
                   ? Padding(padding: const EdgeInsets.all(12), child: content!)
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(12),
@@ -148,12 +174,7 @@ class SkedTaskDialog extends StatelessWidget {
               child: SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  child: Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: actions!,
-                  ),
+                  child: SkedActionArea(runSpacing: 4, actions: actions!),
                 ),
               ),
             ),
