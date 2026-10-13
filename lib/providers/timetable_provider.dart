@@ -4,6 +4,7 @@ import 'dart:ui' show Locale;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../controllers/app_session.dart';
 import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../l10n/app_locale.dart' as app_locale;
@@ -74,15 +75,10 @@ String _defaultSystemLocaleCodeResolver() {
 abstract class _TimetableProviderBase extends ChangeNotifier {
   static final Object _appBackupRestoreZoneKey = Object();
 
-  final StreamController<AppDataCommit> _committedDataController =
-      StreamController<AppDataCommit>.broadcast();
-  var _committedDataRevision = 0;
-  AppData? _lastCommittedSnapshot;
-  var _committedDataVersions = const AppDataVersions();
-  var _committedDataSessionRevision = 0;
-
-  Stream<AppDataCommit> get committedData => _committedDataController.stream;
-  AppDataVersions get committedDataVersions => _committedDataVersions;
+  AppSession get _session;
+  AppSession get session => _session;
+  Stream<AppDataCommit> get committedData => _session.commits;
+  AppDataVersions get committedDataVersions => _session.versions;
 
   Future<void> _pendingSecretWrite = Future<void>.value();
   String _lastPersistedCustomSchoolImportApiKey = '';
@@ -470,9 +466,7 @@ class TimetableProvider extends _TimetableProviderBase
     @visibleForTesting Duration? uiStateSaveDelay,
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
-  }) : _repository =
-           repository ?? AppRepository(storage: storage ?? TimetableStorage()),
-       _systemLocaleCodeResolver =
+  }) : _systemLocaleCodeResolver =
            systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver,
        _settings = settingsService ?? const SettingsService(),
        _privacy = privacyService ?? const PrivacyService(),
@@ -482,10 +476,24 @@ class TimetableProvider extends _TimetableProviderBase
            backupRestoreJournal ?? AppBackupRestoreJournal(),
        _workspaceMutationLock =
            workspaceMutationLock ?? withAgendaRuntimeMutationLock<void>,
-       _uiStateSaveDelay = uiStateSaveDelay ?? _defaultUiStateSaveDelay;
+       _uiStateSaveDelay = uiStateSaveDelay ?? _defaultUiStateSaveDelay {
+    _session = AppSession(
+      repository:
+          repository ?? AppRepository(storage: storage ?? TimetableStorage()),
+      initialData: buildInitialAppData(buildDefaultPeriodTimes()),
+      requireMutationAllowed: _ensureAppBackupRestoreMutationAllowed,
+      restoreRuntimeFields: (persisted, current) =>
+          _withRuntimeCustomSchoolImportApiKey(
+            persisted,
+            current.aiApiSettings.customApiKey,
+          ),
+    );
+  }
 
   @override
-  final AppRepository _repository;
+  late final AppSession _session;
+  @override
+  AppRepository get _repository => _session.repository;
   @override
   final String Function() _systemLocaleCodeResolver;
   @override
@@ -505,8 +513,7 @@ class TimetableProvider extends _TimetableProviderBase
   @override
   final Future<void> Function(Future<void> Function()) _workspaceMutationLock;
 
-  AppData _appDataValue = buildInitialAppData(buildDefaultPeriodTimes());
-  var _appDataMutationEpoch = 0;
+  int get _appDataMutationEpoch => _session.mutationEpoch;
   // A mode switch is persisted as a single command.  Keep the mode exposed to
   // the rest of the app on the previously committed value until that command
   // has completed; otherwise an unrelated notifyListeners() (for example a
@@ -518,7 +525,7 @@ class TimetableProvider extends _TimetableProviderBase
   Completer<void>? _modeSwitchBarrier;
 
   @override
-  AppData get _appData => _appDataValue;
+  AppData get _appData => _session.data;
 
   @override
   AppData get _visibleAppData {
@@ -537,27 +544,27 @@ class TimetableProvider extends _TimetableProviderBase
 
   @override
   set _appData(AppData value) {
-    _ensureAppBackupRestoreMutationAllowed();
-    _appDataValue = value;
-    _appDataMutationEpoch += 1;
+    _session.replaceData(value);
   }
 
   @override
   void _replaceRuntimeCustomSchoolImportApiKey(String value) {
-    _ensureAppBackupRestoreMutationAllowed();
-    _appDataValue = _withRuntimeCustomSchoolImportApiKey(_appDataValue, value);
+    _session.replaceRuntimeSnapshot(
+      _withRuntimeCustomSchoolImportApiKey(_session.data, value),
+    );
   }
 
   void _restoreAppDataAfterPersistenceFailure(AppData value) {
-    _appDataValue = value;
-    _appDataMutationEpoch += 1;
+    _session.restoreData(value);
   }
 
   @override
   void _restoreRuntimeCustomSchoolImportApiKeyAfterPersistenceFailure(
     String value,
   ) {
-    _appDataValue = _withRuntimeCustomSchoolImportApiKey(_appDataValue, value);
+    _session.restoreRuntimeSnapshot(
+      _withRuntimeCustomSchoolImportApiKey(_session.data, value),
+    );
   }
 
   int _selectedWeekValue = 1;
@@ -615,7 +622,7 @@ class TimetableProvider extends _TimetableProviderBase
 
   StorageLoadStatus get storageLoadStatus =>
       _journalRecoveryLoadStatus ?? _repository.lastLoadStatus;
-  bool get canWrite => _repository.canWrite;
+  bool get canWrite => _session.canWrite;
   bool get isStorageWriteStateUnknown => _repository.isWriteStateUnknown;
 
   /// Whether local app data is being cleared or has been cleared for this
@@ -684,7 +691,7 @@ class TimetableProvider extends _TimetableProviderBase
   String? get ignoredUpdateVersion => _appData.ignoredUpdateVersion;
   String? get availableUpdateVersion => _appData.availableUpdateVersion;
 
-  AppData get committedAppData => _repository.persisted ?? _appData;
+  AppData get committedAppData => _session.committedData;
 
   Set<AppMode> get enabledWorkspaces =>
       _visibleEnabledWorkspacesOverride ?? _appData.enabledWorkspaces;
@@ -1001,8 +1008,6 @@ class TimetableProvider extends _TimetableProviderBase
       localeCode: _appData.localeCode,
     );
     _appData = normalized;
-    final attemptEpoch = _appDataMutationEpoch;
-    _lastCommittedSnapshot ??= _repository.persisted;
     // A restore can reserve a new UI session while this save is in flight.
     // Its generation belongs to the restore's own successful write, not this
     // older snapshot. Queued restores also keep their individual lease token.
@@ -1012,31 +1017,12 @@ class TimetableProvider extends _TimetableProviderBase
                 ? restoreToken
                 : _dataSessionToken)
             .revision;
-    try {
-      await _repository.save(normalized);
-      if (emitCommit) {
-        emitAppDataCommit(normalized, dataSessionRevision: dataSessionRevision);
-      }
-    } catch (error) {
-      // A write rejected before enqueue keeps the unsaved mutation visible
-      // behind the recovery gate. A previously accepted write must converge
-      // with the Repository snapshot when an earlier failure closes the gate.
-      final shouldRollback =
-          error is! RecoveryWriteBlockedException ||
-          error is AcceptedWriteBlockedException;
-      if (rollbackOnFailure &&
-          shouldRollback &&
-          _appDataMutationEpoch == attemptEpoch) {
-        final persisted = _repository.current;
-        if (persisted != null) {
-          final runtimeApiKey = customSchoolImportApiKey;
-          _restoreAppDataAfterPersistenceFailure(
-            _withRuntimeCustomSchoolImportApiKey(persisted, runtimeApiKey),
-          );
-        }
-      }
-      rethrow;
-    }
+    await _session.persist(
+      normalized,
+      publish: emitCommit,
+      rollbackOnFailure: rollbackOnFailure,
+      dataSessionRevision: dataSessionRevision,
+    );
   }
 
   @override
@@ -1254,24 +1240,10 @@ class TimetableProvider extends _TimetableProviderBase
 
   @override
   void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision}) {
-    if (_committedDataController.isClosed || _isDisposed) return;
-    final sessionRevision = dataSessionRevision ?? _dataSessionToken.revision;
-    final domains = changedAppDataDomains(
-      _lastCommittedSnapshot,
+    if (_isDisposed) return;
+    _session.publishCommittedSnapshot(
       snapshot,
-      dataSessionChanged: sessionRevision != _committedDataSessionRevision,
-    );
-    _lastCommittedSnapshot = snapshot;
-    _committedDataSessionRevision = sessionRevision;
-    _committedDataVersions = _committedDataVersions.advance(domains);
-    _committedDataRevision += 1;
-    _committedDataController.add(
-      AppDataCommit(
-        snapshot: snapshot,
-        revision: _committedDataRevision,
-        changedDomains: domains,
-        versions: _committedDataVersions,
-      ),
+      dataSessionRevision: dataSessionRevision ?? _dataSessionToken.revision,
     );
   }
 
@@ -1282,7 +1254,7 @@ class TimetableProvider extends _TimetableProviderBase
     if (hadScheduledSave) {
       _startDeferredUiStateSave();
     }
-    unawaited(_committedDataController.close());
+    unawaited(_session.close());
     super.dispose();
   }
 }
