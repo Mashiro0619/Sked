@@ -9,6 +9,7 @@ import '../controllers/general_commands.dart';
 import '../controllers/general_view_state.dart';
 import '../controllers/student_commands.dart';
 import '../controllers/student_view_state.dart';
+import '../controllers/workspace_transactions.dart';
 import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../l10n/app_locale.dart' as app_locale;
@@ -517,8 +518,7 @@ class TimetableProvider extends _TimetableProviderBase
   // theme while the write is still pending.
   AppMode? _visibleActiveModeOverride;
   Set<AppMode>? _visibleEnabledWorkspacesOverride;
-  Future<void>? _modeSwitchInFlight;
-  Completer<void>? _modeSwitchBarrier;
+  final _workspaceTransactions = WorkspaceTransactions();
 
   @override
   AppData get _appData => _session.data;
@@ -981,43 +981,30 @@ class TimetableProvider extends _TimetableProviderBase
   bool isWorkspaceEnabled(AppMode mode) => enabledWorkspaces.contains(mode);
   bool get hasMultipleWorkspaces => enabledWorkspaces.length > 1;
 
-  Future<void> setWorkspaceEnabled(AppMode mode, bool enabled) async {
-    while (_modeSwitchInFlight != null) {
-      try {
-        await _modeSwitchInFlight;
-      } catch (_) {
-        /* The initiating caller owns failure. */
-      }
-    }
+  Future<void> setWorkspaceEnabled(
+    AppMode mode,
+    bool enabled,
+  ) => _workspaceTransactions.run((transaction) async {
     if (_appData.isWorkspaceEnabled(mode) == enabled) return;
     if (!enabled && _appData.enabledWorkspaces.length == 1) {
       throw StateError('At least one workspace must remain enabled.');
     }
-    Future<void> change() async {
-      if (!enabled && !await _prepareWorkspaceDisable(mode)) return;
-      await _workspaceMutationLock(() async {
-        // Guards may flush edits or a restore may finish while awaiting the
-        // runtime lock. Derive availability from the current snapshot, not the
-        // state from before those asynchronous boundaries.
-        if (!enabled && mode == AppMode.student) {
-          await _ensureCustomSchoolImportApiKeyPersistenceKnown();
-        }
-        await _commitWorkspaceAvailability(mode, enabled);
-      });
-    }
-
-    final operation = change();
-    _modeSwitchInFlight = operation;
-    try {
-      await operation;
-    } finally {
-      if (identical(_modeSwitchInFlight, operation)) _modeSwitchInFlight = null;
-    }
-  }
+    if (!enabled && !await _prepareWorkspaceDisable(mode)) return;
+    await _workspaceMutationLock(() async {
+      // Guards may flush edits or a restore may finish while awaiting the
+      // runtime lock. Derive availability from the current snapshot, not the
+      // state from before those asynchronous boundaries.
+      if (!enabled && mode == AppMode.student) {
+        await _ensureCustomSchoolImportApiKeyPersistenceKnown();
+      }
+      await _commitWorkspaceAvailability(mode, enabled, transaction);
+    });
+  });
 
   Future<void> _commitWorkspaceAvailability(
     AppMode changed,
     bool enabled,
+    WorkspaceTransaction transaction,
   ) async {
     _ensureAppBackupRestoreMutationAllowed();
     final previous = _appData;
@@ -1027,44 +1014,40 @@ class TimetableProvider extends _TimetableProviderBase
     if (next.isEmpty) {
       throw StateError('At least one workspace must remain enabled.');
     }
-    final barrier = Completer<void>();
-    _modeSwitchBarrier = barrier;
-    _visibleActiveModeOverride = previous.activeMode;
-    _visibleEnabledWorkspacesOverride = previous.enabledWorkspaces;
-    _appData = _appData.copyWith(
-      enabledWorkspaces: next,
-      activeMode: next.contains(previous.activeMode)
-          ? previous.activeMode
-          : next.single,
-      workspaceReminderNotBefore: {
-        ...previous.workspaceReminderNotBefore,
-        if (enabled) changed: DateTime.now().toUtc(),
-      },
-    );
-    try {
-      await _saveAndNotify(
-        notify: false,
-        allowDuringModeSwitch: true,
-        rollbackOnFailure: false,
+    await transaction.commit((commit) async {
+      _visibleActiveModeOverride = previous.activeMode;
+      _visibleEnabledWorkspacesOverride = previous.enabledWorkspaces;
+      _appData = _appData.copyWith(
+        enabledWorkspaces: next,
+        activeMode: next.contains(previous.activeMode)
+            ? previous.activeMode
+            : next.single,
+        workspaceReminderNotBefore: {
+          ...previous.workspaceReminderNotBefore,
+          if (enabled) changed: DateTime.now().toUtc(),
+        },
       );
-    } catch (_) {
-      _restoreAppDataAfterPersistenceFailure(
-        _appData.copyWith(
-          enabledWorkspaces: previous.enabledWorkspaces,
-          activeMode: previous.activeMode,
-          workspaceReminderNotBefore: previous.workspaceReminderNotBefore,
-        ),
-      );
-      rethrow;
-    } finally {
-      _visibleActiveModeOverride = null;
-      _visibleEnabledWorkspacesOverride = null;
-      if (!_isDisposed) notifyListeners();
-      if (identical(_modeSwitchBarrier, barrier)) {
-        _modeSwitchBarrier = null;
-        barrier.complete();
+      try {
+        await _saveAndNotify(
+          notify: false,
+          workspaceCommit: commit,
+          rollbackOnFailure: false,
+        );
+      } catch (_) {
+        _restoreAppDataAfterPersistenceFailure(
+          _appData.copyWith(
+            enabledWorkspaces: previous.enabledWorkspaces,
+            activeMode: previous.activeMode,
+            workspaceReminderNotBefore: previous.workspaceReminderNotBefore,
+          ),
+        );
+        rethrow;
+      } finally {
+        _visibleActiveModeOverride = null;
+        _visibleEnabledWorkspacesOverride = null;
+        if (!_isDisposed) notifyListeners();
       }
-    }
+    });
   }
 
   AppMode get activeMode => _visibleActiveModeOverride ?? _appData.activeMode;
@@ -1094,15 +1077,7 @@ class TimetableProvider extends _TimetableProviderBase
     }
 
     validateSession();
-    while (_modeSwitchInFlight != null) {
-      try {
-        await _modeSwitchInFlight;
-      } catch (_) {
-        /* The initiating caller owns failure. */
-      }
-    }
-    validateSession();
-    Future<void> commit() async {
+    Future<void> commit(WorkspaceTransaction transaction) async {
       await flushPendingUiStateSaves();
       // Navigation changes no reminder source or availability. It is already
       // serialized with provider mode/availability transactions below, and the
@@ -1119,89 +1094,70 @@ class TimetableProvider extends _TimetableProviderBase
         }
         return;
       }
-      final barrier = Completer<void>();
-      _modeSwitchBarrier = barrier;
-      _generalView.keepPreviousNavigation(previous);
-      _appData = _appData.copyWith(generalMode: next);
-      try {
-        await _saveAndNotify(
-          notify: false,
-          allowDuringModeSwitch: true,
-          rollbackOnFailure: false,
-          emitCommit: false,
-        );
-        if (revealFocus) _generalView.revealFocus();
-      } catch (_) {
-        _restoreAppDataAfterPersistenceFailure(
-          _appData.copyWith(
-            generalMode: _appData.generalMode.copyWith(
-              customDateRange: previous.customDateRange,
-              selectedDateIso: previous.selectedDateIso,
+      await transaction.commit((commit) async {
+        _generalView.keepPreviousNavigation(previous);
+        _appData = _appData.copyWith(generalMode: next);
+        try {
+          await _saveAndNotify(
+            notify: false,
+            workspaceCommit: commit,
+            rollbackOnFailure: false,
+            emitCommit: false,
+          );
+          if (revealFocus) _generalView.revealFocus();
+        } catch (_) {
+          _restoreAppDataAfterPersistenceFailure(
+            _appData.copyWith(
+              generalMode: _appData.generalMode.copyWith(
+                customDateRange: previous.customDateRange,
+                selectedDateIso: previous.selectedDateIso,
+              ),
             ),
-          ),
-        );
-        rethrow;
-      } finally {
-        _generalView.completeNavigation();
-        if (identical(_modeSwitchBarrier, barrier)) {
-          _modeSwitchBarrier = null;
-          barrier.complete();
+          );
+          rethrow;
+        } finally {
+          _generalView.completeNavigation();
+          if (!_isDisposed) notifyListeners();
         }
-        if (!_isDisposed) notifyListeners();
-      }
+      });
     }
 
-    _generalView.navigationPending = true;
-    final operation = commit();
-    _modeSwitchInFlight = operation;
-    try {
-      await operation;
-    } finally {
-      _generalView.navigationPending = false;
-      if (identical(_modeSwitchInFlight, operation)) _modeSwitchInFlight = null;
-    }
-  }
-
-  Future<void> switchMode(AppMode mode) async {
-    // Serialize direct callers as well as the shell's navigation command. A
-    // second request waits for the first transaction and then observes the
-    // newly committed mode instead of racing two full snapshots.
-    while (_modeSwitchInFlight != null) {
+    await _workspaceTransactions.run((transaction) async {
+      validateSession();
+      _generalView.navigationPending = true;
       try {
-        await _modeSwitchInFlight;
-      } catch (_) {
-        // The caller that initiated the failed transaction receives its
-        // error. A later explicit request is still allowed to retry.
+        await commit(transaction);
+      } finally {
+        _generalView.navigationPending = false;
       }
-    }
-
-    requireWorkspaceEnabled(mode);
-    if (activeMode == mode) return;
-    final previousMode = activeMode;
-    final operation = _switchModeTransaction(mode, previousMode);
-    _modeSwitchInFlight = operation;
-    try {
-      await operation;
-    } finally {
-      if (identical(_modeSwitchInFlight, operation)) {
-        _modeSwitchInFlight = null;
-      }
-    }
+    });
   }
+
+  Future<void> switchMode(AppMode mode) =>
+      _workspaceTransactions.run((transaction) async {
+        // Serialize direct callers as well as the shell's navigation command. A
+        // second request waits for the first transaction and then observes the
+        // newly committed mode instead of racing two full snapshots.
+        requireWorkspaceEnabled(mode);
+        if (activeMode == mode) return;
+        final previousMode = activeMode;
+        await transaction.commit(
+          (commit) => _switchModeTransaction(mode, previousMode, commit),
+        );
+      });
 
   Future<void> _switchModeTransaction(
     AppMode mode,
     AppMode previousMode,
+    WorkspaceCommit commit,
   ) async {
     _ensureAppBackupRestoreMutationAllowed();
-    final barrier = Completer<void>();
-    _modeSwitchBarrier = barrier;
     _visibleActiveModeOverride = previousMode;
     _appData = _appData.copyWith(activeMode: mode);
     try {
       await _saveAndNotify(
         notify: false,
-        allowDuringModeSwitch: true,
+        workspaceCommit: commit,
         rollbackOnFailure: false,
       );
     } catch (_) {
@@ -1220,17 +1176,13 @@ class TimetableProvider extends _TimetableProviderBase
       if (!_isDisposed) {
         notifyListeners();
       }
-      if (identical(_modeSwitchBarrier, barrier)) {
-        _modeSwitchBarrier = null;
-        barrier.complete();
-      }
     }
   }
 
   @override
   Future<void> _saveAndNotify({
     bool notify = true,
-    bool allowDuringModeSwitch = false,
+    WorkspaceCommit? workspaceCommit,
     bool rollbackOnFailure = true,
     bool emitCommit = true,
     int? rollbackSelectedWeek,
@@ -1241,7 +1193,7 @@ class TimetableProvider extends _TimetableProviderBase
     final hadScheduledUiStateSave = _cancelScheduledUiStateSave();
     try {
       await _save(
-        allowDuringModeSwitch: allowDuringModeSwitch,
+        workspaceCommit: workspaceCommit,
         rollbackOnFailure: rollbackOnFailure,
         emitCommit: emitCommit,
       );
@@ -1270,16 +1222,15 @@ class TimetableProvider extends _TimetableProviderBase
 
   @override
   Future<void> _save({
-    bool allowDuringModeSwitch = false,
+    WorkspaceCommit? workspaceCommit,
     bool rollbackOnFailure = true,
     bool emitCommit = true,
   }) async {
-    if (!allowDuringModeSwitch) {
-      while (true) {
-        final barrier = _modeSwitchBarrier;
-        if (barrier == null) break;
-        await barrier.future;
-      }
+    final pendingCommit = _workspaceTransactions.waitBeforeSave(
+      commit: workspaceCommit,
+    );
+    if (pendingCommit != null) {
+      await pendingCommit;
     }
     _ensureAppBackupRestoreMutationAllowed();
     final normalized = _importExportService.normalizeAppData(
@@ -1393,8 +1344,7 @@ class TimetableProvider extends _TimetableProviderBase
           secretEpoch == _customSchoolImportApiKeyMutationEpoch &&
           _uiStateSaveTimer == null &&
           _uiStateSaveInFlight == null &&
-          _modeSwitchInFlight == null &&
-          _modeSwitchBarrier == null) {
+          _workspaceTransactions.isIdle) {
         return;
       }
     }
