@@ -59,7 +59,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                 _editCalendarName(anchorContext: _addAnchor.currentContext),
               ),
             ),
-            PopupMenuButton<SettingsTransferDirection>(
+            SkedPopupMenuButton<SettingsTransferDirection>(
               tooltip: l10n.importExport,
               enabled: !_actionsDisabled,
               icon: const Icon(Icons.import_export),
@@ -461,38 +461,28 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
                 const UiCommandBusyIndicator(busy: true),
                 const SizedBox(height: 8),
               ],
-              TextField(
-                key: ValueKey(
+              SkedEditorTextField(
+                label: l10n.name,
+                controlKey: ValueKey(
                   creating ? 'add-calendar-field' : 'rename-calendar-field',
                 ),
                 controller: _controller,
                 enabled: !_busy && !_popped,
                 autofocus: true,
                 textInputAction: TextInputAction.done,
-                decoration: InputDecoration(
-                  labelText: l10n.name,
-                  hintText: creating ? l10n.newCalendar : null,
-                ),
+                hintText: creating ? l10n.newCalendar : null,
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => unawaited(_save()),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: _busy || _popped
-                ? null
-                : () => unawaited(requestEditorExit()),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: _busy || _popped || !_canSave
-                ? null
-                : () => unawaited(_save()),
-            child: Text(l10n.save),
-          ),
-        ],
+        actions: SkedEditorActions(
+          onCancel: () => unawaited(requestEditorExit()),
+          onSubmit: _canSave ? () => unawaited(_save()) : null,
+          enabled: !_popped,
+          busy: _busy,
+        ).trailing(context),
       ),
     );
   }
@@ -547,7 +537,7 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog>
     final l10n = AppLocalizations.of(context);
     return PopScope<void>(
       canPop: !_busy && !_popped,
-      child: AlertDialog(
+      child: SkedConfirmationDialog(
         title: Text(l10n.deleteCalendar),
         content: Column(
           mainAxisSize: MainAxisSize.min,

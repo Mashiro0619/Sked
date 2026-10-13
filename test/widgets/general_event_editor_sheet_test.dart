@@ -10,6 +10,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
+import 'package:sked/widgets/workspace_editor_form.dart';
 
 Widget _localizedApp(Widget child) {
   return MaterialApp(
@@ -463,10 +464,15 @@ void main() {
     );
     await tester.pump();
 
-    final bodyPadding = tester.widget<Padding>(
-      find.byKey(const ValueKey('sked-task-content')),
+    final body = tester.getRect(
+      find.byKey(const PageStorageKey('app-sheet-body')),
     );
-    expect(bodyPadding.padding, const EdgeInsets.fromLTRB(16, 20, 16, 12));
+    final titleField = tester.getRect(
+      find.byKey(const ValueKey('event-desktop-title')),
+    );
+    expect(titleField.left - body.left, closeTo(16, .1));
+    expect(body.right - titleField.right, closeTo(16, .1));
+    expect(titleField.top - body.top, closeTo(8, .1));
     expect(find.byType(Divider), findsOneWidget);
     expect(find.byTooltip('Pick date'), findsNWidgets(2));
     expect(find.byTooltip('Pick time'), findsNWidgets(2));
@@ -912,7 +918,12 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    final delete = find.descendant(
+      of: find.byType(GeneralEventEditorSheet),
+      matching: find.widgetWithText(TextButton, 'Delete'),
+    );
+    expect(delete.hitTestable(), findsOneWidget);
+    await tester.tap(delete);
     await tester.pumpAndSettle();
     expect(deleteCount, 0);
     await tester.tap(
@@ -930,7 +941,8 @@ void main() {
     expect(results, isEmpty);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    expect(delete.hitTestable(), findsOneWidget);
+    await tester.tap(delete);
     await tester.pumpAndSettle();
     expect(deleteCount, 1);
     await tester.tap(
@@ -1167,7 +1179,7 @@ void main() {
       final previousFocus = await _focusTextFormField(tester, repeatCountField);
 
       final endDateButton = find.widgetWithText(
-        FilledButton,
+        SkedEditorValueField,
         l10n.recurrenceEndDate,
       );
       await tester.ensureVisible(endDateButton);
@@ -1221,7 +1233,7 @@ void main() {
     await tester.ensureVisible(recurrenceField);
     await tester.tap(recurrenceField);
     await tester.pumpAndSettle();
-    final endDateButton = find.widgetWithText(FilledButton, 'End date');
+    final endDateButton = find.widgetWithText(SkedEditorValueField, 'End date');
     await tester.tap(endDateButton);
     await tester.pumpAndSettle();
 
@@ -1439,7 +1451,7 @@ void main() {
     await tester.enterText(repeatCountField, '5');
 
     final endDateButton = find.widgetWithText(
-      FilledButton,
+      SkedEditorValueField,
       l10n.recurrenceEndDate,
     );
     await tester.ensureVisible(endDateButton);
@@ -1829,7 +1841,7 @@ void main() {
 
     final monthlyHeight = tester.getSize(_dialogSurface()).height;
     final endDateButton = find.widgetWithText(
-      FilledButton,
+      SkedEditorValueField,
       l10n.recurrenceEndDate,
     );
     final confirmButton = find.widgetWithText(FilledButton, l10n.confirm);

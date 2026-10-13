@@ -1,3 +1,5 @@
+import 'sked_task_dialog.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -35,24 +37,31 @@ Future<GeneralEventEditScope?> showGeneralEventEditScopeDialog(
           Navigator.of(dialogContext).pop(scope);
         }
 
-        return AlertDialog(
+        return SkedTaskDialog(
           key: const ValueKey('general-event-edit-scope-dialog'),
+          constraints: const BoxConstraints(
+            minWidth: expressiveDialogMaxWidth,
+            maxWidth: expressiveDialogMaxWidth,
+          ),
+          scrollable: true,
           title: Text(l10n.eventEditScopeTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(occurrence.event.title),
-              const SizedBox(height: 8),
-              for (final scope in GeneralEventEditScope.values)
-                if (scope != GeneralEventEditScope.thisAndFollowing ||
-                    occurrence.sequence > 0)
-                  ListTile(
-                    key: ValueKey('event-edit-scope-${scope.name}'),
-                    title: Text(generalEventEditScopeLabel(scope, l10n)),
-                    onTap: () => finish(scope),
-                  ),
-            ],
+          content: ExpressiveDialogContent(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(occurrence.event.title),
+                const SizedBox(height: 8),
+                for (final scope in GeneralEventEditScope.values)
+                  if (scope != GeneralEventEditScope.thisAndFollowing ||
+                      occurrence.sequence > 0)
+                    ExpressiveDialogOption(
+                      key: ValueKey('event-edit-scope-${scope.name}'),
+                      title: Text(generalEventEditScopeLabel(scope, l10n)),
+                      onTap: () => finish(scope),
+                    ),
+              ],
+            ),
           ),
           actions: [TextButton(onPressed: finish, child: Text(l10n.cancel))],
         );

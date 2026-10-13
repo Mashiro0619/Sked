@@ -1,10 +1,9 @@
-import '../theme/sked_surface.dart';
-
 import 'workspace_editor.dart';
 import 'workspace_editor_form.dart';
 import 'workspace_editor_time_rows.dart';
 import 'general_event_edit_flow.dart';
 import 'sked_task_session.dart';
+import 'sked_confirmation_dialog.dart';
 import 'sked_time_picker.dart';
 
 import 'dart:convert';
@@ -13,6 +12,8 @@ import 'editor_exit_guard.dart';
 
 import 'dart:async';
 
+import '../theme/sked_expressive_theme.dart';
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -20,11 +21,9 @@ import 'sked_date_picker.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../theme/sked_expressive_theme.dart';
 import '../utils/general_schedule_colors.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
-import 'sked_dropdown_menu.dart';
 import 'sked_adaptive_picker_dialog.dart';
 import 'sked_task_dialog.dart';
 import 'sked_floating_surface.dart';
@@ -237,7 +236,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     // accessibility text scaling; wider layouts start compact when empty.
     _detailsSectionExpanded =
         hasDetails ||
-        (WorkspaceEditorScope.maybeOf(context)?.enabled != true &&
+        (!WorkbenchChromeMetrics.of(context).desktop &&
             (textScale > 1.3 || mediaQuery.size.height < 560));
     _sectionsInitialized = true;
   }
@@ -322,7 +321,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                     .expansionAnimationStyle
                     ?.duration ??
                 const Duration(milliseconds: 200);
-      final inlineTime = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+      final inlineTime = WorkbenchChromeMetrics.of(context).desktop;
       if (!inlineTime) _timeExpansion.expand();
       _timeErrorReveal?.cancel();
       // Start after the first expanded frame, then measure the final transform.
@@ -414,7 +413,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         context: context,
         session: _editorSession,
         waitForTransitionComplete: true,
-        builder: (dialogContext) => AlertDialog(
+        builder: (dialogContext) => SkedConfirmationDialog(
           key: const ValueKey('editor-delete-confirmation'),
           title: Text(switch (widget.editScope) {
             GeneralEventEditScope.thisOccurrence => l.deleteThisOccurrence,
@@ -543,20 +542,8 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
 
   @override
   Widget build(BuildContext context) {
-    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final mediaQuery = MediaQuery.of(context);
-    // A keyboard already reduces the route's usable height. Expanding the
-    // sheet to 96% in that state would leave the fixed action bar over the
-    // scrollable form on short Android windows.
-    final compactSheet =
-        mediaQuery.size.height < 700 && mediaQuery.viewInsets.bottom == 0;
-    final sheetHeightFactor = mediaQuery.viewInsets.bottom > 0
-        ? 1.0
-        : compactSheet
-        ? 0.96
-        : 0.84;
+    final theme = Theme.of(context);
     return PopScope(
       canPop: _hasPopped,
       onPopInvokedWithResult: (didPop, _) {
@@ -564,37 +551,21 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       },
       child: Form(
         key: _formKey,
-        child: AppSheetScaffold(
+        child: AppSheetScaffold.editor(
           onClose: () => unawaited(requestEditorExit()),
           closeEnabled: !_blocked,
-          // Android portrait keyboards and short windows need nearly the
-          // whole viewport so the fixed action bar does not cover the form.
-          heightFactor: sheetHeightFactor,
-          contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+          busy: _actionInProgress,
           title: Text(_isEditing ? l10n.editEvent : l10n.addEvent),
-          leading: _isEditing
-              ? (desktop ? TextButton.icon : OutlinedButton.icon)(
-                  onPressed: _blocked ? null : () => unawaited(_delete()),
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(l10n.delete),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error,
-                  ),
-                )
-              : null,
-          actions: [
-            TextButton(
-              onPressed: _blocked ? null : () => unawaited(requestEditorExit()),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton.icon(
-              onPressed: _blocked ? null : () => unawaited(_save()),
-              icon: const Icon(Icons.check),
-              label: Text(l10n.save),
-            ),
-          ],
+          editorActions: SkedEditorActions(
+            enabled: !_blocked,
+            busy: _actionInProgress,
+            onCancel: () => unawaited(requestEditorExit()),
+            onSubmit: () => unawaited(_save()),
+            showDelete: _isEditing,
+            onDelete: _isEditing ? () => unawaited(_delete()) : null,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.editScope != null) ...[
@@ -611,97 +582,11 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                   ),
                 const SizedBox(height: 8),
               ],
-              if (desktop) ...[
-                if (_actionInProgress) const UiCommandBusyIndicator(busy: true),
-              ] else ...[
-                UiCommandBusyIndicator(busy: _actionInProgress),
-                const SizedBox(height: 8),
-              ],
               FocusScope(
                 canRequestFocus: !_blocked,
                 child: AbsorbPointer(
                   absorbing: _actionInProgress,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (desktop)
-                        _buildDesktopFields(l10n)
-                      else ...[
-                        TextFormField(
-                          controller: _titleController,
-                          decoration: InputDecoration(
-                            labelText: l10n.eventTitle,
-                            prefixIcon: const Icon(Icons.title),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return l10n.eventTitleRequired;
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _locationController,
-                          decoration: InputDecoration(
-                            labelText: l10n.place,
-                            prefixIcon: const Icon(Icons.location_on_outlined),
-                          ),
-                        ),
-                        if (_showCalendarPicker) ...[
-                          const SizedBox(height: 8),
-                          _buildCalendarField(l10n),
-                        ],
-                        const SizedBox(height: 8),
-                        WorkspaceEditorDisclosure(
-                          controller: _timeExpansion,
-                          icon: Icons.schedule_outlined,
-                          title: '${l10n.eventDate} · ${l10n.eventTime}',
-                          initiallyExpanded: _timeSectionExpanded,
-                          onExpansionChanged: (expanded) =>
-                              setState(() => _timeSectionExpanded = expanded),
-                          enabled: !_blocked,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildAllDayField(l10n),
-                              _buildTimeRange(l10n),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        WorkspaceEditorDisclosure(
-                          icon: Icons.tune_outlined,
-                          title: '${l10n.eventRecurrence} · ${l10n.reminder}',
-                          initiallyExpanded: _optionsSectionExpanded,
-                          onExpansionChanged: (expanded) => setState(
-                            () => _optionsSectionExpanded = expanded,
-                          ),
-                          enabled: !_blocked,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildRecurrenceField(l10n),
-                              const SizedBox(height: 8),
-                              _buildReminderField(l10n),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        WorkspaceEditorDisclosure(
-                          icon: Icons.more_horiz,
-                          title: '${l10n.eventNotes} · ${l10n.eventColor}',
-                          initiallyExpanded: _detailsSectionExpanded,
-                          onExpansionChanged: (expanded) => setState(
-                            () => _detailsSectionExpanded = expanded,
-                          ),
-                          enabled: !_blocked,
-                          child: _buildDetailsFields(l10n),
-                        ),
-                      ],
-                    ],
-                  ),
+                  child: _buildFields(l10n),
                 ),
               ),
             ],
@@ -711,92 +596,120 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     );
   }
 
-  Widget _buildDesktopFields(AppLocalizations l10n) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Semantics(
-        label: l10n.eventTitle,
-        child: TextFormField(
-          key: const ValueKey('event-desktop-title'),
+  Widget _buildFields(AppLocalizations l10n) {
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
+    final options = SkedEditorFormRow(
+      breakpoint: double.infinity,
+      minimumChildWidths: [
+        workspaceEditorMinimumFieldWidth(
+          context,
+          label: l10n.eventRecurrence,
+          value: _currentRecurrenceSummary(l10n),
+          minimumWidth: 144,
+        ),
+        workspaceEditorMinimumFieldWidth(
+          context,
+          label: l10n.reminder,
+          value: _currentReminderSummary(l10n),
+          minimumWidth: 160,
+        ),
+      ],
+      children: [_buildRecurrenceField(l10n), _buildReminderField(l10n)],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SkedEditorTextField(
+          controlKey: const ValueKey('event-desktop-title'),
+          label: l10n.eventTitle,
           controller: _titleController,
-          style: workspaceEditorTitleStyle(context),
-          decoration: workspaceEditorInputDecoration(
-            context,
-            l10n.eventTitle,
-            headline: true,
-          ),
+          enabled: !_blocked,
+          icon: Icons.title,
+          headline: true,
+          formField: true,
           validator: (value) => value == null || value.trim().isEmpty
               ? l10n.eventTitleRequired
               : null,
         ),
-      ),
-      const SizedBox(height: 12),
-      WorkspaceEditorFieldsRow(
-        flexes: [1, if (_showCalendarPicker) 0],
-        minimumChildWidths: [
-          workspaceEditorMinimumFieldWidth(
-            context,
-            label: l10n.place,
-            minimumWidth: 180,
-          ),
-          if (_showCalendarPicker)
-            workspaceEditorMinimumFieldWidth(
-              context,
-              label: l10n.calendar,
-              value: _calendarOptions
-                  .firstWhere((calendar) => calendar.id == _calendarId)
-                  .name,
-              valuePadding: 74,
-              minimumWidth: 144,
-            ),
-        ],
-        children: [
-          WorkspaceEditorField(
-            label: l10n.place,
-            child: TextFormField(
-              key: const ValueKey('event-desktop-location'),
-              controller: _locationController,
-              style: workspaceEditorContentStyle(context),
-              decoration: workspaceEditorInputDecoration(context, l10n.place),
-            ),
-          ),
-          if (_showCalendarPicker) _buildCalendarField(l10n),
-        ],
-      ),
-      WorkspaceEditorFormSection(child: _buildTimeRange(l10n)),
-      WorkspaceEditorFormSection(
-        child: WorkspaceEditorFieldsRow(
+        SizedBox(height: desktop ? 12 : 8),
+        SkedEditorFormRow(
+          breakpoint: double.infinity,
+          flexes: [1, if (_showCalendarPicker) 0],
           minimumChildWidths: [
             workspaceEditorMinimumFieldWidth(
               context,
-              label: l10n.eventRecurrence,
-              value: _currentRecurrenceSummary(l10n),
-              minimumWidth: 144,
+              label: l10n.place,
+              minimumWidth: 180,
             ),
-            workspaceEditorMinimumFieldWidth(
-              context,
-              label: l10n.reminder,
-              value: _currentReminderSummary(l10n),
-              minimumWidth: 160,
-            ),
+            if (_showCalendarPicker)
+              workspaceEditorMinimumFieldWidth(
+                context,
+                label: l10n.calendar,
+                value: _calendarOptions
+                    .firstWhere((calendar) => calendar.id == _calendarId)
+                    .name,
+                valuePadding: 74,
+                minimumWidth: 144,
+              ),
           ],
-          children: [_buildRecurrenceField(l10n), _buildReminderField(l10n)],
+          children: [
+            SkedEditorTextField(
+              controlKey: const ValueKey('event-desktop-location'),
+              label: l10n.place,
+              controller: _locationController,
+              enabled: !_blocked,
+              icon: Icons.location_on_outlined,
+              formField: true,
+            ),
+            if (_showCalendarPicker) _buildCalendarField(l10n),
+          ],
         ),
-      ),
-      WorkspaceEditorFormSection(
-        child: WorkspaceEditorDisclosure(
-          compact: true,
+        SizedBox(height: desktop ? 16 : 8),
+        if (desktop)
+          _buildTimeRange(l10n)
+        else
+          WorkspaceEditorDisclosure(
+            controller: _timeExpansion,
+            icon: Icons.schedule_outlined,
+            title: '${l10n.eventDate} · ${l10n.eventTime}',
+            initiallyExpanded: _timeSectionExpanded,
+            onExpansionChanged: (expanded) =>
+                setState(() => _timeSectionExpanded = expanded),
+            enabled: !_blocked,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [_buildAllDayField(l10n), _buildTimeRange(l10n)],
+            ),
+          ),
+        SizedBox(height: desktop ? 16 : 8),
+        if (desktop)
+          options
+        else
+          WorkspaceEditorDisclosure(
+            icon: Icons.tune_outlined,
+            title: '${l10n.eventRecurrence} · ${l10n.reminder}',
+            initiallyExpanded: _optionsSectionExpanded,
+            onExpansionChanged: (expanded) =>
+                setState(() => _optionsSectionExpanded = expanded),
+            enabled: !_blocked,
+            child: options,
+          ),
+        SizedBox(height: desktop ? 16 : 8),
+        WorkspaceEditorDisclosure(
+          compact: desktop,
           icon: Icons.more_horiz,
-          title: l10n.more,
+          title: desktop
+              ? l10n.more
+              : '${l10n.eventNotes} · ${l10n.eventColor}',
           initiallyExpanded: _detailsSectionExpanded,
           onExpansionChanged: (expanded) =>
               setState(() => _detailsSectionExpanded = expanded),
           enabled: !_blocked,
           child: _buildDetailsFields(l10n),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 
   Widget _buildTimeRange(AppLocalizations l10n) => _DateTimeRange(
     allDay: _buildAllDayField(l10n),
@@ -884,85 +797,63 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     l10n: l10n,
   );
 
-  Widget _buildRecurrenceField(AppLocalizations l10n) => _EventOptionField(
+  Widget _buildRecurrenceField(AppLocalizations l10n) => SkedEditorValueField(
     key: const ValueKey('event-recurrence-field'),
     icon: Icons.repeat,
     label: l10n.eventRecurrence,
     value: _currentRecurrenceSummary(l10n),
-    onTap: _blocked || widget.editScope == GeneralEventEditScope.thisOccurrence
+    onPressed:
+        _blocked || widget.editScope == GeneralEventEditScope.thisOccurrence
         ? null
         : (anchor) => unawaited(_openRecurrenceDialog(anchor)),
   );
 
-  Widget _buildReminderField(AppLocalizations l10n) => _EventOptionField(
+  Widget _buildReminderField(AppLocalizations l10n) => SkedEditorValueField(
     key: const ValueKey('event-reminder-field'),
     icon: Icons.notifications_outlined,
     label: l10n.reminder,
     value: _currentReminderSummary(l10n),
-    onTap: _blocked ? null : (anchor) => unawaited(_openReminderDialog(anchor)),
+    onPressed: _blocked
+        ? null
+        : (anchor) => unawaited(_openReminderDialog(anchor)),
   );
 
-  Widget _buildAllDayField(AppLocalizations l10n) => _EventSwitchRow(
+  Widget _buildAllDayField(AppLocalizations l10n) => SkedEditorSwitchField(
     icon: Icons.event_available_outlined,
-    title: l10n.allDay,
+    label: l10n.allDay,
     value: _isAllDay,
-    onChanged: (value) => setState(() {
-      _isAllDay = value;
-      if (value && _endDate.isBefore(_startDate)) {
-        _endDate = _startDate;
-      }
-    }),
+    onChanged: _blocked
+        ? null
+        : (value) => setState(() {
+            _isAllDay = value;
+            if (value && _endDate.isBefore(_startDate)) {
+              _endDate = _startDate;
+            }
+          }),
   );
 
-  Widget _buildCalendarField(AppLocalizations l10n) {
-    final picker = SkedDropdownMenu<String>(
-      initialSelection: _calendarId,
-      label: WorkspaceEditorScope.maybeOf(context)?.enabled == true
-          ? null
-          : Text(l10n.calendar),
-      leadingIcon: WorkspaceEditorScope.maybeOf(context)?.enabled == true
-          ? null
-          : const Icon(Icons.calendar_month_outlined),
-      expandedInsets: EdgeInsets.zero,
-      dropdownMenuEntries: [
-        for (final calendar in _calendarOptions)
-          DropdownMenuEntry(
-            value: calendar.id,
-            label: calendar.isVisible
-                ? calendar.name
-                : '${calendar.name} · ${l10n.categoryHidden}',
-            labelWidget: _CalendarDropdownItem(calendar: calendar),
-          ),
-      ],
-      onSelected: (value) {
-        if (value != null) {
-          setState(() => _calendarId = value);
-        }
-      },
-    );
-    return WorkspaceEditorScope.maybeOf(context)?.enabled == true
-        ? WorkspaceEditorField(
-            label: l10n.calendar,
-            child: WorkspaceEditorDropdownStyle(child: picker),
-          )
-        : picker;
-  }
-
-  Widget _buildDetailsFields(AppLocalizations l10n) {
-    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
-    final theme = Theme.of(context);
-    final notes = TextFormField(
-      controller: _notesController,
-      style: desktop ? workspaceEditorContentStyle(context) : null,
-      decoration: desktop
-          ? workspaceEditorInputDecoration(context, l10n.eventNotes)
-          : InputDecoration(
-              labelText: l10n.eventNotes,
-              prefixIcon: const Icon(Icons.notes_outlined),
+  Widget _buildCalendarField(AppLocalizations l10n) =>
+      SkedEditorChoiceField<String>(
+        label: l10n.calendar,
+        icon: Icons.calendar_month_outlined,
+        enabled: !_blocked,
+        initialSelection: _calendarId,
+        entries: [
+          for (final calendar in _calendarOptions)
+            DropdownMenuEntry(
+              value: calendar.id,
+              label: calendar.isVisible
+                  ? calendar.name
+                  : '${calendar.name} · ${l10n.categoryHidden}',
+              labelWidget: _CalendarDropdownItem(calendar: calendar),
             ),
-      minLines: 2,
-      maxLines: 4,
-    );
+        ],
+        onSelected: (value) {
+          if (value != null) setState(() => _calendarId = value);
+        },
+      );
+  Widget _buildDetailsFields(AppLocalizations l10n) {
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final palette = Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -977,24 +868,26 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
           ),
       ],
     );
-    if (desktop) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          WorkspaceEditorField(label: l10n.eventNotes, child: notes),
-          const SizedBox(height: 12),
-          WorkspaceEditorField(label: l10n.eventColor, child: palette),
-        ],
-      );
-    }
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        notes,
-        const SizedBox(height: 8),
-        Text(l10n.eventColor, style: theme.textTheme.labelLarge),
-        const SizedBox(height: 4),
-        palette,
+        SkedEditorTextField(
+          label: l10n.eventNotes,
+          controller: _notesController,
+          enabled: !_blocked,
+          icon: Icons.notes_outlined,
+          formField: true,
+          minLines: 2,
+          maxLines: 4,
+        ),
+        SizedBox(height: desktop ? 12 : 8),
+        if (desktop)
+          WorkspaceEditorField(label: l10n.eventColor, child: palette)
+        else ...[
+          Text(l10n.eventColor, style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 4),
+          palette,
+        ],
       ],
     );
   }
@@ -1114,139 +1007,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   }
 }
 
-class _EventOptionField extends StatelessWidget {
-  const _EventOptionField({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final ValueChanged<BuildContext>? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorField(
-        label: label,
-        child: Builder(
-          builder: (anchor) => WorkspaceEditorValue(
-            label: label,
-            value: value,
-            onPressed: onTap == null ? null : () => onTap!(anchor),
-          ),
-        ),
-      );
-    }
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final enabled = onTap != null;
-    final foreground = enabled
-        ? colors.onSurface
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondary = enabled
-        ? colors.onSurfaceVariant
-        : colors.onSurface.withValues(alpha: 0.38);
-    return Semantics(
-      container: true,
-      button: true,
-      enabled: enabled,
-      label: label,
-      value: value,
-      onTap: onTap == null ? null : () => onTap!(context),
-      child: ExcludeSemantics(
-        child: Material(
-          color: colors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(16),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap == null ? null : () => onTap!(context),
-            borderRadius: BorderRadius.circular(16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 56),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final textScale = MediaQuery.textScalerOf(context).scale(1);
-                    final iconWidget = SizedBox.square(
-                      dimension: 40,
-                      child: Center(child: Icon(icon, color: secondary)),
-                    );
-                    final textWidget = Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          label,
-                          softWrap: true,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: secondary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: foreground,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    );
-                    final chevron = Icon(Icons.chevron_right, color: secondary);
-                    final stack = constraints.maxWidth < 240 || textScale > 1.3;
-                    if (stack) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              iconWidget,
-                              const SizedBox(width: 8),
-                              Expanded(child: textWidget),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Align(
-                            alignment: AlignmentDirectional.centerEnd,
-                            child: chevron,
-                          ),
-                        ],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        iconWidget,
-                        const SizedBox(width: 8),
-                        Expanded(child: textWidget),
-                        const SizedBox(width: 8),
-                        chevron,
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Desktop option cells use measured text widths, a single selection surface,
 /// and one keyboard/semantics target. This is not the touch dialog list.
 class _DesktopEventChoice extends StatelessWidget {
@@ -1260,44 +1020,8 @@ class _DesktopEventChoice extends StatelessWidget {
   final bool selected;
   final VoidCallback? onPressed;
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      selected: selected,
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          minimumSize: const Size(0, 36),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          foregroundColor: selected
-              ? skedReadableAccent(
-                  colors,
-                  surface: Color.alphaBlend(
-                    colors.primary.withValues(alpha: .12),
-                    SkedSurface.colorOf(context),
-                  ),
-                )
-              : colors.onSurface,
-          backgroundColor: selected
-              ? colors.primary.withValues(alpha: .12)
-              : Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        ),
-        child: Row(
-          children: [
-            Expanded(child: Text(label)),
-            const SizedBox(width: 6),
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: selected ? const Icon(Icons.check, size: 16) : null,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      SkedEditorOption(label: label, selected: selected, onPressed: onPressed);
 }
 
 class _DesktopEventChoiceGrid extends StatelessWidget {
@@ -1508,7 +1232,7 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
       // open. A barrier/back dismissal at that point would otherwise leave
       // the nested picker with a stale parent route.
       canPop: !_blocked,
-      child: AlertDialog(
+      child: SkedConfirmationDialog(
         scrollable: true,
         // A bounded width lets the scrollable title/body lay out responsive
         // options without asking their LayoutBuilders for intrinsic sizes.
@@ -1706,25 +1430,12 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final mode in modes)
-          if (desktop)
-            _DesktopEventChoice(
-              key: ValueKey('general-reminder-${mode.$2}'),
-              label: mode.$3,
-              selected: _behavior == mode.$1,
-              onPressed: _hasPopped ? null : () => _selectBehavior(mode.$1),
-            )
-          else
-            ListTile(
-              key: ValueKey('general-reminder-${mode.$2}'),
-              title: Text(mode.$3),
-              leading: Icon(
-                _behavior == mode.$1
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-              ),
-              selected: _behavior == mode.$1,
-              onTap: _hasPopped ? null : () => _selectBehavior(mode.$1),
-            ),
+          SkedEditorOption(
+            key: ValueKey('general-reminder-${mode.$2}'),
+            label: mode.$3,
+            selected: _behavior == mode.$1,
+            onPressed: _hasPopped ? null : () => _selectBehavior(mode.$1),
+          ),
         if (_behavior == GeneralEventReminderBehavior.custom) ...[
           const SizedBox(height: 8),
           if (desktop)
@@ -1801,10 +1512,11 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
               content: content,
               actions: actions,
             )
-          : AlertDialog(
+          : SkedConfirmationDialog(
               title: Text(l.reminder),
               scrollable: true,
               constraints: const BoxConstraints(
+                minWidth: expressiveDialogMaxWidth,
                 maxWidth: expressiveDialogMaxWidth,
               ),
               insetPadding: _eventDialogInsetPadding(
@@ -1850,7 +1562,7 @@ class _DateTimeRange extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+    if (WorkbenchChromeMetrics.of(context).desktop) {
       final theme = Theme.of(context);
       Widget label(String text) =>
           Text(text, style: workspaceEditorLabelStyle(context));
@@ -1861,10 +1573,10 @@ class _DateTimeRange extends StatelessWidget {
         minimumTimeWidth: 104 * MediaQuery.textScalerOf(context).scale(14) / 14,
         startLabel: label(start.label),
         endLabel: label(end.label),
-        startDate: start.desktopDate(context),
-        startTime: start.desktopTime(context),
-        endDate: end.desktopDate(context),
-        endTime: end.desktopTime(context),
+        startDate: start.dateControl(context),
+        startTime: start.timeControl(context),
+        endDate: end.dateControl(context),
+        endTime: end.timeControl(context),
         allDay: allDay,
         error: end.errorText == null
             ? null
@@ -1931,85 +1643,39 @@ class _DateTimeRow extends StatelessWidget {
   final ValueChanged<BuildContext>? onPickDate;
   final ValueChanged<BuildContext>? onPickTime;
 
-  Widget desktopDate(BuildContext context) => Builder(
-    builder: (anchor) => Tooltip(
-      message: AppLocalizations.of(context).pickDate,
-      child: WorkspaceEditorValue(
-        label: '$label · ${AppLocalizations.of(context).pickDate}',
-        value: _fmtDate(date),
-        onPressed: onPickDate == null ? null : () => onPickDate!(anchor),
-      ),
-    ),
-  );
-  Widget desktopTime(BuildContext context) => Builder(
-    builder: (anchor) => Tooltip(
-      message: AppLocalizations.of(context).pickTime,
-      child: WorkspaceEditorValue(
-        label: '$label · ${AppLocalizations.of(context).pickTime}',
-        value: time.format(context),
-        onPressed: onPickTime == null ? null : () => onPickTime!(anchor),
-      ),
-    ),
+  Widget dateControl(BuildContext context) => SkedEditorValueAction(
+    label: '$label · ${AppLocalizations.of(context).pickDate}',
+    tooltip: AppLocalizations.of(context).pickDate,
+    value: _fmtDate(date),
+    icon: Icons.calendar_today_outlined,
+    iconOnlyOnTouch: true,
+    onPressed: onPickDate,
   );
 
+  Widget timeControl(BuildContext context) => SkedEditorValueAction(
+    label: '$label · ${AppLocalizations.of(context).pickTime}',
+    tooltip: AppLocalizations.of(context).pickTime,
+    value: time.format(context),
+    icon: Icons.access_time,
+    iconOnlyOnTouch: true,
+    onPressed: onPickTime,
+  );
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
     final value = showTime
         ? '${_fmtDate(date)} ${time.format(context)}'
         : _fmtDate(date);
-    final actionStyle = IconButton.styleFrom(
-      minimumSize: const Size.square(48),
-      tapTargetSize: MaterialTapTargetSize.padded,
-    );
     final actionButtons = [
-      Builder(
-        builder: (anchorContext) => IconButton(
-          tooltip: l10n.pickDate,
-          onPressed: onPickDate == null
-              ? null
-              : () => onPickDate!(anchorContext),
-          style: actionStyle,
-          icon: const Icon(Icons.calendar_today_outlined),
-        ),
-      ),
-      if (showTime)
-        Builder(
-          builder: (anchor) => IconButton(
-            tooltip: l10n.pickTime,
-            onPressed: onPickTime == null ? null : () => onPickTime!(anchor),
-            style: actionStyle,
-            icon: const Icon(Icons.access_time),
-          ),
-        ),
+      dateControl(context),
+      if (showTime) timeControl(context),
     ];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final leading = Container(
-            width: 40,
-            height: 40,
-            decoration: ShapeDecoration(
-              color: colors.primary.withValues(alpha: 0.10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: skedReadableAccent(
-                colors,
-                surface: Color.alphaBlend(
-                  colors.primary.withValues(alpha: .10),
-                  SkedSurface.colorOf(context),
-                ),
-              ),
-            ),
-          );
+          final leading = SkedEditorSelectionIcon(icon: icon);
           final text = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -2098,119 +1764,6 @@ class _DateTimeRow extends StatelessWidget {
   }
 }
 
-class _EventSwitchRow extends StatelessWidget {
-  const _EventSwitchRow({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final String title;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Text(
-              title,
-              style: workspaceEditorContentStyle(
-                context,
-              ).copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Semantics(
-            label: title,
-            child: Switch(
-              value: value,
-              onChanged: onChanged,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-        ],
-      );
-    }
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => onChanged(!value),
-        child: Ink(
-          decoration: ShapeDecoration(
-            color: colors.surfaceContainerLow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final textScale = MediaQuery.textScalerOf(context).scale(1);
-                final iconWidget = SizedBox.square(
-                  dimension: 40,
-                  child: Center(
-                    child: Icon(icon, color: colors.onSurfaceVariant),
-                  ),
-                );
-                final titleWidget = Text(
-                  title,
-                  softWrap: true,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
-                );
-                final stack = constraints.maxWidth < 240 || textScale > 1.3;
-                if (stack) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          iconWidget,
-                          const SizedBox(width: 12),
-                          Expanded(child: titleWidget),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: Switch(value: value, onChanged: onChanged),
-                      ),
-                    ],
-                  );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    iconWidget,
-                    const SizedBox(width: 12),
-                    Expanded(child: titleWidget),
-                    const SizedBox(width: 8),
-                    Switch(value: value, onChanged: onChanged),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _RepeatOptions extends StatelessWidget {
   const _RepeatOptions({
     required this.recurrence,
@@ -2239,36 +1792,17 @@ class _RepeatOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final desktop = SkedTaskDialogScope.maybeOf(context) != null;
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final endDateButton = Row(
       children: [
         Expanded(
-          child: Builder(
-            builder: (anchorContext) => FilledButton.tonalIcon(
-              onPressed: onPickUntil == null
-                  ? null
-                  : () => onPickUntil!(anchorContext),
-              style: desktop
-                  ? FilledButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Theme.of(context).colorScheme.onSurface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                    )
-                  : null,
-              icon: const Icon(Icons.event_repeat_outlined),
-              label: Text(
-                untilDate == null
-                    ? l10n.recurrenceEndDate
-                    : _fmtDate(untilDate!),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+          child: SkedEditorValueField(
+            label: l10n.recurrenceEndDate,
+            value: untilDate == null
+                ? l10n.recurrenceNoLimit
+                : _fmtDate(untilDate!),
+            icon: Icons.event_repeat_outlined,
+            onPressed: onPickUntil,
           ),
         ),
         if (untilDate != null) ...[
@@ -2297,11 +1831,11 @@ class _RepeatOptions extends StatelessWidget {
                 unit: customUnit,
                 onChanged: onIntervalChanged,
               ),
-              SkedDropdownMenu<GeneralEventRecurrenceUnit>(
+              SkedEditorChoiceField<GeneralEventRecurrenceUnit>(
                 initialSelection: customUnit,
-                label: Text(l10n.recurrenceUnit),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
+                label: l10n.recurrenceUnit,
+                workspace: AppMode.general,
+                entries: [
                   DropdownMenuEntry(
                     value: GeneralEventRecurrenceUnit.day,
                     label: l10n.recurrenceDays,
@@ -2327,15 +1861,12 @@ class _RepeatOptions extends StatelessWidget {
           spacing: 8,
           breakpoint: 420,
           children: [
-            TextFormField(
+            SkedEditorTextField(
               controller: repeatCountController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l10n.recurrenceRepeatCount,
-                hintText: l10n.recurrenceNoLimit,
-                prefixIcon: desktop ? null : const Icon(Icons.numbers),
-                isDense: desktop,
-              ),
+              label: l10n.recurrenceRepeatCount,
+              hintText: l10n.recurrenceNoLimit,
+              icon: Icons.numbers,
               validator: (value) {
                 final text = value?.trim() ?? '';
                 if (text.isEmpty) return null;
@@ -2396,19 +1927,13 @@ class _RecurrenceIntervalStepperState
   @override
   void initState() {
     super.initState();
-    _valueFocusNode = FocusNode()..addListener(_handleFocusChanged);
+    _valueFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
-    _valueFocusNode
-      ..removeListener(_handleFocusChanged)
-      ..dispose();
+    _valueFocusNode.dispose();
     super.dispose();
-  }
-
-  void _handleFocusChanged() {
-    if (mounted) setState(() {});
   }
 
   void _setValue(int value, FormFieldState<int> field) {
@@ -2438,94 +1963,59 @@ class _RecurrenceIntervalStepperState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final shapes = skedShapeSchemeOf(context);
     final unitLabel = _recurrenceUnitLabel(widget.unit, l10n);
     final value = _value;
 
     String destinationLabel(int destination) =>
         l10n.repeatsEvery(destination, unitLabel);
 
-    ButtonStyle actionStyle() => SkedTaskDialogScope.maybeOf(context) != null
-        ? WorkbenchChromeMetrics.of(context).iconStyle
-        : IconButton.styleFrom(
-            minimumSize: const Size.square(48),
-            tapTargetSize: MaterialTapTargetSize.padded,
-            shape: shapes.compact,
-          );
+    final actionStyle = WorkbenchChromeMetrics.of(context).iconStyle;
 
     return FormField<int>(
       key: const ValueKey('recurrence-interval-stepper'),
       initialValue: _enteredValue,
       validator: (current) =>
           current == null ? l10n.recurrencePositiveNumber : null,
-      builder: (field) => InputDecorator(
-        isEmpty: widget.controller.text.isEmpty,
-        isFocused: _valueFocusNode.hasFocus,
-        decoration: InputDecoration(
-          labelText: l10n.recurrenceEvery,
-          errorText: field.errorText,
-          contentPadding: const EdgeInsetsDirectional.fromSTEB(4, 8, 4, 4),
+      builder: (field) => SkedEditorTextField(
+        controlKey: const ValueKey('recurrence-interval-value'),
+        label: l10n.recurrenceEvery,
+        controller: widget.controller,
+        focusNode: _valueFocusNode,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(3),
+        ],
+        textAlign: TextAlign.center,
+        errorText: field.errorText,
+        prefixIcon: IconButton(
+          key: const ValueKey('recurrence-interval-decrement'),
+          tooltip: destinationLabel(
+            value > _minimumRecurrenceInterval
+                ? value - 1
+                : _minimumRecurrenceInterval,
+          ),
+          onPressed: value > _minimumRecurrenceInterval
+              ? () => _setValue(value - 1, field)
+              : null,
+          style: actionStyle,
+          icon: const Icon(Icons.remove),
         ),
-        child: Row(
-          children: [
-            IconButton(
-              key: const ValueKey('recurrence-interval-decrement'),
-              tooltip: destinationLabel(
-                value > _minimumRecurrenceInterval
-                    ? value - 1
-                    : _minimumRecurrenceInterval,
-              ),
-              onPressed: value > _minimumRecurrenceInterval
-                  ? () => _setValue(value - 1, field)
-                  : null,
-              style: actionStyle(),
-              icon: const Icon(Icons.remove),
-            ),
-            Expanded(
-              child: Semantics(
-                label: l10n.recurrenceEvery,
-                child: TextField(
-                  key: const ValueKey('recurrence-interval-value'),
-                  controller: widget.controller,
-                  focusNode: _valueFocusNode,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(3),
-                  ],
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 12,
-                    ),
-                  ),
-                  onChanged: (text) => _handleTextChanged(text, field),
-                ),
-              ),
-            ),
-            IconButton(
-              key: const ValueKey('recurrence-interval-increment'),
-              tooltip: destinationLabel(
-                value < _maximumRecurrenceInterval
-                    ? value + 1
-                    : _maximumRecurrenceInterval,
-              ),
-              onPressed: value < _maximumRecurrenceInterval
-                  ? () => _setValue(value + 1, field)
-                  : null,
-              style: actionStyle(),
-              icon: const Icon(Icons.add),
-            ),
-          ],
+        suffixIcon: IconButton(
+          key: const ValueKey('recurrence-interval-increment'),
+          tooltip: destinationLabel(
+            value < _maximumRecurrenceInterval
+                ? value + 1
+                : _maximumRecurrenceInterval,
+          ),
+          onPressed: value < _maximumRecurrenceInterval
+              ? () => _setValue(value + 1, field)
+              : null,
+          style: actionStyle,
+          icon: const Icon(Icons.add),
         ),
+        onChanged: (text) => _handleTextChanged(text, field),
       ),
     );
   }
@@ -2602,7 +2092,7 @@ class _CalendarDropdownItem extends StatelessWidget {
       children: [
         _ColorDot(color: effectiveGeneralCalendarColor(context, calendar)),
         const SizedBox(width: 8),
-        if (WorkspaceEditorScope.maybeOf(context)?.enabled == true)
+        if (WorkbenchChromeMetrics.of(context).desktop)
           Flexible(child: label)
         else
           ConstrainedBox(

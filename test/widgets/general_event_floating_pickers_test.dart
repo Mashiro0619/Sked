@@ -10,6 +10,7 @@ import 'package:sked/widgets/sked_adaptive_picker_dialog.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:sked/widgets/sked_task_dialog.dart';
+import 'package:sked/widgets/workspace_editor_form.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -395,7 +396,10 @@ void main() {
       );
       await t.enterText(interval, '3');
       final l = AppLocalizations.of(t.element(k('general-recurrence-panel')));
-      final count = find.widgetWithText(TextFormField, l.recurrenceRepeatCount);
+      final count = find.descendant(
+        of: find.widgetWithText(SkedEditorTextField, l.recurrenceRepeatCount),
+        matching: find.byType(TextFormField),
+      );
       await t.enterText(count, '0');
       await tap(t, k('general-recurrence-confirm'));
       expect(k('general-recurrence-panel'), findsOneWidget);
@@ -431,7 +435,13 @@ void main() {
           .widget<TextButton>(k('general-recurrence-cancel'))
           .onPressed!;
       final l = AppLocalizations.of(t.element(k('general-recurrence-panel')));
-      await tap(t, find.text(l.recurrenceEndDate));
+      await tap(
+        t,
+        find.descendant(
+          of: find.widgetWithText(SkedEditorValueField, l.recurrenceEndDate),
+          matching: find.byType(WorkspaceEditorValue),
+        ),
+      );
       expect(find.byType(SkedDatePicker), findsOneWidget);
       cancelBeforeChild();
       await t.pumpAndSettle();
@@ -450,7 +460,13 @@ void main() {
         findsOneWidget,
       ); // closes the top date only
       expect(t.getRect(surface('recurrence')), before);
-      await tap(t, find.text(l.recurrenceEndDate));
+      await tap(
+        t,
+        find.descendant(
+          of: find.widgetWithText(SkedEditorValueField, l.recurrenceEndDate),
+          matching: find.byType(WorkspaceEditorValue),
+        ),
+      );
       await tap(t, k('sked-date-confirm'));
       expect(k('general-recurrence-panel'), findsOneWidget);
       expect(t.getRect(surface('recurrence')).topLeft, before.topLeft);

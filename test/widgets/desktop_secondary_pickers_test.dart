@@ -8,12 +8,21 @@ import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:sked/widgets/sked_task_dialog.dart';
 import 'package:sked/widgets/sked_adaptive_picker_dialog.dart';
+import 'package:sked/widgets/workspace_editor_form.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/models/timetable_models.dart';
 
 import '../support/workspace_harness.dart';
 
 final desktop = TargetPlatformVariant.only(TargetPlatform.windows);
+
+Finder _valueControl(String label) => find.descendant(
+  of: find.byWidgetPredicate(
+    (widget) => widget is SkedEditorValueField && widget.label == label,
+  ),
+  matching: find.byType(WorkspaceEditorValue),
+);
+
 void viewport(WidgetTester t, [Size size = const Size(1200, 900)]) {
   t.view.devicePixelRatio = 1;
   t.view.physicalSize = size;
@@ -48,8 +57,11 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      final field = find.text('Day').first;
+      final field = _valueControl('Day');
+      expect(field, findsOneWidget);
       await t.ensureVisible(field);
+      await t.pumpAndSettle();
+      expect(field.hitTestable(), findsOneWidget);
       await t.tap(field);
       await t.pumpAndSettle();
       final panel = t.getRect(find.byType(SkedFloatingSurface));
@@ -91,8 +103,11 @@ void main() {
         );
         await t.pumpAndSettle();
         for (final label in ['Day', 'Weeks', 'Linked periods']) {
-          final trigger = find.text(label).first;
+          final trigger = _valueControl(label);
+          expect(trigger, findsOneWidget);
           await t.ensureVisible(trigger);
+          await t.pumpAndSettle();
+          expect(trigger.hitTestable(), findsOneWidget);
           await t.tap(trigger);
           await t.pumpAndSettle();
           expect(find.byType(SkedFloatingSurface), findsOneWidget);

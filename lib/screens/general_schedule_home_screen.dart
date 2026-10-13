@@ -47,11 +47,14 @@ import '../widgets/workspace_frame.dart';
 import '../widgets/assistant_pane.dart';
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/editor_exit_guard.dart';
+import '../widgets/sked_task_route.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../widgets/workspace_navigation.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_task_dialog.dart';
+import '../widgets/sked_confirmation_dialog.dart';
+import '../widgets/workspace_editor_form.dart';
 import '../widgets/sked_adaptive_picker_dialog.dart';
 import '../widgets/sked_compact_color_picker.dart';
 import '../widgets/sked_floating_surface.dart';
@@ -1161,7 +1164,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               ),
             )
           else
-            ListTile(
+            ExpressiveDialogOption(
               leading: const Icon(Icons.calendar_month_outlined),
               title: Text(
                 formatDateSelection(
@@ -1663,7 +1666,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       ],
       actions: [
         Builder(
-          builder: (viewAnchor) => PopupMenuButton<String>(
+          builder: (viewAnchor) => SkedPopupMenuButton<String>(
             key: const ValueKey('general-view-switcher'),
             tooltip: l.defaultView,
             enabled: widget.interactive && !_dateNavigationBusy,
@@ -2160,7 +2163,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             // Async data invalidation may already have retired this detail.
             // Never let its completion pop the summary or a newer route.
             if (detailRoute?.isCurrent == true) {
-              detailRoute!.navigator?.pop();
+              completeSkedTaskRoute(sheetContext);
             }
           }
 

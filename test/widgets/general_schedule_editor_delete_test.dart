@@ -131,6 +131,7 @@ Future<TimetableProvider> _mount(
 Future<void> _tap(WidgetTester tester, Finder target) async {
   await tester.ensureVisible(target);
   await tester.pumpAndSettle();
+  expect(target.hitTestable(), findsOneWidget);
   await tester.tap(target);
   await tester.pumpAndSettle();
 }
@@ -163,6 +164,8 @@ void main() {
             _inside(_editor, find.byType(EditableText)).first,
             'Unsaved draft title',
           );
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+          await tester.pumpAndSettle();
           if (repeating) {
             await _tap(tester, _key('event-recurrence-field'));
             await _tap(tester, find.text('Does not repeat'));
