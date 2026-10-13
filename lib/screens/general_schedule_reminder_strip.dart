@@ -345,31 +345,12 @@ class _ReminderStripState extends State<_ReminderStrip>
               child: Text(l.noUpcomingEvents),
             ),
           for (final item in items)
-            Builder(
-              builder: (anchor) => ListTile(
-                title: Text(item.occurrence.event.title),
-                subtitle: Text(
-                  '${switch (item.status) {
-                    GeneralReminderStatus.upcoming => l.reminderUpcoming,
-                    GeneralReminderStatus.inProgress => l.reminderInProgress,
-                    GeneralReminderStatus.overdue => l.reminderEnded,
-                  }} · ${intl.DateFormat.MMMd(l.localeName).add_Hm().format(item.occurrence.start)}',
-                ),
-                onTap: () => widget.onOccurrenceTap(item.occurrence, anchor),
-                trailing: IconButton(
-                  tooltip: l.markReminderHandled,
-                  icon: const Icon(Icons.check_circle_outline),
-                  onPressed: () => unawaited(
-                    runUiCommandWithFeedback(
-                      context: context,
-                      debugLabel: 'Dismiss reminder',
-                      command: () => widget.provider.dismissGeneralReminder(
-                        item.occurrence,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            _ReminderSummaryRow(
+              item: item,
+              busy: _handling.contains(item.occurrence.occurrenceKey),
+              onOpen: (anchor) =>
+                  widget.onOccurrenceTap(item.occurrence, anchor),
+              onHandle: () => unawaited(_handleReminder(item.occurrence)),
             ),
         ],
       ),
@@ -438,11 +419,8 @@ class _ReminderSummaryRow extends StatelessWidget {
         : sameDay
         ? '${time(start)} – ${time(end)}'
         : '${date.format(start)} ${time(start)} – ${date.format(end)} ${time(end)}';
-    return ListTile(
+    return ExpressiveDialogOption(
       key: ValueKey('general-reminder-${occurrence.occurrenceKey}'),
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      minVerticalPadding: 8,
       title: Text(
         occurrence.event.title,
         maxLines: 2,

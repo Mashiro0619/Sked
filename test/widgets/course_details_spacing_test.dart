@@ -142,7 +142,8 @@ void main() {
       final time = tester.getRect(_primary(Icons.schedule));
 
       expect(header.height, closeTo(48, .1));
-      expect(place.top - body.top, closeTo(12, .1));
+      // The shared status slot has no idle progress placeholder in the body.
+      expect(place.top - body.top, closeTo(8, .1));
       expect(place.left - panel.left, closeTo(16, .1));
       expect(panel.right - place.right, closeTo(16, .1));
       expect(time.top - place.bottom, closeTo(12, .1));
@@ -351,11 +352,20 @@ void main() {
       final fixture = await _pump(tester, width: 390, viewTask: false);
       final panel = tester.getRect(find.byKey(_panelKey));
       final strings = fixture.strings(tester);
-      final heading = tester.widget<Text>(find.text(fixture.course.name));
+      final heading = tester.widget<RichText>(
+        find.descendant(
+          of: find.text(fixture.course.name),
+          matching: find.byType(RichText),
+        ),
+      );
       final theme = Theme.of(tester.element(find.byType(CourseDetailsSheet)));
 
       expect(find.byType(WorkspaceViewPanel), findsNothing);
-      expect(heading.style, theme.textTheme.headlineSmall);
+      final paintedStyle = heading.text.style!;
+      expect(paintedStyle.fontSize, theme.textTheme.headlineSmall!.fontSize);
+      expect(paintedStyle.height, theme.textTheme.headlineSmall!.height);
+      expect(paintedStyle.fontWeight, FontWeight.w400);
+      expect(paintedStyle.color, theme.colorScheme.onSurface);
       expect(
         tester.getTopLeft(find.byIcon(Icons.place_outlined)).dx - panel.left,
         closeTo(30, .1),

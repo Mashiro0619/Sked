@@ -1,3 +1,8 @@
+import 'sked_detail_row.dart';
+import 'sked_task_actions.dart';
+import 'sked_task_body.dart';
+import 'sked_task_header.dart';
+import 'sked_confirmation_dialog.dart';
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
@@ -166,7 +171,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
         }
 
         if (!isRepeating) {
-          return AlertDialog(
+          return SkedConfirmationDialog(
             key: const ValueKey('general-event-delete-dialog'),
             title: Text(l10n.deleteEventTitle),
             content: Column(
@@ -197,7 +202,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
             ],
           );
         }
-        return AlertDialog(
+        return SkedConfirmationDialog(
           key: const ValueKey('general-event-delete-scope-dialog'),
           title: Text(l10n.deleteRecurringEventTitle),
           contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -372,6 +377,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       return PopScope<void>(
         canPop: !_blocked,
         child: WorkspaceViewPanel(
+          status: _actionTriggered
+              ? const UiCommandBusyIndicator(busy: true)
+              : null,
           prominentTitle: true,
           headerAction: widget.headerAction,
           title: Row(
@@ -415,7 +423,6 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
           toolbar: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              UiCommandBusyIndicator(busy: _actionTriggered),
               Wrap(
                 key: const ValueKey('general-event-action-bar'),
                 spacing: 4,
@@ -448,75 +455,50 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
 
     final content = SafeArea(
       top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Column(
+      child: SkedTaskBody(
+        status: _actionTriggered
+            ? const UiCommandBusyIndicator(busy: true)
+            : null,
+        header: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            UiCommandBusyIndicator(busy: _actionTriggered),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 14,
-                  height: 14,
-                  margin: const EdgeInsets.only(top: 7),
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        event.title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.occurrence.calendar.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: skedReadableAccent(
-                            theme.colorScheme,
-                            surface: SkedSurface.colorOf(context),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (widget.onEdit != null || widget.onEditScoped != null)
-                  Builder(
-                    builder: (anchor) => _EventIconButton(
-                      key: const ValueKey('general-event-edit-action'),
-                      tooltip: l10n.editEvent,
-                      onPressed: _blocked || widget.canEdit?.call() == false
-                          ? null
-                          : () => _edit(anchor),
-                      icon: Icons.edit_outlined,
-                    ),
-                  ),
-              ],
+            Container(
+              width: 14,
+              height: 14,
+              margin: const EdgeInsets.only(top: 7),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-            const SizedBox(height: 12),
-            ...info,
-            if (widget.onDuplicate != null ||
-                (reminders.isNotEmpty &&
-                    (widget.onDismissReminder != null ||
-                        widget.onRestoreReminder != null)) ||
-                canDelete) ...[
-              const SizedBox(height: 16),
-              _EventActionBar(children: [...secondaryActions]),
-            ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: SkedTaskHeader(
+                title: Text(
+                  event.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(widget.occurrence.calendar.name),
+              ),
+            ),
+            if (widget.onEdit != null || widget.onEditScoped != null)
+              Builder(
+                builder: (anchor) => _EventIconButton(
+                  key: const ValueKey('general-event-edit-action'),
+                  tooltip: l10n.editEvent,
+                  onPressed: _blocked || widget.canEdit?.call() == false
+                      ? null
+                      : () => _edit(anchor),
+                  icon: Icons.edit_outlined,
+                ),
+              ),
           ],
+        ),
+        footer: secondaryActions.isEmpty
+            ? null
+            : _EventActionBar(children: secondaryActions),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [...info],
         ),
       ),
     );
@@ -573,7 +555,7 @@ class _EventActionBar extends StatelessWidget {
           WorkbenchChromeMetrics.of(context).desktop ? 6 : 16,
         ),
         clipBehavior: Clip.antiAlias,
-        child: Row(mainAxisSize: MainAxisSize.min, children: children),
+        child: SkedActionArea(actions: children, spacing: 4, runSpacing: 4),
       ),
     );
   }
@@ -586,24 +568,7 @@ class _InfoRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            size: 19,
-            color: theme.colorScheme.onSurface.withAlpha(160),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SkedDetailRow(icon: icon, value: value);
 }
 
 String _formatOccurrenceTime(

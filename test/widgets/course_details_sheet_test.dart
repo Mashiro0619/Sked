@@ -11,6 +11,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
+import 'package:sked/widgets/sked_task_route.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -283,6 +284,9 @@ void main() {
     );
     expect(setDisplayedButton, findsOneWidget);
 
+    await tester.ensureVisible(setDisplayedButton);
+    await tester.pumpAndSettle();
+    expect(setDisplayedButton.hitTestable(), findsOneWidget);
     await tester.tap(setDisplayedButton);
     await tester.tap(setDisplayedButton, warnIfMissed: false);
 
@@ -331,7 +335,7 @@ void main() {
                             actionStarted.complete();
                             await allowAction.future;
                             if (sheetContext.mounted) {
-                              Navigator.of(sheetContext).pop();
+                              completeSkedTaskRoute(sheetContext);
                             }
                           },
                         ),
@@ -348,11 +352,16 @@ void main() {
 
       await tester.tap(find.text('Open course details'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.widgetWithIcon(IconButton, Icons.visibility_outlined),
+      final setDisplayed = find.widgetWithIcon(
+        IconButton,
+        Icons.visibility_outlined,
       );
-      await actionStarted.future;
+      await tester.ensureVisible(setDisplayed);
+      await tester.pumpAndSettle();
+      expect(setDisplayed.hitTestable(), findsOneWidget);
+      await tester.tap(setDisplayed);
       await tester.pump();
+      expect(actionStarted.isCompleted, isTrue);
 
       final busyIndicator = find.byKey(
         const ValueKey('course-details-busy-indicator'),
@@ -428,6 +437,9 @@ void main() {
       IconButton,
       Icons.visibility_outlined,
     );
+    await tester.ensureVisible(setDisplayedButton);
+    await tester.pumpAndSettle();
+    expect(setDisplayedButton.hitTestable(), findsOneWidget);
     await tester.tap(setDisplayedButton);
     await tester.pumpAndSettle();
 
@@ -437,6 +449,9 @@ void main() {
     expect(tester.takeException(), isNull);
 
     failAction = false;
+    await tester.ensureVisible(setDisplayedButton);
+    await tester.pumpAndSettle();
+    expect(setDisplayedButton.hitTestable(), findsOneWidget);
     await tester.tap(setDisplayedButton);
     await tester.pump();
 

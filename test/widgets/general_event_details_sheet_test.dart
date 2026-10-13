@@ -243,10 +243,17 @@ void main() {
     final deleteRect = tester.getRect(find.byKey(keys[3]));
     expect(duplicateRect.top, closeTo(reminderRect.top, 0.1));
     expect(reminderRect.top, closeTo(deleteRect.top, 0.1));
-    expect(
-      tester.getSize(find.byKey(const ValueKey('general-event-action-bar'))),
-      const Size(144, 48),
+    final actionBar = tester.getRect(
+      find.byKey(const ValueKey('general-event-action-bar')),
     );
+    expect(actionBar.height, 48);
+    expect(actionBar.left, duplicateRect.left);
+    expect(actionBar.right, deleteRect.right);
+    expect(reminderRect.left - duplicateRect.right, closeTo(4, .1));
+    expect(deleteRect.left - reminderRect.right, closeTo(4, .1));
+    for (final key in keys) {
+      expect(find.byKey(key).hitTestable(), findsOneWidget);
+    }
     expect(find.widgetWithText(FilledButton, 'Edit event'), findsNothing);
     expect(find.widgetWithText(FilledButton, 'Duplicate'), findsNothing);
     expect(tester.takeException(), isNull);

@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
+import 'package:sked/widgets/expressive_dialog.dart';
 
 import '../support/reminder_summary_harness.dart';
 import '../support/workspace_harness.dart';
@@ -431,15 +432,15 @@ void main() {
           await t.tap(k('general-reminders-action'));
           await t.pumpAndSettle();
           final rows = t
-              .widgetList<ListTile>(
+              .widgetList<ExpressiveDialogOption>(
                 find.descendant(
                   of: k('general-reminders-list'),
-                  matching: find.byType(ListTile),
+                  matching: find.byType(ExpressiveDialogOption),
                 ),
               )
               .toList();
           expect(
-            rows.map((row) => (row.title! as Text).data),
+            rows.map((row) => (row.title as Text).data).toList(),
             locale == 'zh'
                 ? ['学习小组', '校园集市', '账单日', '晨读', '项目截止']
                 : [

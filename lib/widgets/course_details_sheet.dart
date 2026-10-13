@@ -1,7 +1,9 @@
+import 'sked_detail_row.dart';
+import 'sked_task_body.dart';
+import 'sked_task_header.dart';
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -136,29 +138,17 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
             icon: const Icon(Icons.edit),
           ),
         );
+        final status = _actionInProgress
+            ? const UiCommandBusyIndicator(
+                key: ValueKey('course-details-busy-indicator'),
+                busy: true,
+                semanticsKey: ValueKey('course-details-busy-semantics'),
+              )
+            : null;
         final details = Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            UiCommandBusyIndicator(
-              key: const ValueKey('course-details-busy-indicator'),
-              busy: _actionInProgress,
-              semanticsKey: const ValueKey('course-details-busy-semantics'),
-            ),
-            if (!viewTask) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      course.name,
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                  ),
-                  editAction,
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
             _PrimaryInfoCard(
               compact: viewTask,
               icon: Icons.place_outlined,
@@ -175,7 +165,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                   : '$timeLabel · ${_formatPeriodsLabel(l10n, course.periods)}',
             ),
             SizedBox(height: viewTask ? 16 : 12),
-            _DetailFields(
+            SkedDetailGroup(
               compact: viewTask,
               entries: [
                 (
@@ -263,7 +253,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
               const SizedBox(height: 12),
               Text(l10n.customFields, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
-              _DetailFields(
+              SkedDetailGroup(
                 compact: viewTask,
                 entries: [
                   for (final entry in course.customFields.entries)
@@ -275,6 +265,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
         );
         if (viewTask) {
           return WorkspaceViewPanel(
+            status: status,
             title: Text(
               course.name,
               style: skedPanelTitleStyle(context, prominent: true),
@@ -291,8 +282,16 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
           top: false,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: SkedTaskBody(
+              status: status,
+              header: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: SkedTaskHeader(title: Text(course.name))),
+                  editAction,
+                ],
+              ),
+              contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: details,
             ),
           ),
@@ -577,110 +576,6 @@ class _ConflictCourseCard extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-class _DetailFields extends StatelessWidget {
-  const _DetailFields({required this.entries, required this.compact});
-
-  final List<({String label, String value})> entries;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!compact) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final entry in entries)
-            _DetailRow(label: entry.label, value: entry.value),
-        ],
-      );
-    }
-    final theme = Theme.of(context);
-    final scaler = MediaQuery.textScalerOf(context);
-    final labelStyle = theme.textTheme.bodySmall!.copyWith(
-      fontSize: 12,
-      height: 1.75,
-      color: theme.colorScheme.onSurfaceVariant,
-    );
-    final valueStyle = theme.textTheme.bodyMedium!.copyWith(
-      fontSize: 14,
-      height: 1.5,
-    );
-    var labelWidth = 56 * scaler.scale(12) / 12;
-    for (final entry in entries) {
-      final painter = TextPainter(
-        text: TextSpan(text: entry.label, style: labelStyle),
-        textDirection: Directionality.of(context),
-        textScaler: scaler,
-        locale: Localizations.maybeLocaleOf(context),
-        maxLines: 1,
-      )..layout();
-      labelWidth = math.max(labelWidth, painter.width);
-      painter.dispose();
-    }
-    return LayoutBuilder(
-      builder: (context, bounds) {
-        final stacked =
-            labelWidth + 12 + 160 * scaler.scale(14) / 14 > bounds.maxWidth;
-        final valueWidth = stacked
-            ? bounds.maxWidth
-            : bounds.maxWidth - labelWidth - 12;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < entries.length; index++)
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: index == entries.length - 1 ? 0 : 8,
-                ),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 2,
-                  children: [
-                    SizedBox(
-                      width: stacked ? bounds.maxWidth : labelWidth,
-                      child: Text(entries[index].label, style: labelStyle),
-                    ),
-                    SizedBox(
-                      width: valueWidth,
-                      child: Text(entries[index].value, style: valueStyle),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            flex: 3,
-            child: Text(label, style: Theme.of(context).textTheme.labelLarge),
-          ),
-          const SizedBox(width: 12),
-          Flexible(flex: 7, child: Text(value, softWrap: true)),
-        ],
       ),
     );
   }
