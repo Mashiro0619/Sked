@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as path;
 
 import 'migrations/migration.dart';
+import 'app_data_codec.dart';
 import '../models/timetable_models.dart';
 import '../services/app_storage_layout_io.dart';
 import '../services/recovery_artifact_access_io.dart';
@@ -359,7 +360,7 @@ class IoTimetableStorage
     await _regularFileOrMissing(storagePaths.failedTemporary);
     final originalMain = await _writeSnapshot(main);
     final originalBackup = await _writeSnapshot(backup);
-    final bytes = utf8.encode(data.encode());
+    final bytes = await AppDataCodec.encodeStorage(data);
     final writtenTemp = _DecodeAttempt(_Outcome.success, data, bytes);
     var ownsTemp = false;
     var ownedTempSnapshot = writtenTemp;
@@ -580,7 +581,7 @@ class IoTimetableStorage
       return;
     }
 
-    final sanitized = AppData.decodeStorageSnapshot(source).encode();
+    final sanitized = await AppDataCodec.sanitizeStorage(source);
     final sanitizedJson = jsonDecode(sanitized);
     if (sanitizedJson is! Map || _containsLegacyAiApiSecret(sanitizedJson)) {
       throw const StorageWriteException(
@@ -608,7 +609,7 @@ class IoTimetableStorage
     } finally {
       await raf.close();
     }
-    AppData.decodeStorageSnapshot(await temporary.readAsString());
+    await AppDataCodec.decodeStorage(await temporary.readAsBytes());
 
     final currentBytes = await (_fileReader?.call(file) ?? file.readAsBytes());
     if (!_sameBytes(originalBytes, currentBytes)) {
@@ -712,7 +713,7 @@ class IoTimetableStorage
     if (rollbackType == FileSystemEntityType.notFound) {
       if (temporaryType == FileSystemEntityType.notFound) return;
       if (fileType == FileSystemEntityType.file) {
-        AppData.decodeStorageSnapshot(await file.readAsString());
+        await AppDataCodec.decodeStorage(await file.readAsBytes());
         await temporary.delete();
       } else {
         await _validateSanitizedLegacySecretScrubTarget(temporary);
@@ -723,7 +724,7 @@ class IoTimetableStorage
     }
 
     if (fileType == FileSystemEntityType.file) {
-      AppData.decodeStorageSnapshot(await file.readAsString());
+      await AppDataCodec.decodeStorage(await file.readAsBytes());
       if (temporaryType == FileSystemEntityType.file) {
         await temporary.delete();
       }
@@ -753,7 +754,7 @@ class IoTimetableStorage
         'Interrupted API key scrub target is not safely sanitized.',
       );
     }
-    AppData.decodeStorageSnapshot(source);
+    await AppDataCodec.decodeStorageText(source);
   }
 
   File _legacySecretScrubTemporaryFile(File file) =>
@@ -838,11 +839,7 @@ class IoTimetableStorage
       }
       final bytes = await (_fileReader?.call(file) ?? file.readAsBytes());
       snapshot = List<int>.unmodifiable(bytes);
-      final content = utf8.decode(bytes, allowMalformed: false);
-      if (content.trim().isEmpty) {
-        return _DecodeAttempt(_Outcome.corrupt, null, snapshot);
-      }
-      final data = AppData.decodeStorageSnapshot(content);
+      final data = await AppDataCodec.decodeStorage(bytes);
       return _DecodeAttempt(_Outcome.success, data, snapshot);
     } on UnsupportedSchemaVersionException {
       return _DecodeAttempt(_Outcome.unsupportedVersion, null, snapshot);
