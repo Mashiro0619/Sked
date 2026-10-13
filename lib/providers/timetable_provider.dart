@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/app_session.dart';
+import '../controllers/general_commands.dart';
+import '../controllers/general_view_state.dart';
 import '../controllers/student_commands.dart';
 import '../controllers/student_view_state.dart';
 import '../data/app_repository.dart';
@@ -17,7 +19,6 @@ import '../services/app_backup_restore_journal.dart';
 import '../services/agenda_runtime_mutation_lock.dart';
 import '../services/general_calendar_service.dart';
 import '../services/general_calendar_ics_service.dart';
-import '../services/general_occurrence_cache.dart';
 import '../services/general_occurrence_service.dart';
 import '../services/developer_sample_data_service.dart';
 import '../services/import_export_service.dart';
@@ -29,14 +30,12 @@ import '../services/settings_service.dart';
 
 export '../models/app_data_commit.dart';
 
-part 'timetable_provider_general.dart';
 part 'timetable_provider_import_export.dart';
 part 'timetable_provider_lifecycle.dart';
 part 'timetable_provider_settings.dart';
 part 'timetable_provider_developer.dart';
 
 const _calendarService = GeneralCalendarService();
-const _occurrenceService = GeneralOccurrenceService();
 const _importExportService = ImportExportService();
 
 enum AppImportMode { replaceAll, addAll }
@@ -71,6 +70,9 @@ String _defaultSystemLocaleCodeResolver() {
   );
 }
 
+bool _sameGeneralDate(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
 abstract class _TimetableProviderBase extends ChangeNotifier {
   static final Object _appBackupRestoreZoneKey = Object();
 
@@ -92,13 +94,11 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   String? _corruptAppBackupRestoreJournalArtifact;
 
   final Map<AppMode, Set<Future<bool> Function()>> _workspaceExitGuards = {};
-  (GeneralDateRange?, String?)? _visibleGeneralNavigation;
-  bool _generalNavigationPending = false;
-  int _generalDateFocusRevision = 0;
+  GeneralViewState get _generalView;
 
   /// UI-only intent: explicit date jumps reveal their column; range paging
   /// leaves the user's horizontal/time viewport where it was.
-  int get generalDateFocusRevision => _generalDateFocusRevision;
+  int get generalDateFocusRevision => _generalView.focusRevision;
   _AppDataSessionToken _dataSessionToken = _AppDataSessionToken(0);
 
   /// Invalidates UI selection sessions when a complete data replacement is
@@ -109,24 +109,11 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   /// it is queued behind an earlier operation. Reading app data remains safe.
   bool get isRestoringAppBackup => _appBackupRestoreReservationCount > 0;
 
-  Future<void> _commitGeneralNavigation(
-    GeneralScheduleData Function(GeneralScheduleData) change, {
-    bool Function()? isCurrent,
-    bool revealFocus = true,
-  });
-  AppData get _visibleAppData => _visibleGeneralNavigation == null
+  AppData get _visibleAppData => !_generalView.hasNavigationOverride
       ? _appData
       : _appData.copyWith(generalMode: _visibleGeneralMode);
 
-  GeneralScheduleData get _visibleGeneralMode {
-    final previous = _visibleGeneralNavigation;
-    return previous == null
-        ? _appData.generalMode
-        : _appData.generalMode.copyWith(
-            customDateRange: previous.$1,
-            selectedDateIso: previous.$2,
-          );
-  }
+  GeneralScheduleData get _visibleGeneralMode => _generalView.visibleData;
 
   VoidCallback registerWorkspaceExitGuard(
     AppMode mode,
@@ -175,7 +162,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   SchoolSiteService get _schoolSites;
   AppBackupRestoreJournal get _backupRestoreJournal;
   SecretStore get _secrets;
-  GeneralOccurrenceCache get _generalOccurrenceCache;
 
   GeneralSchedule? get activeGeneralScheduleOrNull;
   TimetableData? get activeTimetableOrNull;
@@ -195,7 +181,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   // ignore: unused_element_parameter
   Future<void> _save({bool emitCommit = true});
   void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision});
-  void _scheduleUiStateSave();
   bool _cancelScheduledUiStateSave();
   void _startDeferredUiStateSave();
 
@@ -445,7 +430,6 @@ class _SecretWriteVerificationException implements Exception {
 
 class TimetableProvider extends _TimetableProviderBase
     with
-        _TimetableProviderGeneral,
         _TimetableProviderImportExport,
         _TimetableProviderLifecycle,
         _TimetableProviderSettings,
@@ -493,12 +477,20 @@ class TimetableProvider extends _TimetableProviderBase
       loadDefaultPeriodTimes: _loadDefaultPeriodTimes,
       notifyViewChanged: notifyListeners,
     );
+    _generalView = GeneralViewState(_session);
+    _generalCommands = GeneralCommands(
+      session: _session,
+      persist: _saveAndNotify,
+    );
   }
 
   @override
   late final AppSession _session;
   late final StudentViewState _studentView;
   late final StudentCommands _studentCommands;
+  @override
+  late final GeneralViewState _generalView;
+  late final GeneralCommands _generalCommands;
   @override
   AppRepository get _repository => _session.repository;
   @override
@@ -513,9 +505,6 @@ class TimetableProvider extends _TimetableProviderBase
   final SchoolSiteService _schoolSites;
   @override
   final AppBackupRestoreJournal _backupRestoreJournal;
-  @override
-  final GeneralOccurrenceCache _generalOccurrenceCache =
-      GeneralOccurrenceCache();
 
   @override
   final Future<void> Function(Future<void> Function()) _workspaceMutationLock;
@@ -643,6 +632,236 @@ class TimetableProvider extends _TimetableProviderBase
     String conflictKey,
     String courseId,
   ) => _studentCommands.setDisplayedCourseForConflict(conflictKey, courseId);
+
+  GeneralCommands get generalCommands => _generalCommands;
+  GeneralViewState get generalView => _generalView;
+  List<GeneralSchedule> get generalSchedules => _generalView.schedules;
+  List<GeneralSchedule> get visibleGeneralSchedules =>
+      _generalView.visibleSchedules;
+  @override
+  GeneralSchedule? get activeGeneralScheduleOrNull =>
+      _generalView.activeScheduleOrNull;
+  GeneralSchedule get activeGeneralSchedule => _generalView.activeSchedule;
+  String get generalDefaultView => _generalView.data.defaultView;
+  String get generalViewSwitchBehavior => _generalView.data.viewSwitchBehavior;
+  String get generalToolbarWidthPolicy => _generalView.data.toolbarWidthPolicy;
+  String get generalDateLabelFormat => _generalView.data.dateLabelFormat;
+  bool get generalFitWeekColumnsToWidth =>
+      _generalView.data.fitWeekColumnsToWidth;
+  int? get generalCustomDayMinWidth => _generalView.data.customDayMinWidth;
+  bool get generalShowWeekends => _generalView.data.showWeekends;
+  bool get generalShowLunarCalendar => _generalView.data.showLunarCalendar;
+  int get generalDayStartHour => _generalView.data.dayStartHour;
+  int get generalDayEndHour => _generalView.data.dayEndHour;
+  int get generalTimeGridMinutes => _generalView.data.timeGridMinutes;
+  int get generalTimeGridHourHeight => _generalView.data.timeGridHourHeight;
+  bool get closeGeneralEventPopupOnOutsideTap =>
+      _generalView.data.closeEventPopupOnOutsideTap;
+  bool get showAddEventFab => _generalView.data.showAddEventFab;
+  bool get enableLongPressAddEvent => _generalView.data.enableLongPressAddEvent;
+  bool get allDayTimelineCollapsed => _generalView.data.allDayTimelineCollapsed;
+  List<String> get generalToolbarNavigationOrder =>
+      _generalView.data.toolbarNavigationOrder;
+  List<String> get generalHiddenToolbarNavigationIds =>
+      _generalView.data.hiddenToolbarNavigationIds;
+  String get generalToolbarHiddenItemsBehavior =>
+      _generalView.data.toolbarHiddenItemsBehavior;
+  DateTime get selectedGeneralDate => _generalView.selectedDate;
+  GeneralDateRange? get customGeneralDateRange => _generalView.customDateRange;
+
+  Future<void> switchGeneralSchedule(String id) =>
+      _generalCommands.switchSchedule(id);
+  Future<void> addGeneralSchedule({String? name, int? colorValue}) =>
+      _generalCommands.addSchedule(name: name, colorValue: colorValue);
+  Future<void> renameGeneralSchedule(String id, String name) =>
+      _generalCommands.renameSchedule(id, name);
+  Future<void> updateGeneralSchedule(GeneralSchedule schedule) =>
+      _generalCommands.updateSchedule(schedule);
+  Future<void> updateGeneralScheduleColor(String id, int colorValue) =>
+      _generalCommands.updateScheduleColor(id, colorValue);
+  Future<void> updateGeneralScheduleVisibility(String id, bool isVisible) =>
+      _generalCommands.updateScheduleVisibility(id, isVisible);
+  Future<void> deleteGeneralSchedule(String id) =>
+      _generalCommands.deleteSchedule(id);
+  Future<void> updateGeneralCustomDayMinWidth(int? value) =>
+      _generalCommands.updateCustomDayMinWidth(value);
+  Future<void> updateGeneralToolbarNavigationOrder(List<String> order) =>
+      _generalCommands.updateToolbarNavigationOrder(order);
+  Future<void> updateGeneralToolbarNavigationVisibility(
+    String id,
+    bool visible,
+  ) => _generalCommands.updateToolbarNavigationVisibility(id, visible);
+  Future<void> updateGeneralToolbarNavigationHiddenIds(List<String> ids) =>
+      _generalCommands.updateToolbarNavigationHiddenIds(ids);
+  Future<void> updateGeneralToolbarHiddenItemsBehavior(String behavior) =>
+      _generalCommands.updateToolbarHiddenItemsBehavior(behavior);
+
+  Future<void> updateGeneralDisplaySettings({
+    String? defaultView,
+    String? viewSwitchBehavior,
+    String? toolbarWidthPolicy,
+    String? dateLabelFormat,
+    bool? fitWeekColumnsToWidth,
+    bool? showWeekends,
+    bool? showLunarCalendar,
+    int? dayStartHour,
+    int? dayEndHour,
+    int? timeGridMinutes,
+    int? timeGridHourHeight,
+    bool? closeEventPopupOnOutsideTap,
+    bool? showAddEventFab,
+    bool? enableLongPressAddEvent,
+    bool? allDayTimelineCollapsed,
+    List<String>? toolbarNavigationOrder,
+    List<String>? hiddenToolbarNavigationIds,
+    String? toolbarHiddenItemsBehavior,
+  }) => _generalCommands.updateDisplaySettings(
+    defaultView: defaultView,
+    viewSwitchBehavior: viewSwitchBehavior,
+    toolbarWidthPolicy: toolbarWidthPolicy,
+    dateLabelFormat: dateLabelFormat,
+    fitWeekColumnsToWidth: fitWeekColumnsToWidth,
+    showWeekends: showWeekends,
+    showLunarCalendar: showLunarCalendar,
+    dayStartHour: dayStartHour,
+    dayEndHour: dayEndHour,
+    timeGridMinutes: timeGridMinutes,
+    timeGridHourHeight: timeGridHourHeight,
+    closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
+    showAddEventFab: showAddEventFab,
+    enableLongPressAddEvent: enableLongPressAddEvent,
+    allDayTimelineCollapsed: allDayTimelineCollapsed,
+    toolbarNavigationOrder: toolbarNavigationOrder,
+    hiddenToolbarNavigationIds: hiddenToolbarNavigationIds,
+    toolbarHiddenItemsBehavior: toolbarHiddenItemsBehavior,
+  );
+
+  Future<void> saveGeneralEvent(GeneralEvent event) =>
+      _generalCommands.saveEvent(event);
+  GeneralEvent prepareGeneralOccurrenceEdit(
+    GeneralEventOccurrence occurrence,
+    GeneralEventEditScope scope,
+  ) => _generalCommands.prepareOccurrenceEdit(occurrence, scope);
+  Future<GeneralEvent> editGeneralOccurrence(
+    GeneralEventOccurrence occurrence,
+    GeneralEvent draft,
+    GeneralEventEditScope scope,
+  ) => _generalCommands.editOccurrence(occurrence, draft, scope);
+  Future<void> deleteGeneralOccurrenceScope(
+    GeneralEventOccurrence occurrence,
+    GeneralEventEditScope scope,
+  ) => _generalCommands.deleteOccurrenceScope(occurrence, scope);
+  Future<void> deleteGeneralEvent(String id) =>
+      _generalCommands.deleteEvent(id);
+  Future<GeneralEvent> duplicateGeneralOccurrence(
+    GeneralEventOccurrence occurrence,
+  ) => _generalCommands.duplicateOccurrence(occurrence);
+  Future<void> deleteGeneralOccurrence(GeneralEventOccurrence occurrence) =>
+      _generalCommands.deleteOccurrence(occurrence);
+  Future<void> deleteFutureGeneralOccurrences(
+    GeneralEventOccurrence occurrence,
+  ) => _generalCommands.deleteFutureOccurrences(occurrence);
+  Future<void> dismissGeneralReminder(GeneralEventOccurrence occurrence) =>
+      _generalCommands.dismissReminder(occurrence);
+  Future<void> restoreGeneralReminder(GeneralEventOccurrence occurrence) =>
+      _generalCommands.restoreReminder(occurrence);
+
+  List<GeneralEventOccurrence> generalOccurrencesForRange({
+    required DateTime startInclusive,
+    required DateTime endExclusive,
+    bool onlyVisibleCalendars = true,
+  }) => _generalView.occurrencesForRange(
+    startInclusive: startInclusive,
+    endExclusive: endExclusive,
+    onlyVisibleCalendars: onlyVisibleCalendars,
+  );
+  List<GeneralEventOccurrence> generalOccurrencesForQuery(
+    GeneralOccurrenceQuery query,
+  ) => _generalView.occurrencesForQuery(query);
+  List<GeneralEventOccurrence> upcomingGeneralOccurrences({
+    DateTime? now,
+    Duration horizon = const Duration(days: 7),
+  }) => _generalView.upcomingOccurrences(now: now, horizon: horizon);
+  bool isGeneralReminderHandled(GeneralEventOccurrence occurrence) =>
+      _generalView.isReminderHandled(occurrence);
+  List<GeneralReminderItem> generalReminderItems({
+    DateTime? now,
+    Duration upcomingHorizon = const Duration(hours: 24),
+    Duration overdueWindow = defaultGeneralReminderOverdueWindow,
+    GeneralOccurrenceQuery? occurrenceFilter,
+  }) => _generalView.reminderItems(
+    now: now,
+    upcomingHorizon: upcomingHorizon,
+    overdueWindow: overdueWindow,
+    occurrenceFilter: occurrenceFilter,
+  );
+
+  Future<void> setGeneralDateRange(
+    GeneralDateRange range, {
+    DateTime? focusedDate,
+    bool Function()? isCurrent,
+    bool revealFocus = true,
+  }) => _commitGeneralNavigation(
+    (data) {
+      final focus = focusedDate ?? data.selectedDate;
+      return data.copyWith(
+        customDateRange: range,
+        selectedDateIso: (range.contains(focus) ? focus : range.start)
+            .toIso8601String()
+            .split('T')
+            .first,
+      );
+    },
+    isCurrent: isCurrent,
+    revealFocus: revealFocus,
+  );
+
+  Future<void> clearGeneralDateRange() => _commitGeneralNavigation((data) {
+    final date = data.selectedDate;
+    final focus = !data.showWeekends && date.weekday > DateTime.friday
+        ? DateTime(
+            date.year,
+            date.month,
+            date.day - date.weekday + DateTime.friday,
+          )
+        : date;
+    return _calendarService
+        .setSelectedDate(data, focus)
+        .copyWith(customDateRange: null);
+  });
+
+  Future<void> setSelectedGeneralDate(
+    DateTime date, {
+    bool moveCustomRange = true,
+  }) async {
+    requireWorkspaceEnabled(AppMode.general);
+    if (_generalView.navigationPending ||
+        _appData.generalMode.customDateRange != null) {
+      await _commitGeneralNavigation(
+        (data) => _calendarService
+            .setSelectedDate(data, date)
+            .copyWith(
+              customDateRange: moveCustomRange
+                  ? data.customDateRange?.containing(date)
+                  : data.customDateRange,
+            ),
+      );
+      return;
+    }
+    final next = _calendarService.setSelectedDate(_appData.generalMode, date);
+    if (identical(next, _appData.generalMode) ||
+        _sameGeneralDate(
+          next.selectedDate,
+          _appData.generalMode.selectedDate,
+        )) {
+      return;
+    }
+    requireWorkspaceEnabled(AppMode.general);
+    _appData = _appData.copyWith(generalMode: next);
+    _generalView.revealFocus();
+    notifyListeners();
+    _scheduleUiStateSave();
+  }
 
   @override
   bool _isLoaded = false;
@@ -854,7 +1073,6 @@ class TimetableProvider extends _TimetableProviderBase
   StudentModeData get studentMode => _appData.studentMode;
   GeneralScheduleData get generalMode => _visibleGeneralMode;
 
-  @override
   Future<void> _commitGeneralNavigation(
     GeneralScheduleData Function(GeneralScheduleData) change, {
     bool Function()? isCurrent,
@@ -896,17 +1114,14 @@ class TimetableProvider extends _TimetableProviderBase
       if (next.customDateRange == previous.customDateRange &&
           next.selectedDateIso == previous.selectedDateIso) {
         if (revealFocus) {
-          _generalDateFocusRevision++;
+          _generalView.revealFocus();
           notifyListeners();
         }
         return;
       }
       final barrier = Completer<void>();
       _modeSwitchBarrier = barrier;
-      _visibleGeneralNavigation = (
-        previous.customDateRange,
-        previous.selectedDateIso,
-      );
+      _generalView.keepPreviousNavigation(previous);
       _appData = _appData.copyWith(generalMode: next);
       try {
         await _saveAndNotify(
@@ -915,7 +1130,7 @@ class TimetableProvider extends _TimetableProviderBase
           rollbackOnFailure: false,
           emitCommit: false,
         );
-        if (revealFocus) _generalDateFocusRevision++;
+        if (revealFocus) _generalView.revealFocus();
       } catch (_) {
         _restoreAppDataAfterPersistenceFailure(
           _appData.copyWith(
@@ -927,7 +1142,7 @@ class TimetableProvider extends _TimetableProviderBase
         );
         rethrow;
       } finally {
-        _visibleGeneralNavigation = null;
+        _generalView.completeNavigation();
         if (identical(_modeSwitchBarrier, barrier)) {
           _modeSwitchBarrier = null;
           barrier.complete();
@@ -936,13 +1151,13 @@ class TimetableProvider extends _TimetableProviderBase
       }
     }
 
-    _generalNavigationPending = true;
+    _generalView.navigationPending = true;
     final operation = commit();
     _modeSwitchInFlight = operation;
     try {
       await operation;
     } finally {
-      _generalNavigationPending = false;
+      _generalView.navigationPending = false;
       if (identical(_modeSwitchInFlight, operation)) _modeSwitchInFlight = null;
     }
   }
@@ -1089,7 +1304,6 @@ class TimetableProvider extends _TimetableProviderBase
     );
   }
 
-  @override
   void _scheduleUiStateSave() {
     _uiStateSaveTimer?.cancel();
     if (_uiStateSaveDelay <= Duration.zero) {
