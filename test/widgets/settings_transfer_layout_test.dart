@@ -141,10 +141,18 @@ void main() {
             expect(rows, findsNWidgets(student ? 8 : 10));
             for (final element in rows.evaluate()) {
               final row = find.byWidget(element.widget);
+              expect(
+                find.descendant(
+                  of: row,
+                  matching: find.byType(SettingsConnectedTile),
+                ),
+                findsOneWidget,
+              );
               await t.ensureVisible(row);
               await t.pumpAndSettle();
               final rect = t.getRect(row);
-              expect(rect.height, greaterThanOrEqualTo(80));
+              final desktop = width >= 600;
+              expect(rect.height, greaterThanOrEqualTo(desktop ? 52 : 76));
               expect(rect.left, greaterThanOrEqualTo(16));
               expect(rect.right, lessThanOrEqualTo(width - 16));
               final texts = find.descendant(
@@ -153,11 +161,15 @@ void main() {
               );
               final title = t.getRect(texts.first),
                   subtitle = t.getRect(texts.last);
-              expect(subtitle.top - title.bottom, closeTo(4, 0.001));
-              expect(title.top - rect.top, greaterThanOrEqualTo(15.99));
+              expect(subtitle.top - title.bottom, closeTo(3, 0.001));
+              final minimumVerticalPadding = desktop ? 10.0 : 12.0;
+              expect(
+                title.top - rect.top,
+                greaterThanOrEqualTo(minimumVerticalPadding - .01),
+              );
               expect(
                 rect.bottom - subtitle.bottom,
-                greaterThanOrEqualTo(15.99),
+                greaterThanOrEqualTo(minimumVerticalPadding - .01),
               );
               if (scale == 1.3) {
                 expect(title.right, closeTo(subtitle.right, 0.001));
@@ -174,6 +186,7 @@ void main() {
                 t.widget<Text>(texts.first).style!.fontWeight,
                 FontWeight.w400,
               );
+              expect(row.hitTestable(), findsOneWidget);
               await t.tap(row);
               await t.pumpAndSettle();
             }

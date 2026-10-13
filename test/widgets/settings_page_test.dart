@@ -21,7 +21,7 @@ import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/microsoft_store_update_service.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/school_site_service.dart';
-import 'package:sked/widgets/expressive_motion.dart';
+import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/settings_list.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
@@ -373,7 +373,7 @@ Future<void> _openGeneralDataActions(
 Finder _generalSelectionTile(String name) {
   return find.ancestor(
     of: find.text(name),
-    matching: find.byType(ExpressiveTap),
+    matching: find.byType(ExpressiveDialogOption),
   );
 }
 

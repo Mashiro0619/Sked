@@ -966,6 +966,7 @@ class SettingsSwitchTile extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
+    this.changesAppData = true,
   });
 
   final bool value;
@@ -973,10 +974,13 @@ class SettingsSwitchTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
+  final bool changesAppData;
 
   @override
   Widget build(BuildContext context) {
-    final onChanged = _settingsWritesEnabled(context) ? this.onChanged : null;
+    final onChanged = !changesAppData || _settingsWritesEnabled(context)
+        ? this.onChanged
+        : null;
     if (_SettingsTonalGroup.of(context) ||
         WorkbenchChromeMetrics.of(context).desktop) {
       return SettingsConnectedTile(

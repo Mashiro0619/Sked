@@ -1,14 +1,10 @@
-import '../theme/sked_surface.dart';
-
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../widgets/app_modal_sheet.dart';
-import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
-import '../widgets/sked_panel_header.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 
 enum SettingsStudentDataAction {
@@ -55,7 +51,6 @@ class SettingsDataTransferController {
   }) async {
     final action = await _showActions<SettingsAppDataAction>(
       context,
-      icon: Icons.inventory_2_outlined,
       constrainHeight: true,
       buildSpec: (sheetContext) {
         final l10n = AppLocalizations.of(sheetContext);
@@ -278,7 +273,6 @@ class SettingsDataTransferController {
 
   Future<T?> _showActions<T>(
     BuildContext context, {
-    required IconData icon,
     required _TransferSheetSpec<T> Function(BuildContext context) buildSpec,
     bool constrainHeight = false,
   }) {
@@ -294,42 +288,33 @@ class SettingsDataTransferController {
           Navigator.of(sheetContext).pop(action);
         }
 
-        final list = ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          children: [
-            _ActionSheetHeader(
-              icon: icon,
-              title: spec.title,
-              subtitle: spec.subtitle,
-            ),
-            for (var index = 0; index < spec.groups.length; index++) ...[
-              const SizedBox(height: 12),
-              _ActionSheetGroup(
-                children: [
-                  for (final action in spec.groups[index])
-                    _ActionSheetTile(
-                      icon: action.icon,
-                      title: action.title,
-                      subtitle: action.subtitle,
-                      onTap: action.enabled
-                          ? () => popWith(action.value)
-                          : null,
-                    ),
-                ],
-              ),
-            ],
-          ],
-        );
-        final content = constrainHeight
-            ? ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.85,
+        return AppSheetScaffold(
+          title: Text(spec.title),
+          subtitle: Text(spec.subtitle),
+          heightFactor: constrainHeight ? .85 : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < spec.groups.length; index++) ...[
+                if (index > 0) const SizedBox(height: 12),
+                _ActionSheetGroup(
+                  children: [
+                    for (final action in spec.groups[index])
+                      _ActionSheetTile(
+                        icon: action.icon,
+                        title: action.title,
+                        subtitle: action.subtitle,
+                        onTap: action.enabled
+                            ? () => popWith(action.value)
+                            : null,
+                      ),
+                  ],
                 ),
-                child: list,
-              )
-            : list;
-        return SafeArea(top: false, child: content);
+              ],
+            ],
+          ),
+        );
       },
     );
   }
@@ -363,104 +348,17 @@ class _TransferAction<T> {
   final bool enabled;
 }
 
-class _ActionSheetHeader extends StatelessWidget {
-  const _ActionSheetHeader({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final desktop = WorkbenchChromeMetrics.of(context).desktop;
-    final headingStyle = desktop
-        ? skedPanelTitleStyle(context)
-        : Theme.of(context).textTheme.titleMedium!;
-    final heading = Text(title, style: headingStyle);
-    final iconOffset = desktop
-        ? (MediaQuery.textScalerOf(context).scale(headingStyle.fontSize!) *
-                      headingStyle.height! -
-                  20) /
-              2
-        : 0.0;
-    return Padding(
-      // The list already supplies the shared 16dp horizontal gutter.
-      padding: desktop
-          ? skedPanelHeaderPadding.copyWith(start: 0, end: 0)
-          : EdgeInsets.zero,
-      child: Row(
-        crossAxisAlignment: desktop
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: desktop ? 24 : 40,
-            child: Padding(
-              padding: EdgeInsets.only(top: math.max(0, iconOffset)),
-              child: Icon(
-                icon,
-                size: desktop ? 20 : null,
-                color: skedReadableAccent(
-                  Theme.of(context).colorScheme,
-                  surface: SkedSurface.colorOf(context),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: desktop ? 8 : 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                desktop ? Semantics(header: true, child: heading) : heading,
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: desktop
-                      ? skedPanelSubtitleStyle(context)
-                      : Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ActionSheetGroup extends StatelessWidget {
   const _ActionSheetGroup({required this.children});
 
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var index = 0; index < children.length; index++) ...[
-            if (index > 0)
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 72,
-                color: colors.outlineVariant.withValues(alpha: 0.48),
-              ),
-            children[index],
-          ],
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SettingsConnectedGroup(
+    tonal: true,
+    margin: EdgeInsets.zero,
+    children: children,
+  );
 }
 
 class _ActionSheetTile extends StatelessWidget {
@@ -472,76 +370,20 @@ class _ActionSheetTile extends StatelessWidget {
   });
 
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String title, subtitle;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final foreground = onTap == null
-        ? colors.onSurface.withValues(alpha: 0.38)
-        : colors.onSurface;
-    final secondary = onTap == null ? foreground : colors.onSurfaceVariant;
-    return ExpressiveTap(
-      onTap: onTap,
-      enabled: onTap != null,
-      borderRadius: BorderRadius.circular(16),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 72),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 10, 10),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: Center(child: Icon(icon, color: secondary)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: foreground,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: secondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 32,
-                height: 48,
-                child: Icon(Icons.chevron_right, size: 28, color: secondary),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SettingsTransferPageTile(
+    icon: icon,
+    title: title,
+    subtitle: subtitle,
+    onTap: onTap,
+  );
 }
 
-/// Full-page transfer actions share one density and never truncate descriptions.
-/// Configuration links use the same geometry without inheriting ListTile defaults.
+/// Transfer and configuration links use the same settings row. Business action
+/// keys and the owning page remain stable while density and text wrapping agree.
 class SettingsTransferPageTile extends StatelessWidget {
   const SettingsTransferPageTile({
     super.key,
@@ -552,75 +394,17 @@ class SettingsTransferPageTile extends StatelessWidget {
   });
 
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String title, subtitle;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final enabled = onTap != null;
-    final foreground = enabled
-        ? colors.onSurface
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondary = enabled
-        ? colors.onSurfaceVariant
-        : colors.onSurface.withValues(alpha: 0.38);
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: '$title, $subtitle',
-      onTap: onTap,
-      child: ExcludeSemantics(
-        child: InkWell(
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 80),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  SizedBox.square(
-                    dimension: 24,
-                    child: Icon(icon, size: 22, color: secondary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: foreground,
-                            fontWeight: FontWeight.w400,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: secondary,
-                            fontWeight: FontWeight.w400,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(Icons.chevron_right, size: 18, color: secondary),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SettingsConnectedTile(
+    leading: Icon(icon),
+    title: title,
+    subtitle: subtitle,
+    trailing: const Icon(Icons.chevron_right),
+    onTap: onTap,
+  );
 }
 
 /// A direct task page, not a settings intermediary followed by another modal.

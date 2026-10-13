@@ -1,4 +1,4 @@
-import '../theme/sked_surface.dart';
+import '../widgets/expressive_dialog.dart';
 
 import '../widgets/desktop_window_host.dart';
 
@@ -164,97 +164,35 @@ class _LanguageOptionTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final accent = skedReadableAccent(
-      colorScheme,
-      surface: colorScheme.primary.withValues(alpha: 0.12),
-    );
-    final foreground = selected ? accent : colorScheme.onSurface;
-    final subtitleColor = selected ? accent : colorScheme.onSurfaceVariant;
-    return Semantics(
-      key: ValueKey('language-option-semantics-${option.code}'),
-      container: true,
-      button: true,
-      enabled: onTap != null,
-      selected: selected,
-      onTap: onTap,
+  Widget build(BuildContext context) => Semantics(
+    key: ValueKey('language-option-semantics-${option.code}'),
+    container: true,
+    button: true,
+    enabled: onTap != null,
+    selected: selected,
+    onTap: onTap,
+    label: option.localizedName == option.nativeName
+        ? option.nativeName
+        : '${option.nativeName}, ${option.localizedName}',
+    child: ExcludeSemantics(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Material(
-          color: selected
-              ? colorScheme.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            excludeFromSemantics: true,
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final textScale = MediaQuery.textScalerOf(context).scale(1);
-                  final text = Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        option.nativeName,
-                        softWrap: true,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: foreground,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
-                      ),
-                      if (option.localizedName != option.nativeName) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          option.localizedName,
-                          softWrap: true,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: subtitleColor,
-                          ),
-                        ),
-                      ],
-                    ],
-                  );
-                  final check = selected
-                      ? Icon(Icons.check, color: accent)
-                      : null;
-                  final stack =
-                      selected &&
-                      (constraints.maxWidth < 360 || textScale > 1.3);
-                  if (stack) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        text,
-                        const SizedBox(height: 4),
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: check,
-                        ),
-                      ],
-                    );
-                  }
-                  return Row(
-                    children: [
-                      Expanded(child: text),
-                      if (check != null) ...[const SizedBox(width: 12), check],
-                    ],
-                  );
-                },
-              ),
-            ),
+        child: ExpressiveDialogOption(
+          selected: selected,
+          enabled: onTap != null,
+          onTap: onTap,
+          title: Text(option.nativeName),
+          subtitle: option.localizedName == option.nativeName
+              ? null
+              : Text(option.localizedName),
+          titleMaxLines: null,
+          subtitleMaxLines: null,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

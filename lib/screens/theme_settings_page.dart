@@ -4,7 +4,6 @@ import '../widgets/sked_color_draft.dart';
 import '../widgets/sked_task_session.dart';
 import '../widgets/sked_task_submission_controller.dart';
 import '../widgets/desktop_window_host.dart';
-import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/sked_dropdown_menu.dart';
 
 import 'dart:async';
@@ -197,54 +196,21 @@ class _AppearanceChoiceField extends StatelessWidget {
           alignment: AlignmentDirectional.centerStart,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
-            child:
-                (WorkbenchChromeMetrics.of(context).desktop ||
-                    WorkbenchChromeMetrics.compactTouch(context))
-                ? SkedDropdownMenu<String>(
-                    key: choiceListKey,
-                    initialSelection: selected.first,
-                    enabled: enabled,
-                    workspace: workspace,
-                    sessionKey: workspace,
-                    expandedInsets: EdgeInsets.zero,
-                    dropdownMenuEntries: [
-                      for (final option in segments)
-                        DropdownMenuEntry(
-                          value: option.value,
-                          label: option.label,
-                        ),
-                    ],
-                    onSelected: (value) {
-                      if (value != null) onSelectionChanged({value});
-                    },
-                  )
-                : DropdownButtonFormField<String>(
-                    key: choiceListKey,
-                    initialValue: selected.first,
-                    isExpanded: true,
-                    itemHeight: null,
-                    decoration: InputDecoration(
-                      isDense: WorkbenchChromeMetrics.of(context).desktop,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                    ),
-                    items: [
-                      for (final option in segments)
-                        DropdownMenuItem(
-                          value: option.value,
-                          child: Text(
-                            option.label,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) onSelectionChanged({value});
-                    },
-                  ),
+            child: SkedDropdownMenu<String>(
+              key: choiceListKey,
+              initialSelection: selected.first,
+              enabled: enabled,
+              workspace: workspace,
+              sessionKey: workspace,
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final option in segments)
+                  DropdownMenuEntry(value: option.value, label: option.label),
+              ],
+              onSelected: (value) {
+                if (value != null) onSelectionChanged({value});
+              },
+            ),
           ),
         );
 }
@@ -1278,7 +1244,6 @@ class _PersistingThemeDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final blocked = busy || popped;
-    final desktop = SkedTaskDialogScope.maybeOf(context) != null;
     final progress = UiCommandBusyIndicator(
       key: const ValueKey('theme-persistence-dialog-busy-indicator'),
       busy: busy,
@@ -1295,22 +1260,16 @@ class _PersistingThemeDialog extends StatelessWidget {
           absorbing: blocked,
           child: SkedTaskDialog(
             closeEnabled: !blocked,
-            title: desktop
-                ? title
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [progress, const SizedBox(height: 8), title],
-                  ),
-            content: desktop
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    // The progress slot remains stable while saving and no
-                    // longer shifts the task title below its close action.
-                    children: [progress, const SizedBox(height: 8), content],
-                  )
-                : content,
+            title: title,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                progress,
+                const SizedBox(height: 8),
+                Flexible(child: content),
+              ],
+            ),
             actions: actions,
           ),
         ),
@@ -1528,77 +1487,12 @@ class _OutlineSwitchRow extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    void toggle() => onChanged(!value);
-    return Semantics(
-      label: title,
-      toggled: value,
-      onTap: toggle,
-      child: ExcludeSemantics(
-        child: ExpressiveTap(
-          onTap: toggle,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final textScale = MediaQuery.textScalerOf(context).scale(1);
-                final label = Text(
-                  title,
-                  softWrap: true,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
-                );
-                final leading = SizedBox.square(
-                  dimension: 40,
-                  child: Center(
-                    child: Icon(icon, color: colors.onSurfaceVariant),
-                  ),
-                );
-                final toggleControl = Switch(
-                  value: value,
-                  onChanged: onChanged,
-                );
-                if (constraints.maxWidth < 240 || textScale > 1.3) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          leading,
-                          const SizedBox(width: 12),
-                          Expanded(child: label),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: toggleControl,
-                      ),
-                    ],
-                  );
-                }
-                return Row(
-                  children: [
-                    leading,
-                    const SizedBox(width: 12),
-                    Expanded(child: label),
-                    const SizedBox(width: 12),
-                    toggleControl,
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SettingsSwitchTile(
+    icon: icon,
+    title: title,
+    value: value,
+    onChanged: onChanged,
+  );
 }
 
 class _SurfacePanel extends StatelessWidget {

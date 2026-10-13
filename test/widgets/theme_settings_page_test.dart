@@ -17,6 +17,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/theme/app_theme.dart';
+import 'package:sked/widgets/settings_list.dart';
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -903,18 +904,40 @@ void main() {
         of: followThemeRow,
         matching: find.byType(Text),
       );
-      expect(tester.widget<Text>(followThemeLabel).maxLines, isNull);
-      expect(
-        tester
-            .getRect(
-              find.descendant(
-                of: followThemeRow,
-                matching: find.byType(Switch),
-              ),
-            )
-            .top,
-        greaterThanOrEqualTo(tester.getRect(followThemeLabel).bottom),
+      final followThemeSwitch = find.descendant(
+        of: followThemeRow,
+        matching: find.byType(Switch),
       );
+      expect(
+        find.descendant(
+          of: followThemeRow,
+          matching: find.byType(SettingsSwitchTile),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<Text>(followThemeLabel).maxLines, isNull);
+      expect(tester.widget<Text>(followThemeLabel).softWrap, isTrue);
+      final rowRect = tester.getRect(followThemeRow);
+      final labelRect = tester.getRect(followThemeLabel);
+      final switchRect = tester.getRect(followThemeSwitch);
+      expect(labelRect.left, greaterThanOrEqualTo(rowRect.left));
+      expect(labelRect.top, greaterThanOrEqualTo(rowRect.top));
+      expect(labelRect.bottom, lessThanOrEqualTo(rowRect.bottom));
+      expect(labelRect.right, lessThanOrEqualTo(switchRect.left));
+      expect(switchRect.right, lessThanOrEqualTo(rowRect.right));
+      expect(switchRect.bottom, lessThanOrEqualTo(rowRect.bottom));
+      await tester.ensureVisible(followThemeSwitch);
+      await tester.pumpAndSettle();
+      expect(followThemeSwitch.hitTestable(), findsOneWidget);
+      final initialFollowTheme = tester.widget<Switch>(followThemeSwitch).value;
+      expect(tester.widget<Switch>(followThemeSwitch).onChanged, isNotNull);
+      await tester.tap(followThemeSwitch);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Switch>(followThemeSwitch).value,
+        !initialFollowTheme,
+      );
+      expect(storage.saveCount, 0);
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byKey(const ValueKey('theme-outline-page-cancel')));
@@ -1343,7 +1366,7 @@ void main() {
         await tester.tap(
           find.descendant(
             of: find.byType(AlertDialog),
-            matching: find.byType(DropdownButtonFormField<String>),
+            matching: find.byType(SkedDropdownMenu<String>),
           ),
         );
         await tester.pumpAndSettle();

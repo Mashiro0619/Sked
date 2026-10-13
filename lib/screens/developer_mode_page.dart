@@ -1269,10 +1269,12 @@ class _DeveloperAssistantPreference extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Column(
       children: [
-        SwitchListTile(
+        SettingsSwitchTile(
           key: const ValueKey('developer-assistant-visible'),
-          title: Text(l.assistantLayoutPreview),
-          subtitle: Text(l.assistantPreviewDescription),
+          title: l.assistantLayoutPreview,
+          subtitle: l.assistantPreviewDescription,
+          icon: Icons.assistant_outlined,
+          changesAppData: false,
           value: p.assistantVisible,
           onChanged: p.busy || !p.ready
               ? null
@@ -1280,12 +1282,12 @@ class _DeveloperAssistantPreference extends StatelessWidget {
         ),
         if (p.busy) const LinearProgressIndicator(),
         if (p.hasError)
-          ListTile(
-            title: Text(l.saveFailedRetry),
-            trailing: TextButton(
-              onPressed: p.busy ? null : p.retry,
-              child: Text(l.dataRecoveryRetryAction),
-            ),
+          SettingsConnectedTile(
+            title: l.saveFailedRetry,
+            subtitle: l.dataRecoveryRetryAction,
+            leading: const Icon(Icons.error_outline),
+            trailing: const Icon(Icons.refresh),
+            onTap: p.busy ? null : p.retry,
           ),
         const SizedBox(height: 16),
       ],

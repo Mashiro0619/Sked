@@ -67,8 +67,8 @@ void main() {
             )
             .text
             .style!;
-        expect(style.fontSize, 16);
-        expect(style.fontWeight, desktop ? FontWeight.w600 : FontWeight.w500);
+        expect(style.fontSize, desktop ? 16 : 24);
+        expect(style.fontWeight, desktop ? FontWeight.w600 : FontWeight.w400);
         if (desktop) {
           expect(style.height, 1.35);
           expect(style.letterSpacing, 0);
@@ -87,6 +87,7 @@ void main() {
         final saveAction = find.text(l10n.saveBackupTitle);
         await tester.ensureVisible(saveAction);
         await tester.pumpAndSettle();
+        expect(saveAction.hitTestable(), findsOneWidget);
         await tester.tap(saveAction);
         await tester.pumpAndSettle();
         await flow;

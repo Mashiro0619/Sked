@@ -3253,10 +3253,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('live-course-outline-target')),
+          matching: find.byType(SkedDropdownMenu<String>),
+        ),
+        findsOneWidget,
+      );
       final target = find.descendant(
         of: find.byKey(const ValueKey('live-course-outline-target')),
-        matching: find.byType(DropdownButtonFormField<String>),
+        matching: find.byType(SkedDropdownMenu<String>),
       );
       await tester.ensureVisible(target);
       await tester.pumpAndSettle();
@@ -3310,7 +3316,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(AlertDialog),
-          matching: find.byType(DropdownButtonFormField<String>),
+          matching: find.byType(SkedDropdownMenu<String>),
         ),
       );
       await tester.pumpAndSettle();
@@ -3341,7 +3347,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(AlertDialog),
-          matching: find.byType(DropdownButtonFormField<String>),
+          matching: find.byType(SkedDropdownMenu<String>),
         ),
       );
       await tester.pumpAndSettle();

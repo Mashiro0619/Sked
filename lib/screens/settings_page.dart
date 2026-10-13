@@ -1,3 +1,4 @@
+import '../widgets/sked_confirmation_dialog.dart';
 import '../theme/sked_surface.dart';
 
 import '../widgets/desktop_window_host.dart';
@@ -36,7 +37,6 @@ import '../services/update_distribution.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/export_save_flow.dart';
-import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/adaptive_settings_scaffold.dart';
@@ -966,7 +966,7 @@ class _SettingsPageState extends State<SettingsPage>
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext);
         final colors = Theme.of(dialogContext).colorScheme;
-        return AlertDialog(
+        return SkedConfirmationDialog(
           scrollable: true,
           title: Text(l10n.clearAppDataConfirmTitle),
           content: Text(l10n.clearAppDataConfirmMessage),
@@ -1080,7 +1080,7 @@ class _SettingsPageState extends State<SettingsPage>
       context: context,
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.dataRecoveryArtifactsAction),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 620, maxHeight: 360),
@@ -1217,42 +1217,46 @@ class _SettingsPageState extends State<SettingsPage>
         }
 
         final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.restoreBackupConfirmTitle),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.restoreBackupConfirmMessage),
-                const SizedBox(height: 16),
-                Text(l10n.backupWorkspaceSelection),
-                const SizedBox(height: 8),
-                for (final mode in AppMode.values)
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      restored.isWorkspaceEnabled(mode)
-                          ? Icons.check_circle_outline
-                          : Icons.block_outlined,
+            child: ExpressiveDialogContent(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.restoreBackupConfirmMessage),
+                  const SizedBox(height: 16),
+                  Text(l10n.backupWorkspaceSelection),
+                  const SizedBox(height: 8),
+                  for (final mode in AppMode.values)
+                    ExpressiveDialogOption(
+                      onTap: null,
+                      titleMaxLines: null,
+                      subtitleMaxLines: null,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        restored.isWorkspaceEnabled(mode)
+                            ? Icons.check_circle_outline
+                            : Icons.block_outlined,
+                      ),
+                      title: Text(
+                        mode == AppMode.student
+                            ? l10n.studentTimetable
+                            : l10n.generalSchedule,
+                      ),
+                      subtitle: Text(
+                        '${provider.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary} → ${restored.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary}',
+                      ),
+                      trailing: Icon(
+                        provider.isWorkspaceEnabled(mode) ==
+                                restored.isWorkspaceEnabled(mode)
+                            ? Icons.remove
+                            : Icons.swap_horiz,
+                      ),
                     ),
-                    title: Text(
-                      mode == AppMode.student
-                          ? l10n.studentTimetable
-                          : l10n.generalSchedule,
-                    ),
-                    subtitle: Text(
-                      '${provider.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary} → ${restored.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary}',
-                    ),
-                    trailing: Icon(
-                      provider.isWorkspaceEnabled(mode) ==
-                              restored.isWorkspaceEnabled(mode)
-                          ? Icons.remove
-                          : Icons.swap_horiz,
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -1478,7 +1482,7 @@ class _SettingsPageState extends State<SettingsPage>
               Navigator.of(context).pop(value);
             }
 
-            return AlertDialog(
+            return SkedConfirmationDialog(
               title: Text(title),
               content: ExpressiveDialogContent(
                 maxWidth: 420,
@@ -1639,7 +1643,7 @@ class _SettingsPageState extends State<SettingsPage>
               Navigator.of(context).pop(value);
             }
 
-            return AlertDialog(
+            return SkedConfirmationDialog(
               title: Text(title),
               content: ExpressiveDialogContent(
                 maxWidth: 420,
@@ -1735,7 +1739,7 @@ class _SettingsPageState extends State<SettingsPage>
               Navigator.of(context).pop(value);
             }
 
-            return AlertDialog(
+            return SkedConfirmationDialog(
               title: Text(l10n.selectCategoryToReplace),
               content: ExpressiveDialogContent(
                 maxWidth: 420,
@@ -1845,7 +1849,7 @@ class _SettingsPageState extends State<SettingsPage>
               Navigator.of(ctx).pop(value);
             }
 
-            return AlertDialog(
+            return SkedConfirmationDialog(
               title: Text(l10n.dataImportExport),
               content: Text(l10n.replaceActiveSchedulePrompt),
               actions: [
@@ -1953,7 +1957,7 @@ class _SettingsPageState extends State<SettingsPage>
               Navigator.of(ctx).pop(value);
             }
 
-            return AlertDialog(
+            return SkedConfirmationDialog(
               title: Text(l10n.importIcs),
               content: Text(
                 l10n.importIcsPreviewPrompt(
@@ -2382,99 +2386,13 @@ class _SelectableExportTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return ExpressiveTap(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Material(
-        color: selected
-            ? colorScheme.primary.withValues(alpha: 0.12)
-            : colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final icon = Icon(
-                selected ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: selected
-                    ? skedReadableAccent(
-                        colorScheme,
-                        surface: colorScheme.primary.withValues(alpha: 0.12),
-                      )
-                    : colorScheme.outline,
-              );
-              final content = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DefaultTextStyle.merge(
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    child: title,
-                  ),
-                  const SizedBox(height: 2),
-                  DefaultTextStyle.merge(
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    child: subtitle,
-                  ),
-                ],
-              );
-
-              if (constraints.maxWidth < 300) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 40,
-                          height: 40,
-                          child: Center(child: leading),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: content),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: icon,
-                    ),
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: Center(child: leading),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: content),
-                  const SizedBox(width: 10),
-                  icon,
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ExpressiveDialogOption(
+    title: title,
+    subtitle: subtitle,
+    leading: leading,
+    selected: selected,
+    onTap: onTap,
+    trailing: selected ? null : const Icon(Icons.radio_button_unchecked),
+    subtitleMaxLines: 2,
+  );
 }
