@@ -22,6 +22,15 @@ import '../test/support/mobile_layout_data.dart';
 import '../test/support/workspace_harness.dart';
 
 Finder key(String key) => find.byKey(ValueKey(key));
+
+// The full timetable/course/event and shared-component acceptance matrix lives
+// in component_unification_visual_test.dart. It includes real home/details/
+// settings entries, short dialogs, import review, tablet, RTL and tiny IME cases.
+// Use its SKED_VISUAL_PROFILE define (one name or comma-separated names) and
+// SKED_VISUAL_OUTPUT (absolute directory) to run native Windows profiles and
+// simulated Android profiles in separate processes. Do not invoke both
+// collectors from one test main. See docs/COMPONENT_UNIFICATION.md for the
+// exact profile groups and the local comparison/evidence locations.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('mobile tasks from actual home entries and themed setting menus', (
