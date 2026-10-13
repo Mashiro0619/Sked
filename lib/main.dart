@@ -1,3 +1,5 @@
+import 'widgets/sked_confirmation_dialog.dart';
+import 'widgets/sked_task_route.dart';
 import 'widgets/general_event_edit_flow.dart';
 import 'widgets/update_prompt_scope.dart';
 
@@ -459,7 +461,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (context != null && context.mounted) {
         await showDialog<void>(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (context) => SkedConfirmationDialog(
             title: Text(AppLocalizations.of(context).saveFailedRetry),
             actions: [
               TextButton(
@@ -636,7 +638,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       context: context,
       useRootNavigator: true,
       isDismissible: widget.provider.closeCoursePopupOnOutsideTap,
-      enableDrag: false,
+      enableDrag: true,
       maxWidth: 860,
       builder: (sheetContext) => CourseDetailsSheet(
         timetableId: timetable.id,
@@ -646,7 +648,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         isFullConflict: false,
         onEdit: () async {
           if (sheetContext.mounted) {
-            await Navigator.of(sheetContext).maybePop();
+            completeSkedTaskRoute(sheetContext);
           }
           if (context.mounted) {
             await _openAgendaCourseEditor(
@@ -685,7 +687,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       context: context,
       useRootNavigator: true,
       isDismissible: widget.provider.closeCoursePopupOnOutsideTap,
-      enableDrag: false,
+      enableDrag: true,
       maxWidth: appSheetWidthExpanded,
       builder: (_) => CourseEditorSheet(
         periodTimes: widget.provider.periodTimesForTimetable(timetable),
@@ -739,14 +741,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       isSessionCurrent: () =>
           mutating || _currentGeneralOccurrence(occurrence) != null,
       isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
-      enableDrag: false,
+      enableDrag: true,
       maxWidth: appSheetWidthCompact,
       builder: (sheetContext) => Consumer<TimetableProvider>(
         builder: (_, provider, _) {
           final current = _currentGeneralOccurrence(occurrence) ?? occurrence;
           void close() {
             final route = ModalRoute.of(sheetContext);
-            if (route?.isCurrent == true) route!.navigator?.pop();
+            if (route?.isCurrent == true) completeSkedTaskRoute(sheetContext);
           }
 
           Future<void> command(
@@ -823,7 +825,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       isSessionCurrent: () =>
           mutating || _currentGeneralOccurrence(occurrence) != null,
       isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
-      enableDrag: false,
+      enableDrag: true,
       maxWidth: appSheetWidthExpanded,
       builder: (sheetContext) => Consumer<TimetableProvider>(
         builder: (_, provider, _) => GeneralEventEditorSheet(

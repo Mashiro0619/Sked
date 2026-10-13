@@ -52,7 +52,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
             : null,
         selectionId: 'course:${info.course.id}',
         isDismissible: canDismiss,
-        enableDrag: false,
+        enableDrag: true,
         maxWidth: 860,
         builder: (sheetContext) => CourseDetailsSheet(
           timetableId: timetableId,
@@ -81,7 +81,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
                     course.id,
                   );
                   if (sheetContext.mounted) {
-                    Navigator.of(sheetContext).pop();
+                    completeSkedTaskRoute(sheetContext);
                   }
                 },
           onEditConflictCourse: !info.isFullConflict ? null : edit,
@@ -140,7 +140,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         ),
         selectionId: course == null ? null : 'course:${course.id}',
         isDismissible: canDismiss,
-        enableDrag: false,
+        enableDrag: true,
         maxWidth: appSheetWidthExpanded,
         builder: (sheetContext) => CourseEditorSheet(
           periodTimes: periodTimes,

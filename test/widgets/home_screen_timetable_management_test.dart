@@ -4035,7 +4035,7 @@ void main() {
     await _openTimetablePicker(tester);
 
     final sheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
-    expect(sheet.enableDrag, isFalse);
+    expect(sheet.enableDrag, isTrue);
     await tester.tap(find.text('Second timetable'));
     await storage.firstSaveStarted;
     await tester.pump();

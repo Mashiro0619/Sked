@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsAction;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -107,6 +108,7 @@ void _assertBottom(WidgetTester t, Finder task) {
       .ancestor(of: task, matching: _key('app-bottom-task-surface'))
       .first;
   final rect = t.getRect(surface);
+  final sheet = find.byType(BottomSheet).last;
   expect(rect.top, greaterThan(24));
   expect(rect.bottom, closeTo(t.view.physicalSize.height, 1));
   final pane = t
@@ -117,8 +119,49 @@ void _assertBottom(WidgetTester t, Finder task) {
   expect(_key('workspace-inspector'), findsNothing);
   expect(
     t.widget<BottomSheet>(find.byType(BottomSheet).last).enableDrag,
-    isFalse,
+    isTrue,
   );
+  expect(t.widget<BottomSheet>(sheet).showDragHandle, isTrue);
+}
+
+Future<void> _nativeDismiss(
+  WidgetTester tester, {
+  bool semantic = false,
+  bool settle = true,
+}) async {
+  final sheet = find.byType(BottomSheet).last;
+  final semantics = semantic ? tester.ensureSemantics() : null;
+  try {
+    if (semantic) {
+      await tester.pump();
+      final label = MaterialLocalizations.of(tester.element(sheet)).scrimLabel;
+      final barrier = find
+          .byWidgetPredicate(
+            (widget) => widget is Semantics && widget.properties.label == label,
+          )
+          .last;
+      final node = tester.getSemantics(barrier);
+      tester
+          .renderObject(barrier)
+          .owner!
+          .semanticsOwner!
+          .performAction(node.id, SemanticsAction.tap);
+    } else {
+      final header = find.descendant(
+        of: sheet,
+        matching: _key('app-sheet-header'),
+      );
+      await tester.fling(header, const Offset(0, 480), 1600);
+    }
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+  } finally {
+    semantics?.dispose();
+  }
 }
 
 void main() {
@@ -192,6 +235,20 @@ void main() {
         expect(t.getRect(save).bottom, lessThanOrEqualTo(552));
         t.view.viewInsets = const FakeViewPadding();
         await t.pumpAndSettle();
+        for (final semantic in [false, true]) {
+          await _nativeDismiss(t, semantic: semantic);
+          expect(find.text(l.unsavedChangesMessage), findsOneWidget);
+          await t.tap(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.text(l.cancel),
+            ),
+          );
+          await t.pumpAndSettle();
+          expect(t.state(editor), same(state));
+          expect(find.text('手机草稿仍需保留'), findsOneWidget);
+          expect(storage.writes, before);
+        }
         await t.tapAt(const Offset(15, 30));
         await t.pumpAndSettle();
         expect(find.text(l.unsavedChangesMessage), findsOneWidget);
@@ -252,6 +309,12 @@ void main() {
         await t.pump();
         staleSave();
         await t.pump();
+        for (final semantic in [false, true]) {
+          await _nativeDismiss(t, semantic: semantic, settle: false);
+          expect(editor, findsOneWidget);
+          expect(find.byType(AlertDialog), findsNothing);
+          expect(storage.writes, before + 1);
+        }
         final pane = t
             .widget<WorkspaceFrame>(find.byType(WorkspaceFrame).first)
             .controller;

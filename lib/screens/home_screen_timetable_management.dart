@@ -55,7 +55,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
         await showAppModalSheet<void>(
           context: context,
           maxWidth: appSheetWidthCompact,
-          enableDrag: false,
+          enableDrag: true,
           useSafeArea: true,
           builder: (_) => panel,
         );

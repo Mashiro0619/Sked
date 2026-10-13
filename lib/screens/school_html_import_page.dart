@@ -657,7 +657,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           useRootNavigator: true,
           maxWidth: appSheetWidthMedium,
           isDismissible: false,
-          enableDrag: false,
+          enableDrag: true,
           routeSettings: RouteSettings(arguments: recoveryDraft),
           session: owner,
           builder: (_) => SchoolWebImportResultSheet(

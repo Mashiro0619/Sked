@@ -2004,7 +2004,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ? null
             : _pane.selectedId ?? 'event:${event.id}',
         isDismissible: provider.closeGeneralEventPopupOnOutsideTap,
-        enableDrag: false,
+        enableDrag: true,
         maxWidth: appSheetWidthMedium,
         builder: (sheetContext) => Consumer<TimetableProvider>(
           builder: (_, current, _) => GeneralEventEditorSheet(
@@ -2153,7 +2153,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             deletingOccurrence || resolveOccurrence() != null,
         selectionId: occurrence.occurrenceKey,
         isDismissible: canDismiss,
-        enableDrag: false,
+        enableDrag: true,
         maxWidth: appSheetWidthCompact,
         builder: (sheetContext) {
           final detailProvider = sheetContext.watch<TimetableProvider>();
