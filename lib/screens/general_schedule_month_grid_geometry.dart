@@ -206,7 +206,7 @@ class _DesktopMonthCalendarPanel extends StatelessWidget {
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
   final TimetableProvider provider;
   final _MonthGridPageData previousPage, nextPage;
-  final double dragOffset;
+  final ValueListenable<double> dragOffset;
   final bool sharedTopEdge, sharedStartEdge, sharedEndEdge;
   final ValueChanged<DateTime> onDaySelected;
   final GestureDragStartCallback onDragStart;
@@ -274,38 +274,34 @@ class _DesktopMonthCalendarPanel extends StatelessWidget {
         DateTime date,
         Map<String, List<GeneralEventOccurrence>> occurrences,
         double position,
-        bool visible,
       ) => Positioned.fill(
-        child: Transform.translate(
-          offset: Offset((position + dragOffset) * columns.extent, 0),
-          child: IgnorePointer(
-            ignoring: !visible,
-            child: ExcludeSemantics(
-              excluding: !visible,
-              child: !visible
-                  ? const SizedBox.shrink()
-                  : _DesktopMonthDatePage(
-                      key: ValueKey(
-                        'general-month-date-grid-${date.year}-${date.month}',
-                      ),
+        child: _MonthSlidePage(
+          position: position,
+          width: columns.extent,
+          dragOffset: dragOffset,
+          devicePixelRatio: dpr,
+          child: Builder(
+            builder: (context) => _DesktopMonthDatePage(
+              key: ValueKey(
+                'general-month-date-grid-${date.year}-${date.month}',
+              ),
+              columns: columns,
+              layout: position == 0
+                  ? current
+                  : _DesktopMonthPageLayout.resolve(
+                      context,
                       columns: columns,
-                      layout: position == 0
-                          ? current
-                          : _DesktopMonthPageLayout.resolve(
-                              context,
-                              columns: columns,
-                              model: pageModel,
-                              provider: provider,
-                              availableHeight: availableBody,
-                            ),
                       model: pageModel,
-                      selectedDate: date,
-                      today: today,
-                      occurrencesByDay: occurrences,
                       provider: provider,
-                      rtl: rtl,
-                      onDaySelected: onDaySelected,
+                      availableHeight: availableBody,
                     ),
+              model: pageModel,
+              selectedDate: date,
+              today: today,
+              occurrencesByDay: occurrences,
+              provider: provider,
+              rtl: rtl,
+              onDaySelected: onDaySelected,
             ),
           ),
         ),
@@ -418,22 +414,14 @@ class _DesktopMonthCalendarPanel extends StatelessWidget {
                                   previousPage.date,
                                   previousPage.occurrencesByDay,
                                   -1,
-                                  dragOffset > 0,
                                 ),
                                 page(
                                   nextPage.model,
                                   nextPage.date,
                                   nextPage.occurrencesByDay,
                                   1,
-                                  dragOffset < 0,
                                 ),
-                                page(
-                                  model,
-                                  selectedDate,
-                                  occurrencesByDay,
-                                  0,
-                                  true,
-                                ),
+                                page(model, selectedDate, occurrencesByDay, 0),
                               ],
                             ),
                           ),

@@ -29,6 +29,7 @@ Future<TimetableProvider> _mount(
   String locale = 'zh',
   double scale = 1,
   double dpr = 1,
+  TextDirection? textDirection,
   Offset origin = Offset.zero,
   Size size = const Size(1440, 900),
   bool weekends = true,
@@ -88,6 +89,7 @@ Future<TimetableProvider> _mount(
         ? const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
         : Locale(locale),
     textScale: scale,
+    textDirection: textDirection,
     brightness: brightness,
     home: calendarTheme == null
         ? null
@@ -159,6 +161,69 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  for (final (platform, direction) in [
+    (TargetPlatform.windows, TextDirection.ltr),
+    (TargetPlatform.android, TextDirection.ltr),
+    (TargetPlatform.windows, TextDirection.rtl),
+  ]) {
+    testWidgets(
+      'month drag and settle reuse current and neighboring day cells: $platform $direction',
+      (t) async {
+        final selected = DateTime(2026, 8, 16);
+        final provider = await _mount(
+          t,
+          date: selected,
+          dpr: 1.25,
+          textDirection: direction,
+          size: platform == TargetPlatform.windows
+              ? const Size(1440, 900)
+              : const Size(393, 852),
+        );
+        final cell = _cell(selected);
+        final drag = await t.startGesture(t.getCenter(cell));
+        await drag.moveBy(const Offset(24, 0));
+        await t.pump(const Duration(milliseconds: 16));
+        await drag.moveBy(const Offset(12, 0));
+        await t.pump(const Duration(milliseconds: 16));
+        expect(_key('general-month-date-grid-2026-7'), findsOneWidget);
+
+        final before = t.getTopLeft(cell).dx;
+        final rebuiltDays = <String>[];
+        final previous = debugOnRebuildDirtyWidget;
+        debugOnRebuildDirtyWidget = (element, builtOnce) {
+          previous?.call(element, builtOnce);
+          final key = element.widget.key;
+          if (builtOnce &&
+              key is ValueKey<String> &&
+              key.value.startsWith('general-month-day-cell-')) {
+            rebuiltDays.add(key.value);
+          }
+        };
+        addTearDown(() => debugOnRebuildDirtyWidget = previous);
+        for (var frame = 0; frame < 8; frame++) {
+          await drag.moveBy(const Offset(3.25, 0));
+          await t.pump(const Duration(milliseconds: 16));
+        }
+        expect(t.getTopLeft(cell).dx, greaterThan(before));
+        await drag.cancel();
+        await t.pumpAndSettle();
+        expect(provider.selectedGeneralDate, selected);
+        expect(
+          rebuiltDays,
+          isEmpty,
+          reason: 'Moving retained month pages must not rebuild day cells.',
+        );
+        expect(_key('general-month-date-grid-2026-7'), findsNothing);
+        final nextSelection = DateTime(2026, 8, 18);
+        await t.tap(_cell(nextSelection));
+        await t.pumpAndSettle();
+        expect(provider.selectedGeneralDate, nextSelection);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
   for (final dpr in [1.25, 1.5, 1.75]) {
     testWidgets(
       'physical month grid survives fractional scroll, hover and month drag at $dpr',

@@ -567,7 +567,9 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
   late Animation<double> _dragAnimation;
   late _MonthGridPageData _previousPage;
   late _MonthGridPageData _nextPage;
-  double _dragOffset = 0;
+  final _dragPosition = ValueNotifier<double>(0);
+  double get _dragOffset => _dragPosition.value;
+  set _dragOffset(double value) => _dragPosition.value = value;
   bool _isDragging = false;
   int _settleDirection = 0;
 
@@ -577,7 +579,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
     _dragController =
         AnimationController(vsync: this, duration: _pageAnimationDuration)
           ..addListener(() {
-            setState(() => _dragOffset = _dragAnimation.value);
+            _dragOffset = _dragAnimation.value;
           });
     _dragAnimation = AlwaysStoppedAnimation(_dragOffset);
     _refreshAdjacentPages();
@@ -616,6 +618,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
   @override
   void dispose() {
     _dragController.dispose();
+    _dragPosition.dispose();
     super.dispose();
   }
 
@@ -731,18 +734,14 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
 
   void _handleDragStart(DragStartDetails details) {
     _dragController.stop();
-    setState(() {
-      _isDragging = true;
-      _settleDirection = 0;
-    });
+    _isDragging = true;
+    _settleDirection = 0;
   }
 
   void _handleDragUpdate(DragUpdateDetails details, double width) {
     final delta = details.primaryDelta;
     if (delta == null || width <= 0) return;
-    setState(() {
-      _dragOffset = (_dragOffset + delta / width).clamp(-1.0, 1.0);
-    });
+    _dragOffset = (_dragOffset + delta / width).clamp(-1.0, 1.0);
   }
 
   void _handleDragEnd(DragEndDetails details) {
@@ -780,7 +779,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         0,
         onCompleted: () {
           if (!mounted) return;
-          setState(() => _isDragging = false);
+          _isDragging = false;
         },
       );
     }
@@ -792,7 +791,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
       0,
       onCompleted: () {
         if (!mounted) return;
-        setState(() => _isDragging = false);
+        _isDragging = false;
       },
     );
   }
@@ -808,7 +807,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         provider: widget.provider,
         previousPage: _previousPage,
         nextPage: _nextPage,
-        dragOffset: _dragOffset,
+        dragOffset: _dragPosition,
         sharedTopEdge: widget.sharedTopEdge,
         sharedStartEdge: widget.sharedStartEdge,
         sharedEndEdge: widget.sharedEndEdge,
@@ -834,7 +833,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
           occurrencesByDay: widget.occurrencesByDay,
           provider: widget.provider,
           compact: compact,
-          dragOffset: _dragOffset,
+          dragOffset: _dragPosition,
           previousPage: _previousPage,
           nextPage: _nextPage,
           onDaySelected: widget.onDaySelected,
@@ -885,6 +884,50 @@ class _MonthGridPageData {
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
 }
 
+/// A slide changes only the transform. The date grid remains the same child
+/// throughout the drag and settle animation; hidden neighbors mount on demand.
+class _MonthSlidePage extends StatelessWidget {
+  const _MonthSlidePage({
+    required this.position,
+    required this.width,
+    required this.dragOffset,
+    required this.child,
+    this.devicePixelRatio,
+  });
+
+  final double position, width;
+  final ValueListenable<double> dragOffset;
+  final Widget child;
+  final double? devicePixelRatio;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<double>(
+    valueListenable: dragOffset,
+    child: child,
+    builder: (context, offset, child) {
+      final visible =
+          position == 0 ||
+          (position < 0 && offset > 0) ||
+          (position > 0 && offset < 0);
+      final dx = (position + offset) * width;
+      final dpr = devicePixelRatio;
+      // Desktop scroll viewports are repaint boundaries. Move their retained
+      // pixels by whole physical pixels, matching the grid's paint/hit snap.
+      final translation = dpr == null ? dx : (dx * dpr).round() / dpr;
+      return Transform.translate(
+        offset: Offset(translation, 0),
+        child: IgnorePointer(
+          ignoring: !visible,
+          child: ExcludeSemantics(
+            excluding: !visible,
+            child: visible ? child! : const SizedBox.shrink(),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class _DraggableMonthGrid extends StatelessWidget {
   const _DraggableMonthGrid({
     required this.model,
@@ -909,7 +952,7 @@ class _DraggableMonthGrid extends StatelessWidget {
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
   final TimetableProvider provider;
   final bool compact;
-  final double dragOffset;
+  final ValueListenable<double> dragOffset;
   final _MonthGridPageData previousPage;
   final _MonthGridPageData nextPage;
   final ValueChanged<DateTime> onDaySelected;
@@ -956,29 +999,22 @@ class _DraggableMonthGrid extends StatelessWidget {
     required DateTime date,
     required _MonthGridModel model,
     required Map<String, List<GeneralEventOccurrence>> occurrences,
-    required bool active,
   }) {
-    return Transform.translate(
-      offset: Offset((position + dragOffset) * width, 0),
-      child: IgnorePointer(
-        ignoring: !active,
-        child: ExcludeSemantics(
-          excluding: !active,
-          child: active
-              ? SizedBox(
-                  width: width,
-                  height: height,
-                  child: _MonthDateGrid(
-                    model: model,
-                    selectedDate: date,
-                    today: today,
-                    occurrencesByDay: occurrences,
-                    provider: provider,
-                    compact: compact,
-                    onDaySelected: onDaySelected,
-                  ),
-                )
-              : const SizedBox.shrink(),
+    return _MonthSlidePage(
+      position: position,
+      width: width,
+      dragOffset: dragOffset,
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: _MonthDateGrid(
+          model: model,
+          selectedDate: date,
+          today: today,
+          occurrencesByDay: occurrences,
+          provider: provider,
+          compact: compact,
+          onDaySelected: onDaySelected,
         ),
       ),
     );
@@ -1000,9 +1036,6 @@ class _DraggableMonthGrid extends StatelessWidget {
           width,
           textScale,
         );
-        final showPreviousPage = dragOffset > 0;
-        final showNextPage = dragOffset < 0;
-
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onHorizontalDragStart: onDragStart,
@@ -1022,7 +1055,6 @@ class _DraggableMonthGrid extends StatelessWidget {
                     date: previousPage.date,
                     model: previousPage.model,
                     occurrences: previousPage.occurrencesByDay,
-                    active: showPreviousPage,
                   ),
                   _page(
                     position: 1,
@@ -1031,7 +1063,6 @@ class _DraggableMonthGrid extends StatelessWidget {
                     date: nextPage.date,
                     model: nextPage.model,
                     occurrences: nextPage.occurrencesByDay,
-                    active: showNextPage,
                   ),
                   _page(
                     position: 0,
@@ -1040,7 +1071,6 @@ class _DraggableMonthGrid extends StatelessWidget {
                     date: selectedDate,
                     model: model,
                     occurrences: occurrencesByDay,
-                    active: true,
                   ),
                 ],
               ),
