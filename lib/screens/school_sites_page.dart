@@ -1,4 +1,5 @@
-import '../theme/sked_surface.dart';
+import '../widgets/sked_confirmation_dialog.dart';
+import '../widgets/workspace_editor_form.dart';
 
 import '../widgets/adaptive_navigation_scope.dart';
 
@@ -6,7 +7,6 @@ import '../widgets/editor_exit_guard.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
 import '../widgets/desktop_window_host.dart';
-import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/sked_resizable.dart';
 import '../services/desktop_layout_preferences.dart';
 import '../widgets/workspace_route_lifecycle.dart';
@@ -30,7 +30,6 @@ import '../utils/platform_capabilities.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/export_save_flow.dart';
 import '../widgets/expressive_empty_state.dart';
-import '../widgets/expressive_motion.dart';
 import '../widgets/sked_popup_menu.dart';
 import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
@@ -607,7 +606,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
       barrierDismissible: false,
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.schoolSitesRecoveryStartFreshConfirmTitle),
           content: Text(l10n.schoolSitesRecoveryStartFreshConfirmMessage),
           actions: [
@@ -641,7 +640,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
           context: context,
           builder: (dialogContext) {
             final l10n = AppLocalizations.of(dialogContext);
-            return AlertDialog(
+            return SkedConfirmationDialog(
               title: Text(l10n.dataRecoveryArtifactsAction),
               content: ConstrainedBox(
                 constraints: const BoxConstraints(
@@ -914,7 +913,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
           Navigator.of(context).pop(value);
         }
 
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.schoolSitesDeleteTitle),
           content: Text(l10n.schoolSitesDeleteMessage(site.name)),
           actions: [
@@ -1050,7 +1049,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
         final rowCount = preview.sites.length + preview.issues.length;
         final listHeight = (rowCount * 64.0).clamp(0.0, 300.0).toDouble();
         final canReplace = preview.sites.isNotEmpty || preview.issues.isEmpty;
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.schoolSitesImportPreviewTitle),
           content: ExpressiveDialogContent(
             child: Column(
@@ -1073,14 +1072,19 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
                     child: ListView(
                       children: [
                         for (final site in preview.sites)
-                          ListTile(
+                          ExpressiveDialogOption(
+                            onTap: null,
+                            titleMaxLines: null,
+                            subtitleMaxLines: null,
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.check_circle_outline),
                             title: Text(site.name),
                             subtitle: Text(site.loginUrl),
                           ),
                         for (final issue in preview.issues)
-                          ListTile(
+                          ExpressiveDialogOption(
+                            onTap: null,
+                            titleMaxLines: null,
                             contentPadding: EdgeInsets.zero,
                             leading: Icon(
                               Icons.error_outline,
@@ -1135,7 +1139,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
       barrierDismissible: false,
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.schoolSitesImportReplaceConfirmTitle),
           content: Text(
             l10n.schoolSitesImportReplaceConfirmMessage(
@@ -1427,125 +1431,16 @@ class _SchoolSiteRow extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = Theme.of(context).colorScheme;
-    final contentColor = enabled
-        ? colors.onSurface
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondaryColor = enabled
-        ? colors.onSurfaceVariant
-        : colors.onSurface.withValues(alpha: 0.38);
-
-    return ExpressiveTap(
-      onTap: onTap,
-      enabled: enabled,
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        decoration: ShapeDecoration(
-          color: enabled
-              ? colors.surfaceContainerLow
-              : colors.surfaceContainerLow.withValues(alpha: 0.66),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final leading = Container(
-                width: 44,
-                height: 44,
-                decoration: ShapeDecoration(
-                  color: colors.primary.withValues(
-                    alpha: enabled ? 0.10 : 0.05,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Icon(
-                  Icons.school_outlined,
-                  color: enabled
-                      ? skedReadableAccent(
-                          colors,
-                          surface: colors.primary.withValues(alpha: 0.12),
-                        )
-                      : secondaryColor,
-                ),
-              );
-              final content = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    site.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: contentColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    site.loginUrl,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: secondaryColor,
-                    ),
-                  ),
-                ],
-              );
-              final trailingWidget = trailing == null
-                  ? null
-                  : IconTheme.merge(
-                      data: IconThemeData(color: secondaryColor),
-                      child: trailing!,
-                    );
-
-              if (constraints.maxWidth < 320 && trailingWidget != null) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        leading,
-                        const SizedBox(width: 14),
-                        Expanded(child: content),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: trailingWidget,
-                    ),
-                  ],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  leading,
-                  const SizedBox(width: 14),
-                  Expanded(child: content),
-                  if (trailingWidget != null) ...[
-                    const SizedBox(width: 8),
-                    trailingWidget,
-                  ],
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ExpressiveDialogOption(
+    enabled: enabled,
+    onTap: onTap,
+    leading: const Icon(Icons.school_outlined),
+    title: Text(site.name),
+    subtitle: Text(site.loginUrl),
+    trailing: trailing,
+    titleMaxLines: null,
+    subtitleMaxLines: 2,
+  );
 }
 
 class _SchoolSiteEditor extends StatefulWidget {
@@ -1633,44 +1528,37 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
-          child: AppSheetScaffold(
-            contentPadding: WorkbenchChromeMetrics.of(context).desktop
-                ? const EdgeInsets.fromLTRB(16, 8, 16, 12)
-                : const EdgeInsets.fromLTRB(24, 24, 24, 12),
+          child: AppSheetScaffold.editor(
+            compact: true,
+            busy: _saving,
+            closeEnabled: !_saving,
+            onClose: () => unawaited(requestEditorExit()),
             title: Text(
               widget.initialSite == null ? l.schoolSitesAdd : l.schoolSitesEdit,
             ),
-            actions: [
-              TextButton(
-                onPressed: _saving ? null : requestEditorExit,
-                child: Text(l.cancel),
-              ),
-              FilledButton(
-                onPressed: _saving ? null : _save,
-                child: Text(l.save),
-              ),
-            ],
+            editorActions: SkedEditorActions(
+              onCancel: () => unawaited(requestEditorExit()),
+              onSubmit: () => unawaited(_save()),
+              busy: _saving,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
+                SkedEditorTextField(
+                  label: l.schoolSitesNameLabel,
                   controller: _name,
                   enabled: !_saving,
-                  decoration: InputDecoration(
-                    labelText: l.schoolSitesNameLabel,
-                    prefixIcon: const Icon(Icons.school_outlined),
-                  ),
+                  icon: Icons.school_outlined,
+                  headline: true,
                 ),
                 const SizedBox(height: 16),
-                TextField(
+                SkedEditorTextField(
+                  label: l.schoolSitesLoginUrlLabel,
                   controller: _url,
                   enabled: !_saving,
                   keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    labelText: l.schoolSitesLoginUrlLabel,
-                    prefixIcon: const Icon(Icons.link),
-                  ),
+                  icon: Icons.link,
                 ),
                 if (_error != null)
                   Padding(
@@ -1682,7 +1570,6 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
                       ),
                     ),
                   ),
-                if (_saving) const LinearProgressIndicator(),
               ],
             ),
           ),

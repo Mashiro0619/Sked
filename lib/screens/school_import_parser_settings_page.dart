@@ -1,3 +1,5 @@
+import '../widgets/sked_confirmation_dialog.dart';
+import '../widgets/workspace_editor_form.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 
 import '../widgets/desktop_window_host.dart';
@@ -183,48 +185,38 @@ class _SchoolImportParserSettingsPageState
                                 ),
                           ),
                           const SizedBox(height: 12),
-                          TextField(
+                          SkedEditorTextField(
+                            label: l10n.schoolImportParserBaseUrl,
                             controller: _baseUrlController,
                             focusNode: _baseUrlFocusNode,
-                            decoration: InputDecoration(
-                              labelText: l10n.schoolImportParserBaseUrl,
-                              hintText: 'https://api.example.com/v1',
-                              prefixIcon: const Icon(Icons.link),
-                              errorText: baseUrl.isNotEmpty && !hasValidBaseUrl
-                                  ? l10n.schoolImportParserBaseUrlInvalid
-                                  : null,
-                              // Keep the full localized validation message
-                              // visible at narrow widths and large text sizes.
-                              errorMaxLines: 8,
-                              errorStyle: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                            ),
+                            hintText: 'https://api.example.com/v1',
+                            icon: Icons.link,
+                            errorText: baseUrl.isNotEmpty && !hasValidBaseUrl
+                                ? l10n.schoolImportParserBaseUrlInvalid
+                                : null,
+                            errorMaxLines: 8,
                             keyboardType: TextInputType.url,
                             onChanged: (_) =>
                                 _scheduleTextSettingsUpdate(provider),
                           ),
                           const SizedBox(height: 12),
-                          TextField(
+                          SkedEditorTextField(
+                            label: l10n.schoolImportParserApiKey,
                             controller: _apiKeyController,
                             focusNode: _apiKeyFocusNode,
                             obscureText: !_showApiKey,
-                            decoration: InputDecoration(
-                              labelText: l10n.schoolImportParserApiKey,
-                              prefixIcon: const Icon(Icons.key_outlined),
-                              suffixIcon: IconButton(
-                                onPressed: () {
-                                  setState(() => _showApiKey = !_showApiKey);
-                                },
-                                tooltip: _showApiKey
-                                    ? l10n.hideApiKey
-                                    : l10n.showApiKey,
-                                icon: Icon(
-                                  _showApiKey
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                ),
+                            icon: Icons.key_outlined,
+                            suffixIcon: IconButton(
+                              onPressed: () {
+                                setState(() => _showApiKey = !_showApiKey);
+                              },
+                              tooltip: _showApiKey
+                                  ? l10n.hideApiKey
+                                  : l10n.showApiKey,
+                              icon: Icon(
+                                _showApiKey
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
                               ),
                             ),
                             onChanged: (value) =>
@@ -234,15 +226,11 @@ class _SchoolImportParserSettingsPageState
                           SettingsSectionHeader(
                             title: l10n.schoolImportParserModel,
                           ),
-                          TextField(
+                          SkedEditorTextField(
+                            label: l10n.schoolImportParserModel,
                             controller: _modelController,
                             focusNode: _modelFocusNode,
-                            decoration: InputDecoration(
-                              labelText: l10n.schoolImportParserModel,
-                              prefixIcon: const Icon(
-                                Icons.model_training_outlined,
-                              ),
-                            ),
+                            icon: Icons.model_training_outlined,
                             onChanged: (_) =>
                                 _scheduleTextSettingsUpdate(provider),
                           ),
@@ -272,18 +260,14 @@ class _SchoolImportParserSettingsPageState
                               l10n.schoolImportParserCustomPromptDescription,
                             ),
                             children: [
-                              TextField(
+                              SkedEditorTextField(
+                                label: l10n.schoolImportParserCustomPromptTitle,
                                 controller: _customPromptController,
                                 focusNode: _customPromptFocusNode,
                                 minLines: 4,
                                 maxLines: 8,
-                                decoration: InputDecoration(
-                                  labelText:
-                                      l10n.schoolImportParserCustomPromptTitle,
-                                  hintText:
-                                      l10n.schoolImportParserCustomPromptHint,
-                                  alignLabelWithHint: true,
-                                ),
+                                hintText:
+                                    l10n.schoolImportParserCustomPromptHint,
                                 onChanged: (value) {
                                   _promptStorageValue = value;
                                   _scheduleTextSettingsUpdate(provider);
@@ -874,7 +858,7 @@ class _ModelListDialogState extends State<_ModelListDialog>
 
     return PopScope<void>(
       canPop: !_isLoading,
-      child: AlertDialog(
+      child: SkedConfirmationDialog(
         key: const ValueKey('school-import-model-list-dialog'),
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title: Text(l10n.schoolImportParserFetchModels),

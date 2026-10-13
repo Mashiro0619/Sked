@@ -1,3 +1,6 @@
+import '../widgets/sked_confirmation_dialog.dart';
+import '../widgets/sked_task_actions.dart';
+import '../widgets/workspace_editor_form.dart';
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
@@ -643,7 +646,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
             Navigator.of(dialogContext).pop(value);
           }
 
-          return AlertDialog(
+          return SkedConfirmationDialog(
             title: Text(l10n.schoolWebImportExitTitle),
             content: Text(l10n.schoolWebImportExitMessage),
             actions: [
@@ -708,9 +711,10 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
                 Navigator.of(dialogContext).pop(normalized);
               }
 
-              return AlertDialog(
+              return SkedConfirmationDialog(
                 title: Text(l10n.schoolWebImportEditAddress),
-                content: TextField(
+                content: SkedEditorTextField(
+                  label: l10n.schoolWebImportAddressLabel,
                   controller: controller,
                   autofocus: true,
                   keyboardType: TextInputType.url,
@@ -723,28 +727,14 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
                     }
                   },
                   onSubmitted: (_) => unawaited(submit()),
-                  decoration: InputDecoration(
-                    labelText: l10n.schoolWebImportAddressLabel,
-                    errorText: validationError,
-                    errorMaxLines: 3,
-                  ),
+                  errorText: validationError,
+                  errorMaxLines: 3,
                 ),
-                actions: [
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(64, 48),
-                    ),
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                    child: Text(l10n.cancel),
-                  ),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(64, 48),
-                    ),
-                    onPressed: submitting ? null : () => unawaited(submit()),
-                    child: Text(l10n.schoolWebImportOpenAddress),
-                  ),
-                ],
+                actions: SkedEditorActions(
+                  onCancel: () => Navigator.of(dialogContext).pop(),
+                  onSubmit: submitting ? null : () => unawaited(submit()),
+                  submitLabel: l10n.schoolWebImportOpenAddress,
+                ).trailing(dialogContext),
               );
             },
           );
