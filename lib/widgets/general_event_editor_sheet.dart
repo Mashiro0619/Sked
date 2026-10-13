@@ -17,6 +17,8 @@ import '../theme/sked_expressive_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import 'sked_date_picker.dart';
 
 import '../l10n/app_localizations.dart';
@@ -2035,7 +2037,7 @@ class _ColorOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Tooltip(
+    return SkedTooltip(
       message: '#${colorValue.toRadixString(16).padLeft(8, '0').toUpperCase()}',
       child: Semantics(
         button: true,

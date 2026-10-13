@@ -8,6 +8,8 @@ import 'package:flutter/gestures.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/app_mode.dart';
 import '../models/general_date_range.dart';
@@ -1224,7 +1226,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     );
     return Semantics(
       liveRegion: message != null,
-      child: Tooltip(
+      child: SkedTooltip(
         message: message ?? label,
         excludeFromSemantics: true,
         child: compact
@@ -1436,7 +1438,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                             : _CalendarPage.days,
                       );
                     },
-              child: Tooltip(
+              child: SkedTooltip(
                 message: retry
                     ? l.retrySave
                     : feedback ??

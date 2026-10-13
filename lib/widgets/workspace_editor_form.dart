@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import '../models/timetable_models.dart';
 import '../theme/sked_surface.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -484,7 +486,7 @@ class SkedEditorValueAction extends StatelessWidget {
     final active = enabled && onPressed != null;
     final onTap = active ? () => onPressed!(context) : null;
     if (WorkbenchChromeMetrics.of(context).desktop) {
-      return Tooltip(
+      return SkedTooltip(
         message: tooltip ?? label,
         child: WorkspaceEditorValue(
           label: label,

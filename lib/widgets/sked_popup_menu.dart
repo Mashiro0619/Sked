@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 
@@ -124,7 +126,7 @@ class _FocusedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
   Widget build(BuildContext context) {
     final button = widget as _FocusedPopupMenuButton<T>;
     if (button.child != null) {
-      return Tooltip(
+      return SkedTooltip(
         message:
             button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
         child: InkWell(

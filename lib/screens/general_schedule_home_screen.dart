@@ -27,6 +27,9 @@ import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:material_ui/material_ui.dart';
+
+import '../widgets/sked_tooltip.dart';
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -388,7 +391,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                     ),
                                   ),
                                 );
-                                return Tooltip(
+                                return SkedTooltip(
                                   message: l10n.addEvent,
                                   child: width >= 1000
                                       ? FilledButton.icon(
@@ -1643,7 +1646,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           child: Text(l.today),
         ),
         Builder(
-          builder: (anchorContext) => Tooltip(
+          builder: (anchorContext) => SkedTooltip(
             message:
                 '${_datePickerTitle(l, _dateUnitForView(view))}: ${_accessibleDateNavigationLabel(date, view, context)}',
             child: TextButton(
@@ -2444,7 +2447,7 @@ class _GeneralCalendarSelector extends StatelessWidget {
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
-    return Tooltip(
+    return SkedTooltip(
       message: l10n.calendars,
       child: SizedBox(
         width: double.infinity,
@@ -3243,7 +3246,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     final dateButton = Builder(
       builder: (anchor) => SizedBox(
         width: labelWidth,
-        child: Tooltip(
+        child: SkedTooltip(
           excludeFromSemantics: true,
           message: fullDateLabel,
           child: Semantics(
@@ -3403,7 +3406,7 @@ class _GeneralViewSwitcher extends StatelessWidget {
     return Semantics(
       button: true,
       label: tooltip,
-      child: Tooltip(
+      child: SkedTooltip(
         excludeFromSemantics: true,
         message: tooltip,
         child: IconButton(

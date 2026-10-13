@@ -273,6 +273,12 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                                     primary: false,
                                     reserveCaption: false,
                                     leading: BackButton(
+                                      // Recreate the implicit tooltip when its
+                                      // sidebar becomes offstage; a fading
+                                      // overlay must not outlive its anchor.
+                                      key: ValueKey(
+                                        'settings-sidebar-back-$_wide',
+                                      ),
                                       onPressed: () => unawaited(_back()),
                                     ),
                                     title: Text(

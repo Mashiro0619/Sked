@@ -849,7 +849,7 @@ class _DesktopCalendarManagerRow extends StatelessWidget {
           ),
           Expanded(
             child: Builder(
-              builder: (anchor) => Tooltip(
+              builder: (anchor) => SkedTooltip(
                 message: l.rename,
                 child: InkWell(
                   key: ValueKey('calendar-name-${schedule.id}'),
@@ -980,7 +980,7 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
       child: SkedTaskDialog(
         key: const ValueKey('category-color-dialog'),
         closeEnabled: !_blocked,
-        title: Tooltip(
+        title: SkedTooltip(
           message: latest?.name ?? widget.schedule.name,
           child: Text(
             latest?.name ?? widget.schedule.name,

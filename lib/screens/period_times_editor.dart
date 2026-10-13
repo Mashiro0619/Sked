@@ -629,16 +629,16 @@ class _PeriodTimeAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      excludeSemantics: true,
-      label: '$periodLabel, $label',
-      value: value,
-      onTap: enabled ? () => onTap(context) : null,
-      child: Tooltip(
-        message: '$periodLabel, $label',
-        excludeFromSemantics: true,
+    return SkedTooltip(
+      message: '$periodLabel, $label',
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        excludeSemantics: true,
+        label: '$periodLabel, $label',
+        value: value,
+        onTap: enabled ? () => onTap(context) : null,
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           excludeFromSemantics: true,

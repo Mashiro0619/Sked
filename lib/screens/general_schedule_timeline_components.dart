@@ -197,7 +197,7 @@ class _AllDayTimelineState extends State<_AllDayTimeline> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Tooltip(
+                        SkedTooltip(
                           message: toggleLabel,
                           child: TextButton(
                             key: const ValueKey('general-all-day-toggle'),
@@ -301,7 +301,7 @@ class _AllDayChip extends StatelessWidget {
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Tooltip(
+      child: SkedTooltip(
         message: occurrence.event.title,
         excludeFromSemantics: true,
         child: Material(
@@ -369,7 +369,7 @@ class _AllDayCollapsedChip extends StatelessWidget {
         horizontal: 3,
         vertical: _AllDayTimelineLayout.verticalPadding,
       ),
-      child: Tooltip(
+      child: SkedTooltip(
         message: semanticLabel,
         excludeFromSemantics: true,
         child: Material(
@@ -423,7 +423,7 @@ class _AllDayMoreChip extends StatelessWidget {
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Tooltip(
+      child: SkedTooltip(
         message: semanticLabel,
         excludeFromSemantics: true,
         child: Material(
@@ -772,7 +772,7 @@ class _MoreOccurrencesCard extends StatelessWidget {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(4),
     );
-    return Tooltip(
+    return SkedTooltip(
       message: label,
       excludeFromSemantics: true,
       child: Material(

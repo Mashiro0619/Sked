@@ -9,6 +9,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
+
+import '../widgets/sked_tooltip.dart';
+
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
 
@@ -508,7 +511,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
       ),
     );
     return enabled
-        ? Tooltip(
+        ? SkedTooltip(
             message: l10n.schoolWebImportEditAddress,
             excludeFromSemantics: true,
             child: addressControl,

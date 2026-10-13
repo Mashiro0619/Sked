@@ -226,7 +226,7 @@ class _DesktopMonthDayCell extends StatelessWidget {
       ),
     );
     final lunar = showLunar
-        ? Tooltip(
+        ? SkedTooltip(
             message: _cachedLunarLabelFor(date, locale).text,
             excludeFromSemantics: true,
             child: _LunarDateLabel(
@@ -320,7 +320,7 @@ class _DesktopMonthDayCell extends StatelessWidget {
                   SizedBox(
                     key: const ValueKey('desktop-month-more'),
                     height: metrics.countHeight,
-                    child: Tooltip(
+                    child: SkedTooltip(
                       message: l.moreEvents(remaining),
                       excludeFromSemantics: true,
                       child: Align(
@@ -359,7 +359,7 @@ class _DesktopMonthEventSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final color = effectiveGeneralOccurrenceColor(context, occurrence);
-    return Tooltip(
+    return SkedTooltip(
       message:
           '${occurrence.event.title}\n${_formatOccurrenceTime(context, occurrence)}',
       excludeFromSemantics: true,

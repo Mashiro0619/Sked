@@ -16,6 +16,8 @@ import 'dart:convert';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:material_ui/material_ui.dart';
 
+import '../widgets/sked_tooltip.dart';
+
 import '../widgets/sked_date_picker.dart';
 
 import '../l10n/app_locale.dart';
@@ -1151,7 +1153,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       textInputAction: TextInputAction.done,
       icon: Icons.date_range_outlined,
       suffixIcon: warning
-          ? Tooltip(
+          ? SkedTooltip(
               message: warningText ?? '',
               child: Semantics(
                 label: warningText ?? '',

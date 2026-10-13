@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -425,19 +427,19 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
     final selected = week == widget.selectedWeek;
     final focused = _focused && week == _focusedWeek;
     final hint = today ? '$dates · ${l.today}' : dates;
-    return Semantics(
-      key: ValueKey('student-week-option-$week'),
-      button: true,
-      selected: selected,
-      focusable: true,
-      focused: focused,
-      label: label,
-      value: hint,
-      onTap: () => _select(week),
-      excludeSemantics: true,
-      child: Tooltip(
-        message: '$label · $hint',
-        excludeFromSemantics: true,
+    return SkedTooltip(
+      message: '$label · $hint',
+      excludeFromSemantics: true,
+      child: Semantics(
+        key: ValueKey('student-week-option-$week'),
+        button: true,
+        selected: selected,
+        focusable: true,
+        focused: focused,
+        label: label,
+        value: hint,
+        onTap: () => _select(week),
+        excludeSemantics: true,
         child: WorkbenchChromeMetrics.compactTouch(context)
             ? _touchWeek(
                 context,

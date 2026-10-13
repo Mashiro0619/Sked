@@ -6,6 +6,9 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+
+import 'sked_tooltip.dart';
+
 import 'package:provider/provider.dart';
 
 import '../providers/timetable_provider.dart';
@@ -1314,7 +1317,7 @@ class _ToolbarReorderHandleState extends State<_ToolbarReorderHandle> {
             ? (_) => widget.onPointerCancel()
             : null,
         onPointerMove: widget.enabled ? widget.onPointerMove : null,
-        child: Tooltip(
+        child: SkedTooltip(
           message: widget.tooltipMessage,
           // Keep touch interactions reserved for the delayed drag recognizer.
           // RawTooltip still shows this message for mouse hover in manual mode.
@@ -1605,7 +1608,7 @@ class _SettingsToolbarNavigationEditorState
                     ?.copyWith(color: foreground, fontWeight: FontWeight.w500),
               ),
             ),
-            Tooltip(
+            SkedTooltip(
               message: widget.visibilityLabel,
               child: Semantics(
                 label: '${widget.visibilityLabel}: ${item.label}',

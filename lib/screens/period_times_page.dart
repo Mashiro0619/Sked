@@ -9,6 +9,9 @@ import 'dart:math' as math;
 import 'dart:ui' show FontFeature, PointerDeviceKind;
 
 import 'package:material_ui/material_ui.dart';
+
+import '../widgets/sked_tooltip.dart';
+
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';

@@ -3,6 +3,9 @@ import '../theme/sked_surface.dart';
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+
+import 'sked_tooltip.dart';
+
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:provider/provider.dart';
 
@@ -305,7 +308,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
             FocusNode? focusNode,
           }) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            child: Tooltip(
+            child: SkedTooltip(
               message: collapsed ? title : '',
               excludeFromSemantics: true,
               child: ListTile(

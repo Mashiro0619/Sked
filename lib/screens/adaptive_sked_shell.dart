@@ -7,6 +7,8 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../widgets/sked_tooltip.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
@@ -1246,7 +1248,7 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
                     child: Semantics(
                       button: true,
                       enabled: actionEnabled,
-                      child: Tooltip(
+                      child: SkedTooltip(
                         message: l10n.settings,
                         child: InkWell(
                           key: const ValueKey('adaptive-shell-settings-action'),
@@ -1488,7 +1490,7 @@ class _WorkspaceNavigationBrandIcon extends StatelessWidget {
         ),
       );
     }
-    return Tooltip(
+    return SkedTooltip(
       message: tooltip,
       excludeFromSemantics: true,
       child: Semantics(

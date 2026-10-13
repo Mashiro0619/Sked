@@ -174,7 +174,7 @@ void main() {
       expect(decoration.color, Colors.transparent);
       expect(decoration.border, isNull);
       final tooltip = t.widget<Tooltip>(
-        find.descendant(of: _week(1), matching: find.byType(Tooltip)),
+        find.ancestor(of: _week(1), matching: find.byType(Tooltip)),
       );
       expect(tooltip.message, contains('Sep 7, 2026'));
       expect(tooltip.message, contains('Sep 13, 2026'));
@@ -309,7 +309,7 @@ void main() {
       );
       final value = t
           .widget<Tooltip>(
-            find.descendant(of: _week(1), matching: find.byType(Tooltip)),
+            find.ancestor(of: _week(1), matching: find.byType(Tooltip)),
           )
           .message!;
       expect(value, contains('Dec 28, 2026'));

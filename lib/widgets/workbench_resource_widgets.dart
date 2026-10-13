@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import '../l10n/app_localizations.dart';
 import 'workbench_chrome_metrics.dart';
 
@@ -20,7 +22,7 @@ class CalendarResourceRow extends StatelessWidget {
     final m = WorkbenchChromeMetrics.of(context);
     final c = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context);
-    return Tooltip(
+    return SkedTooltip(
       message: name,
       child: Semantics(
         label: name,
@@ -121,6 +123,7 @@ class _TimetableResourceRowState extends State<TimetableResourceRow> {
         MediaQuery.accessibleNavigationOf(context) ||
         _hovered ||
         _focused;
+    final editLabel = AppLocalizations.of(context).editTimetable;
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -138,20 +141,29 @@ class _TimetableResourceRowState extends State<TimetableResourceRow> {
               'resource-timetable-edit-visibility-${widget.timetableId}',
             ),
             opacity: showEdit ? 1 : 0,
+            // Keep the portal anchor while a tooltip finishes dismissing. Only
+            // the source button below is excluded when the edit action hides.
+            alwaysIncludeSemantics: true,
             child: IgnorePointer(
               ignoring: !showEdit,
-              child: ExcludeSemantics(
-                excluding: !showEdit,
-                child: Builder(
-                  builder: (anchor) => IconButton(
-                    key: ValueKey(
-                      'resource-timetable-edit-${widget.timetableId}',
+              child: SkedTooltip(
+                message: editLabel,
+                excludeFromSemantics: true,
+                child: ExcludeSemantics(
+                  excluding: !showEdit,
+                  child: Semantics(
+                    label: editLabel,
+                    child: Builder(
+                      builder: (anchor) => IconButton(
+                        key: ValueKey(
+                          'resource-timetable-edit-${widget.timetableId}',
+                        ),
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: widget.onEditAt == null
+                            ? widget.onEdit
+                            : () => widget.onEditAt!(anchor),
+                      ),
                     ),
-                    tooltip: AppLocalizations.of(context).editTimetable,
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: widget.onEditAt == null
-                        ? widget.onEdit
-                        : () => widget.onEditAt!(anchor),
                   ),
                 ),
               ),

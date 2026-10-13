@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import '../l10n/app_localizations.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -165,16 +167,16 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
                           final onPressed = enabled && date.onSelected != null
                               ? () => date.onSelected!(anchor)
                               : null;
-                          return Semantics(
-                            button: true,
-                            enabled: onPressed != null,
-                            label: date.tooltip ?? date.label,
-                            onTap: onPressed,
-                            onLongPress: enabled ? onDateLongPress : null,
-                            excludeSemantics: true,
-                            child: Tooltip(
-                              message: date.tooltip ?? date.label,
-                              excludeFromSemantics: true,
+                          return SkedTooltip(
+                            message: date.tooltip ?? date.label,
+                            excludeFromSemantics: true,
+                            child: Semantics(
+                              button: true,
+                              enabled: onPressed != null,
+                              label: date.tooltip ?? date.label,
+                              onTap: onPressed,
+                              onLongPress: enabled ? onDateLongPress : null,
+                              excludeSemantics: true,
                               child: TextButton(
                                 key: ValueKey(date.id),
                                 onPressed: onPressed,

@@ -22,6 +22,8 @@ import 'dart:async';
 import 'package:flutter/widget_previews.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_tooltip.dart';
+
 import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
@@ -1263,7 +1265,7 @@ class _WeekdayPickerDialog extends StatelessWidget {
                     SizedBox(
                       width: width,
                       height: 40 * scale,
-                      child: Tooltip(
+                      child: SkedTooltip(
                         message: formatDayOfWeekLabel(
                           day,
                           localeCode: localeCode,

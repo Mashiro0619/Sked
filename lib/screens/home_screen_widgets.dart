@@ -268,7 +268,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     );
     Widget buildWeekPicker({required double width}) {
       return Builder(
-        builder: (anchor) => Tooltip(
+        builder: (anchor) => SkedTooltip(
           message: '${l10n.jumpToWeek}; ${l10n.today}',
           child: Semantics(
             key: const ValueKey('student-week-picker-semantics'),
@@ -455,7 +455,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           const AssistantPaneToggle(),
         if (onAddCourse != null)
           Builder(
-            builder: (anchor) => Tooltip(
+            builder: (anchor) => SkedTooltip(
               message: l10n.addCourse,
               child: showAddLabel
                   ? FilledButton.icon(
