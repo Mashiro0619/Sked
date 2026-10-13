@@ -165,7 +165,9 @@ void main() {
       );
       addTearDown(mouse.removePointer);
       await t.pumpAndSettle();
-      await t.tap(find.byTooltip('Edit timetable'));
+      await t.tap(
+        _key('resource-timetable-edit-${provider.activeTimetable.id}'),
+      );
       await t.pumpAndSettle();
       final nameField = find.byType(TextField).first;
       final configRoute = ModalRoute.of(t.element(nameField))!;
