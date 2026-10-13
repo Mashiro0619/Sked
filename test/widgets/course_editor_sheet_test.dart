@@ -439,6 +439,10 @@ void main() {
       tester.getTopLeft(title).dy - tester.getRect(sheet).top,
       closeTo(16, .1),
     );
+    expect(
+      tester.getTopLeft(title).dx,
+      tester.getTopLeft(find.byKey(const ValueKey('course-desktop-title'))).dx,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -463,6 +467,10 @@ void main() {
 
     final titleTop = tester.getTopLeft(find.text('Add course')).dy;
     expect(titleTop, closeTo(16, .1));
+    expect(
+      tester.getTopLeft(find.text('Add course')).dx,
+      tester.getTopLeft(find.byKey(const ValueKey('course-desktop-title'))).dx,
+    );
     expect(tester.takeException(), isNull);
   });
 

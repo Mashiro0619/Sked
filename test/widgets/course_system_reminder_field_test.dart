@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 
 import 'dart:async';
@@ -9,6 +10,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/widgets/course_system_reminder_field.dart';
+import 'package:sked/widgets/workspace_editor_form.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -28,10 +30,13 @@ class _Gateway extends MemoryAgendaNotificationGateway {
 void main() {
   for (final scale in [1.0, 2.0]) {
     testWidgets(
-      'desktop reminder uses styled menu and preserves drafts at scale $scale',
+      'shared reminder menu preserves drafts and ignores stale selections at scale $scale',
       (t) async {
         t.view.devicePixelRatio = 1;
-        t.view.physicalSize = const Size(1000, 900);
+        final width = defaultTargetPlatform == TargetPlatform.android
+            ? 393.0
+            : 1000.0;
+        t.view.physicalSize = Size(width, 900);
         addTearDown(t.view.reset);
         final p = await workspaceProvider();
         addTearDown(p.dispose);
@@ -87,6 +92,14 @@ void main() {
           isA<SkedDropdownMenu<CourseReminderBehavior>>(),
         );
         expect(
+          find.byType(SkedEditorChoiceField<CourseReminderBehavior>),
+          findsOneWidget,
+        );
+        expect(
+          t.widget<SkedDropdownMenu<CourseReminderBehavior>>(field).workspace,
+          AppMode.student,
+        );
+        expect(
           find.byType(DropdownButtonFormField<CourseReminderBehavior>),
           findsNothing,
         );
@@ -123,7 +136,7 @@ void main() {
             )
             .first;
         expect(custom.hitTestable(), findsOneWidget);
-        expect(t.getRect(custom).right, lessThanOrEqualTo(1000));
+        expect(t.getRect(custom).right, lessThanOrEqualTo(width));
         await t.sendKeyEvent(LogicalKeyboardKey.escape);
         await t.pumpAndSettle();
         expect(changes, 0);
@@ -138,6 +151,7 @@ void main() {
           find.byKey(const ValueKey('course-reminder-custom-minutes')),
           findsOneWidget,
         );
+        expect(find.byType(SkedEditorTextField), findsOneWidget);
         expect(minutes.text, '25');
         await t.tap(field);
         await t.pumpAndSettle();
@@ -161,7 +175,10 @@ void main() {
         expect(t.takeException(), isNull);
         await t.pumpWidget(const SizedBox());
       },
-      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+      variant: const TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.windows,
+      }),
     );
   }
 
@@ -354,11 +371,11 @@ void main() {
       );
       expect(
         tester
-            .widget<DropdownButtonFormField<CourseReminderBehavior>>(
+            .widget<SkedDropdownMenu<CourseReminderBehavior>>(
               find.byKey(const ValueKey('course-reminder-behavior')),
             )
-            .onChanged,
-        isNull,
+            .enabled,
+        isFalse,
       );
     },
   );

@@ -111,8 +111,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _editorSession ??= SkedTaskSessionScope.maybeOf(context)?.session;
-    if (!_desktopInitialized &&
-        WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+    if (!_desktopInitialized && WorkbenchChromeMetrics.of(context).desktop) {
       _desktopInitialized = true;
       if (_reminderBehavior != CourseReminderBehavior.inherit) {
         _detailsSectionExpanded = true;
@@ -251,180 +250,101 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
 
   @override
   Widget build(BuildContext context) {
-    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
     final l10n = AppLocalizations.of(context);
-    final linkedPeriods = _selectedPeriods;
-    final linkedPeriodsLabel = _formatPeriodsLabel(linkedPeriods, l10n);
-    final mediaQuery = MediaQuery.of(context);
-    final compactSheet =
-        mediaQuery.size.height < 700 && mediaQuery.viewInsets.bottom == 0;
-    final sheetHeightFactor = mediaQuery.viewInsets.bottom > 0
-        ? 1.0
-        : compactSheet
-        ? 0.96
-        : 0.72;
-
     return PopScope(
       canPop: _hasPopped,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && !_blocked) unawaited(requestEditorExit());
       },
-      child: AppSheetScaffold(
+      child: AppSheetScaffold.editor(
         onClose: () => unawaited(requestEditorExit()),
         closeEnabled: !_blocked,
-        // Short Android windows and the IME need enough room for both the
-        // fixed action area and a useful scrollable form viewport.
-        heightFactor: sheetHeightFactor,
-        contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        busy: _actionInProgress,
         title: Text(
           widget.initialCourse == null
               ? l10n.addCourseTitle
               : l10n.editCourseTitle,
         ),
-        leading: widget.initialCourse == null
-            ? null
-            : TextButton.icon(
-                onPressed: _blocked ? null : () => unawaited(_confirmDelete()),
-                icon: const Icon(Icons.delete_outline),
-                label: Text(l10n.delete),
-                style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                ),
-              ),
-        actions: [
-          TextButton(
-            onPressed: _blocked ? null : () => unawaited(requestEditorExit()),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton.icon(
-            onPressed: _blocked ? null : () => unawaited(_submit()),
-            icon: const Icon(Icons.check),
-            label: Text(l10n.save),
-          ),
-        ],
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (desktop) ...[
-              if (_actionInProgress) const UiCommandBusyIndicator(busy: true),
-            ] else ...[
-              UiCommandBusyIndicator(busy: _actionInProgress),
-              const SizedBox(height: 8),
-            ],
-            if (desktop)
-              _buildDesktopFields(l10n)
-            else ...[
-              _ResponsiveFormRow(
-                flexes: const [2, 1],
-                children: [
-                  TextField(
-                    controller: _nameController,
-                    enabled: !_blocked,
-                    decoration: InputDecoration(
-                      labelText: l10n.courseName,
-                      prefixIcon: const Icon(Icons.book_outlined),
-                    ),
-                  ),
-                  TextField(
-                    controller: _locationController,
-                    enabled: !_blocked,
-                    decoration: InputDecoration(
-                      labelText: l10n.location,
-                      prefixIcon: const Icon(Icons.location_on_outlined),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              WorkspaceEditorDisclosure(
-                icon: Icons.event_note_outlined,
-                title: '${l10n.dayOfWeek} · ${l10n.time}',
-                subtitle: linkedPeriods.isEmpty
-                    ? l10n.linkedPeriodsUnmatched
-                    : linkedPeriodsLabel,
-                initiallyExpanded: _scheduleSectionExpanded,
-                onExpansionChanged: (expanded) =>
-                    setState(() => _scheduleSectionExpanded = expanded),
-                enabled: !_blocked,
-                child: _buildScheduleFields(l10n),
-              ),
-              const SizedBox(height: 8),
-              WorkspaceEditorDisclosure(
-                key: const ValueKey('course-details-section'),
-                controller: _detailsExpansion,
-                icon: Icons.notes_outlined,
-                title: l10n.more,
-                subtitle: _detailsSectionExpanded
-                    ? null
-                    : '${l10n.courseSystemReminder} · ${_reminderSummary(l10n)}',
-                initiallyExpanded: _detailsSectionExpanded,
-                onExpansionChanged: (expanded) =>
-                    setState(() => _detailsSectionExpanded = expanded),
-                enabled: !_blocked,
-                child: _buildDetailsFields(l10n),
-              ),
-            ],
-          ],
+        editorActions: SkedEditorActions(
+          enabled: !_blocked,
+          busy: _actionInProgress,
+          onCancel: () => unawaited(requestEditorExit()),
+          onSubmit: () => unawaited(_submit()),
+          showDelete: widget.initialCourse != null,
+          onDelete: widget.initialCourse == null
+              ? null
+              : () => unawaited(_confirmDelete()),
         ),
+        child: _buildFields(l10n),
       ),
     );
   }
 
-  Widget _buildDesktopFields(AppLocalizations l10n) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Semantics(
-        label: l10n.courseName,
-        child: TextField(
-          key: const ValueKey('course-desktop-title'),
-          controller: _nameController,
-          enabled: !_blocked,
-          style: workspaceEditorTitleStyle(context),
-          decoration: workspaceEditorInputDecoration(
-            context,
-            l10n.courseName,
-            headline: true,
+  Widget _buildFields(AppLocalizations l10n) {
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
+    final linkedPeriodsLabel = _formatPeriodsLabel(_selectedPeriods, l10n);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ResponsiveEditorFormRow(
+          breakpoint: desktop ? double.infinity : 480,
+          flexes: const [2, 1],
+          children: [
+            SkedEditorTextField(
+              controlKey: const ValueKey('course-desktop-title'),
+              label: l10n.courseName,
+              controller: _nameController,
+              enabled: !_blocked,
+              icon: Icons.book_outlined,
+              headline: true,
+            ),
+            SkedEditorTextField(
+              label: l10n.location,
+              controller: _locationController,
+              enabled: !_blocked,
+              icon: Icons.location_on_outlined,
+            ),
+          ],
+        ),
+        SizedBox(height: desktop ? 16 : 12),
+        if (desktop)
+          _buildScheduleFields(l10n)
+        else
+          WorkspaceEditorDisclosure(
+            icon: Icons.event_note_outlined,
+            title: '${l10n.dayOfWeek} · ${l10n.time}',
+            subtitle: _selectedPeriods.isEmpty
+                ? l10n.linkedPeriodsUnmatched
+                : linkedPeriodsLabel,
+            initiallyExpanded: _scheduleSectionExpanded,
+            onExpansionChanged: (expanded) =>
+                setState(() => _scheduleSectionExpanded = expanded),
+            enabled: !_blocked,
+            child: _buildScheduleFields(l10n),
           ),
-        ),
-      ),
-      const SizedBox(height: 12),
-      WorkspaceEditorField(
-        label: l10n.location,
-        child: TextField(
-          controller: _locationController,
-          enabled: !_blocked,
-          style: workspaceEditorContentStyle(context),
-          decoration: workspaceEditorInputDecoration(context, l10n.location)
-              .copyWith(
-                prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 32,
-                  minHeight: 40,
-                ),
-              ),
-        ),
-      ),
-      WorkspaceEditorFormSection(child: _buildScheduleFields(l10n)),
-      WorkspaceEditorFormSection(
-        child: WorkspaceEditorDisclosure(
-          compact: true,
+        SizedBox(height: desktop ? 16 : 8),
+        WorkspaceEditorDisclosure(
           key: const ValueKey('course-details-section'),
           controller: _detailsExpansion,
+          compact: desktop,
           icon: Icons.notes_outlined,
           title: l10n.more,
+          subtitle: desktop || _detailsSectionExpanded
+              ? null
+              : '${l10n.courseSystemReminder} · ${_reminderSummary(l10n)}',
           initiallyExpanded: _detailsSectionExpanded,
           onExpansionChanged: (expanded) =>
               setState(() => _detailsSectionExpanded = expanded),
           enabled: !_blocked,
           child: _buildDetailsFields(l10n),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 
   Widget _buildScheduleFields(AppLocalizations l10n) {
-    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final localeCode = app_locale.localeCodeFromLocale(
       Localizations.localeOf(context),
     );
@@ -440,7 +360,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _ResponsiveFormRow(
+        SkedEditorFormRow(
           breakpoint: 520,
           minimumChildWidths: desktop
               ? [
@@ -459,21 +379,21 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                 ]
               : const [],
           children: [
-            _SelectionTile(
+            SkedEditorValueField(
               key: _weekdayAnchor,
-              title: l10n.dayOfWeek,
-              subtitle: weekdayLabel,
+              label: l10n.dayOfWeek,
+              value: weekdayLabel,
               icon: Icons.today_outlined,
               enabled: !_blocked,
-              onTap: _blocked ? null : _pickDayOfWeek,
+              onPressed: _blocked ? null : (_) => _pickDayOfWeek(),
             ),
-            _SelectionTile(
+            SkedEditorValueField(
               key: _weeksAnchor,
-              title: l10n.semesterWeeks,
-              subtitle: weeksLabel,
+              label: l10n.semesterWeeks,
+              value: weeksLabel,
               icon: Icons.edit_calendar,
               enabled: !_blocked,
-              onTap: _blocked ? null : _pickSemesterWeeks,
+              onPressed: _blocked ? null : (_) => _pickSemesterWeeks(),
             ),
           ],
         ),
@@ -512,15 +432,15 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     );
   }
 
-  Widget _buildPeriodsField(AppLocalizations l10n) => _SelectionTile(
+  Widget _buildPeriodsField(AppLocalizations l10n) => SkedEditorValueField(
     key: _periodsAnchor,
-    title: l10n.linkedPeriods,
-    subtitle: _selectedPeriods.isEmpty
+    label: l10n.linkedPeriods,
+    value: _selectedPeriods.isEmpty
         ? l10n.linkedPeriodsUnmatched
         : _formatPeriodsLabel(_selectedPeriods, l10n),
     icon: Icons.tune,
     enabled: !_blocked,
-    onTap: _blocked ? null : _pickPeriods,
+    onPressed: _blocked ? null : (_) => _pickPeriods(),
   );
 
   String _reminderSummary(AppLocalizations l10n) => switch (_reminderBehavior) {
@@ -536,140 +456,78 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     },
   };
 
-  Widget _buildDetailsFields(AppLocalizations l10n) {
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      Widget input(
-        String label,
-        TextEditingController controller, {
-        int maxLines = 1,
-        TextInputType? keyboardType,
-      }) => WorkspaceEditorField(
-        label: label,
-        child: TextField(
-          controller: controller,
-          enabled: !_blocked,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          style: workspaceEditorContentStyle(context),
-          decoration: workspaceEditorInputDecoration(context, label),
-        ),
-      );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          WorkspaceEditorFieldsRow(
-            flexes: const [1, 0],
-            minimumChildWidths: [
-              workspaceEditorMinimumFieldWidth(
-                context,
-                label: l10n.teacherName,
-                minimumWidth: 160,
-              ),
-              workspaceEditorMinimumFieldWidth(
-                context,
-                label: l10n.credits,
-                minimumWidth: 96,
-              ),
-            ],
-            children: [
-              input(l10n.teacherName, _teacherController),
-              input(
-                l10n.credits,
-                _creditController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-              ),
-            ],
+  Widget _buildDetailsFields(AppLocalizations l10n) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      SkedEditorFormRow(
+        flexes: const [1, 0],
+        minimumChildWidths: [
+          workspaceEditorMinimumFieldWidth(
+            context,
+            label: l10n.teacherName,
+            minimumWidth: 160,
           ),
-          const SizedBox(height: 12),
-          input(l10n.remarks, _remarksController, maxLines: 2),
-          const SizedBox(height: 12),
-          _buildCustomFieldsField(l10n),
-          const SizedBox(height: 16),
-          _buildReminderField(l10n),
+          workspaceEditorMinimumFieldWidth(
+            context,
+            label: l10n.credits,
+            minimumWidth: 96,
+          ),
         ],
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ResponsiveFormRow(
-          children: [
-            TextField(
-              controller: _teacherController,
-              enabled: !_blocked,
-              decoration: InputDecoration(
-                labelText: l10n.teacherName,
-                prefixIcon: const Icon(Icons.badge_outlined),
-              ),
-            ),
-            TextField(
-              controller: _creditController,
-              enabled: !_blocked,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: InputDecoration(
-                labelText: l10n.credits,
-                prefixIcon: const Icon(Icons.payments_outlined),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _remarksController,
-          enabled: !_blocked,
-          decoration: InputDecoration(
-            labelText: l10n.remarks,
-            prefixIcon: const Icon(Icons.notes_outlined),
+        children: [
+          SkedEditorTextField(
+            label: l10n.teacherName,
+            controller: _teacherController,
+            enabled: !_blocked,
+            icon: Icons.badge_outlined,
           ),
-          maxLines: 2,
-        ),
-        const SizedBox(height: 12),
-        _buildCustomFieldsField(l10n),
-        const SizedBox(height: 16),
-        _buildReminderField(l10n),
-      ],
-    );
-  }
+          SkedEditorTextField(
+            label: l10n.credits,
+            controller: _creditController,
+            enabled: !_blocked,
+            icon: Icons.payments_outlined,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      SkedEditorTextField(
+        label: l10n.remarks,
+        controller: _remarksController,
+        enabled: !_blocked,
+        icon: Icons.notes_outlined,
+        maxLines: 2,
+      ),
+      const SizedBox(height: 12),
+      _buildCustomFieldsField(l10n),
+      const SizedBox(height: 16),
+      _buildReminderField(l10n),
+    ],
+  );
 
   Widget _buildCustomFieldsField(AppLocalizations l10n) {
-    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final usesJson = _customFieldsDraft.usesJson;
-    final decoration = desktop
-        ? workspaceEditorInputDecoration(context, l10n.customFields)
-        : InputDecoration(
-            labelText: l10n.customFields,
-            prefixIcon: const Icon(Icons.data_object_outlined),
-          );
-    final field = TextField(
-      key: const ValueKey('course-custom-fields'),
+    return SkedEditorTextField(
+      controlKey: const ValueKey('course-custom-fields'),
+      label: l10n.customFields,
       controller: _customFieldsController,
       focusNode: _customFieldsFocus,
       enabled: !_blocked,
-      style: desktop ? workspaceEditorContentStyle(context) : null,
+      icon: Icons.data_object_outlined,
       maxLines: usesJson ? 6 : (desktop ? 2 : 3),
       onChanged: (_) {
         if (_customFieldsInvalid) setState(() => _customFieldsInvalid = false);
       },
-      decoration: decoration.copyWith(
-        hintText: usesJson ? null : l10n.customFieldsHint,
-        helperText: usesJson ? l10n.jsonContent : null,
-        helperMaxLines: 2,
-        error: _customFieldsInvalid ? Text(l10n.customFieldsInvalidJson) : null,
-      ),
+      hintText: usesJson ? null : l10n.customFieldsHint,
+      helperText: usesJson ? l10n.jsonContent : null,
+      helperMaxLines: 2,
+      error: _customFieldsInvalid ? Text(l10n.customFieldsInvalidJson) : null,
     );
-    return desktop
-        ? WorkspaceEditorField(label: l10n.customFields, child: field)
-        : field;
   }
 
   Widget _buildReminderField(AppLocalizations l10n) =>
       CourseSystemReminderField(
         key: const ValueKey('course-reminder-section'),
-        compactEditor: WorkspaceEditorScope.maybeOf(context)?.enabled == true,
         behavior: _reminderBehavior,
         minutesController: _reminderMinutesController,
         minutesFocusNode: _reminderMinutesFocus,
@@ -1410,32 +1268,18 @@ class _WeekdayPickerDialog extends StatelessWidget {
                           day,
                           localeCode: localeCode,
                         ),
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            backgroundColor: day == selectedDay
-                                ? Theme.of(context).colorScheme.primaryContainer
-                                : null,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
+                        child: SkedEditorOption(
+                          compact: true,
+                          selected: day == selectedDay,
+                          label: formatWeekdayShortLabel(
+                            day,
+                            localeCode: localeCode,
+                          ),
+                          semanticLabel: formatDayOfWeekLabel(
+                            day,
+                            localeCode: localeCode,
                           ),
                           onPressed: () => onSelect(day),
-                          child: Semantics(
-                            selected: day == selectedDay,
-                            label: formatDayOfWeekLabel(
-                              day,
-                              localeCode: localeCode,
-                            ),
-                            child: ExcludeSemantics(
-                              child: Text(
-                                formatWeekdayShortLabel(
-                                  day,
-                                  localeCode: localeCode,
-                                ),
-                              ),
-                            ),
-                          ),
                         ),
                       ),
                     ),
@@ -1449,6 +1293,10 @@ class _WeekdayPickerDialog extends StatelessWidget {
     return SkedTaskDialog(
       insetPadding: _editorDialogInsetPadding(context),
       title: Text(l10n.selectDayOfWeek),
+      scrollable: true,
+      // Responsive option rows need a real width before native dialog layout.
+      // The route's available width still narrows this on small screens.
+      constraints: const BoxConstraints(minWidth: 352, maxWidth: 352),
       titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
       contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
       content: ExpressiveDialogContent(
@@ -1487,243 +1335,12 @@ class _WeekdayChoiceRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final fillColor = selected ? colors.primaryContainer : Colors.transparent;
-    final foreground = selected ? colors.onPrimaryContainer : colors.onSurface;
-    final indicatorColor = selected
-        ? colors.onPrimaryContainer
-        : Colors.transparent;
-    final badgeFill = selected ? colors.primary : colors.surfaceContainerHigh;
-    final badgeForeground = selected
-        ? colors.onPrimary
-        : colors.onSurfaceVariant;
-    final borderColor = selected
-        ? colors.primary.withValues(alpha: 0.46)
-        : Colors.transparent;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: label,
-        child: Material(
-          color: fillColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: BorderSide(color: borderColor),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: SizedBox(
-              height: 52,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 10, 0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: badgeFill,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        shortLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: badgeForeground,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: foreground,
-                          fontWeight: selected
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(Icons.check_rounded, color: indicatorColor, size: 24),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ResponsiveFormRow extends StatelessWidget {
-  const _ResponsiveFormRow({
-    required this.children,
-    this.flexes,
-    this.breakpoint = 480,
-    this.minimumChildWidths = const [],
-  });
-
-  static const double _spacing = 12;
-
-  final List<Widget> children;
-  final List<int>? flexes;
-  final double breakpoint;
-  final List<double> minimumChildWidths;
-
-  @override
-  Widget build(BuildContext context) {
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorFieldsRow(
-        minimumChildWidths: minimumChildWidths,
-        flexes: flexes ?? const [],
-        children: children,
-      );
-    }
-    return ResponsiveEditorFormRow(
-      flexes: flexes ?? const [],
-      breakpoint: breakpoint,
-      spacing: _spacing,
-      children: children,
-    );
-  }
-}
-
-class _SelectionTile extends StatelessWidget {
-  const _SelectionTile({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorField(
-        label: title,
-        child: WorkspaceEditorValue(
-          label: title,
-          value: subtitle,
-          onPressed: enabled ? onTap : null,
-        ),
-      );
-    }
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final contentColor = enabled
-        ? colors.onSurface
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondaryColor = enabled
-        ? colors.onSurfaceVariant
-        : colors.onSurface.withValues(alpha: 0.38);
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              _SelectionIcon(
-                icon: icon,
-                enabled: enabled,
-                disabledColor: secondaryColor,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: contentColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: secondaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: secondaryColor),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SelectionIcon extends StatelessWidget {
-  const _SelectionIcon({
-    super.key,
-    required this.icon,
-    required this.enabled,
-    required this.disabledColor,
-  });
-
-  final IconData icon;
-  final bool enabled;
-  final Color disabledColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: ShapeDecoration(
-        color: colors.primary.withValues(alpha: enabled ? 0.10 : 0.05),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: Icon(
-        icon,
-        color: enabled
-            ? skedReadableAccent(
-                colors,
-                surface: colors.primary.withValues(alpha: 0.10),
-              )
-            : disabledColor,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SkedEditorOption(
+    label: label,
+    leading: ExcludeSemantics(child: Text(shortLabel)),
+    selected: selected,
+    onPressed: onTap,
+  );
 }
 
 class _CourseTimeRange extends StatelessWidget {
@@ -1737,18 +1354,28 @@ class _CourseTimeRange extends StatelessWidget {
     required this.onPickEnd,
   });
 
-  final String startLabel;
-  final String startValue;
-  final String endLabel;
-  final String endValue;
+  final String startLabel, startValue, endLabel, endValue;
   final bool enabled;
-  final ValueChanged<BuildContext>? onPickStart;
-  final ValueChanged<BuildContext>? onPickEnd;
+  final ValueChanged<BuildContext>? onPickStart, onPickEnd;
 
   @override
   Widget build(BuildContext context) {
-    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return WorkspaceEditorFieldsRow(
+    final start = SkedEditorValueAction(
+      key: const ValueKey('course-start-time-action'),
+      label: startLabel,
+      value: startValue,
+      enabled: enabled,
+      onPressed: onPickStart,
+    );
+    final end = SkedEditorValueAction(
+      key: const ValueKey('course-end-time-action'),
+      label: endLabel,
+      value: endValue,
+      enabled: enabled,
+      onPressed: onPickEnd,
+    );
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      return SkedEditorFormRow(
         minimumChildWidths: [
           workspaceEditorMinimumFieldWidth(
             context,
@@ -1764,81 +1391,29 @@ class _CourseTimeRange extends StatelessWidget {
           ),
         ],
         children: [
-          WorkspaceEditorField(
-            label: startLabel,
-            child: Builder(
-              builder: (anchor) => Tooltip(
-                message: startLabel,
-                child: WorkspaceEditorValue(
-                  key: const ValueKey('course-start-time-action'),
-                  label: startLabel,
-                  value: startValue,
-                  onPressed: enabled && onPickStart != null
-                      ? () => onPickStart!(anchor)
-                      : null,
-                ),
-              ),
-            ),
-          ),
-          WorkspaceEditorField(
-            label: endLabel,
-            child: Builder(
-              builder: (anchor) => Tooltip(
-                message: endLabel,
-                child: WorkspaceEditorValue(
-                  key: const ValueKey('course-end-time-action'),
-                  label: endLabel,
-                  value: endValue,
-                  onPressed: enabled && onPickEnd != null
-                      ? () => onPickEnd!(anchor)
-                      : null,
-                ),
-              ),
-            ),
-          ),
+          WorkspaceEditorField(label: startLabel, child: start),
+          WorkspaceEditorField(label: endLabel, child: end),
         ],
       );
     }
     final colors = Theme.of(context).colorScheme;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+    final leadingIcon = ExcludeSemantics(
+      child: SkedEditorSelectionIcon(
+        key: const ValueKey('course-time-range-icon-background'),
+        icon: Icons.schedule_outlined,
+        enabled: enabled,
+      ),
     );
     return Material(
       key: const ValueKey('course-time-range'),
       color: colors.surfaceContainerLow,
-      shape: shape,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final textScale = MediaQuery.textScalerOf(context).scale(1);
           final stacksVertically =
               constraints.maxWidth < 280 || textScale > 1.3;
-          final start = _CourseTimeAction(
-            key: const ValueKey('course-start-time-action'),
-            label: startLabel,
-            value: startValue,
-            enabled: enabled,
-            onTap: onPickStart,
-          );
-          final end = _CourseTimeAction(
-            key: const ValueKey('course-end-time-action'),
-            label: endLabel,
-            value: endValue,
-            enabled: enabled,
-            onTap: onPickEnd,
-          );
-          final secondaryColor = enabled
-              ? colors.onSurfaceVariant
-              : colors.onSurface.withValues(alpha: 0.38);
-          final leadingIcon = ExcludeSemantics(
-            child: _SelectionIcon(
-              key: const ValueKey('course-time-range-icon-background'),
-              icon: Icons.schedule_outlined,
-              enabled: enabled,
-              disabledColor: secondaryColor,
-            ),
-          );
-
           if (stacksVertically) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1868,7 +1443,6 @@ class _CourseTimeRange extends StatelessWidget {
               ),
             );
           }
-
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
@@ -1890,7 +1464,9 @@ class _CourseTimeRange extends StatelessWidget {
                                 Icons.arrow_forward,
                                 key: const ValueKey('course-time-range-arrow'),
                                 size: 20,
-                                color: secondaryColor,
+                                color: enabled
+                                    ? colors.onSurfaceVariant
+                                    : colors.onSurface.withValues(alpha: .38),
                               ),
                             ),
                           ),
@@ -1904,87 +1480,6 @@ class _CourseTimeRange extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _CourseTimeAction extends StatelessWidget {
-  const _CourseTimeAction({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final bool enabled;
-  final ValueChanged<BuildContext>? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final contentColor = enabled
-        ? colors.onSurface
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondaryColor = enabled
-        ? colors.onSurfaceVariant
-        : colors.onSurface.withValues(alpha: 0.38);
-    final VoidCallback? effectiveOnTap = enabled && onTap != null
-        ? () => onTap!(context)
-        : null;
-    final interactionShape = skedShapeSchemeOf(context).compact;
-
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: label,
-      value: value,
-      onTap: effectiveOnTap,
-      child: ExcludeSemantics(
-        child: InkWell(
-          onTap: effectiveOnTap,
-          customBorder: interactionShape,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 64),
-            child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(10, 8, 8, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          label,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: contentColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: secondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
