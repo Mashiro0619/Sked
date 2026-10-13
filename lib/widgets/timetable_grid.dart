@@ -1,15 +1,20 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:material_ui/material_ui.dart';
 
 import '../models/timetable_models.dart';
 import '../theme/color_contrast.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'timetable_entry.dart';
+import 'timetable_week_projection.dart';
 import 'sked_calendar_day_label.dart';
 import 'sked_floating_anchor.dart';
 import 'workspace_frame.dart';
 import 'workbench_chrome_metrics.dart';
+
+export 'timetable_week_projection.dart'
+    show CourseDisplayState, CourseLayout, OverlapGroup, buildOverlapGroups;
 
 const _minuteHeight = 1.4;
 const _compactHeaderHeight = 56.0;
@@ -159,10 +164,32 @@ class _TimetableGridState extends State<TimetableGrid> {
   final ScrollController _bodyHorizontalController = ScrollController();
   bool _syncingHorizontalScroll = false;
   bool _horizontalSyncScheduled = false;
+  final _projectionCache = TimetableWeekProjectionCache();
+  late TimetableWeekProjection _weekProjection;
+  _TimetableVerticalLayout? _verticalLayout;
+  final _dayGeometries =
+      <
+        int,
+        ({
+          List<CourseLayout> layouts,
+          _TimetableVerticalLayout verticalLayout,
+          double gap,
+          List<_CourseGeometry> geometries,
+        })
+      >{};
+  ({
+    Map<int, List<CourseLayout>> layouts,
+    Map<String, int> courseColors,
+    Color surface,
+    Color fallback,
+    Color result,
+  })?
+  _colorfulTextCache;
 
   @override
   void initState() {
     super.initState();
+    _updateWeekProjection();
     _headerHorizontalController.addListener(_syncHeaderToBody);
     _bodyHorizontalController.addListener(_syncBodyToHeader);
   }
@@ -170,7 +197,98 @@ class _TimetableGridState extends State<TimetableGrid> {
   @override
   void didUpdateWidget(covariant TimetableGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _updateWeekProjection();
     _scheduleHorizontalSync();
+  }
+
+  void _updateWeekProjection() {
+    _weekProjection = _projectionCache.project(
+      timetable: widget.timetable,
+      periodTimes: widget.periodTimes,
+      selectedWeek: widget.selectedWeek,
+      realCurrentWeek: widget.realCurrentWeek,
+      showPastEndedCourses: widget.showPastEndedCourses,
+      showFutureCourses: widget.showFutureCourses,
+      preserveGaps: widget.preserveGaps || widget.entries != null,
+      entries: widget.entries,
+    );
+  }
+
+  _TimetableVerticalLayout _layoutFor(double minuteHeight) {
+    final previous = _verticalLayout;
+    final preserveGaps = widget.preserveGaps || widget.entries != null;
+    if (previous != null &&
+        identical(previous.slots, _weekProjection.periodTimes) &&
+        previous.preserveGaps == preserveGaps &&
+        previous.minuteHeight == minuteHeight) {
+      return previous;
+    }
+    return _verticalLayout = _TimetableVerticalLayout(
+      slots: _weekProjection.periodTimes,
+      preserveGaps: preserveGaps,
+      minuteHeight: minuteHeight,
+    );
+  }
+
+  List<_CourseGeometry> _geometriesForDay(
+    int weekday,
+    List<CourseLayout> layouts,
+    _TimetableVerticalLayout verticalLayout,
+    double gap,
+  ) {
+    final previous = _dayGeometries[weekday];
+    if (previous != null &&
+        identical(previous.layouts, layouts) &&
+        identical(previous.verticalLayout, verticalLayout) &&
+        previous.gap == gap) {
+      return previous.geometries;
+    }
+    final geometries = _buildCourseGeometries(
+      layouts: layouts,
+      verticalLayout: verticalLayout,
+      visualGap: gap,
+    );
+    _dayGeometries[weekday] = (
+      layouts: layouts,
+      verticalLayout: verticalLayout,
+      gap: gap,
+      geometries: geometries,
+    );
+    return geometries;
+  }
+
+  Color? _colorfulTextFor(
+    Map<int, List<CourseLayout>> layouts,
+    ColorScheme colors,
+  ) {
+    if (widget.themeColorMode != themeColorModeColorful) return null;
+    if (widget.colorfulCourseTextColorMode ==
+            colorfulCourseTextColorModeCustom &&
+        widget.colorfulCourseTextColorValue != null) {
+      return Color(widget.colorfulCourseTextColorValue!);
+    }
+    final previous = _colorfulTextCache;
+    if (previous != null &&
+        identical(previous.layouts, layouts) &&
+        mapEquals(previous.courseColors, widget.courseNameColorValues) &&
+        previous.surface == colors.surface &&
+        previous.fallback == colors.onSecondaryContainer) {
+      return previous.result;
+    }
+    final result = resolveSharedColorfulTextColor(
+      layouts: layouts.values.expand((items) => items),
+      courseNameColorValues: widget.courseNameColorValues,
+      surfaceColor: colors.surface,
+      fallbackColor: colors.onSecondaryContainer,
+    );
+    _colorfulTextCache = (
+      layouts: layouts,
+      courseColors: Map.of(widget.courseNameColorValues),
+      surface: colors.surface,
+      fallback: colors.onSecondaryContainer,
+      result: result,
+    );
+    return result;
   }
 
   @override
@@ -265,16 +383,10 @@ class _TimetableGridState extends State<TimetableGrid> {
   Widget build(BuildContext context) {
     _scheduleHorizontalSync();
     _validateVisibleWeekdays(widget.visibleWeekdays);
-    final slots = widget.periodTimes.isEmpty
-        ? buildPeriodTimesForCount(1)
-        : widget.periodTimes;
+    final slots = _weekProjection.periodTimes;
     final textScaler = MediaQuery.textScalerOf(context);
     final textScale = textScaler.scale(1);
-    final layout = _TimetableVerticalLayout(
-      slots: slots,
-      preserveGaps: widget.preserveGaps || widget.entries != null,
-      minuteHeight: _minuteHeight * textScale.clamp(1.0, 1.8),
-    );
+    final layout = _layoutFor(_minuteHeight * textScale.clamp(1.0, 1.8));
     final colors = Theme.of(context).colorScheme;
     final useEntries = widget.entries != null;
     assert(
@@ -283,42 +395,10 @@ class _TimetableGridState extends State<TimetableGrid> {
     );
     // Resolve automatic colorful text against the complete week so switching
     // the day view cannot make the same course palette change text color.
-    final dayLayoutsByWeekday = <int, List<CourseLayout>>{
-      for (var weekday = DateTime.monday; weekday <= DateTime.sunday; weekday++)
-        weekday: useEntries
-            ? _buildDayLayoutsFromEntries(
-                entries: widget.entries!,
-                weekday: weekday,
-              )
-            : _buildDayLayouts(
-                timetable: widget.timetable,
-                courses: widget.timetable.courses,
-                periodTimes: slots,
-                weekday: weekday,
-                selectedWeek: widget.selectedWeek,
-                realCurrentWeek: widget.realCurrentWeek,
-                showPastEndedCourses: widget.showPastEndedCourses,
-                showFutureCourses: widget.showFutureCourses,
-                displayedCourseIdForConflict:
-                    widget.displayedCourseIdForConflict,
-                liveCourseTarget: widget.liveCourseTarget,
-                liveCourseOutlineEnabled: widget.liveCourseOutlineEnabled,
-                liveCourseOutlineMode: widget.liveCourseOutlineMode,
-                preserveGaps: layout.preserveGaps,
-              ),
-    };
-    final colorfulTextColor = widget.themeColorMode == themeColorModeColorful
-        ? widget.colorfulCourseTextColorMode ==
-                      colorfulCourseTextColorModeCustom &&
-                  widget.colorfulCourseTextColorValue != null
-              ? Color(widget.colorfulCourseTextColorValue!)
-              : resolveSharedColorfulTextColor(
-                  layouts: dayLayoutsByWeekday.values.expand((items) => items),
-                  courseNameColorValues: widget.courseNameColorValues,
-                  surfaceColor: colors.surface,
-                  fallbackColor: colors.onSecondaryContainer,
-                )
-        : null;
+    final dayLayoutsByWeekday = _weekProjection.resolveLayouts(
+      widget.displayedCourseIdForConflict,
+    );
+    final colorfulTextColor = _colorfulTextFor(dayLayoutsByWeekday, colors);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -331,9 +411,7 @@ class _TimetableGridState extends State<TimetableGrid> {
           periodTimes: slots,
           fitVisibleDaysToWidth: widget.fitVisibleDaysToWidth,
           desktop: WorkbenchChromeMetrics.of(context).desktop,
-          courseSpacing:
-              widget.entries == null ||
-              widget.entries!.every((e) => e.kind == TimetableEntryKind.course),
+          courseSpacing: _weekProjection.courseSpacing,
         );
         final baseHeaderHeight = WorkbenchChromeMetrics.of(context).desktop
             ? 60.0
@@ -514,8 +592,12 @@ class _TimetableGridState extends State<TimetableGrid> {
                                                 : Colors.transparent,
                                             showGridLines: widget.showGridLines,
                                             slots: slots,
-                                            layouts:
-                                                dayLayoutsByWeekday[weekday]!,
+                                            geometries: _geometriesForDay(
+                                              weekday,
+                                              dayLayoutsByWeekday[weekday]!,
+                                              layout,
+                                              metrics.courseVerticalGap,
+                                            ),
                                             verticalLayout: layout,
                                             metrics: metrics,
                                             themeColorMode:
@@ -526,6 +608,11 @@ class _TimetableGridState extends State<TimetableGrid> {
                                                 colorfulTextColor,
                                             liveCourseOutlineMode:
                                                 widget.liveCourseOutlineMode,
+                                            liveCourseOutlineEnabled:
+                                                widget.liveCourseOutlineEnabled,
+                                            liveCourseTarget:
+                                                widget.liveCourseTarget,
+                                            selectedWeek: widget.selectedWeek,
                                             outlineColor: Color(
                                               widget
                                                   .liveCourseOutlineColorValue,
@@ -639,13 +726,16 @@ class _DayColumn extends StatelessWidget {
     required this.borderColor,
     required this.showGridLines,
     required this.slots,
-    required this.layouts,
+    required this.geometries,
     required this.verticalLayout,
     required this.metrics,
     required this.themeColorMode,
     required this.courseNameColorValues,
     required this.colorfulTextColor,
     required this.liveCourseOutlineMode,
+    required this.liveCourseOutlineEnabled,
+    required this.liveCourseTarget,
+    required this.selectedWeek,
     required this.outlineColor,
     required this.outlineWidth,
     required this.onLongPressAt,
@@ -657,13 +747,16 @@ class _DayColumn extends StatelessWidget {
   final Color borderColor;
   final bool showGridLines;
   final List<CoursePeriodTime> slots;
-  final List<CourseLayout> layouts;
+  final List<_CourseGeometry> geometries;
   final _TimetableVerticalLayout verticalLayout;
   final _TimetableMetrics metrics;
   final String themeColorMode;
   final Map<String, int> courseNameColorValues;
   final Color? colorfulTextColor;
   final String liveCourseOutlineMode;
+  final bool liveCourseOutlineEnabled;
+  final TimetableLiveCourseTarget? liveCourseTarget;
+  final int selectedWeek;
   final Color outlineColor;
   final double outlineWidth;
   final void Function(Offset position, Rect anchor)? onLongPressAt;
@@ -672,11 +765,6 @@ class _DayColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final geometries = _buildCourseGeometries(
-      layouts: layouts,
-      verticalLayout: verticalLayout,
-      visualGap: metrics.courseVerticalGap,
-    );
     final hasDenseHitTargets = geometries.any(
       (geometry) => geometry.hitHeight < _minimumCourseHitExtent,
     );
@@ -745,6 +833,9 @@ class _DayColumn extends StatelessWidget {
                     courseNameColorValues: courseNameColorValues,
                     colorfulTextColor: colorfulTextColor,
                     liveCourseOutlineMode: liveCourseOutlineMode,
+                    liveCourseOutlineEnabled: liveCourseOutlineEnabled,
+                    liveCourseTarget: liveCourseTarget,
+                    selectedWeek: selectedWeek,
                     outlineColor: outlineColor,
                     outlineWidth: outlineWidth,
                   ),
@@ -1208,8 +1299,6 @@ class _TimetableVerticalLayout {
   }
 }
 
-enum CourseDisplayState { active, futureInactive, pastEnded }
-
 class _CourseGeometry {
   const _CourseGeometry({
     required this.layout,
@@ -1246,19 +1335,15 @@ List<_CourseGeometry> _buildCourseGeometries({
         })
       >[];
   for (final layout in layouts) {
-    final timeRange = _resolvedLayoutTimeRange(layout, verticalLayout);
-    final top = verticalLayout.rangeTop(timeRange.startMinutes);
+    final top = verticalLayout.rangeTop(layout.startMinutes);
     ranges.add((
       layout: layout,
-      startMinutes: timeRange.startMinutes,
-      endMinutes: timeRange.endMinutes,
+      startMinutes: layout.startMinutes,
+      endMinutes: layout.endMinutes,
       top: top,
       bottom:
           top +
-          verticalLayout.rangeHeight(
-            timeRange.startMinutes,
-            timeRange.endMinutes,
-          ),
+          verticalLayout.rangeHeight(layout.startMinutes, layout.endMinutes),
     ));
   }
 
@@ -1357,6 +1442,9 @@ class _CourseCard extends StatelessWidget {
     required this.courseNameColorValues,
     required this.colorfulTextColor,
     required this.liveCourseOutlineMode,
+    required this.liveCourseOutlineEnabled,
+    required this.liveCourseTarget,
+    required this.selectedWeek,
     required this.outlineColor,
     required this.outlineWidth,
   });
@@ -1367,10 +1455,26 @@ class _CourseCard extends StatelessWidget {
   final Map<String, int> courseNameColorValues;
   final Color? colorfulTextColor;
   final String liveCourseOutlineMode;
+  final bool liveCourseOutlineEnabled;
+  final TimetableLiveCourseTarget? liveCourseTarget;
+  final int selectedWeek;
   final Color outlineColor;
   final double outlineWidth;
 
   CourseLayout get layout => geometry.layout;
+
+  bool get _isPrimaryLiveTarget =>
+      layout.course != null &&
+      liveCourseOutlineEnabled &&
+      liveCourseTarget?.week == selectedWeek &&
+      liveCourseTarget?.weekday == layout.course!.dayOfWeek &&
+      liveCourseTarget?.courseId == layout.course!.id;
+
+  bool get _isLiveHighlighted =>
+      layout.course != null &&
+      liveCourseOutlineEnabled &&
+      (liveCourseOutlineMode == liveCourseOutlineModeAllDisplayed ||
+          _isPrimaryLiveTarget);
 
   bool get _isInactiveForCurrentWeek =>
       layout.entry?.isInactive ??
@@ -1486,17 +1590,17 @@ class _CourseCard extends StatelessWidget {
         : outlineWidth;
     final effectivePrimaryOutlineWidth =
         liveCourseOutlineMode == liveCourseOutlineModeAllDisplayed &&
-            layout.isPrimaryLiveTarget
+            _isPrimaryLiveTarget
         ? effectiveOutlineWidth + (compact ? 1.2 : 1.6)
         : effectiveOutlineWidth;
     final selected =
         WorkspaceSelectionScope.of(context) == 'course:${layout.course?.id}';
     final side = selected
         ? BorderSide(color: colorScheme.primary, width: 2)
-        : layout.isLiveHighlighted
+        : _isLiveHighlighted
         ? BorderSide(
             color: outlineColor,
-            width: layout.isPrimaryLiveTarget
+            width: _isPrimaryLiveTarget
                 ? effectivePrimaryOutlineWidth
                 : effectiveOutlineWidth,
           )
@@ -2189,51 +2293,6 @@ String _semanticLabelForGeometry(_CourseGeometry geometry) {
   ].join(', ');
 }
 
-({int startMinutes, int endMinutes}) _resolvedLayoutTimeRange(
-  CourseLayout layout,
-  _TimetableVerticalLayout verticalLayout,
-) {
-  final entry = layout.entry;
-  if (entry != null) {
-    return (startMinutes: entry.startMinutes, endMinutes: entry.endMinutes);
-  }
-  final course = layout.course!;
-  return resolveCourseTimeRange(course, verticalLayout.slots) ??
-      (startMinutes: course.startMinutes, endMinutes: course.endMinutes);
-}
-
-class CourseLayout {
-  const CourseLayout({
-    this.course,
-    this.entry,
-    required this.priorityDepth,
-    required this.isFullConflict,
-    required this.conflictCourses,
-    required this.displayState,
-    required this.isLiveHighlighted,
-    required this.isPrimaryLiveTarget,
-    required this.liveTargetIsCurrentCourse,
-    this.conflictKey,
-  });
-
-  final CourseItem? course;
-  final TimetableEntry? entry;
-  final int priorityDepth;
-  final bool isFullConflict;
-  final List<Object> conflictCourses;
-  final CourseDisplayState displayState;
-  final bool isLiveHighlighted;
-  final bool isPrimaryLiveTarget;
-  final bool liveTargetIsCurrentCourse;
-  final String? conflictKey;
-}
-
-class OverlapGroup {
-  const OverlapGroup(this.courses);
-
-  final List<CourseItem> courses;
-}
-
 Color resolveSharedColorfulTextColor({
   required Iterable<CourseLayout> layouts,
   required Map<String, int> courseNameColorValues,
@@ -2292,326 +2351,4 @@ Color resolveSharedColorfulTextColor({
       : 0.8 + ((minLuminance - 0.5) * 0.4);
   return Color.lerp(Colors.white, Colors.black, colorfulTextProgress) ??
       fallbackColor;
-}
-
-List<CourseLayout> _buildDayLayouts({
-  required TimetableData timetable,
-  required List<CourseItem> courses,
-  required List<CoursePeriodTime> periodTimes,
-  required int weekday,
-  required int selectedWeek,
-  required int realCurrentWeek,
-  required bool showPastEndedCourses,
-  required bool showFutureCourses,
-  required String? Function(String conflictKey)? displayedCourseIdForConflict,
-  required TimetableLiveCourseTarget? liveCourseTarget,
-  required bool liveCourseOutlineEnabled,
-  required String liveCourseOutlineMode,
-  required bool preserveGaps,
-}) {
-  final dayCourses =
-      courses
-          .where((item) => item.dayOfWeek == weekday)
-          .where((item) {
-            return _displayStateForCourse(
-                  item,
-                  selectedWeek: selectedWeek,
-                  realCurrentWeek: realCurrentWeek,
-                  showPastEndedCourses: showPastEndedCourses,
-                  showFutureCourses: showFutureCourses,
-                ) !=
-                null;
-          })
-          .map(
-            (course) => _courseWithResolvedPeriodTime(
-              course,
-              periodTimes,
-              preserveGaps: preserveGaps,
-            ),
-          )
-          .toList()
-        ..sort((a, b) {
-          final startCompare = a.startMinutes.compareTo(b.startMinutes);
-          if (startCompare != 0) {
-            return startCompare;
-          }
-          final endCompare = a.endMinutes.compareTo(b.endMinutes);
-          if (endCompare != 0) {
-            return endCompare;
-          }
-          return a.id.compareTo(b.id);
-        });
-
-  final layouts = <CourseLayout>[];
-  for (final group in buildOverlapGroups(dayCourses)) {
-    if (isFullConflictGroup(group.courses)) {
-      final conflictKey = buildConflictKeyForCourses(
-        timetable.id,
-        weekday,
-        group.courses,
-      );
-      final displayedCourseId = displayedCourseIdForConflict?.call(conflictKey);
-      final displayedCourse = pickDisplayedCourseForConflict(
-        group.courses,
-        displayedCourseId,
-      );
-      final sortedCourses = [...group.courses]
-        ..sort(compareDisplayedCourseChoice);
-      final displayState =
-          _displayStateForCourse(
-            displayedCourse,
-            selectedWeek: selectedWeek,
-            realCurrentWeek: realCurrentWeek,
-            showPastEndedCourses: showPastEndedCourses,
-            showFutureCourses: showFutureCourses,
-          ) ??
-          CourseDisplayState.active;
-      final isPrimaryLiveTarget =
-          liveCourseOutlineEnabled &&
-          liveCourseTarget?.week == selectedWeek &&
-          liveCourseTarget?.weekday == weekday &&
-          liveCourseTarget?.courseId == displayedCourse.id;
-      final isLiveHighlighted =
-          liveCourseOutlineEnabled &&
-          (liveCourseOutlineMode == liveCourseOutlineModeAllDisplayed ||
-              isPrimaryLiveTarget);
-      layouts.add(
-        CourseLayout(
-          course: displayedCourse,
-          priorityDepth: 0,
-          isFullConflict: true,
-          conflictCourses: sortedCourses,
-          displayState: displayState,
-          isLiveHighlighted: isLiveHighlighted,
-          isPrimaryLiveTarget: isPrimaryLiveTarget,
-          liveTargetIsCurrentCourse:
-              isPrimaryLiveTarget &&
-              (liveCourseTarget?.isCurrentCourse ?? false),
-          conflictKey: conflictKey,
-        ),
-      );
-      continue;
-    }
-
-    final sortedCourses = [...group.courses]..sort(compareCoursePaintPriority);
-    for (var index = 0; index < sortedCourses.length; index++) {
-      final course = sortedCourses[index];
-      final displayState =
-          _displayStateForCourse(
-            course,
-            selectedWeek: selectedWeek,
-            realCurrentWeek: realCurrentWeek,
-            showPastEndedCourses: showPastEndedCourses,
-            showFutureCourses: showFutureCourses,
-          ) ??
-          CourseDisplayState.active;
-      final isPrimaryLiveTarget =
-          liveCourseOutlineEnabled &&
-          liveCourseTarget?.week == selectedWeek &&
-          liveCourseTarget?.weekday == weekday &&
-          liveCourseTarget?.courseId == course.id;
-      final isLiveHighlighted =
-          liveCourseOutlineEnabled &&
-          (liveCourseOutlineMode == liveCourseOutlineModeAllDisplayed ||
-              isPrimaryLiveTarget);
-      layouts.add(
-        CourseLayout(
-          course: course,
-          priorityDepth: index,
-          isFullConflict: false,
-          conflictCourses: [course],
-          displayState: displayState,
-          isLiveHighlighted: isLiveHighlighted,
-          isPrimaryLiveTarget: isPrimaryLiveTarget,
-          liveTargetIsCurrentCourse:
-              isPrimaryLiveTarget &&
-              (liveCourseTarget?.isCurrentCourse ?? false),
-        ),
-      );
-    }
-  }
-  return layouts;
-}
-
-CourseItem _courseWithResolvedPeriodTime(
-  CourseItem course,
-  List<CoursePeriodTime> periodTimes, {
-  required bool preserveGaps,
-}) {
-  if (periodTimes.isEmpty) {
-    return course;
-  }
-  final range = resolveCourseTimeRange(course, periodTimes);
-  if (range != null && course.endMinutes <= course.startMinutes) {
-    return course.copyWith(
-      startMinutes: range.startMinutes,
-      endMinutes: range.endMinutes,
-      timeRange: buildTimeRange(range.startMinutes, range.endMinutes),
-    );
-  }
-  if (preserveGaps || course.endMinutes <= course.startMinutes) {
-    return course;
-  }
-
-  // When gaps are collapsed, a course entirely inside a gap maps to zero
-  // height. Anchor it to the nearest configured period so it remains visible
-  // and participates in the same overlap group as the period it occupies.
-  final start = course.startMinutes;
-  final end = course.endMinutes;
-  final overlapsSlot = periodTimes.where(
-    (slot) => start < slot.endMinutes && end > slot.startMinutes,
-  );
-  if (overlapsSlot.isNotEmpty) return course;
-  final anchor = periodTimes.firstWhere(
-    (slot) => end <= slot.startMinutes,
-    orElse: () => periodTimes.last,
-  );
-  return course.copyWith(
-    startMinutes: anchor.startMinutes,
-    endMinutes: anchor.endMinutes,
-  );
-}
-
-List<CourseLayout> _buildDayLayoutsFromEntries({
-  required List<TimetableEntry> entries,
-  required int weekday,
-}) {
-  final dayEntries = entries.where((e) => e.dayOfWeek == weekday).toList()
-    ..sort((a, b) {
-      final startCompare = a.startMinutes.compareTo(b.startMinutes);
-      if (startCompare != 0) return startCompare;
-      final endCompare = a.endMinutes.compareTo(b.endMinutes);
-      if (endCompare != 0) return endCompare;
-      return a.id.compareTo(b.id);
-    });
-
-  final layouts = <CourseLayout>[];
-  for (final group in _buildEntryOverlapGroups(dayEntries)) {
-    final sorted = [...group]..sort(_compareEntryPaintPriority);
-    for (var i = 0; i < sorted.length; i++) {
-      layouts.add(
-        CourseLayout(
-          entry: sorted[i],
-          priorityDepth: i,
-          isFullConflict: false,
-          conflictCourses: [sorted[i]],
-          displayState: CourseDisplayState.active,
-          isLiveHighlighted: false,
-          isPrimaryLiveTarget: false,
-          liveTargetIsCurrentCourse: false,
-        ),
-      );
-    }
-  }
-  return layouts;
-}
-
-List<List<TimetableEntry>> _buildEntryOverlapGroups(
-  List<TimetableEntry> entries,
-) {
-  if (entries.isEmpty) return const [];
-  final groups = <List<TimetableEntry>>[];
-  var current = <TimetableEntry>[];
-  var currentEnd = -1;
-  for (final entry in entries) {
-    if (current.isEmpty) {
-      current = [entry];
-      currentEnd = entry.endMinutes;
-      continue;
-    }
-    if (entry.startMinutes < currentEnd) {
-      current.add(entry);
-      currentEnd = math.max(currentEnd, entry.endMinutes);
-      continue;
-    }
-    groups.add(List<TimetableEntry>.from(current));
-    current = [entry];
-    currentEnd = entry.endMinutes;
-  }
-  if (current.isNotEmpty) groups.add(List<TimetableEntry>.from(current));
-  return groups;
-}
-
-int _compareEntryPaintPriority(TimetableEntry a, TimetableEntry b) {
-  final startCompare = a.startMinutes.compareTo(b.startMinutes);
-  if (startCompare != 0) return startCompare;
-  final durCompare = (b.endMinutes - b.startMinutes).compareTo(
-    a.endMinutes - a.startMinutes,
-  );
-  if (durCompare != 0) return durCompare;
-  return a.id.compareTo(b.id);
-}
-
-CourseDisplayState? _displayStateForCourse(
-  CourseItem course, {
-  required int selectedWeek,
-  required int realCurrentWeek,
-  required bool showPastEndedCourses,
-  required bool showFutureCourses,
-}) {
-  if (matchesSemesterWeek(course, selectedWeek)) {
-    return CourseDisplayState.active;
-  }
-  if (course.semesterWeeks.isEmpty) {
-    return CourseDisplayState.active;
-  }
-  final normalizedWeeks = normalizeSemesterWeeks(course.semesterWeeks);
-  if (normalizedWeeks.isEmpty) {
-    return CourseDisplayState.active;
-  }
-  if (selectedWeek < realCurrentWeek) {
-    final nextWeek = normalizedWeeks.firstWhere(
-      (week) => week > selectedWeek,
-      orElse: () => -1,
-    );
-    if (nextWeek != -1) {
-      return showFutureCourses ? CourseDisplayState.futureInactive : null;
-    }
-    return showPastEndedCourses ? CourseDisplayState.pastEnded : null;
-  }
-  if (selectedWeek > realCurrentWeek) {
-    final lastWeek = normalizedWeeks.lastWhere(
-      (week) => week < selectedWeek,
-      orElse: () => -1,
-    );
-    if (lastWeek != -1) {
-      return showPastEndedCourses ? CourseDisplayState.pastEnded : null;
-    }
-    return showFutureCourses ? CourseDisplayState.futureInactive : null;
-  }
-  final hasFutureWeek = normalizedWeeks.any((week) => week > realCurrentWeek);
-  if (hasFutureWeek) {
-    return showFutureCourses ? CourseDisplayState.futureInactive : null;
-  }
-  return showPastEndedCourses ? CourseDisplayState.pastEnded : null;
-}
-
-List<OverlapGroup> buildOverlapGroups(List<CourseItem> courses) {
-  if (courses.isEmpty) {
-    return const [];
-  }
-  final groups = <OverlapGroup>[];
-  var currentCourses = <CourseItem>[];
-  var currentEnd = -1;
-
-  for (final course in courses) {
-    if (currentCourses.isEmpty) {
-      currentCourses = [course];
-      currentEnd = course.endMinutes;
-      continue;
-    }
-    if (course.startMinutes < currentEnd) {
-      currentCourses.add(course);
-      currentEnd = math.max(currentEnd, course.endMinutes);
-      continue;
-    }
-    groups.add(OverlapGroup(List<CourseItem>.from(currentCourses)));
-    currentCourses = [course];
-    currentEnd = course.endMinutes;
-  }
-
-  if (currentCourses.isNotEmpty) {
-    groups.add(OverlapGroup(List<CourseItem>.from(currentCourses)));
-  }
-  return groups;
 }

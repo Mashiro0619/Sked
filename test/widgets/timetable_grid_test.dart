@@ -111,6 +111,9 @@ Widget _gridHarness({
   Map<String, int> courseColors = const {},
   int? textColor,
   ColorScheme? colorScheme,
+  String? Function(String)? displayedCourseIdForConflict,
+  TimetableLiveCourseTarget? liveCourseTarget,
+  bool liveCourseOutlineEnabled = false,
 }) {
   return MaterialApp(
     theme: ThemeData(
@@ -144,7 +147,9 @@ Widget _gridHarness({
               ? colorfulCourseTextColorModeAuto
               : colorfulCourseTextColorModeCustom,
           colorfulCourseTextColorValue: textColor,
-          liveCourseOutlineEnabled: false,
+          displayedCourseIdForConflict: displayedCourseIdForConflict,
+          liveCourseTarget: liveCourseTarget,
+          liveCourseOutlineEnabled: liveCourseOutlineEnabled,
           liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
           liveCourseOutlineColorValue: 0xFF6750A4,
           liveCourseOutlineWidth: 2,
@@ -172,6 +177,129 @@ ScrollableState _horizontalScrollState(WidgetTester tester, Key ownerKey) {
 }
 
 void main() {
+  testWidgets('reused week updates live outlines and conflict choices', (
+    tester,
+  ) async {
+    final timetable = _timetableWithCourses([
+      _course(id: 'first', weekday: 1, startMinutes: 480, endMinutes: 540),
+      _course(
+        id: 'alternative',
+        weekday: 1,
+        startMinutes: 480,
+        endMinutes: 540,
+      ),
+      _course(id: 'next', weekday: 1, startMinutes: 600, endMinutes: 660),
+    ]);
+    String? selected = 'first';
+    String? choose(String key) => selected;
+    TimetableCourseTapInfo? tapped;
+    Future<void> pump(String target) async {
+      await tester.pumpWidget(
+        _gridHarness(
+          timetable: timetable,
+          periodTimes: const [
+            CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),
+            CoursePeriodTime(index: 2, startMinutes: 600, endMinutes: 660),
+          ],
+          visibleWeekdays: const [1],
+          showDayHeader: false,
+          platform: TargetPlatform.windows,
+          displayedCourseIdForConflict: choose,
+          liveCourseOutlineEnabled: true,
+          liveCourseTarget: TimetableLiveCourseTarget(
+            week: 1,
+            weekday: 1,
+            courseId: target,
+            isCurrentCourse: target != 'next',
+          ),
+          onCourseTap: (value) => tapped = value,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Finder card(String id) =>
+        find.byKey(ValueKey('timetable-course-visual-$id'));
+    BorderSide outline(String id) =>
+        (tester.widget<Card>(card(id)).shape! as RoundedRectangleBorder).side;
+    await pump('first');
+    expect(outline('first'), isNot(BorderSide.none));
+    final nextBounds = tester.getRect(card('next'));
+    await pump('next');
+    expect(outline('first'), BorderSide.none);
+    expect(outline('next'), isNot(BorderSide.none));
+    expect(tester.getRect(card('next')), nextBounds);
+    selected = 'alternative';
+    await pump('alternative');
+    expect(card('first'), findsNothing);
+    expect(outline('alternative'), isNot(BorderSide.none));
+    await tester.tap(
+      find.byKey(const ValueKey('timetable-course-hit-alternative')),
+    );
+    expect(tapped!.course.id, 'alternative');
+    expect(
+      tapped!.courses.map((course) => course.id),
+      containsAll(['first', 'alternative']),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('day view keeps the full-week palette and observes color edits', (
+    tester,
+  ) async {
+    final timetable = _timetableWithCourses([
+      _course(
+        id: 'monday',
+        title: 'Monday',
+        weekday: 1,
+        startMinutes: 480,
+        endMinutes: 600,
+      ),
+      _course(
+        id: 'tuesday',
+        title: 'Tuesday',
+        weekday: 2,
+        startMinutes: 480,
+        endMinutes: 600,
+      ),
+    ]);
+    final colors = {'Monday': 0xffffffff, 'Tuesday': 0xff000000};
+    Future<void> pump(List<int> days) async {
+      await tester.pumpWidget(
+        _gridHarness(
+          timetable: timetable,
+          periodTimes: const [
+            CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 600),
+          ],
+          visibleWeekdays: days,
+          showDayHeader: false,
+          platform: TargetPlatform.windows,
+          themeColorMode: themeColorModeColorful,
+          courseColors: colors,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Color titleColor() =>
+        tester.widget<Text>(find.text('Monday')).style!.color!;
+    await pump(const [1, 2]);
+    final wholeWeekColor = titleColor();
+    await pump(const [1]);
+    expect(titleColor(), wholeWeekColor);
+    colors['Tuesday'] = 0xffffffff;
+    await pump(const [1]);
+    expect(titleColor(), isNot(wholeWeekColor));
+    final editedDayColor = titleColor();
+    await pump(const [1, 2]);
+    expect(titleColor(), editedDayColor);
+    expect(
+      tester.widget<Text>(find.text('Tuesday')).style!.color,
+      editedDayColor,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   for (final platform in [
     TargetPlatform.windows,
     TargetPlatform.macOS,
