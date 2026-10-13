@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
-import '../l10n/app_localizations.dart';
+import 'sked_confirmation_dialog.dart';
 import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 import 'adaptive_navigation_scope.dart';
@@ -69,25 +69,10 @@ mixin EditorExitGuard<T extends StatefulWidget> on State<T> {
     if (!hasUnsavedDraft) return true;
     _askingToDiscard = true;
     try {
-      final l = AppLocalizations.of(context);
       return await showDialog<bool>(
             context: context,
-            builder: (context) => guardDiscardConfirmation(
-              AlertDialog(
-                title: Text(l.periodTimesUnsavedExitTitle),
-                content: Text(l.unsavedChangesMessage),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(l.cancel),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(l.discardChangesAndExit),
-                  ),
-                ],
-              ),
-            ),
+            builder: (context) =>
+                guardDiscardConfirmation(const SkedDiscardDraftDialog()),
           ) ==
           true;
     } finally {

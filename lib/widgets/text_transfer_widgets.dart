@@ -1,3 +1,4 @@
+import 'sked_confirmation_dialog.dart';
 import 'adaptive_navigation_scope.dart';
 
 import 'desktop_window_host.dart';
@@ -154,7 +155,7 @@ Future<void> showTextExportDialog(
         Navigator.of(dialogContext).pop();
       }
 
-      return AlertDialog(
+      return SkedConfirmationDialog(
         title: Text(title),
         content: ExpressiveDialogContent(
           child: DecoratedBox(

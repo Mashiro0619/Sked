@@ -1,3 +1,4 @@
+import '../widgets/sked_confirmation_dialog.dart';
 import '../widgets/desktop_window_host.dart';
 
 import 'dart:async';
@@ -89,7 +90,7 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
       _confirming = true;
       final confirm = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => SkedConfirmationDialog(
           title: Text(l.workspaceDisableTitle),
           content: Text(l.workspaceDisableMessage),
           actions: [

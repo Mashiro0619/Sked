@@ -1,3 +1,5 @@
+import 'sked_confirmation_dialog.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -68,7 +70,7 @@ class _SkedMutationConfirmationDialogState
     final confirm = _blocked ? null : () => unawaited(_confirm());
     return PopScope(
       canPop: !_blocked,
-      child: AlertDialog(
+      child: SkedConfirmationDialog(
         insetPadding: widget.insetPadding,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

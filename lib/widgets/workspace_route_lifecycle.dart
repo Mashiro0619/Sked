@@ -4,7 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_mode.dart';
-import '../l10n/app_localizations.dart';
+import 'sked_confirmation_dialog.dart';
 import '../providers/timetable_provider.dart';
 
 /// A disabled domain must also disappear from routes pushed above the shell.
@@ -65,23 +65,9 @@ mixin WorkspaceRouteLifecycle<T extends StatefulWidget> on State<T> {
 }
 
 Future<bool> confirmWorkspaceDraftDiscard(BuildContext context) async {
-  final l = AppLocalizations.of(context);
   return await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l.periodTimesUnsavedExitTitle),
-          content: Text(l.unsavedChangesMessage),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l.discardChangesAndExit),
-            ),
-          ],
-        ),
+        builder: (context) => const SkedDiscardDraftDialog(),
       ) ==
       true;
 }

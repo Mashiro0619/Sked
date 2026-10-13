@@ -1,3 +1,5 @@
+import 'sked_confirmation_dialog.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -21,7 +23,7 @@ Future<bool> confirmSchoolImportWeekRange(
         waitForTransitionComplete: true,
         builder: (context) {
           final l10n = AppLocalizations.of(context);
-          return AlertDialog(
+          return SkedConfirmationDialog(
             title: Text(l10n.schoolWebImportWarnings),
             content: Text(
               '${l10n.totalWeeks}: $totalWeeks\n'

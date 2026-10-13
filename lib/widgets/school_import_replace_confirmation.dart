@@ -1,3 +1,5 @@
+import 'sked_confirmation_dialog.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -38,7 +40,7 @@ Future<bool> confirmSchoolImportReplacement(
           completeSkedTaskRoute(dialogContext, result);
         }
 
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.replaceCurrentTimetableConfirmTitle),
           content: Text(l10n.replaceCurrentTimetableConfirmMessage),
           actions: [

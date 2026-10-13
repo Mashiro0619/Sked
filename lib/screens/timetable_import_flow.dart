@@ -1,3 +1,5 @@
+import '../widgets/sked_confirmation_dialog.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -119,7 +121,7 @@ class TimetableImportFlow {
             Navigator.of(context).pop(value);
           }
 
-          return AlertDialog(
+          return SkedConfirmationDialog(
             title: Text(l10n.importTimetableDialogTitle),
             content: Text(
               l10n.chooseTimetableImportMethod(
@@ -230,7 +232,7 @@ class TimetableImportFlow {
           Navigator.of(context).pop(value);
         }
 
-        return AlertDialog(
+        return SkedConfirmationDialog(
           title: Text(l10n.importPeriodTimeSetDialogTitle),
           content: Text(dialogBody),
           actions: [
@@ -322,7 +324,7 @@ class TimetableImportFlow {
               Navigator.of(context).pop(result);
             }
 
-            return AlertDialog(
+            return SkedConfirmationDialog(
               title: Text(title),
               content: ExpressiveDialogContent(
                 maxWidth: 420,

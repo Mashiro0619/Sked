@@ -1,3 +1,5 @@
+import 'sked_confirmation_dialog.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -120,7 +122,7 @@ Future<bool?> _confirmExportAction({
         completeSkedTaskRoute(dialogContext, result);
       }
 
-      return AlertDialog(
+      return SkedConfirmationDialog(
         title: Text(title),
         content: Text(message),
         actions: [
