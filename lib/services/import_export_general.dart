@@ -70,8 +70,27 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
       source,
       localeCode: localeCode,
     );
-    final selected = _selectImportedSchedules(
+    return importPreparedGeneralSchedules(
+      data,
       imported.schedules,
+      scheduleIds: scheduleIds,
+      mode: mode,
+      replacementScheduleId: replacementScheduleId,
+      localeCode: localeCode,
+    );
+  }
+
+  GeneralScheduleImportMutation importPreparedGeneralSchedules(
+    GeneralScheduleData data,
+    List<GeneralSchedule> imported, {
+    required List<String> scheduleIds,
+    required GeneralScheduleImportMode mode,
+    String? replacementScheduleId,
+    required String localeCode,
+    List<GeneralCalendarIcsImportWarning> icsWarnings = const [],
+  }) {
+    final selected = _selectImportedSchedules(
+      imported,
       scheduleIds,
       localeCode: localeCode,
     );
@@ -81,6 +100,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
       mode: mode,
       replacementScheduleId: replacementScheduleId,
       localeCode: localeCode,
+      icsWarnings: icsWarnings,
     );
   }
 

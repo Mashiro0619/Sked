@@ -65,8 +65,15 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
   TimetableExportData decodeStudentImportCandidate(
     String source, {
     required String localeCode,
+  }) => decodeStudentImportEnvelope(
+    ImportExportEnvelope.decode(source),
+    localeCode: localeCode,
+  );
+
+  TimetableExportData decodeStudentImportEnvelope(
+    ImportExportEnvelope envelope, {
+    required String localeCode,
   }) {
-    final envelope = ImportExportEnvelope.decode(source);
     if (envelope.version > importExportVersion) {
       throw FormatException(
         importFileVersionUnsupportedMessage(localeCode: localeCode),
@@ -108,6 +115,28 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
       source,
       localeCode: localeCode,
     );
+    return importPreparedTimetables(
+      data,
+      imported,
+      timetableIds: timetableIds,
+      mode: mode,
+      localeCode: localeCode,
+      importBundledPeriodTimeSets: importBundledPeriodTimeSets,
+      targetPeriodTimeSetId: targetPeriodTimeSetId,
+      replacementTimetableId: replacementTimetableId,
+    );
+  }
+
+  StudentTimetableImportMutation importPreparedTimetables(
+    StudentModeData data,
+    TimetableExportData imported, {
+    required List<String> timetableIds,
+    required TimetableImportMode mode,
+    required String localeCode,
+    bool importBundledPeriodTimeSets = true,
+    String? targetPeriodTimeSetId,
+    String? replacementTimetableId,
+  }) {
     final manualTargetSetId = targetPeriodTimeSetId?.trim() ?? '';
     if (!importBundledPeriodTimeSets) {
       if (manualTargetSetId.isEmpty ||
