@@ -253,20 +253,31 @@ class GeneralCalendarService {
     bool preserveEventReminderAcknowledgements = false,
   }) {
     final base = data.schedules.isEmpty ? data.normalized() : data;
-    final existing = _eventLocationById(base, event.id);
+    final locations = base.eventLocationsById(event.id);
+    final existing = locations.firstOrNull;
     var targetScheduleId = event.calendarId.trim().isEmpty
         ? base.activeSchedule.id
         : event.calendarId.trim();
     if (!base.schedules.any((s) => s.id == targetScheduleId)) {
       targetScheduleId = base.activeSchedule.id;
     }
-    final normalized = event
-        .copyWith(calendarId: targetScheduleId)
-        .normalized(fallbackCalendarId: targetScheduleId);
+    final normalized = base.normalizeEventForCalendar(
+      event,
+      calendarId: targetScheduleId,
+    );
     final updatedSchedules = <GeneralSchedule>[];
     var inserted = false;
     for (final schedule in base.schedules) {
-      var events = schedule.events.where((e) => e.id != event.id).toList();
+      final containsEvent = locations.any(
+        (location) => identical(location.schedule, schedule),
+      );
+      if (!containsEvent && schedule.id != targetScheduleId) {
+        updatedSchedules.add(schedule);
+        continue;
+      }
+      var events = containsEvent
+          ? schedule.events.where((e) => e.id != event.id).toList()
+          : schedule.events;
       if (schedule.id == targetScheduleId) {
         events = [...events, normalized]
           ..sort((a, b) => a.startDateTimeIso.compareTo(b.startDateTimeIso));
@@ -304,20 +315,21 @@ class GeneralCalendarService {
   }
 
   GeneralScheduleData deleteEvent(GeneralScheduleData data, String eventId) {
-    final deletedLocations = <({GeneralSchedule schedule, GeneralEvent event})>[
-      for (final schedule in data.schedules)
-        for (final event in schedule.events)
-          if (event.id == eventId) (schedule: schedule, event: event),
-    ];
+    final deletedLocations = data.eventLocationsById(eventId);
     if (deletedLocations.isEmpty) {
       return data;
     }
     return data.copyWith(
       schedules: [
         for (final schedule in data.schedules)
-          schedule.copyWith(
-            events: schedule.events.where((e) => e.id != eventId).toList(),
-          ),
+          if (deletedLocations.any(
+            (location) => identical(location.schedule, schedule),
+          ))
+            schedule.copyWith(
+              events: schedule.events.where((e) => e.id != eventId).toList(),
+            )
+          else
+            schedule,
       ],
       reminderAcknowledgements: data.reminderAcknowledgements
           .where(
@@ -685,14 +697,7 @@ String _preferredActiveScheduleId(
   if (eventId.trim().isEmpty) {
     return null;
   }
-  for (final schedule in data.schedules) {
-    for (final event in schedule.events) {
-      if (event.id == eventId) {
-        return (schedule: schedule, event: event);
-      }
-    }
-  }
-  return null;
+  return data.eventLocationsById(eventId).firstOrNull;
 }
 
 bool _eventOccurrenceIdentityChanged(

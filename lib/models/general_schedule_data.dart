@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import '../data/migrations/migration.dart';
 import '../utils/constants.dart';
 import '../utils/time_utils.dart';
@@ -8,6 +10,7 @@ import 'general_schedule.dart';
 import 'general_date_range.dart';
 
 part 'general_occurrence_identity.dart';
+part 'general_schedule_normalization.dart';
 
 const generalViewWeek = 'week';
 const generalViewDay = 'day';
@@ -296,7 +299,48 @@ class GeneralScheduleData {
     this.themeSeedColorValue = defaultThemeSeedColorValue,
     this.colorfulUiColorValues = const {},
     this.reminderAcknowledgements = const [],
-  });
+  }) : _snapshot = null;
+
+  // Only repaired, owned collections receive an index. The public constructor
+  // still accepts raw values; the index contains only sendable model values.
+  GeneralScheduleData._fromSnapshot(
+    GeneralScheduleData source,
+    _GeneralScheduleSnapshot snapshot,
+    List<GeneralReminderAcknowledgement> acknowledgements,
+  ) : _snapshot = snapshot,
+      activeScheduleId = _activeScheduleId(
+        snapshot.schedules,
+        source.activeScheduleId,
+      ),
+      schedules = snapshot.schedules,
+      selectedDateIso = source.selectedDateIso,
+      customDateRange = source.customDateRange,
+      defaultView = source.defaultView,
+      viewSwitchBehavior = source.viewSwitchBehavior,
+      toolbarWidthPolicy = source.toolbarWidthPolicy,
+      dateLabelFormat = source.dateLabelFormat,
+      fitWeekColumnsToWidth = source.fitWeekColumnsToWidth,
+      customDayMinWidth = source.customDayMinWidth,
+      showWeekends = source.showWeekends,
+      showLunarCalendar = source.showLunarCalendar,
+      dayStartHour = source.dayStartHour,
+      dayEndHour = source.dayEndHour,
+      timeGridMinutes = source.timeGridMinutes,
+      timeGridHourHeight = source.timeGridHourHeight,
+      closeEventPopupOnOutsideTap = source.closeEventPopupOnOutsideTap,
+      showAddEventFab = source.showAddEventFab,
+      enableLongPressAddEvent = source.enableLongPressAddEvent,
+      allDayTimelineCollapsed = source.allDayTimelineCollapsed,
+      toolbarNavigationOrder = source.toolbarNavigationOrder,
+      hiddenToolbarNavigationIds = source.hiddenToolbarNavigationIds,
+      toolbarHiddenItemsBehavior = source.toolbarHiddenItemsBehavior,
+      themeMode = source.themeMode,
+      themeColorMode = source.themeColorMode,
+      themeSeedColorValue = source.themeSeedColorValue,
+      colorfulUiColorValues = source.colorfulUiColorValues,
+      reminderAcknowledgements = acknowledgements;
+
+  final _GeneralScheduleSnapshot? _snapshot;
 
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
@@ -344,6 +388,39 @@ class GeneralScheduleData {
 
   GeneralSchedule? get activeScheduleOrNull =>
       schedules.isEmpty ? null : activeSchedule;
+
+  /// Repaired snapshots look up ownership without enumerating event lists.
+  /// Raw callers retain the ability to contain duplicate event IDs.
+  List<({GeneralSchedule schedule, GeneralEvent event})> eventLocationsById(
+    String eventId,
+  ) {
+    final snapshot = _snapshot;
+    if (snapshot != null) {
+      return [
+        for (final index in snapshot.indexes)
+          if (index.eventsById[eventId] case final event?)
+            (schedule: index.schedule, event: event),
+      ];
+    }
+    return [
+      for (final schedule in schedules)
+        for (final event in schedule.events)
+          if (event.id == eventId) (schedule: schedule, event: event),
+    ];
+  }
+
+  /// A stored event has already crossed the repair boundary. Reusing it avoids
+  /// parsing unchanged dates when an editor saves the original values.
+  GeneralEvent normalizeEventForCalendar(
+    GeneralEvent event, {
+    required String calendarId,
+  }) {
+    final prepared = event.copyWith(calendarId: calendarId);
+    final stored = _snapshot?.byScheduleId[calendarId]?.eventsById[prepared.id];
+    return identical(stored, prepared)
+        ? prepared
+        : prepared.normalized(fallbackCalendarId: calendarId);
+  }
 
   DateTime get selectedDate {
     final parsed = tryParseStrictIsoDate(selectedDateIso);
@@ -532,10 +609,15 @@ class GeneralScheduleData {
 
   factory GeneralScheduleData.createDefault() {
     final schedule = createDefaultGeneralSchedule();
-    return GeneralScheduleData(
+    final data = GeneralScheduleData(
       activeScheduleId: schedule.id,
       schedules: [schedule],
       selectedDateIso: _dateIso(DateTime.now()),
+    );
+    return GeneralScheduleData._fromSnapshot(
+      data,
+      _GeneralScheduleSnapshot.fromSchedules([schedule]),
+      const [],
     );
   }
 
@@ -626,14 +708,22 @@ class GeneralScheduleData {
           enableLongPressAddEvent ?? this.enableLongPressAddEvent,
       allDayTimelineCollapsed:
           allDayTimelineCollapsed ?? this.allDayTimelineCollapsed,
-      toolbarNavigationOrder: normalizeToolbarNavigationOrder(
-        toolbarNavigationOrder ?? this.toolbarNavigationOrder,
-        knownIds: generalToolbarNavigationKnownIds,
-        defaultOrder: generalToolbarNavigationDefaultOrder,
+      toolbarNavigationOrder: _sharedStrings(
+        this.toolbarNavigationOrder,
+        normalizeToolbarNavigationOrder(
+          toolbarNavigationOrder ?? this.toolbarNavigationOrder,
+          knownIds: generalToolbarNavigationKnownIds,
+          defaultOrder: generalToolbarNavigationDefaultOrder,
+        ),
+        canReuse: _snapshot != null,
       ),
-      hiddenToolbarNavigationIds: normalizeToolbarHiddenNavigationIds(
-        hiddenToolbarNavigationIds ?? this.hiddenToolbarNavigationIds,
-        knownIds: generalToolbarNavigationKnownIds,
+      hiddenToolbarNavigationIds: _sharedStrings(
+        this.hiddenToolbarNavigationIds,
+        normalizeToolbarHiddenNavigationIds(
+          hiddenToolbarNavigationIds ?? this.hiddenToolbarNavigationIds,
+          knownIds: generalToolbarNavigationKnownIds,
+        ),
+        canReuse: _snapshot != null,
       ),
       toolbarHiddenItemsBehavior: normalizeToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehavior ?? this.toolbarHiddenItemsBehavior,
@@ -648,13 +738,23 @@ class GeneralScheduleData {
       reminderAcknowledgements:
           reminderAcknowledgements ?? this.reminderAcknowledgements,
     );
-    // Navigation and presentation changes do not alter events or their reminder
-    // identities. Keep that immutable branch so warmed queries remain valid.
-    return schedules == null &&
-            reminderAcknowledgements == null &&
-            nextSchedules.isNotEmpty
-        ? updated
-        : updated.normalized();
+    final snapshot = _snapshot;
+    if (snapshot == null) {
+      return schedules == null &&
+              reminderAcknowledgements == null &&
+              nextSchedules.isNotEmpty
+          ? updated
+          : updated.normalized();
+    }
+    final changes = snapshot.update(nextSchedules);
+    return GeneralScheduleData._fromSnapshot(
+      updated,
+      changes.snapshot,
+      changes.normalizeAcknowledgements(
+        reminderAcknowledgements ?? this.reminderAcknowledgements,
+        previous: this,
+      ),
+    );
   }
 
   GeneralScheduleData normalized({
@@ -704,7 +804,9 @@ class GeneralScheduleData {
         final normalizedEventWithIds = normalizedEvent.copyWith(
           id: eventId,
           calendarId: scheduleId,
-          recurrenceExceptionDateIso: normalizedExceptionDateIso,
+          recurrenceExceptionDateIso: migrateLegacyElapsedExceptions
+              ? List.unmodifiable(normalizedExceptionDateIso)
+              : normalizedExceptionDateIso,
         );
         occurrenceKeyRemaps.add(
           GeneralOccurrenceKeyRemap(
@@ -728,7 +830,7 @@ class GeneralScheduleData {
               ? 'My calendar'
               : schedule.name.trim(),
           sortOrder: normalizedSchedules.length,
-          events: normalizedEvents,
+          events: List.unmodifiable(normalizedEvents),
         ),
       );
     }
@@ -748,7 +850,7 @@ class GeneralScheduleData {
       reminderAcknowledgements,
       occurrenceKeyRemaps,
     );
-    return GeneralScheduleData(
+    final data = GeneralScheduleData(
       activeScheduleId: activeId,
       schedules: normalizedSchedules,
       selectedDateIso:
@@ -774,14 +876,18 @@ class GeneralScheduleData {
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
       allDayTimelineCollapsed: allDayTimelineCollapsed,
-      toolbarNavigationOrder: normalizeToolbarNavigationOrder(
-        toolbarNavigationOrder,
-        knownIds: generalToolbarNavigationKnownIds,
-        defaultOrder: generalToolbarNavigationDefaultOrder,
+      toolbarNavigationOrder: List.unmodifiable(
+        normalizeToolbarNavigationOrder(
+          toolbarNavigationOrder,
+          knownIds: generalToolbarNavigationKnownIds,
+          defaultOrder: generalToolbarNavigationDefaultOrder,
+        ),
       ),
-      hiddenToolbarNavigationIds: normalizeToolbarHiddenNavigationIds(
-        hiddenToolbarNavigationIds,
-        knownIds: generalToolbarNavigationKnownIds,
+      hiddenToolbarNavigationIds: List.unmodifiable(
+        normalizeToolbarHiddenNavigationIds(
+          hiddenToolbarNavigationIds,
+          knownIds: generalToolbarNavigationKnownIds,
+        ),
       ),
       toolbarHiddenItemsBehavior: normalizeToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehavior,
@@ -792,10 +898,18 @@ class GeneralScheduleData {
       colorfulUiColorValues: colorfulUiColorValues,
       reminderAcknowledgements: acknowledgements,
     );
+    return GeneralScheduleData._fromSnapshot(
+      data,
+      _GeneralScheduleSnapshot.fromSchedules(normalizedSchedules),
+      List.unmodifiable(acknowledgements),
+    );
   }
 
   GeneralScheduleData withSchedule(GeneralSchedule schedule) {
-    final normalizedSchedule = schedule.normalized();
+    final id = schedule.id.trim();
+    final normalizedSchedule = schedule.copyWith(
+      id: id.isEmpty ? createDefaultGeneralSchedule().id : id,
+    );
     final index = schedules.indexWhere((s) => s.id == normalizedSchedule.id);
     final updated = index >= 0
         ? [

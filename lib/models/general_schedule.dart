@@ -128,6 +128,14 @@ class GeneralSchedule {
   }) {
     final nextId = id ?? this.id;
     final nextEvents = events ?? this.events;
+    if (nextId == this.id &&
+        (name ?? this.name) == this.name &&
+        (colorValue ?? this.colorValue) == this.colorValue &&
+        (isVisible ?? this.isVisible) == this.isVisible &&
+        (sortOrder ?? this.sortOrder) == this.sortOrder &&
+        identical(nextEvents, this.events)) {
+      return this;
+    }
     return GeneralSchedule(
       id: nextId,
       name: name ?? this.name,
@@ -136,12 +144,12 @@ class GeneralSchedule {
       sortOrder: sortOrder ?? this.sortOrder,
       events: nextId == this.id
           ? nextEvents
-          : [
+          : List.unmodifiable([
               for (final event in nextEvents)
                 event.calendarId == this.id || event.calendarId.trim().isEmpty
                     ? event.copyWith(calendarId: nextId)
                     : event,
-            ],
+            ]),
     );
   }
 
@@ -151,10 +159,10 @@ class GeneralSchedule {
       id: normalizedId,
       name: name.trim().isEmpty ? 'My calendar' : name.trim(),
       sortOrder: sortOrder < 0 ? sortOrderFallback : sortOrder,
-      events: [
+      events: List.unmodifiable([
         for (final event in events)
           event.normalized(fallbackCalendarId: normalizedId),
-      ],
+      ]),
     );
   }
 }

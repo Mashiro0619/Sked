@@ -170,17 +170,30 @@ class GeneralEventRecurrenceRule {
     Object? count = _keepNullable,
     Object? monthlyAnchorDay = _keepNullable,
   }) {
+    final nextUntilDateIso = identical(untilDateIso, _keepNullable)
+        ? this.untilDateIso
+        : untilDateIso as String?;
+    final nextCount = identical(count, _keepNullable)
+        ? this.count
+        : count as int?;
+    final nextMonthlyAnchorDay = identical(monthlyAnchorDay, _keepNullable)
+        ? this.monthlyAnchorDay
+        : monthlyAnchorDay as int?;
+    if ((type ?? this.type) == this.type &&
+        (interval ?? this.interval) == this.interval &&
+        (unit ?? this.unit) == this.unit &&
+        nextUntilDateIso == this.untilDateIso &&
+        nextCount == this.count &&
+        nextMonthlyAnchorDay == this.monthlyAnchorDay) {
+      return this;
+    }
     return GeneralEventRecurrenceRule(
       type: type ?? this.type,
       interval: interval ?? this.interval,
       unit: unit ?? this.unit,
-      untilDateIso: identical(untilDateIso, _keepNullable)
-          ? this.untilDateIso
-          : untilDateIso as String?,
-      count: identical(count, _keepNullable) ? this.count : count as int?,
-      monthlyAnchorDay: identical(monthlyAnchorDay, _keepNullable)
-          ? this.monthlyAnchorDay
-          : monthlyAnchorDay as int?,
+      untilDateIso: nextUntilDateIso,
+      count: nextCount,
+      monthlyAnchorDay: nextMonthlyAnchorDay,
     );
   }
 }
@@ -361,6 +374,42 @@ class GeneralEvent {
                 },
                 untilDateIso: recurrenceEndDateIso,
               ));
+    final nextColorValue = identical(colorValue, _keepNullable)
+        ? this.colorValue
+        : colorValue as int?;
+    final nextReminderBehavior =
+        reminderBehavior ??
+        (reminders == null
+            ? this.reminderBehavior
+            : reminders.isEmpty
+            ? GeneralEventReminderBehavior.disabled
+            : GeneralEventReminderBehavior.custom);
+    final nextCreatedAtIso = identical(createdAtIso, _keepNullable)
+        ? this.createdAtIso
+        : createdAtIso as String?;
+    final nextUpdatedAtIso = identical(updatedAtIso, _keepNullable)
+        ? this.updatedAtIso
+        : updatedAtIso as String?;
+    if ((id ?? this.id) == this.id &&
+        (calendarId ?? this.calendarId) == this.calendarId &&
+        (title ?? this.title) == this.title &&
+        (startDateTimeIso ?? this.startDateTimeIso) == this.startDateTimeIso &&
+        (endDateTimeIso ?? this.endDateTimeIso) == this.endDateTimeIso &&
+        (isAllDay ?? this.isAllDay) == this.isAllDay &&
+        identical(nextRecurrenceRule, this.recurrenceRule) &&
+        identical(
+          recurrenceExceptionDateIso ?? this.recurrenceExceptionDateIso,
+          this.recurrenceExceptionDateIso,
+        ) &&
+        (location ?? this.location) == this.location &&
+        (notes ?? this.notes) == this.notes &&
+        nextColorValue == this.colorValue &&
+        identical(reminders ?? this.reminders, this.reminders) &&
+        nextReminderBehavior == this.reminderBehavior &&
+        nextCreatedAtIso == this.createdAtIso &&
+        nextUpdatedAtIso == this.updatedAtIso) {
+      return this;
+    }
     return GeneralEvent(
       id: id ?? this.id,
       calendarId: calendarId ?? this.calendarId,
@@ -373,23 +422,11 @@ class GeneralEvent {
           recurrenceExceptionDateIso ?? this.recurrenceExceptionDateIso,
       location: location ?? this.location,
       notes: notes ?? this.notes,
-      colorValue: identical(colorValue, _keepNullable)
-          ? this.colorValue
-          : colorValue as int?,
+      colorValue: nextColorValue,
       reminders: reminders ?? this.reminders,
-      reminderBehavior:
-          reminderBehavior ??
-          (reminders == null
-              ? this.reminderBehavior
-              : reminders.isEmpty
-              ? GeneralEventReminderBehavior.disabled
-              : GeneralEventReminderBehavior.custom),
-      createdAtIso: identical(createdAtIso, _keepNullable)
-          ? this.createdAtIso
-          : createdAtIso as String?,
-      updatedAtIso: identical(updatedAtIso, _keepNullable)
-          ? this.updatedAtIso
-          : updatedAtIso as String?,
+      reminderBehavior: nextReminderBehavior,
+      createdAtIso: nextCreatedAtIso,
+      updatedAtIso: nextUpdatedAtIso,
     );
   }
 
@@ -458,13 +495,13 @@ class GeneralEvent {
       startDateTimeIso: start.toIso8601String(),
       endDateTimeIso: end.toIso8601String(),
       recurrenceRule: normalizedRecurrenceRule,
-      recurrenceExceptionDateIso: normalizedExceptionDates,
+      recurrenceExceptionDateIso: List.unmodifiable(normalizedExceptionDates),
       reminderBehavior:
           reminderBehavior == GeneralEventReminderBehavior.custom &&
               normalizedReminders.isEmpty
           ? GeneralEventReminderBehavior.disabled
           : reminderBehavior,
-      reminders: normalizedReminders,
+      reminders: List.unmodifiable(normalizedReminders),
       createdAtIso: _tryNormalizeDateTimeIso(createdAtIso),
       updatedAtIso: _tryNormalizeDateTimeIso(updatedAtIso),
     );
