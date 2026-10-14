@@ -30,7 +30,7 @@ class _WeekCalendarView extends StatefulWidget {
     required this.customRange,
     required this.onRangePageSettled,
     required this.viewport,
-    required this.provider,
+    required this.view,
     required this.filter,
     required this.active,
     required this.syncRevision,
@@ -48,7 +48,7 @@ class _WeekCalendarView extends StatefulWidget {
   final GeneralDateRange? customRange;
   final ValueChanged<GeneralDateRange> onRangePageSettled;
   final _CalendarViewportSession viewport;
-  final TimetableProvider provider;
+  final GeneralViewState view;
   final _GeneralOccurrenceFilter filter;
   final bool active;
   final int syncRevision;
@@ -189,7 +189,7 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
 
   bool _isVisibleDay(DateTime date) {
     return widget.customRange != null ||
-        widget.provider.generalShowWeekends ||
+        widget.view.data.showWeekends ||
         date.weekday <= DateTime.friday;
   }
 
@@ -280,12 +280,12 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
                             constraints.maxWidth,
                             dayCount:
                                 widget.customRange?.dayCount ??
-                                (widget.provider.generalShowWeekends ? 7 : 5),
+                                (widget.view.data.showWeekends ? 7 : 5),
                             fitWeekColumnsToWidth:
-                                widget.provider.generalFitWeekColumnsToWidth,
+                                widget.view.data.fitWeekColumnsToWidth,
                             customDayMinWidth: widget.customRange == null
                                 ? null
-                                : widget.provider.generalCustomDayMinWidth,
+                                : widget.view.data.customDayMinWidth,
                           ).totalWidth <=
                           constraints.maxWidth + .5
                   ? const PageScrollPhysics()
@@ -302,7 +302,7 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
                     weekStart,
                     _selectedWeekdayOffset(),
                   ),
-                  provider: widget.provider,
+                  view: widget.view,
                   filter: widget.filter,
                   onDaySelected: widget.onDaySelected,
                   onEmptySlotTap: widget.onEmptySlotTap,
@@ -320,7 +320,7 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
   }
 }
 
-class _WeekTimelinePage extends StatelessWidget {
+class _WeekTimelinePage extends StatefulWidget {
   const _WeekTimelinePage({
     required this.weekStart,
     this.customDayCount,
@@ -328,7 +328,7 @@ class _WeekTimelinePage extends StatelessWidget {
     required this.viewportActive,
     required this.selectedDate,
     required this.onDaySelected,
-    required this.provider,
+    required this.view,
     required this.filter,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -344,7 +344,7 @@ class _WeekTimelinePage extends StatelessWidget {
   final bool viewportActive;
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDaySelected;
-  final TimetableProvider provider;
+  final GeneralViewState view;
   final _GeneralOccurrenceFilter filter;
   final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
   final _GeneralOccurrenceTap onOccurrenceTap;
@@ -354,31 +354,65 @@ class _WeekTimelinePage extends StatelessWidget {
   final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
 
   @override
-  Widget build(BuildContext context) {
+  State<_WeekTimelinePage> createState() => _WeekTimelinePageState();
+}
+
+class _WeekTimelinePageState extends State<_WeekTimelinePage> {
+  final _projection = GeneralTimelineProjectionCache();
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.view,
+    builder: (context, _) => _buildTimeline(context),
+  );
+
+  Widget _buildTimeline(BuildContext context) {
+    final _WeekTimelinePage(
+      :weekStart,
+      :customDayCount,
+      :viewport,
+      :viewportActive,
+      :selectedDate,
+      :onDaySelected,
+      :view,
+      :filter,
+      :onEmptySlotTap,
+      :onOccurrenceTap,
+      :onMoreOccurrencesTap,
+      :onAllDayCollapsedGroupTap,
+      :allDayTimelineCollapsed,
+      :onAllDayTimelineCollapsedChanged,
+    ) = widget;
     final days = customDayCount == null
-        ? _visibleWeekDays(weekStart, provider.generalShowWeekends)
-        : List.generate(customDayCount!, (i) => addCalendarDays(weekStart, i));
-    final occurrences = provider.generalOccurrencesForQuery(
+        ? _visibleWeekDays(weekStart, view.data.showWeekends)
+        : List.generate(customDayCount, (i) => addCalendarDays(weekStart, i));
+    final occurrences = view.occurrencesForQuery(
       filter.toQuery(
         startInclusive: weekStart,
         endExclusive: addCalendarDays(weekStart, customDayCount ?? 7),
       ),
     );
     return _CalendarTimeline(
-      days: days,
+      snapshot: _projection.project(
+        occurrences: occurrences,
+        days: days,
+        startHour: view.data.dayStartHour,
+        endHour: view.data.dayEndHour,
+      ),
+      focusRevision: view.focusRevision,
+      enableLongPressAddEvent: view.data.enableLongPressAddEvent,
       viewport: viewport,
       viewportActive: viewportActive,
       selectedDate: selectedDate,
-      occurrences: occurrences,
-      startHour: provider.generalDayStartHour,
-      endHour: provider.generalDayEndHour,
-      gridMinutes: provider.generalTimeGridMinutes,
-      hourHeight: provider.generalTimeGridHourHeight.toDouble(),
+      startHour: view.data.dayStartHour,
+      endHour: view.data.dayEndHour,
+      gridMinutes: view.data.timeGridMinutes,
+      hourHeight: view.data.timeGridHourHeight.toDouble(),
       showHeader: true,
-      fitWeekColumnsToWidth: provider.generalFitWeekColumnsToWidth,
+      fitWeekColumnsToWidth: view.data.fitWeekColumnsToWidth,
       customDayMinWidth: customDayCount == null
           ? null
-          : provider.generalCustomDayMinWidth,
+          : view.data.customDayMinWidth,
       onDaySelected: onDaySelected,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
@@ -393,7 +427,7 @@ class _WeekTimelinePage extends StatelessWidget {
 class _DayCalendarView extends StatefulWidget {
   const _DayCalendarView({
     required this.date,
-    required this.provider,
+    required this.view,
     required this.filter,
     required this.active,
     required this.syncRevision,
@@ -408,7 +442,7 @@ class _DayCalendarView extends StatefulWidget {
   });
 
   final DateTime date;
-  final TimetableProvider provider;
+  final GeneralViewState view;
   final _GeneralOccurrenceFilter filter;
   final bool active;
   final int syncRevision;
@@ -448,7 +482,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     super.initState();
     _baseDate = _visibleDayForDate(widget.date);
     _baseWeekStart = startOfWeekMonday(_baseDate);
-    _showWeekends = widget.provider.generalShowWeekends;
+    _showWeekends = widget.view.data.showWeekends;
     _settledDayPage = _generalTimelineInitialPage;
     _settledWeekPage = _generalTimelineInitialPage;
     _dayController = PageController(
@@ -473,9 +507,8 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
   void didUpdateWidget(covariant _DayCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active) _syncVisibleSelectedDate();
-    final showWeekendsChanged =
-        _showWeekends != widget.provider.generalShowWeekends;
-    _showWeekends = widget.provider.generalShowWeekends;
+    final showWeekendsChanged = _showWeekends != widget.view.data.showWeekends;
+    _showWeekends = widget.view.data.showWeekends;
     final becameActive = !oldWidget.active && widget.active;
     if (_sameDay(oldWidget.date, widget.date) &&
         oldWidget.syncRevision == widget.syncRevision &&
@@ -548,7 +581,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
 
   int _pageForDay(DateTime date) {
     final selectedDate = _visibleDayForDate(date);
-    if (widget.provider.generalShowWeekends) {
+    if (widget.view.data.showWeekends) {
       return _generalTimelineInitialPage +
           calendarDaysBetween(_baseDate, selectedDate);
     }
@@ -558,7 +591,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
 
   DateTime _dayForPage(int page) {
     final deltaDays = page - _generalTimelineInitialPage;
-    if (widget.provider.generalShowWeekends) {
+    if (widget.view.data.showWeekends) {
       return addCalendarDays(_baseDate, deltaDays);
     }
     return _addVisibleDays(_baseDate, deltaDays);
@@ -631,8 +664,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
   }
 
   bool _isVisibleDay(DateTime date) {
-    return widget.provider.generalShowWeekends ||
-        date.weekday <= DateTime.friday;
+    return widget.view.data.showWeekends || date.weekday <= DateTime.friday;
   }
 
   DateTime _visibleDayForDate(DateTime date) {
@@ -766,7 +798,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
           selectionController: _dayController,
           selectedDate: day,
           selectedDayPageFallback: _settledDayPage,
-          showWeekends: widget.provider.generalShowWeekends,
+          showWeekends: widget.view.data.showWeekends,
           dayPageForDate: _pageForDay,
           weekStartForPage: _weekStartForPage,
           onPageScroll: _handleWeekPageScroll,
@@ -789,7 +821,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
                 final pageDay = _dayForPage(index);
                 return _DayTimelinePage(
                   date: pageDay,
-                  provider: widget.provider,
+                  view: widget.view,
                   filter: widget.filter,
                   onEmptySlotTap: widget.onEmptySlotTap,
                   onOccurrenceTap: widget.onOccurrenceTap,
@@ -808,10 +840,10 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
   }
 }
 
-class _DayTimelinePage extends StatelessWidget {
+class _DayTimelinePage extends StatefulWidget {
   const _DayTimelinePage({
     required this.date,
-    required this.provider,
+    required this.view,
     required this.filter,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -822,7 +854,7 @@ class _DayTimelinePage extends StatelessWidget {
   });
 
   final DateTime date;
-  final TimetableProvider provider;
+  final GeneralViewState view;
   final _GeneralOccurrenceFilter filter;
   final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
   final _GeneralOccurrenceTap onOccurrenceTap;
@@ -832,22 +864,51 @@ class _DayTimelinePage extends StatelessWidget {
   final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
 
   @override
-  Widget build(BuildContext context) {
+  State<_DayTimelinePage> createState() => _DayTimelinePageState();
+}
+
+class _DayTimelinePageState extends State<_DayTimelinePage> {
+  final _projection = GeneralTimelineProjectionCache();
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.view,
+    builder: (context, _) => _buildTimeline(context),
+  );
+
+  Widget _buildTimeline(BuildContext context) {
+    final _DayTimelinePage(
+      :date,
+      :view,
+      :filter,
+      :onEmptySlotTap,
+      :onOccurrenceTap,
+      :onMoreOccurrencesTap,
+      :onAllDayCollapsedGroupTap,
+      :allDayTimelineCollapsed,
+      :onAllDayTimelineCollapsedChanged,
+    ) = widget;
     final day = normalizeDateOnly(date);
-    final occurrences = provider.generalOccurrencesForQuery(
+    final occurrences = view.occurrencesForQuery(
       filter.toQuery(
         startInclusive: day,
         endExclusive: calendarDateEndExclusive(day),
       ),
     );
     return _CalendarTimeline(
-      days: [day],
+      snapshot: _projection.project(
+        occurrences: occurrences,
+        days: [day],
+        startHour: view.data.dayStartHour,
+        endHour: view.data.dayEndHour,
+      ),
+      focusRevision: view.focusRevision,
+      enableLongPressAddEvent: view.data.enableLongPressAddEvent,
       selectedDate: day,
-      occurrences: occurrences,
-      startHour: provider.generalDayStartHour,
-      endHour: provider.generalDayEndHour,
-      gridMinutes: provider.generalTimeGridMinutes,
-      hourHeight: provider.generalTimeGridHourHeight.toDouble(),
+      startHour: view.data.dayStartHour,
+      endHour: view.data.dayEndHour,
+      gridMinutes: view.data.timeGridMinutes,
+      hourHeight: view.data.timeGridHourHeight.toDouble(),
       showHeader: false,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
@@ -1072,11 +1133,12 @@ class _DayPickerItem extends StatelessWidget {
 
 class _CalendarTimeline extends StatelessWidget {
   const _CalendarTimeline({
-    required this.days,
+    required this.snapshot,
+    required this.focusRevision,
+    required this.enableLongPressAddEvent,
     this.viewport,
     this.viewportActive = true,
     required this.selectedDate,
-    required this.occurrences,
     required this.startHour,
     required this.endHour,
     required this.gridMinutes,
@@ -1097,9 +1159,11 @@ class _CalendarTimeline extends StatelessWidget {
 
   final _CalendarViewportSession? viewport;
   final bool viewportActive;
-  final List<DateTime> days;
+  final GeneralTimelineSnapshot snapshot;
+  final int focusRevision;
+  final bool enableLongPressAddEvent;
+  List<DateTime> get days => snapshot.days;
   final DateTime selectedDate;
-  final List<GeneralEventOccurrence> occurrences;
   final int startHour;
   final int endHour;
   final int gridMinutes;
@@ -1136,11 +1200,7 @@ class _CalendarTimeline extends StatelessWidget {
     final gridHeight = math.max(1, endHour - startHour) * safeHourHeight;
     final contentHeight = gridHeight + labelPadding * 2;
     final minuteHeight = safeHourHeight / 60;
-    final occurrenceIndex = _TimelineOccurrenceIndex.build(occurrences, days);
-    final allDayLayout = _AllDayTimelineLayout.build(
-      occurrences: occurrences,
-      days: days,
-    );
+    final allDayLayout = _AllDayTimelineLayout(snapshot.allDay);
     final allDayCount = allDayLayout.segments.length;
     final hasAllDayOccurrences = allDayCount > 0;
     final canCollapseAllDay = allDayCount > 1;
@@ -1196,9 +1256,7 @@ class _CalendarTimeline extends StatelessWidget {
                 contentWidth: metrics.totalWidth,
                 viewport: viewport,
                 active: viewportActive,
-                focusRevision: context.select<TimetableProvider, int>(
-                  (p) => p.generalDateFocusRevision,
-                ),
+                focusRevision: focusRevision,
                 selectedDay: days.indexWhere(
                   (day) => _sameDay(day, selectedDate),
                 ),
@@ -1378,9 +1436,7 @@ class _CalendarTimeline extends StatelessWidget {
                                             },
                                       onLongPressStart:
                                           onEmptySlotTap == null ||
-                                              !context
-                                                  .read<TimetableProvider>()
-                                                  .enableLongPressAddEvent
+                                              !enableLongPressAddEvent
                                           ? null
                                           : (details) {
                                               final minutes =
@@ -1428,18 +1484,14 @@ class _CalendarTimeline extends StatelessWidget {
                                 )
                                   ..._timedOccurrenceCards(
                                     context: context,
-                                    day: days[index],
                                     start:
                                         metrics.timeColumnWidth +
                                         index * metrics.dayWidth,
                                     width: metrics.dayWidth,
                                     startMinutes: startMinutes,
-                                    endMinutes: endMinutes,
                                     minuteHeight: minuteHeight,
                                     topOffset: labelPadding,
-                                    dayOccurrences: occurrenceIndex.timedFor(
-                                      days[index],
-                                    ),
+                                    groups: snapshot.timedFor(days[index]),
                                   ),
                                 for (
                                   var index = 0;
@@ -1487,51 +1539,13 @@ class _CalendarTimeline extends StatelessWidget {
 
   Iterable<Widget> _timedOccurrenceCards({
     required BuildContext context,
-    required DateTime day,
-    required List<GeneralEventOccurrence> dayOccurrences,
+    required List<TimelineEventGroup<GeneralEventOccurrence>> groups,
     required double start,
     required double width,
     required int startMinutes,
-    required int endMinutes,
     required double minuteHeight,
     required double topOffset,
   }) sync* {
-    final dayStart = normalizeDateOnly(day);
-    final dayEnd = calendarDateEndExclusive(dayStart);
-    final segments = <_TimedOccurrenceSegment>[];
-    for (final occurrence in dayOccurrences) {
-      final displayStart = occurrence.calendarDisplayStart;
-      final displayEnd = occurrence.calendarDisplayEnd;
-      if (occurrence.isAllDay || !_sameDay(displayStart, displayEnd)) {
-        continue;
-      }
-      final segmentStart = displayStart.isBefore(dayStart)
-          ? dayStart
-          : displayStart;
-      final segmentEnd = displayEnd.isAfter(dayEnd) ? dayEnd : displayEnd;
-      final rawStart = segmentStart.hour * 60 + segmentStart.minute;
-      final rawEnd = segmentEnd.hour * 60 + segmentEnd.minute;
-      final topMinutes = rawStart.clamp(startMinutes, endMinutes).toInt();
-      final bottomMinutes = rawEnd.clamp(startMinutes, endMinutes).toInt();
-      if (bottomMinutes <= startMinutes || topMinutes >= endMinutes) {
-        continue;
-      }
-      segments.add(
-        _TimedOccurrenceSegment(
-          occurrence: occurrence,
-          startMinutes: topMinutes,
-          endMinutes: bottomMinutes,
-        ),
-      );
-    }
-    final groups = layoutTimelineEventColumns([
-      for (final segment in segments)
-        TimelineEventSpan(
-          segment.occurrence,
-          segment.startMinutes,
-          segment.endMinutes,
-        ),
-    ]);
     final chrome = WorkbenchChromeMetrics.of(context);
     final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
     const gap = 2.0;
@@ -1721,45 +1735,19 @@ class _TimelineVerticalScrollViewportState
 }
 
 class _AllDayTimelineLayout {
-  const _AllDayTimelineLayout({
-    required this.segments,
-    required this.visibleSegments,
-    required this.collapsedGroups,
-    required this.visibleLaneCount,
-    required this.laneCount,
-  });
-  static const int maxVisibleLanes = 2;
+  const _AllDayTimelineLayout(this.projection);
+
+  final GeneralAllDayProjection projection;
   static const double verticalPadding = 4;
   static const double laneGap = 3;
-  final List<_AllDaySegment> segments;
-  final List<_AllDaySegment> visibleSegments;
-  final List<_AllDayCollapsedGroup> collapsedGroups;
-  final int visibleLaneCount;
-  final int laneCount;
-  int get hiddenCount => segments.length - visibleSegments.length;
-  factory _AllDayTimelineLayout.build({
-    required List<GeneralEventOccurrence> occurrences,
-    required List<DateTime> days,
-  }) {
-    final segments = _layoutAllDaySegments(
-      _allDaySegmentsForDays(occurrences, days),
-    );
-    final lanes = segments.fold<int>(
-      0,
-      (count, segment) => math.max(count, segment.lane + 1),
-    );
-    return _AllDayTimelineLayout(
-      segments: List.unmodifiable(segments),
-      visibleSegments: List.unmodifiable(
-        segments.where((s) => s.lane < maxVisibleLanes),
-      ),
-      collapsedGroups: List.unmodifiable(
-        _groupAllDayCollapsedSegments(segments),
-      ),
-      visibleLaneCount: math.min(lanes, maxVisibleLanes),
-      laneCount: lanes,
-    );
-  }
+  List<GeneralAllDaySegment> get segments => projection.segments;
+  List<GeneralAllDaySegment> get visibleSegments => projection.visibleSegments;
+  List<GeneralAllDayCollapsedGroup> get collapsedGroups =>
+      projection.collapsedGroups;
+  int get visibleLaneCount => projection.visibleLaneCount;
+  int get laneCount => projection.laneCount;
+  int get hiddenCount => projection.hiddenCount;
+
   double laneHeightFor(BuildContext context) {
     final text = MediaQuery.textScalerOf(context).scale(12);
     return math.max(
@@ -1784,183 +1772,7 @@ class _AllDayTimelineLayout {
   }
 }
 
-class _AllDayCollapsedGroup {
-  const _AllDayCollapsedGroup({
-    required this.dayIndex,
-    required this.occurrences,
-  });
-
-  final int dayIndex;
-  final List<GeneralEventOccurrence> occurrences;
-}
-
-class _AllDaySegment {
-  const _AllDaySegment({
-    required this.occurrence,
-    required this.startIndex,
-    required this.endIndex,
-    this.lane = 0,
-  });
-
-  final GeneralEventOccurrence occurrence;
-  final int startIndex;
-  final int endIndex;
-  final int lane;
-
-  _AllDaySegment inLane(int value) => _AllDaySegment(
-    occurrence: occurrence,
-    startIndex: startIndex,
-    endIndex: endIndex,
-    lane: value,
-  );
-}
-
-List<_AllDaySegment> _allDaySegmentsForDays(
-  List<GeneralEventOccurrence> occurrences,
-  List<DateTime> days,
-) {
-  if (days.isEmpty) {
-    return const [];
-  }
-  final normalizedDays = [for (final day in days) normalizeDateOnly(day)];
-  final segments = <_AllDaySegment>[];
-  for (final occurrence in occurrences) {
-    final displayStart = occurrence.calendarDisplayStart;
-    final displayEnd = occurrence.calendarDisplayEnd;
-    // Multi-day timed events keep their existing all-day-lane representation;
-    // same-day timed events remain in the hourly grid instead.
-    if (!displayEnd.isAfter(displayStart) ||
-        (!occurrence.isAllDay && _sameDay(displayStart, displayEnd))) {
-      continue;
-    }
-
-    final eventStartDay = normalizeDateOnly(displayStart);
-    final eventLastDay = normalizeDateOnly(
-      displayEnd.subtract(const Duration(microseconds: 1)),
-    );
-    var startIndex = -1;
-    var endIndex = -1;
-    for (var index = 0; index < normalizedDays.length; index++) {
-      final day = normalizedDays[index];
-      final startsOnOrAfterEvent = calendarDaysBetween(eventStartDay, day) >= 0;
-      final endsOnOrBeforeEvent = calendarDaysBetween(day, eventLastDay) >= 0;
-      if (!startsOnOrAfterEvent || !endsOnOrBeforeEvent) {
-        continue;
-      }
-      startIndex = startIndex == -1 ? index : startIndex;
-      endIndex = index;
-    }
-    if (startIndex == -1 || endIndex < startIndex) {
-      continue;
-    }
-    segments.add(
-      _AllDaySegment(
-        occurrence: occurrence,
-        startIndex: startIndex,
-        endIndex: endIndex,
-      ),
-    );
-  }
-  return segments;
-}
-
-List<_AllDaySegment> _layoutAllDaySegments(List<_AllDaySegment> segments) {
-  final sorted = [...segments]
-    ..sort((a, b) {
-      final startCompare = a.startIndex.compareTo(b.startIndex);
-      if (startCompare != 0) return startCompare;
-      final spanCompare = b.endIndex.compareTo(a.endIndex);
-      if (spanCompare != 0) return spanCompare;
-      final startTimeCompare = a.occurrence.start.compareTo(b.occurrence.start);
-      if (startTimeCompare != 0) return startTimeCompare;
-      final titleCompare = a.occurrence.event.title.compareTo(
-        b.occurrence.event.title,
-      );
-      if (titleCompare != 0) return titleCompare;
-      return a.occurrence.event.id.compareTo(b.occurrence.event.id);
-    });
-  final laneEnds = <int>[];
-  final laidOut = <_AllDaySegment>[];
-  for (final segment in sorted) {
-    var lane = laneEnds.indexWhere((endIndex) => endIndex < segment.startIndex);
-    if (lane == -1) {
-      lane = laneEnds.length;
-      laneEnds.add(segment.endIndex);
-    } else {
-      laneEnds[lane] = segment.endIndex;
-    }
-    laidOut.add(segment.inLane(lane));
-  }
-  return laidOut;
-}
-
-List<_AllDayCollapsedGroup> _groupAllDayCollapsedSegments(
-  List<_AllDaySegment> segments,
-) {
-  if (segments.isEmpty) {
-    return const [];
-  }
-  final grouped = <int, List<GeneralEventOccurrence>>{};
-  for (final segment in segments) {
-    for (
-      var dayIndex = segment.startIndex;
-      dayIndex <= segment.endIndex;
-      dayIndex++
-    ) {
-      grouped
-          .putIfAbsent(dayIndex, () => <GeneralEventOccurrence>[])
-          .add(segment.occurrence);
-    }
-  }
-  return [
-    for (final entry in grouped.entries)
-      _AllDayCollapsedGroup(
-        dayIndex: entry.key,
-        occurrences: List.unmodifiable(entry.value),
-      ),
-  ];
-}
-
-class _TimelineOccurrenceIndex {
-  const _TimelineOccurrenceIndex({required this.timedByDate});
-
-  final Map<String, List<GeneralEventOccurrence>> timedByDate;
-
-  factory _TimelineOccurrenceIndex.build(
-    List<GeneralEventOccurrence> occurrences,
-    List<DateTime> days,
-  ) {
-    final timedByDate = <String, List<GeneralEventOccurrence>>{};
-    for (final day in days) {
-      final key = _calendarDateKey(day);
-      timedByDate[key] = [];
-    }
-    final firstDay = normalizeDateOnly(days.first);
-    final lastDay = normalizeDateOnly(days.last);
-    final rangeEndExclusive = calendarDateEndExclusive(lastDay);
-
-    for (final occurrence in occurrences) {
-      final displayStart = occurrence.calendarDisplayStart;
-      final displayEnd = occurrence.calendarDisplayEnd;
-      if (!displayEnd.isAfter(displayStart) ||
-          !displayEnd.isAfter(firstDay) ||
-          !displayStart.isBefore(rangeEndExclusive)) {
-        continue;
-      }
-
-      if (occurrence.isAllDay || !_sameDay(displayStart, displayEnd)) {
-        continue;
-      }
-
-      timedByDate[_calendarDateKey(displayStart)]?.add(occurrence);
-    }
-
-    return _TimelineOccurrenceIndex(timedByDate: timedByDate);
-  }
-
-  List<GeneralEventOccurrence> timedFor(DateTime day) =>
-      timedByDate[_calendarDateKey(day)] ?? const [];
-}
+typedef _AllDayCollapsedGroup = GeneralAllDayCollapsedGroup;
 
 class _TimelineMetrics {
   const _TimelineMetrics({
@@ -2047,17 +1859,6 @@ class _MonthRail extends StatelessWidget {
       ),
     );
   }
-}
-
-class _TimedOccurrenceSegment {
-  const _TimedOccurrenceSegment({
-    required this.occurrence,
-    required this.startMinutes,
-    required this.endMinutes,
-  });
-  final GeneralEventOccurrence occurrence;
-  final int startMinutes;
-  final int endMinutes;
 }
 
 class _DayHeader extends StatelessWidget {

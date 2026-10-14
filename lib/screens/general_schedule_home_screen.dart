@@ -4,6 +4,7 @@ import '../widgets/general_event_task_editor.dart';
 import '../widgets/general_event_edit_flow.dart';
 import '../widgets/general_month_projection.dart';
 import '../widgets/general_list_projection.dart';
+import '../widgets/general_timeline_projection.dart';
 import '../widgets/update_prompt_scope.dart';
 import '../widgets/calendar_management_actions.dart';
 import '../widgets/sked_color_draft.dart';
@@ -516,7 +517,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                           child: switch (view) {
                             generalViewDay => _DayCalendarView(
                               date: selectedDate,
-                              provider: provider,
+                              view: provider.generalView,
                               filter: filter,
                               active: pagerActive,
                               syncRevision: _pagerSyncRevision,
@@ -606,7 +607,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                               onRangePageSettled: (range) =>
                                   unawaited(_moveRange(provider, range)),
                               date: selectedDate,
-                              provider: provider,
+                              view: provider.generalView,
                               filter: filter,
                               active: pagerActive,
                               syncRevision: _pagerSyncRevision,
