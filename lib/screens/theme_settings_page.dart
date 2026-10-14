@@ -17,6 +17,8 @@ import '../widgets/sked_compact_color_picker.dart';
 
 import 'package:provider/provider.dart';
 
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
@@ -257,7 +259,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }) async {
     // Restore rotates the data session before it obtains the mutation lock.
     // Retained entry callbacks must not create a draft in that new session.
-    if (!mounted || !context.mounted || target.source.isRestoringAppBackup) {
+    if (!mounted || !context.mounted || target.source.maintenance.isReserved) {
       return;
     }
     final task = SkedTaskSession(
@@ -302,17 +304,18 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   void _switchWorkspace(WorkspaceThemeTarget provider, String value) {
     final target = AppMode.values.singleWhere((mode) => mode.value == value);
-    if (provider.source.isWorkspaceEnabled(target)) {
+    if (provider.source.workspaceView.isEnabled(target)) {
       setState(() => _targetMode = target);
       widget.onWorkspaceChanged?.call(target);
     }
   }
 
   Widget _buildPanelDisplayChoice(
-    TimetableProvider source,
+    SettingsViewState settings,
+    SettingsCommands commands,
     AppLocalizations l,
   ) {
-    final description = switch (source.workspacePanelDisplayMode) {
+    final description = switch (settings.workspacePanelDisplayMode) {
       WorkspacePanelDisplayMode.overlay =>
         l.settingsPanelDisplayOverlayDescription,
       WorkspacePanelDisplayMode.sideBySide =>
@@ -325,7 +328,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       title: l.settingsPanelDisplayMode,
       subtitle: '${l.settingsPanelDisplayModeGlobal} · $description',
       icon: Icons.view_sidebar_outlined,
-      value: source.workspacePanelDisplayMode,
+      value: settings.workspacePanelDisplayMode,
       enabled: !uiCommandBusy,
       entries: [
         DropdownMenuEntry(
@@ -345,7 +348,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         if (value != null) {
           _updateSetting(
             'Update workspace panel display mode',
-            () => source.updateWorkspacePanelDisplayMode(value),
+            () => commands.updateWorkspacePanelDisplayMode(value),
           );
         }
       },
@@ -353,9 +356,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }
 
   Widget _buildOverview(WorkspaceThemeTarget provider, AppLocalizations l) {
+    final source = provider.source;
+    final workspace = source.workspaceView;
     final controls = <Widget>[
-      _buildPanelDisplayChoice(provider.source, l),
-      if (provider.source.hasMultipleWorkspaces)
+      _buildPanelDisplayChoice(source.settingsView, source.settingsCommands, l),
+      if (workspace.enabledWorkspaces.length > 1)
         SettingsChoiceTile<String>(
           key: const ValueKey('theme-workspace-target'),
           changesAppData: false,
@@ -364,12 +369,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           value: provider.activeMode.value,
           enabled: !uiCommandBusy,
           entries: [
-            if (provider.source.isWorkspaceEnabled(AppMode.student))
+            if (workspace.isEnabled(AppMode.student))
               DropdownMenuEntry(
                 value: AppMode.student.value,
                 label: l.timetable,
               ),
-            if (provider.source.isWorkspaceEnabled(AppMode.general))
+            if (workspace.isEnabled(AppMode.general))
               DropdownMenuEntry(
                 value: AppMode.general.value,
                 label: l.themeWorkspaceSchedule,
@@ -461,7 +466,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   ) async {
     if (_outlineSettingsPageOpen ||
         uiCommandBusy ||
-        provider.source.isRestoringAppBackup) {
+        provider.source.maintenance.isReserved) {
       return;
     }
     _outlineSettingsPageOpen = true;
@@ -483,10 +488,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   Widget build(BuildContext context) {
     return Consumer<TimetableProvider>(
       builder: (context, source, child) {
-        final target =
-            _targetMode != null && source.isWorkspaceEnabled(_targetMode!)
+        final workspace = source.workspaceView;
+        final settings = source.settingsView;
+        final commands = source.settingsCommands;
+        final target = _targetMode != null && workspace.isEnabled(_targetMode!)
             ? _targetMode!
-            : source.activeMode;
+            : workspace.activeMode;
         final provider = WorkspaceThemeTarget(source, target);
         final l10n = AppLocalizations.of(context);
         if (widget.embedded) return _buildOverview(provider, l10n);
@@ -526,8 +533,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                           margin: const EdgeInsets.only(bottom: 24),
                           title: l10n.settingsSectionAppearance,
                           children: [
-                            _buildPanelDisplayChoice(source, l10n),
-                            if (source.hasMultipleWorkspaces)
+                            _buildPanelDisplayChoice(settings, commands, l10n),
+                            if (workspace.enabledWorkspaces.length > 1)
                               _AppearanceChoiceField(
                                 title: l10n.settingsThemeTarget,
                                 changesAppData: false,
@@ -539,16 +546,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                   'theme-workspace-mode-choice-list',
                                 ),
                                 segments: [
-                                  if (source.isWorkspaceEnabled(
-                                    AppMode.student,
-                                  ))
+                                  if (workspace.isEnabled(AppMode.student))
                                     _SegmentOption(
                                       value: AppMode.student.value,
                                       label: l10n.timetable,
                                     ),
-                                  if (source.isWorkspaceEnabled(
-                                    AppMode.general,
-                                  ))
+                                  if (workspace.isEnabled(AppMode.general))
                                     _SegmentOption(
                                       value: AppMode.general.value,
                                       label: l10n.themeWorkspaceSchedule,
@@ -1329,7 +1332,7 @@ class _SingleThemeColorSection extends StatelessWidget {
                         ),
                         colorValue: colorValue,
                         selected: provider.themeSeedColorValue == colorValue,
-                        onTap: provider.source.isRestoringAppBackup
+                        onTap: provider.source.maintenance.isReserved
                             ? null
                             : () => onSelectColor(colorValue),
                       ),
@@ -1384,7 +1387,7 @@ class _OutlineSettingsCard extends StatelessWidget {
       children: [
         ExpressiveTap(
           borderRadius: BorderRadius.circular(20),
-          onTap: provider.source.isRestoringAppBackup ? null : onTap,
+          onTap: provider.source.maintenance.isReserved ? null : onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

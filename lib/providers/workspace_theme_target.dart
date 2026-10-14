@@ -6,38 +6,45 @@ class WorkspaceThemeTarget {
   const WorkspaceThemeTarget(this.source, this.activeMode);
   final TimetableProvider source;
   final AppMode activeMode;
-  AppData get data => source.themeDataFor(activeMode);
+  AppData get data => source.settingsView.themeDataFor(activeMode);
   bool get isStudentMode => activeMode == AppMode.student;
   String get themeMode => data.themeMode;
   String get themeColorMode => data.themeColorMode;
   int get themeSeedColorValue => data.themeSeedColorValue;
   Map<String, int> get colorfulUiColorValues => data.colorfulUiColorValues;
-  Map<String, int> get courseNameColorValues => source.courseNameColorValues;
-  List<GeneralSchedule> get generalSchedules => source.generalSchedules;
-  String get colorfulCourseTextColorMode => source.colorfulCourseTextColorMode;
-  bool get liveCourseOutlineEnabled => source.liveCourseOutlineEnabled;
-  bool get liveCourseOutlineFollowTheme => source.liveCourseOutlineFollowTheme;
-  int get liveCourseOutlineColorValue => source.liveCourseOutlineColorValue;
-  String get liveCourseOutlineMode => source.liveCourseOutlineMode;
-  double get liveCourseOutlineWidth => source.liveCourseOutlineWidth;
+  Map<String, int> get courseNameColorValues =>
+      source.settingsView.courseNameColorValues;
+  List<GeneralSchedule> get generalSchedules => source.generalView.schedules;
+  String get colorfulCourseTextColorMode =>
+      source.settingsView.colorfulCourseTextColorMode;
+  bool get liveCourseOutlineEnabled =>
+      source.settingsView.liveCourseOutlineEnabled;
+  bool get liveCourseOutlineFollowTheme =>
+      source.settingsView.liveCourseOutlineFollowTheme;
+  int get liveCourseOutlineColorValue =>
+      source.settingsView.liveCourseOutlineColorValue;
+  String get liveCourseOutlineMode => source.settingsView.liveCourseOutlineMode;
+  double get liveCourseOutlineWidth =>
+      source.settingsView.liveCourseOutlineWidth;
   Future<void> updateThemeMode(String value) =>
-      source.updateThemeMode(value, workspace: activeMode);
-  Future<void> updateThemeSeedColorValue(int value) =>
-      source.updateThemeSeedColorValue(value, workspace: activeMode);
-  Future<void> updateThemeColorMode(String value) =>
-      source.updateThemeColorMode(value, workspace: activeMode);
-  Future<void> updateColorfulUiColorValue(String key, int value) =>
-      source.updateColorfulUiColorValue(key, value, workspace: activeMode);
+      source.settingsCommands.updateThemeMode(value, workspace: activeMode);
+  Future<void> updateThemeSeedColorValue(int value) => source.settingsCommands
+      .updateThemeSeedColorValue(value, workspace: activeMode);
+  Future<void> updateThemeColorMode(String value) => source.settingsCommands
+      .updateThemeColorMode(value, workspace: activeMode);
+  Future<void> updateColorfulUiColorValue(String key, int value) => source
+      .settingsCommands
+      .updateColorfulUiColorValue(key, value, workspace: activeMode);
   Future<void> updateCourseNameColorValue(String name, int value) =>
-      source.updateCourseNameColorValue(name, value);
+      source.settingsCommands.updateCourseNameColorValue(name, value);
   Future<void> updateGeneralScheduleColor(String id, int value) =>
-      source.updateGeneralScheduleColor(id, value);
+      source.generalCommands.updateScheduleColor(id, value);
   Future<void> updateGeneralSchedule(GeneralSchedule value) =>
-      source.updateGeneralSchedule(value);
+      source.generalCommands.updateSchedule(value);
   Future<void> updateColorfulCourseTextSettings({
     required String mode,
     required int customColorValue,
-  }) => source.updateColorfulCourseTextSettings(
+  }) => source.settingsCommands.updateColorfulCourseTextSettings(
     mode: mode,
     customColorValue: customColorValue,
   );

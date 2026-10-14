@@ -47,26 +47,26 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   @override
   void initState() {
     super.initState();
-    final provider = context.read<TimetableProvider>();
+    final settings = context.read<TimetableProvider>().settingsView;
     _derivedThemeColorValue = _derivedOutlineColorValue(
-      provider.studentMode.themeSeedColorValue,
+      settings.data.studentMode.themeSeedColorValue,
     );
-    _enabled = provider.liveCourseOutlineEnabled;
-    _followTheme = provider.liveCourseOutlineFollowTheme;
-    _colorDraft = SkedColorDraft(provider.liveCourseOutlineColorValue);
-    _customColorInitialized = provider.liveCourseOutlineCustomColorInitialized;
-    _outlineMode = provider.liveCourseOutlineMode;
-    _outlineWidth = provider.liveCourseOutlineWidth;
+    _enabled = settings.liveCourseOutlineEnabled;
+    _followTheme = settings.liveCourseOutlineFollowTheme;
+    _colorDraft = SkedColorDraft(settings.liveCourseOutlineColorValue);
+    _customColorInitialized = settings.liveCourseOutlineCustomColorInitialized;
+    _outlineMode = settings.liveCourseOutlineMode;
+    _outlineWidth = settings.liveCourseOutlineWidth;
     initializeDraftGuard();
   }
 
   Future<void> _apply() async {
     if (_blocked || !_canApply) return;
     FocusScope.of(context).unfocus();
-    final provider = context.read<TimetableProvider>();
+    final commands = context.read<TimetableProvider>().settingsCommands;
     final saved = await runUiCommand(
       debugLabel: 'Update live course outline settings',
-      command: () => provider.updateLiveCourseOutlineSettings(
+      command: () => commands.updateLiveCourseOutlineSettings(
         enabled: _enabled,
         followTheme: _followTheme,
         colorValue: _customColorValue,
