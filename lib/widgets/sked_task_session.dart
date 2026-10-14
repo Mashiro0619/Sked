@@ -2,29 +2,51 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 
 /// A task lifetime, independent of route type, draft, persistence and layout.
 /// Invalidity is latched: becoming available again never revives an old task.
 class SkedTaskSession extends ChangeNotifier {
+  /// [targetChanges] publishes the domain read by [isTargetCurrent]. The
+  /// provider bridge supplies that notification source for existing callers.
   SkedTaskSession({
     this.provider,
+    AppDataMaintenance? maintenance,
+    WorkspaceViewState? workspaceView,
+    WorkspaceCommands? workspaces,
+    Listenable? targetChanges,
     this.workspace,
     this.parent,
     this.ownerRoute,
     this.isOwnerActive,
     this.isTargetCurrent,
-  }) : _dataSession = provider?.dataSessionToken,
-       _resumeBoundary =
-           provider?.appData.workspaceReminderNotBefore[workspace] {
-    provider?.addListener(check);
-    parent?.addListener(check);
+  }) : maintenance = maintenance ?? provider?.maintenance,
+       workspaceView = workspaceView ?? provider?.workspaceView,
+       workspaces = workspaces ?? provider?.workspaces,
+       _dataSession = (maintenance ?? provider?.maintenance)?.dataSessionToken,
+       _resumeBoundary = (workspaceView ?? provider?.workspaceView)
+           ?.data
+           .workspaceReminderNotBefore[workspace] {
+    _changes = Listenable.merge([
+      this.maintenance,
+      this.workspaceView,
+      targetChanges ?? provider,
+      parent,
+    ])..addListener(check);
     final weak = WeakReference(this);
     unawaited(ownerRoute?.completed.then((_) => weak.target?.check()));
     check();
   }
+
+  /// Legacy construction bridge while callers move to domain dependencies.
   final TimetableProvider? provider;
+  final AppDataMaintenance? maintenance;
+  final WorkspaceViewState? workspaceView;
+  final WorkspaceCommands? workspaces;
   final AppMode? workspace;
   final SkedTaskSession? parent;
   final ModalRoute<dynamic>? ownerRoute;
@@ -32,6 +54,7 @@ class SkedTaskSession extends ChangeNotifier {
   final bool Function()? isTargetCurrent;
   final Object? _dataSession;
   final Object? _resumeBoundary;
+  late final Listenable _changes;
   bool _invalidated = false;
   bool _disposed = false;
 
@@ -39,11 +62,10 @@ class SkedTaskSession extends ChangeNotifier {
     if (_disposed || _invalidated) return false;
     if (ownerRoute?.isActive == false ||
         parent?.isCurrent == false ||
-        !identical(_dataSession, provider?.dataSessionToken) ||
+        !identical(_dataSession, maintenance?.dataSessionToken) ||
         _resumeBoundary !=
-            provider?.appData.workspaceReminderNotBefore[workspace] ||
-        (workspace != null &&
-            provider?.isWorkspaceEnabled(workspace!) == false) ||
+            workspaceView?.data.workspaceReminderNotBefore[workspace] ||
+        (workspace != null && workspaceView?.isEnabled(workspace!) == false) ||
         isOwnerActive?.call() == false ||
         isTargetCurrent?.call() == false) {
       invalidate();
@@ -67,8 +89,7 @@ class SkedTaskSession extends ChangeNotifier {
     if (_disposed) return;
     invalidate();
     _disposed = true;
-    provider?.removeListener(check);
-    parent?.removeListener(check);
+    _changes.removeListener(check);
     super.dispose();
   }
 }
@@ -95,6 +116,10 @@ class SkedTaskRouteGuard extends StatefulWidget {
   const SkedTaskRouteGuard({
     super.key,
     this.provider,
+    this.maintenance,
+    this.workspaceView,
+    this.workspaces,
+    this.targetChanges,
     this.workspace,
     this.parent,
     this.isOwnerActive,
@@ -102,6 +127,10 @@ class SkedTaskRouteGuard extends StatefulWidget {
     required this.child,
   });
   final TimetableProvider? provider;
+  final AppDataMaintenance? maintenance;
+  final WorkspaceViewState? workspaceView;
+  final WorkspaceCommands? workspaces;
+  final Listenable? targetChanges;
   final AppMode? workspace;
   final SkedTaskSession? parent;
   final bool Function()? isOwnerActive;
@@ -120,6 +149,10 @@ class _SkedTaskRouteGuardState extends State<SkedTaskRouteGuard> {
     super.initState();
     _session = SkedTaskSession(
       provider: widget.provider,
+      maintenance: widget.maintenance,
+      workspaceView: widget.workspaceView,
+      workspaces: widget.workspaces,
+      targetChanges: widget.targetChanges,
       workspace: widget.workspace,
       parent: widget.parent,
       isOwnerActive: () =>
@@ -143,6 +176,10 @@ class _SkedTaskRouteGuardState extends State<SkedTaskRouteGuard> {
     // A guard belongs to one data owner and one task. Replacing that identity
     // invalidates it rather than silently capturing a fresh data session.
     if (oldWidget.provider != widget.provider ||
+        oldWidget.maintenance != widget.maintenance ||
+        oldWidget.workspaceView != widget.workspaceView ||
+        oldWidget.workspaces != widget.workspaces ||
+        oldWidget.targetChanges != widget.targetChanges ||
         oldWidget.workspace != widget.workspace ||
         oldWidget.parent != widget.parent) {
       _session.invalidate();

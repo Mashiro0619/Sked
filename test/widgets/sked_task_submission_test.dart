@@ -9,12 +9,15 @@ import 'package:sked/widgets/sked_task_submission_controller.dart';
 import '../support/workspace_harness.dart';
 
 void main() {
-  testWidgets('submission gate rejects duplicates and releases after failure', (
-    t,
-  ) async {
+  testWidgets('domain submission blocks exit until failure settles', (t) async {
     final p = await workspaceProvider(mode: AppMode.general);
     addTearDown(p.dispose);
-    final session = SkedTaskSession(provider: p, workspace: AppMode.general);
+    final session = SkedTaskSession(
+      maintenance: p.maintenance,
+      workspaceView: p.workspaceView,
+      workspaces: p.workspaces,
+      workspace: AppMode.general,
+    );
     addTearDown(session.dispose);
     final submit = SkedTaskSubmissionController(session: session);
     addTearDown(submit.dispose);
@@ -53,8 +56,8 @@ void main() {
       ),
       isFalse,
     );
-    await p.setWorkspaceEnabled(AppMode.general, false);
-    expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+    await p.workspaces.setEnabled(AppMode.general, false);
+    expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
     gate.complete();
     expect(await first, isFalse);
     expect(submit.busy, isFalse);
@@ -70,6 +73,9 @@ void main() {
       isTrue,
     );
     expect(calls, 2);
+    await p.workspaces.setEnabled(AppMode.general, false);
+    expect(p.workspaceView.isEnabled(AppMode.general), isFalse);
+    expect(session.isCurrent, isFalse);
     await t.pumpAndSettle();
     await t.pumpWidget(const SizedBox());
   });

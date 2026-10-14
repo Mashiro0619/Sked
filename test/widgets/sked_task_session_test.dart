@@ -117,6 +117,137 @@ void main() {
       expect(session.isCurrent, isFalse);
     },
   );
+  test(
+    'domain maintenance invalidates tasks before replacement begins',
+    () async {
+      final p = await workspaceProvider(mode: AppMode.general);
+      addTearDown(p.dispose);
+      final session = SkedTaskSession(
+        maintenance: p.maintenance,
+        workspaceView: p.workspaceView,
+        workspaces: p.workspaces,
+        workspace: AppMode.general,
+      );
+      addTearDown(session.dispose);
+      var notices = 0;
+      session.addListener(() => notices++);
+
+      final reservation = p.maintenance.reserve();
+      expect(notices, 1);
+      expect(session.isCurrent, isFalse);
+      p.maintenance.release(reservation);
+      expect(session.isCurrent, isFalse);
+      expect(notices, 1);
+    },
+  );
+  test('domain workspace changes cannot revive a retired task', () async {
+    final p = await workspaceProvider(mode: AppMode.general);
+    addTearDown(p.dispose);
+    final session = SkedTaskSession(
+      maintenance: p.maintenance,
+      workspaceView: p.workspaceView,
+      workspaces: p.workspaces,
+      workspace: AppMode.general,
+    );
+    addTearDown(session.dispose);
+    var notices = 0;
+    session.addListener(() => notices++);
+
+    await p.workspaces.setEnabled(AppMode.general, false);
+    expect(notices, 1);
+    expect(session.isCurrent, isFalse);
+    await p.workspaces.setEnabled(AppMode.general, true);
+    expect(session.isCurrent, isFalse);
+    expect(notices, 1);
+  });
+  test('a target domain retires a task when its calendar is deleted', () async {
+    final p = await workspaceProvider(mode: AppMode.general);
+    addTearDown(p.dispose);
+    final calendarId = p.generalView.schedules.last.id;
+    final session = SkedTaskSession(
+      maintenance: p.maintenance,
+      workspaceView: p.workspaceView,
+      workspaces: p.workspaces,
+      targetChanges: p.generalView,
+      workspace: AppMode.general,
+      isTargetCurrent: () =>
+          p.generalView.schedules.any((calendar) => calendar.id == calendarId),
+    );
+    addTearDown(session.dispose);
+    var notices = 0;
+    session.addListener(() => notices++);
+
+    await p.generalCommands.deleteSchedule(calendarId);
+    expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
+    expect(notices, 1);
+    expect(session.isCurrent, isFalse);
+  });
+  test('disposed domain tasks detach their target listener', () {
+    final target = ValueNotifier(true);
+    addTearDown(target.dispose);
+    var reads = 0;
+    final session = SkedTaskSession(
+      targetChanges: target,
+      isTargetCurrent: () {
+        reads++;
+        return target.value;
+      },
+    );
+    expect(session.isCurrent, isTrue);
+    final beforeDispose = reads;
+    session.dispose();
+    target.value = false;
+    expect(reads, beforeDispose);
+  });
+  testWidgets('domain guard retires only its route during maintenance', (
+    t,
+  ) async {
+    final p = await workspaceProvider(mode: AppMode.general);
+    addTearDown(p.dispose);
+    await t.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => SkedTaskRouteGuard(
+                maintenance: p.maintenance,
+                workspaceView: p.workspaceView,
+                workspaces: p.workspaces,
+                workspace: AppMode.general,
+                child: const AlertDialog(title: Text('Domain task')),
+              ),
+            ),
+            child: const Text('Open'),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('Open'));
+    await t.pumpAndSettle();
+    final ownContext = t.element(find.text('Domain task'));
+    final route = ModalRoute.of(ownContext)!;
+    final newer = showDialog<void>(
+      context: ownContext,
+      builder: (_) => const AlertDialog(title: Text('Newer domain task')),
+    );
+    await t.pumpAndSettle();
+
+    final reservation = p.maintenance.reserve();
+    try {
+      await t.pumpAndSettle();
+      expect(route.isActive, isFalse);
+      expect(find.text('Domain task'), findsNothing);
+      expect(find.text('Newer domain task'), findsOneWidget);
+    } finally {
+      p.maintenance.release(reservation);
+    }
+    completeSkedTaskRoute(t.element(find.text('Newer domain task')));
+    await newer;
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox());
+  });
   testWidgets('route guard removes only owned route beneath a newer dialog', (
     t,
   ) async {

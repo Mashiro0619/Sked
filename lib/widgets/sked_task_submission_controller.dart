@@ -15,7 +15,7 @@ class SkedTaskSubmissionController extends ChangeNotifier {
   SkedTaskSubmissionController({required this.session}) {
     final workspace = session.workspace;
     if (workspace != null) {
-      _unregister = session.provider?.registerWorkspaceExitGuard(
+      _unregister = session.workspaces?.registerExitGuard(
         workspace,
         () async => !busy,
       );
