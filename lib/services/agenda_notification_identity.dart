@@ -17,3 +17,11 @@ int notificationIdForKey(String key) {
   // collide with a test that deliberately uses a fixed, discoverable ID.
   return (value % (developerNotificationIdStart - 1)) + 1;
 }
+
+const developerNotificationIdEnd = 2147483647;
+
+bool isDeveloperNotificationId(int id) =>
+    id >= developerNotificationIdStart && id <= developerNotificationIdEnd;
+
+int nextDeveloperNotificationId(int id) =>
+    id >= developerNotificationIdEnd ? developerNotificationIdStart : id + 1;

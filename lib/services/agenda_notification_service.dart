@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:flutter/widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:url_launcher/url_launcher.dart';
@@ -31,8 +30,11 @@ import 'windows_notification_identity.dart';
 
 import 'agenda_notification_contract.dart';
 import 'agenda_notification_identity.dart';
+import 'agenda_notification_test_ids.dart';
 
 export 'agenda_notification_contract.dart';
+export 'agenda_notification_memory_gateway.dart';
+export 'agenda_notification_test_ids.dart';
 export 'agenda_notification_identity.dart' show notificationIdForKey;
 
 @visibleForTesting
@@ -427,313 +429,6 @@ Future<bool> _backgroundExactDeliveryAllowed(
   }
 }
 
-/// Deterministic allocator used by in-memory gateways and tests.
-class MemoryAgendaNotificationTestIdAllocator
-    implements AgendaNotificationTestIdAllocator {
-  MemoryAgendaNotificationTestIdAllocator({int? nextId})
-    : _nextId = nextId ?? _developerTestNotificationIdStart;
-
-  int _nextId;
-
-  @override
-  Future<int> allocate({required Set<int> occupiedIds}) async {
-    var candidate = _nextId;
-    for (
-      var offset = 0;
-      offset <=
-          _developerTestNotificationIdEnd - _developerTestNotificationIdStart;
-      offset++
-    ) {
-      if (!occupiedIds.contains(candidate)) {
-        _nextId = _nextDeveloperTestNotificationId(candidate);
-        return candidate;
-      }
-      candidate = _nextDeveloperTestNotificationId(candidate);
-    }
-    throw StateError('No developer notification test IDs are available.');
-  }
-}
-
-/// SharedPreferences-backed developer-test ID allocator.
-///
-/// The cursor is advanced before the ID is returned.  If scheduling is
-/// interrupted, that ID is intentionally skipped rather than reused on the
-/// next process launch, which prevents a stale visible notification from being
-/// replaced after a crash.  A random first cursor also avoids colliding with
-/// the two fixed IDs used by pre-2.2.0 builds when their active notification
-/// list is temporarily unavailable on an OEM device.
-class SharedPreferencesAgendaNotificationTestIdAllocator
-    implements AgendaNotificationTestIdAllocator {
-  SharedPreferencesAgendaNotificationTestIdAllocator({
-    Future<SharedPreferences> Function()? preferencesProvider,
-    math.Random? random,
-  }) : _preferencesProvider =
-           preferencesProvider ?? SharedPreferences.getInstance,
-       _random = random ?? math.Random.secure();
-
-  static const storageKey =
-      'sked.notification.runtime.developer_test_next_id.v1';
-
-  // A static tail serializes allocators created by multiple gateway instances
-  // in the same isolate.  The persisted/random cursor still protects the
-  // process-restart case where no Dart object survives.
-  static Future<void> _allocationTail = Future<void>.value();
-
-  final Future<SharedPreferences> Function() _preferencesProvider;
-  final math.Random _random;
-
-  @override
-  Future<int> allocate({required Set<int> occupiedIds}) {
-    final occupied = Set<int>.of(occupiedIds);
-    final previous = _allocationTail;
-    final operation = previous.then<int>(
-      (_) => _allocate(occupied),
-      onError: (_, _) => _allocate(occupied),
-    );
-    _allocationTail = operation.then<void>((_) {}, onError: (_, _) {});
-    return operation;
-  }
-
-  Future<int> _allocate(Set<int> occupiedIds) async {
-    var candidate = _randomCandidate();
-    try {
-      final preferences = await _preferencesProvider();
-      final stored = preferences.getInt(storageKey);
-      if (stored != null && _isDeveloperTestNotificationId(stored)) {
-        candidate = stored;
-      }
-      for (
-        var offset = 0;
-        offset <=
-            _developerTestNotificationIdEnd - _developerTestNotificationIdStart;
-        offset++
-      ) {
-        if (!occupiedIds.contains(candidate)) {
-          final next = _nextDeveloperTestNotificationId(candidate);
-          // A false result is unusual; the current process still has a unique
-          // ID, while the next launch will use a fresh random cursor if this
-          // runtime-only write was rejected by the platform.
-          if (!await preferences.setInt(storageKey, next)) {
-            // Do not treat an unpersisted cursor as durable. Fall through to
-            // the random in-process fallback so a later process cannot reuse
-            // this ID after a failed SharedPreferences write.
-            throw StateError('Developer notification ID cursor was not saved.');
-          }
-          return candidate;
-        }
-        candidate = _nextDeveloperTestNotificationId(candidate);
-      }
-    } catch (_) {
-      // Diagnostics should remain usable if SharedPreferences is temporarily
-      // unavailable (for example while Android is restoring application data).
-      // The random fallback is still safe against ordinary ID reuse.
-    }
-
-    // If the persistent store could not be read, allocate from a fresh random
-    // point and probe the IDs reserved for developer diagnostics.  The local
-    // gateway also tracks its returned IDs, so rapid taps remain distinct.
-    candidate = _randomCandidate();
-    for (
-      var offset = 0;
-      offset <=
-          _developerTestNotificationIdEnd - _developerTestNotificationIdStart;
-      offset++
-    ) {
-      if (!occupiedIds.contains(candidate)) return candidate;
-      candidate = _nextDeveloperTestNotificationId(candidate);
-    }
-    throw StateError('No developer notification test IDs are available.');
-  }
-
-  int _randomCandidate() =>
-      _developerTestNotificationIdStart +
-      _random.nextInt(
-        _developerTestNotificationIdEnd - _developerTestNotificationIdStart + 1,
-      );
-}
-
-/// In-memory gateway useful for widget/unit tests and desktop previews.
-class MemoryAgendaNotificationGateway
-    implements
-        AgendaNotificationGateway,
-        AgendaNotificationMetadataGateway,
-        AgendaNotificationScheduleIdGateway,
-        AgendaNotificationPlatformDiagnosticsGateway,
-        AgendaNotificationOwnershipGateway,
-        AgendaNotificationIdCancellationGateway,
-        AgendaNotificationBatteryOptimizationGateway,
-        AgendaNotificationChannelStateGateway,
-        AgendaNotificationTestGateway {
-  MemoryAgendaNotificationGateway({
-    AgendaNotificationTestIdAllocator? developerTestIdAllocator,
-  }) : _developerTestIdAllocator =
-           developerTestIdAllocator ??
-           MemoryAgendaNotificationTestIdAllocator();
-
-  final Map<String, AgendaNotificationRequest> scheduled = {};
-
-  /// Test notifications are keyed by their platform id so repeated diagnostic
-  /// taps model Android's separate notification cards rather than replacing a
-  /// previous card in the test double.
-  final Map<int, AgendaNotificationTestRequest> testNotifications = {};
-  Future<void> _developerTestTail = Future<void>.value();
-  final AgendaNotificationTestIdAllocator _developerTestIdAllocator;
-  void Function(String? payload)? _onTap;
-  void Function(String? payload, String? actionId)? _onAction;
-  bool permissionGranted = true;
-  bool exactAlarmGranted = true;
-  bool batteryOptimizationGranted = true;
-  int? _lastScheduledNotificationId;
-
-  Future<T> _enqueueDeveloperTest<T>(Future<T> Function() operation) {
-    final previous = _developerTestTail;
-    final result = previous.then<T>(
-      (_) => operation(),
-      onError: (_, _) {
-        return operation();
-      },
-    );
-    _developerTestTail = result.then<void>((_) {}, onError: (_, _) {});
-    return result;
-  }
-
-  @override
-  int? get lastScheduledNotificationId => _lastScheduledNotificationId;
-
-  @override
-  Future<AgendaNotificationPlatformSnapshot> platformSnapshot() async {
-    return AgendaNotificationPlatformSnapshot(
-      sampledAt: DateTime.now(),
-      pendingIds: scheduled.values
-          .map((item) => item.id)
-          .toList(growable: false),
-      activeIds: const [],
-      platform: AgendaNotificationPlatform.unsupported,
-      permissionState: permissionGranted
-          ? AgendaNotificationPermissionState.granted
-          : AgendaNotificationPermissionState.denied,
-      exactAlarmState: exactAlarmGranted
-          ? AgendaNotificationExactAlarmState.exact
-          : AgendaNotificationExactAlarmState.inexact,
-    );
-  }
-
-  @override
-  Future<Set<String>> ownedNotificationKeys() async =>
-      Set.unmodifiable(scheduled.keys);
-
-  @override
-  Future<void> cancelNotificationId(int id, {String? tag}) async {
-    scheduled.removeWhere((_, request) => request.id == id);
-  }
-
-  @override
-  Future<void> initialize({
-    required void Function(String? payload) onTap,
-    void Function(String? payload, String? actionId)? onAction,
-  }) async {
-    _onTap = onTap;
-    _onAction = onAction;
-  }
-
-  @override
-  Future<Map<String, DateTime>> pendingPlan() async => {
-    for (final entry in scheduled.entries) entry.key: entry.value.fireAt,
-  };
-
-  @override
-  Future<Map<String, AgendaNotificationMetadata>> pendingMetadata() async => {
-    for (final entry in scheduled.entries)
-      entry.key: AgendaNotificationMetadata(
-        fireAt: entry.value.fireAt,
-        fingerprint: _notificationFingerprint(entry.value),
-        id: entry.value.id,
-        exact:
-            AgendaNotificationPayload.tryDecode(entry.value.payload)
-                ?.scheduleExact ??
-            false,
-        hasStableTag:
-            AgendaNotificationPayload.tryDecode(entry.value.payload)
-                ?.hasStableTag ??
-            false,
-      ),
-  };
-
-  @override
-  Future<void> schedule(
-    AgendaNotificationRequest request, {
-    required bool exact,
-  }) async {
-    // Keep optional platform scheduling outcomes coherent for every request.
-    // The in-memory gateway never probes, so its actual ID is the stable
-    // preferred ID carried by the request.
-    _lastScheduledNotificationId = request.id;
-    scheduled[request.key] = request;
-  }
-
-  @override
-  Future<void> cancel(String key) async => scheduled.remove(key);
-
-  @override
-  Future<void> cancelAll() async => scheduled.clear();
-
-  @override
-  Future<bool> requestPermission() async => permissionGranted;
-
-  @override
-  Future<bool> requestExactAlarmPermission() async => exactAlarmGranted;
-
-  @override
-  Future<bool> get notificationsEnabled async => permissionGranted;
-
-  @override
-  Future<bool> get exactAlarmsAllowed async => exactAlarmGranted;
-
-  @override
-  Future<bool> get batteryOptimizationIgnored async =>
-      batteryOptimizationGranted;
-
-  @override
-  Future<bool> notificationChannelEnabled(String channelId) async => true;
-
-  @override
-  Future<bool> openNotificationSettings() async => true;
-
-  @override
-  Future<void> showTestNotification(AgendaNotificationTestRequest request) =>
-      _enqueueDeveloperTest(() async {
-        final id = await _developerTestIdAllocator.allocate(
-          occupiedIds: testNotifications.keys.toSet(),
-        );
-        testNotifications[id] = request.copyWith(id: id);
-      });
-
-  @override
-  Future<void> scheduleTestNotification(
-    AgendaNotificationTestRequest request,
-  ) => _enqueueDeveloperTest(() async {
-    final id = await _developerTestIdAllocator.allocate(
-      occupiedIds: testNotifications.keys.toSet(),
-    );
-    testNotifications[id] = request.copyWith(id: id);
-  });
-
-  @override
-  Future<void> clearTestNotifications() => _enqueueDeveloperTest(() async {
-    testNotifications.clear();
-  });
-
-  /// Simulates a notification click in tests.
-  void tap(String key) {
-    _onTap?.call(scheduled[key]?.payload);
-  }
-
-  void act(String key, String actionId) {
-    _onAction?.call(scheduled[key]?.payload, actionId);
-  }
-}
-
-/// Flutter implementation backed by flutter_local_notifications.
 class FlutterAgendaNotificationGateway
     implements
         AgendaNotificationGateway,
@@ -1576,12 +1271,12 @@ class FlutterAgendaNotificationGateway
       } else if (_isDeveloperTestPayload(request.payload)) {
         _knownDeveloperTestNotificationIds.add(request.id);
         _knownScheduledDeveloperTestNotificationIds.add(request.id);
-      } else if (_isWindows && _isDeveloperTestNotificationId(request.id)) {
+      } else if (_isWindows && isDeveloperNotificationId(request.id)) {
         // Windows pending requests intentionally omit payload/title/body.
         // The reserved ID range is the durable namespace for developer tests.
         _knownDeveloperTestNotificationIds.add(request.id);
         _knownScheduledDeveloperTestNotificationIds.add(request.id);
-      } else if (_isAndroid && _isDeveloperTestNotificationId(request.id)) {
+      } else if (_isAndroid && isDeveloperNotificationId(request.id)) {
         // A damaged/legacy payload must still consume the reserved alarm slot
         // and remain removable by the developer-test cleanup action.
         _knownDeveloperTestNotificationIds.add(request.id);
@@ -1631,7 +1326,7 @@ class FlutterAgendaNotificationGateway
         active
             .map((notification) => notification.id)
             .whereType<int>()
-            .where(_isDeveloperTestNotificationId),
+            .where(isDeveloperNotificationId),
       );
     } on UnimplementedError {
       // Some platform implementations do not expose active notifications.
@@ -4338,17 +4033,14 @@ const _renewalDirectAlarmBuffer = 300;
 const _windowsMaxScheduledNotifications = 200;
 const _windowsReminderHorizon = Duration(days: 14);
 const _exactAlarmPermissionErrorCode = 'exact_alarms_not_permitted';
-const _developerTestNotificationIdStart = developerNotificationIdStart;
-const _developerTestNotificationIdEnd = 2147483647;
 // Keep diagnostic delayed alarms below the remaining headroom after the
 // production direct-alarm budget (450) and the one native renewal wake-up.
 // Samsung has reported a 500-request AlarmManager ceiling. Immediate tests do
 // not consume AlarmManager slots.
 const _maxDeveloperTestScheduledNotifications = 49;
-const _developerCourseTestNotificationId = _developerTestNotificationIdStart;
-const _developerScheduleTestNotificationId =
-    _developerTestNotificationIdStart + 1;
-const _agendaNotificationIdLimit = _developerTestNotificationIdStart - 1;
+const _developerCourseTestNotificationId = developerNotificationIdStart;
+const _developerScheduleTestNotificationId = developerNotificationIdStart + 1;
+const _agendaNotificationIdLimit = developerNotificationIdStart - 1;
 const _notificationIdProbeLimit = 100000;
 
 class _SelectedNotificationPlan {
@@ -4403,15 +4095,6 @@ int _developerTestNotificationId(AgendaNotificationTestChannel channel) =>
       AgendaNotificationTestChannel.schedule =>
         _developerScheduleTestNotificationId,
     };
-
-bool _isDeveloperTestNotificationId(int id) =>
-    id >= _developerTestNotificationIdStart &&
-    id <= _developerTestNotificationIdEnd;
-
-int _nextDeveloperTestNotificationId(int id) =>
-    id >= _developerTestNotificationIdEnd
-    ? _developerTestNotificationIdStart
-    : id + 1;
 
 String _developerTestPayload(AgendaNotificationTestChannel channel, int id) =>
     'sked.developer.notification-test.v1:${channel.name}:$id';
@@ -4676,14 +4359,6 @@ String _notificationFingerprintForItem(
     data: data,
     descriptor: descriptor,
   );
-}
-
-String _notificationFingerprint(AgendaNotificationRequest request) {
-  // Memory gateway requests already carry the fully rendered payload.  The
-  // payload fingerprint is authoritative when present.
-  final decoded = _decodeNotificationPayload(request.payload);
-  return decoded?.fingerprint ??
-      sha1.convert(utf8.encode('${request.title}\n${request.body}')).toString();
 }
 
 AgendaNotificationPayload? _decodeNotificationPayload(String? payload) =>
