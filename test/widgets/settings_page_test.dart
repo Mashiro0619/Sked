@@ -26,6 +26,8 @@ import 'package:sked/widgets/settings_list.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
+import '../support/data_transfer_codec.dart';
+
 import '../support/period_time_assets.dart';
 
 class _MemoryTimetableStorage
@@ -213,6 +215,7 @@ Future<TimetableProvider> _createProvider(
   SchoolSiteService? schoolSiteService,
 }) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage:
         storage ??
         _MemoryTimetableStorage(

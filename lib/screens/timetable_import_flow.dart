@@ -4,11 +4,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../controllers/data_transfer_controller.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/text_file_picker.dart';
-import '../services/timetable_json_import_service.dart';
+import '../services/data_transfer_codec.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/sked_floating_anchor.dart';
@@ -27,8 +28,6 @@ class _TimetableImportChoice {
 class TimetableImportFlow {
   const TimetableImportFlow._();
 
-  static const TimetableJsonImportService _jsonImportService =
-      TimetableJsonImportService();
   static var _importTimetablesInProgress = false;
 
   static Future<void> importTimetables(
@@ -39,9 +38,18 @@ class TimetableImportFlow {
       return;
     }
     _importTimetablesInProgress = true;
+    final dataSession = provider.maintenance.dataSessionToken;
+    final workspaceBoundary =
+        provider.workspaceView.data.workspaceReminderNotBefore[AppMode.student];
     try {
       final source = await _pickJsonSource();
-      if (source == null || !context.mounted) {
+      if (source == null ||
+          !context.mounted ||
+          !identical(dataSession, provider.maintenance.dataSessionToken) ||
+          !provider.workspaceView.isEnabled(AppMode.student) ||
+          workspaceBoundary !=
+              provider.workspaceView.data.workspaceReminderNotBefore[AppMode
+                  .student]) {
         return;
       }
       await importTimetablesFromSource(context, provider, source);
@@ -64,27 +72,39 @@ class TimetableImportFlow {
     String source,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final dataSession = provider.dataSessionToken;
+    final transfers = provider.transfers;
+    final dataSession = provider.maintenance.dataSessionToken;
+    final workspaceBoundary =
+        provider.workspaceView.data.workspaceReminderNotBefore[AppMode.student];
     bool isCurrent() =>
         context.mounted &&
-        identical(dataSession, provider.dataSessionToken) &&
-        provider.isWorkspaceEnabled(AppMode.student);
+        identical(dataSession, provider.maintenance.dataSessionToken) &&
+        provider.workspaceView.isEnabled(AppMode.student) &&
+        workspaceBoundary ==
+            provider.workspaceView.data.workspaceReminderNotBefore[AppMode
+                .student];
 
-    TimetableJsonImportPreview preview;
+    PreparedDataImport<TimetableImportCandidate> prepared;
     try {
-      preview = _jsonImportService.preview(provider, source);
+      prepared = await transfers.prepareTimetables(source);
     } on FormatException catch (error) {
+      if (!context.mounted || !isCurrent()) return false;
       final message = error.message == 'Unsupported import file type.'
-          ? importFileTypeMismatchMessage(localeCode: provider.localeCode)
+          ? importFileTypeMismatchMessage(
+              localeCode: provider.settingsView.localeCode,
+            )
           : error.message;
       _showMessage(context, message);
       return false;
     } catch (_) {
+      if (!context.mounted || !isCurrent()) return false;
       _showMessage(context, l10n.importFailedCheckContent);
       return false;
     }
 
-    final candidates = preview.candidates;
+    if (!context.mounted || !isCurrent()) return false;
+    final preview = prepared.value;
+    final candidates = preview.timetables;
     if (candidates.isEmpty) {
       _showMessage(context, l10n.noImportableTimetables);
       return false;
@@ -108,7 +128,7 @@ class TimetableImportFlow {
 
     var mode = TimetableImportMode.addAsNew;
     String? replacementTimetableId;
-    final replacementTimetable = provider.activeTimetableOrNull;
+    final replacementTimetable = provider.studentView.activeTimetableOrNull;
     if (selectedIds.length == 1 && replacementTimetable != null) {
       final pickedMode = await showExpressiveDialog<TimetableImportMode>(
         context: context,
@@ -163,28 +183,25 @@ class TimetableImportFlow {
     }
 
     try {
-      final count = await _jsonImportService.apply(
-        provider,
-        TimetableJsonImportRequest(
-          source: source,
-          timetableIds: selectedIds,
-          mode: mode,
-          importBundledPeriodTimeSets: importChoice.importBundledPeriodTimeSets,
-          targetPeriodTimeSetId: importChoice.targetPeriodTimeSetId,
-          replacementTimetableId: replacementTimetableId,
-        ),
+      final count = await transfers.applyTimetables(
+        prepared,
+        timetableIds: selectedIds,
+        mode: mode,
+        importBundledPeriodTimeSets: importChoice.importBundledPeriodTimeSets,
+        targetPeriodTimeSetId: importChoice.targetPeriodTimeSetId,
+        replacementTimetableId: replacementTimetableId,
       );
-      if (context.mounted) {
+      if (context.mounted && isCurrent()) {
         _showMessage(context, l10n.importedTimetablesCount(count));
       }
       return true;
     } on FormatException catch (error) {
-      if (context.mounted) {
+      if (context.mounted && isCurrent()) {
         _showMessage(context, error.message);
       }
       return false;
     } catch (_) {
-      if (context.mounted) {
+      if (context.mounted && isCurrent()) {
         _showMessage(context, l10n.importFailedCheckContent);
       }
       return false;
@@ -217,7 +234,8 @@ class TimetableImportFlow {
       return null;
     }
     final l10n = AppLocalizations.of(context);
-    final canDiscardBundledSets = provider.periodTimeSets.isNotEmpty;
+    final canDiscardBundledSets =
+        provider.studentView.periodTimeSets.isNotEmpty;
     final dialogBody = canDiscardBundledSets
         ? l10n.importPeriodTimeSetDialogBody
         : '${l10n.importPeriodTimeSetDialogBody}\n\n${l10n.importDiscardPeriodTimeSetUnavailable}';
@@ -283,8 +301,8 @@ class TimetableImportFlow {
       provider: provider,
       anchorRect: anchorRect,
       selectedPeriodTimeSetId:
-          provider.activePeriodTimeSetOrNull?.id ??
-          provider.periodTimeSets.firstOrNull?.id ??
+          provider.studentView.activePeriodTimeSetOrNull?.id ??
+          provider.studentView.periodTimeSets.firstOrNull?.id ??
           '',
     );
     if (selectedPeriodTimeSetId == null || selectedPeriodTimeSetId.isEmpty) {

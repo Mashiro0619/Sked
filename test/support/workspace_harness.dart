@@ -24,6 +24,7 @@ import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/desktop_window_host.dart';
 
 import 'timetable_storage_fakes.dart';
+import 'data_transfer_codec.dart';
 
 export 'timetable_storage_fakes.dart' show WorkspaceMemoryStorage;
 
@@ -94,6 +95,7 @@ Future<TimetableProvider> workspaceProvider({
     now: DateTime(2026, 9, 8, 9),
   );
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage:
         storage ??
         WorkspaceMemoryStorage(sample.data.copyWith(activeMode: mode)),

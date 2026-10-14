@@ -17,6 +17,59 @@ void main() {
   const service = ImportExportService();
 
   test(
+    'candidate metadata preserves full, empty and legacy period-set choices',
+    () async {
+      final data = _data();
+      final cases = [
+        (
+          encodeAppDataEnvelope(data),
+          data.studentMode.timetables.first.id,
+          true,
+        ),
+        (
+          encodeTimetableDataEnvelope(
+            const TimetableExportData(timetables: [], periodTimeSets: []),
+          ),
+          null,
+          false,
+        ),
+        (
+          const ImportExportEnvelope(
+            schema: timetableDataSchema,
+            version: importExportVersion,
+            data: {
+              'timetable': {
+                'id': 'legacy',
+                'config': {
+                  'name': 'Legacy',
+                  'periodTimeSetId': '',
+                  'periodTimes': [
+                    {'index': 3, 'startMinutes': 600, 'endMinutes': 645},
+                  ],
+                },
+                'courses': [],
+              },
+            },
+          ).encode(),
+          'legacy',
+          true,
+        ),
+      ];
+      for (final (source, id, bundled) in cases) {
+        final candidate = await codec.decodeTimetables(
+          source,
+          localeCode: 'en',
+        );
+        expect(
+          candidate.timetables.map((item) => item.id),
+          id == null ? isEmpty : [id],
+        );
+        expect(candidate.hasBundledPeriodTimeSets, bundled);
+      }
+    },
+  );
+
+  test(
     'native transfer candidates preserve formats and merge with live branches',
     () async {
       final data = _data();

@@ -11,8 +11,11 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/timetable_import_flow.dart';
+import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -32,9 +35,12 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://timetable-import-flow-test';
 }
 
-Future<TimetableProvider> _createProvider() async {
+Future<TimetableProvider> _createProvider({
+  DataTransferCodec codec = inlineDataTransferCodec,
+}) async {
   final periodTimes = buildDefaultPeriodTimes();
   final provider = TimetableProvider(
+    dataTransferCodec: codec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(periodTimes, localeCode: defaultLocaleCode).copyWith(
         activeMode: AppMode.student,
@@ -66,6 +72,24 @@ Future<TimetableProvider> _createProvider() async {
   );
   await provider.load();
   return provider;
+}
+
+class _PendingTimetableCodec extends DataTransferCodec {
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<TimetableImportCandidate> decodeTimetables(
+    String source, {
+    required String localeCode,
+  }) async {
+    started.complete();
+    await release.future;
+    return inlineDataTransferCodec.decodeTimetables(
+      source,
+      localeCode: localeCode,
+    );
+  }
 }
 
 Future<void> _pumpImportButton(
@@ -119,6 +143,31 @@ void main() {
           periodTimeSets: const [],
         ),
       );
+
+  testWidgets(
+    'late parsing cannot open choices in a replacement data session',
+    (tester) async {
+      final codec = _PendingTimetableCodec();
+      final provider = await _createProvider(codec: codec);
+      addTearDown(provider.dispose);
+      await _pumpImportButton(
+        tester,
+        provider,
+        source: withoutPeriodTimes(provider),
+      );
+      final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+      await tester.tap(find.text('Import'));
+      await tester.pump();
+      expect(codec.started.isCompleted, isTrue);
+      final reservation = provider.maintenance.reserve();
+      provider.maintenance.release(reservation);
+      codec.release.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.importTimetableDialogTitle), findsNothing);
+      expect(find.text(l10n.importFailedCheckContent), findsNothing);
+      expect(provider.studentView.timetables.single.config.name, 'Flow test');
+    },
+  );
 
   testWidgets(
     'missing bundled times require an explicit choice and cancel cleanly',
