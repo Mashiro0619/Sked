@@ -9,7 +9,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:url_launcher/url_launcher.dart';
 
-import 'agenda_action_router.dart';
+import 'agenda_notification_payload.dart';
 import 'agenda_notification_contract.dart';
 import 'agenda_notification_identity.dart';
 import 'agenda_notification_presentation.dart';
