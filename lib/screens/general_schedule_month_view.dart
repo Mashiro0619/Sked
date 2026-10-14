@@ -111,6 +111,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   static int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
   final ScrollController _compactScrollController = ScrollController();
+  final _monthProjection = GeneralMonthProjectionCache();
   bool _calendarRevealScheduled = false;
 
   @override
@@ -167,6 +168,9 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   @override
   void didUpdateWidget(covariant _MonthCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(widget.provider, oldWidget.provider)) {
+      _monthProjection.clear();
+    }
     if (widget.active &&
         (widget.date.year != oldWidget.date.year ||
             widget.date.month != oldWidget.date.month)) {
@@ -216,20 +220,17 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
         if (mounted && widget.active) widget.onDaySelected(selectedDate);
       });
     }
-    final model = _MonthGridModel.build(
-      monthDate: selectedDate,
-      showWeekends: widget.provider.generalShowWeekends,
+    final pages = _monthProjection.project(
+      data: widget.provider.generalMode,
+      selectedDate: selectedDate,
+      queryOccurrences: widget.provider.generalOccurrencesForQuery,
+      searchQuery: widget.filter.query,
+      colorValue: widget.filter.colorValue,
     );
-    final occurrences = widget.provider.generalOccurrencesForQuery(
-      widget.filter.toQuery(
-        startInclusive: model.queryStart,
-        endExclusive: model.queryEndExclusive,
-      ),
-    );
-    final occurrencesByDay = _groupOccurrencesByDay(occurrences, model.days);
+    final model = pages.current.model;
+    final occurrencesByDay = pages.current.occurrencesByDay;
     final selectedOccurrences =
-        (occurrencesByDay[_calendarDateKey(selectedDate)] ?? const [])
-            .sortedForAgenda();
+        occurrencesByDay[_calendarDateKey(selectedDate)] ?? const [];
 
     return DesktopResizableRegion(
       layoutKey: DesktopLayoutRegion.monthAgenda,
@@ -272,7 +273,8 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                           today: today,
                           occurrencesByDay: occurrencesByDay,
                           provider: widget.provider,
-                          filter: widget.filter,
+                          previousPage: pages.previous,
+                          nextPage: pages.next,
                           onPreviousMonth: _goToPreviousMonth,
                           onNextMonth: _goToNextMonth,
                           onDaySelected: _selectDay,
@@ -487,47 +489,6 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   }
 }
 
-class _MonthGridModel {
-  const _MonthGridModel({
-    required this.days,
-    required this.columnCount,
-    required this.rowCount,
-    required this.queryStart,
-    required this.queryEndExclusive,
-  });
-
-  final List<DateTime> days;
-  final int columnCount;
-  final int rowCount;
-  final DateTime queryStart;
-  final DateTime queryEndExclusive;
-
-  static _MonthGridModel build({
-    required DateTime monthDate,
-    required bool showWeekends,
-  }) {
-    final firstOfMonth = DateTime(monthDate.year, monthDate.month, 1);
-    final lastOfMonth = DateTime(monthDate.year, monthDate.month + 1, 0);
-    final gridStart = startOfWeekMonday(firstOfMonth);
-    final lastWeekStart = startOfWeekMonday(lastOfMonth);
-    final gridEnd = addCalendarDays(lastWeekStart, showWeekends ? 6 : 4);
-    final days = <DateTime>[];
-    for (var d = gridStart; !d.isAfter(gridEnd); d = nextCalendarDate(d)) {
-      if (showWeekends || d.weekday <= DateTime.friday) {
-        days.add(d);
-      }
-    }
-    final columnCount = showWeekends ? 7 : 5;
-    return _MonthGridModel(
-      days: days,
-      columnCount: columnCount,
-      rowCount: days.length ~/ columnCount,
-      queryStart: days.first,
-      queryEndExclusive: calendarDateEndExclusive(days.last),
-    );
-  }
-}
-
 class _MonthCalendarPanel extends StatefulWidget {
   const _MonthCalendarPanel({
     required this.model,
@@ -535,7 +496,8 @@ class _MonthCalendarPanel extends StatefulWidget {
     required this.today,
     required this.occurrencesByDay,
     required this.provider,
-    required this.filter,
+    required this.previousPage,
+    required this.nextPage,
     required this.onPreviousMonth,
     required this.onNextMonth,
     required this.onDaySelected,
@@ -544,12 +506,12 @@ class _MonthCalendarPanel extends StatefulWidget {
     this.sharedEndEdge = false,
   });
 
-  final _MonthGridModel model;
+  final GeneralMonthGridModel model;
   final DateTime selectedDate;
   final DateTime today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
   final TimetableProvider provider;
-  final _GeneralOccurrenceFilter filter;
+  final GeneralMonthPage previousPage, nextPage;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
   final ValueChanged<DateTime> onDaySelected;
@@ -565,8 +527,6 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
 
   late final AnimationController _dragController;
   late Animation<double> _dragAnimation;
-  late _MonthGridPageData _previousPage;
-  late _MonthGridPageData _nextPage;
   final _dragPosition = ValueNotifier<double>(0);
   double get _dragOffset => _dragPosition.value;
   set _dragOffset(double value) => _dragPosition.value = value;
@@ -582,16 +542,11 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
             _dragOffset = _dragAnimation.value;
           });
     _dragAnimation = AlwaysStoppedAnimation(_dragOffset);
-    _refreshAdjacentPages();
   }
 
   @override
   void didUpdateWidget(covariant _MonthCalendarPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_shouldRefreshAdjacentPages(oldWidget)) {
-      _refreshAdjacentPages();
-    }
-
     final monthChanged = !_sameMonth(
       widget.selectedDate,
       oldWidget.selectedDate,
@@ -631,77 +586,6 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
 
   bool _sameMonth(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month;
-  }
-
-  bool _sameModel(_MonthGridModel a, _MonthGridModel b) {
-    return a.columnCount == b.columnCount &&
-        a.rowCount == b.rowCount &&
-        _sameDay(a.queryStart, b.queryStart) &&
-        _sameDay(a.queryEndExclusive, b.queryEndExclusive);
-  }
-
-  bool _sameFilter(_GeneralOccurrenceFilter a, _GeneralOccurrenceFilter b) {
-    return a.query == b.query && a.colorValue == b.colorValue;
-  }
-
-  bool _shouldRefreshAdjacentPages(_MonthCalendarPanel oldWidget) {
-    return !identical(widget.provider, oldWidget.provider) ||
-        !identical(widget.occurrencesByDay, oldWidget.occurrencesByDay) ||
-        !_sameDay(widget.selectedDate, oldWidget.selectedDate) ||
-        !_sameModel(widget.model, oldWidget.model) ||
-        !_sameFilter(widget.filter, oldWidget.filter);
-  }
-
-  DateTime _visibleDayForDate(DateTime date) {
-    final normalized = normalizeDateOnly(date);
-    if (widget.provider.generalShowWeekends ||
-        normalized.weekday <= DateTime.friday) {
-      return normalized;
-    }
-    return addCalendarDays(normalized, 8 - normalized.weekday);
-  }
-
-  DateTime _adjacentMonthDate(int monthOffset) {
-    final baseDate = widget.selectedDate;
-    final monthStart = DateTime(baseDate.year, baseDate.month + monthOffset);
-    final daysInMonth = DateTime(monthStart.year, monthStart.month + 1, 0).day;
-    return _visibleDayForDate(
-      DateTime(
-        monthStart.year,
-        monthStart.month,
-        baseDate.day.clamp(1, daysInMonth),
-      ),
-    );
-  }
-
-  Map<String, List<GeneralEventOccurrence>> _occurrencesByDayForModel(
-    _MonthGridModel model,
-  ) {
-    final occurrences = widget.provider.generalOccurrencesForQuery(
-      widget.filter.toQuery(
-        startInclusive: model.queryStart,
-        endExclusive: model.queryEndExclusive,
-      ),
-    );
-    return _groupOccurrencesByDay(occurrences, model.days);
-  }
-
-  _MonthGridPageData _pageDataForAdjacentMonth(int monthOffset) {
-    final date = _adjacentMonthDate(monthOffset);
-    final model = _MonthGridModel.build(
-      monthDate: date,
-      showWeekends: widget.provider.generalShowWeekends,
-    );
-    return _MonthGridPageData(
-      date: date,
-      model: model,
-      occurrencesByDay: _occurrencesByDayForModel(model),
-    );
-  }
-
-  void _refreshAdjacentPages() {
-    _previousPage = _pageDataForAdjacentMonth(-1);
-    _nextPage = _pageDataForAdjacentMonth(1);
   }
 
   void _animateToOffset(
@@ -805,8 +689,8 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         today: widget.today,
         occurrencesByDay: widget.occurrencesByDay,
         provider: widget.provider,
-        previousPage: _previousPage,
-        nextPage: _nextPage,
+        previousPage: widget.previousPage,
+        nextPage: widget.nextPage,
         dragOffset: _dragPosition,
         sharedTopEdge: widget.sharedTopEdge,
         sharedStartEdge: widget.sharedStartEdge,
@@ -834,8 +718,8 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
           provider: widget.provider,
           compact: compact,
           dragOffset: _dragPosition,
-          previousPage: _previousPage,
-          nextPage: _nextPage,
+          previousPage: widget.previousPage,
+          nextPage: widget.nextPage,
           onDaySelected: widget.onDaySelected,
           onDragStart: _handleDragStart,
           onDragUpdate: _handleDragUpdate,
@@ -870,18 +754,6 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
       },
     );
   }
-}
-
-class _MonthGridPageData {
-  const _MonthGridPageData({
-    required this.date,
-    required this.model,
-    required this.occurrencesByDay,
-  });
-
-  final DateTime date;
-  final _MonthGridModel model;
-  final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
 }
 
 /// A slide changes only the transform. The date grid remains the same child
@@ -946,15 +818,15 @@ class _DraggableMonthGrid extends StatelessWidget {
     required this.onDragCancel,
   });
 
-  final _MonthGridModel model;
+  final GeneralMonthGridModel model;
   final DateTime selectedDate;
   final DateTime today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
   final TimetableProvider provider;
   final bool compact;
   final ValueListenable<double> dragOffset;
-  final _MonthGridPageData previousPage;
-  final _MonthGridPageData nextPage;
+  final GeneralMonthPage previousPage;
+  final GeneralMonthPage nextPage;
   final ValueChanged<DateTime> onDaySelected;
   final GestureDragStartCallback onDragStart;
   final void Function(DragUpdateDetails details, double width) onDragUpdate;
@@ -963,7 +835,7 @@ class _DraggableMonthGrid extends StatelessWidget {
 
   double _gridHeight(
     BuildContext context,
-    _MonthGridModel model,
+    GeneralMonthGridModel model,
     BoxConstraints constraints,
     double width,
     double textScale,
@@ -997,7 +869,7 @@ class _DraggableMonthGrid extends StatelessWidget {
     required double width,
     required double height,
     required DateTime date,
-    required _MonthGridModel model,
+    required GeneralMonthGridModel model,
     required Map<String, List<GeneralEventOccurrence>> occurrences,
   }) {
     return _MonthSlidePage(
@@ -1093,7 +965,7 @@ class _MonthDateGrid extends StatelessWidget {
     required this.onDaySelected,
   });
 
-  final _MonthGridModel model;
+  final GeneralMonthGridModel model;
   final DateTime selectedDate;
   final DateTime today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
@@ -1172,7 +1044,7 @@ class _MonthDateGrid extends StatelessWidget {
                       month: selectedDate.month,
                       isToday: _sameDay(day, today),
                       isSelected: _sameDay(day, selectedDate),
-                      occurrences: dayOccurrences.sortedForAgenda(),
+                      occurrences: dayOccurrences,
                       localeCode: provider.localeCode,
                       showLunarCalendar: _showMonthLunar(provider),
                       cellWidth: cellWidth,
@@ -1189,55 +1061,6 @@ class _MonthDateGrid extends StatelessWidget {
       },
     );
   }
-}
-
-Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
-  List<GeneralEventOccurrence> occurrences,
-  List<DateTime> days,
-) {
-  final result = <String, List<GeneralEventOccurrence>>{};
-  if (days.isEmpty) {
-    return result;
-  }
-
-  for (final day in days) {
-    result[_calendarDateKey(day)] = [];
-  }
-  final firstDay = normalizeDateOnly(days.first);
-  final lastDay = normalizeDateOnly(days.last);
-  final rangeEndExclusive = calendarDateEndExclusive(lastDay);
-
-  for (final occurrence in occurrences) {
-    final displayStart = occurrence.calendarDisplayStart;
-    final displayEnd = occurrence.calendarDisplayEnd;
-    if (!displayEnd.isAfter(displayStart)) {
-      continue;
-    }
-    if (!displayEnd.isAfter(firstDay) ||
-        !displayStart.isBefore(rangeEndExclusive)) {
-      continue;
-    }
-
-    var bucketDay = normalizeDateOnly(displayStart);
-    if (bucketDay.isBefore(firstDay)) {
-      bucketDay = firstDay;
-    }
-    var lastBucketDay = normalizeDateOnly(
-      displayEnd.subtract(const Duration(microseconds: 1)),
-    );
-    if (lastBucketDay.isAfter(lastDay)) {
-      lastBucketDay = lastDay;
-    }
-
-    for (
-      var day = bucketDay;
-      !day.isAfter(lastBucketDay);
-      day = nextCalendarDate(day)
-    ) {
-      result[_calendarDateKey(day)]?.add(occurrence);
-    }
-  }
-  return result;
 }
 
 class _MonthWeekdayHeaderRow extends StatelessWidget {
@@ -2070,15 +1893,5 @@ class _LunarText extends StatelessWidget {
         fontWeight: FontWeight.w500,
       ),
     );
-  }
-}
-
-extension on List<GeneralEventOccurrence> {
-  List<GeneralEventOccurrence> sortedForAgenda() {
-    return toList()..sort((a, b) {
-      if (a.isAllDay && !b.isAllDay) return -1;
-      if (!a.isAllDay && b.isAllDay) return 1;
-      return a.start.compareTo(b.start);
-    });
   }
 }

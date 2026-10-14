@@ -161,6 +161,64 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    testWidgets(
+      'month snapshots survive stored selection and display updates: $platform',
+      (t) async {
+        final selected = DateTime(2026, 9, 8);
+        final event = GeneralEvent(
+          id: 'retained',
+          calendarId: 'empty',
+          title: 'Retained meeting',
+          startDateTimeIso: DateTime(2026, 9, 8, 10).toIso8601String(),
+          endDateTimeIso: DateTime(2026, 9, 8, 11).toIso8601String(),
+        );
+        final provider = await _mount(
+          t,
+          date: selected,
+          events: [event],
+          dpr: 1.25,
+          size: platform == TargetPlatform.windows
+              ? const Size(1440, 900)
+              : const Size(393, 900),
+        );
+        List<GeneralEventOccurrence> occurrences() {
+          final cell = t.widget(_cell(selected));
+          final dynamic content = cell is KeyedSubtree ? cell.child : cell;
+          return content.occurrences as List<GeneralEventOccurrence>;
+        }
+
+        final initial = occurrences();
+        final schedules = provider.generalSchedules;
+        await t.tap(_cell(DateTime(2026, 9, 9)));
+        await t.pumpAndSettle();
+        expect(provider.generalSchedules, same(schedules));
+        expect(occurrences(), same(initial));
+
+        await provider.updateGeneralDisplaySettings(showLunarCalendar: false);
+        await t.pumpAndSettle();
+        expect(occurrences(), same(initial));
+
+        await provider.saveGeneralEvent(
+          event.copyWith(title: 'Edited meeting'),
+        );
+        await t.pumpAndSettle();
+        expect(occurrences(), isNot(same(initial)));
+        expect(occurrences().single.event.title, 'Edited meeting');
+        await t.tap(_cell(selected));
+        await t.pumpAndSettle();
+        expect(find.text('Edited meeting'), findsWidgets);
+
+        await provider.updateGeneralScheduleVisibility('empty', false);
+        await t.pumpAndSettle();
+        expect(occurrences(), isEmpty);
+        expect(find.text('Edited meeting'), findsNothing);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
   for (final (platform, direction) in [
     (TargetPlatform.windows, TextDirection.ltr),
     (TargetPlatform.android, TextDirection.ltr),

@@ -152,7 +152,7 @@ class _DesktopMonthPageLayout {
   factory _DesktopMonthPageLayout.resolve(
     BuildContext context, {
     required _DesktopMonthTracks columns,
-    required _MonthGridModel model,
+    required GeneralMonthGridModel model,
     required TimetableProvider provider,
     required double availableHeight,
   }) {
@@ -201,11 +201,11 @@ class _DesktopMonthCalendarPanel extends StatelessWidget {
     required this.onDragEnd,
     required this.onDragCancel,
   });
-  final _MonthGridModel model;
+  final GeneralMonthGridModel model;
   final DateTime selectedDate, today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
   final TimetableProvider provider;
-  final _MonthGridPageData previousPage, nextPage;
+  final GeneralMonthPage previousPage, nextPage;
   final ValueListenable<double> dragOffset;
   final bool sharedTopEdge, sharedStartEdge, sharedEndEdge;
   final ValueChanged<DateTime> onDaySelected;
@@ -270,7 +270,7 @@ class _DesktopMonthCalendarPanel extends StatelessWidget {
           : headerRows.extent;
       final rtl = Directionality.of(context) == TextDirection.rtl;
       Widget page(
-        _MonthGridModel pageModel,
+        GeneralMonthGridModel pageModel,
         DateTime date,
         Map<String, List<GeneralEventOccurrence>> occurrences,
         double position,
@@ -454,7 +454,7 @@ class _DesktopMonthDatePage extends StatelessWidget {
   });
   final _DesktopMonthTracks columns;
   final _DesktopMonthPageLayout layout;
-  final _MonthGridModel model;
+  final GeneralMonthGridModel model;
   final DateTime selectedDate, today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
   final TimetableProvider provider;
@@ -508,11 +508,10 @@ class _DesktopMonthDatePage extends StatelessWidget {
                       isToday: _sameDay(model.days[index], today),
                       isSelected: index == selected,
                       occurrences:
-                          (occurrencesByDay[_calendarDateKey(
-                                    model.days[index],
-                                  )] ??
-                                  const <GeneralEventOccurrence>[])
-                              .sortedForAgenda(),
+                          occurrencesByDay[_calendarDateKey(
+                            model.days[index],
+                          )] ??
+                          const <GeneralEventOccurrence>[],
                       locale: provider.localeCode,
                       showLunar: _showMonthLunar(provider),
                       height: cellRect(index).height,

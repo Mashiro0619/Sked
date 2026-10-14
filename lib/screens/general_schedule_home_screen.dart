@@ -1,6 +1,7 @@
 import '../controllers/general_event_task_controller.dart';
 import '../widgets/general_event_task_editor.dart';
 import '../widgets/general_event_edit_flow.dart';
+import '../widgets/general_month_projection.dart';
 import '../widgets/update_prompt_scope.dart';
 import '../widgets/calendar_management_actions.dart';
 import '../widgets/sked_color_draft.dart';
