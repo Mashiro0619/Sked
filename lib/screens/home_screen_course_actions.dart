@@ -6,7 +6,8 @@ extension _HomeScreenCourseActions on _HomeScreenState {
     TimetableProvider provider,
     TimetableCourseTapInfo info,
   ) async {
-    final timetableId = provider.activeTimetableOrNull?.id;
+    final student = provider.studentView;
+    final timetableId = student.activeTimetableOrNull?.id;
     if (!mounted || _courseEditorOpen || timetableId == null) return;
     if (_courseDetailsOpen) {
       if (_pane.selectedId == 'course:${info.course.id}') return;
@@ -16,7 +17,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
     }
     _setCourseDetailsOpen(true);
     try {
-      final canDismiss = provider.closeCoursePopupOnOutsideTap;
+      final canDismiss = provider.settingsView.closeCoursePopupOnOutsideTap;
       final mobile = WorkbenchChromeMetrics.compactTouch(context);
       Future<void> edit(CourseItem course) {
         final task = _openEditor(
@@ -42,7 +43,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         isSessionCurrent:
             (WorkbenchChromeMetrics.compactTouch(context) ||
                 _pane.hasModalTasks)
-            ? () => provider.timetables.any(
+            ? () => student.timetables.any(
                 (timetable) =>
                     timetable.id == timetableId &&
                     timetable.courses.any(
@@ -76,7 +77,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
               !info.isFullConflict || info.conflictKey == null
               ? null
               : (course) async {
-                  await provider.setDisplayedCourseForConflict(
+                  await provider.studentCommands.setDisplayedCourseForConflict(
                     info.conflictKey!,
                     course.id,
                   );
@@ -101,9 +102,10 @@ extension _HomeScreenCourseActions on _HomeScreenState {
     int? weekday,
     TimetableEmptySlotTapInfo? emptySlot,
   }) async {
+    final student = provider.studentView;
     final timetable = timetableId == null
-        ? provider.activeTimetableOrNull
-        : provider.timetables
+        ? student.activeTimetableOrNull
+        : student.timetables
               .where((item) => item.id == timetableId)
               .firstOrNull;
     if (_courseEditorOpen || !mounted || timetable == null) {
@@ -116,13 +118,16 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         : timetable.courses.where((item) => item.id == course.id).firstOrNull;
     if (course != null && initialCourse == null) return;
     final task = CourseTaskController(
-      provider: provider,
+      commands: provider.studentCommands,
+      view: student,
+      workspaceView: provider.workspaceView,
+      maintenance: provider.maintenance,
       timetable: timetable,
       initialCourse: initialCourse,
     );
     _setCourseEditorOpen(true);
     try {
-      final canDismiss = provider.closeCoursePopupOnOutsideTap;
+      final canDismiss = provider.settingsView.closeCoursePopupOnOutsideTap;
       await showAppModalSheet<CourseEditorResult>(
         context: context,
         workspacePane: _pane,

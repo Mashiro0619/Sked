@@ -679,7 +679,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     CourseItem course, {
     required String timetableId,
   }) async {
-    final timetable = widget.provider.timetables
+    final student = widget.provider.studentView;
+    final timetable = student.timetables
         .where((item) => item.id == timetableId)
         .firstOrNull;
     if (timetable == null || !context.mounted) return;
@@ -688,7 +689,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         .firstOrNull;
     if (currentCourse == null) return;
     final task = CourseTaskController(
-      provider: widget.provider,
+      commands: widget.provider.studentCommands,
+      view: student,
+      workspaceView: widget.provider.workspaceView,
+      maintenance: widget.provider.maintenance,
       timetable: timetable,
       initialCourse: currentCourse,
     );
@@ -697,7 +701,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       useRootNavigator: true,
       workspace: AppMode.student,
       isSessionCurrent: () => task.isCurrent,
-      isDismissible: widget.provider.closeCoursePopupOnOutsideTap,
+      isDismissible: widget.provider.settingsView.closeCoursePopupOnOutsideTap,
       enableDrag: true,
       maxWidth: appSheetWidthExpanded,
       builder: (_) => CourseTaskEditor(task: task),
@@ -715,7 +719,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   GeneralEventOccurrence? _currentGeneralOccurrence(
     GeneralEventOccurrence source,
-  ) => resolveCurrentGeneralOccurrence(widget.provider, source);
+  ) => resolveCurrentGeneralOccurrence(widget.provider.generalView, source);
 
   Future<void> _openGeneralOccurrenceDetails(
     BuildContext context,
@@ -800,8 +804,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     GeneralEventEditScope scope,
   ) async {
     if (!context.mounted) return;
+    final general = widget.provider.generalView;
     final task = GeneralEventTaskController(
-      provider: widget.provider,
+      commands: widget.provider.generalCommands,
+      view: general,
+      workspaceView: widget.provider.workspaceView,
+      maintenance: widget.provider.maintenance,
+      updates: widget.provider,
       occurrence: occurrence,
       scope: scope,
     );
@@ -810,10 +819,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       useRootNavigator: true,
       workspace: AppMode.general,
       isSessionCurrent: () => task.isCurrent,
-      isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
+      isDismissible: general.data.closeEventPopupOnOutsideTap,
       enableDrag: true,
       maxWidth: appSheetWidthExpanded,
-      builder: (_) => GeneralEventTaskEditor(task: task),
+      builder: (_) => GeneralEventTaskEditor(
+        task: task,
+        settings: widget.provider.settingsView,
+      ),
     );
     final event = task.savedEvent;
     if (!context.mounted) return;
@@ -823,7 +835,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
       return;
     }
-    final calendar = widget.provider.generalSchedules
+    final calendar = general.schedules
         .where((item) => item.id == event.calendarId)
         .firstOrNull;
     if (calendar == null || calendar.isVisible) return;
@@ -834,8 +846,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         if (!context.mounted) return;
         final date = tryParseStrictIsoDateTime(event.startDateTimeIso);
         if (date == null) return;
-        final displayed = widget.provider
-            .generalOccurrencesForRange(
+        final displayed = general
+            .occurrencesForRange(
               startInclusive: date,
               endExclusive: addCalendarDays(date, 32),
               onlyVisibleCalendars: false,

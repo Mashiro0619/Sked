@@ -1,26 +1,35 @@
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import 'app_data_maintenance.dart';
+import 'student_commands.dart';
+import 'student_view_state.dart';
+import 'workspace_view_state.dart';
 
 /// The stored course and timetable owned by a single editor, regardless of its
 /// presentation or whether the user entered it from a notification or a grid.
 class CourseTaskController {
   CourseTaskController({
-    required this.provider,
+    required this._commands,
+    required this._view,
+    required this._workspaceView,
+    required this._maintenance,
     required TimetableData timetable,
     this.initialCourse,
   }) : timetableId = timetable.id,
        totalWeeks = timetable.config.totalWeeks,
-       periodTimes = provider.periodTimesForTimetable(timetable),
-       _dataSession = provider.dataSessionToken,
+       periodTimes = _view.periodTimesForTimetable(timetable),
+       _dataSession = _maintenance.dataSessionToken,
        _workspaceBoundary =
-           provider.appData.workspaceReminderNotBefore[AppMode.student];
+           _workspaceView.data.workspaceReminderNotBefore[AppMode.student];
 
-  final TimetableProvider provider;
+  final StudentCommands _commands;
+  final StudentViewState _view;
+  final WorkspaceViewState _workspaceView;
+  final AppDataMaintenance _maintenance;
   final String timetableId;
   final CourseItem? initialCourse;
   final int totalWeeks;
   final List<CoursePeriodTime> periodTimes;
-  final Object _dataSession;
+  final AppDataSessionToken _dataSession;
   final DateTime? _workspaceBoundary;
   bool _invalidated = false;
   bool _mutating = false;
@@ -28,14 +37,14 @@ class CourseTaskController {
 
   bool get isCurrent {
     if (_invalidated) return false;
-    final timetable = provider.timetables
+    final timetable = _view.timetables
         .where((item) => item.id == timetableId)
         .firstOrNull;
     final ownerCurrent =
-        identical(_dataSession, provider.dataSessionToken) &&
-        provider.isWorkspaceEnabled(AppMode.student) &&
+        identical(_dataSession, _maintenance.dataSessionToken) &&
+        _workspaceView.isEnabled(AppMode.student) &&
         _workspaceBoundary ==
-            provider.appData.workspaceReminderNotBefore[AppMode.student];
+            _workspaceView.data.workspaceReminderNotBefore[AppMode.student];
     final targetCurrent =
         _mutating ||
         _committed ||
@@ -47,12 +56,12 @@ class CourseTaskController {
   }
 
   Future<void> save(CourseItem draft) =>
-      _submit(() => provider.saveCourse(draft, timetableId: timetableId));
+      _submit(() => _commands.saveCourse(draft, timetableId: timetableId));
 
   Future<void> delete() => _submit(() async {
     final source = initialCourse;
     if (source == null) throw StateError('A new course cannot be deleted.');
-    await provider.deleteCourse(source.id, timetableId: timetableId);
+    await _commands.deleteCourse(source.id, timetableId: timetableId);
   });
 
   Future<void> _submit(Future<void> Function() action) async {

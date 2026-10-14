@@ -1973,8 +1973,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     GeneralEventEditScope? editScope,
   }) async {
     if (_editorSheetOpen || !widget.interactive) return;
+    final general = provider.generalView;
     final task = GeneralEventTaskController(
-      provider: provider,
+      commands: provider.generalCommands,
+      view: general,
+      workspaceView: provider.workspaceView,
+      maintenance: provider.maintenance,
+      updates: provider,
       occurrence: occurrence,
       scope: editScope ?? GeneralEventEditScope.entireSeries,
     );
@@ -1983,10 +1988,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final start =
         initialStart ??
         defaultGeneralEventStart(
-          date: initialDate ?? provider.selectedGeneralDate,
+          date: initialDate ?? general.selectedDate,
           now: DateTime.now(),
-          dayStartHour: provider.generalDayStartHour,
-          dayEndHour: provider.generalDayEndHour,
+          dayStartHour: general.data.dayStartHour,
+          dayEndHour: general.data.dayEndHour,
         );
     try {
       await showAppModalSheet<GeneralEventEditorResult>(
@@ -1999,10 +2004,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         selectionId: event == null
             ? null
             : _pane.selectedId ?? 'event:${event.id}',
-        isDismissible: provider.closeGeneralEventPopupOnOutsideTap,
+        isDismissible: general.data.closeEventPopupOnOutsideTap,
         enableDrag: true,
         maxWidth: appSheetWidthMedium,
-        builder: (_) => GeneralEventTaskEditor(task: task, initialDate: start),
+        builder: (_) => GeneralEventTaskEditor(
+          task: task,
+          settings: provider.settingsView,
+          initialDate: start,
+        ),
       );
     } finally {
       _setUiBusyFlag(() => _editorSheetOpen = false);
@@ -2020,7 +2029,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       }
       return;
     }
-    final calendar = provider.generalSchedules
+    final calendar = general.schedules
         .where((item) => item.id == saved.calendarId)
         .firstOrNull;
     if (calendar == null || calendar.isVisible) return;
@@ -2031,8 +2040,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         if (!mounted || !context.mounted) return;
         final date = tryParseStrictIsoDateTime(saved.startDateTimeIso);
         if (date == null) return;
-        final displayed = provider
-            .generalOccurrencesForRange(
+        final displayed = general
+            .occurrencesForRange(
               startInclusive: date,
               endExclusive: addCalendarDays(date, 32),
               onlyVisibleCalendars: false,
@@ -2069,7 +2078,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     var displayedOccurrence = occurrence;
     var deletingOccurrence = false;
     GeneralEventOccurrence? resolveOccurrence() =>
-        resolveCurrentGeneralOccurrence(provider, occurrence);
+        resolveCurrentGeneralOccurrence(provider.generalView, occurrence);
 
     try {
       await showAppModalSheet<void>(

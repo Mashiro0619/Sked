@@ -1,11 +1,16 @@
+import 'package:flutter/foundation.dart' show Listenable;
+
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import 'app_data_maintenance.dart';
+import 'general_commands.dart';
+import 'general_view_state.dart';
+import 'workspace_view_state.dart';
 
 GeneralEventOccurrence? resolveCurrentGeneralOccurrence(
-  TimetableProvider provider,
+  GeneralViewState view,
   GeneralEventOccurrence source,
 ) {
-  final calendar = provider.generalSchedules
+  final calendar = view.schedules
       .where((item) => item.id == source.calendar.id)
       .firstOrNull;
   final event = calendar?.events
@@ -25,22 +30,29 @@ GeneralEventOccurrence? resolveCurrentGeneralOccurrence(
 /// keeps its own successful mutation alive until the host completes the route.
 class GeneralEventTaskController {
   GeneralEventTaskController({
-    required this.provider,
+    required this._commands,
+    required this.view,
+    required this._workspaceView,
+    required this._maintenance,
+    required this.updates,
     this.occurrence,
     this.scope = GeneralEventEditScope.entireSeries,
-  }) : _dataSession = provider.dataSessionToken,
-       calendarId =
-           occurrence?.calendar.id ?? provider.activeGeneralSchedule.id,
+  }) : _dataSession = _maintenance.dataSessionToken,
+       calendarId = occurrence?.calendar.id ?? view.activeSchedule.id,
        initialEvent = occurrence == null
            ? null
-           : provider.prepareGeneralOccurrenceEdit(occurrence, scope);
+           : _commands.prepareOccurrenceEdit(occurrence, scope);
 
-  final TimetableProvider provider;
+  final GeneralCommands _commands;
+  final GeneralViewState view;
+  final WorkspaceViewState _workspaceView;
+  final AppDataMaintenance _maintenance;
+  final Listenable updates;
   final GeneralEventOccurrence? occurrence;
   final GeneralEventEditScope scope;
   final String calendarId;
   final GeneralEvent? initialEvent;
-  final Object _dataSession;
+  final AppDataSessionToken _dataSession;
   bool _invalidated = false;
   bool _mutating = false;
   bool _committed = false;
@@ -52,14 +64,14 @@ class GeneralEventTaskController {
   bool get isCurrent {
     if (_invalidated) return false;
     final ownerCurrent =
-        identical(_dataSession, provider.dataSessionToken) &&
-        provider.isWorkspaceEnabled(AppMode.general);
+        identical(_dataSession, _maintenance.dataSessionToken) &&
+        _workspaceView.isEnabled(AppMode.general);
     final targetCurrent =
         _mutating ||
         _committed ||
         (occurrence == null
-            ? provider.generalSchedules.any((item) => item.id == calendarId)
-            : resolveCurrentGeneralOccurrence(provider, occurrence!) != null);
+            ? view.schedules.any((item) => item.id == calendarId)
+            : resolveCurrentGeneralOccurrence(view, occurrence!) != null);
     if (!ownerCurrent || !targetCurrent) _invalidated = true;
     return !_invalidated;
   }
@@ -67,17 +79,17 @@ class GeneralEventTaskController {
   Future<void> save(GeneralEvent draft) => _submit(() async {
     final source = occurrence;
     if (source == null) {
-      await provider.saveGeneralEvent(draft);
+      await _commands.saveEvent(draft);
       _savedEvent = draft;
     } else {
-      _savedEvent = await provider.editGeneralOccurrence(source, draft, scope);
+      _savedEvent = await _commands.editOccurrence(source, draft, scope);
     }
   });
 
   Future<void> delete() => _submit(() async {
     final source = occurrence;
     if (source == null) throw StateError('A new event cannot be deleted.');
-    await provider.deleteGeneralOccurrenceScope(source, scope);
+    await _commands.deleteOccurrenceScope(source, scope);
   });
 
   Future<void> _submit(Future<void> Function() action) async {

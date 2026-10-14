@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../controllers/general_event_task_controller.dart';
+import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import 'general_event_editor_sheet.dart';
@@ -10,24 +11,26 @@ class GeneralEventTaskEditor extends StatelessWidget {
   const GeneralEventTaskEditor({
     super.key,
     required this.task,
+    required this.settings,
     this.initialDate,
   });
 
   final GeneralEventTaskController task;
+  final SettingsViewState settings;
   final DateTime? initialDate;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: task.provider,
+    listenable: task.updates,
     builder: (context, _) => GeneralEventEditorSheet(
       initialEvent: task.initialEvent,
       initialDate: initialDate,
       editScope: task.occurrence?.event.recurrenceRule.isRepeating == true
           ? task.scope
           : null,
-      calendars: task.provider.generalSchedules,
+      calendars: task.view.schedules,
       activeCalendarId: task.calendarId,
-      defaultReminderMinutesBefore: task.provider.generalDefaultMinutesBefore,
+      defaultReminderMinutesBefore: settings.generalDefaultMinutesBefore,
       onSave: (draft) async {
         try {
           await task.save(draft);
