@@ -1,6 +1,8 @@
 import '../models/agenda.dart';
 import 'agenda_notification_identity.dart';
 
+const agendaExactAlarmPermissionErrorCode = 'exact_alarms_not_permitted';
+
 /// Optional richer pending-notification contract.  Keeping this separate from
 /// [AgendaNotificationGateway] preserves compatibility with small test and
 /// platform gateways that only implement the original fire-time map.
