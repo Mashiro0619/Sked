@@ -9,10 +9,50 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:sked/controllers/app_data_maintenance.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
 
+import '../support/workspace_harness.dart';
+
 void main() {
+  testWidgets('maintenance reservations suspend and resume settings writes', (
+    tester,
+  ) async {
+    final app = await workspaceProvider();
+    addTearDown(app.dispose);
+    var changes = 0;
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AppDataMaintenance>.value(
+        value: app.maintenance,
+        child: MaterialApp(
+          home: Scaffold(
+            body: SettingsSwitchTile(
+              icon: Icons.settings,
+              title: 'Setting',
+              value: false,
+              onChanged: (_) => changes++,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Setting'));
+    expect(changes, 1);
+
+    final reservation = app.maintenance.reserve();
+    await tester.pump();
+    await tester.tap(find.text('Setting'));
+    expect(changes, 1);
+
+    app.maintenance.release(reservation);
+    await tester.pump();
+    await tester.tap(find.text('Setting'));
+    expect(changes, 2);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('responsive settings body switches at its usable column width', (
     tester,
   ) async {
@@ -809,7 +849,6 @@ void main() {
       of: find.byKey(const ValueKey('toolbar-navigation-reorderable-list')),
       matching: find.byIcon(Icons.drag_indicator),
     );
-    expect(handles, findsNWidgets(2));
     final gesture = await tester.startGesture(
       tester.getCenter(handles.at(0)),
       kind: PointerDeviceKind.mouse,

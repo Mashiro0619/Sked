@@ -12,7 +12,6 @@ import '../controllers/settings_commands.dart';
 import '../controllers/settings_view_state.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/adaptive_navigation_scope.dart';
@@ -31,11 +30,9 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        final settings = provider.settingsView;
-        final commands = provider.settingsCommands;
-        final maintenance = provider.maintenance;
+    return Consumer2<SettingsViewState, AppDataMaintenance>(
+      builder: (context, settings, maintenance, child) {
+        final commands = context.read<SettingsCommands>();
         final l10n = AppLocalizations.of(context);
         final languageOptions = supportedLanguageOptions(l10n);
         final currentCode = normalizeLocaleCode(settings.localeCode);

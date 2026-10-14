@@ -8,9 +8,13 @@ import '../widgets/adaptive_navigation_scope.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/app_session.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/agenda_notification_service.dart';
 import '../widgets/settings_list.dart';
@@ -73,7 +77,7 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
       await widget.coordinator!.reconcileNow();
     } else if (widget.notificationService != null) {
       await widget.notificationService!.reconcile(
-        context.read<TimetableProvider>().session.committedData,
+        context.read<AppSession>().committedData,
       );
     }
     final service =
@@ -83,9 +87,8 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
 
   Future<void> _set(AppMode mode, bool enabled) async {
     if (uiCommandBusy || _confirming) return;
-    final provider = context.read<TimetableProvider>();
-    final workspace = provider.workspaceView;
-    final commands = provider.workspaces;
+    final workspace = context.read<WorkspaceViewState>();
+    final commands = context.read<WorkspaceCommands>();
     final l = AppLocalizations.of(context);
     if (!enabled && workspace.enabledWorkspaces.length < 2) return;
     if (!enabled) {
@@ -126,10 +129,9 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TimetableProvider>();
-    final workspace = provider.workspaceView;
-    final settings = provider.settingsView;
-    final commands = provider.settingsCommands;
+    final workspace = context.watch<WorkspaceViewState>();
+    final settings = context.watch<SettingsViewState>();
+    final commands = context.read<SettingsCommands>();
     final hasMultipleWorkspaces = workspace.enabledWorkspaces.length > 1;
     final l = AppLocalizations.of(context);
     final controls = <Widget>[

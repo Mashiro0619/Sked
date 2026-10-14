@@ -11,7 +11,7 @@ import 'sked_tooltip.dart';
 
 import 'package:provider/provider.dart';
 
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'expressive_motion.dart';
 import 'workbench_layout_policy.dart';
@@ -20,8 +20,8 @@ import 'sked_dropdown_menu.dart';
 import '../models/app_mode.dart';
 
 bool _settingsWritesEnabled(BuildContext context) =>
-    !context.select<TimetableProvider?, bool>(
-      (provider) => provider?.maintenance.isReserved ?? false,
+    !context.select<AppDataMaintenance?, bool>(
+      (maintenance) => maintenance?.isReserved ?? false,
     );
 
 /// Blocks a settings surface during persistence without switching every child
@@ -1352,7 +1352,7 @@ class _SettingsToolbarNavigationEditorState
 
   bool get _reorderInteractionEnabled =>
       !widget.busy &&
-      !(context.read<TimetableProvider?>()?.maintenance.isReserved ?? false) &&
+      !(context.read<AppDataMaintenance?>()?.isReserved ?? false) &&
       !_dragInProgress &&
       !_dropSettlementPending &&
       !_reorderSavePending;
@@ -1398,7 +1398,7 @@ class _SettingsToolbarNavigationEditorState
 
   void _onReorder(int oldIndex, int newIndex) {
     if (widget.busy ||
-        (context.read<TimetableProvider?>()?.maintenance.isReserved ?? false) ||
+        (context.read<AppDataMaintenance?>()?.isReserved ?? false) ||
         oldIndex == newIndex ||
         oldIndex < 0 ||
         newIndex < 0 ||
@@ -1667,7 +1667,7 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (context.read<TimetableProvider?>()?.maintenance.isReserved ?? false) {
+    if (context.read<AppDataMaintenance?>()?.isReserved ?? false) {
       _isInteracting = false;
       _previewValue = _clamp(widget.value);
     }
