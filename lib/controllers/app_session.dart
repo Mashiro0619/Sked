@@ -34,6 +34,7 @@ class AppSession {
   AppData get committedData => repository.persisted ?? _data;
   int get mutationEpoch => _mutationEpoch;
   bool get canWrite => repository.canWrite;
+  bool get isClosed => _commits.isClosed;
   Stream<AppDataCommit> get commits => _commits.stream;
   AppDataVersions get versions => _versions;
 

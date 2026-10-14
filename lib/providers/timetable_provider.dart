@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../controllers/app_session.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_persistence.dart';
+import '../controllers/data_transfer_controller.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_view_state.dart';
 import '../controllers/school_import_secret_controller.dart';
@@ -70,6 +71,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   AppSession get _session;
   AppDataMaintenance get _maintenance;
   AppPersistence get _persistence;
+  DataTransferController get _transfers;
   AppSession get session => _session;
   Stream<AppDataCommit> get committedData => _session.commits;
   AppDataVersions get committedDataVersions => _session.versions;
@@ -273,6 +275,12 @@ class TimetableProvider extends _TimetableProviderBase
       persist: _saveAndNotify,
       service: settingsService ?? const SettingsService(),
     );
+    _transfers = DataTransferController(
+      session: _session,
+      student: _studentView,
+      general: _generalView,
+      persistence: _persistence,
+    );
   }
 
   @override
@@ -281,6 +289,8 @@ class TimetableProvider extends _TimetableProviderBase
   late final AppDataMaintenance _maintenance;
   @override
   late final AppPersistence _persistence;
+  @override
+  late final DataTransferController _transfers;
   late final StudentViewState _studentView;
   late final StudentCommands _studentCommands;
   @override
@@ -680,6 +690,93 @@ class TimetableProvider extends _TimetableProviderBase
           _repository.recoveryArtifacts.isNotEmpty) ||
       (_journalRecoveryLoadStatus == StorageLoadStatus.corrupt &&
           _corruptAppBackupRestoreJournalArtifact != null);
+  DataTransferController get transfers => _transfers;
+
+  String exportSelectedGeneralSchedulesJson(List<String> scheduleIds) =>
+      _transfers.exportSelectedGeneralSchedulesJson(scheduleIds);
+
+  String exportActiveGeneralScheduleJson() =>
+      _transfers.exportActiveGeneralScheduleJson();
+
+  String exportSelectedGeneralSchedulesIcs(List<String> scheduleIds) =>
+      _transfers.exportSelectedGeneralSchedulesIcs(scheduleIds);
+
+  GeneralCalendarIcsImportResult previewImportGeneralSchedulesIcs(
+    String source,
+  ) => _transfers.previewImportGeneralSchedulesIcs(source);
+
+  List<GeneralSchedule> previewImportGeneralSchedules(String source) =>
+      _transfers.previewImportGeneralSchedules(source);
+
+  Future<GeneralScheduleImportResult> importSelectedGeneralSchedulesJson(
+    String source, {
+    required List<String> scheduleIds,
+    required GeneralScheduleImportMode mode,
+    String? replacementScheduleId,
+  }) => _transfers.importSelectedGeneralSchedulesJson(
+    source,
+    scheduleIds: scheduleIds,
+    mode: mode,
+    replacementScheduleId: replacementScheduleId,
+  );
+
+  Future<GeneralScheduleImportResult> importGeneralSchedulesIcs(
+    String source, {
+    required GeneralScheduleImportMode mode,
+    String? replacementScheduleId,
+  }) => _transfers.importGeneralSchedulesIcs(
+    source,
+    mode: mode,
+    replacementScheduleId: replacementScheduleId,
+  );
+
+  String exportSelectedTimetablesJson(List<String> timetableIds) =>
+      _transfers.exportSelectedTimetablesJson(timetableIds);
+
+  String exportActiveTimetableJson() => _transfers.exportActiveTimetableJson();
+
+  String exportActivePeriodTimesJson() =>
+      _transfers.exportActivePeriodTimesJson();
+
+  List<TimetableData> previewImportTimetables(String source) =>
+      _transfers.previewImportTimetables(source);
+
+  Future<int> importSelectedTimetablesJson(
+    String source, {
+    required List<String> timetableIds,
+    required TimetableImportMode mode,
+    bool importBundledPeriodTimeSets = true,
+    String? targetPeriodTimeSetId,
+    String? replacementTimetableId,
+  }) => _transfers.importSelectedTimetablesJson(
+    source,
+    timetableIds: timetableIds,
+    mode: mode,
+    importBundledPeriodTimeSets: importBundledPeriodTimeSets,
+    targetPeriodTimeSetId: targetPeriodTimeSetId,
+    replacementTimetableId: replacementTimetableId,
+  );
+
+  Future<String> importTimetableJson(
+    String source, {
+    required TimetableImportMode mode,
+    bool importBundledPeriodTimeSets = true,
+    String? targetPeriodTimeSetId,
+    String? replacementTimetableId,
+  }) => _transfers.importTimetableJson(
+    source,
+    mode: mode,
+    importBundledPeriodTimeSets: importBundledPeriodTimeSets,
+    targetPeriodTimeSetId: targetPeriodTimeSetId,
+    replacementTimetableId: replacementTimetableId,
+  );
+
+  Future<void> applySchoolImportRequest(SchoolImportApplyRequest request) =>
+      _transfers.applySchoolImportRequest(request);
+
+  List<CoursePeriodTime> importPeriodTimesJson(String source) =>
+      _transfers.importPeriodTimesJson(source);
+
   SettingsCommands get settingsCommands => _settingsCommands;
   SettingsViewState get settingsView => _settingsView;
   WorkspaceViewState get workspaceView => _workspaceView;
