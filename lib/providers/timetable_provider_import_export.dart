@@ -369,7 +369,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   @override
   Future<void> _resumePendingAppBackupRestore() async {
     assert(_isLoading);
-    assert(_appBackupRestoreReservationCount == 0);
+    assert(!_maintenance.isReserved);
     final preflight = await _backupRestoreJournal.load(
       localeCode: _appData.localeCode,
     );
@@ -724,7 +724,9 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         await schoolSiteLease?.release();
       }
     });
-    final result = actionResult.whenComplete(_releaseAppBackupRestore);
+    final result = actionResult.whenComplete(
+      () => _releaseAppBackupRestore(token),
+    );
     _appBackupRestoreTail = result.then<void>(
       (_) {},
       onError: (Object _, StackTrace _) {},

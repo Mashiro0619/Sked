@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/app_session.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_persistence.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_view_state.dart';
 import '../controllers/school_import_secret_controller.dart';
@@ -34,6 +36,8 @@ import '../services/secret_store.dart';
 import '../services/settings_service.dart';
 
 export '../models/app_data_commit.dart';
+export '../controllers/app_data_maintenance.dart'
+    show AppBackupRestoreInProgressException;
 
 part 'timetable_provider_import_export.dart';
 part 'timetable_provider_lifecycle.dart';
@@ -46,21 +50,6 @@ enum AppImportMode { replaceAll, addAll }
 
 class WorkspaceChangeCancelledException implements Exception {
   const WorkspaceChangeCancelledException();
-}
-
-class AppBackupRestoreInProgressException implements Exception {
-  const AppBackupRestoreInProgressException();
-
-  @override
-  String toString() =>
-      'AppBackupRestoreInProgressException: app data cannot be changed while '
-      'a complete backup restore is queued or running.';
-}
-
-class _AppDataSessionToken {
-  _AppDataSessionToken(this.revision);
-
-  final int revision;
 }
 
 String resolveFirstLaunchLocaleCode(Locale? locale) {
@@ -78,16 +67,14 @@ bool _sameGeneralDate(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
 abstract class _TimetableProviderBase extends ChangeNotifier {
-  static final Object _appBackupRestoreZoneKey = Object();
-
   AppSession get _session;
+  AppDataMaintenance get _maintenance;
+  AppPersistence get _persistence;
   AppSession get session => _session;
   Stream<AppDataCommit> get committedData => _session.commits;
   AppDataVersions get committedDataVersions => _session.versions;
 
-  var _appBackupRestoreReservationCount = 0;
   var _isDisposed = false;
-  Object? _activeAppBackupRestoreToken;
   SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
   StorageLoadStatus? _journalRecoveryLoadStatus;
   List<String> _journalRecoveryArtifacts = const [];
@@ -100,15 +87,14 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   /// UI-only intent: explicit date jumps reveal their column; range paging
   /// leaves the user's horizontal/time viewport where it was.
   int get generalDateFocusRevision => _generalView.focusRevision;
-  _AppDataSessionToken _dataSessionToken = _AppDataSessionToken(0);
 
   /// Invalidates UI selection sessions when a complete data replacement is
   /// reserved, including a restore that keeps the same workspace enabled.
-  Object get dataSessionToken => _dataSessionToken;
+  Object get dataSessionToken => _maintenance.dataSessionToken;
 
   /// A complete backup restore has reserved the write lease, including while
   /// it is queued behind an earlier operation. Reading app data remains safe.
-  bool get isRestoringAppBackup => _appBackupRestoreReservationCount > 0;
+  bool get isRestoringAppBackup => _maintenance.isReserved;
 
   AppData get _visibleAppData => _workspaceView.data;
 
@@ -175,66 +161,27 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   // ignore: unused_element_parameter
   Future<void> _save({bool emitCommit = true});
   void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision});
-  bool _cancelScheduledUiStateSave();
-  void _startDeferredUiStateSave();
 
-  void _ensureAppBackupRestoreMutationAllowed() {
-    if (_appBackupRestoreReservationCount == 0) return;
-    final zoneToken = Zone.current[_appBackupRestoreZoneKey];
-    if (identical(zoneToken, _activeAppBackupRestoreToken) &&
-        zoneToken != null) {
-      return;
-    }
-    throw const AppBackupRestoreInProgressException();
+  void _ensureAppBackupRestoreMutationAllowed() =>
+      _maintenance.ensureMutationAllowed();
+
+  AppDataSessionToken _reserveAppBackupRestore() {
+    _persistence.flushScheduledUiStateSave();
+    return _maintenance.reserve();
   }
 
-  Object _reserveAppBackupRestore() {
-    final hadScheduledSave = _cancelScheduledUiStateSave();
-    if (hadScheduledSave) {
-      _startDeferredUiStateSave();
-    }
-    _appBackupRestoreReservationCount += 1;
-    final token = _AppDataSessionToken(_dataSessionToken.revision + 1);
-    _dataSessionToken = token;
-    if (_appBackupRestoreReservationCount == 1 && !_isDisposed) {
-      notifyListeners();
-    }
-    return token;
-  }
-
-  void _releaseAppBackupRestore() {
-    assert(_appBackupRestoreReservationCount > 0);
-    _appBackupRestoreReservationCount -= 1;
-    if (_appBackupRestoreReservationCount == 0 && !_isDisposed) {
-      notifyListeners();
-    }
-  }
+  void _releaseAppBackupRestore(AppDataSessionToken token) =>
+      _maintenance.release(token);
 
   Future<T> _runWithAppBackupRestoreLease<T>(
-    Object token,
+    AppDataSessionToken token,
     Future<T> Function() action, {
     bool allowRecoveryBlocked = false,
-  }) async {
-    await _repository.waitForPendingWrites();
-    if (!allowRecoveryBlocked && !_repository.canWrite) {
-      throw RecoveryWriteBlockedException(_repository.lastLoadStatus);
-    }
-    if (_activeAppBackupRestoreToken != null) {
-      throw StateError('Another app-backup restore lease is already active.');
-    }
-
-    _activeAppBackupRestoreToken = token;
-    try {
-      return await runZoned<Future<T>>(
-        action,
-        zoneValues: {_appBackupRestoreZoneKey: token},
-      );
-    } finally {
-      if (identical(_activeAppBackupRestoreToken, token)) {
-        _activeAppBackupRestoreToken = null;
-      }
-    }
-  }
+  }) => _maintenance.runWithLease(
+    token,
+    action,
+    allowRecoveryBlocked: allowRecoveryBlocked,
+  );
 
   SchoolSiteRestoreLease get _schoolSiteRestoreLease {
     final lease = _activeSchoolSiteRestoreLease;
@@ -269,11 +216,17 @@ class TimetableProvider extends _TimetableProviderBase
        _backupRestoreJournal =
            backupRestoreJournal ?? AppBackupRestoreJournal(),
        _workspaceMutationLock =
-           workspaceMutationLock ?? withAgendaRuntimeMutationLock<void>,
-       _uiStateSaveDelay = uiStateSaveDelay ?? _defaultUiStateSaveDelay {
+           (workspaceMutationLock ?? withAgendaRuntimeMutationLock<void>) {
+    final appRepository =
+        repository ?? AppRepository(storage: storage ?? TimetableStorage());
+    _maintenance = AppDataMaintenance(
+      repository: appRepository,
+      notifyViewChanged: () {
+        if (!_isDisposed) notifyListeners();
+      },
+    );
     _session = AppSession(
-      repository:
-          repository ?? AppRepository(storage: storage ?? TimetableStorage()),
+      repository: appRepository,
       initialData: buildInitialAppData(buildDefaultPeriodTimes()),
       requireMutationAllowed: _ensureAppBackupRestoreMutationAllowed,
       restoreRuntimeFields: (persisted, current) =>
@@ -290,6 +243,16 @@ class TimetableProvider extends _TimetableProviderBase
       },
     );
     _studentView = StudentViewState(_session);
+    _persistence = AppPersistence(
+      session: _session,
+      student: _studentView,
+      transactions: _workspaceTransactions,
+      maintenance: _maintenance,
+      notifyViewChanged: () {
+        if (!_isDisposed) notifyListeners();
+      },
+      uiStateSaveDelay: uiStateSaveDelay ?? const Duration(milliseconds: 450),
+    );
     _studentCommands = StudentCommands(
       session: _session,
       view: _studentView,
@@ -314,6 +277,10 @@ class TimetableProvider extends _TimetableProviderBase
 
   @override
   late final AppSession _session;
+  @override
+  late final AppDataMaintenance _maintenance;
+  @override
+  late final AppPersistence _persistence;
   late final StudentViewState _studentView;
   late final StudentCommands _studentCommands;
   @override
@@ -356,7 +323,6 @@ class TimetableProvider extends _TimetableProviderBase
 
   StudentCommands get studentCommands => _studentCommands;
   StudentViewState get studentView => _studentView;
-  int get _selectedWeekMutationEpoch => _studentView.selectionEpoch;
 
   @override
   int get _selectedWeek => _studentView.selectedWeek;
@@ -660,14 +626,9 @@ class TimetableProvider extends _TimetableProviderBase
   bool _isLoading = false;
   @override
   String? _storagePath;
-  Timer? _uiStateSaveTimer;
-  Future<void>? _uiStateSaveInFlight;
   var _dataClearReserved = false;
   Future<void>? _dataClearInFlight;
   SchoolSiteRestoreLease? _permanentDataClearSchoolSiteLease;
-  final Duration _uiStateSaveDelay;
-
-  static const _defaultUiStateSaveDelay = Duration(milliseconds: 450);
 
   bool get isLoaded => _isLoaded;
 
@@ -722,6 +683,8 @@ class TimetableProvider extends _TimetableProviderBase
   SettingsCommands get settingsCommands => _settingsCommands;
   SettingsViewState get settingsView => _settingsView;
   WorkspaceViewState get workspaceView => _workspaceView;
+  AppDataMaintenance get maintenance => _maintenance;
+  AppPersistence get persistence => _persistence;
   SchoolImportSecretController get schoolImportSecrets => _schoolImportSecrets;
 
   NotificationSettings get notificationSettings =>
@@ -1164,96 +1127,29 @@ class TimetableProvider extends _TimetableProviderBase
     bool rollbackOnFailure = true,
     bool emitCommit = true,
     int? rollbackSelectedWeek,
-  }) async {
-    _ensureAppBackupRestoreMutationAllowed();
-    final timetableIdBeforeSave = activeTimetableOrNull?.id;
-    final selectedWeekEpoch = _selectedWeekMutationEpoch;
-    final hadScheduledUiStateSave = _cancelScheduledUiStateSave();
-    try {
-      await _save(
-        workspaceCommit: workspaceCommit,
-        rollbackOnFailure: rollbackOnFailure,
-        emitCommit: emitCommit,
-      );
-    } catch (_) {
-      final timetable = activeTimetableOrNull;
-      if (timetable?.id != timetableIdBeforeSave) {
-        _selectedWeek = _currentWeekForActiveTimetable();
-      } else if (timetable != null) {
-        // Configuration edits may have clamped the selection optimistically.
-        // Restore its prior value only if no later navigation superseded it.
-        final preferredWeek =
-            rollbackSelectedWeek != null &&
-                _selectedWeekMutationEpoch == selectedWeekEpoch
-            ? rollbackSelectedWeek
-            : _selectedWeek;
-        _selectedWeek = preferredWeek.clamp(1, timetable.config.totalWeeks);
-      }
-      if (hadScheduledUiStateSave && !rollbackOnFailure) {
-        _scheduleUiStateSave();
-      }
-      if (notify) notifyListeners();
-      rethrow;
-    }
-    if (notify) notifyListeners();
-  }
+  }) => _persistence.saveAndNotify(
+    notify: notify,
+    workspaceCommit: workspaceCommit,
+    rollbackOnFailure: rollbackOnFailure,
+    emitCommit: emitCommit,
+    rollbackSelectedWeek: rollbackSelectedWeek,
+  );
 
   @override
   Future<void> _save({
     WorkspaceCommit? workspaceCommit,
     bool rollbackOnFailure = true,
     bool emitCommit = true,
-  }) async {
-    final pendingCommit = _workspaceTransactions.waitBeforeSave(
-      commit: workspaceCommit,
-    );
-    if (pendingCommit != null) {
-      await pendingCommit;
-    }
-    _ensureAppBackupRestoreMutationAllowed();
-    // Commands preserve the invariants of the branches they change. Full data
-    // repair belongs to load/import boundaries, where legacy input enters.
-    final snapshot = _appData;
-    // A restore can reserve a new UI session while this save is in flight.
-    // Its generation belongs to the restore's own successful write, not this
-    // older snapshot. Queued restores also keep their individual lease token.
-    final restoreToken = _activeAppBackupRestoreToken;
-    final dataSessionRevision =
-        (restoreToken is _AppDataSessionToken
-                ? restoreToken
-                : _dataSessionToken)
-            .revision;
-    await _session.persist(
-      snapshot,
-      publish: emitCommit,
-      rollbackOnFailure: rollbackOnFailure,
-      dataSessionRevision: dataSessionRevision,
-    );
-  }
+  }) => _persistence.save(
+    workspaceCommit: workspaceCommit,
+    rollbackOnFailure: rollbackOnFailure,
+    emitCommit: emitCommit,
+  );
 
-  void _scheduleUiStateSave() {
-    _uiStateSaveTimer?.cancel();
-    if (_uiStateSaveDelay <= Duration.zero) {
-      _uiStateSaveTimer = null;
-      _startDeferredUiStateSave();
-      return;
-    }
-    _uiStateSaveTimer = Timer(_uiStateSaveDelay, () {
-      _uiStateSaveTimer = null;
-      _startDeferredUiStateSave();
-    });
-  }
+  void _scheduleUiStateSave() => _persistence.scheduleUiStateSave();
 
-  Future<void> flushPendingUiStateSaves() async {
-    final hadScheduledSave = _cancelScheduledUiStateSave();
-    if (hadScheduledSave) {
-      _startDeferredUiStateSave();
-    }
-    final inFlight = _uiStateSaveInFlight;
-    if (inFlight != null) {
-      await inFlight;
-    }
-  }
+  Future<void> flushPendingUiStateSaves() =>
+      _persistence.flushPendingUiStateSaves();
 
   /// User-requested close may fail or be cancelled. Unlike teardown, errors
   /// must reach the UI before the native window is destroyed.
@@ -1262,7 +1158,7 @@ class TimetableProvider extends _TimetableProviderBase
       await quiesceForShutdown();
       return true;
     }
-    if (_appBackupRestoreReservationCount > 0 || isDataClearActive) {
+    if (_maintenance.isReserved || isDataClearActive) {
       return false;
     }
     for (final mode in [...enabledWorkspaces]) {
@@ -1318,8 +1214,7 @@ class TimetableProvider extends _TimetableProviderBase
       await Future<void>.microtask(() {});
       if (appDataEpoch == _appDataMutationEpoch &&
           secretEpoch == _schoolImportSecrets.mutationEpoch &&
-          _uiStateSaveTimer == null &&
-          _uiStateSaveInFlight == null &&
+          _persistence.isIdle &&
           _workspaceTransactions.isIdle) {
         return;
       }
@@ -1383,7 +1278,7 @@ class TimetableProvider extends _TimetableProviderBase
           final lease = schoolSiteLease ?? await schoolSiteLeaseFuture;
           await lease.release();
         } finally {
-          _releaseAppBackupRestore();
+          _releaseAppBackupRestore(token);
           _dataClearReserved = false;
           if (!_isDisposed) notifyListeners();
         }
@@ -1392,55 +1287,19 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   @override
-  bool _cancelScheduledUiStateSave() {
-    final timer = _uiStateSaveTimer;
-    _uiStateSaveTimer = null;
-    timer?.cancel();
-    return timer != null;
-  }
-
-  @override
-  void _startDeferredUiStateSave() {
-    final future = _runDeferredUiStateSave();
-    _uiStateSaveInFlight = future;
-    unawaited(
-      future.then<void>(
-        (_) {
-          if (identical(_uiStateSaveInFlight, future)) {
-            _uiStateSaveInFlight = null;
-          }
-        },
-        onError: (Object error, StackTrace stackTrace) {
-          debugPrint('Deferred UI state save failed: $error\n$stackTrace');
-          if (identical(_uiStateSaveInFlight, future)) {
-            _uiStateSaveInFlight = null;
-          }
-          if (!_isDisposed) {
-            notifyListeners();
-          }
-        },
-      ),
-    );
-  }
-
-  Future<void> _runDeferredUiStateSave() => _save(emitCommit: false);
-
-  @override
   void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision}) {
     if (_isDisposed) return;
     _session.publishCommittedSnapshot(
       snapshot,
-      dataSessionRevision: dataSessionRevision ?? _dataSessionToken.revision,
+      dataSessionRevision:
+          dataSessionRevision ?? _maintenance.dataSessionToken.revision,
     );
   }
 
   @override
   void dispose() {
     _isDisposed = true;
-    final hadScheduledSave = _cancelScheduledUiStateSave();
-    if (hadScheduledSave) {
-      _startDeferredUiStateSave();
-    }
+    _persistence.flushScheduledUiStateSave();
     unawaited(_session.close());
     super.dispose();
   }
