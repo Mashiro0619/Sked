@@ -1,4 +1,30 @@
-part of 'timetable_provider.dart';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show VoidCallback, debugPrint;
+
+import '../data/app_repository.dart';
+import '../data/timetable_storage.dart';
+import '../models/school_import_models.dart';
+import '../models/timetable_models.dart';
+import '../services/app_backup_restore_journal.dart';
+import '../services/import_export_service.dart';
+import '../services/school_site_service.dart';
+import '../services/school_site_store.dart';
+import 'app_data_defaults.dart';
+import 'app_data_maintenance.dart';
+import 'app_persistence.dart';
+import 'app_session.dart';
+import 'data_transfer_controller.dart';
+import 'school_import_secret_controller.dart';
+import 'student_view_state.dart';
+import 'workspace_commands.dart';
+import 'workspace_view_state.dart';
+
+enum AppImportMode { replaceAll, addAll }
+
+class WorkspaceChangeCancelledException implements Exception {
+  const WorkspaceChangeCancelledException();
+}
 
 class AppBackupRestoreException implements Exception {
   const AppBackupRestoreException(
@@ -17,33 +43,96 @@ class AppBackupRestoreException implements Exception {
       : 'App backup restore failed and rollback was incomplete: $cause';
 }
 
-mixin _TimetableProviderImportExport on _TimetableProviderBase {
+/// Owns complete backup restore and journal recovery across app data, saved
+/// school sites and the separately stored import key.
+class AppBackupController {
+  AppBackupController({
+    required this._session,
+    required this._persistence,
+    required this._maintenance,
+    required this._student,
+    required this._workspace,
+    required this._workspaces,
+    required this._secrets,
+    required this._schoolSites,
+    required this._journal,
+    required this._defaults,
+    required this._transfers,
+    required this._runtimeMutationLock,
+    required this._notifyViewChanged,
+    this._imports = const ImportExportService(),
+  });
+
+  final AppSession _session;
+  final AppPersistence _persistence;
+  final AppDataMaintenance _maintenance;
+  final StudentViewState _student;
+  final WorkspaceViewState _workspace;
+  final WorkspaceCommands _workspaces;
+  final SchoolImportSecretController _secrets;
+  final SchoolSiteService _schoolSites;
+  final AppBackupRestoreJournal _journal;
+  final AppDataDefaults _defaults;
+  final DataTransferController _transfers;
+  final Future<void> Function(Future<void> Function()) _runtimeMutationLock;
+  final VoidCallback _notifyViewChanged;
+  final ImportExportService _imports;
+  SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
+  StorageLoadStatus? _journalRecoveryLoadStatus;
+  List<String> _journalRecoveryArtifacts = const [];
+  String? _corruptAppBackupRestoreJournalArtifact;
+
+  AppRepository get _repository => _session.repository;
+  AppData get _data => _session.data;
+  set _data(AppData value) => _session.replaceData(value);
+
+  StorageLoadStatus? get journalLoadStatus => _journalRecoveryLoadStatus;
+  List<String> get recoveryArtifacts => _journalRecoveryArtifacts;
+  bool get canStartFreshAfterRecovery =>
+      _journalRecoveryLoadStatus == StorageLoadStatus.corrupt &&
+      _corruptAppBackupRestoreJournalArtifact != null;
+
+  Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
+    if (!_journalRecoveryArtifacts.contains(artifactPath)) return null;
+    return _journal.readRecoveryArtifact(artifactPath);
+  }
+
+  AppDataSessionToken _reserveRestore() {
+    _persistence.flushScheduledUiStateSave();
+    return _maintenance.reserve();
+  }
+
+  SchoolSiteRestoreLease get _schoolSiteRestoreLease {
+    final lease = _activeSchoolSiteRestoreLease;
+    if (lease == null) {
+      throw StateError('A school-site restore lease is not active.');
+    }
+    return lease;
+  }
+
   Future<void> _appBackupRestoreTail = Future<void>.value();
 
-  Future<String> exportAppDataJson() async {
+  Future<String> exportJson() async {
     final siteResult = await _schoolSites.loadSitesResult();
     if (!siteResult.canWrite) {
       throw SchoolSiteRecoveryException(siteResult);
     }
     // Pending range/focus writes are deliberately unpublished. A backup made
     // while they are in flight must not resurrect a navigation that later fails.
-    return encodeAppBackup(_visibleAppData, siteResult.sites);
+    return encodeAppBackup(_workspace.data, siteResult.sites);
   }
 
-  Future<int> importAppDataJson(
-    String source, {
-    required AppImportMode mode,
-  }) async {
+  Future<int> importJson(String source, {required AppImportMode mode}) async {
     if (mode == AppImportMode.addAll) {
-      _ensureAppBackupRestoreMutationAllowed();
+      _maintenance.ensureMutationAllowed();
     }
-    final backup = decodeAppBackup(source, localeCode: _appData.localeCode);
-    final imported = _importExportService.normalizeAppData(
+    final backup = decodeAppBackup(source, localeCode: _data.localeCode);
+    final imported = _imports.normalizeAppData(
       backup.appData,
       localeCode: backup.appData.localeCode,
     );
     if (mode == AppImportMode.replaceAll) {
-      for (final workspace in _appData.enabledWorkspaces) {
+      for (final workspace in _data.enabledWorkspaces) {
         // Replacing data invalidates drafts even when the workspace stays enabled.
         if (_workspaces.hasExitGuards(workspace) &&
             !await _workspaces.prepareExit(workspace)) {
@@ -65,14 +154,14 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   }
 
   Future<int> _restoreAppBackup(AppData imported, AppBackupData backup) async {
-    await _schoolImportSecrets.ensurePersistenceKnown();
+    await _secrets.ensurePersistenceKnown();
     final schoolSiteLease = _schoolSiteRestoreLease;
     final siteResult = await schoolSiteLease.loadSitesResult();
     if (!siteResult.canWrite && !siteResult.canReplaceAfterRecovery) {
       throw SchoolSiteRecoveryException(siteResult);
     }
 
-    final previousAppData = _appData;
+    final previousAppData = _data;
     final newlyEnabled = imported.enabledWorkspaces.difference(
       previousAppData.enabledWorkspaces,
     );
@@ -99,7 +188,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     // Backups never carry secrets. Keep the existing key until both data
     // stores and the dataCommitted marker are durable, then apply its policy.
     try {
-      pendingRestore = await _backupRestoreJournal.writePrepared(
+      pendingRestore = await _journal.writePrepared(
         encodeAppBackup(journalAppData, restoredSchoolSites),
         localeCode: imported.localeCode,
       );
@@ -107,29 +196,27 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       if (error.stateUnknown) {
         _trackAppBackupRestoreJournal(
           status: StorageLoadStatus.ioFailure,
-          artifacts: [_backupRestoreJournal.pendingArtifactPath],
+          artifacts: [_journal.pendingArtifactPath],
         );
         _session.blockWritesAfterInitializationFailure();
-        notifyListeners();
+        _notifyViewChanged();
       }
       rethrow;
     }
-    _trackAppBackupRestoreJournal(
-      artifacts: [_backupRestoreJournal.pendingArtifactPath],
-    );
+    _trackAppBackupRestoreJournal(artifacts: [_journal.pendingArtifactPath]);
     var appDataCommitted = false;
     var schoolSitesAttempted = false;
     var schoolSitesCommitted = false;
 
     try {
-      _appData = restoredAppData;
-      _selectedWeek = _currentWeekForActiveTimetable();
-      await _saveAndNotify();
+      _data = restoredAppData;
+      _student.selectedWeek = _student.currentWeek();
+      await _persistence.saveAndNotify();
       appDataCommitted = true;
       schoolSitesAttempted = true;
       await schoolSiteLease.replaceSitesAfterRecovery(restoredSchoolSites);
       schoolSitesCommitted = true;
-      pendingRestore = await _backupRestoreJournal.advancePhase(
+      pendingRestore = await _journal.advancePhase(
         pendingRestore,
         AppBackupRestoreJournalPhase.dataCommitted,
         localeCode: imported.localeCode,
@@ -142,7 +229,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
               error is! SchoolSiteStoreRecoveryBlockedException);
       if (schoolSitesCommitted || !schoolSitesStateKnown) {
         _session.blockWritesAfterInitializationFailure();
-        notifyListeners();
+        _notifyViewChanged();
         Error.throwWithStackTrace(
           AppBackupRestoreException(
             error,
@@ -156,23 +243,23 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       var appDataRestored = false;
       if (appDataCommitted) {
         try {
-          _appData = previousAppData;
-          _selectedWeek = _currentWeekForActiveTimetable();
-          await _saveAndNotify();
+          _data = previousAppData;
+          _student.selectedWeek = _student.currentWeek();
+          await _persistence.saveAndNotify();
           appDataRestored = true;
         } catch (rollbackError) {
           rollbackErrors.add(rollbackError);
         }
       } else {
-        _appData = previousAppData;
-        _selectedWeek = _currentWeekForActiveTimetable();
-        notifyListeners();
+        _data = previousAppData;
+        _student.selectedWeek = _student.currentWeek();
+        _notifyViewChanged();
         appDataRestored = _repository.canWrite;
       }
       var journalCleared = false;
       if (appDataRestored) {
         try {
-          await _backupRestoreJournal.clear();
+          await _journal.clear();
           journalCleared = true;
           _clearAppBackupRestoreJournalTracking();
         } catch (rollbackError) {
@@ -181,7 +268,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       }
       if (!appDataRestored || !journalCleared || rollbackErrors.isNotEmpty) {
         _session.blockWritesAfterInitializationFailure();
-        notifyListeners();
+        _notifyViewChanged();
         throw AppBackupRestoreException(
           error,
           rollbackErrors,
@@ -193,16 +280,16 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
     try {
       if (pendingRestore.apiKeyPolicy == AppBackupRestoreApiKeyPolicy.clear) {
-        await _schoolImportSecrets.persist('');
+        await _secrets.persist('');
       }
-      pendingRestore = await _backupRestoreJournal.advancePhase(
+      pendingRestore = await _journal.advancePhase(
         pendingRestore,
         AppBackupRestoreJournalPhase.secretPolicyApplied,
         localeCode: imported.localeCode,
       );
     } catch (error, stackTrace) {
       _session.blockWritesAfterInitializationFailure();
-      notifyListeners();
+      _notifyViewChanged();
       Error.throwWithStackTrace(
         AppBackupRestoreException(error, const [], recoveryPending: true),
         stackTrace,
@@ -220,15 +307,12 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     return imported.studentMode.timetables.length;
   }
 
-  @override
-  Future<void> _resumePendingAppBackupRestore() async {
-    assert(_isLoading);
+  Future<void> resumePendingRestore() async {
+    assert(_session.isLoading);
     assert(!_maintenance.isReserved);
-    final preflight = await _backupRestoreJournal.load(
-      localeCode: _appData.localeCode,
-    );
+    final preflight = await _journal.load(localeCode: _data.localeCode);
     if (preflight.status == AppBackupRestoreJournalLoadStatus.missing) {
-      // Startup/retry owns the provider while _isLoading is true, so a clean
+      // Startup/retry owns the session while _session.isLoading is true, so a clean
       // journal needs neither an app-data reservation nor a school-site lease.
       _clearAppBackupRestoreJournalTracking(
         retainedArtifacts: preflight.recoveryArtifacts,
@@ -247,9 +331,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     // Never apply the preflight snapshot. Another process or a preceding
     // queued operation may have advanced the journal before this lease was
     // acquired, so the authoritative state must be read inside the queue.
-    final authoritative = await _backupRestoreJournal.load(
-      localeCode: _appData.localeCode,
-    );
+    final authoritative = await _journal.load(localeCode: _data.localeCode);
     final changedToMissing =
         authoritative.status == AppBackupRestoreJournalLoadStatus.missing &&
         preflight.status != AppBackupRestoreJournalLoadStatus.missing;
@@ -262,7 +344,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         ? AppBackupRestoreJournalLoadResult(
             status: AppBackupRestoreJournalLoadStatus.ioFailure,
             recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
-              _backupRestoreJournal.pendingArtifactPath,
+              _journal.pendingArtifactPath,
               ...preflight.recoveryArtifacts,
               ...authoritative.recoveryArtifacts,
             ]),
@@ -335,9 +417,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
     late final String recoveryArtifact;
     try {
-      recoveryArtifact = await _backupRestoreJournal.preserveForRecovery(
-        source,
-      );
+      recoveryArtifact = await _journal.preserveForRecovery(source);
     } catch (_) {
       _session.blockWritesAfterInitializationFailure();
       rethrow;
@@ -347,10 +427,8 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       status: StorageLoadStatus.corrupt,
       artifacts: [
         recoveryArtifact,
-        if (result.recoveryArtifacts.contains(
-          _backupRestoreJournal.pendingArtifactPath,
-        ))
-          _backupRestoreJournal.pendingArtifactPath,
+        if (result.recoveryArtifacts.contains(_journal.pendingArtifactPath))
+          _journal.pendingArtifactPath,
       ],
     );
     _session.blockWritesAfterInitializationFailure();
@@ -361,8 +439,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     );
   }
 
-  @override
-  Future<void> _startFreshAfterCorruptAppBackupRestoreJournal() {
+  Future<void> startFreshAfterCorruptJournal() {
     return _enqueueAppBackupRestore(
       _startFreshAfterCorruptAppBackupRestoreJournalNow,
       allowWhileLoading: true,
@@ -379,8 +456,8 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     }
 
     try {
-      await _schoolImportSecrets.ensurePersistenceKnown();
-      final runtimeApiKey = _appData.aiApiSettings.customApiKey;
+      await _secrets.ensurePersistenceKnown();
+      final runtimeApiKey = _data.aiApiSettings.customApiKey;
       final schoolSiteLease = _schoolSiteRestoreLease;
       final siteResult = await schoolSiteLease.loadSitesResult();
       if (!siteResult.canWrite && !siteResult.canReplaceAfterRecovery) {
@@ -389,19 +466,18 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
       final currentAppData = _repository.current;
       if (currentAppData != null) {
-        final currentBackupArtifact = await _backupRestoreJournal
-            .preserveForRecovery(
-              encodeAppBackup(currentAppData, siteResult.sites),
-            );
+        final currentBackupArtifact = await _journal.preserveForRecovery(
+          encodeAppBackup(currentAppData, siteResult.sites),
+        );
         _trackAppBackupRestoreJournal(artifacts: [currentBackupArtifact]);
       }
 
-      var fresh = await _buildDefaultAppData();
-      fresh = _importExportService.normalizeAppData(
+      var fresh = await _defaults.build();
+      fresh = _imports.normalizeAppData(
         withRuntimeSchoolImportApiKey(fresh, runtimeApiKey),
         localeCode: fresh.localeCode,
       );
-      await _backupRestoreJournal.writeReconciliation(
+      await _journal.writeReconciliation(
         encodeAppBackup(fresh, siteResult.sites),
         recoveryArtifact: recoveryArtifact,
         localeCode: fresh.localeCode,
@@ -416,14 +492,12 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
           throw RecoveryWriteBlockedException(_repository.lastLoadStatus);
         }
       }
-      _appData = withRuntimeSchoolImportApiKey(
+      _data = withRuntimeSchoolImportApiKey(
         _repository.current ?? fresh,
         runtimeApiKey,
       );
 
-      final replacement = await _backupRestoreJournal.load(
-        localeCode: fresh.localeCode,
-      );
+      final replacement = await _journal.load(localeCode: fresh.localeCode);
       if (replacement.status != AppBackupRestoreJournalLoadStatus.valid) {
         throw AppBackupRestoreJournalException(
           'The replacement app-backup restore journal could not be verified.',
@@ -448,17 +522,14 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     }
     _corruptAppBackupRestoreJournalArtifact = null;
     _trackAppBackupRestoreJournal(
-      artifacts: [
-        _backupRestoreJournal.pendingArtifactPath,
-        ...result.recoveryArtifacts,
-      ],
+      artifacts: [_journal.pendingArtifactPath, ...result.recoveryArtifacts],
     );
     var pendingRestore = result;
 
     if (pendingRestore.phase == AppBackupRestoreJournalPhase.prepared) {
-      final existingApiKey = _appData.aiApiSettings.customApiKey;
+      final existingApiKey = _data.aiApiSettings.customApiKey;
       final restoredAppData = withRuntimeSchoolImportApiKey(
-        _importExportService.normalizeAppData(
+        _imports.normalizeAppData(
           backup.appData,
           localeCode: backup.appData.localeCode,
         ),
@@ -470,11 +541,11 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         throw SchoolSiteRecoveryException(siteResult);
       }
 
-      _appData = restoredAppData;
-      _selectedWeek = _currentWeekForActiveTimetable();
-      await _saveAndNotify();
+      _data = restoredAppData;
+      _student.selectedWeek = _student.currentWeek();
+      await _persistence.saveAndNotify();
       await schoolSiteLease.replaceSitesAfterRecovery(backup.schoolSites);
-      pendingRestore = await _backupRestoreJournal.advancePhase(
+      pendingRestore = await _journal.advancePhase(
         pendingRestore,
         AppBackupRestoreJournalPhase.dataCommitted,
         localeCode: backup.appData.localeCode,
@@ -483,9 +554,9 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
     if (pendingRestore.phase == AppBackupRestoreJournalPhase.dataCommitted) {
       if (pendingRestore.apiKeyPolicy == AppBackupRestoreApiKeyPolicy.clear) {
-        await _schoolImportSecrets.persist('');
+        await _secrets.persist('');
       }
-      pendingRestore = await _backupRestoreJournal.advancePhase(
+      pendingRestore = await _journal.advancePhase(
         pendingRestore,
         AppBackupRestoreJournalPhase.secretPolicyApplied,
         localeCode: backup.appData.localeCode,
@@ -500,18 +571,18 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
   Future<void> _clearCompletedAppBackupRestoreJournal() async {
     try {
-      await _backupRestoreJournal.clear();
+      await _journal.clear();
     } catch (error, stackTrace) {
       _trackAppBackupRestoreJournal(
         status: StorageLoadStatus.ioFailure,
-        artifacts: [_backupRestoreJournal.pendingArtifactPath],
+        artifacts: [_journal.pendingArtifactPath],
       );
       // A terminal journal is safe to retain only while the application is
       // write-blocked. Until cleanup is confirmed, a later launch must retry
       // cleanup and must never allow edits that could be confused with a
       // still-pending restore transaction.
       _session.blockWritesAfterInitializationFailure();
-      notifyListeners();
+      _notifyViewChanged();
       debugPrint(
         'Completed app-backup restore journal cleanup was deferred: '
         '$error\n$stackTrace',
@@ -539,10 +610,10 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     _corruptAppBackupRestoreJournalArtifact = null;
     _journalRecoveryArtifacts = List.unmodifiable({
       ..._journalRecoveryArtifacts.where(
-        (artifact) => artifact != _backupRestoreJournal.pendingArtifactPath,
+        (artifact) => artifact != _journal.pendingArtifactPath,
       ),
       ...retainedArtifacts.where(
-        (artifact) => artifact != _backupRestoreJournal.pendingArtifactPath,
+        (artifact) => artifact != _journal.pendingArtifactPath,
       ),
     });
   }
@@ -552,21 +623,21 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     bool allowWhileLoading = false,
     bool allowRecoveryBlocked = false,
   }) {
-    if (!allowWhileLoading && (!_isLoaded || _isLoading)) {
+    if (!allowWhileLoading && (!_session.isLoaded || _session.isLoading)) {
       return Future<T>.error(
         StateError('App data must finish loading before backup restore.'),
       );
     }
     final schoolSiteLeaseFuture = _schoolSites.reserveRestore();
-    final token = _reserveAppBackupRestore();
+    final token = _reserveRestore();
     final actionResult = _appBackupRestoreTail.then((_) async {
       SchoolSiteRestoreLease? schoolSiteLease;
       try {
         schoolSiteLease = await schoolSiteLeaseFuture;
         _activeSchoolSiteRestoreLease = schoolSiteLease;
-        return await _runWithAppBackupRestoreLease(token, () async {
+        return await _maintenance.runWithLease(token, () async {
           late T value;
-          await _workspaceMutationLock(() async {
+          await _runtimeMutationLock(() async {
             value = await action();
           });
           return value;
@@ -578,33 +649,11 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         await schoolSiteLease?.release();
       }
     });
-    final result = actionResult.whenComplete(
-      () => _releaseAppBackupRestore(token),
-    );
+    final result = actionResult.whenComplete(() => _maintenance.release(token));
     _appBackupRestoreTail = result.then<void>(
       (_) {},
       onError: (Object _, StackTrace _) {},
     );
     return result;
-  }
-
-  Future<List<CoursePeriodTime>> _loadDefaultPeriodTimes() async {
-    try {
-      final source = await rootBundle.loadString(defaultPeriodTimesAssetPath);
-      return _transfers.importPeriodTimesJson(source);
-    } catch (e, st) {
-      debugPrint('Failed to load default period times from assets: $e\n$st');
-      return buildDefaultPeriodTimes();
-    }
-  }
-
-  @override
-  Future<AppData> _buildDefaultAppData() async {
-    final periodTimes = await _loadDefaultPeriodTimes();
-    final localeCode = _systemLocaleCodeResolver();
-    return _importExportService.normalizeAppData(
-      buildInitialAppData(periodTimes, localeCode: localeCode),
-      localeCode: localeCode,
-    );
   }
 }

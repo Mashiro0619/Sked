@@ -61,7 +61,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     try {
       await _hydrateFromStorage(retry: false);
       if (_repository.canWrite) {
-        await _resumePendingAppBackupRestore();
+        await _backups.resumePendingRestore();
       }
     } catch (e, st) {
       debugPrint(
@@ -74,7 +74,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         _appData = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
       } else {
         try {
-          _appData = await _buildDefaultAppData();
+          _appData = await _defaults.build();
         } catch (fallbackError, fallbackStackTrace) {
           debugPrint(
             'Provider fallback initialization failed: '
@@ -98,7 +98,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     try {
       await _hydrateFromStorage(retry: true);
       if (_repository.canWrite) {
-        await _resumePendingAppBackupRestore();
+        await _backups.resumePendingRestore();
       }
     } catch (error, stackTrace) {
       _session.blockWritesAfterInitializationFailure();
@@ -122,11 +122,11 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     _session.updateLoadState(isLoading: true);
     notifyListeners();
     try {
-      if (_journalRecoveryLoadStatus == StorageLoadStatus.corrupt) {
-        await _startFreshAfterCorruptAppBackupRestoreJournal();
+      if (_backups.journalLoadStatus == StorageLoadStatus.corrupt) {
+        await _backups.startFreshAfterCorruptJournal();
         return;
       }
-      var fresh = await _buildDefaultAppData();
+      var fresh = await _defaults.build();
       fresh = withRuntimeSchoolImportApiKey(
         fresh,
         await _schoolImportSecrets.readForInitialization(),
@@ -139,10 +139,10 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       _appData = fresh;
       _storagePath = await _repository.filePath();
       try {
-        await _resumePendingAppBackupRestore();
+        await _backups.resumePendingRestore();
       } on AppBackupRestoreJournalException {
-        if (_journalRecoveryLoadStatus != StorageLoadStatus.corrupt) rethrow;
-        await _startFreshAfterCorruptAppBackupRestoreJournal();
+        if (_backups.journalLoadStatus != StorageLoadStatus.corrupt) rethrow;
+        await _backups.startFreshAfterCorruptJournal();
       }
     } finally {
       _selectedWeek = _currentWeekForActiveTimetable();
@@ -152,13 +152,8 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   }
 
   Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
-    if (_journalRecoveryArtifacts.contains(artifactPath)) {
-      final bytes = await _backupRestoreJournal.readRecoveryArtifact(
-        artifactPath,
-      );
-      if (bytes != null) return bytes;
-    }
-    return _repository.readRecoveryArtifact(artifactPath);
+    final journalBytes = await _backups.readRecoveryArtifact(artifactPath);
+    return journalBytes ?? await _repository.readRecoveryArtifact(artifactPath);
   }
 
   Future<void> _hydrateFromStorage({required bool retry}) async {
@@ -166,7 +161,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         ? await _repository.retryLoad()
         : await _repository.load();
     if (fileData == null) {
-      var defaults = await _buildDefaultAppData();
+      var defaults = await _defaults.build();
       defaults = withRuntimeSchoolImportApiKey(
         defaults,
         await _schoolImportSecrets.readForInitialization(),

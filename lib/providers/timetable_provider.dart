@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 import '../controllers/app_session.dart';
+import '../controllers/app_backup_controller.dart';
+import '../controllers/app_data_defaults.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_persistence.dart';
 import '../controllers/data_transfer_controller.dart';
@@ -34,25 +35,22 @@ import '../services/import_export_service.dart';
 import '../services/data_transfer_codec.dart';
 import '../services/privacy_service.dart';
 import '../services/school_site_service.dart';
-import '../services/school_site_store.dart';
 import '../services/secret_store.dart';
 import '../services/settings_service.dart';
 
 export '../models/app_data_commit.dart';
+export '../controllers/app_backup_controller.dart'
+    show
+        AppImportMode,
+        AppBackupRestoreException,
+        WorkspaceChangeCancelledException;
 export '../controllers/app_data_maintenance.dart'
     show AppBackupRestoreInProgressException;
 
-part 'timetable_provider_import_export.dart';
 part 'timetable_provider_lifecycle.dart';
 part 'timetable_provider_developer.dart';
 
 const _importExportService = ImportExportService();
-
-enum AppImportMode { replaceAll, addAll }
-
-class WorkspaceChangeCancelledException implements Exception {
-  const WorkspaceChangeCancelledException();
-}
 
 String resolveFirstLaunchLocaleCode(Locale? locale) {
   return app_locale.resolveFirstLaunchLocaleCode(locale);
@@ -67,19 +65,16 @@ String _defaultSystemLocaleCodeResolver() {
 
 abstract class _TimetableProviderBase extends ChangeNotifier {
   AppSession get _session;
+  AppBackupController get _backups;
+  AppDataDefaults get _defaults;
   AppDataMaintenance get _maintenance;
   AppPersistence get _persistence;
-  DataTransferController get _transfers;
   WorkspaceCommands get _workspaces;
   AppSession get session => _session;
   Stream<AppDataCommit> get committedData => _session.commits;
   AppDataVersions get committedDataVersions => _session.versions;
 
   var _isDisposed = false;
-  SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
-  StorageLoadStatus? _journalRecoveryLoadStatus;
-  List<String> _journalRecoveryArtifacts = const [];
-  String? _corruptAppBackupRestoreJournalArtifact;
 
   GeneralViewState get _generalView;
   WorkspaceViewState get _workspaceView;
@@ -124,11 +119,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   set _storagePath(String? value);
 
   AppRepository get _repository;
-  Future<void> Function(Future<void> Function()) get _workspaceMutationLock;
-  String Function() get _systemLocaleCodeResolver;
   PrivacyService get _privacy;
-  SchoolSiteService get _schoolSites;
-  AppBackupRestoreJournal get _backupRestoreJournal;
   SchoolImportSecretController get _schoolImportSecrets;
 
   GeneralSchedule? get activeGeneralScheduleOrNull;
@@ -137,9 +128,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   PeriodTimeSet get activePeriodTimeSet;
 
   int _currentWeekForActiveTimetable();
-  Future<AppData> _buildDefaultAppData();
-  Future<void> _resumePendingAppBackupRestore();
-  Future<void> _startFreshAfterCorruptAppBackupRestoreJournal();
   Future<void> _saveAndNotify();
   Future<void> _save();
   void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision});
@@ -164,21 +152,10 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
     action,
     allowRecoveryBlocked: allowRecoveryBlocked,
   );
-
-  SchoolSiteRestoreLease get _schoolSiteRestoreLease {
-    final lease = _activeSchoolSiteRestoreLease;
-    if (lease == null) {
-      throw StateError('A school-site restore lease is not active.');
-    }
-    return lease;
-  }
 }
 
 class TimetableProvider extends _TimetableProviderBase
-    with
-        _TimetableProviderImportExport,
-        _TimetableProviderLifecycle,
-        _TimetableProviderDeveloper {
+    with _TimetableProviderLifecycle, _TimetableProviderDeveloper {
   TimetableProvider({
     TimetableStorage? storage,
     AppRepository? repository,
@@ -225,6 +202,10 @@ class TimetableProvider extends _TimetableProviderBase
         if (!_isDisposed) notifyListeners();
       },
     );
+    _defaults = AppDataDefaults(
+      session: _session,
+      localeCodeResolver: _systemLocaleCodeResolver,
+    );
     _studentView = StudentViewState(_session);
     _persistence = AppPersistence(
       session: _session,
@@ -241,7 +222,7 @@ class TimetableProvider extends _TimetableProviderBase
       view: _studentView,
       persist: ({int? rollbackSelectedWeek}) =>
           _saveAndNotify(rollbackSelectedWeek: rollbackSelectedWeek),
-      loadDefaultPeriodTimes: _loadDefaultPeriodTimes,
+      loadDefaultPeriodTimes: _defaults.loadPeriodTimes,
       notifyViewChanged: notifyListeners,
     );
     _generalView = GeneralViewState(_session);
@@ -281,15 +262,35 @@ class TimetableProvider extends _TimetableProviderBase
       maintenance: _maintenance,
       codec: dataTransferCodec,
     );
+    _backups = AppBackupController(
+      session: _session,
+      persistence: _persistence,
+      maintenance: _maintenance,
+      student: _studentView,
+      workspace: _workspaceView,
+      workspaces: _workspaces,
+      secrets: _schoolImportSecrets,
+      schoolSites: _schoolSites,
+      journal: _backupRestoreJournal,
+      defaults: _defaults,
+      transfers: _transfers,
+      runtimeMutationLock: _workspaceMutationLock,
+      notifyViewChanged: () {
+        if (!_isDisposed) notifyListeners();
+      },
+    );
   }
 
   @override
   late final AppSession _session;
   @override
+  late final AppBackupController _backups;
+  @override
+  late final AppDataDefaults _defaults;
+  @override
   late final AppDataMaintenance _maintenance;
   @override
   late final AppPersistence _persistence;
-  @override
   late final DataTransferController _transfers;
   @override
   late final WorkspaceCommands _workspaces;
@@ -305,18 +306,14 @@ class TimetableProvider extends _TimetableProviderBase
   late final SettingsCommands _settingsCommands;
   @override
   AppRepository get _repository => _session.repository;
-  @override
   final String Function() _systemLocaleCodeResolver;
   @override
   final PrivacyService _privacy;
   @override
   late final SchoolImportSecretController _schoolImportSecrets;
-  @override
   final SchoolSiteService _schoolSites;
-  @override
   final AppBackupRestoreJournal _backupRestoreJournal;
 
-  @override
   final Future<void> Function(Future<void> Function()) _workspaceMutationLock;
 
   int get _appDataMutationEpoch => _session.mutationEpoch;
@@ -608,7 +605,7 @@ class TimetableProvider extends _TimetableProviderBase
   String? get storagePath => _storagePath;
 
   RecoveryStatus get lastRecoveryStatus {
-    return switch (_journalRecoveryLoadStatus) {
+    return switch (_backups.journalLoadStatus) {
       StorageLoadStatus.corrupt => RecoveryStatus.failedBackupRestore,
       StorageLoadStatus.ioFailure => RecoveryStatus.ioFailure,
       StorageLoadStatus.unsupportedVersion => RecoveryStatus.unsupportedVersion,
@@ -620,7 +617,7 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   StorageLoadStatus get storageLoadStatus =>
-      _journalRecoveryLoadStatus ?? _repository.lastLoadStatus;
+      _backups.journalLoadStatus ?? _repository.lastLoadStatus;
   bool get canWrite => _session.canWrite;
   bool get isStorageWriteStateUnknown => _repository.isWriteStateUnknown;
 
@@ -637,14 +634,18 @@ class TimetableProvider extends _TimetableProviderBase
       _dataClearReserved && _permanentDataClearSchoolSiteLease != null;
   List<String> get recoveryArtifacts => List.unmodifiable({
     ..._repository.recoveryArtifacts,
-    ..._journalRecoveryArtifacts,
+    ..._backups.recoveryArtifacts,
   });
   bool get canStartFreshAfterRecovery =>
       (_repository.lastLoadStatus == StorageLoadStatus.corrupt &&
           _repository.recoveryArtifacts.isNotEmpty) ||
-      (_journalRecoveryLoadStatus == StorageLoadStatus.corrupt &&
-          _corruptAppBackupRestoreJournalArtifact != null);
+      _backups.canStartFreshAfterRecovery;
+  AppBackupController get backups => _backups;
   DataTransferController get transfers => _transfers;
+
+  Future<String> exportAppDataJson() => _backups.exportJson();
+  Future<int> importAppDataJson(String source, {required AppImportMode mode}) =>
+      _backups.importJson(source, mode: mode);
 
   String exportSelectedGeneralSchedulesJson(List<String> scheduleIds) =>
       _transfers.exportSelectedGeneralSchedulesJson(scheduleIds);
