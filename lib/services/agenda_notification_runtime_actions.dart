@@ -4,7 +4,7 @@ import 'package:crypto/crypto.dart';
 
 import 'agenda_notification_fingerprint.dart';
 import 'agenda_notification_payload.dart';
-import 'agenda_notification_runtime_store.dart';
+import 'agenda_notification_runtime_contract.dart';
 
 Future<DateTime?> resolveAgendaSnoozeFireAt(
   AgendaNotificationRuntimeStore runtime,

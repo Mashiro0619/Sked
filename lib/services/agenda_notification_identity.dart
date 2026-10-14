@@ -74,3 +74,11 @@ String agendaNotificationTag(String key) => '$agendaNotificationTagPrefix$key';
 
 bool isDeveloperNotificationPayload(String? payload) =>
     payload?.startsWith('sked.developer.notification-test.v1:') == true;
+
+String runtimeNotificationActionId(String payload, String actionId) {
+  // A queue item can be created in the Android background isolate and then
+  // read by the foreground isolate. Use a cryptographic digest so the same
+  // payload/action pair cannot collide with another pending action.
+  final digest = sha256.convert(utf8.encode('$actionId\u0000$payload'));
+  return 'action-${digest.toString()}';
+}

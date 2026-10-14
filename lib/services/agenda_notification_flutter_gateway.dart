@@ -13,7 +13,7 @@ import 'agenda_notification_payload.dart';
 import 'agenda_notification_contract.dart';
 import 'agenda_notification_identity.dart';
 import 'agenda_notification_presentation.dart';
-import 'agenda_notification_runtime_store.dart';
+import 'agenda_notification_runtime_contract.dart';
 // Existing Android callback handles contain this library URI. Keep registering
 // the original entry point while platform implementation lives independently.
 import 'agenda_notification_service.dart'
