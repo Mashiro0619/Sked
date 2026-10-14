@@ -7,9 +7,12 @@ import 'package:flutter/services.dart';
 import '../controllers/app_session.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_view_state.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
 import '../controllers/student_commands.dart';
 import '../controllers/student_view_state.dart';
 import '../controllers/workspace_transactions.dart';
+import '../controllers/workspace_view_state.dart';
 import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../l10n/app_locale.dart' as app_locale;
@@ -33,7 +36,6 @@ export '../models/app_data_commit.dart';
 
 part 'timetable_provider_import_export.dart';
 part 'timetable_provider_lifecycle.dart';
-part 'timetable_provider_settings.dart';
 part 'timetable_provider_developer.dart';
 
 const _calendarService = GeneralCalendarService();
@@ -96,6 +98,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
 
   final Map<AppMode, Set<Future<bool> Function()>> _workspaceExitGuards = {};
   GeneralViewState get _generalView;
+  WorkspaceViewState get _workspaceView;
 
   /// UI-only intent: explicit date jumps reveal their column; range paging
   /// leaves the user's horizontal/time viewport where it was.
@@ -110,9 +113,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   /// it is queued behind an earlier operation. Reading app data remains safe.
   bool get isRestoringAppBackup => _appBackupRestoreReservationCount > 0;
 
-  AppData get _visibleAppData => !_generalView.hasNavigationOverride
-      ? _appData
-      : _appData.copyWith(generalMode: _visibleGeneralMode);
+  AppData get _visibleAppData => _workspaceView.data;
 
   GeneralScheduleData get _visibleGeneralMode => _generalView.visibleData;
 
@@ -158,7 +159,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   AppRepository get _repository;
   Future<void> Function(Future<void> Function()) get _workspaceMutationLock;
   String Function() get _systemLocaleCodeResolver;
-  SettingsService get _settings;
   PrivacyService get _privacy;
   SchoolSiteService get _schoolSites;
   AppBackupRestoreJournal get _backupRestoreJournal;
@@ -433,7 +433,6 @@ class TimetableProvider extends _TimetableProviderBase
     with
         _TimetableProviderImportExport,
         _TimetableProviderLifecycle,
-        _TimetableProviderSettings,
         _TimetableProviderDeveloper {
   TimetableProvider({
     TimetableStorage? storage,
@@ -449,7 +448,6 @@ class TimetableProvider extends _TimetableProviderBase
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
   }) : _systemLocaleCodeResolver =
            systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver,
-       _settings = settingsService ?? const SettingsService(),
        _privacy = privacyService ?? const PrivacyService(),
        _secrets = secretStore ?? SecretStore(),
        _schoolSites = schoolSiteService ?? SchoolSiteService(),
@@ -483,6 +481,13 @@ class TimetableProvider extends _TimetableProviderBase
       session: _session,
       persist: _saveAndNotify,
     );
+    _workspaceView = WorkspaceViewState(_session, _generalView);
+    _settingsView = SettingsViewState(_workspaceView);
+    _settingsCommands = SettingsCommands(
+      session: _session,
+      persist: _saveAndNotify,
+      service: settingsService ?? const SettingsService(),
+    );
   }
 
   @override
@@ -493,11 +498,13 @@ class TimetableProvider extends _TimetableProviderBase
   late final GeneralViewState _generalView;
   late final GeneralCommands _generalCommands;
   @override
+  late final WorkspaceViewState _workspaceView;
+  late final SettingsViewState _settingsView;
+  late final SettingsCommands _settingsCommands;
+  @override
   AppRepository get _repository => _session.repository;
   @override
   final String Function() _systemLocaleCodeResolver;
-  @override
-  final SettingsService _settings;
   @override
   final PrivacyService _privacy;
   @override
@@ -511,32 +518,10 @@ class TimetableProvider extends _TimetableProviderBase
   final Future<void> Function(Future<void> Function()) _workspaceMutationLock;
 
   int get _appDataMutationEpoch => _session.mutationEpoch;
-  // A mode switch is persisted as a single command.  Keep the mode exposed to
-  // the rest of the app on the previously committed value until that command
-  // has completed; otherwise an unrelated notifyListeners() (for example a
-  // privacy/update refresh) can make MyApp rebuild with the target mode's
-  // theme while the write is still pending.
-  AppMode? _visibleActiveModeOverride;
-  Set<AppMode>? _visibleEnabledWorkspacesOverride;
   final _workspaceTransactions = WorkspaceTransactions();
 
   @override
   AppData get _appData => _session.data;
-
-  @override
-  AppData get _visibleAppData {
-    final data = super._visibleAppData;
-    if (_visibleActiveModeOverride == null &&
-        _visibleEnabledWorkspacesOverride == null) {
-      return data;
-    }
-    // A reader must see the same workspace selection and availability as the
-    // public getters while their transaction is waiting for durable storage.
-    return data.copyWith(
-      activeMode: _visibleActiveModeOverride,
-      enabledWorkspaces: _visibleEnabledWorkspacesOverride,
-    );
-  }
 
   @override
   set _appData(AppData value) {
@@ -928,57 +913,247 @@ class TimetableProvider extends _TimetableProviderBase
           _repository.recoveryArtifacts.isNotEmpty) ||
       (_journalRecoveryLoadStatus == StorageLoadStatus.corrupt &&
           _corruptAppBackupRestoreJournalArtifact != null);
+  SettingsCommands get settingsCommands => _settingsCommands;
+  SettingsViewState get settingsView => _settingsView;
+  WorkspaceViewState get workspaceView => _workspaceView;
+
+  NotificationSettings get notificationSettings =>
+      _settingsView.notificationSettings;
+  bool get notificationsEnabled => _settingsView.notificationsEnabled;
+  int? get courseDefaultMinutesBefore =>
+      _settingsView.courseDefaultMinutesBefore;
+  int? get generalDefaultMinutesBefore =>
+      _settingsView.generalDefaultMinutesBefore;
+  bool get lockScreenShowTitles => _settingsView.lockScreenShowTitles;
+  bool get remindHiddenGeneralCalendars =>
+      _settingsView.remindHiddenGeneralCalendars;
+  bool get hideHomeWorkspaceNavigation =>
+      _settingsView.hideHomeWorkspaceNavigation;
+  bool get homeWorkspaceNavigationCollapsed =>
+      _settingsView.homeWorkspaceNavigationCollapsed;
+  WorkspacePanelDisplayMode get workspacePanelDisplayMode =>
+      _settingsView.workspacePanelDisplayMode;
+  bool get fitDaySelectorToWidth => _settingsView.fitDaySelectorToWidth;
+  bool get fitWeekColumnsToWidth => _settingsView.fitWeekColumnsToWidth;
+  bool get enableWeekSwipeNavigation => _settingsView.enableWeekSwipeNavigation;
+  bool get showAddCourseFab => _settingsView.showAddCourseFab;
+  bool get enableLongPressAddCourse => _settingsView.enableLongPressAddCourse;
+  List<String> get studentToolbarNavigationOrder =>
+      _settingsView.studentToolbarNavigationOrder;
+  List<String> get studentHiddenToolbarNavigationIds =>
+      _settingsView.studentHiddenToolbarNavigationIds;
+  String get studentToolbarHiddenItemsBehavior =>
+      _settingsView.studentToolbarHiddenItemsBehavior;
   bool get closeCoursePopupOnOutsideTap =>
-      _appData.studentMode.closeCoursePopupOnOutsideTap;
-  bool get preserveTimetableGaps => _appData.studentMode.preserveTimetableGaps;
-  bool get showPastEndedCourses => _appData.studentMode.showPastEndedCourses;
-  bool get showFutureCourses => _appData.studentMode.showFutureCourses;
-  bool get showTimetableGridLines =>
-      _appData.studentMode.showTimetableGridLines;
-  String get localeCode => _appData.localeCode;
-  String get themeMode => isGeneralMode
-      ? _appData.generalMode.themeMode
-      : _appData.studentMode.themeMode;
-  String get themeColorMode => isGeneralMode
-      ? _appData.generalMode.themeColorMode
-      : _appData.studentMode.themeColorMode;
-  int get themeSeedColorValue => isGeneralMode
-      ? _appData.generalMode.themeSeedColorValue
-      : _appData.studentMode.themeSeedColorValue;
+      _settingsView.closeCoursePopupOnOutsideTap;
+  bool get preserveTimetableGaps => _settingsView.preserveTimetableGaps;
+  bool get showPastEndedCourses => _settingsView.showPastEndedCourses;
+  bool get showFutureCourses => _settingsView.showFutureCourses;
+  bool get showTimetableGridLines => _settingsView.showTimetableGridLines;
+  String get localeCode => _settingsView.localeCode;
+  String get themeMode => _settingsView.themeMode;
+  String get themeColorMode => _settingsView.themeColorMode;
+  int get themeSeedColorValue => _settingsView.themeSeedColorValue;
   String get colorfulCourseTextColorMode =>
-      _appData.studentMode.colorfulCourseTextColorMode;
-  Map<String, int> get colorfulUiColorValues => isGeneralMode
-      ? _appData.generalMode.colorfulUiColorValues
-      : _appData.studentMode.colorfulUiColorValues;
+      _settingsView.colorfulCourseTextColorMode;
+  Map<String, int> get colorfulUiColorValues =>
+      _settingsView.colorfulUiColorValues;
   Map<String, int> get courseNameColorValues =>
-      _appData.studentMode.courseNameColorValues;
-  AiApiSettings get aiApiSettings => _appData.aiApiSettings;
-  String get schoolImportParserSource => _appData.aiApiSettings.source;
-  String get customSchoolImportBaseUrl => _appData.aiApiSettings.customBaseUrl;
-  String get customSchoolImportApiKey => _appData.aiApiSettings.customApiKey;
-  String get customSchoolImportModel => _appData.aiApiSettings.customModel;
-  String get customSchoolImportPrompt => _appData.aiApiSettings.customPrompt;
+      _settingsView.courseNameColorValues;
+  AiApiSettings get aiApiSettings => _settingsView.aiApiSettings;
+  String get schoolImportParserSource => _settingsView.schoolImportParserSource;
+  String get customSchoolImportBaseUrl =>
+      _settingsView.customSchoolImportBaseUrl;
+  String get customSchoolImportApiKey => _settingsView.customSchoolImportApiKey;
+  String get customSchoolImportModel => _settingsView.customSchoolImportModel;
+  String get customSchoolImportPrompt => _settingsView.customSchoolImportPrompt;
   int get liveCourseOutlineColorValue =>
-      _appData.studentMode.liveCourseOutlineColorValue;
-  bool get liveCourseOutlineEnabled =>
-      _appData.studentMode.liveCourseOutlineEnabled;
+      _settingsView.liveCourseOutlineColorValue;
+  bool get liveCourseOutlineEnabled => _settingsView.liveCourseOutlineEnabled;
   bool get liveCourseOutlineFollowTheme =>
-      _appData.studentMode.liveCourseOutlineFollowTheme;
+      _settingsView.liveCourseOutlineFollowTheme;
   bool get liveCourseOutlineCustomColorInitialized =>
-      _appData.studentMode.liveCourseOutlineCustomColorInitialized;
-  String get liveCourseOutlineMode =>
-      _appData.studentMode.liveCourseOutlineMode;
-  double get liveCourseOutlineWidth =>
-      _appData.studentMode.liveCourseOutlineWidth;
-  bool get includePrereleaseUpdates => _appData.includePrereleaseUpdates;
-  String? get ignoredUpdateVersion => _appData.ignoredUpdateVersion;
-  String? get availableUpdateVersion => _appData.availableUpdateVersion;
+      _settingsView.liveCourseOutlineCustomColorInitialized;
+  String get liveCourseOutlineMode => _settingsView.liveCourseOutlineMode;
+  double get liveCourseOutlineWidth => _settingsView.liveCourseOutlineWidth;
+  bool get includePrereleaseUpdates => _settingsView.includePrereleaseUpdates;
+  String? get ignoredUpdateVersion => _settingsView.ignoredUpdateVersion;
+  String? get availableUpdateVersion => _settingsView.availableUpdateVersion;
+
+  Future<void> updateIncludePrereleaseUpdates(bool value) =>
+      _settingsCommands.updateIncludePrereleaseUpdates(value);
+
+  Future<void> updateNotificationSettings({
+    bool? enabled,
+    Object? courseDefaultMinutesBefore = NotificationSettings.keep,
+    Object? generalDefaultMinutesBefore = NotificationSettings.keep,
+    bool? lockScreenShowTitles,
+    bool? remindHiddenGeneralCalendars,
+  }) => _settingsCommands.updateNotificationSettings(
+    enabled: enabled,
+    courseDefaultMinutesBefore: courseDefaultMinutesBefore,
+    generalDefaultMinutesBefore: generalDefaultMinutesBefore,
+    lockScreenShowTitles: lockScreenShowTitles,
+    remindHiddenGeneralCalendars: remindHiddenGeneralCalendars,
+  );
+
+  Future<void> updateNotificationsEnabled(bool value) =>
+      _settingsCommands.updateNotificationsEnabled(value);
+
+  Future<void> updateCourseDefaultReminder(int? minutesBefore) =>
+      _settingsCommands.updateCourseDefaultReminder(minutesBefore);
+
+  Future<void> updateGeneralDefaultReminder(int? minutesBefore) =>
+      _settingsCommands.updateGeneralDefaultReminder(minutesBefore);
+
+  Future<void> updateLockScreenShowTitles(bool value) =>
+      _settingsCommands.updateLockScreenShowTitles(value);
+
+  Future<void> updateRemindHiddenGeneralCalendars(bool value) =>
+      _settingsCommands.updateRemindHiddenGeneralCalendars(value);
+
+  Future<void> updateHideHomeWorkspaceNavigation(bool value) =>
+      _settingsCommands.updateHideHomeWorkspaceNavigation(value);
+
+  Future<void> updateHomeWorkspaceNavigationCollapsed(bool value) =>
+      _settingsCommands.updateHomeWorkspaceNavigationCollapsed(value);
+
+  Future<void> updateWorkspacePanelDisplayMode(
+    WorkspacePanelDisplayMode value,
+  ) => _settingsCommands.updateWorkspacePanelDisplayMode(value);
+
+  Future<void> updateCloseCoursePopupOnOutsideTap(bool value) =>
+      _settingsCommands.updateCloseCoursePopupOnOutsideTap(value);
+
+  Future<void> updatePreserveTimetableGaps(bool value) =>
+      _settingsCommands.updatePreserveTimetableGaps(value);
+
+  Future<void> updateShowPastEndedCourses(bool value) =>
+      _settingsCommands.updateShowPastEndedCourses(value);
+
+  Future<void> updateShowFutureCourses(bool value) =>
+      _settingsCommands.updateShowFutureCourses(value);
+
+  Future<void> updateShowTimetableGridLines(bool value) =>
+      _settingsCommands.updateShowTimetableGridLines(value);
+
+  Future<void> updateShowAddCourseFab(bool value) =>
+      _settingsCommands.updateShowAddCourseFab(value);
+
+  Future<void> updateEnableLongPressAddCourse(bool value) =>
+      _settingsCommands.updateEnableLongPressAddCourse(value);
+
+  Future<void> updateStudentToolbarNavigationOrder(List<String> order) =>
+      _settingsCommands.updateStudentToolbarNavigationOrder(order);
+
+  Future<void> updateStudentToolbarNavigationVisibility(
+    String id,
+    bool visible,
+  ) => _settingsCommands.updateStudentToolbarNavigationVisibility(id, visible);
+
+  Future<void> updateStudentToolbarNavigationHiddenIds(
+    List<String> hiddenIds,
+  ) => _settingsCommands.updateStudentToolbarNavigationHiddenIds(hiddenIds);
+
+  Future<void> updateStudentToolbarHiddenItemsBehavior(String behavior) =>
+      _settingsCommands.updateStudentToolbarHiddenItemsBehavior(behavior);
+
+  Future<void> updateFitDaySelectorToWidth(bool value) =>
+      _settingsCommands.updateFitDaySelectorToWidth(value);
+
+  Future<void> updateFitWeekColumnsToWidth(bool value) =>
+      _settingsCommands.updateFitWeekColumnsToWidth(value);
+
+  Future<void> updateEnableWeekSwipeNavigation(bool value) =>
+      _settingsCommands.updateEnableWeekSwipeNavigation(value);
+
+  Future<void> updateLocaleCode(String localeCode) =>
+      _settingsCommands.updateLocaleCode(localeCode);
+
+  Future<void> updateThemeMode(String themeMode, {AppMode? workspace}) =>
+      _settingsCommands.updateThemeMode(themeMode, workspace: workspace);
+
+  Future<void> updateThemeSeedColorValue(
+    int colorValue, {
+    AppMode? workspace,
+  }) => _settingsCommands.updateThemeSeedColorValue(
+    colorValue,
+    workspace: workspace,
+  );
+
+  Future<void> updateThemeColorMode(String mode, {AppMode? workspace}) =>
+      _settingsCommands.updateThemeColorMode(mode, workspace: workspace);
+
+  Future<void> updateColorfulUiColorValue(
+    String key,
+    int colorValue, {
+    AppMode? workspace,
+  }) => _settingsCommands.updateColorfulUiColorValue(
+    key,
+    colorValue,
+    workspace: workspace,
+  );
+
+  Future<void> updateColorfulCourseTextColorMode(String mode) =>
+      _settingsCommands.updateColorfulCourseTextColorMode(mode);
+
+  Future<void> updateColorfulCourseTextSettings({
+    required String mode,
+    required int customColorValue,
+  }) => _settingsCommands.updateColorfulCourseTextSettings(
+    mode: mode,
+    customColorValue: customColorValue,
+  );
+
+  Future<void> updateCourseNameColorValue(String courseName, int colorValue) =>
+      _settingsCommands.updateCourseNameColorValue(courseName, colorValue);
+
+  Future<void> updateCustomSchoolImportTextSettings({
+    required String baseUrl,
+    required String model,
+    required String prompt,
+  }) => _settingsCommands.updateCustomSchoolImportTextSettings(
+    baseUrl: baseUrl,
+    model: model,
+    prompt: prompt,
+  );
+
+  Future<void> updateLiveCourseOutlineColorValue(int colorValue) =>
+      _settingsCommands.updateLiveCourseOutlineColorValue(colorValue);
+
+  Future<void> updateLiveCourseOutlineEnabled(bool value) =>
+      _settingsCommands.updateLiveCourseOutlineEnabled(value);
+
+  Future<void> updateLiveCourseOutlineFollowTheme(bool value) =>
+      _settingsCommands.updateLiveCourseOutlineFollowTheme(value);
+
+  Future<void> updateLiveCourseOutlineSettings({
+    required bool enabled,
+    required bool followTheme,
+    required int colorValue,
+    required bool customColorInitialized,
+    required String mode,
+    required double width,
+  }) => _settingsCommands.updateLiveCourseOutlineSettings(
+    enabled: enabled,
+    followTheme: followTheme,
+    colorValue: colorValue,
+    customColorInitialized: customColorInitialized,
+    mode: mode,
+    width: width,
+  );
+
+  AppData themeDataFor(AppMode mode) => _settingsView.themeDataFor(mode);
+
+  Future<void> updateCustomSchoolImportApiKey(String value) async {
+    requireWorkspaceEnabled(AppMode.student);
+    await _persistCustomSchoolImportApiKey(value);
+  }
 
   AppData get committedAppData => _session.committedData;
 
-  Set<AppMode> get enabledWorkspaces =>
-      _visibleEnabledWorkspacesOverride ?? _appData.enabledWorkspaces;
-  bool isWorkspaceEnabled(AppMode mode) => enabledWorkspaces.contains(mode);
+  Set<AppMode> get enabledWorkspaces => _workspaceView.enabledWorkspaces;
+  bool isWorkspaceEnabled(AppMode mode) => _workspaceView.isEnabled(mode);
   bool get hasMultipleWorkspaces => enabledWorkspaces.length > 1;
 
   Future<void> setWorkspaceEnabled(
@@ -1015,8 +1190,7 @@ class TimetableProvider extends _TimetableProviderBase
       throw StateError('At least one workspace must remain enabled.');
     }
     await transaction.commit((commit) async {
-      _visibleActiveModeOverride = previous.activeMode;
-      _visibleEnabledWorkspacesOverride = previous.enabledWorkspaces;
+      _workspaceView.keepPreviousAvailability(previous);
       _appData = _appData.copyWith(
         enabledWorkspaces: next,
         activeMode: next.contains(previous.activeMode)
@@ -1043,16 +1217,15 @@ class TimetableProvider extends _TimetableProviderBase
         );
         rethrow;
       } finally {
-        _visibleActiveModeOverride = null;
-        _visibleEnabledWorkspacesOverride = null;
+        _workspaceView.completeChange();
         if (!_isDisposed) notifyListeners();
       }
     });
   }
 
-  AppMode get activeMode => _visibleActiveModeOverride ?? _appData.activeMode;
-  bool get isGeneralMode => activeMode == AppMode.general;
-  bool get isStudentMode => activeMode == AppMode.student;
+  AppMode get activeMode => _workspaceView.activeMode;
+  bool get isGeneralMode => _workspaceView.isGeneralMode;
+  bool get isStudentMode => _workspaceView.isStudentMode;
   StudentModeData get studentMode => _appData.studentMode;
   GeneralScheduleData get generalMode => _visibleGeneralMode;
 
@@ -1152,7 +1325,7 @@ class TimetableProvider extends _TimetableProviderBase
     WorkspaceCommit commit,
   ) async {
     _ensureAppBackupRestoreMutationAllowed();
-    _visibleActiveModeOverride = previousMode;
+    _workspaceView.keepPreviousMode(previousMode);
     _appData = _appData.copyWith(activeMode: mode);
     try {
       await _saveAndNotify(
@@ -1170,7 +1343,7 @@ class TimetableProvider extends _TimetableProviderBase
       }
       rethrow;
     } finally {
-      _visibleActiveModeOverride = null;
+      _workspaceView.completeChange();
       // Publish only after the write result and any failure rollback are
       // settled. This keeps MyApp's mode-dependent theme snapshot atomic.
       if (!_isDisposed) {
