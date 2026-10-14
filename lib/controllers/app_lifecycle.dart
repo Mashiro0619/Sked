@@ -1,23 +1,112 @@
-part of 'timetable_provider.dart';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart'
+    show VoidCallback, debugPrint, setEquals;
+
+import '../data/app_repository.dart';
+import '../data/timetable_storage.dart';
+import '../models/timetable_models.dart';
+import '../services/app_backup_restore_journal.dart';
+import '../services/import_export_service.dart';
+import '../services/privacy_service.dart';
+import 'app_backup_controller.dart';
+import 'app_data_defaults.dart';
+import 'app_persistence.dart';
+import 'app_session.dart';
+import 'observable_view_state.dart';
+import 'school_import_secret_controller.dart';
+import 'student_view_state.dart';
 
 const bundledPrivacyPolicyVersion = '2026-08-07';
 
-mixin _TimetableProviderLifecycle on _TimetableProviderBase {
+/// Loads and recovers the session and owns application lifecycle metadata.
+/// The session remains the only current AppData and durable commit owner.
+class AppLifecycle extends ObservableViewState {
+  AppLifecycle({
+    required this._session,
+    required this._student,
+    required this._persistence,
+    required this._defaults,
+    required this._backups,
+    required this._secrets,
+    required this._privacy,
+    required this._notifyViewChanged,
+    this._imports = const ImportExportService(),
+  }) {
+    initializePublication();
+  }
+
+  final AppSession _session;
+  final StudentViewState _student;
+  final AppPersistence _persistence;
+  final AppDataDefaults _defaults;
+  final AppBackupController _backups;
+  final SchoolImportSecretController _secrets;
+  final PrivacyService _privacy;
+  final VoidCallback _notifyViewChanged;
+  final ImportExportService _imports;
+  String? _storagePath;
+
+  AppRepository get _repository => _session.repository;
+  AppData get _data => _session.data;
+  set _data(AppData value) => _session.replaceData(value);
+
+  @override
+  Object get publicationKey => (
+    _storagePath,
+    _session.readiness.value,
+    _remotePrivacyPolicyVersion,
+    _data.privacyPolicyAcceptedVersion,
+    _data.privacyPolicyAcceptedAtIso,
+    _repository.lastRecoveryStatus,
+    _repository.lastLoadStatus,
+    _repository.recoveryArtifacts,
+    _backups.journalLoadStatus,
+    _backups.recoveryArtifacts,
+    _backups.canStartFreshAfterRecovery,
+  );
+
+  String? get storagePath => _storagePath;
+  RecoveryStatus get lastRecoveryStatus {
+    return switch (_backups.journalLoadStatus) {
+      StorageLoadStatus.corrupt => RecoveryStatus.failedBackupRestore,
+      StorageLoadStatus.ioFailure => RecoveryStatus.ioFailure,
+      StorageLoadStatus.unsupportedVersion => RecoveryStatus.unsupportedVersion,
+      null ||
+      StorageLoadStatus.missing ||
+      StorageLoadStatus.success ||
+      StorageLoadStatus.restored => _repository.lastRecoveryStatus,
+    };
+  }
+
+  StorageLoadStatus get storageLoadStatus =>
+      _backups.journalLoadStatus ?? _repository.lastLoadStatus;
+  bool get canWrite => _session.canWrite;
+  bool get isStorageWriteStateUnknown => _repository.isWriteStateUnknown;
+  List<String> get recoveryArtifacts => List.unmodifiable({
+    ..._repository.recoveryArtifacts,
+    ..._backups.recoveryArtifacts,
+  });
+  bool get canStartFreshAfterRecovery =>
+      (_repository.lastLoadStatus == StorageLoadStatus.corrupt &&
+          _repository.recoveryArtifacts.isNotEmpty) ||
+      _backups.canStartFreshAfterRecovery;
+
   String? _remotePrivacyPolicyVersion = bundledPrivacyPolicyVersion;
 
   String? get activePrivacyPolicyVersion => _remotePrivacyPolicyVersion;
 
   String? get acceptedPrivacyPolicyVersion =>
-      _appData.privacyPolicyAcceptedVersion;
+      _data.privacyPolicyAcceptedVersion;
 
   DateTime? get privacyPolicyAcceptedAt {
-    final value = _appData.privacyPolicyAcceptedAtIso;
+    final value = _data.privacyPolicyAcceptedAtIso;
     return tryParseStrictIsoDateTime(value);
   }
 
   bool get hasAcceptedCurrentPrivacyPolicy {
     return _isPrivacyPolicyVersionAtLeast(
-      _appData.privacyPolicyAcceptedVersion,
+      _data.privacyPolicyAcceptedVersion,
       _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion,
     );
   }
@@ -35,7 +124,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     if (version == null || !_promoteActivePrivacyPolicyVersion(version)) {
       return;
     }
-    notifyListeners();
+    _notifyViewChanged();
   }
 
   bool _promoteActivePrivacyPolicyVersion(String candidate) {
@@ -54,7 +143,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   }
 
   Future<void> load() async {
-    if (_isLoaded || _isLoading) {
+    if (_session.isLoaded || _session.isLoading) {
       return;
     }
     _session.updateLoadState(isLoading: true);
@@ -65,36 +154,36 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       }
     } catch (e, st) {
       debugPrint(
-        'Provider initialization failed, using read-only defaults: $e\n$st',
+        'App initialization failed, using read-only defaults: $e\n$st',
       );
       _session.blockWritesAfterInitializationFailure();
       final loaded = _repository.current;
       if (loaded != null) {
-        final runtimeApiKey = _appData.aiApiSettings.customApiKey;
-        _appData = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
+        final runtimeApiKey = _data.aiApiSettings.customApiKey;
+        _data = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
       } else {
         try {
-          _appData = await _defaults.build();
+          _data = await _defaults.build();
         } catch (fallbackError, fallbackStackTrace) {
           debugPrint(
-            'Provider fallback initialization failed: '
+            'App fallback initialization failed: '
             '$fallbackError\n$fallbackStackTrace',
           );
         }
       }
       _storagePath = await _repository.filePath();
     } finally {
-      _selectedWeek = _currentWeekForActiveTimetable();
+      _student.selectedWeek = _student.currentWeek();
       _session.updateLoadState(isLoaded: true, isLoading: false);
-      notifyListeners();
+      _notifyViewChanged();
     }
   }
 
   Future<void> retryStorageLoad() async {
-    _ensureAppBackupRestoreMutationAllowed();
-    if (_isLoading) return;
+    _session.ensureMutationAllowed();
+    if (_session.isLoading) return;
     _session.updateLoadState(isLoading: true);
-    notifyListeners();
+    _notifyViewChanged();
     try {
       await _hydrateFromStorage(retry: true);
       if (_repository.canWrite) {
@@ -104,23 +193,23 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       _session.blockWritesAfterInitializationFailure();
       final loaded = _repository.current;
       if (loaded != null) {
-        final runtimeApiKey = _appData.aiApiSettings.customApiKey;
-        _appData = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
+        final runtimeApiKey = _data.aiApiSettings.customApiKey;
+        _data = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
       }
       debugPrint('Storage retry initialization failed: $error\n$stackTrace');
       rethrow;
     } finally {
-      _selectedWeek = _currentWeekForActiveTimetable();
+      _student.selectedWeek = _student.currentWeek();
       _session.updateLoadState(isLoaded: true, isLoading: false);
-      notifyListeners();
+      _notifyViewChanged();
     }
   }
 
   Future<void> startFreshAfterRecovery() async {
-    _ensureAppBackupRestoreMutationAllowed();
-    if (_isLoading) return;
+    _session.ensureMutationAllowed();
+    if (_session.isLoading) return;
     _session.updateLoadState(isLoading: true);
-    notifyListeners();
+    _notifyViewChanged();
     try {
       if (_backups.journalLoadStatus == StorageLoadStatus.corrupt) {
         await _backups.startFreshAfterCorruptJournal();
@@ -129,14 +218,11 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       var fresh = await _defaults.build();
       fresh = withRuntimeSchoolImportApiKey(
         fresh,
-        await _schoolImportSecrets.readForInitialization(),
+        await _secrets.readForInitialization(),
       );
-      fresh = _importExportService.normalizeAppData(
-        fresh,
-        localeCode: fresh.localeCode,
-      );
+      fresh = _imports.normalizeAppData(fresh, localeCode: fresh.localeCode);
       await _repository.startFreshAfterRecovery(fresh);
-      _appData = fresh;
+      _data = fresh;
       _storagePath = await _repository.filePath();
       try {
         await _backups.resumePendingRestore();
@@ -145,9 +231,9 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         await _backups.startFreshAfterCorruptJournal();
       }
     } finally {
-      _selectedWeek = _currentWeekForActiveTimetable();
+      _student.selectedWeek = _student.currentWeek();
       _session.updateLoadState(isLoading: false);
-      notifyListeners();
+      _notifyViewChanged();
     }
   }
 
@@ -164,23 +250,23 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       var defaults = await _defaults.build();
       defaults = withRuntimeSchoolImportApiKey(
         defaults,
-        await _schoolImportSecrets.readForInitialization(),
+        await _secrets.readForInitialization(),
       );
-      _appData = defaults;
+      _data = defaults;
       if (_repository.canWrite) {
-        await _save();
+        await _persistence.save();
       }
       _storagePath = await _repository.filePath();
       return;
     }
 
-    var normalized = _importExportService.normalizeAppData(
+    var normalized = _imports.normalizeAppData(
       fileData,
       localeCode: fileData.localeCode,
     );
     final legacyApiKey = normalized.aiApiSettings.customApiKey;
-    final secureApiKey = await _schoolImportSecrets.readForInitialization();
-    final secureApiKeyReadKnown = _schoolImportSecrets.isPersistenceKnown;
+    final secureApiKey = await _secrets.readForInitialization();
+    final secureApiKeyReadKnown = _secrets.isPersistenceKnown;
     final runtimeApiKey = secureApiKeyReadKnown && secureApiKey.isNotEmpty
         ? secureApiKey
         : legacyApiKey;
@@ -188,13 +274,13 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         secureApiKeyReadKnown &&
         secureApiKey.isEmpty &&
         legacyApiKey.isNotEmpty &&
-        await _schoolImportSecrets.writeVerified(legacyApiKey);
+        await _secrets.writeVerified(legacyApiKey);
     final legacyApiKeyMigrationBlocked =
         legacyApiKey.isNotEmpty &&
         (!secureApiKeyReadKnown ||
             (secureApiKey.isEmpty && !migratedLegacyApiKey));
     normalized = withRuntimeSchoolImportApiKey(normalized, runtimeApiKey);
-    _appData = normalized;
+    _data = normalized;
     if (legacyApiKeyMigrationBlocked) {
       _session.blockWritesAfterInitializationFailure();
     }
@@ -210,8 +296,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     var sanitizedMainSnapshotIsDurable = !shouldWriteBack;
     if (shouldWriteBack) {
       try {
-        await _repository.save(normalized);
-        emitAppDataCommit(normalized);
+        await _persistence.save(rollbackOnFailure: false);
         sanitizedMainSnapshotIsDurable = true;
       } catch (e, st) {
         debugPrint(
@@ -240,7 +325,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   Future<void> acceptPrivacyPolicyCurrentVersion() async {
     final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
     if (_isPrivacyPolicyVersionAtLeast(
-      _appData.privacyPolicyAcceptedVersion,
+      _data.privacyPolicyAcceptedVersion,
       active,
     )) {
       return;
@@ -248,11 +333,11 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     if (_parsePrivacyPolicyVersion(active) == null) {
       throw StateError('Invalid active privacy policy version: $active');
     }
-    _appData = _appData.copyWith(
+    _data = _data.copyWith(
       privacyPolicyAcceptedVersion: active,
       privacyPolicyAcceptedAtIso: DateTime.now().toIso8601String(),
     );
-    await _saveAndNotify();
+    await _persistence.saveAndNotify();
   }
 
   Future<void> completeFirstLaunch(
@@ -266,43 +351,43 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     }
 
     final preservesExistingAcceptance = _isPrivacyPolicyVersionAtLeast(
-      _appData.privacyPolicyAcceptedVersion,
+      _data.privacyPolicyAcceptedVersion,
       active,
     );
-    final enabled = enabledWorkspaces ?? _appData.enabledWorkspaces;
+    final enabled = enabledWorkspaces ?? _data.enabledWorkspaces;
     if (enabled.isEmpty || !enabled.contains(mode)) {
       throw StateError('At least one workspace must be enabled.');
     }
-    if (setEquals(_appData.enabledWorkspaces, enabled) &&
-        _appData.activeMode == mode &&
+    if (setEquals(_data.enabledWorkspaces, enabled) &&
+        _data.activeMode == mode &&
         preservesExistingAcceptance &&
-        _appData.hideHomeWorkspaceNavigation == hideWorkspaceNavigation &&
-        !_appData.homeWorkspaceNavigationCollapsed) {
+        _data.hideHomeWorkspaceNavigation == hideWorkspaceNavigation &&
+        !_data.homeWorkspaceNavigationCollapsed) {
       return;
     }
 
-    _appData = _appData.copyWith(
+    _data = _data.copyWith(
       activeMode: mode,
       enabledWorkspaces: enabled,
       hideHomeWorkspaceNavigation: hideWorkspaceNavigation,
       homeWorkspaceNavigationCollapsed: false,
       privacyPolicyAcceptedVersion: preservesExistingAcceptance
-          ? _appData.privacyPolicyAcceptedVersion
+          ? _data.privacyPolicyAcceptedVersion
           : active,
       privacyPolicyAcceptedAtIso: preservesExistingAcceptance
-          ? _appData.privacyPolicyAcceptedAtIso
+          ? _data.privacyPolicyAcceptedAtIso
           : DateTime.now().toIso8601String(),
     );
-    await _saveAndNotify();
+    await _persistence.saveAndNotify();
   }
 
   Future<void> ignoreUpdateVersion(String version) async {
     final normalized = version.trim();
-    if (normalized.isEmpty || _appData.ignoredUpdateVersion == normalized) {
+    if (normalized.isEmpty || _data.ignoredUpdateVersion == normalized) {
       return;
     }
-    _appData = _appData.copyWith(ignoredUpdateVersion: normalized);
-    await _saveAndNotify();
+    _data = _data.copyWith(ignoredUpdateVersion: normalized);
+    await _persistence.saveAndNotify();
   }
 
   Future<void> updateAvailableUpdateVersion(String? version) async {
@@ -310,11 +395,11 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     final nextValue = normalized == null || normalized.isEmpty
         ? null
         : normalized;
-    if (_appData.availableUpdateVersion == nextValue) {
+    if (_data.availableUpdateVersion == nextValue) {
       return;
     }
-    _appData = _appData.copyWith(availableUpdateVersion: nextValue);
-    await _saveAndNotify();
+    _data = _data.copyWith(availableUpdateVersion: nextValue);
+    await _persistence.saveAndNotify();
   }
 }
 

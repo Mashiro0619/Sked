@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../controllers/app_session.dart';
 import '../controllers/app_backup_controller.dart';
 import '../controllers/app_data_defaults.dart';
+import '../controllers/app_lifecycle.dart';
 import '../controllers/observable_view_state.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_persistence.dart';
@@ -40,6 +41,7 @@ import '../services/secret_store.dart';
 import '../services/settings_service.dart';
 
 export '../models/app_data_commit.dart';
+export '../controllers/app_lifecycle.dart' show bundledPrivacyPolicyVersion;
 export '../controllers/app_backup_controller.dart'
     show
         AppImportMode,
@@ -48,10 +50,7 @@ export '../controllers/app_backup_controller.dart'
 export '../controllers/app_data_maintenance.dart'
     show AppBackupRestoreInProgressException;
 
-part 'timetable_provider_lifecycle.dart';
 part 'timetable_provider_developer.dart';
-
-const _importExportService = ImportExportService();
 
 String resolveFirstLaunchLocaleCode(Locale? locale) {
   return app_locale.resolveFirstLaunchLocaleCode(locale);
@@ -66,8 +65,6 @@ String _defaultSystemLocaleCodeResolver() {
 
 abstract class _TimetableProviderBase extends ChangeNotifier {
   AppSession get _session;
-  AppBackupController get _backups;
-  AppDataDefaults get _defaults;
   AppDataMaintenance get _maintenance;
   AppPersistence get _persistence;
   WorkspaceCommands get _workspaces;
@@ -113,25 +110,14 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   int get _selectedWeek;
   set _selectedWeek(int value);
 
-  bool get _isLoaded;
-
-  bool get _isLoading;
-
-  set _storagePath(String? value);
-
   AppRepository get _repository;
-  PrivacyService get _privacy;
-  SchoolImportSecretController get _schoolImportSecrets;
 
   GeneralSchedule? get activeGeneralScheduleOrNull;
   TimetableData? get activeTimetableOrNull;
   PeriodTimeSet? get activePeriodTimeSetOrNull;
   PeriodTimeSet get activePeriodTimeSet;
 
-  int _currentWeekForActiveTimetable();
   Future<void> _saveAndNotify();
-  Future<void> _save();
-  void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision});
 
   void _ensureAppBackupRestoreMutationAllowed() =>
       _maintenance.ensureMutationAllowed();
@@ -156,7 +142,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
 }
 
 class TimetableProvider extends _TimetableProviderBase
-    with _TimetableProviderLifecycle, _TimetableProviderDeveloper {
+    with _TimetableProviderDeveloper {
   TimetableProvider({
     TimetableStorage? storage,
     AppRepository? repository,
@@ -281,20 +267,32 @@ class TimetableProvider extends _TimetableProviderBase
         if (!_isDisposed) notifyListeners();
       },
     );
+    _lifecycle = AppLifecycle(
+      session: _session,
+      student: _studentView,
+      persistence: _persistence,
+      defaults: _defaults,
+      backups: _backups,
+      secrets: _schoolImportSecrets,
+      privacy: _privacy,
+      notifyViewChanged: () {
+        if (!_isDisposed) notifyListeners();
+      },
+    );
     _viewUpdates = AppViewUpdates([
       _studentView,
       _generalView,
       _workspaceView,
       _settingsView,
+      _lifecycle,
     ]);
   }
 
   @override
   late final AppSession _session;
-  @override
   late final AppBackupController _backups;
-  @override
   late final AppDataDefaults _defaults;
+  late final AppLifecycle _lifecycle;
   @override
   late final AppDataMaintenance _maintenance;
   @override
@@ -316,9 +314,7 @@ class TimetableProvider extends _TimetableProviderBase
   @override
   AppRepository get _repository => _session.repository;
   final String Function() _systemLocaleCodeResolver;
-  @override
   final PrivacyService _privacy;
-  @override
   late final SchoolImportSecretController _schoolImportSecrets;
   final SchoolSiteService _schoolSites;
   final AppBackupRestoreJournal _backupRestoreJournal;
@@ -356,8 +352,6 @@ class TimetableProvider extends _TimetableProviderBase
       _studentView.activePeriodTimeSetOrNull;
   @override
   PeriodTimeSet get activePeriodTimeSet => _studentView.activePeriodTimeSet;
-  @override
-  int _currentWeekForActiveTimetable() => _studentView.currentWeek();
   PeriodTimeSet? periodTimeSetForId(String id) =>
       _studentView.periodTimeSetForId(id);
   List<TimetableData> timetablesUsingPeriodTimeSet(String id) =>
@@ -590,17 +584,11 @@ class TimetableProvider extends _TimetableProviderBase
     moveCustomRange: moveCustomRange,
   );
 
-  @override
-  bool get _isLoaded => _session.isLoaded;
-  @override
-  bool get _isLoading => _session.isLoading;
-  @override
-  String? _storagePath;
   var _dataClearReserved = false;
   Future<void>? _dataClearInFlight;
   SchoolSiteRestoreLease? _permanentDataClearSchoolSiteLease;
 
-  bool get isLoaded => _isLoaded;
+  bool get isLoaded => _session.isLoaded;
 
   /// The latest in-memory application snapshot. Consumers that need a
   /// platform projection should prefer [committedData] so failed writes are
@@ -611,24 +599,12 @@ class TimetableProvider extends _TimetableProviderBase
   List<TimetableData> get timetables => _studentView.timetables;
   List<PeriodTimeSet> get periodTimeSets => _studentView.periodTimeSets;
   int get selectedWeek => _selectedWeek;
-  String? get storagePath => _storagePath;
+  String? get storagePath => _lifecycle.storagePath;
 
-  RecoveryStatus get lastRecoveryStatus {
-    return switch (_backups.journalLoadStatus) {
-      StorageLoadStatus.corrupt => RecoveryStatus.failedBackupRestore,
-      StorageLoadStatus.ioFailure => RecoveryStatus.ioFailure,
-      StorageLoadStatus.unsupportedVersion => RecoveryStatus.unsupportedVersion,
-      null ||
-      StorageLoadStatus.missing ||
-      StorageLoadStatus.success ||
-      StorageLoadStatus.restored => _repository.lastRecoveryStatus,
-    };
-  }
-
-  StorageLoadStatus get storageLoadStatus =>
-      _backups.journalLoadStatus ?? _repository.lastLoadStatus;
+  RecoveryStatus get lastRecoveryStatus => _lifecycle.lastRecoveryStatus;
+  StorageLoadStatus get storageLoadStatus => _lifecycle.storageLoadStatus;
   bool get canWrite => _session.canWrite;
-  bool get isStorageWriteStateUnknown => _repository.isWriteStateUnknown;
+  bool get isStorageWriteStateUnknown => _lifecycle.isStorageWriteStateUnknown;
 
   /// Whether local app data is being cleared or has been cleared for this
   /// process lifetime.
@@ -641,14 +617,44 @@ class TimetableProvider extends _TimetableProviderBase
 
   bool get isDataClearCommitted =>
       _dataClearReserved && _permanentDataClearSchoolSiteLease != null;
-  List<String> get recoveryArtifacts => List.unmodifiable({
-    ..._repository.recoveryArtifacts,
-    ..._backups.recoveryArtifacts,
-  });
-  bool get canStartFreshAfterRecovery =>
-      (_repository.lastLoadStatus == StorageLoadStatus.corrupt &&
-          _repository.recoveryArtifacts.isNotEmpty) ||
-      _backups.canStartFreshAfterRecovery;
+  List<String> get recoveryArtifacts => _lifecycle.recoveryArtifacts;
+  bool get canStartFreshAfterRecovery => _lifecycle.canStartFreshAfterRecovery;
+
+  AppLifecycle get lifecycle => _lifecycle;
+  String? get activePrivacyPolicyVersion =>
+      _lifecycle.activePrivacyPolicyVersion;
+  String? get acceptedPrivacyPolicyVersion =>
+      _lifecycle.acceptedPrivacyPolicyVersion;
+  DateTime? get privacyPolicyAcceptedAt => _lifecycle.privacyPolicyAcceptedAt;
+  bool get hasAcceptedCurrentPrivacyPolicy =>
+      _lifecycle.hasAcceptedCurrentPrivacyPolicy;
+
+  void injectRemotePrivacyPolicyVersion(String version) =>
+      _lifecycle.injectRemotePrivacyPolicyVersion(version);
+  Future<void> fetchRemotePrivacyPolicyVersion() =>
+      _lifecycle.fetchRemotePrivacyPolicyVersion();
+  Future<void> load() => _lifecycle.load();
+  Future<void> retryStorageLoad() => _lifecycle.retryStorageLoad();
+  Future<void> startFreshAfterRecovery() =>
+      _lifecycle.startFreshAfterRecovery();
+  Future<Uint8List?> readRecoveryArtifact(String path) =>
+      _lifecycle.readRecoveryArtifact(path);
+  Future<void> acceptPrivacyPolicyCurrentVersion() =>
+      _lifecycle.acceptPrivacyPolicyCurrentVersion();
+  Future<void> completeFirstLaunch(
+    AppMode mode, {
+    required bool hideWorkspaceNavigation,
+    Set<AppMode>? enabledWorkspaces,
+  }) => _lifecycle.completeFirstLaunch(
+    mode,
+    hideWorkspaceNavigation: hideWorkspaceNavigation,
+    enabledWorkspaces: enabledWorkspaces,
+  );
+  Future<void> ignoreUpdateVersion(String version) =>
+      _lifecycle.ignoreUpdateVersion(version);
+  Future<void> updateAvailableUpdateVersion(String? version) =>
+      _lifecycle.updateAvailableUpdateVersion(version);
+
   AppBackupController get backups => _backups;
   DataTransferController get transfers => _transfers;
 
@@ -1002,9 +1008,6 @@ class TimetableProvider extends _TimetableProviderBase
   Future<void> _saveAndNotify({int? rollbackSelectedWeek}) =>
       _persistence.saveAndNotify(rollbackSelectedWeek: rollbackSelectedWeek);
 
-  @override
-  Future<void> _save() => _persistence.save();
-
   Future<void> flushPendingUiStateSaves() =>
       _persistence.flushPendingUiStateSaves();
 
@@ -1144,16 +1147,6 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   @override
-  void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision}) {
-    if (_isDisposed) return;
-    _session.publishCommittedSnapshot(
-      snapshot,
-      dataSessionRevision:
-          dataSessionRevision ?? _maintenance.dataSessionToken.revision,
-    );
-  }
-
-  @override
   void notifyListeners() {
     if (_isDisposed) return;
     _viewUpdates.publish();
@@ -1168,6 +1161,7 @@ class TimetableProvider extends _TimetableProviderBase
     _generalView.dispose();
     _workspaceView.dispose();
     _settingsView.dispose();
+    _lifecycle.dispose();
     _maintenance.dispose();
     unawaited(_session.close());
     super.dispose();

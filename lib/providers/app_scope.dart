@@ -5,6 +5,7 @@ import 'package:provider/single_child_widget.dart';
 
 import '../controllers/app_backup_controller.dart';
 import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_lifecycle.dart';
 import '../controllers/app_persistence.dart';
 import '../controllers/app_session.dart';
 import '../controllers/data_transfer_controller.dart';
@@ -40,6 +41,7 @@ class AppScope extends StatelessWidget {
     _AppScopeAnchor(app: app),
     ChangeNotifierProvider<TimetableProvider>.value(value: app),
     Provider<AppSession>.value(value: app.session),
+    ChangeNotifierProvider<AppLifecycle>.value(value: app.lifecycle),
     ListenableProvider<ValueListenable<AppSessionReadiness>>.value(
       value: app.session.readiness,
     ),
