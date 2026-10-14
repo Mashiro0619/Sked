@@ -11,6 +11,9 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/school_import_secret_controller.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
@@ -71,13 +74,13 @@ class _SchoolImportParserSettingsPageState
   bool _isHandlingPop = false;
   Timer? _apiKeySaveDebounce;
   Future<bool>? _apiKeyFlushOperation;
-  TimetableProvider? _pendingApiKeyProvider;
+  SchoolImportSecretController? _pendingApiKeyController;
   String? _pendingApiKeyValue;
   int _apiKeySaveToken = 0;
   bool _isSavingTextSettings = false;
   Timer? _textSettingsSaveDebounce;
   Future<bool>? _textSettingsFlushOperation;
-  TimetableProvider? _pendingTextSettingsProvider;
+  SettingsCommands? _pendingTextSettingsCommands;
   _ParserTextSettingsDraft? _pendingTextSettingsValue;
   int _textSettingsSaveToken = 0;
   String _promptStorageValue = '';
@@ -143,7 +146,10 @@ class _SchoolImportParserSettingsPageState
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
-        _syncControllers(provider);
+        final settings = provider.settingsView;
+        final commands = provider.settingsCommands;
+        final secrets = provider.schoolImportSecrets;
+        _syncControllers(settings, secrets);
         final l10n = AppLocalizations.of(context);
         final baseUrl = _baseUrlController.text.trim();
         final apiKey = _apiKeyController.text.trim();
@@ -197,7 +203,7 @@ class _SchoolImportParserSettingsPageState
                             errorMaxLines: 8,
                             keyboardType: TextInputType.url,
                             onChanged: (_) =>
-                                _scheduleTextSettingsUpdate(provider),
+                                _scheduleTextSettingsUpdate(commands),
                           ),
                           const SizedBox(height: 12),
                           SkedEditorTextField(
@@ -220,7 +226,7 @@ class _SchoolImportParserSettingsPageState
                               ),
                             ),
                             onChanged: (value) =>
-                                _scheduleApiKeyUpdate(provider, value),
+                                _scheduleApiKeyUpdate(secrets, value),
                           ),
                           const SizedBox(height: 12),
                           SettingsSectionHeader(
@@ -232,7 +238,7 @@ class _SchoolImportParserSettingsPageState
                             focusNode: _modelFocusNode,
                             icon: Icons.model_training_outlined,
                             onChanged: (_) =>
-                                _scheduleTextSettingsUpdate(provider),
+                                _scheduleTextSettingsUpdate(commands),
                           ),
                           const SizedBox(height: 12),
                           FilledButton.tonalIcon(
@@ -270,7 +276,7 @@ class _SchoolImportParserSettingsPageState
                                     l10n.schoolImportParserCustomPromptHint,
                                 onChanged: (value) {
                                   _promptStorageValue = value;
-                                  _scheduleTextSettingsUpdate(provider);
+                                  _scheduleTextSettingsUpdate(commands);
                                 },
                               ),
                               const SizedBox(height: 8),
@@ -285,7 +291,7 @@ class _SchoolImportParserSettingsPageState
                                           .defaultCustomOpenAiSystemPrompt,
                                     );
                                     _scheduleTextSettingsUpdate(
-                                      provider,
+                                      commands,
                                       promptOverride: '',
                                     );
                                     unawaited(_flushPendingTextSettingsSave());
@@ -321,22 +327,25 @@ class _SchoolImportParserSettingsPageState
     );
   }
 
-  void _syncControllers(TimetableProvider provider) {
+  void _syncControllers(
+    SettingsViewState settings,
+    SchoolImportSecretController secrets,
+  ) {
     if (_pendingTextSettingsValue == null && !_isSavingTextSettings) {
-      _syncController(_baseUrlController, provider.customSchoolImportBaseUrl);
-      _syncController(_modelController, provider.customSchoolImportModel);
-      _promptStorageValue = provider.customSchoolImportPrompt;
+      _syncController(_baseUrlController, settings.customSchoolImportBaseUrl);
+      _syncController(_modelController, settings.customSchoolImportModel);
+      _promptStorageValue = settings.customSchoolImportPrompt;
       _syncController(
         _customPromptController,
-        provider.customSchoolImportPrompt.isEmpty
+        settings.customSchoolImportPrompt.isEmpty
             ? SchoolImportApi.defaultCustomOpenAiSystemPrompt
-            : provider.customSchoolImportPrompt,
+            : settings.customSchoolImportPrompt,
       );
     }
     if (!_apiKeyFocusNode.hasFocus &&
         _pendingApiKeyValue == null &&
         !_isSavingApiKey) {
-      _syncController(_apiKeyController, provider.customSchoolImportApiKey);
+      _syncController(_apiKeyController, secrets.value);
     }
   }
 
@@ -361,11 +370,11 @@ class _SchoolImportParserSettingsPageState
   }
 
   void _scheduleTextSettingsUpdate(
-    TimetableProvider provider, {
+    SettingsCommands commands, {
     String? promptOverride,
   }) {
     _allowPop = false;
-    _pendingTextSettingsProvider = provider;
+    _pendingTextSettingsCommands = commands;
     _pendingTextSettingsValue = _ParserTextSettingsDraft(
       baseUrl: _baseUrlController.text,
       model: _modelController.text,
@@ -417,19 +426,19 @@ class _SchoolImportParserSettingsPageState
 
   Future<bool> _drainPendingTextSettingsSaves() async {
     while (true) {
-      final provider = _pendingTextSettingsProvider;
+      final commands = _pendingTextSettingsCommands;
       final value = _pendingTextSettingsValue;
-      if (provider == null || value == null) {
+      if (commands == null || value == null) {
         return true;
       }
-      _pendingTextSettingsProvider = null;
+      _pendingTextSettingsCommands = null;
       _pendingTextSettingsValue = null;
       final token = ++_textSettingsSaveToken;
       if (mounted && !_isDisposing) {
         setState(() => _isSavingTextSettings = true);
       }
       try {
-        await provider.updateCustomSchoolImportTextSettings(
+        await commands.updateCustomSchoolImportTextSettings(
           baseUrl: value.baseUrl,
           model: value.model,
           prompt: value.prompt,
@@ -440,7 +449,7 @@ class _SchoolImportParserSettingsPageState
           return false;
         }
         if (_pendingTextSettingsValue == null) {
-          _pendingTextSettingsProvider = provider;
+          _pendingTextSettingsCommands = commands;
           _pendingTextSettingsValue = value;
           _showMessage(AppLocalizations.of(context).saveFailedRetry);
           return false;
@@ -469,9 +478,12 @@ class _SchoolImportParserSettingsPageState
     }
   }
 
-  void _scheduleApiKeyUpdate(TimetableProvider provider, String value) {
+  void _scheduleApiKeyUpdate(
+    SchoolImportSecretController secrets,
+    String value,
+  ) {
     _allowPop = false;
-    _pendingApiKeyProvider = provider;
+    _pendingApiKeyController = secrets;
     _pendingApiKeyValue = value;
     _apiKeySaveDebounce?.cancel();
     _apiKeySaveDebounce = Timer(
@@ -489,10 +501,10 @@ class _SchoolImportParserSettingsPageState
     final existing = _apiKeyFlushOperation;
     if (existing != null) {
       final hasNewerPendingValue =
-          _pendingApiKeyProvider != null && _pendingApiKeyValue != null;
+          _pendingApiKeyController != null && _pendingApiKeyValue != null;
       if (!hasNewerPendingValue) return existing;
       return existing.then((_) {
-        if (_pendingApiKeyProvider == null || _pendingApiKeyValue == null) {
+        if (_pendingApiKeyController == null || _pendingApiKeyValue == null) {
           return true;
         }
         return _flushPendingApiKeySave();
@@ -527,26 +539,26 @@ class _SchoolImportParserSettingsPageState
 
   Future<bool> _drainPendingApiKeySaves() async {
     while (true) {
-      final provider = _pendingApiKeyProvider;
+      final secrets = _pendingApiKeyController;
       final value = _pendingApiKeyValue;
-      if (provider == null || value == null) {
+      if (secrets == null || value == null) {
         return true;
       }
-      _pendingApiKeyProvider = null;
+      _pendingApiKeyController = null;
       _pendingApiKeyValue = null;
       final token = ++_apiKeySaveToken;
       if (mounted && !_isDisposing) {
         setState(() => _isSavingApiKey = true);
       }
       try {
-        await provider.updateCustomSchoolImportApiKey(value);
+        await secrets.update(value);
       } catch (error, stackTrace) {
         debugPrint('Parser API key save failed: $error\n$stackTrace');
         if (!mounted || _isDisposing || token != _apiKeySaveToken) {
           return false;
         }
         if (_pendingApiKeyValue == null) {
-          _pendingApiKeyProvider = provider;
+          _pendingApiKeyController = secrets;
           _pendingApiKeyValue = value;
           _showMessage(AppLocalizations.of(context).saveFailedRetry);
         }
@@ -629,12 +641,12 @@ class _SchoolImportParserSettingsPageState
           settings != _currentModelFetchSettings()) {
         return;
       }
-      final provider = context.read<TimetableProvider>();
+      final commands = context.read<TimetableProvider>().settingsCommands;
       _modelController.value = TextEditingValue(
         text: selectedModel,
         selection: TextSelection.collapsed(offset: selectedModel.length),
       );
-      _scheduleTextSettingsUpdate(provider);
+      _scheduleTextSettingsUpdate(commands);
       await _flushPendingTextSettingsSave();
     } catch (error, stackTrace) {
       if (!mounted ||

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/settings_commands.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../models/app_mode.dart';
@@ -202,14 +203,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   }
 
   Future<void> _setNotificationsEnabled(
-    TimetableProvider provider,
+    SettingsCommands commands,
     bool value,
   ) async {
     if (uiCommandBusy) return;
     await runUiCommand(
       debugLabel: 'Update notifications enabled',
       command: () async {
-        await provider.updateNotificationsEnabled(value);
+        await commands.updateNotificationsEnabled(value);
         if (!value || !_notificationService.isSupported) return;
         try {
           await _notificationService.gateway.requestPermission();
@@ -316,6 +317,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     final l10n = AppLocalizations.of(context);
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
+        final settings = provider.settingsView;
+        final commands = provider.settingsCommands;
+        final workspace = provider.workspaceView;
         final permissionActionLabel = _notificationsPermissionGranted == true
             ? l10n.notificationPermissionOpenSettings
             : l10n.notificationPermissionRequest;
@@ -324,7 +328,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         final autostartSubtitle = _autostartSubtitle(l10n);
         final coverage = _notificationService.status.coverage;
         final showCoverageNotice =
-            provider.notificationsEnabled &&
+            settings.notificationsEnabled &&
             !_isWindows &&
             (coverage == AgendaNotificationCoverage.renewable ||
                 coverage == AgendaNotificationCoverage.capacityLimited);
@@ -333,16 +337,15 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
           SettingsSwitchTile(
             key: const ValueKey('notification-settings-enabled'),
             icon: Icons.notifications_active_outlined,
-            value: provider.notificationsEnabled,
+            value: settings.notificationsEnabled,
             title: l10n.notificationSettingsEnabled,
-            subtitle:
-                !widget.embedded && provider.isWorkspaceEnabled(AppMode.student)
+            subtitle: !widget.embedded && workspace.isEnabled(AppMode.student)
                 ? l10n.notificationSettingsEnabledHint
                 : null,
             onChanged: uiCommandBusy
                 ? null
                 : (value) =>
-                      unawaited(_setNotificationsEnabled(provider, value)),
+                      unawaited(_setNotificationsEnabled(commands, value)),
           ),
           if (showCoverageNotice)
             SettingsConnectedTile(
@@ -356,32 +359,32 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   : l10n.notificationCoverageRenewable,
             ),
           SettingsSectionHeader(title: l10n.notificationDefaultsSection),
-          if (provider.isWorkspaceEnabled(AppMode.student))
+          if (workspace.isEnabled(AppMode.student))
             _buildReminderDropdown(
               key: const ValueKey('notification-course-default-reminder'),
               label: l10n.notificationCourseDefaultReminder,
               icon: Icons.school_outlined,
-              value: provider.courseDefaultMinutesBefore,
+              value: settings.courseDefaultMinutesBefore,
               l10n: l10n,
               onChanged: (minutes) => _updateSetting(
                 'Update course default reminder',
-                () => provider.updateCourseDefaultReminder(minutes),
+                () => commands.updateCourseDefaultReminder(minutes),
               ),
             ),
           const SizedBox(height: 12),
-          if (provider.isWorkspaceEnabled(AppMode.general))
+          if (workspace.isEnabled(AppMode.general))
             _buildReminderDropdown(
               key: const ValueKey('notification-general-default-reminder'),
               label: l10n.notificationGeneralDefaultReminder,
               icon: Icons.event_outlined,
-              value: provider.generalDefaultMinutesBefore,
+              value: settings.generalDefaultMinutesBefore,
               l10n: l10n,
               onChanged: (minutes) => _updateSetting(
                 'Update general default reminder',
-                () => provider.updateGeneralDefaultReminder(minutes),
+                () => commands.updateGeneralDefaultReminder(minutes),
               ),
             ),
-          if (provider.isWorkspaceEnabled(AppMode.general))
+          if (workspace.isEnabled(AppMode.general))
             SettingsSwitchTile(
               key: const ValueKey(
                 'notification-remind-hidden-general-calendars',
@@ -389,12 +392,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               icon: Icons.visibility_off_outlined,
               title: l10n.notificationRemindHiddenGeneralCalendars,
               subtitle: l10n.notificationRemindHiddenGeneralCalendarsHint,
-              value: provider.remindHiddenGeneralCalendars,
+              value: settings.remindHiddenGeneralCalendars,
               onChanged: uiCommandBusy
                   ? null
                   : (value) => _updateSetting(
                       'Update hidden calendar reminders',
-                      () => provider.updateRemindHiddenGeneralCalendars(value),
+                      () => commands.updateRemindHiddenGeneralCalendars(value),
                     ),
             ),
           SettingsSectionHeader(title: l10n.notificationPermission),
@@ -510,14 +513,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
           SettingsSwitchTile(
             key: const ValueKey('notification-lock-screen-titles'),
             icon: Icons.lock_outline,
-            value: provider.lockScreenShowTitles,
+            value: settings.lockScreenShowTitles,
             title: l10n.notificationLockScreenTitles,
             subtitle: l10n.notificationLockScreenTitlesHint,
             onChanged: uiCommandBusy
                 ? null
                 : (value) => _updateSetting(
                     'Update lock screen notification titles',
-                    () => provider.updateLockScreenShowTitles(value),
+                    () => commands.updateLockScreenShowTitles(value),
                   ),
           ),
         ];
