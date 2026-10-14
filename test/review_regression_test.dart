@@ -1112,20 +1112,49 @@ END:VCALENDAR''',
       dateIso: '2026-09-20',
     );
     expect(
-      resolveNotificationOccurrence(provider, target)?.occurrenceKey,
+      resolveNotificationOccurrence(
+        provider.generalView,
+        target,
+        includeHiddenCalendars:
+            provider.settingsView.remindHiddenGeneralCalendars,
+      )?.occurrenceKey,
       occurrence.occurrenceKey,
     );
-    final router = AgendaActionRouter(provider: provider);
+    final router = AgendaActionRouter(
+      workspace: provider.workspaceView,
+      workspaces: provider.workspaces,
+      student: provider.studentView,
+      studentCommands: provider.studentCommands,
+      general: provider.generalView,
+      generalNavigation: provider.generalNavigation,
+      settings: provider.settingsView,
+    );
     expect(await router.route(AgendaAction(target: target)), isTrue);
     expect(
       provider.selectedGeneralDate,
       normalizeDateOnly(occurrence.start.toLocal()),
     );
     await provider.updateGeneralScheduleVisibility(utc.calendarId, false);
-    expect(resolveNotificationOccurrence(provider, target), isNull);
+    expect(
+      resolveNotificationOccurrence(
+        provider.generalView,
+        target,
+        includeHiddenCalendars:
+            provider.settingsView.remindHiddenGeneralCalendars,
+      ),
+      isNull,
+    );
     await provider.updateGeneralScheduleVisibility(utc.calendarId, true);
     await provider.deleteGeneralEvent(utc.id);
-    expect(resolveNotificationOccurrence(provider, target), isNull);
+    expect(
+      resolveNotificationOccurrence(
+        provider.generalView,
+        target,
+        includeHiddenCalendars:
+            provider.settingsView.remindHiddenGeneralCalendars,
+      ),
+      isNull,
+    );
     for (final invalid in [
       const AgendaTarget(sourceType: AgendaSourceType.course),
       const AgendaTarget(sourceType: AgendaSourceType.generalEvent),
@@ -1150,7 +1179,15 @@ END:VCALENDAR''',
         dateIso: '2026-09-26',
       ),
     ]) {
-      expect(resolveNotificationOccurrence(provider, invalid), isNull);
+      expect(
+        resolveNotificationOccurrence(
+          provider.generalView,
+          invalid,
+          includeHiddenCalendars:
+              provider.settingsView.remindHiddenGeneralCalendars,
+        ),
+        isNull,
+      );
     }
   });
 

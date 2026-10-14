@@ -224,7 +224,15 @@ void main() {
       await provider.setWorkspaceEnabled(AppMode.student, false);
       await service.handleAction(request.payload, 'snooze_10m');
       expect(runtime.snoozes, isEmpty);
-      final router = AgendaActionRouter(provider: provider);
+      final router = AgendaActionRouter(
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
+      );
       expect(
         await router.route(AgendaAction(target: request.occurrence.target)),
         isFalse,

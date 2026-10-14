@@ -3,7 +3,13 @@ import 'dart:convert';
 
 import '../models/timetable_models.dart';
 import '../models/workspace_availability.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/general_navigation_controller.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_commands.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import 'agenda_notification_payload.dart';
 import 'agenda_projection_service.dart';
 import 'notification_planner.dart';
@@ -13,12 +19,18 @@ export 'agenda_notification_payload.dart';
 
 typedef AgendaTargetCallback = Future<void> Function(AgendaTarget target);
 
-/// Resolves stable agenda targets into provider navigation state. UI layers can
-/// supply [onTarget] to open a course/event details sheet after the date and
+/// Resolves stable agenda targets through workspace navigation commands. UI
+/// layers can supply [onTarget] to open course/event details after the date and
 /// workspace have been selected.
 class AgendaActionRouter {
   AgendaActionRouter({
-    required this.provider,
+    required this.workspace,
+    required this.workspaces,
+    required this.student,
+    required this.studentCommands,
+    required this.general,
+    required this.generalNavigation,
+    required this.settings,
     this.onTarget,
     this.sourceHandlers = const {},
     AgendaProjectionService? projection,
@@ -27,7 +39,13 @@ class AgendaActionRouter {
   }) : _projection = projection ?? const AgendaProjectionService(),
        _clock = clock ?? DateTime.now;
 
-  final TimetableProvider provider;
+  final WorkspaceViewState workspace;
+  final WorkspaceCommands workspaces;
+  final StudentViewState student;
+  final StudentCommands studentCommands;
+  final GeneralViewState general;
+  final GeneralNavigationController generalNavigation;
+  final SettingsViewState settings;
   final AgendaTargetCallback? onTarget;
 
   /// Optional handlers for sources that are not part of the built-in student
@@ -115,14 +133,14 @@ class AgendaActionRouter {
     }
     return agendaNotificationPayloadMatchesProjection(
       payload: payload,
-      data: provider.appData,
+      data: workspace.data,
       projection: _projection,
     );
   }
 
   Future<bool> route(AgendaAction action) async {
     final target = action.target;
-    if (!provider.appData.allowsAgendaSource(target.sourceType)) return false;
+    if (!workspace.data.allowsAgendaSource(target.sourceType)) return false;
     final customHandler = sourceHandlers[target.sourceType];
     if (customHandler != null) {
       await customHandler(target);
@@ -143,7 +161,7 @@ class AgendaActionRouter {
     final date = agendaActionDate(target.dateIso);
     if (timetableId == null || courseId == null || date == null) return false;
     TimetableData? timetable;
-    for (final candidate in provider.timetables) {
+    for (final candidate in student.timetables) {
       if (candidate.id == timetableId) {
         timetable = candidate;
         break;
@@ -169,13 +187,13 @@ class AgendaActionRouter {
       }
     }
     if (course == null) return false;
-    if (provider.activeMode != AppMode.student) {
-      await provider.switchMode(AppMode.student);
+    if (workspace.activeMode != AppMode.student) {
+      await workspaces.switchMode(AppMode.student);
     }
-    if (provider.activeTimetableOrNull?.id != timetableId) {
-      await provider.switchTimetable(timetableId);
+    if (student.activeTimetableOrNull?.id != timetableId) {
+      await studentCommands.switchTimetable(timetableId);
     }
-    await provider.setSelectedWeek(week);
+    await studentCommands.setSelectedWeek(week);
     await onTarget?.call(target);
     return true;
   }
@@ -185,10 +203,9 @@ class AgendaActionRouter {
     final eventId = _requiredString(target.eventId);
     if (scheduleId == null || eventId == null) return false;
     GeneralSchedule? schedule;
-    for (final candidate in provider.generalSchedules) {
+    for (final candidate in general.schedules) {
       if (candidate.id == scheduleId &&
-          (candidate.isVisible ||
-              provider.notificationSettings.remindHiddenGeneralCalendars)) {
+          (candidate.isVisible || settings.remindHiddenGeneralCalendars)) {
         schedule = candidate;
         break;
       }
@@ -208,7 +225,11 @@ class AgendaActionRouter {
     if (target.dateIso != null && date == null) return false;
     GeneralEventOccurrence? matchedOccurrence;
     if (target.occurrenceKey != null) {
-      matchedOccurrence = resolveNotificationOccurrence(provider, target);
+      matchedOccurrence = resolveNotificationOccurrence(
+        general,
+        target,
+        includeHiddenCalendars: settings.remindHiddenGeneralCalendars,
+      );
       if (matchedOccurrence == null) return false;
     }
     final searchDate =
@@ -216,8 +237,8 @@ class AgendaActionRouter {
         (matchedOccurrence == null
             ? null
             : normalizeDateOnly(matchedOccurrence.start.toLocal()));
-    if (provider.activeMode != AppMode.general) {
-      await provider.switchMode(AppMode.general);
+    if (workspace.activeMode != AppMode.general) {
+      await workspaces.switchMode(AppMode.general);
     }
     var navigationDate = searchDate;
     if (matchedOccurrence != null && !matchedOccurrence.isAllDay) {
@@ -226,7 +247,7 @@ class AgendaActionRouter {
       );
     }
     if (navigationDate != null) {
-      await provider.setSelectedGeneralDate(navigationDate);
+      await generalNavigation.setSelectedDate(navigationDate);
     }
     await onTarget?.call(target);
     return true;

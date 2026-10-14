@@ -482,7 +482,13 @@ END:VCALENDAR
       final request = gateway.scheduled.values.first;
       final payload = AgendaNotificationPayload.tryDecode(request.payload)!;
       final router = AgendaActionRouter(
-        provider: provider,
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
         duplicateWindow: Duration.zero,
       );
       expect(
@@ -496,11 +502,24 @@ END:VCALENDAR
       expect(await router.routePayload(request.payload), isTrue);
       expect(provider.generalSchedules.single.isVisible, isFalse);
       expect(
-        resolveNotificationOccurrence(provider, payload.target),
+        resolveNotificationOccurrence(
+          provider.generalView,
+          payload.target,
+          includeHiddenCalendars:
+              provider.settingsView.remindHiddenGeneralCalendars,
+        ),
         isNotNull,
       );
       await provider.updateRemindHiddenGeneralCalendars(false);
-      expect(resolveNotificationOccurrence(provider, payload.target), isNull);
+      expect(
+        resolveNotificationOccurrence(
+          provider.generalView,
+          payload.target,
+          includeHiddenCalendars:
+              provider.settingsView.remindHiddenGeneralCalendars,
+        ),
+        isNull,
+      );
       expect(
         agendaNotificationPayloadMatchesProjection(
           payload: payload,

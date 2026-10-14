@@ -1,12 +1,13 @@
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/general_view_state.dart';
 
 /// Read-only lookup shared by routing, details, and handled actions. A UTC
 /// occurrence key identifies an instant; dateIso is only a compatibility hint.
 GeneralEventOccurrence? resolveNotificationOccurrence(
-  TimetableProvider provider,
-  AgendaTarget target,
-) {
+  GeneralViewState view,
+  AgendaTarget target, {
+  required bool includeHiddenCalendars,
+}) {
   if (target.sourceType != AgendaSourceType.generalEvent) return null;
   final calendarId = target.calendarId?.trim();
   final eventId = target.eventId?.trim();
@@ -30,11 +31,10 @@ GeneralEventOccurrence? resolveNotificationOccurrence(
   final instant = keyStart ?? date;
   if (instant == null) return null;
   final searchDate = normalizeDateOnly(instant.toLocal());
-  for (final occurrence in provider.generalOccurrencesForRange(
+  for (final occurrence in view.occurrencesForRange(
     startInclusive: addCalendarDays(searchDate, -2),
     endExclusive: addCalendarDays(searchDate, 3),
-    onlyVisibleCalendars:
-        !provider.notificationSettings.remindHiddenGeneralCalendars,
+    onlyVisibleCalendars: !includeHiddenCalendars,
   )) {
     if (occurrence.calendar.id == calendarId &&
         occurrence.event.id == eventId &&

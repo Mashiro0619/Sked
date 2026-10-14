@@ -1085,7 +1085,16 @@ void main() {
 }
 
 class _ThrowingActionRouter extends AgendaActionRouter {
-  _ThrowingActionRouter({required super.provider});
+  _ThrowingActionRouter({required TimetableProvider provider})
+    : super(
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
+      );
 
   @override
   Future<bool> routePayload(String? payload) =>

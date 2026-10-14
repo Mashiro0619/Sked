@@ -336,7 +336,13 @@ void main() {
       addTearDown(provider.dispose);
       final opened = <AgendaTarget>[];
       final router = AgendaActionRouter(
-        provider: provider,
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
         onTarget: (target) async => opened.add(target),
       );
       const target = AgendaTarget(
@@ -392,8 +398,15 @@ void main() {
       );
 
       expect(
-        await AgendaActionRouter(provider: provider)
-            .route(const AgendaAction(target: target)),
+        await AgendaActionRouter(
+          workspace: provider.workspaceView,
+          workspaces: provider.workspaces,
+          student: provider.studentView,
+          studentCommands: provider.studentCommands,
+          general: provider.generalView,
+          generalNavigation: provider.generalNavigation,
+          settings: provider.settingsView,
+        ).route(const AgendaAction(target: target)),
         isTrue,
       );
       expect(provider.activeTimetableOrNull?.id, 'table');
@@ -419,7 +432,13 @@ void main() {
       addTearDown(provider.dispose);
       AgendaTarget? opened;
       final router = AgendaActionRouter(
-        provider: provider,
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
         onTarget: (value) async => opened = value,
       );
 
@@ -432,7 +451,15 @@ void main() {
         _dataWithGeneralEvent(isVisible: false),
       );
       addTearDown(hiddenProvider.dispose);
-      final hiddenRouter = AgendaActionRouter(provider: hiddenProvider);
+      final hiddenRouter = AgendaActionRouter(
+        workspace: hiddenProvider.workspaceView,
+        workspaces: hiddenProvider.workspaces,
+        student: hiddenProvider.studentView,
+        studentCommands: hiddenProvider.studentCommands,
+        general: hiddenProvider.generalView,
+        generalNavigation: hiddenProvider.generalNavigation,
+        settings: hiddenProvider.settingsView,
+      );
       expect(await hiddenRouter.route(AgendaAction(target: target)), isFalse);
       expect(hiddenProvider.activeMode, AppMode.student);
     },
@@ -475,8 +502,15 @@ void main() {
     addTearDown(provider.dispose);
 
     expect(
-      await AgendaActionRouter(provider: provider)
-          .route(AgendaAction(target: occurrence.target)),
+      await AgendaActionRouter(
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
+      ).route(AgendaAction(target: occurrence.target)),
       isTrue,
     );
     expect(
@@ -490,7 +524,15 @@ void main() {
     () async {
       final provider = await _loadProvider(_dataWithGeneralEvent());
       addTearDown(provider.dispose);
-      final router = AgendaActionRouter(provider: provider);
+      final router = AgendaActionRouter(
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
+      );
 
       expect(
         await router.route(
@@ -534,7 +576,13 @@ void main() {
       addTearDown(provider.dispose);
       AgendaTarget? handled;
       final router = AgendaActionRouter(
-        provider: provider,
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
         sourceHandlers: {'exam': (target) async => handled = target},
       );
       const target = AgendaTarget(sourceType: 'exam', eventId: 'exam-1');
@@ -555,7 +603,13 @@ void main() {
       var current = DateTime(2026, 8, 3, 7);
       final opened = <AgendaTarget>[];
       final router = AgendaActionRouter(
-        provider: provider,
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
         clock: () => current,
         onTarget: (target) async => opened.add(target),
       );
@@ -619,7 +673,15 @@ void main() {
         fingerprint: '0' * 40,
         hasStableTag: true,
       ).encode();
-      final router = AgendaActionRouter(provider: provider);
+      final router = AgendaActionRouter(
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
+      );
 
       expect(await router.routePayload(payload), isFalse);
       expect(
@@ -641,7 +703,13 @@ void main() {
       final provider = await _loadProvider(_dataWithCourse());
       addTearDown(provider.dispose);
       final router = AgendaActionRouter(
-        provider: provider,
+        workspace: provider.workspaceView,
+        workspaces: provider.workspaces,
+        student: provider.studentView,
+        studentCommands: provider.studentCommands,
+        general: provider.generalView,
+        generalNavigation: provider.generalNavigation,
+        settings: provider.settingsView,
         sourceHandlers: {
           'failing-source': (_) async => throw StateError('synthetic failure'),
         },

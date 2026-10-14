@@ -713,7 +713,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     BuildContext context,
     AgendaTarget target,
   ) async {
-    final occurrence = resolveNotificationOccurrence(widget.provider, target);
+    final occurrence = resolveNotificationOccurrence(
+      widget.provider.generalView,
+      target,
+      includeHiddenCalendars:
+          widget.provider.settingsView.remindHiddenGeneralCalendars,
+    );
     if (occurrence == null || !context.mounted) return;
     await _openGeneralOccurrenceDetails(context, occurrence);
   }

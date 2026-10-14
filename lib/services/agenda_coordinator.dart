@@ -41,7 +41,13 @@ class AgendaCoordinator {
        _actionRouter =
            actionRouter ??
            AgendaActionRouter(
-             provider: provider,
+             workspace: provider.workspaceView,
+             workspaces: provider.workspaces,
+             student: provider.studentView,
+             studentCommands: provider.studentCommands,
+             general: provider.generalView,
+             generalNavigation: provider.generalNavigation,
+             settings: provider.settingsView,
              onTarget: onTarget,
              projection: projection ?? _defaultProjection,
            ),
@@ -550,7 +556,12 @@ class AgendaCoordinator {
         return true;
       }
       if (tryParseStrictIsoDateTime(rawDate) == null) return true;
-      final occurrence = resolveNotificationOccurrence(_provider, target);
+      final occurrence = resolveNotificationOccurrence(
+        _provider.generalView,
+        target,
+        includeHiddenCalendars:
+            _provider.settingsView.remindHiddenGeneralCalendars,
+      );
       if (occurrence == null ||
           _provider.isGeneralReminderHandled(occurrence)) {
         return true;
