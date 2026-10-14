@@ -7,6 +7,9 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
@@ -30,9 +33,12 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
   Widget build(BuildContext context) {
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
+        final settings = provider.settingsView;
+        final commands = provider.settingsCommands;
+        final maintenance = provider.maintenance;
         final l10n = AppLocalizations.of(context);
         final languageOptions = supportedLanguageOptions(l10n);
-        final currentCode = normalizeLocaleCode(provider.localeCode);
+        final currentCode = normalizeLocaleCode(settings.localeCode);
         return PopScope(
           canPop: !_isSelectingLanguage,
           child: Scaffold(
@@ -77,11 +83,16 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                               onTap:
                                   _isSelectingLanguage ||
                                       _languageSelectionPopped ||
-                                      provider.isRestoringAppBackup
+                                      maintenance.isReserved
                                   ? null
                                   : () {
                                       unawaited(
-                                        _selectLanguage(provider, option.code),
+                                        _selectLanguage(
+                                          commands: commands,
+                                          settings: settings,
+                                          maintenance: maintenance,
+                                          localeCode: option.code,
+                                        ),
                                       );
                                     },
                             ),
@@ -114,17 +125,19 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     }).toList();
   }
 
-  Future<void> _selectLanguage(
-    TimetableProvider provider,
-    String localeCode,
-  ) async {
+  Future<void> _selectLanguage({
+    required SettingsCommands commands,
+    required SettingsViewState settings,
+    required AppDataMaintenance maintenance,
+    required String localeCode,
+  }) async {
     if (_isSelectingLanguage ||
         _languageSelectionPopped ||
-        provider.isRestoringAppBackup) {
+        maintenance.isReserved) {
       return;
     }
     final normalizedCode = normalizeLocaleCode(localeCode);
-    if (normalizedCode == normalizeLocaleCode(provider.localeCode)) {
+    if (normalizedCode == normalizeLocaleCode(settings.localeCode)) {
       return;
     }
     setState(() => _isSelectingLanguage = true);
@@ -132,7 +145,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
       final saved = await runUiCommandWithFeedback(
         context: context,
         debugLabel: 'Update application language',
-        command: () => provider.updateLocaleCode(normalizedCode),
+        command: () => commands.updateLocaleCode(normalizedCode),
       );
       if (!saved || !mounted) {
         return;

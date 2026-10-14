@@ -73,7 +73,7 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
       await widget.coordinator!.reconcileNow();
     } else if (widget.notificationService != null) {
       await widget.notificationService!.reconcile(
-        context.read<TimetableProvider>().committedAppData,
+        context.read<TimetableProvider>().session.committedData,
       );
     }
     final service =
@@ -84,8 +84,10 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
   Future<void> _set(AppMode mode, bool enabled) async {
     if (uiCommandBusy || _confirming) return;
     final provider = context.read<TimetableProvider>();
+    final workspace = provider.workspaceView;
+    final commands = provider.workspaces;
     final l = AppLocalizations.of(context);
-    if (!enabled && !provider.hasMultipleWorkspaces) return;
+    if (!enabled && workspace.enabledWorkspaces.length < 2) return;
     if (!enabled) {
       _confirming = true;
       final confirm = await showDialog<bool>(
@@ -110,8 +112,8 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
     await runUiCommand(
       debugLabel: 'Change enabled workspaces',
       command: () async {
-        await provider.setWorkspaceEnabled(mode, enabled);
-        if (provider.isWorkspaceEnabled(mode) != enabled) return;
+        await commands.setEnabled(mode, enabled);
+        if (workspace.isEnabled(mode) != enabled) return;
         try {
           await _reconcile();
           if (mounted) setState(() => _cleanupPending = false);
@@ -124,7 +126,11 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
 
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<TimetableProvider>();
+    final provider = context.watch<TimetableProvider>();
+    final workspace = provider.workspaceView;
+    final settings = provider.settingsView;
+    final commands = provider.settingsCommands;
+    final hasMultipleWorkspaces = workspace.enabledWorkspaces.length > 1;
     final l = AppLocalizations.of(context);
     final controls = <Widget>[
       Padding(
@@ -140,29 +146,29 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
           title: mode == AppMode.student
               ? l.studentTimetable
               : l.generalSchedule,
-          subtitle: p.isWorkspaceEnabled(mode) && !p.hasMultipleWorkspaces
+          subtitle: workspace.isEnabled(mode) && !hasMultipleWorkspaces
               ? l.workspaceLastRequired
               : null,
-          value: p.isWorkspaceEnabled(mode),
-          onChanged: p.isWorkspaceEnabled(mode) && !p.hasMultipleWorkspaces
+          value: workspace.isEnabled(mode),
+          onChanged: workspace.isEnabled(mode) && !hasMultipleWorkspaces
               ? null
               : (value) => unawaited(_set(mode, value)),
         ),
-      if (p.hasMultipleWorkspaces)
+      if (hasMultipleWorkspaces)
         SettingsSwitchTile(
           icon: Icons.navigation_outlined,
           title: l.hideHomeWorkspaceNavigation,
           subtitle: l.hideHomeWorkspaceNavigationDesc,
-          value: p.hideHomeWorkspaceNavigation,
+          value: settings.hideHomeWorkspaceNavigation,
           onChanged: (value) => unawaited(
             runUiCommand(
               debugLabel: 'Change workspace navigation',
-              command: () => p.updateHideHomeWorkspaceNavigation(value),
+              command: () => commands.updateHideHomeWorkspaceNavigation(value),
             ),
           ),
         ),
       if (_cleanupPending ||
-          (!p.hasMultipleWorkspaces && _service?.status.lastError != null))
+          (!hasMultipleWorkspaces && _service?.status.lastError != null))
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

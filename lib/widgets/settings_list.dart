@@ -21,7 +21,7 @@ import '../models/app_mode.dart';
 
 bool _settingsWritesEnabled(BuildContext context) =>
     !context.select<TimetableProvider?, bool>(
-      (provider) => provider?.isRestoringAppBackup ?? false,
+      (provider) => provider?.maintenance.isReserved ?? false,
     );
 
 /// Blocks a settings surface during persistence without switching every child
@@ -1352,7 +1352,7 @@ class _SettingsToolbarNavigationEditorState
 
   bool get _reorderInteractionEnabled =>
       !widget.busy &&
-      !(context.read<TimetableProvider?>()?.isRestoringAppBackup ?? false) &&
+      !(context.read<TimetableProvider?>()?.maintenance.isReserved ?? false) &&
       !_dragInProgress &&
       !_dropSettlementPending &&
       !_reorderSavePending;
@@ -1398,7 +1398,7 @@ class _SettingsToolbarNavigationEditorState
 
   void _onReorder(int oldIndex, int newIndex) {
     if (widget.busy ||
-        (context.read<TimetableProvider?>()?.isRestoringAppBackup ?? false) ||
+        (context.read<TimetableProvider?>()?.maintenance.isReserved ?? false) ||
         oldIndex == newIndex ||
         oldIndex < 0 ||
         newIndex < 0 ||
@@ -1667,7 +1667,7 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (context.read<TimetableProvider?>()?.isRestoringAppBackup ?? false) {
+    if (context.read<TimetableProvider?>()?.maintenance.isReserved ?? false) {
       _isInteracting = false;
       _previewValue = _clamp(widget.value);
     }
