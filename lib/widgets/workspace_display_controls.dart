@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/general_commands.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
 import 'settings_list.dart';
 
 typedef SettingsUpdate = void Function(
@@ -11,45 +13,48 @@ typedef SettingsUpdate = void Function(
 );
 
 Widget studentWeekWidthSetting(
-  TimetableProvider provider,
+  SettingsViewState settings,
+  SettingsCommands commands,
   AppLocalizations l,
   SettingsUpdate update, {
   bool enabled = true,
 }) => SettingsSwitchTile(
   key: const ValueKey('student-fit-week-columns-setting'),
   icon: Icons.view_column_outlined,
-  value: provider.fitWeekColumnsToWidth,
+  value: settings.fitWeekColumnsToWidth,
   title: l.fitWeekColumnsToWidth,
   onChanged: (value) {
     if (!enabled) return;
     update(
       'Update week column width mode',
-      () => provider.updateFitWeekColumnsToWidth(value),
+      () => commands.updateFitWeekColumnsToWidth(value),
     );
   },
 );
 
 Widget studentGridLinesSetting(
-  TimetableProvider provider,
+  SettingsViewState settings,
+  SettingsCommands commands,
   AppLocalizations l,
   SettingsUpdate update, {
   bool enabled = true,
 }) => SettingsSwitchTile(
   key: const ValueKey('student-grid-lines-setting'),
   icon: Icons.grid_4x4_outlined,
-  value: provider.showTimetableGridLines,
+  value: settings.showTimetableGridLines,
   title: l.showTimetableGridLines,
   onChanged: (value) {
     if (!enabled) return;
     update(
       'Update timetable grid line visibility',
-      () => provider.updateShowTimetableGridLines(value),
+      () => commands.updateShowTimetableGridLines(value),
     );
   },
 );
 
 Widget generalDefaultViewSetting(
-  TimetableProvider provider,
+  GeneralScheduleData display,
+  GeneralCommands commands,
   AppLocalizations l,
   SettingsUpdate update, {
   bool enabled = true,
@@ -57,7 +62,7 @@ Widget generalDefaultViewSetting(
   key: const ValueKey('general-default-view'),
   title: l.defaultView,
   icon: Icons.space_dashboard_outlined,
-  value: provider.generalDefaultView,
+  value: display.defaultView,
   enabled: enabled,
   workspace: AppMode.general,
   entries: [
@@ -70,14 +75,15 @@ Widget generalDefaultViewSetting(
     if (value != null) {
       update(
         'Update general default view',
-        () => provider.updateGeneralDisplaySettings(defaultView: value),
+        () => commands.updateDisplaySettings(defaultView: value),
       );
     }
   },
 );
 
 List<Widget> generalCalendarDisplaySettings(
-  TimetableProvider provider,
+  GeneralScheduleData display,
+  GeneralCommands commands,
   AppLocalizations l,
   SettingsUpdate update, {
   bool enabled = true,
@@ -86,13 +92,12 @@ List<Widget> generalCalendarDisplaySettings(
     key: const ValueKey('general-fit-week-columns-setting'),
     icon: Icons.view_column_outlined,
     title: l.generalFitWeekColumnsToWidth,
-    value: provider.generalFitWeekColumnsToWidth,
+    value: display.fitWeekColumnsToWidth,
     onChanged: (value) {
       if (!enabled) return;
       update(
         'Update general week column width mode',
-        () =>
-            provider.updateGeneralDisplaySettings(fitWeekColumnsToWidth: value),
+        () => commands.updateDisplaySettings(fitWeekColumnsToWidth: value),
       );
     },
   ),
@@ -100,12 +105,12 @@ List<Widget> generalCalendarDisplaySettings(
     key: const ValueKey('general-show-weekends-setting'),
     icon: Icons.weekend_outlined,
     title: l.showWeekends,
-    value: provider.generalShowWeekends,
+    value: display.showWeekends,
     onChanged: (value) {
       if (!enabled) return;
       update(
         'Update weekend visibility',
-        () => provider.updateGeneralDisplaySettings(showWeekends: value),
+        () => commands.updateDisplaySettings(showWeekends: value),
       );
     },
   ),
@@ -114,12 +119,12 @@ List<Widget> generalCalendarDisplaySettings(
       key: const ValueKey('general-show-lunar-setting'),
       icon: Icons.brightness_2_outlined,
       title: l.showLunarCalendar,
-      value: provider.generalShowLunarCalendar,
+      value: display.showLunarCalendar,
       onChanged: (value) {
         if (!enabled) return;
         update(
           'Update lunar calendar visibility',
-          () => provider.updateGeneralDisplaySettings(showLunarCalendar: value),
+          () => commands.updateDisplaySettings(showLunarCalendar: value),
         );
       },
     ),
@@ -127,7 +132,7 @@ List<Widget> generalCalendarDisplaySettings(
     key: const ValueKey('general-custom-column-width-mode'),
     title: l.generalCustomColumnWidth,
     icon: Icons.width_normal_outlined,
-    value: provider.generalCustomDayMinWidth != null,
+    value: display.customDayMinWidth != null,
     enabled: enabled,
     workspace: AppMode.general,
     entries: [
@@ -138,14 +143,14 @@ List<Widget> generalCalendarDisplaySettings(
       if (manual != null) {
         update(
           'Update custom calendar column width mode',
-          () => provider.updateGeneralCustomDayMinWidth(
+          () => commands.updateCustomDayMinWidth(
             manual ? generalCustomDayMinWidthDefault : null,
           ),
         );
       }
     },
   ),
-  if (provider.generalCustomDayMinWidth case final int width)
+  if (display.customDayMinWidth case final int width)
     SettingsSliderTile(
       key: const ValueKey('general-custom-column-width-slider'),
       icon: Icons.view_column_outlined,
@@ -159,7 +164,7 @@ List<Widget> generalCalendarDisplaySettings(
       labelBuilder: (value) => '$value dp',
       onChangeEnd: (value) => update(
         'Update custom calendar column width',
-        () => provider.updateGeneralCustomDayMinWidth(value),
+        () => commands.updateCustomDayMinWidth(value),
       ),
     ),
 ];

@@ -42,6 +42,11 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
     final l10n = AppLocalizations.of(context);
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
+        final display = provider.generalView.data;
+        final commands = provider.generalCommands;
+        final workspaceFallback =
+            provider.workspaceView.enabledWorkspaces.length > 1 &&
+            provider.settingsView.hideHomeWorkspaceNavigation;
         return Scaffold(
           appBar: WorkbenchAppBar(
             automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
@@ -72,7 +77,8 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           title: l10n.generalDefaultViewSection,
                         ),
                         generalDefaultViewSetting(
-                          provider,
+                          display,
+                          commands,
                           l10n,
                           _updateSetting,
                           enabled: !uiCommandBusy,
@@ -83,7 +89,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                               !WorkbenchChromeMetrics.compactTouch(context) ||
                               !uiCommandBusy,
                           key: const ValueKey('general-view-switch-behavior'),
-                          value: provider.generalViewSwitchBehavior,
+                          value: display.viewSwitchBehavior,
                           title: l10n.generalViewSwitchBehavior,
                           icon: Icons.swap_horiz_outlined,
                           entries: [
@@ -100,7 +106,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             if (value != null) {
                               _updateSetting(
                                 'Update general view switch behavior',
-                                () => provider.updateGeneralDisplaySettings(
+                                () => commands.updateDisplaySettings(
                                   viewSwitchBehavior: value,
                                 ),
                               );
@@ -115,7 +121,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                               !WorkbenchChromeMetrics.compactTouch(context) ||
                               !uiCommandBusy,
                           key: const ValueKey('general-toolbar-width-policy'),
-                          value: provider.generalToolbarWidthPolicy,
+                          value: display.toolbarWidthPolicy,
                           title: l10n.generalToolbarWidthPolicy,
                           icon: Icons.space_bar_outlined,
                           entries: [
@@ -140,7 +146,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             if (value != null) {
                               _updateSetting(
                                 'Update general toolbar width policy',
-                                () => provider.updateGeneralDisplaySettings(
+                                () => commands.updateDisplaySettings(
                                   toolbarWidthPolicy: value,
                                 ),
                               );
@@ -153,7 +159,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                               !WorkbenchChromeMetrics.compactTouch(context) ||
                               !uiCommandBusy,
                           key: const ValueKey('general-date-label-format'),
-                          value: provider.generalDateLabelFormat,
+                          value: display.dateLabelFormat,
                           title: l10n.generalDateLabelFormat,
                           subtitle: l10n.generalDateLabelFormatDescription,
                           icon: Icons.text_format_outlined,
@@ -175,7 +181,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             if (value != null) {
                               _updateSetting(
                                 'Update general date label format',
-                                () => provider.updateGeneralDisplaySettings(
+                                () => commands.updateDisplaySettings(
                                   dateLabelFormat: value,
                                 ),
                               );
@@ -187,7 +193,8 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           title: l10n.generalScheduleDisplaySection,
                         ),
                         ...generalCalendarDisplaySettings(
-                          provider,
+                          display,
+                          commands,
                           l10n,
                           _updateSetting,
                           enabled: !uiCommandBusy,
@@ -198,13 +205,13 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         SettingsSliderTile(
                           icon: Icons.access_time,
                           title: l10n.startHour,
-                          value: provider.generalDayStartHour,
+                          value: display.dayStartHour,
                           min: 0,
-                          max: provider.generalDayEndHour - 1,
+                          max: display.dayEndHour - 1,
                           labelBuilder: _hourLabel,
                           onChangeEnd: (value) => _updateSetting(
                             'Update general day start hour',
-                            () => provider.updateGeneralDisplaySettings(
+                            () => commands.updateDisplaySettings(
                               dayStartHour: value,
                             ),
                           ),
@@ -212,13 +219,13 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         SettingsSliderTile(
                           icon: Icons.access_time,
                           title: l10n.endHour,
-                          value: provider.generalDayEndHour,
-                          min: provider.generalDayStartHour + 1,
+                          value: display.dayEndHour,
+                          min: display.dayStartHour + 1,
                           max: 24,
                           labelBuilder: _hourLabel,
                           onChangeEnd: (value) => _updateSetting(
                             'Update general day end hour',
-                            () => provider.updateGeneralDisplaySettings(
+                            () => commands.updateDisplaySettings(
                               dayEndHour: value,
                             ),
                           ),
@@ -228,7 +235,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                               !WorkbenchChromeMetrics.compactTouch(context) ||
                               !uiCommandBusy,
                           key: const ValueKey('general-time-grid'),
-                          value: provider.generalTimeGridMinutes,
+                          value: display.timeGridMinutes,
                           title: l10n.timeGridDensity,
                           icon: Icons.grid_4x4_outlined,
                           entries: [
@@ -249,7 +256,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             if (value != null) {
                               _updateSetting(
                                 'Update general time grid density',
-                                () => provider.updateGeneralDisplaySettings(
+                                () => commands.updateDisplaySettings(
                                   timeGridMinutes: value,
                                 ),
                               );
@@ -262,14 +269,14 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           icon: Icons.height,
                           title: l10n.timeGridHourHeight,
                           subtitle: l10n.timeGridHourHeightHint,
-                          value: provider.generalTimeGridHourHeight,
+                          value: display.timeGridHourHeight,
                           min: generalTimeGridHourHeightMin,
                           max: generalTimeGridHourHeightMax,
                           step: generalTimeGridHourHeightStep,
                           labelBuilder: l10n.timeGridHourHeightValue,
                           onChangeEnd: (value) => _updateSetting(
                             'Update general time grid hour height',
-                            () => provider.updateGeneralDisplaySettings(
+                            () => commands.updateDisplaySettings(
                               timeGridHourHeight: value,
                             ),
                           ),
@@ -278,10 +285,10 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         SettingsSwitchTile(
                           icon: Icons.open_in_full_outlined,
                           title: l10n.closePopupOnOutsideTap,
-                          value: provider.closeGeneralEventPopupOnOutsideTap,
+                          value: display.closeEventPopupOnOutsideTap,
                           onChanged: (value) => _updateSetting(
                             'Update general popup dismissal',
-                            () => provider.updateGeneralDisplaySettings(
+                            () => commands.updateDisplaySettings(
                               closeEventPopupOnOutsideTap: value,
                             ),
                           ),
@@ -303,7 +310,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           key: const ValueKey(
                             'general-toolbar-hidden-behavior',
                           ),
-                          value: provider.generalToolbarHiddenItemsBehavior,
+                          value: display.toolbarHiddenItemsBehavior,
                           title: l10n.toolbarNavigationHiddenBehavior,
                           icon: Icons.more_horiz_outlined,
                           entries: <DropdownMenuEntry<Object>>[
@@ -320,10 +327,9 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             if (value is String) {
                               _updateSetting(
                                 'Update general toolbar hidden items behavior',
-                                () => provider
-                                    .updateGeneralToolbarHiddenItemsBehavior(
-                                      value,
-                                    ),
+                                () => commands.updateToolbarHiddenItemsBehavior(
+                                  value,
+                                ),
                               );
                             }
                           },
@@ -332,23 +338,24 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           key: const ValueKey(
                             'general-toolbar-navigation-editor',
                           ),
-                          items: _generalToolbarItems(l10n, provider),
+                          items: _generalToolbarItems(
+                            l10n,
+                            display,
+                            workspaceFallback: workspaceFallback,
+                          ),
                           busy: uiCommandBusy,
                           reorderLabel: l10n.toolbarNavigationReorder,
                           visibilityLabel: l10n.toolbarNavigationVisibility,
                           onReorder: (order) => _updateSetting(
                             'Update general toolbar navigation order',
-                            () => provider.updateGeneralToolbarNavigationOrder(
-                              order,
-                            ),
+                            () => commands.updateToolbarNavigationOrder(order),
                           ),
                           onVisibilityChanged: (id, visible) => _updateSetting(
                             'Update general toolbar navigation visibility',
-                            () => provider
-                                .updateGeneralToolbarNavigationVisibility(
-                                  id,
-                                  visible,
-                                ),
+                            () => commands.updateToolbarNavigationVisibility(
+                              id,
+                              visible,
+                            ),
                           ),
                         ),
                         SettingsSectionHeader(title: l10n.quickActionsSection),
@@ -357,10 +364,10 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           icon: Icons.add_circle_outline,
                           title: l10n.showAddEventFab,
                           subtitle: l10n.showAddEventFabHint,
-                          value: provider.showAddEventFab,
+                          value: display.showAddEventFab,
                           onChanged: (value) => _updateSetting(
                             'Update add event button visibility',
-                            () => provider.updateGeneralDisplaySettings(
+                            () => commands.updateDisplaySettings(
                               showAddEventFab: value,
                             ),
                           ),
@@ -372,10 +379,10 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           icon: Icons.touch_app_outlined,
                           title: l10n.enableLongPressAddEvent,
                           subtitle: l10n.enableLongPressAddEventHint,
-                          value: provider.enableLongPressAddEvent,
+                          value: display.enableLongPressAddEvent,
                           onChanged: (value) => _updateSetting(
                             'Update long-press event creation',
-                            () => provider.updateGeneralDisplaySettings(
+                            () => commands.updateDisplaySettings(
                               enableLongPressAddEvent: value,
                             ),
                           ),
@@ -397,8 +404,9 @@ String _hourLabel(int hour) => '${hour.toString().padLeft(2, '0')}:00';
 
 List<SettingsToolbarNavigationItem> _generalToolbarItems(
   AppLocalizations l10n,
-  TimetableProvider provider,
-) {
+  GeneralScheduleData display, {
+  required bool workspaceFallback,
+}) {
   final labels = <String, String>{
     'category': l10n.toolbarNavigationCategory,
     'date': l10n.toolbarNavigationDate,
@@ -415,22 +423,17 @@ List<SettingsToolbarNavigationItem> _generalToolbarItems(
     'settings': Icons.settings_outlined,
     'more': Icons.more_horiz_outlined,
   };
-  final hidden = provider.generalHiddenToolbarNavigationIds.toSet();
+  final hidden = display.hiddenToolbarNavigationIds.toSet();
   final order = [
-    ...provider.generalToolbarNavigationOrder,
-    if (!provider.generalToolbarNavigationOrder.contains('more')) 'more',
+    ...display.toolbarNavigationOrder,
+    if (!display.toolbarNavigationOrder.contains('more')) 'more',
   ];
   final placement = MobileToolbarLayout.resolve(
-    order: provider.generalToolbarNavigationOrder,
-    hiddenIds: provider.generalHiddenToolbarNavigationIds,
-    hiddenBehavior: provider.generalToolbarHiddenItemsBehavior,
+    order: display.toolbarNavigationOrder,
+    hiddenIds: display.hiddenToolbarNavigationIds,
+    hiddenBehavior: display.toolbarHiddenItemsBehavior,
     defaultOrder: generalToolbarNavigationDefaultOrder,
-    availableIds: {
-      'settings',
-      if (provider.hasMultipleWorkspaces &&
-          provider.hideHomeWorkspaceNavigation)
-        'workspace',
-    },
+    availableIds: {'settings', if (workspaceFallback) 'workspace'},
     hasFixedMenuItems: true,
   );
   return [

@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/constants.dart';
 import '../providers/timetable_provider.dart';
@@ -43,6 +44,11 @@ class _TimetableDisplaySettingsPageState
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
+        final settings = provider.settingsView;
+        final commands = provider.settingsCommands;
+        final workspaceFallback =
+            provider.workspaceView.enabledWorkspaces.length > 1 &&
+            settings.hideHomeWorkspaceNavigation;
         final l10n = AppLocalizations.of(context);
         return Scaffold(
           appBar: WorkbenchAppBar(
@@ -85,12 +91,12 @@ class _TimetableDisplaySettingsPageState
                         SettingsSectionHeader(title: l10n.generalPopupSection),
                         SettingsSwitchTile(
                           icon: Icons.open_in_full_outlined,
-                          value: provider.closeCoursePopupOnOutsideTap,
+                          value: settings.closeCoursePopupOnOutsideTap,
                           title: l10n.coursePopupDismissSetting,
                           subtitle: l10n.coursePopupDismissSettingHint,
                           onChanged: (value) => _updateSetting(
                             'Update course popup dismissal',
-                            () => provider.updateCloseCoursePopupOnOutsideTap(
+                            () => commands.updateCloseCoursePopupOnOutsideTap(
                               value,
                             ),
                           ),
@@ -100,32 +106,32 @@ class _TimetableDisplaySettingsPageState
                         ),
                         SettingsSwitchTile(
                           icon: Icons.view_timeline_outlined,
-                          value: provider.preserveTimetableGaps,
+                          value: settings.preserveTimetableGaps,
                           title: l10n.preserveTimetableGaps,
                           subtitle: l10n.preserveTimetableGapsHint,
                           onChanged: (value) => _updateSetting(
                             'Update timetable gap preservation',
-                            () => provider.updatePreserveTimetableGaps(value),
+                            () => commands.updatePreserveTimetableGaps(value),
                           ),
                         ),
                         SettingsSwitchTile(
                           icon: Icons.history_outlined,
-                          value: provider.showPastEndedCourses,
+                          value: settings.showPastEndedCourses,
                           title: l10n.showPastEndedCourses,
                           subtitle: l10n.showPastEndedCoursesHint,
                           onChanged: (value) => _updateSetting(
                             'Update past course visibility',
-                            () => provider.updateShowPastEndedCourses(value),
+                            () => commands.updateShowPastEndedCourses(value),
                           ),
                         ),
                         SettingsSwitchTile(
                           icon: Icons.upcoming_outlined,
-                          value: provider.showFutureCourses,
+                          value: settings.showFutureCourses,
                           title: l10n.showFutureCourses,
                           subtitle: l10n.showFutureCoursesHint,
                           onChanged: (value) => _updateSetting(
                             'Update future course visibility',
-                            () => provider.updateShowFutureCourses(value),
+                            () => commands.updateShowFutureCourses(value),
                           ),
                         ),
                         SettingsSectionHeader(
@@ -133,36 +139,38 @@ class _TimetableDisplaySettingsPageState
                         ),
                         SettingsSwitchTile(
                           icon: Icons.view_week_outlined,
-                          value: provider.fitDaySelectorToWidth,
+                          value: settings.fitDaySelectorToWidth,
                           title: l10n.fitDaySelectorToWidth,
                           subtitle: l10n.fitDaySelectorToWidthHint,
                           onChanged: (value) => _updateSetting(
                             'Update day selector width mode',
-                            () => provider.updateFitDaySelectorToWidth(value),
+                            () => commands.updateFitDaySelectorToWidth(value),
                           ),
                         ),
                         studentWeekWidthSetting(
-                          provider,
+                          settings,
+                          commands,
                           l10n,
                           _updateSetting,
                           enabled: !uiCommandBusy,
                         ),
                         SettingsSwitchTile(
                           icon: Icons.swipe_outlined,
-                          value: provider.enableWeekSwipeNavigation,
+                          value: settings.enableWeekSwipeNavigation,
                           title: l10n.enableWeekSwipeNavigation,
                           subtitle: l10n.enableWeekSwipeNavigationHint,
                           onChanged: (value) => _updateSetting(
                             'Update week swipe navigation',
                             () =>
-                                provider.updateEnableWeekSwipeNavigation(value),
+                                commands.updateEnableWeekSwipeNavigation(value),
                           ),
                         ),
                         SettingsSectionHeader(
                           title: l10n.generalTimeGridSection,
                         ),
                         studentGridLinesSetting(
-                          provider,
+                          settings,
+                          commands,
                           l10n,
                           _updateSetting,
                           enabled: !uiCommandBusy,
@@ -184,7 +192,7 @@ class _TimetableDisplaySettingsPageState
                           key: const ValueKey(
                             'timetable-toolbar-hidden-behavior',
                           ),
-                          value: provider.studentToolbarHiddenItemsBehavior,
+                          value: settings.studentToolbarHiddenItemsBehavior,
                           title: l10n.toolbarNavigationHiddenBehavior,
                           icon: Icons.more_horiz_outlined,
                           entries: [
@@ -201,7 +209,7 @@ class _TimetableDisplaySettingsPageState
                             if (value != null) {
                               _updateSetting(
                                 'Update timetable toolbar hidden items behavior',
-                                () => provider
+                                () => commands
                                     .updateStudentToolbarHiddenItemsBehavior(
                                       value,
                                     ),
@@ -213,19 +221,23 @@ class _TimetableDisplaySettingsPageState
                           key: const ValueKey(
                             'timetable-toolbar-navigation-editor',
                           ),
-                          items: _studentToolbarItems(l10n, provider),
+                          items: _studentToolbarItems(
+                            l10n,
+                            settings,
+                            workspaceFallback: workspaceFallback,
+                          ),
                           busy: uiCommandBusy,
                           reorderLabel: l10n.toolbarNavigationReorder,
                           visibilityLabel: l10n.toolbarNavigationVisibility,
                           onReorder: (order) => _updateSetting(
                             'Update timetable toolbar navigation order',
-                            () => provider.updateStudentToolbarNavigationOrder(
+                            () => commands.updateStudentToolbarNavigationOrder(
                               order,
                             ),
                           ),
                           onVisibilityChanged: (id, visible) => _updateSetting(
                             'Update timetable toolbar navigation visibility',
-                            () => provider
+                            () => commands
                                 .updateStudentToolbarNavigationVisibility(
                                   id,
                                   visible,
@@ -236,12 +248,12 @@ class _TimetableDisplaySettingsPageState
                         SettingsSwitchTile(
                           key: const ValueKey('show-add-course-fab-setting'),
                           icon: Icons.add_circle_outline,
-                          value: provider.showAddCourseFab,
+                          value: settings.showAddCourseFab,
                           title: l10n.showAddCourseFab,
                           subtitle: l10n.showAddCourseFabHint,
                           onChanged: (value) => _updateSetting(
                             'Update add course button visibility',
-                            () => provider.updateShowAddCourseFab(value),
+                            () => commands.updateShowAddCourseFab(value),
                           ),
                         ),
                         SettingsSwitchTile(
@@ -249,13 +261,13 @@ class _TimetableDisplaySettingsPageState
                             'enable-long-press-add-course-setting',
                           ),
                           icon: Icons.touch_app_outlined,
-                          value: provider.enableLongPressAddCourse,
+                          value: settings.enableLongPressAddCourse,
                           title: l10n.enableLongPressAddCourse,
                           subtitle: l10n.enableLongPressAddCourseHint,
                           onChanged: (value) => _updateSetting(
                             'Update long-press course creation',
                             () =>
-                                provider.updateEnableLongPressAddCourse(value),
+                                commands.updateEnableLongPressAddCourse(value),
                           ),
                         ),
                       ],
@@ -273,8 +285,9 @@ class _TimetableDisplaySettingsPageState
 
 List<SettingsToolbarNavigationItem> _studentToolbarItems(
   AppLocalizations l10n,
-  TimetableProvider provider,
-) {
+  SettingsViewState settings, {
+  required bool workspaceFallback,
+}) {
   final labels = <String, String>{
     'timetable': l10n.toolbarNavigationTimetable,
     'week': l10n.toolbarNavigationWeek,
@@ -291,22 +304,17 @@ List<SettingsToolbarNavigationItem> _studentToolbarItems(
     'settings': Icons.settings_outlined,
     'more': Icons.more_horiz_outlined,
   };
-  final hidden = provider.studentHiddenToolbarNavigationIds.toSet();
+  final hidden = settings.studentHiddenToolbarNavigationIds.toSet();
   final order = [
-    ...provider.studentToolbarNavigationOrder,
-    if (!provider.studentToolbarNavigationOrder.contains('more')) 'more',
+    ...settings.studentToolbarNavigationOrder,
+    if (!settings.studentToolbarNavigationOrder.contains('more')) 'more',
   ];
   final placement = MobileToolbarLayout.resolve(
-    order: provider.studentToolbarNavigationOrder,
-    hiddenIds: provider.studentHiddenToolbarNavigationIds,
-    hiddenBehavior: provider.studentToolbarHiddenItemsBehavior,
+    order: settings.studentToolbarNavigationOrder,
+    hiddenIds: settings.studentHiddenToolbarNavigationIds,
+    hiddenBehavior: settings.studentToolbarHiddenItemsBehavior,
     defaultOrder: studentToolbarNavigationDefaultOrder,
-    availableIds: {
-      'settings',
-      if (provider.hasMultipleWorkspaces &&
-          provider.hideHomeWorkspaceNavigation)
-        'workspace',
-    },
+    availableIds: {'settings', if (workspaceFallback) 'workspace'},
     hasFixedMenuItems: false,
   );
   return [
