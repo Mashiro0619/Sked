@@ -83,7 +83,7 @@ class _NoActivePeriodTimeSetProvider extends TimetableProvider {
     required super.storage,
     required super.systemLocaleCodeResolver,
     required super.privacyService,
-  });
+  }) : super(dataTransferCodec: inlineDataTransferCodec);
 
   @override
   PeriodTimeSet? get activePeriodTimeSetOrNull => null;

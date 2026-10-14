@@ -10,6 +10,8 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_instance_lease.dart';
 
+import '../support/data_transfer_codec.dart';
+
 class _MemoryStorage implements TimetableStorage {
   AppData? data = buildInitialAppData(buildDefaultPeriodTimes());
 
@@ -49,6 +51,7 @@ class _FakeLease implements AppInstanceLease {
 }
 
 TimetableProvider _provider() => TimetableProvider(
+  dataTransferCodec: inlineDataTransferCodec,
   storage: _MemoryStorage(),
   systemLocaleCodeResolver: () => 'en',
 );
@@ -57,7 +60,11 @@ class _ControlledShutdownProvider extends TimetableProvider {
   _ControlledShutdownProvider({
     required this.loadCompleter,
     required this.quiesceCompleter,
-  }) : super(storage: _MemoryStorage(), systemLocaleCodeResolver: () => 'en');
+  }) : super(
+         storage: _MemoryStorage(),
+         systemLocaleCodeResolver: () => 'en',
+         dataTransferCodec: inlineDataTransferCodec,
+       );
 
   final Completer<void> loadCompleter;
   final Completer<void> quiesceCompleter;

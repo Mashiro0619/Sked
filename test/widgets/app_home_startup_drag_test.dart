@@ -13,6 +13,7 @@ import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/desktop_window_host.dart';
 
 import '../support/workspace_harness.dart';
+import '../support/data_transfer_codec.dart';
 
 Finder k(String key) => find.byKey(ValueKey(key));
 
@@ -52,7 +53,10 @@ Future<TimetableProvider> _pumpStartup(
   final source = storage ?? _StartupStorage();
   final provider = loaded
       ? await workspaceProvider(storage: source)
-      : TimetableProvider(storage: source);
+      : TimetableProvider(
+          dataTransferCodec: inlineDataTransferCodec,
+          storage: source,
+        );
   addTearDown(provider.dispose);
   await t.pumpWidget(
     WorkspaceHarness(

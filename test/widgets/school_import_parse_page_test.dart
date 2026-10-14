@@ -16,6 +16,8 @@ import 'package:sked/services/school_import_api.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 
+import '../support/data_transfer_codec.dart';
+
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
 
@@ -36,6 +38,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
 Future<TimetableProvider> _createProvider() async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     ),

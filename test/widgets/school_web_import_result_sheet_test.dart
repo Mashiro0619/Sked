@@ -13,6 +13,8 @@ import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
 
+import '../support/data_transfer_codec.dart';
+
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
 
@@ -35,7 +37,7 @@ class _SilentNotificationTimetableProvider extends TimetableProvider {
   _SilentNotificationTimetableProvider({
     required super.storage,
     required super.systemLocaleCodeResolver,
-  });
+  }) : super(dataTransferCodec: inlineDataTransferCodec);
 
   var suppressNotifications = false;
 
@@ -93,6 +95,7 @@ SchoolImportResponse _buildResponse({
 
 Future<TimetableProvider> _createProvider() async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     ),
