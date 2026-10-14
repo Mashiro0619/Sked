@@ -28,7 +28,16 @@ class AppScope extends StatelessWidget {
   final TimetableProvider app;
   final Widget child;
 
+  /// Captures the current composition without subscribing to its owner. Routes
+  /// can reuse these dependencies even when their Navigator is outside the scope.
+  /// Standalone UI without an application scope returns null.
+  static CapturedAppScope? capture(BuildContext context) {
+    final owner = context.getInheritedWidgetOfExactType<_AppScopeOwner>();
+    return owner == null ? null : CapturedAppScope._(owner.app);
+  }
+
   static List<SingleChildWidget> providersFor(TimetableProvider app) => [
+    _AppScopeAnchor(app: app),
     ChangeNotifierProvider<TimetableProvider>.value(value: app),
     Provider<AppSession>.value(value: app.session),
     ListenableProvider<ValueListenable<AppSessionReadiness>>.value(
@@ -58,4 +67,33 @@ class AppScope extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       MultiProvider(providers: providersFor(app), child: child);
+}
+
+/// A reference to the same domain instances; the original application retains
+/// ownership of their lifetime when the captured route is removed.
+class CapturedAppScope {
+  const CapturedAppScope._(this._app);
+
+  final TimetableProvider _app;
+
+  Widget wrap(Widget child) => AppScope(app: _app, child: child);
+}
+
+class _AppScopeAnchor extends SingleChildStatelessWidget {
+  const _AppScopeAnchor({required this.app});
+
+  final TimetableProvider app;
+
+  @override
+  Widget buildWithChild(BuildContext context, Widget? child) =>
+      _AppScopeOwner(app: app, child: child ?? const SizedBox.shrink());
+}
+
+class _AppScopeOwner extends InheritedWidget {
+  const _AppScopeOwner({required this.app, required super.child});
+
+  final TimetableProvider app;
+
+  @override
+  bool updateShouldNotify(_AppScopeOwner oldWidget) => false;
 }
