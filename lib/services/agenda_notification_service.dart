@@ -8,12 +8,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:flutter/widgets.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:url_launcher/url_launcher.dart';
 
-import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../models/workspace_availability.dart';
 import 'agenda_action_router.dart';
@@ -29,6 +27,7 @@ import 'windows_notification_backend.dart';
 import 'windows_notification_identity.dart';
 
 import 'agenda_notification_contract.dart';
+import 'agenda_notification_presentation.dart';
 import 'agenda_notification_identity.dart';
 import 'agenda_notification_test_ids.dart';
 
@@ -39,8 +38,6 @@ export 'agenda_notification_identity.dart' show notificationIdForKey;
 
 @visibleForTesting
 AgendaBackgroundDataLoader? notificationBackgroundDataLoader;
-
-const _backgroundNotificationActionIds = <String>{'snooze_10m', 'handled'};
 
 class _AgendaNotificationPrecisionBlocked implements Exception {
   const _AgendaNotificationPrecisionBlocked({
@@ -78,7 +75,7 @@ void agendaNotificationBackgroundAction(NotificationResponse response) async {
   if (actionId == null ||
       payload == null ||
       payload.isEmpty ||
-      !_backgroundNotificationActionIds.contains(actionId) ||
+      !backgroundNotificationActionIds.contains(actionId) ||
       decoded == null ||
       !agendaNotificationPayloadHasRuntimeIdentity(decoded)) {
     return;
@@ -287,7 +284,7 @@ Future<bool> _scheduleBackgroundSnooze({
         )) {
       return false;
     }
-    final copy = _notificationCopy(request.localeCode);
+    final copy = notificationText(request.localeCode);
     var updatedPayload = payload.copyWith(fireAt: fireAt).encode();
     final channelId = request.channelId ?? 'sked_agenda_reminders';
     final channelName = request.channelName ?? 'Sked reminders';
@@ -302,7 +299,7 @@ Future<bool> _scheduleBackgroundSnooze({
         priority: Priority.high,
         icon: 'ic_stat_notification',
         autoCancel: true,
-        tag: _agendaNotificationTag(payload.key),
+        tag: agendaNotificationTag(payload.key),
         visibility: request.lockScreenShowTitles
             ? NotificationVisibility.public
             : NotificationVisibility.private,
@@ -350,9 +347,7 @@ Future<bool> _scheduleBackgroundSnooze({
       await withAgendaRuntimeMutationLock(
         () => plugin.cancel(
           id: request.notificationId,
-          tag: payload.hasStableTag
-              ? _agendaNotificationTag(request.key)
-              : null,
+          tag: payload.hasStableTag ? agendaNotificationTag(request.key) : null,
         ),
       );
       return false;
@@ -368,9 +363,7 @@ Future<bool> _scheduleBackgroundSnooze({
       await withAgendaRuntimeMutationLock(
         () => plugin.cancel(
           id: request.notificationId,
-          tag: payload.hasStableTag
-              ? _agendaNotificationTag(request.key)
-              : null,
+          tag: payload.hasStableTag ? agendaNotificationTag(request.key) : null,
         ),
       );
       return false;
@@ -781,7 +774,7 @@ class FlutterAgendaNotificationGateway
     if (_isWindows) {
       if (response.notificationResponseType ==
           NotificationResponseType.selectedNotificationAction) {
-        final action = _decodeWindowsActionEnvelope(
+        final action = decodeWindowsNotificationAction(
           response.payload ?? response.actionId,
         );
         if (action != null) {
@@ -923,7 +916,7 @@ class FlutterAgendaNotificationGateway
     final channelName = request.channelName ?? '$sourceLabel reminders';
     final channelDescription =
         request.channelDescription ?? 'Reminders from $sourceLabel.';
-    final copy = _notificationCopy(request.localeCode);
+    final copy = notificationText(request.localeCode);
     final details = NotificationDetails(
       android: _isAndroid
           ? AndroidNotificationDetails(
@@ -934,7 +927,7 @@ class FlutterAgendaNotificationGateway
               priority: Priority.high,
               icon: 'ic_stat_notification',
               autoCancel: true,
-              tag: _agendaNotificationTag(request.key),
+              tag: agendaNotificationTag(request.key),
               visibility: request.lockScreenShowTitles
                   ? NotificationVisibility.public
                   : NotificationVisibility.private,
@@ -959,14 +952,17 @@ class FlutterAgendaNotificationGateway
               actions: [
                 WindowsAction(
                   content: copy.snoozeAction,
-                  arguments: _windowsActionEnvelope(
+                  arguments: encodeWindowsNotificationAction(
                     'snooze_10m',
                     request.payload,
                   ),
                 ),
                 WindowsAction(
                   content: copy.handledAction,
-                  arguments: _windowsActionEnvelope('handled', request.payload),
+                  arguments: encodeWindowsNotificationAction(
+                    'handled',
+                    request.payload,
+                  ),
                 ),
               ],
             )
@@ -1042,7 +1038,7 @@ class FlutterAgendaNotificationGateway
       // active card after its scheduled-cache entry has been removed. Legacy
       // requests have no tag and must use the untagged cancellation path.
       if (wasTagged || _taggedManagedKeys.contains(key)) {
-        await _cancelPlatformNotification(id, tag: _agendaNotificationTag(key));
+        await _cancelPlatformNotification(id, tag: agendaNotificationTag(key));
       } else {
         await _cancelPlatformNotification(id);
       }
@@ -1084,7 +1080,7 @@ class FlutterAgendaNotificationGateway
         if (_taggedManagedKeys.contains(key)) {
           await _cancelPlatformNotification(
             id,
-            tag: _agendaNotificationTag(key),
+            tag: agendaNotificationTag(key),
           );
         } else {
           await _cancelPlatformNotification(id);
@@ -1119,7 +1115,10 @@ class FlutterAgendaNotificationGateway
                 body: effective.body,
                 notificationDetails: _testNotificationDetails(effective)
                     .windows,
-                payload: _developerTestPayload(effective.channel, effective.id),
+                payload: developerNotificationPayload(
+                  effective.channel.name,
+                  effective.id,
+                ),
               );
             } else {
               await _plugin.show(
@@ -1127,7 +1126,10 @@ class FlutterAgendaNotificationGateway
                 title: effective.title,
                 body: effective.body,
                 notificationDetails: _testNotificationDetails(effective),
-                payload: _developerTestPayload(effective.channel, effective.id),
+                payload: developerNotificationPayload(
+                  effective.channel.name,
+                  effective.id,
+                ),
               );
             }
             _developerTestNotificationIdsInSession.add(effective.id);
@@ -1173,7 +1175,10 @@ class FlutterAgendaNotificationGateway
             body: effective.body,
             scheduledDate: tz.TZDateTime.from(fireAt.toLocal(), tz.local),
             notificationDetails: _testNotificationDetails(effective).windows,
-            payload: _developerTestPayload(effective.channel, effective.id),
+            payload: developerNotificationPayload(
+              effective.channel.name,
+              effective.id,
+            ),
           );
         } else {
           await _scheduleDeveloperTestStrict(
@@ -1186,7 +1191,10 @@ class FlutterAgendaNotificationGateway
               notificationDetails: _testNotificationDetails(effective),
               scheduledDate: tz.TZDateTime.from(fireAt.toLocal(), tz.local),
               androidScheduleMode: mode,
-              payload: _developerTestPayload(effective.channel, effective.id),
+              payload: developerNotificationPayload(
+                effective.channel.name,
+                effective.id,
+              ),
             ),
           );
         }
@@ -1215,7 +1223,10 @@ class FlutterAgendaNotificationGateway
         // New diagnostic notifications use a unique tag as well as a unique
         // ID.  Also issue the untagged cancellation for notifications created by
         // pre-2.2.0 builds, whose payloads did not carry a tag identity.
-        await _cancelPlatformNotification(id, tag: _developerTestTag(id));
+        await _cancelPlatformNotification(
+          id,
+          tag: developerNotificationTag(id),
+        );
         await _cancelPlatformNotification(id);
         _occupiedNotificationIds.remove(id);
       }
@@ -1268,7 +1279,7 @@ class FlutterAgendaNotificationGateway
         _managedNotificationIds[decoded.key] = request.id;
         _sessionManagedNotificationIds[decoded.key] = request.id;
         if (decoded.hasStableTag) _taggedManagedKeys.add(decoded.key);
-      } else if (_isDeveloperTestPayload(request.payload)) {
+      } else if (isDeveloperNotificationPayload(request.payload)) {
         _knownDeveloperTestNotificationIds.add(request.id);
         _knownScheduledDeveloperTestNotificationIds.add(request.id);
       } else if (_isWindows && isDeveloperNotificationId(request.id)) {
@@ -1312,8 +1323,8 @@ class FlutterAgendaNotificationGateway
         if (id == null) continue;
         _occupiedNotificationIds.add(id);
         final tag = notification.tag;
-        if (tag != null && tag.startsWith(_agendaNotificationTagPrefix)) {
-          final key = tag.substring(_agendaNotificationTagPrefix.length);
+        if (tag != null && tag.startsWith(agendaNotificationTagPrefix)) {
+          final key = tag.substring(agendaNotificationTagPrefix.length);
           if (parseNotificationPlanKey(key) != null) {
             _activeManagedNotificationIds[key] = id;
             _managedNotificationIds[key] = id;
@@ -1370,7 +1381,7 @@ class FlutterAgendaNotificationGateway
             priority: Priority.high,
             icon: 'ic_stat_notification',
             autoCancel: true,
-            tag: _developerTestTag(request.id),
+            tag: developerNotificationTag(request.id),
             visibility: NotificationVisibility.public,
           )
         : null,
@@ -1884,7 +1895,7 @@ class AgendaNotificationService extends ChangeNotifier {
       AgendaNotificationTestChannel.schedule => AgendaSourceType.generalEvent,
     };
     final descriptor = projection.registry.descriptorFor(sourceType);
-    final copy = _developerTestCopy(localeCode, channel);
+    final copy = developerNotificationText(localeCode, channel);
     return AgendaNotificationTestRequest(
       id: _developerTestNotificationId(channel),
       channel: channel,
@@ -1892,8 +1903,11 @@ class AgendaNotificationService extends ChangeNotifier {
       body: copy.body,
       localeCode: localeCode,
       channelId: descriptor.channelId,
-      channelName: _localizedChannelName(descriptor, localeCode),
-      channelDescription: _localizedChannelDescription(descriptor, localeCode),
+      channelName: notificationChannelName(descriptor, localeCode),
+      channelDescription: notificationChannelDescription(
+        descriptor,
+        localeCode,
+      ),
       fireAt: fireAt,
     );
   }
@@ -3709,7 +3723,7 @@ class AgendaNotificationService extends ChangeNotifier {
       // device-local suppression above. Preserve the action for a later
       // projection when that callback fails instead of dropping it as handled.
       debugPrint('Notification action callback failed: $error\n$stackTrace');
-      if (_backgroundNotificationActionIds.contains(actionId)) {
+      if (backgroundNotificationActionIds.contains(actionId)) {
         final actionStore = _runtimeStore is AgendaNotificationActionStore
             ? _runtimeStore as AgendaNotificationActionStore
             : null;
@@ -3770,7 +3784,7 @@ class AgendaNotificationService extends ChangeNotifier {
           decoded == null ||
           !payloadMatchesCurrent ||
           !agendaNotificationPayloadHasRuntimeIdentity(decoded) ||
-          !_backgroundNotificationActionIds.contains(action.actionId) ||
+          !backgroundNotificationActionIds.contains(action.actionId) ||
           (action.actionId == 'handled' &&
               !agendaNotificationPayloadHasRuntimeIdentity(decoded));
       // A headless pass has no Provider instance and therefore cannot persist
@@ -3808,7 +3822,7 @@ class AgendaNotificationService extends ChangeNotifier {
     final descriptor = projection.registry.descriptorFor(
       item.occurrence.sourceType,
     );
-    final copy = _notificationCopy(data.localeCode);
+    final copy = notificationText(data.localeCode);
     final showDetails = data.notificationSettings.lockScreenShowTitles;
     // Source adapters own their localized label. Keeping this lookup here
     // avoids a source-type switch in the notification consumer and ensures
@@ -3820,7 +3834,7 @@ class AgendaNotificationService extends ChangeNotifier {
     final start = item.occurrence.start.toLocal();
     final time = item.occurrence.isAllDay
         ? copy.allDay
-        : '${_twoDigits(start.hour)}:${_twoDigits(start.minute)}';
+        : '${notificationTwoDigits(start.hour)}:${notificationTwoDigits(start.minute)}';
     // Location is intentionally omitted when lock-screen details are hidden.
     // The Android notification visibility is private in that mode, but some
     // launchers still expose a notification body in previews.
@@ -3852,8 +3866,8 @@ class AgendaNotificationService extends ChangeNotifier {
       lockScreenShowTitles: data.notificationSettings.lockScreenShowTitles,
       localeCode: data.localeCode,
       channelId: descriptor.channelId,
-      channelName: _localizedChannelName(descriptor, data.localeCode),
-      channelDescription: _localizedChannelDescription(
+      channelName: notificationChannelName(descriptor, data.localeCode),
+      channelDescription: notificationChannelDescription(
         descriptor,
         data.localeCode,
       ),
@@ -3939,7 +3953,7 @@ class AgendaNotificationService extends ChangeNotifier {
           .cancelNotificationId(
             persisted.notificationId,
             tag: payload?.hasStableTag == true
-                ? _agendaNotificationTag(key)
+                ? agendaNotificationTag(key)
                 : null,
           );
     }
@@ -4095,224 +4109,6 @@ int _developerTestNotificationId(AgendaNotificationTestChannel channel) =>
       AgendaNotificationTestChannel.schedule =>
         _developerScheduleTestNotificationId,
     };
-
-String _developerTestPayload(AgendaNotificationTestChannel channel, int id) =>
-    'sked.developer.notification-test.v1:${channel.name}:$id';
-
-String _developerTestTag(int id) => 'sked_developer_test_$id';
-
-const _windowsActionPrefix = 'sked.windows.action.v1:';
-
-String _windowsActionEnvelope(String actionId, String payload) {
-  if (!_backgroundNotificationActionIds.contains(actionId)) {
-    throw ArgumentError.value(actionId, 'actionId');
-  }
-  final encoded = base64Url.encode(utf8.encode(payload)).replaceAll('=', '');
-  return '$_windowsActionPrefix$actionId:$encoded';
-}
-
-({String actionId, String payload})? _decodeWindowsActionEnvelope(
-  String? value,
-) {
-  if (value == null || !value.startsWith(_windowsActionPrefix)) return null;
-  final body = value.substring(_windowsActionPrefix.length);
-  final separator = body.indexOf(':');
-  if (separator <= 0 || separator == body.length - 1) return null;
-  final actionId = body.substring(0, separator);
-  if (!_backgroundNotificationActionIds.contains(actionId)) return null;
-  try {
-    final encoded = body.substring(separator + 1);
-    final padding = (4 - encoded.length % 4) % 4;
-    final payload = utf8.decode(base64Url.decode('$encoded${'=' * padding}'));
-    if (payload.isEmpty) return null;
-    return (actionId: actionId, payload: payload);
-  } on FormatException {
-    return null;
-  }
-}
-
-// Android's active-notification API exposes the tag after a scheduled request
-// has fired and disappeared from flutter_local_notifications' pending cache.
-// Keep the logical planner key in the tag so a fresh gateway instance can
-// recover ownership and cancel a still-visible card after a data edit. Planner
-// keys are bounded by the payload contract and contain no user-facing text.
-const _agendaNotificationTagPrefix = 'sked_agenda:';
-
-String _agendaNotificationTag(String key) =>
-    '$_agendaNotificationTagPrefix$key';
-
-bool _isDeveloperTestPayload(String? payload) =>
-    payload?.startsWith('sked.developer.notification-test.v1:') == true;
-
-class _NotificationCopy {
-  const _NotificationCopy({
-    required this.allDay,
-    required this.snoozeAction,
-    required this.handledAction,
-  });
-
-  final String allDay;
-  final String snoozeAction;
-  final String handledAction;
-}
-
-class _DeveloperTestCopy {
-  const _DeveloperTestCopy({required this.title, required this.body});
-
-  final String title;
-  final String body;
-}
-
-_DeveloperTestCopy _developerTestCopy(
-  String localeCode,
-  AgendaNotificationTestChannel channel,
-) {
-  final locale = _localeFromCode(localeCode);
-  final language = locale.languageCode.toLowerCase();
-  final traditional =
-      language == 'zh' &&
-      (locale.scriptCode?.toLowerCase() == 'hant' ||
-          locale.countryCode?.toLowerCase() == 'tw' ||
-          locale.countryCode?.toLowerCase() == 'hk');
-  final isCourse = channel == AgendaNotificationTestChannel.course;
-  return switch (language) {
-    'zh' => _DeveloperTestCopy(
-      title: traditional ? 'Sked 測試通知' : 'Sked 测试通知',
-      body: isCourse
-          ? (traditional ? '課程提醒通道正常。' : '课程提醒通道正常。')
-          : (traditional ? '日程提醒通道正常。' : '日程提醒通道正常。'),
-    ),
-    'ja' => _DeveloperTestCopy(
-      title: 'Sked 通知テスト',
-      body: isCourse ? '授業リマインダーの通知チャンネルは正常です。' : '予定リマインダーの通知チャンネルは正常です。',
-    ),
-    _ => _DeveloperTestCopy(
-      title: 'Sked notification test',
-      body: isCourse
-          ? 'The course reminder channel is working.'
-          : 'The schedule reminder channel is working.',
-    ),
-  };
-}
-
-_NotificationCopy _notificationCopy(String localeCode) {
-  final locale = _localeFromCode(localeCode);
-  final l10n = _lookupNotificationLocalizations(locale);
-  final language = locale.languageCode.toLowerCase();
-  final traditional =
-      locale.languageCode == 'zh' &&
-      (locale.scriptCode?.toLowerCase() == 'hant' ||
-          locale.countryCode?.toLowerCase() == 'tw' ||
-          locale.countryCode?.toLowerCase() == 'hk');
-  final snoozeAction = switch (language) {
-    'bg' => 'Отложи с 10 минути',
-    'cs' => 'Odložit o 10 minut',
-    'da' => 'Udsæt 10 minutter',
-    'zh' => traditional ? '延後 10 分鐘' : '延后 10 分钟',
-    'de' => '10 Minuten verschieben',
-    'et' => 'Lükka 10 minutit edasi',
-    'es' => 'Posponer 10 minutos',
-    'fi' => 'Siirrä 10 minuuttia',
-    'fr' => 'Reporter de 10 minutes',
-    'hi' => '10 मिनट बाद याद दिलाएं',
-    'hu' => 'Elhalasztás 10 perccel',
-    'it' => 'Posticipa di 10 minuti',
-    'ja' => '10 分後に再通知',
-    'ko' => '10분 후 다시 알림',
-    'nl' => '10 minuten uitstellen',
-    'pl' => 'Odłóż o 10 minut',
-    'pt' => 'Adiar 10 minutos',
-    'ro' => 'Amână 10 minute',
-    'ru' => 'Отложить на 10 минут',
-    'sl' => 'Preloži za 10 minut',
-    'sv' => 'Skjut upp 10 minuter',
-    'th' => 'เลื่อน 10 นาที',
-    'vi' => 'Hoãn 10 phút',
-    _ => 'Snooze 10 minutes',
-  };
-  final handledAction = switch (language) {
-    'bg' => 'Маркиране като обработено',
-    'cs' => 'Označit jako vyřízené',
-    'da' => 'Markér som håndteret',
-    'de' => 'Als erledigt markieren',
-    'el' => 'Σήμανση ως διεκπεραιωμένο',
-    'es' => 'Marcar como gestionado',
-    'et' => 'Märgi käsitletuks',
-    'fi' => 'Merkitse käsitellyksi',
-    'fr' => 'Marquer comme traité',
-    'hi' => 'पूर्ण के रूप में चिह्नित करें',
-    'hu' => 'Megjelölés kezeltként',
-    'it' => 'Segna come gestito',
-    'ja' => '処理済みとしてマーク',
-    'ko' => '처리됨으로 표시',
-    'nl' => 'Als afgehandeld markeren',
-    'pl' => 'Oznacz jako obsłużone',
-    'pt' => 'Marcar como tratado',
-    'ro' => 'Marchează ca finalizat',
-    'ru' => 'Отметить выполненным',
-    'sl' => 'Označi kot obdelano',
-    'sv' => 'Markera som hanterad',
-    'th' => 'ทำเครื่องหมายว่าจัดการแล้ว',
-    'vi' => 'Đánh dấu đã xử lý',
-    'zh' => traditional ? '標記已處理' : '标记已处理',
-    _ => l10n.markReminderHandled,
-  };
-  return _NotificationCopy(
-    allDay: l10n.allDay,
-    snoozeAction: snoozeAction,
-    handledAction: handledAction,
-  );
-}
-
-AppLocalizations _lookupNotificationLocalizations(Locale locale) {
-  try {
-    return lookupAppLocalizations(locale);
-  } on FlutterError {
-    // Imported/legacy data may contain a locale that this build no longer
-    // ships. Notifications must still be schedulable, so use English copy
-    // rather than letting one bad locale abort the entire reconcile.
-    return lookupAppLocalizations(const Locale('en'));
-  }
-}
-
-String _localizedChannelName(
-  AgendaSourceDescriptor descriptor,
-  String localeCode,
-) => descriptor.channelNameFor(localeCode);
-
-String _localizedChannelDescription(
-  AgendaSourceDescriptor descriptor,
-  String localeCode,
-) => descriptor.channelDescriptionFor(localeCode);
-
-Locale _localeFromCode(String code) {
-  final parts = code.trim().replaceAll('_', '-').split('-');
-  final language = parts.isEmpty || parts.first.isEmpty ? 'en' : parts.first;
-  String? script;
-  String? country;
-  for (final part in parts.skip(1)) {
-    if (part.length == 4 && script == null) {
-      script = part[0].toUpperCase() + part.substring(1).toLowerCase();
-    } else if (part.length == 2 && country == null) {
-      country = part.toUpperCase();
-    }
-  }
-  return Locale.fromSubtags(
-    languageCode: language.toLowerCase(),
-    // Android commonly reports Traditional Chinese as zh-TW/zh-HK without
-    // an explicit script. Map those regions to the generated zh-Hant
-    // localization so action labels do not fall back to Simplified Chinese.
-    scriptCode:
-        script ??
-        (language.toLowerCase() == 'zh' &&
-                const {'TW', 'HK', 'MO'}.contains(country)
-            ? 'Hant'
-            : null),
-    countryCode: country,
-  );
-}
-
-String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
 String _runtimeOccurrenceId(AgendaOccurrence occurrence) =>
     agendaRuntimeOccurrenceId(
