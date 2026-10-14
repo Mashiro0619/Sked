@@ -1,8 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../data/app_repository.dart';
 import '../models/app_data.dart';
 import '../models/app_data_commit.dart';
+import 'app_session_readiness.dart';
+
+export 'app_session_readiness.dart';
 
 /// Owns the application's current snapshot and its single durable write path.
 ///
@@ -16,13 +21,16 @@ class AppSession {
     required this._requireMutationAllowed,
     AppData Function(AppData persisted, AppData current)? restoreRuntimeFields,
   }) : _data = initialData,
-       _restoreRuntimeFields = restoreRuntimeFields ?? _persistedSnapshot;
+       _restoreRuntimeFields = restoreRuntimeFields ?? _persistedSnapshot {
+    refreshReadiness();
+  }
 
   final AppRepository repository;
   final void Function() _requireMutationAllowed;
   final AppData Function(AppData persisted, AppData current)
   _restoreRuntimeFields;
   final _commits = StreamController<AppDataCommit>.broadcast();
+  final _readiness = ValueNotifier(const AppSessionReadiness());
   AppData _data;
   var _mutationEpoch = 0;
   var _commitRevision = 0;
@@ -35,12 +43,33 @@ class AppSession {
   int get mutationEpoch => _mutationEpoch;
   bool get canWrite => repository.canWrite;
   bool get isClosed => _commits.isClosed;
+  bool get isLoaded => _readiness.value.isLoaded;
+  bool get isLoading => _readiness.value.isLoading;
+  ValueListenable<AppSessionReadiness> get readiness => _readiness;
   Stream<AppDataCommit> get commits => _commits.stream;
   AppDataVersions get versions => _versions;
 
   /// Side-store commands share the session's maintenance gate even when their
   /// runtime overlay already equals the requested value.
   void ensureMutationAllowed() => _requireMutationAllowed();
+
+  void updateLoadState({bool? isLoaded, bool? isLoading}) {
+    if (isClosed) return;
+    final previous = _readiness.value;
+    _readiness.value = AppSessionReadiness(
+      isLoaded: isLoaded ?? previous.isLoaded,
+      isLoading: isLoading ?? previous.isLoading,
+      canWrite: repository.canWrite,
+      isWriteStateUnknown: repository.isWriteStateUnknown,
+    );
+  }
+
+  void refreshReadiness() => updateLoadState();
+
+  void blockWritesAfterInitializationFailure() {
+    repository.blockWritesAfterInitializationFailure();
+    refreshReadiness();
+  }
 
   void replaceData(AppData value) {
     _requireMutationAllowed();
@@ -97,6 +126,8 @@ class AppSession {
         restoreData(_restoreRuntimeFields(persisted, _data));
       }
       rethrow;
+    } finally {
+      refreshReadiness();
     }
   }
 
@@ -127,7 +158,11 @@ class AppSession {
   }
 
   /// Accepted writes may finish during shutdown, but can no longer publish.
-  Future<void> close() => _commits.close();
+  Future<void> close() {
+    if (isClosed) return _commits.done;
+    _readiness.dispose();
+    return _commits.close();
+  }
 
   static AppData _persistedSnapshot(AppData persisted, AppData _) => persisted;
 }

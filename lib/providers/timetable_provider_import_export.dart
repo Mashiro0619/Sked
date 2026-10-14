@@ -109,7 +109,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
           status: StorageLoadStatus.ioFailure,
           artifacts: [_backupRestoreJournal.pendingArtifactPath],
         );
-        _repository.blockWritesAfterInitializationFailure();
+        _session.blockWritesAfterInitializationFailure();
         notifyListeners();
       }
       rethrow;
@@ -141,7 +141,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
           (error is SchoolSiteStoreWriteException &&
               error is! SchoolSiteStoreRecoveryBlockedException);
       if (schoolSitesCommitted || !schoolSitesStateKnown) {
-        _repository.blockWritesAfterInitializationFailure();
+        _session.blockWritesAfterInitializationFailure();
         notifyListeners();
         Error.throwWithStackTrace(
           AppBackupRestoreException(
@@ -180,7 +180,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         }
       }
       if (!appDataRestored || !journalCleared || rollbackErrors.isNotEmpty) {
-        _repository.blockWritesAfterInitializationFailure();
+        _session.blockWritesAfterInitializationFailure();
         notifyListeners();
         throw AppBackupRestoreException(
           error,
@@ -201,7 +201,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         localeCode: imported.localeCode,
       );
     } catch (error, stackTrace) {
-      _repository.blockWritesAfterInitializationFailure();
+      _session.blockWritesAfterInitializationFailure();
       notifyListeners();
       Error.throwWithStackTrace(
         AppBackupRestoreException(error, const [], recoveryPending: true),
@@ -287,7 +287,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         try {
           await _applyPendingAppBackupRestore(result);
         } catch (_) {
-          _repository.blockWritesAfterInitializationFailure();
+          _session.blockWritesAfterInitializationFailure();
           rethrow;
         }
         return;
@@ -299,7 +299,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
           status: StorageLoadStatus.unsupportedVersion,
           artifacts: result.recoveryArtifacts,
         );
-        _repository.blockWritesAfterInitializationFailure();
+        _session.blockWritesAfterInitializationFailure();
         throw AppBackupRestoreJournalException(
           'The pending app-backup restore journal was written by a newer '
           'version of Sked.',
@@ -310,7 +310,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
           status: StorageLoadStatus.ioFailure,
           artifacts: result.recoveryArtifacts,
         );
-        _repository.blockWritesAfterInitializationFailure();
+        _session.blockWritesAfterInitializationFailure();
         throw AppBackupRestoreJournalException(
           'Unable to read the pending app-backup restore journal.',
           cause: result.error,
@@ -339,7 +339,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
         source,
       );
     } catch (_) {
-      _repository.blockWritesAfterInitializationFailure();
+      _session.blockWritesAfterInitializationFailure();
       rethrow;
     }
     _corruptAppBackupRestoreJournalArtifact = recoveryArtifact;
@@ -353,7 +353,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
           _backupRestoreJournal.pendingArtifactPath,
       ],
     );
-    _repository.blockWritesAfterInitializationFailure();
+    _session.blockWritesAfterInitializationFailure();
     throw AppBackupRestoreJournalException(
       'The pending app-backup restore journal is corrupt and requires '
       'explicit recovery.',
@@ -432,7 +432,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       }
       await _applyPendingAppBackupRestore(replacement);
     } catch (_) {
-      _repository.blockWritesAfterInitializationFailure();
+      _session.blockWritesAfterInitializationFailure();
       rethrow;
     }
   }
@@ -510,7 +510,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       // write-blocked. Until cleanup is confirmed, a later launch must retry
       // cleanup and must never allow edits that could be confused with a
       // still-pending restore transaction.
-      _repository.blockWritesAfterInitializationFailure();
+      _session.blockWritesAfterInitializationFailure();
       notifyListeners();
       debugPrint(
         'Completed app-backup restore journal cleanup was deferred: '

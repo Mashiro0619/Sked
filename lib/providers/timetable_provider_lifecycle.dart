@@ -57,7 +57,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     if (_isLoaded || _isLoading) {
       return;
     }
-    _isLoading = true;
+    _session.updateLoadState(isLoading: true);
     try {
       await _hydrateFromStorage(retry: false);
       if (_repository.canWrite) {
@@ -67,7 +67,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       debugPrint(
         'Provider initialization failed, using read-only defaults: $e\n$st',
       );
-      _repository.blockWritesAfterInitializationFailure();
+      _session.blockWritesAfterInitializationFailure();
       final loaded = _repository.current;
       if (loaded != null) {
         final runtimeApiKey = _appData.aiApiSettings.customApiKey;
@@ -85,8 +85,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       _storagePath = await _repository.filePath();
     } finally {
       _selectedWeek = _currentWeekForActiveTimetable();
-      _isLoaded = true;
-      _isLoading = false;
+      _session.updateLoadState(isLoaded: true, isLoading: false);
       notifyListeners();
     }
   }
@@ -94,7 +93,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   Future<void> retryStorageLoad() async {
     _ensureAppBackupRestoreMutationAllowed();
     if (_isLoading) return;
-    _isLoading = true;
+    _session.updateLoadState(isLoading: true);
     notifyListeners();
     try {
       await _hydrateFromStorage(retry: true);
@@ -102,7 +101,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         await _resumePendingAppBackupRestore();
       }
     } catch (error, stackTrace) {
-      _repository.blockWritesAfterInitializationFailure();
+      _session.blockWritesAfterInitializationFailure();
       final loaded = _repository.current;
       if (loaded != null) {
         final runtimeApiKey = _appData.aiApiSettings.customApiKey;
@@ -112,8 +111,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       rethrow;
     } finally {
       _selectedWeek = _currentWeekForActiveTimetable();
-      _isLoaded = true;
-      _isLoading = false;
+      _session.updateLoadState(isLoaded: true, isLoading: false);
       notifyListeners();
     }
   }
@@ -121,7 +119,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   Future<void> startFreshAfterRecovery() async {
     _ensureAppBackupRestoreMutationAllowed();
     if (_isLoading) return;
-    _isLoading = true;
+    _session.updateLoadState(isLoading: true);
     notifyListeners();
     try {
       if (_journalRecoveryLoadStatus == StorageLoadStatus.corrupt) {
@@ -148,7 +146,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       }
     } finally {
       _selectedWeek = _currentWeekForActiveTimetable();
-      _isLoading = false;
+      _session.updateLoadState(isLoading: false);
       notifyListeners();
     }
   }
@@ -203,7 +201,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     normalized = withRuntimeSchoolImportApiKey(normalized, runtimeApiKey);
     _appData = normalized;
     if (legacyApiKeyMigrationBlocked) {
-      _repository.blockWritesAfterInitializationFailure();
+      _session.blockWritesAfterInitializationFailure();
     }
     final canDropLegacyApiKey =
         legacyApiKey.isEmpty ||
@@ -233,7 +231,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       try {
         await _repository.sanitizeLegacyAiApiSecretArtifacts();
       } catch (e, st) {
-        _repository.blockWritesAfterInitializationFailure();
+        _session.blockWritesAfterInitializationFailure();
         debugPrint(
           'Legacy API key artifact sanitization failed; writes are blocked: '
           '$e\n$st',

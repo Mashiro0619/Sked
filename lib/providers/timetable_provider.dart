@@ -118,10 +118,8 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   set _selectedWeek(int value);
 
   bool get _isLoaded;
-  set _isLoaded(bool value);
 
   bool get _isLoading;
-  set _isLoading(bool value);
 
   set _storagePath(String? value);
 
@@ -587,9 +585,9 @@ class TimetableProvider extends _TimetableProviderBase
   );
 
   @override
-  bool _isLoaded = false;
+  bool get _isLoaded => _session.isLoaded;
   @override
-  bool _isLoading = false;
+  bool get _isLoading => _session.isLoading;
   @override
   String? _storagePath;
   var _dataClearReserved = false;
