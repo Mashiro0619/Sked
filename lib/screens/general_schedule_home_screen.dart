@@ -1,7 +1,9 @@
 import '../controllers/general_event_task_controller.dart';
+import '../controllers/general_view_state.dart';
 import '../widgets/general_event_task_editor.dart';
 import '../widgets/general_event_edit_flow.dart';
 import '../widgets/general_month_projection.dart';
+import '../widgets/general_list_projection.dart';
 import '../widgets/update_prompt_scope.dart';
 import '../widgets/calendar_management_actions.dart';
 import '../widgets/sked_color_draft.dart';
@@ -563,9 +565,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                     ),
                                   ),
                             ),
-                            generalViewList => _ListCalendarView(
+                            generalViewList => _ListCalendarSource(
                               date: selectedDate,
-                              provider: provider,
+                              view: provider.generalView,
                               filter: filter,
                               onOccurrenceTap: (occurrence, anchor) =>
                                   _openDetails(

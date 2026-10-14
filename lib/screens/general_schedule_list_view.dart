@@ -1,36 +1,58 @@
 part of 'general_schedule_home_screen.dart';
 
-class _ListCalendarView extends StatelessWidget {
-  const _ListCalendarView({
+class _ListCalendarSource extends StatefulWidget {
+  const _ListCalendarSource({
     required this.date,
-    required this.provider,
+    required this.view,
     required this.filter,
     required this.onOccurrenceTap,
   });
 
   final DateTime date;
-  final TimetableProvider provider;
+  final GeneralViewState view;
   final _GeneralOccurrenceFilter filter;
   final _GeneralOccurrenceTap onOccurrenceTap;
 
   @override
+  State<_ListCalendarSource> createState() => _ListCalendarSourceState();
+}
+
+class _ListCalendarSourceState extends State<_ListCalendarSource> {
+  final _projection = GeneralListProjectionCache();
+
+  @override
   Widget build(BuildContext context) {
-    final start = normalizeDateOnly(date);
-    final occurrences = provider.generalOccurrencesForQuery(
-      filter.toQuery(
+    final start = normalizeDateOnly(widget.date);
+    final occurrences = widget.view.occurrencesForQuery(
+      widget.filter.toQuery(
         startInclusive: start,
         endExclusive: addCalendarDays(start, 180),
       ),
     );
-    if (occurrences.isEmpty) {
-      return _GeneralEmptyListState(filtered: filter.isActive);
+    return _ListCalendarView(
+      snapshot: _projection.project(occurrences),
+      filtered: widget.filter.isActive,
+      onOccurrenceTap: widget.onOccurrenceTap,
+    );
+  }
+}
+
+class _ListCalendarView extends StatelessWidget {
+  const _ListCalendarView({
+    required this.snapshot,
+    required this.filtered,
+    required this.onOccurrenceTap,
+  });
+
+  final GeneralListSnapshot snapshot;
+  final bool filtered;
+  final _GeneralOccurrenceTap onOccurrenceTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (snapshot.isEmpty) {
+      return _GeneralEmptyListState(filtered: filtered);
     }
-    final groups = <String, List<GeneralEventOccurrence>>{};
-    for (final occurrence in occurrences) {
-      final key = _calendarDateKey(occurrence.calendarDisplayStart);
-      groups.putIfAbsent(key, () => []).add(occurrence);
-    }
-    final entries = groups.entries.toList();
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -38,10 +60,10 @@ class _ListCalendarView extends StatelessWidget {
         16,
         WorkbenchChromeMetrics.of(context).desktop ? 24 : 88,
       ),
-      itemCount: entries.length,
+      itemCount: snapshot.days.length,
       itemBuilder: (context, index) {
-        final group = entries[index];
-        final date = DateTime.parse(group.key);
+        final group = snapshot.days[index];
+        final date = group.date;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -52,7 +74,7 @@ class _ListCalendarView extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
-            for (final occurrence in group.value)
+            for (final occurrence in group.occurrences)
               Builder(
                 builder: (anchor) => _GeneralListOccurrenceTile(
                   occurrence: occurrence,

@@ -39,6 +39,20 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://general-home-test';
 }
 
+class _DomainQueryProvider extends TimetableProvider {
+  _DomainQueryProvider(TimetableStorage storage)
+    : super(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        uiStateSaveDelay: Duration.zero,
+      );
+
+  @override
+  List<GeneralEventOccurrence> generalOccurrencesForQuery(
+    GeneralOccurrenceQuery query,
+  ) => throw StateError('The calendar view must query GeneralViewState');
+}
+
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
 
@@ -1114,6 +1128,49 @@ void main() {
     expect(find.text('No upcoming events'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'list snapshots query the domain and refresh after an event edit',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final event = GeneralEvent(
+        id: 'list-domain',
+        calendarId: 'cal1',
+        title: 'Domain event',
+        startDateTimeIso: '2026-06-16T09:00:00.000',
+        endDateTimeIso: '2026-06-16T10:00:00.000',
+      );
+      final base = _buildGeneralDataWithCalendars([
+        GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
+      ], activeId: 'cal1');
+      final provider = _DomainQueryProvider(
+        _MemoryTimetableStorage(
+          base.copyWith(
+            generalMode: base.generalMode.copyWith(
+              defaultView: generalViewList,
+            ),
+          ),
+        ),
+      );
+      await provider.load();
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
+      expect(find.text('Domain event'), findsOneWidget);
+      await tester.runAsync(
+        () => provider.generalCommands.saveEvent(
+          event.copyWith(
+            title: 'Changed domain event',
+            startDateTimeIso: '2026-06-17T11:00:00.000',
+            endDateTimeIso: '2026-06-17T12:00:00.000',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Domain event'), findsNothing);
+      expect(find.text('Changed domain event'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('each schedule view opens a tapped event from the shared home', (
     tester,
