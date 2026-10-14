@@ -1,13 +1,79 @@
 import '../models/timetable_models.dart';
+import 'observable_view_state.dart';
 import 'workspace_view_state.dart';
 
 /// Settings queries use the same visible workspace selection as the shell.
 /// Pending mode or availability writes therefore cannot leak another theme.
-class SettingsViewState {
-  SettingsViewState(this._workspace);
+class SettingsViewState extends ObservableViewState {
+  SettingsViewState(this._workspace) {
+    initializePublication();
+  }
 
   final WorkspaceViewState _workspace;
   AppData get data => _workspace.data;
+
+  @override
+  Object get publicationKey {
+    final value = data;
+    final student = value.studentMode;
+    final general = value.generalMode;
+    final parser = value.aiApiSettings;
+    return (
+      global: (
+        value.activeMode,
+        value.isWorkspaceEnabled(AppMode.student),
+        value.isWorkspaceEnabled(AppMode.general),
+        value.localeCode,
+        value.notificationSettings,
+        value.hideHomeWorkspaceNavigation,
+        value.homeWorkspaceNavigationCollapsed,
+        value.workspacePanelDisplayMode,
+        value.includePrereleaseUpdates,
+        value.ignoredUpdateVersion,
+        value.availableUpdateVersion,
+      ),
+      student: (
+        student.closeCoursePopupOnOutsideTap,
+        student.preserveTimetableGaps,
+        student.showPastEndedCourses,
+        student.showFutureCourses,
+        student.showTimetableGridLines,
+        student.showAddCourseFab,
+        student.enableLongPressAddCourse,
+        student.fitDaySelectorToWidth,
+        student.fitWeekColumnsToWidth,
+        student.enableWeekSwipeNavigation,
+        student.toolbarNavigationOrder,
+        student.hiddenToolbarNavigationIds,
+        student.toolbarHiddenItemsBehavior,
+        student.themeMode,
+        student.themeColorMode,
+        student.themeSeedColorValue,
+        student.colorfulUiColorValues,
+        student.colorfulCourseTextColorMode,
+        student.courseNameColorValues,
+        student.liveCourseOutlineColorValue,
+        student.liveCourseOutlineEnabled,
+        student.liveCourseOutlineFollowTheme,
+        student.liveCourseOutlineCustomColorInitialized,
+        student.liveCourseOutlineMode,
+        student.liveCourseOutlineWidth,
+      ),
+      generalTheme: (
+        general.themeMode,
+        general.themeColorMode,
+        general.themeSeedColorValue,
+        general.colorfulUiColorValues,
+      ),
+      parser: (
+        parser.source,
+        parser.customBaseUrl,
+        parser.customApiKey,
+        parser.customModel,
+        parser.customPrompt,
+      ),
+    );
+  }
 
   NotificationSettings get notificationSettings => data.notificationSettings;
 

@@ -2,11 +2,14 @@ import '../models/timetable_models.dart';
 import '../services/general_occurrence_cache.dart';
 import '../services/general_occurrence_service.dart';
 import 'app_session.dart';
+import 'observable_view_state.dart';
 
 /// Read model and transient viewport state for the general workspace.
 /// Query caching belongs to this workspace instead of the application facade.
-class GeneralViewState {
-  GeneralViewState(this._session);
+class GeneralViewState extends ObservableViewState {
+  GeneralViewState(this._session) {
+    initializePublication();
+  }
 
   final AppSession _session;
   final _cache = GeneralOccurrenceCache();
@@ -14,6 +17,56 @@ class GeneralViewState {
   (GeneralDateRange?, String?)? _previousNavigation;
   bool navigationPending = false;
   var _focusRevision = 0;
+
+  @override
+  Object get publicationKey {
+    final value = data;
+    final previous = _previousNavigation;
+    final notifications = _session.data.notificationSettings;
+    return (
+      value.schedules,
+      value.activeScheduleId,
+      value.reminderAcknowledgements,
+      navigation: (
+        previous == null ? value.customDateRange : previous.$1,
+        previous == null ? value.selectedDateIso : previous.$2,
+        _focusRevision,
+      ),
+      display: (
+        value.defaultView,
+        value.viewSwitchBehavior,
+        value.toolbarWidthPolicy,
+        value.dateLabelFormat,
+        value.fitWeekColumnsToWidth,
+        value.customDayMinWidth,
+        value.showWeekends,
+        value.showLunarCalendar,
+        value.dayStartHour,
+        value.dayEndHour,
+        value.timeGridMinutes,
+        value.timeGridHourHeight,
+        value.closeEventPopupOnOutsideTap,
+        value.showAddEventFab,
+        value.enableLongPressAddEvent,
+        value.allDayTimelineCollapsed,
+        value.toolbarNavigationOrder,
+        value.hiddenToolbarNavigationIds,
+        value.toolbarHiddenItemsBehavior,
+      ),
+      theme: (
+        value.themeMode,
+        value.themeColorMode,
+        value.themeSeedColorValue,
+        value.colorfulUiColorValues,
+      ),
+      settings: (
+        isEnabled,
+        _session.data.localeCode,
+        notifications.generalDefaultMinutesBefore,
+        notifications.remindHiddenGeneralCalendars,
+      ),
+    );
+  }
 
   GeneralScheduleData get data => _session.data.generalMode;
   bool get isEnabled => _session.data.isWorkspaceEnabled(AppMode.general);

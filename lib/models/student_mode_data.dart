@@ -58,6 +58,17 @@ List<dynamic> _listValue(Object? value) {
   return value is List ? value : const <dynamic>[];
 }
 
+List<String> _reuseNormalizedToolbarIds(
+  List<String> previous,
+  List<String> normalized,
+) {
+  if (previous.length != normalized.length) return normalized;
+  for (var index = 0; index < previous.length; index += 1) {
+    if (previous[index] != normalized[index]) return normalized;
+  }
+  return previous;
+}
+
 PeriodTimeSet _normalizePeriodTimeSet(
   PeriodTimeSet periodTimeSet, {
   String localeCode = defaultLocaleCode,
@@ -406,14 +417,20 @@ class StudentModeData {
           fitWeekColumnsToWidth ?? this.fitWeekColumnsToWidth,
       enableWeekSwipeNavigation:
           enableWeekSwipeNavigation ?? this.enableWeekSwipeNavigation,
-      toolbarNavigationOrder: normalizeToolbarNavigationOrder(
-        toolbarNavigationOrder ?? this.toolbarNavigationOrder,
-        knownIds: studentToolbarNavigationKnownIds,
-        defaultOrder: studentToolbarNavigationDefaultOrder,
+      toolbarNavigationOrder: _reuseNormalizedToolbarIds(
+        this.toolbarNavigationOrder,
+        normalizeToolbarNavigationOrder(
+          toolbarNavigationOrder ?? this.toolbarNavigationOrder,
+          knownIds: studentToolbarNavigationKnownIds,
+          defaultOrder: studentToolbarNavigationDefaultOrder,
+        ),
       ),
-      hiddenToolbarNavigationIds: normalizeToolbarHiddenNavigationIds(
-        hiddenToolbarNavigationIds ?? this.hiddenToolbarNavigationIds,
-        knownIds: studentToolbarNavigationKnownIds,
+      hiddenToolbarNavigationIds: _reuseNormalizedToolbarIds(
+        this.hiddenToolbarNavigationIds,
+        normalizeToolbarHiddenNavigationIds(
+          hiddenToolbarNavigationIds ?? this.hiddenToolbarNavigationIds,
+          knownIds: studentToolbarNavigationKnownIds,
+        ),
       ),
       toolbarHiddenItemsBehavior: normalizeToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehavior ?? this.toolbarHiddenItemsBehavior,

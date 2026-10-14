@@ -1,15 +1,21 @@
 import '../models/timetable_models.dart';
 import '../services/student_timetable_service.dart' as student_timetable;
 import 'app_session.dart';
+import 'observable_view_state.dart';
 
 /// Student workspace queries and its transient selected week.
 /// The underlying timetable data always comes from the shared session.
-class StudentViewState {
-  StudentViewState(this._session);
+class StudentViewState extends ObservableViewState {
+  StudentViewState(this._session) {
+    initializePublication();
+  }
 
   final AppSession _session;
   var _selectedWeek = 1;
   var _selectionEpoch = 0;
+
+  @override
+  Object get publicationKey => (data, localeCode, isEnabled, _selectedWeek);
 
   StudentModeData get data => _session.data.studentMode;
   String get localeCode => _session.data.localeCode;

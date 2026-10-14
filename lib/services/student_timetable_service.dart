@@ -469,6 +469,11 @@ Map<String, int> buildStudentCourseNameColorValuesForTimetables(
     result[courseName] = colorValue;
     usedColors.add(colorValue);
   }
+  if (existing != null &&
+      result.length == existing.length &&
+      result.entries.every((entry) => existing[entry.key] == entry.value)) {
+    return existing;
+  }
   return result;
 }
 

@@ -1,16 +1,28 @@
 import '../models/timetable_models.dart';
 import 'app_session.dart';
 import 'general_view_state.dart';
+import 'observable_view_state.dart';
 
 /// Keeps workspace selection and availability visible as one committed view
 /// while their transaction prepares a new snapshot in the shared session.
-class WorkspaceViewState {
-  WorkspaceViewState(this._session, this._general);
+class WorkspaceViewState extends ObservableViewState {
+  WorkspaceViewState(this._session, this._general) {
+    initializePublication();
+  }
 
   final AppSession _session;
   final GeneralViewState _general;
   AppMode? _previousMode;
   Set<AppMode>? _previousAvailability;
+
+  @override
+  Object get publicationKey => (
+    activeMode,
+    isEnabled(AppMode.student),
+    isEnabled(AppMode.general),
+    _session.data.workspaceReminderNotBefore[AppMode.student],
+    _session.data.workspaceReminderNotBefore[AppMode.general],
+  );
 
   AppMode get activeMode => _previousMode ?? _session.data.activeMode;
   bool get isGeneralMode => activeMode == AppMode.general;

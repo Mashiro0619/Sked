@@ -21,6 +21,7 @@ import 'l10n/app_localization_delegates.dart';
 import 'l10n/app_localizations.dart';
 import 'models/timetable_models.dart';
 import 'providers/timetable_provider.dart';
+import 'providers/app_scope.dart';
 import 'screens/app_home_screen.dart';
 import 'services/app_instance_lease.dart';
 import 'services/agenda_background_reconciler.dart';
@@ -541,8 +542,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return SkedMotionPolicyScope(
       disableAnimations: features.disableAnimations,
       reduceMotion: features.reduceMotion,
-      child: ChangeNotifierProvider<TimetableProvider>.value(
-        value: widget.provider,
+      child: AppScope(
+        app: widget.provider,
         child: Selector<TimetableProvider, _AppShellSnapshot>(
           selector: (_, provider) => _AppShellSnapshot.from(provider),
           builder: (context, snapshot, child) {

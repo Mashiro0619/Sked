@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../data/app_repository.dart';
+import 'observable_view_state.dart';
 
 class AppBackupRestoreInProgressException implements Exception {
   const AppBackupRestoreInProgressException();
@@ -21,11 +22,13 @@ class AppDataSessionToken {
 /// Owns maintenance reservations and their write authorization. The current
 /// visible session advances at reservation time; a queued restore still writes
 /// under its own token after earlier accepted work has settled.
-class AppDataMaintenance {
+class AppDataMaintenance extends ObservableViewState {
   AppDataMaintenance({
     required this._repository,
     required this._notifyViewChanged,
-  });
+  }) {
+    initializePublication();
+  }
 
   static final _leaseZoneKey = Object();
   final AppRepository _repository;
@@ -33,6 +36,9 @@ class AppDataMaintenance {
   final _reservations = <AppDataSessionToken>{};
   var _dataSessionToken = AppDataSessionToken._(0);
   AppDataSessionToken? _activeLease;
+
+  @override
+  Object get publicationKey => (isReserved, _dataSessionToken);
 
   AppDataSessionToken get dataSessionToken => _dataSessionToken;
   bool get isReserved => _reservations.isNotEmpty;
@@ -50,6 +56,7 @@ class AppDataMaintenance {
     final token = AppDataSessionToken._(_dataSessionToken.revision + 1);
     _dataSessionToken = token;
     _reservations.add(token);
+    publishChanges();
     if (_reservations.length == 1) _notifyViewChanged();
     return token;
   }
@@ -58,6 +65,7 @@ class AppDataMaintenance {
     if (!_reservations.remove(token)) {
       throw StateError('The app-data maintenance reservation is not active.');
     }
+    publishChanges();
     if (!isReserved) _notifyViewChanged();
   }
 

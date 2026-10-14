@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
@@ -180,7 +181,7 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
             runtimeStore: MemoryAgendaNotificationRuntimeStore(),
           ),
         ),
-        ChangeNotifierProvider<TimetableProvider>.value(value: provider),
+        ...AppScope.providersFor(provider),
         if (developerUiPreferences != null)
           ChangeNotifierProvider<DeveloperUiPreferences>.value(
             value: developerUiPreferences,

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../controllers/app_session.dart';
 import '../controllers/app_backup_controller.dart';
 import '../controllers/app_data_defaults.dart';
+import '../controllers/observable_view_state.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_persistence.dart';
 import '../controllers/data_transfer_controller.dart';
@@ -279,6 +280,12 @@ class TimetableProvider extends _TimetableProviderBase
         if (!_isDisposed) notifyListeners();
       },
     );
+    _viewUpdates = AppViewUpdates([
+      _studentView,
+      _generalView,
+      _workspaceView,
+      _settingsView,
+    ]);
   }
 
   @override
@@ -304,6 +311,7 @@ class TimetableProvider extends _TimetableProviderBase
   late final WorkspaceViewState _workspaceView;
   late final SettingsViewState _settingsView;
   late final SettingsCommands _settingsCommands;
+  late final AppViewUpdates _viewUpdates;
   @override
   AppRepository get _repository => _session.repository;
   final String Function() _systemLocaleCodeResolver;
@@ -1145,9 +1153,21 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   @override
+  void notifyListeners() {
+    if (_isDisposed) return;
+    _viewUpdates.publish();
+    super.notifyListeners();
+  }
+
+  @override
   void dispose() {
     _isDisposed = true;
     _persistence.flushScheduledUiStateSave();
+    _studentView.dispose();
+    _generalView.dispose();
+    _workspaceView.dispose();
+    _settingsView.dispose();
+    _maintenance.dispose();
     unawaited(_session.close());
     super.dispose();
   }
