@@ -37,6 +37,10 @@ class AppSession {
   Stream<AppDataCommit> get commits => _commits.stream;
   AppDataVersions get versions => _versions;
 
+  /// Side-store commands share the session's maintenance gate even when their
+  /// runtime overlay already equals the requested value.
+  void ensureMutationAllowed() => _requireMutationAllowed();
+
   void replaceData(AppData value) {
     _requireMutationAllowed();
     restoreData(value);

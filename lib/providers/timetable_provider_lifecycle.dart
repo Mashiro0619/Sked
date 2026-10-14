@@ -71,7 +71,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       final loaded = _repository.current;
       if (loaded != null) {
         final runtimeApiKey = _appData.aiApiSettings.customApiKey;
-        _appData = _withRuntimeCustomSchoolImportApiKey(loaded, runtimeApiKey);
+        _appData = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
       } else {
         try {
           _appData = await _buildDefaultAppData();
@@ -106,7 +106,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       final loaded = _repository.current;
       if (loaded != null) {
         final runtimeApiKey = _appData.aiApiSettings.customApiKey;
-        _appData = _withRuntimeCustomSchoolImportApiKey(loaded, runtimeApiKey);
+        _appData = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
       }
       debugPrint('Storage retry initialization failed: $error\n$stackTrace');
       rethrow;
@@ -129,9 +129,9 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         return;
       }
       var fresh = await _buildDefaultAppData();
-      fresh = _withRuntimeCustomSchoolImportApiKey(
+      fresh = withRuntimeSchoolImportApiKey(
         fresh,
-        await _readSecureCustomSchoolImportApiKey(),
+        await _schoolImportSecrets.readForInitialization(),
       );
       fresh = _importExportService.normalizeAppData(
         fresh,
@@ -169,9 +169,9 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         : await _repository.load();
     if (fileData == null) {
       var defaults = await _buildDefaultAppData();
-      defaults = _withRuntimeCustomSchoolImportApiKey(
+      defaults = withRuntimeSchoolImportApiKey(
         defaults,
-        await _readSecureCustomSchoolImportApiKey(),
+        await _schoolImportSecrets.readForInitialization(),
       );
       _appData = defaults;
       if (_repository.canWrite) {
@@ -186,8 +186,8 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       localeCode: fileData.localeCode,
     );
     final legacyApiKey = normalized.aiApiSettings.customApiKey;
-    final secureApiKey = await _readSecureCustomSchoolImportApiKey();
-    final secureApiKeyReadKnown = _customSchoolImportApiKeyPersistenceKnown;
+    final secureApiKey = await _schoolImportSecrets.readForInitialization();
+    final secureApiKeyReadKnown = _schoolImportSecrets.isPersistenceKnown;
     final runtimeApiKey = secureApiKeyReadKnown && secureApiKey.isNotEmpty
         ? secureApiKey
         : legacyApiKey;
@@ -195,15 +195,12 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         secureApiKeyReadKnown &&
         secureApiKey.isEmpty &&
         legacyApiKey.isNotEmpty &&
-        await _writeSecureCustomSchoolImportApiKey(legacyApiKey);
+        await _schoolImportSecrets.writeVerified(legacyApiKey);
     final legacyApiKeyMigrationBlocked =
         legacyApiKey.isNotEmpty &&
         (!secureApiKeyReadKnown ||
             (secureApiKey.isEmpty && !migratedLegacyApiKey));
-    normalized = _withRuntimeCustomSchoolImportApiKey(
-      normalized,
-      runtimeApiKey,
-    );
+    normalized = withRuntimeSchoolImportApiKey(normalized, runtimeApiKey);
     _appData = normalized;
     if (legacyApiKeyMigrationBlocked) {
       _repository.blockWritesAfterInitializationFailure();

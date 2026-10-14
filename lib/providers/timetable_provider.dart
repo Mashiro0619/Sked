@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../controllers/app_session.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_view_state.dart';
+import '../controllers/school_import_secret_controller.dart';
 import '../controllers/settings_commands.dart';
 import '../controllers/settings_view_state.dart';
 import '../controllers/student_commands.dart';
@@ -84,10 +85,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Stream<AppDataCommit> get committedData => _session.commits;
   AppDataVersions get committedDataVersions => _session.versions;
 
-  Future<void> _pendingSecretWrite = Future<void>.value();
-  String _lastPersistedCustomSchoolImportApiKey = '';
-  bool _customSchoolImportApiKeyPersistenceKnown = false;
-  var _customSchoolImportApiKeyMutationEpoch = 0;
   var _appBackupRestoreReservationCount = 0;
   var _isDisposed = false;
   Object? _activeAppBackupRestoreToken;
@@ -140,10 +137,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
 
   AppData get _appData;
   set _appData(AppData value);
-  void _replaceRuntimeCustomSchoolImportApiKey(String value);
-  void _restoreRuntimeCustomSchoolImportApiKeyAfterPersistenceFailure(
-    String value,
-  );
 
   int get _selectedWeek;
   set _selectedWeek(int value);
@@ -162,7 +155,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   PrivacyService get _privacy;
   SchoolSiteService get _schoolSites;
   AppBackupRestoreJournal get _backupRestoreJournal;
-  SecretStore get _secrets;
+  SchoolImportSecretController get _schoolImportSecrets;
 
   GeneralSchedule? get activeGeneralScheduleOrNull;
   TimetableData? get activeTimetableOrNull;
@@ -250,183 +243,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
     }
     return lease;
   }
-
-  AppData _withRuntimeCustomSchoolImportApiKey(AppData data, String value) {
-    final normalized = value.trim();
-    final settings = data.aiApiSettings;
-    if (settings.customApiKey == normalized) {
-      return data;
-    }
-    return data.copyWith(
-      aiApiSettings: settings.copyWith(customApiKey: normalized),
-    );
-  }
-
-  Future<String> _readSecureCustomSchoolImportApiKey() async {
-    try {
-      final value = (await _secrets.readCustomSchoolImportApiKey()).trim();
-      _lastPersistedCustomSchoolImportApiKey = value;
-      _customSchoolImportApiKeyPersistenceKnown = true;
-      return value;
-    } catch (e, st) {
-      _customSchoolImportApiKeyPersistenceKnown = false;
-      debugPrint('Secure API key read failed: $e\n$st');
-      return '';
-    }
-  }
-
-  Future<bool> _writeSecureCustomSchoolImportApiKey(String value) async {
-    final normalized = value.trim();
-    Object? writeError;
-    try {
-      await _secrets.writeCustomSchoolImportApiKey(normalized);
-    } catch (e, st) {
-      writeError = e;
-      debugPrint('Secure API key write failed: $e\n$st');
-    }
-
-    try {
-      final persisted = (await _secrets.readCustomSchoolImportApiKey()).trim();
-      _lastPersistedCustomSchoolImportApiKey = persisted;
-      _customSchoolImportApiKeyPersistenceKnown = true;
-      if (persisted == normalized) return true;
-      if (writeError == null) {
-        debugPrint('Secure API key write could not be verified.');
-      }
-      return false;
-    } catch (e, st) {
-      _customSchoolImportApiKeyPersistenceKnown = false;
-      debugPrint('Secure API key readback failed: $e\n$st');
-      return false;
-    }
-  }
-
-  /// Waits for a stable write queue and confirms ambiguous writes without
-  /// poisoning future close/disable attempts with an already reported error.
-  Future<void> _ensureCustomSchoolImportApiKeyPersistenceKnown() async {
-    while (true) {
-      final pending = _pendingSecretWrite;
-      final epoch = _customSchoolImportApiKeyMutationEpoch;
-      try {
-        await pending;
-      } catch (_) {
-        // The initiating save reports its error. A known persisted value is
-        // still safe; an unknown result must be read back before proceeding.
-      }
-      bool isCurrent() =>
-          identical(pending, _pendingSecretWrite) &&
-          epoch == _customSchoolImportApiKeyMutationEpoch;
-      if (!isCurrent()) continue;
-      if (_customSchoolImportApiKeyPersistenceKnown) return;
-
-      late final String value;
-      try {
-        value = (await _secrets.readCustomSchoolImportApiKey()).trim();
-      } catch (error, stackTrace) {
-        if (!isCurrent()) continue;
-        _customSchoolImportApiKeyPersistenceKnown = false;
-        debugPrint(
-          'Secure API key state could not be confirmed: $error\n$stackTrace',
-        );
-        throw StateError(
-          'Unable to confirm the current custom school import API key.',
-        );
-      }
-      // A delayed read must never overwrite a more recent write or its cache.
-      if (!isCurrent()) continue;
-      _lastPersistedCustomSchoolImportApiKey = value;
-      _customSchoolImportApiKeyPersistenceKnown = true;
-      if (_appData.aiApiSettings.customApiKey != value) {
-        _replaceRuntimeCustomSchoolImportApiKey(value);
-        notifyListeners();
-      }
-      if (isCurrent()) return;
-    }
-  }
-
-  Future<void> _persistCustomSchoolImportApiKey(String value) async {
-    _ensureAppBackupRestoreMutationAllowed();
-    final normalized = value.trim();
-    final current = _appData.aiApiSettings.customApiKey;
-    if (current == normalized &&
-        _customSchoolImportApiKeyPersistenceKnown &&
-        _lastPersistedCustomSchoolImportApiKey == normalized) {
-      return;
-    }
-
-    _replaceRuntimeCustomSchoolImportApiKey(normalized);
-    final attemptEpoch = ++_customSchoolImportApiKeyMutationEpoch;
-    notifyListeners();
-
-    final write = _pendingSecretWrite.catchError((_) {}).then((_) async {
-      Object? writeError;
-      StackTrace? writeStackTrace;
-      try {
-        await _secrets.writeCustomSchoolImportApiKey(normalized);
-      } catch (error, stackTrace) {
-        writeError = error;
-        writeStackTrace = stackTrace;
-      }
-
-      late final String persisted;
-      try {
-        persisted = (await _secrets.readCustomSchoolImportApiKey()).trim();
-      } catch (readError, readStackTrace) {
-        _customSchoolImportApiKeyPersistenceKnown = false;
-        Error.throwWithStackTrace(
-          _SecretWriteStateUnknownException(writeError, readError),
-          readStackTrace,
-        );
-      }
-      _lastPersistedCustomSchoolImportApiKey = persisted;
-      _customSchoolImportApiKeyPersistenceKnown = true;
-      if (persisted == normalized) return;
-
-      if (writeError != null) {
-        Error.throwWithStackTrace(writeError, writeStackTrace!);
-      }
-      throw _SecretWriteVerificationException(normalized, persisted);
-    });
-    _pendingSecretWrite = write;
-    try {
-      await write;
-    } catch (error, stackTrace) {
-      debugPrint('Secure API key write failed: $error\n$stackTrace');
-      if (_customSchoolImportApiKeyMutationEpoch == attemptEpoch &&
-          _customSchoolImportApiKeyPersistenceKnown) {
-        _restoreRuntimeCustomSchoolImportApiKeyAfterPersistenceFailure(
-          _lastPersistedCustomSchoolImportApiKey,
-        );
-        notifyListeners();
-      }
-      throw StateError('Unable to save custom school import API key.');
-    }
-  }
-}
-
-class _SecretWriteStateUnknownException implements Exception {
-  const _SecretWriteStateUnknownException(this.writeError, this.readError);
-
-  final Object? writeError;
-  final Object readError;
-
-  @override
-  String toString() =>
-      'Secure API key state is unknown after a failed write. '
-      'Write error: $writeError; readback error: $readError';
-}
-
-class _SecretWriteVerificationException implements Exception {
-  const _SecretWriteVerificationException(this.expected, this.persisted);
-
-  final String expected;
-  final String persisted;
-
-  @override
-  String toString() =>
-      'Secure API key write could not be verified. Expected a value with '
-      'length ${expected.length}, but storage returned length '
-      '${persisted.length}.';
 }
 
 class TimetableProvider extends _TimetableProviderBase
@@ -449,7 +265,6 @@ class TimetableProvider extends _TimetableProviderBase
   }) : _systemLocaleCodeResolver =
            systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver,
        _privacy = privacyService ?? const PrivacyService(),
-       _secrets = secretStore ?? SecretStore(),
        _schoolSites = schoolSiteService ?? SchoolSiteService(),
        _backupRestoreJournal =
            backupRestoreJournal ?? AppBackupRestoreJournal(),
@@ -462,10 +277,17 @@ class TimetableProvider extends _TimetableProviderBase
       initialData: buildInitialAppData(buildDefaultPeriodTimes()),
       requireMutationAllowed: _ensureAppBackupRestoreMutationAllowed,
       restoreRuntimeFields: (persisted, current) =>
-          _withRuntimeCustomSchoolImportApiKey(
+          withRuntimeSchoolImportApiKey(
             persisted,
             current.aiApiSettings.customApiKey,
           ),
+    );
+    _schoolImportSecrets = SchoolImportSecretController(
+      session: _session,
+      store: secretStore ?? SecretStore(),
+      notifyViewChanged: () {
+        if (!_isDisposed) notifyListeners();
+      },
     );
     _studentView = StudentViewState(_session);
     _studentCommands = StudentCommands(
@@ -508,7 +330,7 @@ class TimetableProvider extends _TimetableProviderBase
   @override
   final PrivacyService _privacy;
   @override
-  final SecretStore _secrets;
+  late final SchoolImportSecretController _schoolImportSecrets;
   @override
   final SchoolSiteService _schoolSites;
   @override
@@ -528,24 +350,8 @@ class TimetableProvider extends _TimetableProviderBase
     _session.replaceData(value);
   }
 
-  @override
-  void _replaceRuntimeCustomSchoolImportApiKey(String value) {
-    _session.replaceRuntimeSnapshot(
-      _withRuntimeCustomSchoolImportApiKey(_session.data, value),
-    );
-  }
-
   void _restoreAppDataAfterPersistenceFailure(AppData value) {
     _session.restoreData(value);
-  }
-
-  @override
-  void _restoreRuntimeCustomSchoolImportApiKeyAfterPersistenceFailure(
-    String value,
-  ) {
-    _session.restoreRuntimeSnapshot(
-      _withRuntimeCustomSchoolImportApiKey(_session.data, value),
-    );
   }
 
   StudentCommands get studentCommands => _studentCommands;
@@ -916,6 +722,7 @@ class TimetableProvider extends _TimetableProviderBase
   SettingsCommands get settingsCommands => _settingsCommands;
   SettingsViewState get settingsView => _settingsView;
   WorkspaceViewState get workspaceView => _workspaceView;
+  SchoolImportSecretController get schoolImportSecrets => _schoolImportSecrets;
 
   NotificationSettings get notificationSettings =>
       _settingsView.notificationSettings;
@@ -1145,10 +952,8 @@ class TimetableProvider extends _TimetableProviderBase
 
   AppData themeDataFor(AppMode mode) => _settingsView.themeDataFor(mode);
 
-  Future<void> updateCustomSchoolImportApiKey(String value) async {
-    requireWorkspaceEnabled(AppMode.student);
-    await _persistCustomSchoolImportApiKey(value);
-  }
+  Future<void> updateCustomSchoolImportApiKey(String value) =>
+      _schoolImportSecrets.update(value);
 
   AppData get committedAppData => _session.committedData;
 
@@ -1170,7 +975,7 @@ class TimetableProvider extends _TimetableProviderBase
       // runtime lock. Derive availability from the current snapshot, not the
       // state from before those asynchronous boundaries.
       if (!enabled && mode == AppMode.student) {
-        await _ensureCustomSchoolImportApiKeyPersistenceKnown();
+        await _schoolImportSecrets.ensurePersistenceKnown();
       }
       await _commitWorkspaceAvailability(mode, enabled, transaction);
     });
@@ -1465,7 +1270,7 @@ class TimetableProvider extends _TimetableProviderBase
     }
     await flushPendingUiStateSaves();
     await _repository.waitForPendingWrites(propagateErrors: true);
-    await _ensureCustomSchoolImportApiKeyPersistenceKnown();
+    await _schoolImportSecrets.ensurePersistenceKnown();
     await _schoolSites.waitForPendingOperations();
     return true;
   }
@@ -1496,7 +1301,7 @@ class TimetableProvider extends _TimetableProviderBase
   Future<void> _quiesceForShutdown({required bool waitForSchoolSites}) async {
     while (true) {
       final appDataEpoch = _appDataMutationEpoch;
-      final secretEpoch = _customSchoolImportApiKeyMutationEpoch;
+      final secretEpoch = _schoolImportSecrets.mutationEpoch;
       try {
         await flushPendingUiStateSaves();
       } catch (error, stackTrace) {
@@ -1507,12 +1312,12 @@ class TimetableProvider extends _TimetableProviderBase
       }
       await Future.wait<void>([
         _repository.waitForPendingWrites(),
-        _waitForPendingSecretWrites(),
+        _schoolImportSecrets.waitForPendingWrites(),
         if (waitForSchoolSites) _schoolSites.waitForPendingOperations(),
       ]);
       await Future<void>.microtask(() {});
       if (appDataEpoch == _appDataMutationEpoch &&
-          secretEpoch == _customSchoolImportApiKeyMutationEpoch &&
+          secretEpoch == _schoolImportSecrets.mutationEpoch &&
           _uiStateSaveTimer == null &&
           _uiStateSaveInFlight == null &&
           _workspaceTransactions.isIdle) {
@@ -1582,23 +1387,6 @@ class TimetableProvider extends _TimetableProviderBase
           _dataClearReserved = false;
           if (!_isDisposed) notifyListeners();
         }
-      }
-    }
-  }
-
-  Future<void> _waitForPendingSecretWrites() async {
-    while (true) {
-      final pendingSecretWrite = _pendingSecretWrite;
-      try {
-        await pendingSecretWrite;
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Pending secret write failed during shutdown: $error\n$stackTrace',
-        );
-      }
-      await Future<void>.microtask(() {});
-      if (identical(pendingSecretWrite, _pendingSecretWrite)) {
-        return;
       }
     }
   }

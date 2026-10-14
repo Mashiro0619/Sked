@@ -211,7 +211,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   }
 
   Future<int> _restoreAppBackup(AppData imported, AppBackupData backup) async {
-    await _ensureCustomSchoolImportApiKeyPersistenceKnown();
+    await _schoolImportSecrets.ensurePersistenceKnown();
     final schoolSiteLease = _schoolSiteRestoreLease;
     final siteResult = await schoolSiteLease.loadSitesResult();
     if (!siteResult.canWrite && !siteResult.canReplaceAfterRecovery) {
@@ -232,8 +232,8 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       );
     }
     final previousApiKey = previousAppData.aiApiSettings.customApiKey;
-    final journalAppData = _withRuntimeCustomSchoolImportApiKey(imported, '');
-    final restoredAppData = _withRuntimeCustomSchoolImportApiKey(
+    final journalAppData = withRuntimeSchoolImportApiKey(imported, '');
+    final restoredAppData = withRuntimeSchoolImportApiKey(
       imported,
       previousApiKey,
     );
@@ -339,7 +339,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
     try {
       if (pendingRestore.apiKeyPolicy == AppBackupRestoreApiKeyPolicy.clear) {
-        await _persistCustomSchoolImportApiKey('');
+        await _schoolImportSecrets.persist('');
       }
       pendingRestore = await _backupRestoreJournal.advancePhase(
         pendingRestore,
@@ -525,7 +525,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     }
 
     try {
-      await _ensureCustomSchoolImportApiKeyPersistenceKnown();
+      await _schoolImportSecrets.ensurePersistenceKnown();
       final runtimeApiKey = _appData.aiApiSettings.customApiKey;
       final schoolSiteLease = _schoolSiteRestoreLease;
       final siteResult = await schoolSiteLease.loadSitesResult();
@@ -544,7 +544,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
       var fresh = await _buildDefaultAppData();
       fresh = _importExportService.normalizeAppData(
-        _withRuntimeCustomSchoolImportApiKey(fresh, runtimeApiKey),
+        withRuntimeSchoolImportApiKey(fresh, runtimeApiKey),
         localeCode: fresh.localeCode,
       );
       await _backupRestoreJournal.writeReconciliation(
@@ -562,7 +562,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
           throw RecoveryWriteBlockedException(_repository.lastLoadStatus);
         }
       }
-      _appData = _withRuntimeCustomSchoolImportApiKey(
+      _appData = withRuntimeSchoolImportApiKey(
         _repository.current ?? fresh,
         runtimeApiKey,
       );
@@ -603,7 +603,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
     if (pendingRestore.phase == AppBackupRestoreJournalPhase.prepared) {
       final existingApiKey = _appData.aiApiSettings.customApiKey;
-      final restoredAppData = _withRuntimeCustomSchoolImportApiKey(
+      final restoredAppData = withRuntimeSchoolImportApiKey(
         _importExportService.normalizeAppData(
           backup.appData,
           localeCode: backup.appData.localeCode,
@@ -629,7 +629,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
     if (pendingRestore.phase == AppBackupRestoreJournalPhase.dataCommitted) {
       if (pendingRestore.apiKeyPolicy == AppBackupRestoreApiKeyPolicy.clear) {
-        await _persistCustomSchoolImportApiKey('');
+        await _schoolImportSecrets.persist('');
       }
       pendingRestore = await _backupRestoreJournal.advancePhase(
         pendingRestore,
