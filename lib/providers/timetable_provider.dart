@@ -275,6 +275,7 @@ class TimetableProvider extends _TimetableProviderBase
       journal: _backupRestoreJournal,
       defaults: _defaults,
       transfers: _transfers,
+      codec: dataTransferCodec,
       runtimeMutationLock: _workspaceMutationLock,
       notifyViewChanged: () {
         if (!_isDisposed) notifyListeners();

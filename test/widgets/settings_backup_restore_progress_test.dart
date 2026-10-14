@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/screens/language_settings_page.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -18,6 +19,7 @@ import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/ui_command.dart';
 
 import '../support/workspace_harness.dart';
+import '../support/data_transfer_codec.dart';
 
 class _Storage extends WorkspaceMemoryStorage {
   _Storage(super.data);
@@ -49,11 +51,30 @@ class _FilePicker extends FileSelectorPlatform {
   );
 }
 
-Future<(TimetableProvider, _Storage)> _fixture() async {
+class _PendingBackupCodec extends DataTransferCodec {
+  _PendingBackupCodec() : super(run: runDataTransferInline);
+
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<AppBackupData> decodeBackup(
+    String source, {
+    required String localeCode,
+  }) async {
+    started.complete();
+    await release.future;
+    return super.decodeBackup(source, localeCode: localeCode);
+  }
+}
+
+Future<(TimetableProvider, _Storage)> _fixture({
+  DataTransferCodec codec = inlineDataTransferCodec,
+}) async {
   final seed = await workspaceProvider();
   final storage = _Storage(seed.appData);
   seed.dispose();
-  return (await workspaceProvider(storage: storage), storage);
+  return (await workspaceProvider(storage: storage, codec: codec), storage);
 }
 
 void _viewport(WidgetTester tester, [Size size = const Size(393, 900)]) {
@@ -110,6 +131,37 @@ Switch _switchIn(WidgetTester tester, Finder row) => tester.widget<Switch>(
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets(
+    'a late backup preview cannot open confirmation in a new session',
+    (tester) async {
+      _viewport(tester);
+      final codec = _PendingBackupCodec();
+      final (provider, storage) = await _fixture(codec: codec);
+      addTearDown(provider.dispose);
+      final original = provider.session.committedData;
+      _pickBackup(encodeAppBackup(original, []));
+      await tester.pumpWidget(
+        WorkspaceHarness(provider: provider, home: const SettingsPage()),
+      );
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      );
+      await _open(tester, _key('settings-app-backup'));
+      await _open(tester, find.text(l10n.restoreBackupFileTitle));
+      expect(codec.started.isCompleted, isTrue);
+      final reservation = provider.maintenance.reserve();
+      provider.maintenance.release(reservation);
+      codec.release.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.restoreBackupConfirmTitle), findsNothing);
+      expect(find.text(l10n.restoreBackupFailureMessage), findsNothing);
+      expect(provider.session.committedData, same(original));
+      expect(storage.writes, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final fails in [false, true]) {
     testWidgets(

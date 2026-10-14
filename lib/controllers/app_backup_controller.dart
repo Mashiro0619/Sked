@@ -7,7 +7,7 @@ import '../data/timetable_storage.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../services/app_backup_restore_journal.dart';
-import '../services/import_export_service.dart';
+import '../services/data_transfer_codec.dart';
 import '../services/school_site_service.dart';
 import '../services/school_site_store.dart';
 import 'app_data_defaults.dart';
@@ -21,6 +21,14 @@ import 'workspace_commands.dart';
 import 'workspace_view_state.dart';
 
 enum AppImportMode { replaceAll, addAll }
+
+class PreparedAppBackup {
+  const PreparedAppBackup._(this.value, this._owner, this._session);
+
+  final AppBackupData value;
+  final AppBackupController _owner;
+  final AppDataSessionToken _session;
+}
 
 class WorkspaceChangeCancelledException implements Exception {
   const WorkspaceChangeCancelledException();
@@ -60,7 +68,7 @@ class AppBackupController {
     required this._transfers,
     required this._runtimeMutationLock,
     required this._notifyViewChanged,
-    this._imports = const ImportExportService(),
+    this._codec = const DataTransferCodec(),
   });
 
   final AppSession _session;
@@ -76,7 +84,7 @@ class AppBackupController {
   final DataTransferController _transfers;
   final Future<void> Function(Future<void> Function()) _runtimeMutationLock;
   final VoidCallback _notifyViewChanged;
-  final ImportExportService _imports;
+  final DataTransferCodec _codec;
   SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
   StorageLoadStatus? _journalRecoveryLoadStatus;
   List<String> _journalRecoveryArtifacts = const [];
@@ -112,6 +120,44 @@ class AppBackupController {
 
   Future<void> _appBackupRestoreTail = Future<void>.value();
 
+  Future<PreparedAppBackup> prepareJson(String source) async {
+    _maintenance.ensureMutationAllowed();
+    final session = _maintenance.dataSessionToken;
+    final backup = await _codec.decodeBackup(
+      source,
+      localeCode: _data.localeCode,
+    );
+    final prepared = PreparedAppBackup._(backup, this, session);
+    _ensureCurrent(prepared);
+    return prepared;
+  }
+
+  bool isCurrent(PreparedAppBackup prepared) =>
+      identical(prepared._owner, this) &&
+      !_session.isClosed &&
+      identical(prepared._session, _maintenance.dataSessionToken);
+
+  void _ensureCurrent(PreparedAppBackup prepared) {
+    _maintenance.ensureMutationAllowed();
+    if (!isCurrent(prepared)) {
+      throw StateError('The backup confirmation session is no longer active.');
+    }
+  }
+
+  Future<int> restorePrepared(PreparedAppBackup prepared) async {
+    _ensureCurrent(prepared);
+    for (final workspace in _data.enabledWorkspaces) {
+      if (_workspaces.hasExitGuards(workspace) &&
+          !await _workspaces.prepareExit(workspace)) {
+        throw const WorkspaceChangeCancelledException();
+      }
+      _ensureCurrent(prepared);
+    }
+    return _enqueueAppBackupRestore(
+      () => _restoreAppBackup(prepared.value.appData, prepared.value),
+    );
+  }
+
   Future<String> exportJson() async {
     final siteResult = await _schoolSites.loadSitesResult();
     if (!siteResult.canWrite) {
@@ -119,36 +165,38 @@ class AppBackupController {
     }
     // Pending range/focus writes are deliberately unpublished. A backup made
     // while they are in flight must not resurrect a navigation that later fails.
-    return encodeAppBackup(_workspace.data, siteResult.sites);
+    return _codec.encodeBackup(_workspace.data, siteResult.sites);
   }
 
   Future<int> importJson(String source, {required AppImportMode mode}) async {
-    if (mode == AppImportMode.addAll) {
-      _maintenance.ensureMutationAllowed();
+    if (mode == AppImportMode.addAll) return _addTimetables(source);
+    if (_data.enabledWorkspaces.any(_workspaces.hasExitGuards)) {
+      return restorePrepared(await prepareJson(source));
     }
-    final backup = decodeAppBackup(source, localeCode: _data.localeCode);
-    final imported = _imports.normalizeAppData(
-      backup.appData,
-      localeCode: backup.appData.localeCode,
-    );
-    if (mode == AppImportMode.replaceAll) {
-      for (final workspace in _data.enabledWorkspaces) {
-        // Replacing data invalidates drafts even when the workspace stays enabled.
-        if (_workspaces.hasExitGuards(workspace) &&
-            !await _workspaces.prepareExit(workspace)) {
-          throw const WorkspaceChangeCancelledException();
-        }
-      }
-      return _enqueueAppBackupRestore(
-        () => _restoreAppBackup(imported, backup),
-      );
-    }
+    // Reserve before the first asynchronous decode so accepted restores retain
+    // their queue position and close the mutation gate synchronously.
+    final localeCode = _data.localeCode;
+    return _enqueueAppBackupRestore(() async {
+      final backup = await _codec.decodeBackup(source, localeCode: localeCode);
+      return _restoreAppBackup(backup.appData, backup);
+    });
+  }
 
-    return _transfers.importSelectedTimetablesJson(
-      encodeAppDataEnvelope(imported),
-      timetableIds: imported.studentMode.timetables
-          .map((item) => item.id)
-          .toList(),
+  Future<int> _addTimetables(String source) async {
+    final prepared = await prepareJson(source);
+    final imported = prepared.value.appData;
+    final ids = imported.studentMode.timetables.map((item) => item.id).toList();
+    final timetableSource = await _codec.encodeTimetables(
+      imported.studentMode,
+      ids,
+      localeCode: imported.localeCode,
+    );
+    _ensureCurrent(prepared);
+    final timetables = await _transfers.prepareTimetables(timetableSource);
+    _ensureCurrent(prepared);
+    return _transfers.applyTimetables(
+      timetables,
+      timetableIds: ids,
       mode: TimetableImportMode.addAsNew,
     );
   }
@@ -189,7 +237,7 @@ class AppBackupController {
     // stores and the dataCommitted marker are durable, then apply its policy.
     try {
       pendingRestore = await _journal.writePrepared(
-        encodeAppBackup(journalAppData, restoredSchoolSites),
+        await _codec.encodeBackup(journalAppData, restoredSchoolSites),
         localeCode: imported.localeCode,
       );
     } on AppBackupRestoreJournalException catch (error) {
@@ -467,18 +515,15 @@ class AppBackupController {
       final currentAppData = _repository.current;
       if (currentAppData != null) {
         final currentBackupArtifact = await _journal.preserveForRecovery(
-          encodeAppBackup(currentAppData, siteResult.sites),
+          await _codec.encodeBackup(currentAppData, siteResult.sites),
         );
         _trackAppBackupRestoreJournal(artifacts: [currentBackupArtifact]);
       }
 
       var fresh = await _defaults.build();
-      fresh = _imports.normalizeAppData(
-        withRuntimeSchoolImportApiKey(fresh, runtimeApiKey),
-        localeCode: fresh.localeCode,
-      );
+      fresh = withRuntimeSchoolImportApiKey(fresh, runtimeApiKey);
       await _journal.writeReconciliation(
-        encodeAppBackup(fresh, siteResult.sites),
+        await _codec.encodeBackup(fresh, siteResult.sites),
         recoveryArtifact: recoveryArtifact,
         localeCode: fresh.localeCode,
       );
@@ -529,7 +574,7 @@ class AppBackupController {
     if (pendingRestore.phase == AppBackupRestoreJournalPhase.prepared) {
       final existingApiKey = _data.aiApiSettings.customApiKey;
       final restoredAppData = withRuntimeSchoolImportApiKey(
-        _imports.normalizeAppData(
+        await _codec.normalize(
           backup.appData,
           localeCode: backup.appData.localeCode,
         ),

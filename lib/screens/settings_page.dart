@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/sked_task_session.dart';
+import '../controllers/app_backup_controller.dart';
 
 import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
@@ -1168,8 +1169,13 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   Future<void> _restoreAppDataFromFile(TimetableProvider provider) async {
+    final session = provider.maintenance.dataSessionToken;
     final source = await _pickTextFile(allowedExtensions: const ['json']);
-    if (source == null || !mounted) return;
+    if (source == null ||
+        !mounted ||
+        !identical(session, provider.maintenance.dataSessionToken)) {
+      return;
+    }
     await _restoreAppDataSource(provider, source, context);
   }
 
@@ -1194,19 +1200,35 @@ class _SettingsPageState extends State<SettingsPage>
     BuildContext feedbackContext,
   ) async {
     if (!_canStartBackupRestore(provider, feedbackContext)) return false;
-    AppData restored;
+    final backups = provider.backups;
+    final session = provider.maintenance.dataSessionToken;
+    bool isCurrent() =>
+        mounted &&
+        feedbackContext.mounted &&
+        identical(session, provider.maintenance.dataSessionToken);
+    PreparedAppBackup prepared;
     try {
-      restored = decodeAppBackup(
-        source,
-        localeCode: provider.localeCode,
-      ).appData;
+      prepared = await backups.prepareJson(source);
     } on FormatException catch (error) {
-      if (feedbackContext.mounted) {
+      if (feedbackContext.mounted && isCurrent()) {
         ScaffoldMessenger.of(feedbackContext)
             .showSnackBar(SnackBar(content: Text(error.message)));
       }
       return false;
+    } catch (_) {
+      if (feedbackContext.mounted && isCurrent()) {
+        ScaffoldMessenger.of(feedbackContext).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(feedbackContext).restoreBackupFailureMessage,
+            ),
+          ),
+        );
+      }
+      return false;
     }
+    if (!feedbackContext.mounted || !isCurrent()) return false;
+    final restored = prepared.value.appData;
     final confirmed = await showExpressiveDialog<bool>(
       context: feedbackContext,
       builder: (dialogContext) {
@@ -1247,10 +1269,10 @@ class _SettingsPageState extends State<SettingsPage>
                             : l10n.generalSchedule,
                       ),
                       subtitle: Text(
-                        '${provider.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary} → ${restored.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary}',
+                        '${provider.workspaceView.isEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary} → ${restored.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary}',
                       ),
                       trailing: Icon(
-                        provider.isWorkspaceEnabled(mode) ==
+                        provider.workspaceView.isEnabled(mode) ==
                                 restored.isWorkspaceEnabled(mode)
                             ? Icons.remove
                             : Icons.swap_horiz,
@@ -1273,13 +1295,15 @@ class _SettingsPageState extends State<SettingsPage>
         );
       },
     );
-    if (confirmed != true || !feedbackContext.mounted) return false;
+    if (confirmed != true || !feedbackContext.mounted || !isCurrent()) {
+      return false;
+    }
     if (!_canStartBackupRestore(provider, feedbackContext)) return false;
     final l10n = AppLocalizations.of(feedbackContext);
     final successMessage = l10n.restoreBackupSuccessMessage;
     final failureMessage = l10n.restoreBackupFailureMessage;
     try {
-      await provider.importAppDataJson(source, mode: AppImportMode.replaceAll);
+      await backups.restorePrepared(prepared);
       if (feedbackContext.mounted) {
         ScaffoldMessenger.of(feedbackContext)
             .showSnackBar(SnackBar(content: Text(successMessage)));
@@ -1325,8 +1349,13 @@ class _SettingsPageState extends State<SettingsPage>
     required bool share,
   }) async {
     final l10n = AppLocalizations.of(context);
+    final session = provider.maintenance.dataSessionToken;
     try {
-      final content = await provider.exportAppDataJson();
+      final content = await provider.backups.exportJson();
+      if (!mounted ||
+          !identical(session, provider.maintenance.dataSessionToken)) {
+        return;
+      }
       final fileName = _backupFileName();
       if (share) {
         await _shareJson(fileName, content);
@@ -1342,9 +1371,13 @@ class _SettingsPageState extends State<SettingsPage>
 
   Future<void> _exportAppDataBackupAsText(TimetableProvider provider) async {
     final l10n = AppLocalizations.of(context);
+    final session = provider.maintenance.dataSessionToken;
     try {
-      final content = await provider.exportAppDataJson();
-      if (!mounted) return;
+      final content = await provider.backups.exportJson();
+      if (!mounted ||
+          !identical(session, provider.maintenance.dataSessionToken)) {
+        return;
+      }
       await showTextExportDialog(
         context,
         title: l10n.copyBackupTitle,

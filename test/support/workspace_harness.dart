@@ -13,6 +13,7 @@ import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
+import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/privacy_service.dart';
@@ -87,6 +88,7 @@ Future<TimetableProvider> workspaceProvider({
   String locale = 'en',
   WorkspaceMemoryStorage? storage,
   Future<void> Function(Future<void> Function())? workspaceMutationLock,
+  DataTransferCodec codec = inlineDataTransferCodec,
 }) async {
   final sample = DeveloperSampleDataService.append(
     current: buildInitialAppData(buildDefaultPeriodTimes(), localeCode: locale),
@@ -96,7 +98,7 @@ Future<TimetableProvider> workspaceProvider({
     now: DateTime(2026, 9, 8, 9),
   );
   final provider = TimetableProvider(
-    dataTransferCodec: inlineDataTransferCodec,
+    dataTransferCodec: codec,
     storage:
         storage ??
         WorkspaceMemoryStorage(sample.data.copyWith(activeMode: mode)),
