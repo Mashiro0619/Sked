@@ -21,6 +21,7 @@ import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/microsoft_store_update_service.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/school_site_service.dart';
+import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/settings_list.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
@@ -92,6 +93,27 @@ class _NoopPrivacyService extends PrivacyService {
 
   @override
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
+}
+
+class _ScheduleCodec extends DataTransferCodec {
+  _ScheduleCodec({this.delayed = false}) : super(run: runDataTransferInline);
+
+  final bool delayed;
+  final started = Completer<void>();
+  final release = Completer<void>();
+  var decodeCalls = 0;
+
+  @override
+  Future<GeneralImportCandidate> decodeSchedules(
+    String source, {
+    required String localeCode,
+    bool ics = false,
+  }) async {
+    decodeCalls += 1;
+    if (!started.isCompleted) started.complete();
+    if (delayed) await release.future;
+    return super.decodeSchedules(source, localeCode: localeCode, ics: ics);
+  }
 }
 
 class _FakeDataClearCoordinator extends AppDataClearCoordinator {
@@ -213,9 +235,10 @@ Future<TimetableProvider> _createProvider(
   Object? recoveryReadError,
   _MemoryTimetableStorage? storage,
   SchoolSiteService? schoolSiteService,
+  DataTransferCodec codec = inlineDataTransferCodec,
 }) async {
   final provider = TimetableProvider(
-    dataTransferCodec: inlineDataTransferCodec,
+    dataTransferCodec: codec,
     storage:
         storage ??
         _MemoryTimetableStorage(
@@ -1710,63 +1733,9 @@ void main() {
     );
   });
 
-  testWidgets('JSON import storage failure is reported without losing text', (
-    tester,
-  ) async {
-    final storage = _MemoryTimetableStorage(_buildGeneralData());
-    final provider = await _createProvider(
-      _buildGeneralData(),
-      storage: storage,
-    );
-    addTearDown(provider.dispose);
-    final source = provider.exportActiveGeneralScheduleJson();
-    storage.failSaves = true;
-    await _pumpSettingsPage(
-      tester,
-      provider,
-      destination: SettingsDestination.general,
-    );
-
-    final importExportTile = find.text('Category import & export');
-    await tester.ensureVisible(importExportTile);
-    await tester.pumpAndSettle();
-    await tester.tap(importExportTile);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Paste JSON'));
-    await _pumpRouteTransition(tester);
-    await tester.enterText(find.byType(TextField), source);
-    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
-    await _pumpRouteTransition(tester);
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
-    await _pumpRouteTransition(tester);
-    await tester.tap(find.widgetWithText(TextButton, 'Add as new category'));
-    await _pumpRouteTransition(tester);
-
-    expect(find.byType(TextImportPage), findsOneWidget);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      source,
-    );
-    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Import'))
-          .onPressed,
-      isNotNull,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('ICS import storage failure is reported without losing text', (
-    tester,
-  ) async {
-    final storage = _MemoryTimetableStorage(_buildGeneralData());
-    final provider = await _createProvider(
-      _buildGeneralData(),
-      storage: storage,
-    );
-    addTearDown(provider.dispose);
-    const source =
+  for (final ics in [false, true]) {
+    final format = ics ? 'ICS' : 'JSON';
+    const icsSource =
         'BEGIN:VCALENDAR\r\n'
         'VERSION:2.0\r\n'
         'PRODID:-//Sked//Test//EN\r\n'
@@ -1778,38 +1747,106 @@ void main() {
         'SUMMARY:Imported event\r\n'
         'END:VEVENT\r\n'
         'END:VCALENDAR';
-    storage.failSaves = true;
-    await _pumpSettingsPage(
+    final source = ics ? icsSource : _buildGeneralImportSource();
+
+    Future<void> submitText(
+      WidgetTester tester,
+      TimetableProvider provider,
+    ) async {
+      await _openGeneralDataActions(tester, provider);
+      await tester.tap(find.text('Paste $format'));
+      await _pumpRouteTransition(tester);
+      await tester.enterText(find.byType(TextField), source);
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await _pumpRouteTransition(tester);
+    }
+
+    Future<void> confirmImport(WidgetTester tester) async {
+      if (!ics) {
+        await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+        await _pumpRouteTransition(tester);
+      }
+      await tester.tap(find.widgetWithText(TextButton, 'Add as new category'));
+      await _pumpRouteTransition(tester);
+    }
+
+    testWidgets(
+      '$format preview is decoded once and the candidate is applied',
+      (tester) async {
+        final codec = _ScheduleCodec();
+        final provider = await _createProvider(
+          _buildGeneralData(),
+          codec: codec,
+        );
+        addTearDown(provider.dispose);
+        final originalCount = provider.generalView.schedules.length;
+        await submitText(tester, provider);
+        expect(codec.decodeCalls, 1);
+        await confirmImport(tester);
+        expect(codec.decodeCalls, 1);
+        expect(find.byType(TextImportPage), findsNothing);
+        expect(provider.generalView.schedules, hasLength(originalCount + 1));
+        expect(
+          provider.generalView.schedules
+              .expand((schedule) => schedule.events)
+              .single
+              .title,
+          'Imported event',
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('$format late parse retires with its data session', (
       tester,
-      provider,
-      destination: SettingsDestination.general,
-    );
+    ) async {
+      final codec = _ScheduleCodec(delayed: true);
+      final provider = await _createProvider(_buildGeneralData(), codec: codec);
+      addTearDown(provider.dispose);
+      final original = provider.generalView.schedules;
+      await submitText(tester, provider);
+      expect(codec.started.isCompleted, isTrue);
+      final reservation = provider.maintenance.reserve();
+      provider.maintenance.release(reservation);
+      codec.release.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(TextImportPage), findsNothing);
+      expect(find.text('Select categories to import'), findsNothing);
+      expect(find.text('Add as new category'), findsNothing);
+      expect(find.text('Save failed. Please try again later.'), findsNothing);
+      expect(provider.generalView.schedules, same(original));
+      expect(tester.takeException(), isNull);
+    });
 
-    final importExportTile = find.text('Category import & export');
-    await tester.ensureVisible(importExportTile);
-    await tester.pumpAndSettle();
-    await tester.tap(importExportTile);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Paste ICS'));
-    await _pumpRouteTransition(tester);
-    await tester.enterText(find.byType(TextField), source);
-    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
-    await _pumpRouteTransition(tester);
-    await tester.tap(find.widgetWithText(TextButton, 'Add as new category'));
-    await _pumpRouteTransition(tester);
-
-    expect(find.byType(TextImportPage), findsOneWidget);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      source,
+    testWidgets(
+      '$format import storage failure is reported without losing text',
+      (tester) async {
+        final storage = _MemoryTimetableStorage(_buildGeneralData());
+        final provider = await _createProvider(
+          _buildGeneralData(),
+          storage: storage,
+        );
+        addTearDown(provider.dispose);
+        storage.failSaves = true;
+        await submitText(tester, provider);
+        await confirmImport(tester);
+        expect(find.byType(TextImportPage), findsOneWidget);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller?.text,
+          source,
+        );
+        expect(
+          find.text('Save failed. Please try again later.'),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<FilledButton>(find.widgetWithText(FilledButton, 'Import'))
+              .onPressed,
+          isNotNull,
+        );
+        expect(tester.takeException(), isNull);
+      },
     );
-    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Import'))
-          .onPressed,
-      isNotNull,
-    );
-    expect(tester.takeException(), isNull);
-  });
+  }
 }

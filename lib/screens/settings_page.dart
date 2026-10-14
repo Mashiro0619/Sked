@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/text_transfer_widgets.dart';
+import '../widgets/sked_task_session.dart';
 
 import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
@@ -1366,15 +1367,19 @@ class _SettingsPageState extends State<SettingsPage>
     final l10n = AppLocalizations.of(context);
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TextImportPage(
-          title: l10n.importTimetableText,
-          onSubmit: (context, content) {
-            return TimetableImportFlow.importTimetablesFromSource(
-              context,
-              provider,
-              content,
-            );
-          },
+        builder: (_) => SkedTaskRouteGuard(
+          provider: provider,
+          workspace: AppMode.student,
+          child: TextImportPage(
+            title: l10n.importTimetableText,
+            onSubmit: (context, content) {
+              return TimetableImportFlow.importTimetablesFromSource(
+                context,
+                provider,
+                content,
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1393,31 +1398,34 @@ class _SettingsPageState extends State<SettingsPage>
 
   Future<void> _exportTimetablesAsText(TimetableProvider provider) async {
     final l10n = AppLocalizations.of(context);
-    final activeId = provider.activeTimetableOrNull?.id;
-    final selectedIds = await _pickTimetableIds(
-      timetables: provider.timetables,
-      title: l10n.selectTimetablesToExport,
-      confirmText: l10n.copyText,
-      initialSelectedIds: activeId == null ? const [] : [activeId],
+    final task = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.student,
+      ownerRoute: ModalRoute.of(context),
     );
-    if (selectedIds == null || selectedIds.isEmpty || !mounted) {
-      return;
-    }
+    bool isCurrent() => mounted && task.isCurrent;
     try {
-      final content = provider.exportSelectedTimetablesJson(selectedIds);
+      final activeId = provider.studentView.activeTimetableOrNull?.id;
+      final selectedIds = await _pickTimetableIds(
+        timetables: provider.studentView.timetables,
+        title: l10n.selectTimetablesToExport,
+        confirmText: l10n.copyText,
+        initialSelectedIds: activeId == null ? const [] : [activeId],
+      );
+      if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
+      final content = await provider.transfers.exportTimetables(selectedIds);
+      if (!mounted || !task.isCurrent) return;
       await showTextExportDialog(
         context,
         title: l10n.exportTimetableText,
         content: content,
       );
     } on FormatException catch (error) {
-      if (mounted) {
-        _showMessage(error.message);
-      }
+      if (isCurrent()) _showMessage(error.message);
     } catch (_) {
-      if (mounted) {
-        _showMessage(l10n.saveFailedRetry);
-      }
+      if (isCurrent()) _showMessage(l10n.saveFailedRetry);
+    } finally {
+      task.dispose();
     }
   }
 
@@ -1426,18 +1434,23 @@ class _SettingsPageState extends State<SettingsPage>
     required bool share,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final activeId = provider.activeTimetableOrNull?.id;
-    final selectedIds = await _pickTimetableIds(
-      timetables: provider.timetables,
-      title: l10n.selectTimetablesToExport,
-      confirmText: share ? l10n.share : l10n.save,
-      initialSelectedIds: activeId == null ? const [] : [activeId],
+    final task = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.student,
+      ownerRoute: ModalRoute.of(context),
     );
-    if (selectedIds == null || selectedIds.isEmpty) {
-      return;
-    }
+    bool isCurrent() => mounted && task.isCurrent;
     try {
-      final content = provider.exportSelectedTimetablesJson(selectedIds);
+      final activeId = provider.studentView.activeTimetableOrNull?.id;
+      final selectedIds = await _pickTimetableIds(
+        timetables: provider.studentView.timetables,
+        title: l10n.selectTimetablesToExport,
+        confirmText: share ? l10n.share : l10n.save,
+        initialSelectedIds: activeId == null ? const [] : [activeId],
+      );
+      if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
+      final content = await provider.transfers.exportTimetables(selectedIds);
+      if (!mounted || !task.isCurrent) return;
       const fileName = 'Sked_timetables.json';
       if (share) {
         await _shareJson(fileName, content);
@@ -1445,13 +1458,11 @@ class _SettingsPageState extends State<SettingsPage>
         await _saveJsonToFile(fileName, content);
       }
     } on FormatException catch (error) {
-      if (mounted) {
-        _showMessage(error.message);
-      }
+      if (isCurrent()) _showMessage(error.message);
     } catch (_) {
-      if (mounted) {
-        _showMessage(l10n.saveFailedRetry);
-      }
+      if (isCurrent()) _showMessage(l10n.saveFailedRetry);
+    } finally {
+      task.dispose();
     }
   }
 
@@ -1590,13 +1601,13 @@ class _SettingsPageState extends State<SettingsPage>
   ) => _guardFlow(_SettingsFlow.generalDataActions, () async {
     switch (action) {
       case SettingsGeneralDataAction.importSchedulesJsonFile:
-        await _importGeneralSchedulesJsonFile(provider);
+        await _importGeneralSchedulesFile(provider, ics: false);
       case SettingsGeneralDataAction.importSchedulesJsonText:
-        await _importGeneralSchedulesJsonText(provider);
+        await _importGeneralSchedulesText(provider, ics: false);
       case SettingsGeneralDataAction.importSchedulesIcsFile:
-        await _importGeneralSchedulesIcsFile(provider);
+        await _importGeneralSchedulesFile(provider, ics: true);
       case SettingsGeneralDataAction.importSchedulesIcsText:
-        await _importGeneralSchedulesIcsText(provider);
+        await _importGeneralSchedulesText(provider, ics: true);
       case SettingsGeneralDataAction.exportSchedulesJsonShare:
         await _exportGeneralSchedules(provider, share: true);
       case SettingsGeneralDataAction.exportSchedulesJsonSave:
@@ -1607,9 +1618,9 @@ class _SettingsPageState extends State<SettingsPage>
           format: _ExportFormat.json,
         );
       case SettingsGeneralDataAction.exportSchedulesIcsShare:
-        await _exportGeneralSchedulesIcs(provider, share: true);
+        await _exportGeneralSchedules(provider, share: true, ics: true);
       case SettingsGeneralDataAction.exportSchedulesIcsSave:
-        await _exportGeneralSchedulesIcs(provider, share: false);
+        await _exportGeneralSchedules(provider, share: false, ics: true);
       case SettingsGeneralDataAction.exportSchedulesIcsText:
         await _exportGeneralSchedulesAsText(
           provider,
@@ -1790,55 +1801,91 @@ class _SettingsPageState extends State<SettingsPage>
     );
   }
 
-  Future<void> _importGeneralSchedulesJsonFile(
-    TimetableProvider provider,
-  ) async {
-    final source = await _pickTextFile(allowedExtensions: const ['json']);
-    if (source == null || !mounted) return;
-    await _importGeneralSchedulesJsonSource(provider, source, context);
+  Future<void> _importGeneralSchedulesFile(
+    TimetableProvider provider, {
+    required bool ics,
+  }) async {
+    final task = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.general,
+      ownerRoute: ModalRoute.of(context),
+    );
+    try {
+      final source = await _pickTextFile(
+        allowedExtensions: [ics ? 'ics' : 'json'],
+      );
+      if (source == null || !mounted || !task.isCurrent) return;
+      await _importGeneralSchedulesSource(provider, source, context, ics: ics);
+    } finally {
+      task.dispose();
+    }
   }
 
-  Future<void> _importGeneralSchedulesJsonText(
-    TimetableProvider provider,
-  ) async {
+  Future<void> _importGeneralSchedulesText(
+    TimetableProvider provider, {
+    required bool ics,
+  }) async {
     final l10n = AppLocalizations.of(context);
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TextImportPage(
-          title: l10n.importGeneralSchedules,
-          onSubmit: (context, content) async {
-            return _importGeneralSchedulesJsonSource(
+        builder: (_) => SkedTaskRouteGuard(
+          provider: provider,
+          workspace: AppMode.general,
+          child: TextImportPage(
+            title: ics ? l10n.importIcs : l10n.importGeneralSchedules,
+            labelText: ics ? l10n.icsContent : null,
+            hintText: ics ? l10n.pasteIcsContentHint : null,
+            onSubmit: (context, content) => _importGeneralSchedulesSource(
               provider,
               content,
               context,
-            );
-          },
+              ics: ics,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Future<bool> _importGeneralSchedulesJsonSource(
+  Future<bool> _importGeneralSchedulesSource(
     TimetableProvider provider,
     String content,
-    BuildContext feedbackContext,
-  ) async {
-    final l10n = AppLocalizations.of(context);
+    BuildContext feedbackContext, {
+    required bool ics,
+  }) async {
+    final l10n = AppLocalizations.of(feedbackContext);
+    final task = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.general,
+      ownerRoute: ModalRoute.of(feedbackContext),
+      parent: SkedTaskSessionScope.maybeOf(feedbackContext)?.session,
+    );
+    bool isCurrent() => mounted && feedbackContext.mounted && task.isCurrent;
     try {
-      final preview = provider.previewImportGeneralSchedules(content);
-      if (!feedbackContext.mounted) return false;
-      final selectedIds = await _pickGeneralScheduleIds(
-        schedules: preview,
-        title: l10n.selectSchedulesToImport,
-        confirmText: l10n.save,
+      final prepared = await provider.transfers.prepareSchedules(
+        content,
+        ics: ics,
       );
-      if (selectedIds == null || selectedIds.isEmpty) return false;
+      if (!feedbackContext.mounted || !isCurrent()) return false;
+      final preview = prepared.value.schedules;
+      final selectedIds = ics
+          ? preview.map((schedule) => schedule.id).toList()
+          : await _pickGeneralScheduleIds(
+              schedules: preview,
+              title: l10n.selectSchedulesToImport,
+              confirmText: l10n.save,
+            );
+      if (selectedIds == null ||
+          selectedIds.isEmpty ||
+          !feedbackContext.mounted ||
+          !isCurrent()) {
+        return false;
+      }
 
       var mode = GeneralScheduleImportMode.addAsNew;
       String? replacementScheduleId;
       if (selectedIds.length == 1 &&
-          provider.activeGeneralScheduleOrNull != null &&
-          feedbackContext.mounted) {
+          provider.generalView.activeScheduleOrNull != null) {
         final choice = await showExpressiveDialog<String>(
           context: feedbackContext,
           builder: (ctx) {
@@ -1850,119 +1897,11 @@ class _SettingsPageState extends State<SettingsPage>
             }
 
             return SkedConfirmationDialog(
-              title: Text(l10n.dataImportExport),
-              content: Text(l10n.replaceActiveSchedulePrompt),
-              actions: [
-                TextButton(
-                  onPressed: () => popWith('new'),
-                  child: Text(l10n.addAsNewSchedule),
-                ),
-                FilledButton(
-                  onPressed: () => popWith('replace'),
-                  child: Text(l10n.replaceCategory),
-                ),
-              ],
-            );
-          },
-        );
-        if (choice == null) {
-          return false;
-        }
-        if (choice == 'replace') {
-          replacementScheduleId = await _pickGeneralScheduleReplacementId(
-            schedules: provider.generalSchedules,
-          );
-          if (replacementScheduleId == null) {
-            return false;
-          }
-          mode = GeneralScheduleImportMode.replaceActive;
-        }
-      }
-
-      final result = await provider.importSelectedGeneralSchedulesJson(
-        content,
-        scheduleIds: selectedIds,
-        mode: mode,
-        replacementScheduleId: replacementScheduleId,
-      );
-      if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(feedbackContext).showSnackBar(
-          SnackBar(content: Text(_formatGeneralImportResult(result, l10n))),
-        );
-      }
-      return true;
-    } on FormatException catch (e) {
-      if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(feedbackContext)
-            .showSnackBar(SnackBar(content: Text(e.message)));
-      }
-      return false;
-    } catch (error, stackTrace) {
-      debugPrint('General schedule JSON import failed: $error\n$stackTrace');
-      if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(feedbackContext)
-            .showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
-      }
-      return false;
-    }
-  }
-
-  Future<void> _importGeneralSchedulesIcsFile(
-    TimetableProvider provider,
-  ) async {
-    final source = await _pickTextFile(allowedExtensions: const ['ics']);
-    if (source == null || !mounted) return;
-    await _importGeneralSchedulesIcsSource(provider, source, context);
-  }
-
-  Future<void> _importGeneralSchedulesIcsText(
-    TimetableProvider provider,
-  ) async {
-    final l10n = AppLocalizations.of(context);
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TextImportPage(
-          title: l10n.importIcs,
-          labelText: l10n.icsContent,
-          hintText: l10n.pasteIcsContentHint,
-          onSubmit: (context, content) async {
-            return _importGeneralSchedulesIcsSource(provider, content, context);
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<bool> _importGeneralSchedulesIcsSource(
-    TimetableProvider provider,
-    String content,
-    BuildContext feedbackContext,
-  ) async {
-    final l10n = AppLocalizations.of(context);
-    try {
-      final preview = provider.previewImportGeneralSchedulesIcs(content);
-      if (!feedbackContext.mounted) return false;
-      var mode = GeneralScheduleImportMode.addAsNew;
-      String? replacementScheduleId;
-      if (preview.schedules.length == 1 &&
-          provider.activeGeneralScheduleOrNull != null &&
-          feedbackContext.mounted) {
-        final choice = await showExpressiveDialog<String>(
-          context: feedbackContext,
-          builder: (ctx) {
-            var popped = false;
-            void popWith(String value) {
-              if (popped) return;
-              popped = true;
-              Navigator.of(ctx).pop(value);
-            }
-
-            return SkedConfirmationDialog(
-              title: Text(l10n.importIcs),
+              title: Text(ics ? l10n.importIcs : l10n.dataImportExport),
               content: Text(
-                l10n.importIcsPreviewPrompt(
-                  preview.schedules.first.events.length,
-                ),
+                ics
+                    ? l10n.importIcsPreviewPrompt(preview.first.events.length)
+                    : l10n.replaceActiveSchedulePrompt,
               ),
               actions: [
                 TextButton(
@@ -1977,43 +1916,42 @@ class _SettingsPageState extends State<SettingsPage>
             );
           },
         );
-        if (choice == null) {
-          return false;
-        }
+        if (choice == null || !isCurrent()) return false;
         if (choice == 'replace') {
           replacementScheduleId = await _pickGeneralScheduleReplacementId(
-            schedules: provider.generalSchedules,
+            schedules: provider.generalView.schedules,
           );
-          if (replacementScheduleId == null) {
-            return false;
-          }
+          if (replacementScheduleId == null || !isCurrent()) return false;
           mode = GeneralScheduleImportMode.replaceActive;
         }
       }
-      final result = await provider.importGeneralSchedulesIcs(
-        content,
+
+      final result = await provider.transfers.applySchedules(
+        prepared,
+        scheduleIds: selectedIds,
         mode: mode,
         replacementScheduleId: replacementScheduleId,
       );
-      if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(feedbackContext).showSnackBar(
-          SnackBar(content: Text(_formatGeneralImportResult(result, l10n))),
-        );
-      }
+      if (!feedbackContext.mounted || !isCurrent()) return false;
+      ScaffoldMessenger.of(feedbackContext).showSnackBar(
+        SnackBar(content: Text(_formatGeneralImportResult(result, l10n))),
+      );
       return true;
-    } on FormatException catch (e) {
-      if (feedbackContext.mounted) {
+    } on FormatException catch (error) {
+      if (feedbackContext.mounted && isCurrent()) {
         ScaffoldMessenger.of(feedbackContext)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
       return false;
     } catch (error, stackTrace) {
-      debugPrint('General schedule ICS import failed: $error\n$stackTrace');
-      if (feedbackContext.mounted) {
+      if (feedbackContext.mounted && isCurrent()) {
+        debugPrint('General schedule import failed: $error\n$stackTrace');
         ScaffoldMessenger.of(feedbackContext)
             .showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
       }
       return false;
+    } finally {
+      task.dispose();
     }
   }
 
@@ -2040,29 +1978,49 @@ class _SettingsPageState extends State<SettingsPage>
   Future<void> _exportGeneralSchedules(
     TimetableProvider provider, {
     required bool share,
+    bool ics = false,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final selectedIds = await _pickGeneralScheduleIds(
-      schedules: provider.generalSchedules,
-      title: l10n.selectSchedulesToExport,
-      confirmText: share ? l10n.share : l10n.save,
-      initialSelectedIds: _defaultGeneralScheduleSelectionIds(
-        provider.generalSchedules,
-      ),
+    final task = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.general,
+      ownerRoute: ModalRoute.of(context),
     );
-    if (selectedIds == null || selectedIds.isEmpty) return;
+    bool isCurrent() => mounted && task.isCurrent;
     try {
-      final content = provider.exportSelectedGeneralSchedulesJson(selectedIds);
-      const fileName = 'Sked_general_schedules.json';
+      final selectedIds = await _pickGeneralScheduleIds(
+        schedules: provider.generalView.schedules,
+        title: ics
+            ? l10n.selectCalendarsToExportIcs
+            : l10n.selectSchedulesToExport,
+        confirmText: share ? l10n.share : l10n.save,
+        initialSelectedIds: _defaultGeneralScheduleSelectionIds(
+          provider.generalView.schedules,
+        ),
+      );
+      if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
+      final content = await provider.transfers.exportSchedules(
+        selectedIds,
+        ics: ics,
+      );
+      if (!mounted || !task.isCurrent) return;
+      final payload = ExportPayload(
+        fileName: 'Sked_general_schedules.${ics ? 'ics' : 'json'}',
+        content: content,
+        mimeType: ics ? 'text/calendar' : 'application/json',
+        allowedExtensions: [ics ? 'ics' : 'json'],
+      );
       if (share) {
-        await _shareJson(fileName, content);
+        await _shareFile(payload);
       } else {
-        await _saveJsonToFile(fileName, content);
+        await _saveFileToDisk(payload);
       }
-    } on FormatException catch (e) {
-      if (mounted) _showMessage(e.message);
+    } on FormatException catch (error) {
+      if (isCurrent()) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage(l10n.saveFailedRetry);
+      if (isCurrent()) _showMessage(l10n.saveFailedRetry);
+    } finally {
+      task.dispose();
     }
   }
 
@@ -2071,67 +2029,41 @@ class _SettingsPageState extends State<SettingsPage>
     required _ExportFormat format,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final selectedIds = await _pickGeneralScheduleIds(
-      schedules: provider.generalSchedules,
-      title: format == _ExportFormat.ics
-          ? l10n.selectCalendarsToCopyIcs
-          : l10n.selectSchedulesToExport,
-      confirmText: l10n.copyText,
-      initialSelectedIds: _defaultGeneralScheduleSelectionIds(
-        provider.generalSchedules,
-      ),
+    final ics = format == _ExportFormat.ics;
+    final task = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.general,
+      ownerRoute: ModalRoute.of(context),
     );
-    if (selectedIds == null || selectedIds.isEmpty || !mounted) return;
+    bool isCurrent() => mounted && task.isCurrent;
     try {
-      final content = format == _ExportFormat.ics
-          ? provider.exportSelectedGeneralSchedulesIcs(selectedIds)
-          : provider.exportSelectedGeneralSchedulesJson(selectedIds);
+      final selectedIds = await _pickGeneralScheduleIds(
+        schedules: provider.generalView.schedules,
+        title: ics
+            ? l10n.selectCalendarsToCopyIcs
+            : l10n.selectSchedulesToExport,
+        confirmText: l10n.copyText,
+        initialSelectedIds: _defaultGeneralScheduleSelectionIds(
+          provider.generalView.schedules,
+        ),
+      );
+      if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
+      final content = await provider.transfers.exportSchedules(
+        selectedIds,
+        ics: ics,
+      );
+      if (!mounted || !task.isCurrent) return;
       await showTextExportDialog(
         context,
-        title: format == _ExportFormat.ics
-            ? l10n.exportIcsText
-            : l10n.exportJsonText,
+        title: ics ? l10n.exportIcsText : l10n.exportJsonText,
         content: content,
       );
-    } on FormatException catch (e) {
-      if (mounted) _showMessage(e.message);
+    } on FormatException catch (error) {
+      if (isCurrent()) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage(l10n.saveFailedRetry);
-    }
-  }
-
-  Future<void> _exportGeneralSchedulesIcs(
-    TimetableProvider provider, {
-    required bool share,
-  }) async {
-    final l10n = AppLocalizations.of(context);
-    final selectedIds = await _pickGeneralScheduleIds(
-      schedules: provider.generalSchedules,
-      title: l10n.selectCalendarsToExportIcs,
-      confirmText: share ? l10n.share : l10n.save,
-      initialSelectedIds: _defaultGeneralScheduleSelectionIds(
-        provider.generalSchedules,
-      ),
-    );
-    if (selectedIds == null || selectedIds.isEmpty) return;
-    try {
-      final content = provider.exportSelectedGeneralSchedulesIcs(selectedIds);
-      const fileName = 'Sked_general_schedules.ics';
-      final payload = ExportPayload(
-        fileName: fileName,
-        content: content,
-        mimeType: 'text/calendar',
-        allowedExtensions: const ['ics'],
-      );
-      if (share) {
-        await _shareFile(payload);
-      } else {
-        await _saveFileToDisk(payload);
-      }
-    } on FormatException catch (e) {
-      if (mounted) _showMessage(e.message);
-    } catch (_) {
-      if (mounted) _showMessage(l10n.saveFailedRetry);
+      if (isCurrent()) _showMessage(l10n.saveFailedRetry);
+    } finally {
+      task.dispose();
     }
   }
 
