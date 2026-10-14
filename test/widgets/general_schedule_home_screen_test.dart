@@ -1172,6 +1172,55 @@ void main() {
     },
   );
 
+  testWidgets('month snapshots query the domain and refresh their agenda', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final event = GeneralEvent(
+      id: 'month-domain',
+      calendarId: 'cal1',
+      title: 'Month domain event',
+      startDateTimeIso: '2026-06-16T09:00:00.000',
+      endDateTimeIso: '2026-06-16T10:00:00.000',
+    );
+    final base = _buildGeneralDataWithCalendars([
+      GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
+    ], activeId: 'cal1');
+    final provider = _DomainQueryProvider(
+      _MemoryTimetableStorage(
+        base.copyWith(
+          generalMode: base.generalMode.copyWith(defaultView: generalViewMonth),
+        ),
+      ),
+    );
+    await provider.load();
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+    final agenda = find.byKey(const ValueKey('general-month-stacked-agenda'));
+    expect(agenda, findsOneWidget);
+    expect(
+      find.descendant(of: agenda, matching: find.text('Month domain event')),
+      findsOneWidget,
+    );
+    await tester.runAsync(
+      () => provider.generalCommands.saveEvent(
+        event.copyWith(title: 'Changed month event'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Month domain event'), findsNothing);
+    expect(
+      find.descendant(of: agenda, matching: find.text('Changed month event')),
+      findsOneWidget,
+    );
+    await tester.runAsync(
+      () => provider.generalCommands.updateScheduleVisibility('cal1', false),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Changed month event'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('each schedule view opens a tapped event from the shared home', (
     tester,
   ) async {

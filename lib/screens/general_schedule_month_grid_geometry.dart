@@ -153,15 +153,15 @@ class _DesktopMonthPageLayout {
     BuildContext context, {
     required _DesktopMonthTracks columns,
     required GeneralMonthGridModel model,
-    required TimetableProvider provider,
+    required GeneralMonthDisplaySettings display,
     required double availableHeight,
   }) {
     final metrics = _DesktopMonthCellMetrics.forGrid(
       context,
       cellWidth: columns.minimumCellExtent,
       days: model.days,
-      lunar: _showMonthLunar(provider),
-      locale: provider.localeCode,
+      lunar: display.showLunarCalendar,
+      locale: display.localeCode,
     );
     final minimum =
         (metrics.minimumHeight * columns.dpr).ceil() * model.rowCount;
@@ -271,7 +271,7 @@ class _DesktopMonthCalendarPanel extends StatefulWidget {
     required this.selectedDate,
     required this.today,
     required this.occurrencesByDay,
-    required this.provider,
+    required this.display,
     required this.previousPage,
     required this.nextPage,
     required this.dragOffset,
@@ -287,7 +287,7 @@ class _DesktopMonthCalendarPanel extends StatefulWidget {
   final GeneralMonthGridModel model;
   final DateTime selectedDate, today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
-  final TimetableProvider provider;
+  final GeneralMonthDisplaySettings display;
   final GeneralMonthPage previousPage, nextPage;
   final ValueListenable<double> dragOffset;
   final bool sharedTopEdge, sharedStartEdge, sharedEndEdge;
@@ -336,8 +336,8 @@ class _DesktopMonthCalendarPanelState
     textScaler: MediaQuery.textScalerOf(context),
     direction: Directionality.of(context),
     locale: Localizations.maybeLocaleOf(context),
-    calendarLocale: widget.provider.localeCode,
-    lunar: _showMonthLunar(widget.provider),
+    calendarLocale: widget.display.localeCode,
+    lunar: widget.display.showLunarCalendar,
   );
 
   _DesktopMonthPageShape _pageShape(GeneralMonthGridModel model) => (
@@ -391,7 +391,7 @@ class _DesktopMonthCalendarPanelState
       context,
       columns: geometry.columns,
       model: model,
-      provider: widget.provider,
+      display: widget.display,
       availableHeight: geometry.availableBody,
     ),
   );
@@ -403,7 +403,7 @@ class _DesktopMonthCalendarPanelState
       :selectedDate,
       :today,
       :occurrencesByDay,
-      :provider,
+      :display,
       :previousPage,
       :nextPage,
       :dragOffset,
@@ -459,7 +459,7 @@ class _DesktopMonthCalendarPanelState
                 selectedDate: date,
                 today: today,
                 occurrencesByDay: occurrences,
-                provider: provider,
+                display: display,
                 rtl: rtl,
                 onDaySelected: onDaySelected,
               ),
@@ -614,7 +614,7 @@ class _DesktopMonthDatePage extends StatelessWidget {
     required this.selectedDate,
     required this.today,
     required this.occurrencesByDay,
-    required this.provider,
+    required this.display,
     required this.rtl,
     required this.onDaySelected,
   });
@@ -623,7 +623,7 @@ class _DesktopMonthDatePage extends StatelessWidget {
   final GeneralMonthGridModel model;
   final DateTime selectedDate, today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
-  final TimetableProvider provider;
+  final GeneralMonthDisplaySettings display;
   final bool rtl;
   final ValueChanged<DateTime> onDaySelected;
 
@@ -678,8 +678,8 @@ class _DesktopMonthDatePage extends StatelessWidget {
                             model.days[index],
                           )] ??
                           const <GeneralEventOccurrence>[],
-                      locale: provider.localeCode,
-                      showLunar: _showMonthLunar(provider),
+                      locale: display.localeCode,
+                      showLunar: display.showLunarCalendar,
                       height: cellRect(index).height,
                       metrics: layout.metrics,
                       onTap: () => onDaySelected(model.days[index]),

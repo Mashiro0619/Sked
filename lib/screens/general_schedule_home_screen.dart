@@ -577,9 +577,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                     anchorContext: anchor,
                                   ),
                             ),
-                            generalViewMonth => _MonthCalendarView(
+                            generalViewMonth => _MonthCalendarSource(
                               date: selectedDate,
-                              provider: provider,
+                              view: provider.generalView,
+                              localeCode: provider.localeCode,
                               filter: filter,
                               active: pagerActive,
                               onDaySelected: selectDate,

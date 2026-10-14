@@ -11,8 +11,6 @@ bool workspaceMonthCanSplit(BuildContext context, double width) =>
 
 const _monthGridSpacing = 1.0;
 
-bool _showMonthLunar(TimetableProvider provider) =>
-    provider.generalShowLunarCalendar && provider.localeCode.startsWith('zh');
 const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
   'general-month-compact-selected-day-feedback',
 );
@@ -84,10 +82,11 @@ double _monthMinimumCellHeight(
   );
 }
 
-class _MonthCalendarView extends StatefulWidget {
-  const _MonthCalendarView({
+class _MonthCalendarSource extends StatefulWidget {
+  const _MonthCalendarSource({
     required this.date,
-    required this.provider,
+    required this.view,
+    required this.localeCode,
     required this.filter,
     required this.active,
     required this.onDaySelected,
@@ -96,8 +95,73 @@ class _MonthCalendarView extends StatefulWidget {
   });
 
   final DateTime date;
-  final TimetableProvider provider;
+  final GeneralViewState view;
+  final String localeCode;
   final _GeneralOccurrenceFilter filter;
+  final bool active;
+  final ValueChanged<DateTime> onDaySelected;
+  final void Function(DateTime date, Rect? anchor) onEmptySlotTap;
+  final _GeneralOccurrenceTap onOccurrenceTap;
+
+  @override
+  State<_MonthCalendarSource> createState() => _MonthCalendarSourceState();
+}
+
+class _MonthCalendarSourceState extends State<_MonthCalendarSource> {
+  final _projection = GeneralMonthProjectionCache();
+
+  @override
+  void didUpdateWidget(covariant _MonthCalendarSource oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.view, oldWidget.view)) _projection.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.view.data;
+    var selectedDate = normalizeDateOnly(widget.date);
+    if (!data.showWeekends && selectedDate.weekday > DateTime.friday) {
+      selectedDate = addCalendarDays(selectedDate, 8 - selectedDate.weekday);
+    }
+    return _MonthCalendarView(
+      date: widget.date,
+      snapshot: GeneralMonthViewSnapshot(
+        filtered: widget.filter.isActive,
+        pages: _projection.project(
+          data: data,
+          selectedDate: selectedDate,
+          queryOccurrences: widget.view.occurrencesForQuery,
+          searchQuery: widget.filter.query,
+          colorValue: widget.filter.colorValue,
+        ),
+        display: GeneralMonthDisplaySettings(
+          showWeekends: data.showWeekends,
+          showLunarCalendar:
+              data.showLunarCalendar && widget.localeCode.startsWith('zh'),
+          localeCode: widget.localeCode,
+        ),
+      ),
+      active: widget.active,
+      onDaySelected: widget.onDaySelected,
+      onEmptySlotTap: widget.onEmptySlotTap,
+      onOccurrenceTap: widget.onOccurrenceTap,
+    );
+  }
+}
+
+class _MonthCalendarView extends StatefulWidget {
+  const _MonthCalendarView({
+    required this.date,
+    required this.snapshot,
+    required this.active,
+    required this.onDaySelected,
+    required this.onEmptySlotTap,
+    required this.onOccurrenceTap,
+  });
+
+  final DateTime date;
+  final GeneralMonthViewSnapshot snapshot;
+  GeneralMonthDisplaySettings get display => snapshot.display;
   final bool active;
   final ValueChanged<DateTime> onDaySelected;
   final void Function(DateTime date, Rect? anchor) onEmptySlotTap;
@@ -111,7 +175,6 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   static int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
   final ScrollController _compactScrollController = ScrollController();
-  final _monthProjection = GeneralMonthProjectionCache();
   bool _calendarRevealScheduled = false;
 
   @override
@@ -122,8 +185,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
 
   DateTime _visibleDayForDate(DateTime date, {int direction = 1}) {
     final normalized = normalizeDateOnly(date);
-    if (widget.provider.generalShowWeekends ||
-        normalized.weekday <= DateTime.friday) {
+    if (widget.display.showWeekends || normalized.weekday <= DateTime.friday) {
       return normalized;
     }
     return addCalendarDays(
@@ -168,9 +230,6 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   @override
   void didUpdateWidget(covariant _MonthCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(widget.provider, oldWidget.provider)) {
-      _monthProjection.clear();
-    }
     if (widget.active &&
         (widget.date.year != oldWidget.date.year ||
             widget.date.month != oldWidget.date.month)) {
@@ -220,13 +279,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
         if (mounted && widget.active) widget.onDaySelected(selectedDate);
       });
     }
-    final pages = _monthProjection.project(
-      data: widget.provider.generalMode,
-      selectedDate: selectedDate,
-      queryOccurrences: widget.provider.generalOccurrencesForQuery,
-      searchQuery: widget.filter.query,
-      colorValue: widget.filter.colorValue,
-    );
+    final pages = widget.snapshot.pages;
     final model = pages.current.model;
     final occurrencesByDay = pages.current.occurrencesByDay;
     final selectedOccurrences =
@@ -272,7 +325,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                           selectedDate: selectedDate,
                           today: today,
                           occurrencesByDay: occurrencesByDay,
-                          provider: widget.provider,
+                          display: widget.display,
                           previousPage: pages.previous,
                           nextPage: pages.next,
                           onPreviousMonth: _goToPreviousMonth,
@@ -282,7 +335,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                     final agenda = _MonthAgendaPanel(
                       date: selectedDate,
                       occurrences: selectedOccurrences,
-                      filtered: widget.filter.isActive,
+                      filtered: widget.snapshot.filtered,
                       onAddEvent: (anchor) => widget.onEmptySlotTap(
                         selectedDate,
                         WorkspaceEditorConfiguration(anchorContext: anchor)
@@ -350,9 +403,8 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                         model.rowCount *
                             _monthMinimumCellHeight(
                               context,
-                              showLunarCalendar: _showMonthLunar(
-                                widget.provider,
-                              ),
+                              showLunarCalendar:
+                                  widget.display.showLunarCalendar,
                             ) +
                         48 * textScale;
                     if (constraints.hasBoundedHeight &&
@@ -429,7 +481,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                                   key: _generalMonthCompactAgendaKey,
                                   date: selectedDate,
                                   count: selectedOccurrences.length,
-                                  filtered: widget.filter.isActive,
+                                  filtered: widget.snapshot.filtered,
                                   compact: true,
                                   onAddEvent: (anchor) => widget.onEmptySlotTap(
                                     selectedDate,
@@ -449,7 +501,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                                       12,
                                     ),
                                     child: Text(
-                                      widget.filter.isActive
+                                      widget.snapshot.filtered
                                           ? l.noMatchingEvents
                                           : l.monthNoEvents,
                                       style: Theme.of(context)
@@ -495,7 +547,7 @@ class _MonthCalendarPanel extends StatefulWidget {
     required this.selectedDate,
     required this.today,
     required this.occurrencesByDay,
-    required this.provider,
+    required this.display,
     required this.previousPage,
     required this.nextPage,
     required this.onPreviousMonth,
@@ -510,7 +562,7 @@ class _MonthCalendarPanel extends StatefulWidget {
   final DateTime selectedDate;
   final DateTime today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
-  final TimetableProvider provider;
+  final GeneralMonthDisplaySettings display;
   final GeneralMonthPage previousPage, nextPage;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
@@ -688,7 +740,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         selectedDate: widget.selectedDate,
         today: widget.today,
         occurrencesByDay: widget.occurrencesByDay,
-        provider: widget.provider,
+        display: widget.display,
         previousPage: widget.previousPage,
         nextPage: widget.nextPage,
         dragOffset: _dragPosition,
@@ -715,7 +767,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
           selectedDate: widget.selectedDate,
           today: widget.today,
           occurrencesByDay: widget.occurrencesByDay,
-          provider: widget.provider,
+          display: widget.display,
           compact: compact,
           dragOffset: _dragPosition,
           previousPage: widget.previousPage,
@@ -744,7 +796,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
                 : MainAxisSize.min,
             children: [
               _MonthWeekdayHeaderRow(
-                showWeekends: widget.provider.generalShowWeekends,
+                showWeekends: widget.display.showWeekends,
                 compact: compact,
               ),
               if (shouldFillHeight) Expanded(child: grid) else grid,
@@ -806,7 +858,7 @@ class _DraggableMonthGrid extends StatelessWidget {
     required this.selectedDate,
     required this.today,
     required this.occurrencesByDay,
-    required this.provider,
+    required this.display,
     required this.compact,
     required this.dragOffset,
     required this.previousPage,
@@ -822,7 +874,7 @@ class _DraggableMonthGrid extends StatelessWidget {
   final DateTime selectedDate;
   final DateTime today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
-  final TimetableProvider provider;
+  final GeneralMonthDisplaySettings display;
   final bool compact;
   final ValueListenable<double> dragOffset;
   final GeneralMonthPage previousPage;
@@ -852,7 +904,7 @@ class _DraggableMonthGrid extends StatelessWidget {
       _monthMinimumCellHeight(
         context,
         compact: compact,
-        showLunarCalendar: _showMonthLunar(provider),
+        showLunarCalendar: display.showLunarCalendar,
       ),
     );
     final totalSpacing = (model.rowCount - 1) * _monthGridSpacing;
@@ -884,7 +936,7 @@ class _DraggableMonthGrid extends StatelessWidget {
           selectedDate: date,
           today: today,
           occurrencesByDay: occurrences,
-          provider: provider,
+          display: display,
           compact: compact,
           onDaySelected: onDaySelected,
         ),
@@ -960,7 +1012,7 @@ class _MonthDateGrid extends StatelessWidget {
     required this.selectedDate,
     required this.today,
     required this.occurrencesByDay,
-    required this.provider,
+    required this.display,
     required this.compact,
     required this.onDaySelected,
   });
@@ -969,7 +1021,7 @@ class _MonthDateGrid extends StatelessWidget {
   final DateTime selectedDate;
   final DateTime today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
-  final TimetableProvider provider;
+  final GeneralMonthDisplaySettings display;
   final bool compact;
   final ValueChanged<DateTime> onDaySelected;
 
@@ -996,7 +1048,7 @@ class _MonthDateGrid extends StatelessWidget {
         final minimumCellHeight = _monthMinimumCellHeight(
           context,
           compact: compact,
-          showLunarCalendar: _showMonthLunar(provider),
+          showLunarCalendar: display.showLunarCalendar,
         );
         final minimumGridHeight =
             model.rowCount * minimumCellHeight + totalSpacing;
@@ -1045,8 +1097,8 @@ class _MonthDateGrid extends StatelessWidget {
                       isToday: _sameDay(day, today),
                       isSelected: _sameDay(day, selectedDate),
                       occurrences: dayOccurrences,
-                      localeCode: provider.localeCode,
-                      showLunarCalendar: _showMonthLunar(provider),
+                      localeCode: display.localeCode,
+                      showLunarCalendar: display.showLunarCalendar,
                       cellWidth: cellWidth,
                       cellHeight: cellConstraints.maxHeight,
                       compact: cellCompact,

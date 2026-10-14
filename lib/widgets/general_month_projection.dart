@@ -1,5 +1,37 @@
 import '../models/timetable_models.dart';
 
+typedef GeneralMonthPages = ({
+  GeneralMonthPage current,
+  GeneralMonthPage previous,
+  GeneralMonthPage next,
+});
+
+class GeneralMonthDisplaySettings {
+  const GeneralMonthDisplaySettings({
+    required this.showWeekends,
+    required this.showLunarCalendar,
+    required this.localeCode,
+  });
+
+  final bool showWeekends;
+  final bool showLunarCalendar;
+  final String localeCode;
+}
+
+/// Rendering receives the resolved month pages and scalar display values. It
+/// has no access to live domain queries or application-wide settings.
+class GeneralMonthViewSnapshot {
+  const GeneralMonthViewSnapshot({
+    required this.pages,
+    required this.display,
+    required this.filtered,
+  });
+
+  final GeneralMonthPages pages;
+  final GeneralMonthDisplaySettings display;
+  final bool filtered;
+}
+
 /// A month query and its day buckets do not depend on the selected day or the
 /// viewport. Keep only the current and neighboring months, reusing their work
 /// when the user selects a day or pages in either direction.
@@ -8,8 +40,7 @@ class GeneralMonthProjectionCache {
   (bool, String, int?)? _options;
   final _months = <DateTime, GeneralMonthProjection>{};
 
-  ({GeneralMonthPage current, GeneralMonthPage previous, GeneralMonthPage next})
-  project({
+  GeneralMonthPages project({
     required GeneralScheduleData data,
     required DateTime selectedDate,
     required List<GeneralEventOccurrence> Function(GeneralOccurrenceQuery)
