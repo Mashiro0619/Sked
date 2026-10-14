@@ -10,6 +10,8 @@ import '../controllers/app_persistence.dart';
 import '../controllers/data_transfer_controller.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_view_state.dart';
+import '../controllers/general_navigation_controller.dart';
+import '../controllers/workspace_commands.dart';
 import '../controllers/school_import_secret_controller.dart';
 import '../controllers/settings_commands.dart';
 import '../controllers/settings_view_state.dart';
@@ -25,7 +27,6 @@ import '../models/timetable_models.dart';
 import '../models/app_data_commit.dart';
 import '../services/app_backup_restore_journal.dart';
 import '../services/agenda_runtime_mutation_lock.dart';
-import '../services/general_calendar_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/general_occurrence_service.dart';
 import '../services/developer_sample_data_service.dart';
@@ -44,7 +45,6 @@ part 'timetable_provider_import_export.dart';
 part 'timetable_provider_lifecycle.dart';
 part 'timetable_provider_developer.dart';
 
-const _calendarService = GeneralCalendarService();
 const _importExportService = ImportExportService();
 
 enum AppImportMode { replaceAll, addAll }
@@ -64,14 +64,12 @@ String _defaultSystemLocaleCodeResolver() {
   );
 }
 
-bool _sameGeneralDate(DateTime a, DateTime b) =>
-    a.year == b.year && a.month == b.month && a.day == b.day;
-
 abstract class _TimetableProviderBase extends ChangeNotifier {
   AppSession get _session;
   AppDataMaintenance get _maintenance;
   AppPersistence get _persistence;
   DataTransferController get _transfers;
+  WorkspaceCommands get _workspaces;
   AppSession get session => _session;
   Stream<AppDataCommit> get committedData => _session.commits;
   AppDataVersions get committedDataVersions => _session.versions;
@@ -82,7 +80,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   List<String> _journalRecoveryArtifacts = const [];
   String? _corruptAppBackupRestoreJournalArtifact;
 
-  final Map<AppMode, Set<Future<bool> Function()>> _workspaceExitGuards = {};
   GeneralViewState get _generalView;
   WorkspaceViewState get _workspaceView;
 
@@ -105,17 +102,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   VoidCallback registerWorkspaceExitGuard(
     AppMode mode,
     Future<bool> Function() guard,
-  ) {
-    (_workspaceExitGuards[mode] ??= {}).add(guard);
-    return () => _workspaceExitGuards[mode]?.remove(guard);
-  }
-
-  Future<bool> _prepareWorkspaceDisable(AppMode mode) async {
-    for (final guard in [...?_workspaceExitGuards[mode]]) {
-      if (!await guard()) return false;
-    }
-    return true;
-  }
+  ) => _workspaces.registerExitGuard(mode, guard);
 
   void requireWorkspaceEnabled(AppMode mode) {
     if (!_appData.isWorkspaceEnabled(mode)) {
@@ -154,14 +141,8 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Future<AppData> _buildDefaultAppData();
   Future<void> _resumePendingAppBackupRestore();
   Future<void> _startFreshAfterCorruptAppBackupRestoreJournal();
-  // These declarations are part of the mixin contract; the concrete methods
-  // below carry additional internal options used by the save transaction.
-  Future<void> _saveAndNotify({
-    // ignore: unused_element_parameter
-    bool emitCommit = true,
-  });
-  // ignore: unused_element_parameter
-  Future<void> _save({bool emitCommit = true});
+  Future<void> _saveAndNotify();
+  Future<void> _save();
   void emitAppDataCommit(AppData snapshot, {int? dataSessionRevision});
 
   void _ensureAppBackupRestoreMutationAllowed() =>
@@ -269,6 +250,23 @@ class TimetableProvider extends _TimetableProviderBase
       persist: _saveAndNotify,
     );
     _workspaceView = WorkspaceViewState(_session, _generalView);
+    _workspaces = WorkspaceCommands(
+      session: _session,
+      view: _workspaceView,
+      transactions: _workspaceTransactions,
+      persistence: _persistence,
+      secrets: _schoolImportSecrets,
+      runtimeMutationLock: _workspaceMutationLock,
+      notifyViewChanged: notifyListeners,
+    );
+    _generalNavigation = GeneralNavigationController(
+      session: _session,
+      view: _generalView,
+      transactions: _workspaceTransactions,
+      persistence: _persistence,
+      maintenance: _maintenance,
+      notifyViewChanged: notifyListeners,
+    );
     _settingsView = SettingsViewState(_workspaceView);
     _settingsCommands = SettingsCommands(
       session: _session,
@@ -291,6 +289,9 @@ class TimetableProvider extends _TimetableProviderBase
   late final AppPersistence _persistence;
   @override
   late final DataTransferController _transfers;
+  @override
+  late final WorkspaceCommands _workspaces;
+  late final GeneralNavigationController _generalNavigation;
   late final StudentViewState _studentView;
   late final StudentCommands _studentCommands;
   @override
@@ -325,10 +326,6 @@ class TimetableProvider extends _TimetableProviderBase
   @override
   set _appData(AppData value) {
     _session.replaceData(value);
-  }
-
-  void _restoreAppDataAfterPersistenceFailure(AppData value) {
-    _session.restoreData(value);
   }
 
   StudentCommands get studentCommands => _studentCommands;
@@ -568,67 +565,22 @@ class TimetableProvider extends _TimetableProviderBase
     DateTime? focusedDate,
     bool Function()? isCurrent,
     bool revealFocus = true,
-  }) => _commitGeneralNavigation(
-    (data) {
-      final focus = focusedDate ?? data.selectedDate;
-      return data.copyWith(
-        customDateRange: range,
-        selectedDateIso: (range.contains(focus) ? focus : range.start)
-            .toIso8601String()
-            .split('T')
-            .first,
-      );
-    },
+  }) => _generalNavigation.setDateRange(
+    range,
+    focusedDate: focusedDate,
     isCurrent: isCurrent,
     revealFocus: revealFocus,
   );
 
-  Future<void> clearGeneralDateRange() => _commitGeneralNavigation((data) {
-    final date = data.selectedDate;
-    final focus = !data.showWeekends && date.weekday > DateTime.friday
-        ? DateTime(
-            date.year,
-            date.month,
-            date.day - date.weekday + DateTime.friday,
-          )
-        : date;
-    return _calendarService
-        .setSelectedDate(data, focus)
-        .copyWith(customDateRange: null);
-  });
+  Future<void> clearGeneralDateRange() => _generalNavigation.clearDateRange();
 
   Future<void> setSelectedGeneralDate(
     DateTime date, {
     bool moveCustomRange = true,
-  }) async {
-    requireWorkspaceEnabled(AppMode.general);
-    if (_generalView.navigationPending ||
-        _appData.generalMode.customDateRange != null) {
-      await _commitGeneralNavigation(
-        (data) => _calendarService
-            .setSelectedDate(data, date)
-            .copyWith(
-              customDateRange: moveCustomRange
-                  ? data.customDateRange?.containing(date)
-                  : data.customDateRange,
-            ),
-      );
-      return;
-    }
-    final next = _calendarService.setSelectedDate(_appData.generalMode, date);
-    if (identical(next, _appData.generalMode) ||
-        _sameGeneralDate(
-          next.selectedDate,
-          _appData.generalMode.selectedDate,
-        )) {
-      return;
-    }
-    requireWorkspaceEnabled(AppMode.general);
-    _appData = _appData.copyWith(generalMode: next);
-    _generalView.revealFocus();
-    notifyListeners();
-    _scheduleUiStateSave();
-  }
+  }) => _generalNavigation.setSelectedDate(
+    date,
+    moveCustomRange: moveCustomRange,
+  );
 
   @override
   bool _isLoaded = false;
@@ -782,6 +734,8 @@ class TimetableProvider extends _TimetableProviderBase
   WorkspaceViewState get workspaceView => _workspaceView;
   AppDataMaintenance get maintenance => _maintenance;
   AppPersistence get persistence => _persistence;
+  WorkspaceCommands get workspaces => _workspaces;
+  GeneralNavigationController get generalNavigation => _generalNavigation;
   SchoolImportSecretController get schoolImportSecrets => _schoolImportSecrets;
 
   NotificationSettings get notificationSettings =>
@@ -1021,72 +975,8 @@ class TimetableProvider extends _TimetableProviderBase
   bool isWorkspaceEnabled(AppMode mode) => _workspaceView.isEnabled(mode);
   bool get hasMultipleWorkspaces => enabledWorkspaces.length > 1;
 
-  Future<void> setWorkspaceEnabled(
-    AppMode mode,
-    bool enabled,
-  ) => _workspaceTransactions.run((transaction) async {
-    if (_appData.isWorkspaceEnabled(mode) == enabled) return;
-    if (!enabled && _appData.enabledWorkspaces.length == 1) {
-      throw StateError('At least one workspace must remain enabled.');
-    }
-    if (!enabled && !await _prepareWorkspaceDisable(mode)) return;
-    await _workspaceMutationLock(() async {
-      // Guards may flush edits or a restore may finish while awaiting the
-      // runtime lock. Derive availability from the current snapshot, not the
-      // state from before those asynchronous boundaries.
-      if (!enabled && mode == AppMode.student) {
-        await _schoolImportSecrets.ensurePersistenceKnown();
-      }
-      await _commitWorkspaceAvailability(mode, enabled, transaction);
-    });
-  });
-
-  Future<void> _commitWorkspaceAvailability(
-    AppMode changed,
-    bool enabled,
-    WorkspaceTransaction transaction,
-  ) async {
-    _ensureAppBackupRestoreMutationAllowed();
-    final previous = _appData;
-    if (previous.isWorkspaceEnabled(changed) == enabled) return;
-    final next = {...previous.enabledWorkspaces};
-    enabled ? next.add(changed) : next.remove(changed);
-    if (next.isEmpty) {
-      throw StateError('At least one workspace must remain enabled.');
-    }
-    await transaction.commit((commit) async {
-      _workspaceView.keepPreviousAvailability(previous);
-      _appData = _appData.copyWith(
-        enabledWorkspaces: next,
-        activeMode: next.contains(previous.activeMode)
-            ? previous.activeMode
-            : next.single,
-        workspaceReminderNotBefore: {
-          ...previous.workspaceReminderNotBefore,
-          if (enabled) changed: DateTime.now().toUtc(),
-        },
-      );
-      try {
-        await _saveAndNotify(
-          notify: false,
-          workspaceCommit: commit,
-          rollbackOnFailure: false,
-        );
-      } catch (_) {
-        _restoreAppDataAfterPersistenceFailure(
-          _appData.copyWith(
-            enabledWorkspaces: previous.enabledWorkspaces,
-            activeMode: previous.activeMode,
-            workspaceReminderNotBefore: previous.workspaceReminderNotBefore,
-          ),
-        );
-        rethrow;
-      } finally {
-        _workspaceView.completeChange();
-        if (!_isDisposed) notifyListeners();
-      }
-    });
-  }
+  Future<void> setWorkspaceEnabled(AppMode mode, bool enabled) =>
+      _workspaces.setEnabled(mode, enabled);
 
   AppMode get activeMode => _workspaceView.activeMode;
   bool get isGeneralMode => _workspaceView.isGeneralMode;
@@ -1094,156 +984,14 @@ class TimetableProvider extends _TimetableProviderBase
   StudentModeData get studentMode => _appData.studentMode;
   GeneralScheduleData get generalMode => _visibleGeneralMode;
 
-  Future<void> _commitGeneralNavigation(
-    GeneralScheduleData Function(GeneralScheduleData) change, {
-    bool Function()? isCurrent,
-    bool revealFocus = true,
-  }) async {
-    final sessionToken = dataSessionToken;
-    final resumeBoundary = _appData.workspaceReminderNotBefore[AppMode.general];
-    void validateSession() {
-      _ensureAppBackupRestoreMutationAllowed();
-      requireWorkspaceEnabled(AppMode.general);
-      if (_isDisposed ||
-          _dataClearReserved ||
-          !identical(sessionToken, dataSessionToken) ||
-          isCurrent?.call() == false ||
-          resumeBoundary !=
-              _appData.workspaceReminderNotBefore[AppMode.general]) {
-        throw StateError('Date navigation session is no longer active.');
-      }
-    }
-
-    validateSession();
-    Future<void> commit(WorkspaceTransaction transaction) async {
-      await flushPendingUiStateSaves();
-      // Navigation changes no reminder source or availability. It is already
-      // serialized with provider mode/availability transactions below, and the
-      // repository preserves write ordering. Do not make it wait for native
-      // notification projection or SharedPreferences reconciliation.
-      validateSession();
-      final previous = _appData.generalMode;
-      final next = change(previous);
-      if (next.customDateRange == previous.customDateRange &&
-          next.selectedDateIso == previous.selectedDateIso) {
-        if (revealFocus) {
-          _generalView.revealFocus();
-          notifyListeners();
-        }
-        return;
-      }
-      await transaction.commit((commit) async {
-        _generalView.keepPreviousNavigation(previous);
-        _appData = _appData.copyWith(generalMode: next);
-        try {
-          await _saveAndNotify(
-            notify: false,
-            workspaceCommit: commit,
-            rollbackOnFailure: false,
-            emitCommit: false,
-          );
-          if (revealFocus) _generalView.revealFocus();
-        } catch (_) {
-          _restoreAppDataAfterPersistenceFailure(
-            _appData.copyWith(
-              generalMode: _appData.generalMode.copyWith(
-                customDateRange: previous.customDateRange,
-                selectedDateIso: previous.selectedDateIso,
-              ),
-            ),
-          );
-          rethrow;
-        } finally {
-          _generalView.completeNavigation();
-          if (!_isDisposed) notifyListeners();
-        }
-      });
-    }
-
-    await _workspaceTransactions.run((transaction) async {
-      validateSession();
-      _generalView.navigationPending = true;
-      try {
-        await commit(transaction);
-      } finally {
-        _generalView.navigationPending = false;
-      }
-    });
-  }
-
-  Future<void> switchMode(AppMode mode) =>
-      _workspaceTransactions.run((transaction) async {
-        // Serialize direct callers as well as the shell's navigation command. A
-        // second request waits for the first transaction and then observes the
-        // newly committed mode instead of racing two full snapshots.
-        requireWorkspaceEnabled(mode);
-        if (activeMode == mode) return;
-        final previousMode = activeMode;
-        await transaction.commit(
-          (commit) => _switchModeTransaction(mode, previousMode, commit),
-        );
-      });
-
-  Future<void> _switchModeTransaction(
-    AppMode mode,
-    AppMode previousMode,
-    WorkspaceCommit commit,
-  ) async {
-    _ensureAppBackupRestoreMutationAllowed();
-    _workspaceView.keepPreviousMode(previousMode);
-    _appData = _appData.copyWith(activeMode: mode);
-    try {
-      await _saveAndNotify(
-        notify: false,
-        workspaceCommit: commit,
-        rollbackOnFailure: false,
-      );
-    } catch (_) {
-      // Preserve any newer non-mode edits, but never leave a failed mode
-      // mutation visible or eligible for a later debounced save.
-      if (_appData.activeMode != previousMode) {
-        _restoreAppDataAfterPersistenceFailure(
-          _appData.copyWith(activeMode: previousMode),
-        );
-      }
-      rethrow;
-    } finally {
-      _workspaceView.completeChange();
-      // Publish only after the write result and any failure rollback are
-      // settled. This keeps MyApp's mode-dependent theme snapshot atomic.
-      if (!_isDisposed) {
-        notifyListeners();
-      }
-    }
-  }
+  Future<void> switchMode(AppMode mode) => _workspaces.switchMode(mode);
 
   @override
-  Future<void> _saveAndNotify({
-    bool notify = true,
-    WorkspaceCommit? workspaceCommit,
-    bool rollbackOnFailure = true,
-    bool emitCommit = true,
-    int? rollbackSelectedWeek,
-  }) => _persistence.saveAndNotify(
-    notify: notify,
-    workspaceCommit: workspaceCommit,
-    rollbackOnFailure: rollbackOnFailure,
-    emitCommit: emitCommit,
-    rollbackSelectedWeek: rollbackSelectedWeek,
-  );
+  Future<void> _saveAndNotify({int? rollbackSelectedWeek}) =>
+      _persistence.saveAndNotify(rollbackSelectedWeek: rollbackSelectedWeek);
 
   @override
-  Future<void> _save({
-    WorkspaceCommit? workspaceCommit,
-    bool rollbackOnFailure = true,
-    bool emitCommit = true,
-  }) => _persistence.save(
-    workspaceCommit: workspaceCommit,
-    rollbackOnFailure: rollbackOnFailure,
-    emitCommit: emitCommit,
-  );
-
-  void _scheduleUiStateSave() => _persistence.scheduleUiStateSave();
+  Future<void> _save() => _persistence.save();
 
   Future<void> flushPendingUiStateSaves() =>
       _persistence.flushPendingUiStateSaves();
@@ -1259,7 +1007,7 @@ class TimetableProvider extends _TimetableProviderBase
       return false;
     }
     for (final mode in [...enabledWorkspaces]) {
-      if (!await _prepareWorkspaceDisable(mode)) return false;
+      if (!await _workspaces.prepareExit(mode)) return false;
     }
     await flushPendingUiStateSaves();
     await _repository.waitForPendingWrites(propagateErrors: true);

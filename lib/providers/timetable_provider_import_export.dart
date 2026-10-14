@@ -45,8 +45,8 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     if (mode == AppImportMode.replaceAll) {
       for (final workspace in _appData.enabledWorkspaces) {
         // Replacing data invalidates drafts even when the workspace stays enabled.
-        if ((_workspaceExitGuards[workspace]?.isNotEmpty ?? false) &&
-            !await _prepareWorkspaceDisable(workspace)) {
+        if (_workspaces.hasExitGuards(workspace) &&
+            !await _workspaces.prepareExit(workspace)) {
           throw const WorkspaceChangeCancelledException();
         }
       }
