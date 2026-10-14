@@ -2,18 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/widgets/expressive_empty_state.dart';
+
+import '../support/data_transfer_codec.dart';
 
 const _site = SchoolSite(
   name: 'Example University',
@@ -58,10 +60,7 @@ Widget _browserApp({
   if (provider == null) {
     return app;
   }
-  return ChangeNotifierProvider<TimetableProvider>.value(
-    value: provider,
-    child: app,
-  );
+  return AppScope(app: provider, child: app);
 }
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -103,6 +102,7 @@ Future<TimetableProvider> _createConfiguredProvider() async {
         ),
       );
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(initial),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
@@ -669,7 +669,9 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final provider = TimetableProvider();
+        final provider = TimetableProvider(
+          dataTransferCodec: inlineDataTransferCodec,
+        );
         addTearDown(provider.dispose);
 
         await tester.pumpWidget(
@@ -719,7 +721,9 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final provider = TimetableProvider();
+      final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
+      );
       addTearDown(provider.dispose);
 
       await tester.pumpWidget(

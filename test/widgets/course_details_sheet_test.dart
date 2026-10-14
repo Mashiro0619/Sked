@@ -2,16 +2,18 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/sked_task_route.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -83,6 +85,7 @@ Future<TimetableProvider> _createProvider({
         ),
       );
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
@@ -104,8 +107,8 @@ void main() {
             ),
           );
           await tester.pumpWidget(
-            ChangeNotifierProvider<TimetableProvider>.value(
-              value: provider,
+            AppScope(
+              app: provider,
               child: MaterialApp(
                 locale: Locale(locale),
                 localizationsDelegates: appLocalizationsDelegates,
@@ -165,8 +168,8 @@ void main() {
       );
       var missingCount = 0;
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: const Locale('en'),
             localizationsDelegates: appLocalizationsDelegates,
@@ -217,8 +220,8 @@ void main() {
     );
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: const Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,
@@ -252,8 +255,8 @@ void main() {
     var selectCount = 0;
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: const Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,
@@ -310,8 +313,8 @@ void main() {
       final allowAction = Completer<void>();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: const Locale('en'),
             localizationsDelegates: appLocalizationsDelegates,
@@ -406,8 +409,8 @@ void main() {
     var selectCount = 0;
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: const Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,
@@ -467,8 +470,8 @@ void main() {
     var missingCount = 0;
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: const Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,

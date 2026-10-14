@@ -6,13 +6,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
@@ -21,6 +21,8 @@ import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'package:sked/services/school_import_http_consent.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -128,6 +130,7 @@ Future<TimetableProvider> _createProvider({
   String baseUrl = 'https://api.example.com/v1',
 }) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       _buildConfiguredCustomParserData(baseUrl: baseUrl),
     ),
@@ -212,8 +215,8 @@ Future<void> _pumpSchoolHtmlImportPage(
   bool initialContentTruncated = false,
 }) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,
@@ -237,8 +240,8 @@ Future<void> _pumpSchoolHtmlImportPageHost(
   TimetableProvider provider,
 ) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,

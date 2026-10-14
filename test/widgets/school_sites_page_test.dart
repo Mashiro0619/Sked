@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
@@ -18,6 +18,8 @@ import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:flutter/services.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemorySchoolSiteStore extends SchoolSiteStore {
   _MemorySchoolSiteStore(this.source) : super.base();
@@ -177,6 +179,7 @@ class _RetryThenShareExportService extends ExportService {
 
 Future<TimetableProvider> _createProvider() async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
@@ -200,8 +203,8 @@ Future<void> _pumpSchoolSitesPage(
   final resolvedSiteService =
       siteService ?? SchoolSiteService(store: _MemorySchoolSiteStore('[]'));
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         key: UniqueKey(),
         locale: const Locale('en'),

@@ -13,6 +13,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/school_html_import_page.dart';
@@ -26,6 +27,8 @@ import 'package:sked/services/school_import_api.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_confirmation_dialog.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _Storage implements TimetableStorage {
   _Storage(this.data);
@@ -65,24 +68,20 @@ class _NoPrivacyRequest extends PrivacyService {
 class _Provider extends TimetableProvider {
   _Provider({required super.storage})
     : super(
+        dataTransferCodec: inlineDataTransferCodec,
         systemLocaleCodeResolver: () => 'en',
         privacyService: const _NoPrivacyRequest(),
       );
 
   bool writable = true;
   bool restoring = false;
-  Object? replacementDataSession;
   @override
   bool get canWrite => writable && super.canWrite;
   @override
   bool get isRestoringAppBackup => restoring || super.isRestoringAppBackup;
-  @override
-  Object get dataSessionToken =>
-      replacementDataSession ?? super.dataSessionToken;
-
   void replaceDataSession() {
-    replacementDataSession = Object();
-    notifyListeners();
+    final reservation = maintenance.reserve();
+    maintenance.release(reservation);
   }
 
   void setWriteAvailability({required bool writable, required bool restoring}) {
@@ -184,7 +183,7 @@ Future<GlobalKey<NavigatorState>> _openHtmlReview(
   await tester.pumpWidget(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<TimetableProvider>.value(value: provider),
+        ...AppScope.providersFor(provider),
         ChangeNotifierProvider<AgendaNotificationService>(
           create: (_) => AgendaNotificationService(
             enabled: false,
@@ -1029,8 +1028,8 @@ void main() {
       addTearDown(provider.dispose);
       final results = <SchoolImportApplyRequest?>[];
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: const Locale('en'),
             localizationsDelegates: appLocalizationsDelegates,

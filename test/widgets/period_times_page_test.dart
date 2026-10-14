@@ -8,16 +8,18 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/services/export_service.dart';
 import 'package:sked/services/text_file_picker.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data, {this.failSaves = false});
@@ -128,6 +130,7 @@ AppData _initialData() => buildInitialAppData(
 
 Future<TimetableProvider> _createProvider({TimetableStorage? storage}) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage ?? _MemoryTimetableStorage(_initialData()),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
@@ -145,8 +148,8 @@ Future<void> _pumpPeriodTimesPage(
   TextDirection textDirection = TextDirection.ltr,
 }) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
@@ -886,8 +889,8 @@ void main() {
     addTearDown(provider.dispose);
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: const Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,
@@ -987,8 +990,8 @@ void main() {
     addTearDown(provider.dispose);
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: const Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,
