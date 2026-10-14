@@ -281,6 +281,9 @@ void main() {
             expect(details, findsOneWidget);
             if (scene == 'event-editor-desktop') {
               await tap(_key('general-event-edit-action'));
+              expect(_key('general-event-edit-scope-dialog'), findsOneWidget);
+              await tap(_key('event-edit-scope-entireSeries'));
+              expect(_key('general-event-edit-scope-dialog'), findsNothing);
               expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
             }
           }
