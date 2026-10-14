@@ -459,22 +459,8 @@ TimetableData _normalizeTimetable(
   final normalizedConfig = config.copyWith();
   final normalizedCourses = <CourseItem>[];
   for (final course in timetable.courses) {
-    final courseId = normalizeUniqueId(
-      course.id.trim(),
-      fallbackPrefix: 'course',
-      existingIds: courseIds,
-    );
-    courseIds.add(courseId);
-    final periods = course.periods.where((item) => item > 0).toSet().toList()
-      ..sort();
     normalizedCourses.add(
-      course.copyWith(
-        id: courseId,
-        dayOfWeek: normalizeDayOfWeek(course.dayOfWeek),
-        semesterWeeks: normalizeSemesterWeeks(course.semesterWeeks),
-        periods: periods,
-        timeRange: buildTimeRange(course.startMinutes, course.endMinutes),
-      ),
+      student_timetable.normalizeStudentCourse(course, courseIds: courseIds),
     );
   }
   return timetable.copyWith(
@@ -513,26 +499,10 @@ Map<String, String> _filterConflictDisplayCourseIds(
   Map<String, String> preferences,
   List<TimetableData> timetables,
 ) {
-  final courseIdsByTimetable = <String, Set<String>>{
-    for (final timetable in timetables)
-      timetable.id: timetable.courses.map((course) => course.id).toSet(),
-  };
-  preferences.removeWhere((key, value) {
-    final parsed = parseConflictKey(key);
-    if (parsed == null) {
-      return true;
-    }
-    final timetableCourseIds = courseIdsByTimetable[parsed.timetableId];
-    if (timetableCourseIds == null || !timetableCourseIds.contains(value)) {
-      return true;
-    }
-    final keyedCourseIds = parsed.courseIds;
-    return keyedCourseIds.isEmpty ||
-        keyedCourseIds.any(
-          (courseId) => !timetableCourseIds.contains(courseId),
-        );
-  });
-  return preferences;
+  return student_timetable.filterStudentConflictDisplayCourseIds(
+    preferences,
+    timetables,
+  );
 }
 
 PeriodTimeSet _createImportedFallbackPeriodTimeSet(

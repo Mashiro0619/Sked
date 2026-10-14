@@ -1233,11 +1233,9 @@ class TimetableProvider extends _TimetableProviderBase
       await pendingCommit;
     }
     _ensureAppBackupRestoreMutationAllowed();
-    final normalized = _importExportService.normalizeAppData(
-      _appData,
-      localeCode: _appData.localeCode,
-    );
-    _appData = normalized;
+    // Commands preserve the invariants of the branches they change. Full data
+    // repair belongs to load/import boundaries, where legacy input enters.
+    final snapshot = _appData;
     // A restore can reserve a new UI session while this save is in flight.
     // Its generation belongs to the restore's own successful write, not this
     // older snapshot. Queued restores also keep their individual lease token.
@@ -1248,7 +1246,7 @@ class TimetableProvider extends _TimetableProviderBase
                 : _dataSessionToken)
             .revision;
     await _session.persist(
-      normalized,
+      snapshot,
       publish: emitCommit,
       rollbackOnFailure: rollbackOnFailure,
       dataSessionRevision: dataSessionRevision,

@@ -299,7 +299,16 @@ void main() {
 
   group('StudentTimetableService conflicts', () {
     test('stores the displayed course choice for a conflict', () {
-      final source = data();
+      final source = data(
+        timetables: [
+          timetable(
+            courses: [
+              course(id: 'course1'),
+              course(id: 'course2'),
+            ],
+          ),
+        ],
+      );
 
       final conflictKey = buildConflictKeyForCourses('table1', 1, [
         course(id: 'course1'),

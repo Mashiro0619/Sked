@@ -1,4 +1,6 @@
+import '../l10n/app_locale.dart';
 import '../models/timetable_models.dart';
+import '../utils/unique_id.dart';
 
 const _studentCourseColorPalette = <int>[
   0xFFE57373,
@@ -99,10 +101,21 @@ class StudentTimetableService {
     if (timetable == null) return data;
     final courses = [...timetable.courses];
     final index = courses.indexWhere((item) => item.id == course.id);
+    final courseIds = <String>{
+      for (final table in data.timetables)
+        for (
+          var courseIndex = 0;
+          courseIndex < table.courses.length;
+          courseIndex++
+        )
+          if (table.id != timetable.id || courseIndex != index)
+            table.courses[courseIndex].id,
+    };
+    final normalized = normalizeStudentCourse(course, courseIds: courseIds);
     if (index >= 0) {
-      courses[index] = course;
+      courses[index] = normalized;
     } else {
-      courses.add(course);
+      courses.add(normalized);
     }
     return replaceTimetable(data, timetable.copyWith(courses: courses));
   }
@@ -119,9 +132,6 @@ class StudentTimetableService {
     final courses = timetable.courses
         .where((item) => item.id != courseId)
         .toList();
-    final filteredPrefs = Map<String, String>.from(
-      data.conflictDisplayCourseIds,
-    )..removeWhere((_, value) => value == courseId);
     final timetables = data.timetables
         .map(
           (item) =>
@@ -130,7 +140,10 @@ class StudentTimetableService {
         .toList();
     return data.copyWith(
       timetables: timetables,
-      conflictDisplayCourseIds: filteredPrefs,
+      conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
+        data.conflictDisplayCourseIds,
+        timetables,
+      ),
       courseNameColorValues: buildStudentCourseNameColorValuesForTimetables(
         timetables,
         existing: data.courseNameColorValues,
@@ -142,17 +155,36 @@ class StudentTimetableService {
     StudentModeData data,
     TimetableConfig config, {
     required PeriodTimeSet fallbackPeriodTimeSet,
+    String localeCode = defaultLocaleCode,
     DateTime? now,
   }) {
     final timestamp = (now ?? DateTime.now()).millisecondsSinceEpoch;
-    final periodTimeSetId =
-        periodTimeSetForId(data, config.periodTimeSetId)?.id ??
-        fallbackPeriodTimeSet.id;
+    final existingSet =
+        periodTimeSetForId(data, config.periodTimeSetId) ??
+        periodTimeSetForId(data, fallbackPeriodTimeSet.id);
+    final createdSet = existingSet == null
+        ? PeriodTimeSet(
+            id: normalizeUniqueId(
+              '',
+              fallbackPrefix: 'period_set',
+              existingIds: data.periodTimeSets.map((item) => item.id).toSet(),
+            ),
+            name: importedPeriodTimeSetName(
+              config.name,
+              localeCode: localeCode,
+            ),
+            periodTimes: buildPeriodTimesForCount(10),
+          )
+        : null;
     final timetable = TimetableData(
-      id: 'table_$timestamp',
+      id: normalizeUniqueId(
+        'table_$timestamp',
+        fallbackPrefix: 'table',
+        existingIds: data.timetables.map((item) => item.id).toSet(),
+      ),
       config: config.copyWith(
         totalWeeks: normalizeTimetableWeeks(config.totalWeeks),
-        periodTimeSetId: periodTimeSetId,
+        periodTimeSetId: (existingSet ?? createdSet!).id,
       ),
       courses: const [],
     );
@@ -160,6 +192,9 @@ class StudentTimetableService {
       data: data.copyWith(
         activeTimetableId: timetable.id,
         timetables: [...data.timetables, timetable],
+        periodTimeSets: createdSet == null
+            ? data.periodTimeSets
+            : [...data.periodTimeSets, createdSet],
       ),
       timetable: timetable,
     );
@@ -291,7 +326,12 @@ class StudentTimetableService {
   ) {
     final updated = Map<String, String>.from(data.conflictDisplayCourseIds)
       ..[conflictKey] = courseId;
-    return data.copyWith(conflictDisplayCourseIds: updated);
+    return data.copyWith(
+      conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
+        updated,
+        data.timetables,
+      ),
+    );
   }
 
   StudentModeData replaceTimetable(
@@ -303,12 +343,58 @@ class StudentTimetableService {
         .toList();
     return data.copyWith(
       timetables: updated,
+      conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
+        data.conflictDisplayCourseIds,
+        updated,
+      ),
       courseNameColorValues: buildStudentCourseNameColorValuesForTimetables(
         updated,
         existing: data.courseNameColorValues,
       ),
     );
   }
+}
+
+/// Normalizes one accepted course and reserves its ID in the caller's batch.
+/// Ordinary edits and imported timetables share the same persistence rules.
+CourseItem normalizeStudentCourse(
+  CourseItem course, {
+  required Set<String> courseIds,
+}) {
+  final id = normalizeUniqueId(
+    course.id,
+    fallbackPrefix: 'course',
+    existingIds: courseIds,
+  );
+  courseIds.add(id);
+  final periods = course.periods.where((item) => item > 0).toSet().toList()
+    ..sort();
+  return course.copyWith(
+    id: id,
+    dayOfWeek: normalizeDayOfWeek(course.dayOfWeek),
+    semesterWeeks: normalizeSemesterWeeks(course.semesterWeeks),
+    periods: periods,
+    timeRange: buildTimeRange(course.startMinutes, course.endMinutes),
+  );
+}
+
+Map<String, String> filterStudentConflictDisplayCourseIds(
+  Map<String, String> preferences,
+  List<TimetableData> timetables,
+) {
+  final courseIdsByTimetable = <String, Set<String>>{
+    for (final timetable in timetables)
+      timetable.id: timetable.courses.map((course) => course.id).toSet(),
+  };
+  return Map<String, String>.from(preferences)..removeWhere((key, value) {
+    final parsed = parseConflictKey(key);
+    if (parsed == null) return true;
+    final courseIds = courseIdsByTimetable[parsed.timetableId];
+    return courseIds == null ||
+        !courseIds.contains(value) ||
+        parsed.courseIds.isEmpty ||
+        parsed.courseIds.any((id) => !courseIds.contains(id));
+  });
 }
 
 TimetableData? activeTimetableOrNull(StudentModeData data) {

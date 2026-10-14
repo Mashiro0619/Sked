@@ -5,6 +5,7 @@ import '../models/general_schedule.dart';
 import '../models/timetable_data.dart';
 import '../utils/localized_names.dart';
 import '../utils/time_utils.dart';
+import 'student_timetable_service.dart';
 
 /// The language used for labels in the developer sample data set.
 enum DeveloperSampleLanguage { simplifiedChinese, english }
@@ -83,9 +84,14 @@ class DeveloperSampleDataService {
       now: normalizeDateOnly(now),
       sortOrderBase: current.generalMode.schedules.length,
     );
+    final timetables = [...current.studentMode.timetables, timetable];
     final studentMode = current.studentMode.copyWith(
       activeTimetableId: timetableId,
-      timetables: [...current.studentMode.timetables, timetable],
+      timetables: timetables,
+      courseNameColorValues: buildStudentCourseNameColorValuesForTimetables(
+        timetables,
+        existing: current.studentMode.courseNameColorValues,
+      ),
       periodTimeSets: [
         ...current.studentMode.periodTimeSets,
         ?createdPeriodTimeSet,

@@ -1,5 +1,6 @@
 import '../l10n/app_locale.dart';
 import '../models/timetable_models.dart';
+import 'student_timetable_service.dart';
 
 class SettingsService {
   const SettingsService();
@@ -313,7 +314,12 @@ class SettingsService {
       data.studentMode.courseNameColorValues,
     )..[normalizedCourseName] = colorValue;
     return data.copyWith(
-      studentMode: data.studentMode.copyWith(courseNameColorValues: updated),
+      studentMode: data.studentMode.copyWith(
+        courseNameColorValues: buildStudentCourseNameColorValuesForTimetables(
+          data.studentMode.timetables,
+          existing: updated,
+        ),
+      ),
     );
   }
 

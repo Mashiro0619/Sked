@@ -127,6 +127,7 @@ class StudentCommands {
       _data,
       config,
       fallbackPeriodTimeSet: _view.activePeriodTimeSet,
+      localeCode: _view.localeCode,
     );
     _replace(result.data);
     _view.selectedWeek = 1;
