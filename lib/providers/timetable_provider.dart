@@ -31,6 +31,7 @@ import '../services/general_calendar_ics_service.dart';
 import '../services/general_occurrence_service.dart';
 import '../services/developer_sample_data_service.dart';
 import '../services/import_export_service.dart';
+import '../services/data_transfer_codec.dart';
 import '../services/privacy_service.dart';
 import '../services/school_site_service.dart';
 import '../services/school_site_store.dart';
@@ -189,6 +190,7 @@ class TimetableProvider extends _TimetableProviderBase
     SecretStore? secretStore,
     SchoolSiteService? schoolSiteService,
     AppBackupRestoreJournal? backupRestoreJournal,
+    DataTransferCodec dataTransferCodec = const DataTransferCodec(),
     @visibleForTesting Duration? uiStateSaveDelay,
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
@@ -278,6 +280,8 @@ class TimetableProvider extends _TimetableProviderBase
       student: _studentView,
       general: _generalView,
       persistence: _persistence,
+      maintenance: _maintenance,
+      codec: dataTransferCodec,
     );
   }
 
