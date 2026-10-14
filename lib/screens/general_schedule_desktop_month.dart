@@ -3,7 +3,7 @@ part of 'general_schedule_home_screen.dart';
 // Header and summary budgets are measured once per grid. They must not switch
 // to the phone date-picker presentation just because a task narrows the canvas.
 class _DesktopMonthCellMetrics {
-  const _DesktopMonthCellMetrics({
+  _DesktopMonthCellMetrics({
     required this.dateStyle,
     required this.summaryStyle,
     required this.countStyle,
@@ -22,6 +22,7 @@ class _DesktopMonthCellMetrics {
   final double dateDiameter, horizontalPadding, lunarHeight, headerHeight;
   final double summaryHeight, countHeight, contentWidth;
   final bool stackLunar, showTitles;
+  final _countLabels = <int, String>{};
   static const verticalPadding = 6.0;
   static const contentGap = 6.0;
   static const summaryGap = 2.0;
@@ -129,16 +130,20 @@ class _DesktopMonthCellMetrics {
       2 * verticalPadding + headerHeight + contentGap + countHeight;
 
   String countText(BuildContext context, int count) {
+    final cached = _countLabels[count];
+    if (cached != null) return cached;
     final label = AppLocalizations.of(context).moreEvents(count);
-    if (_measure(context, label, countStyle).width <= contentWidth) {
-      return label;
+    var result = label;
+    if (_measure(context, label, countStyle).width > contentWidth) {
+      // Keep the number legible when the localized phrase cannot fit. The full
+      // phrase remains available through the tooltip and the cell's semantics.
+      final short = '+$count';
+      result = _measure(context, short, countStyle).width <= contentWidth
+          ? short
+          : '$count';
     }
-    // Keep the number legible when the localized phrase cannot fit. The full
-    // phrase remains available through the tooltip and the cell's semantics.
-    final short = '+$count';
-    return _measure(context, short, countStyle).width <= contentWidth
-        ? short
-        : '$count';
+    if (_countLabels.length >= 64) _countLabels.remove(_countLabels.keys.first);
+    return _countLabels[count] = result;
   }
 
   int titleLimit(double height, int count) {

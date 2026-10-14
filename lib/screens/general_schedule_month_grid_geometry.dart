@@ -182,7 +182,90 @@ class _DesktopMonthPageLayout {
   }
 }
 
-class _DesktopMonthCalendarPanel extends StatelessWidget {
+typedef _DesktopMonthTextInputs = ({
+  ThemeData theme,
+  TextStyle defaultStyle,
+  TextScaler textScaler,
+  TextDirection direction,
+  Locale? locale,
+  String calendarLocale,
+  bool lunar,
+});
+
+typedef _DesktopMonthPageShape = (DateTime, DateTime, int, int);
+
+class _DesktopMonthPanelGeometry {
+  const _DesktopMonthPanelGeometry({
+    required this.columns,
+    required this.headerRows,
+    required this.labelStyle,
+    required this.availableBody,
+    required this.headerHeight,
+    required this.horizontalOverflow,
+  });
+
+  final _DesktopMonthTracks columns, headerRows;
+  final TextStyle labelStyle;
+  final double availableBody, headerHeight;
+  final bool horizontalOverflow;
+
+  factory _DesktopMonthPanelGeometry.resolve(
+    BuildContext context, {
+    required BoxConstraints constraints,
+    required double dpr,
+    required int columnCount,
+    required bool sharedTopEdge,
+    required bool sharedStartEdge,
+    required bool sharedEndEdge,
+  }) {
+    final theme = Theme.of(context);
+    final minCellPixels = (_DesktopMonthCellMetrics.minimumWidth(context) * dpr)
+        .ceil();
+    final minWidth =
+        (minCellPixels * columnCount +
+            columnCount -
+            1 +
+            (sharedStartEdge ? 0 : 1) +
+            (sharedEndEdge ? 0 : 1)) /
+        dpr;
+    final columns = _DesktopMonthTracks.forWidth(
+      math.max(constraints.maxWidth, minWidth),
+      columnCount,
+      dpr,
+      leadingLine: !sharedStartEdge,
+      trailingLine: !sharedEndEdge,
+    );
+    final labelStyle =
+        (theme.textTheme.labelMedium ?? const TextStyle(fontSize: 12)).copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        );
+    final headerRows = _DesktopMonthTracks(
+      count: 1,
+      dpr: dpr,
+      contentPixels:
+          (math.max(40, _monthTextHeight(context, 'Ag星期', labelStyle) + 16) *
+                  dpr)
+              .ceil(),
+      leadingLine: !sharedTopEdge,
+      trailingLine: true,
+    );
+    return _DesktopMonthPanelGeometry(
+      columns: columns,
+      headerRows: headerRows,
+      labelStyle: labelStyle,
+      availableBody: constraints.hasBoundedHeight
+          ? math.max(0.0, constraints.maxHeight - headerRows.extent)
+          : double.infinity,
+      headerHeight: constraints.hasBoundedHeight
+          ? math.min(headerRows.extent, constraints.maxHeight)
+          : headerRows.extent,
+      horizontalOverflow: columns.extent > constraints.maxWidth + .5 / dpr,
+    );
+  }
+}
+
+class _DesktopMonthCalendarPanel extends StatefulWidget {
   const _DesktopMonthCalendarPanel({
     required this.model,
     required this.selectedDate,
@@ -215,228 +298,311 @@ class _DesktopMonthCalendarPanel extends StatelessWidget {
   final GestureDragCancelCallback onDragCancel;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final dpr = View.of(context).devicePixelRatio;
-      final colors = Theme.of(context).colorScheme;
-      final minCellPixels =
-          (_DesktopMonthCellMetrics.minimumWidth(context) * dpr).ceil();
-      final minWidth =
-          (minCellPixels * model.columnCount +
-              model.columnCount -
-              1 +
-              (sharedStartEdge ? 0 : 1) +
-              (sharedEndEdge ? 0 : 1)) /
-          dpr;
-      final columns = _DesktopMonthTracks.forWidth(
-        math.max(constraints.maxWidth, minWidth),
-        model.columnCount,
-        dpr,
-        leadingLine: !sharedStartEdge,
-        trailingLine: !sharedEndEdge,
-      );
-      final horizontalOverflow =
-          columns.extent > constraints.maxWidth + .5 / dpr;
-      final labelStyle =
-          (Theme.of(context).textTheme.labelMedium ??
-                  const TextStyle(fontSize: 12))
-              .copyWith(
-                color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              );
-      final headerRows = _DesktopMonthTracks(
-        count: 1,
-        dpr: dpr,
-        contentPixels:
-            (math.max(40, _monthTextHeight(context, 'Ag星期', labelStyle) + 16) *
-                    dpr)
-                .ceil(),
-        leadingLine: !sharedTopEdge,
-        trailingLine: true,
-      );
-      final availableBody = constraints.hasBoundedHeight
-          ? math.max(0.0, constraints.maxHeight - headerRows.extent)
-          : double.infinity;
-      final current = _DesktopMonthPageLayout.resolve(
+  State<_DesktopMonthCalendarPanel> createState() =>
+      _DesktopMonthCalendarPanelState();
+}
+
+class _DesktopMonthCalendarPanelState
+    extends State<_DesktopMonthCalendarPanel> {
+  (BoxConstraints, double, _DesktopMonthTextInputs, int, bool, bool, bool)?
+  _geometryInputs;
+  _DesktopMonthPanelGeometry? _geometry;
+  final _pageLayouts =
+      <
+        (_DesktopMonthPageShape, _DesktopMonthTextInputs),
+        _DesktopMonthPageLayout
+      >{};
+
+  @override
+  void initState() {
+    super.initState();
+    PaintingBinding.instance.systemFonts.addListener(_fontsChanged);
+  }
+
+  @override
+  void dispose() {
+    PaintingBinding.instance.systemFonts.removeListener(_fontsChanged);
+    super.dispose();
+  }
+
+  void _fontsChanged() => setState(() {
+    _geometryInputs = null;
+    _pageLayouts.clear();
+  });
+
+  _DesktopMonthTextInputs _textInputs(BuildContext context) => (
+    theme: Theme.of(context),
+    defaultStyle: DefaultTextStyle.of(context).style,
+    textScaler: MediaQuery.textScalerOf(context),
+    direction: Directionality.of(context),
+    locale: Localizations.maybeLocaleOf(context),
+    calendarLocale: widget.provider.localeCode,
+    lunar: _showMonthLunar(widget.provider),
+  );
+
+  _DesktopMonthPageShape _pageShape(GeneralMonthGridModel model) => (
+    model.queryStart,
+    model.queryEndExclusive,
+    model.columnCount,
+    model.rowCount,
+  );
+
+  _DesktopMonthPanelGeometry _geometryFor(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    // Subscribe to per-monitor DPI changes even when logical constraints stay
+    // unchanged; reading the mutable FlutterView alone does not rebuild us.
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final inputs = (
+      constraints,
+      dpr,
+      _textInputs(context),
+      widget.model.columnCount,
+      widget.sharedTopEdge,
+      widget.sharedStartEdge,
+      widget.sharedEndEdge,
+    );
+    if (_geometryInputs != inputs) {
+      _geometryInputs = inputs;
+      _pageLayouts.clear();
+      _geometry = _DesktopMonthPanelGeometry.resolve(
         context,
-        columns: columns,
-        model: model,
-        provider: provider,
-        availableHeight: availableBody,
+        constraints: constraints,
+        dpr: dpr,
+        columnCount: widget.model.columnCount,
+        sharedTopEdge: widget.sharedTopEdge,
+        sharedStartEdge: widget.sharedStartEdge,
+        sharedEndEdge: widget.sharedEndEdge,
       );
-      final bodyHeight = math.min(current.rows.extent, availableBody);
-      final headerHeight = constraints.hasBoundedHeight
-          ? math.min(headerRows.extent, constraints.maxHeight)
-          : headerRows.extent;
-      final rtl = Directionality.of(context) == TextDirection.rtl;
-      Widget page(
-        GeneralMonthGridModel pageModel,
-        DateTime date,
-        Map<String, List<GeneralEventOccurrence>> occurrences,
-        double position,
-      ) => Positioned.fill(
-        child: _MonthSlidePage(
-          position: position,
-          width: columns.extent,
-          dragOffset: dragOffset,
-          devicePixelRatio: dpr,
-          child: Builder(
-            builder: (context) => _DesktopMonthDatePage(
-              key: ValueKey(
-                'general-month-date-grid-${date.year}-${date.month}',
+    }
+    return _geometry!;
+  }
+
+  _DesktopMonthPageLayout _pageLayoutFor(
+    BuildContext context,
+    GeneralMonthGridModel model,
+    _DesktopMonthPanelGeometry geometry,
+  ) => _pageLayouts.putIfAbsent(
+    // A hidden page can inherit a different Material text style. Keep its
+    // measured context in the key before promoting it to the current page.
+    (_pageShape(model), _textInputs(context)),
+    () => _DesktopMonthPageLayout.resolve(
+      context,
+      columns: geometry.columns,
+      model: model,
+      provider: widget.provider,
+      availableHeight: geometry.availableBody,
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final _DesktopMonthCalendarPanel(
+      :model,
+      :selectedDate,
+      :today,
+      :occurrencesByDay,
+      :provider,
+      :previousPage,
+      :nextPage,
+      :dragOffset,
+      :onDaySelected,
+      :onDragStart,
+      :onDragUpdate,
+      :onDragEnd,
+      :onDragCancel,
+    ) = widget;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final geometry = _geometryFor(context, constraints);
+        final _DesktopMonthPanelGeometry(
+          :columns,
+          :headerRows,
+          :labelStyle,
+          :availableBody,
+          :headerHeight,
+          :horizontalOverflow,
+        ) = geometry;
+        final retainedPages = {
+          _pageShape(model),
+          _pageShape(previousPage.model),
+          _pageShape(nextPage.model),
+        };
+        _pageLayouts.removeWhere((key, _) => !retainedPages.contains(key.$1));
+        final dpr = columns.dpr;
+        final colors = Theme.of(context).colorScheme;
+        final current = _pageLayoutFor(context, model, geometry);
+        final bodyHeight = math.min(current.rows.extent, availableBody);
+        final rtl = Directionality.of(context) == TextDirection.rtl;
+        Widget page(
+          GeneralMonthGridModel pageModel,
+          DateTime date,
+          Map<String, List<GeneralEventOccurrence>> occurrences,
+          double position,
+        ) => Positioned.fill(
+          child: _MonthSlidePage(
+            position: position,
+            width: columns.extent,
+            dragOffset: dragOffset,
+            devicePixelRatio: dpr,
+            child: Builder(
+              builder: (context) => _DesktopMonthDatePage(
+                key: ValueKey(
+                  'general-month-date-grid-${date.year}-${date.month}',
+                ),
+                columns: columns,
+                layout: position == 0
+                    ? current
+                    : _pageLayoutFor(context, pageModel, geometry),
+                model: pageModel,
+                selectedDate: date,
+                today: today,
+                occurrencesByDay: occurrences,
+                provider: provider,
+                rtl: rtl,
+                onDaySelected: onDaySelected,
               ),
-              columns: columns,
-              layout: position == 0
-                  ? current
-                  : _DesktopMonthPageLayout.resolve(
-                      context,
-                      columns: columns,
-                      model: pageModel,
-                      provider: provider,
-                      availableHeight: availableBody,
-                    ),
-              model: pageModel,
-              selectedDate: date,
-              today: today,
-              occurrencesByDay: occurrences,
-              provider: provider,
-              rtl: rtl,
-              onDaySelected: onDaySelected,
             ),
           ),
-        ),
-      );
-      return Align(
-        alignment: AlignmentDirectional.topStart,
-        child: SizedBox(
-          height: headerHeight + bodyHeight,
-          child: SingleChildScrollView(
-            key: const ValueKey('desktop-month-horizontal-scroll'),
-            scrollDirection: Axis.horizontal,
-            physics: horizontalOverflow
-                ? const ClampingScrollPhysics()
-                : const NeverScrollableScrollPhysics(),
-            child: _DesktopMonthPixelSnap(
-              dpr: dpr,
-              child: Material(
-                key: const ValueKey('general-month-calendar-panel'),
-                color: colors.surface,
-                child: SizedBox(
-                  width: columns.extent,
-                  height: headerHeight + bodyHeight,
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: headerHeight,
-                        child: ClipRect(
-                          child: _DesktopMonthPixelSnap(
-                            dpr: dpr,
-                            child: CustomPaint(
-                              foregroundPainter: _DesktopMonthGridPainter(
-                                columns: columns,
-                                rows: headerRows,
-                                color: colors.outlineVariant,
-                              ),
-                              child: SizedBox(
-                                key: const ValueKey(
-                                  'general-month-weekday-header',
+        );
+        return Align(
+          alignment: AlignmentDirectional.topStart,
+          child: SizedBox(
+            height: headerHeight + bodyHeight,
+            child: SingleChildScrollView(
+              key: const ValueKey('desktop-month-horizontal-scroll'),
+              scrollDirection: Axis.horizontal,
+              physics: horizontalOverflow
+                  ? const ClampingScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              child: _DesktopMonthPixelSnap(
+                dpr: dpr,
+                child: Material(
+                  key: const ValueKey('general-month-calendar-panel'),
+                  color: colors.surface,
+                  child: SizedBox(
+                    width: columns.extent,
+                    height: headerHeight + bodyHeight,
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: headerHeight,
+                          child: ClipRect(
+                            child: _DesktopMonthPixelSnap(
+                              dpr: dpr,
+                              child: CustomPaint(
+                                foregroundPainter: _DesktopMonthGridPainter(
+                                  columns: columns,
+                                  rows: headerRows,
+                                  color: colors.outlineVariant,
                                 ),
-                                width: columns.extent,
-                                height: headerRows.extent,
-                                child: Stack(
-                                  children: [
-                                    for (
-                                      var index = 0;
-                                      index < columns.count;
-                                      index++
-                                    )
-                                      Positioned.fromRect(
-                                        rect: Rect.fromLTRB(
-                                          columns.start(
-                                            rtl
-                                                ? columns.count - index - 1
-                                                : index,
+                                child: SizedBox(
+                                  key: const ValueKey(
+                                    'general-month-weekday-header',
+                                  ),
+                                  width: columns.extent,
+                                  height: headerRows.extent,
+                                  child: Stack(
+                                    children: [
+                                      for (
+                                        var index = 0;
+                                        index < columns.count;
+                                        index++
+                                      )
+                                        Positioned.fromRect(
+                                          rect: Rect.fromLTRB(
+                                            columns.start(
+                                              rtl
+                                                  ? columns.count - index - 1
+                                                  : index,
+                                            ),
+                                            headerRows.start(0),
+                                            columns.end(
+                                              rtl
+                                                  ? columns.count - index - 1
+                                                  : index,
+                                            ),
+                                            headerRows.end(0),
                                           ),
-                                          headerRows.start(0),
-                                          columns.end(
-                                            rtl
-                                                ? columns.count - index - 1
-                                                : index,
-                                          ),
-                                          headerRows.end(0),
-                                        ),
-                                        child: ColoredBox(
-                                          key: ValueKey(
-                                            'desktop-month-weekday-${model.days[index].weekday}',
-                                          ),
-                                          color: colors.surfaceContainerLow,
-                                          child: Center(
-                                            child: Text(
-                                              _weekdayLabel(
-                                                context,
-                                                model.days[index],
+                                          child: ColoredBox(
+                                            key: ValueKey(
+                                              'desktop-month-weekday-${model.days[index].weekday}',
+                                            ),
+                                            color: colors.surfaceContainerLow,
+                                            child: Center(
+                                              child: Text(
+                                                _weekdayLabel(
+                                                  context,
+                                                  model.days[index],
+                                                ),
+                                                style: labelStyle,
+                                                maxLines: 1,
                                               ),
-                                              style: labelStyle,
-                                              maxLines: 1,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      SizedBox(
-                        height: bodyHeight,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onHorizontalDragStart: horizontalOverflow
-                              ? null
-                              : onDragStart,
-                          onHorizontalDragUpdate: horizontalOverflow
-                              ? null
-                              : (details) =>
-                                    onDragUpdate(details, columns.extent),
-                          onHorizontalDragEnd: horizontalOverflow
-                              ? null
-                              : onDragEnd,
-                          onHorizontalDragCancel: horizontalOverflow
-                              ? null
-                              : onDragCancel,
-                          child: ClipRect(
-                            child: Stack(
-                              children: [
-                                page(
-                                  previousPage.model,
-                                  previousPage.date,
-                                  previousPage.occurrencesByDay,
-                                  -1,
-                                ),
-                                page(
-                                  nextPage.model,
-                                  nextPage.date,
-                                  nextPage.occurrencesByDay,
-                                  1,
-                                ),
-                                page(model, selectedDate, occurrencesByDay, 0),
-                              ],
+                        SizedBox(
+                          height: bodyHeight,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onHorizontalDragStart: horizontalOverflow
+                                ? null
+                                : onDragStart,
+                            onHorizontalDragUpdate: horizontalOverflow
+                                ? null
+                                : (details) =>
+                                      onDragUpdate(details, columns.extent),
+                            onHorizontalDragEnd: horizontalOverflow
+                                ? null
+                                : onDragEnd,
+                            onHorizontalDragCancel: horizontalOverflow
+                                ? null
+                                : onDragCancel,
+                            child: ClipRect(
+                              child: Stack(
+                                children: [
+                                  page(
+                                    previousPage.model,
+                                    previousPage.date,
+                                    previousPage.occurrencesByDay,
+                                    -1,
+                                  ),
+                                  page(
+                                    nextPage.model,
+                                    nextPage.date,
+                                    nextPage.occurrencesByDay,
+                                    1,
+                                  ),
+                                  page(
+                                    model,
+                                    selectedDate,
+                                    occurrencesByDay,
+                                    0,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
+  }
 }
 
 class _DesktopMonthDatePage extends StatelessWidget {

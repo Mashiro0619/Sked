@@ -161,6 +161,179 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  testWidgets(
+    'desktop month reuses measured tracks and labels across selection and event edits',
+    (t) async {
+      final selected = DateTime(2026, 9, 8);
+      final event = GeneralEvent(
+        id: 'layout',
+        calendarId: 'empty',
+        title: 'Meeting',
+        startDateTimeIso: DateTime(2026, 9, 8, 10).toIso8601String(),
+        endDateTimeIso: DateTime(2026, 9, 8, 11).toIso8601String(),
+      );
+      final provider = await _mount(t, date: selected, events: [event]);
+      Object metrics(DateTime date) =>
+          (t.widget(_cell(date)) as dynamic).metrics as Object;
+      CustomPainter painter() => t
+          .widget<CustomPaint>(_key('desktop-month-grid-lines'))
+          .foregroundPainter!;
+      final firstMetrics = metrics(selected);
+      final firstPainter = painter();
+
+      await t.tap(_cell(DateTime(2026, 9, 9)));
+      await t.pumpAndSettle();
+      expect(metrics(selected), same(firstMetrics));
+      expect(painter().shouldRepaint(firstPainter), isFalse);
+
+      await provider.saveGeneralEvent(event.copyWith(title: 'Edited meeting'));
+      await t.pumpAndSettle();
+      expect(metrics(selected), same(firstMetrics));
+      expect(painter().shouldRepaint(firstPainter), isFalse);
+
+      Future<TestGesture> revealPrevious() async {
+        final drag = await t.startGesture(t.getCenter(_cell(selected)));
+        await drag.moveBy(const Offset(24, 0));
+        await t.pump(const Duration(milliseconds: 16));
+        await drag.moveBy(const Offset(12, 0));
+        await t.pump(const Duration(milliseconds: 16));
+        return drag;
+      }
+
+      final drag = await revealPrevious();
+      final previousMetrics = metrics(DateTime(2026, 8, 18));
+      await drag.cancel();
+      await t.pumpAndSettle();
+      final secondDrag = await revealPrevious();
+      expect(metrics(DateTime(2026, 8, 18)), same(previousMetrics));
+      await secondDrag.cancel();
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+    },
+    variant: _desktop,
+  );
+
+  testWidgets(
+    'desktop month measurements follow live viewport, fonts, scale, locale and direction changes',
+    (t) async {
+      final selected = DateTime(2026, 9, 8);
+      final provider = await _mount(
+        t,
+        date: selected,
+        dpr: 1.25,
+        size: const Size(1440, 1000),
+      );
+      dynamic metrics() => (t.widget(_cell(selected)) as dynamic).metrics;
+      Future<void> repump({
+        double? scale,
+        TextDirection? direction,
+        Locale? locale,
+        String? font,
+      }) async {
+        final previous = t.widget<WorkspaceHarness>(
+          find.byType(WorkspaceHarness),
+        );
+        await t.pumpWidget(
+          Transform.translate(
+            offset: Offset.zero,
+            child: WorkspaceHarness(
+              key: previous.key,
+              provider: previous.provider,
+              home: previous.home,
+              developerUiPreferences: previous.developerUiPreferences,
+              layoutPreferences: previous.layoutPreferences,
+              textScale: scale ?? previous.textScale,
+              textDirection: direction ?? previous.textDirection,
+              locale: locale ?? previous.locale,
+              fontFamily: font ?? previous.fontFamily,
+              brightness: previous.brightness,
+              seedColor: previous.seedColor,
+            ),
+          ),
+        );
+      }
+
+      Future<void> expectRemeasured(Future<void> Function() change) async {
+        final previous = metrics();
+        await change();
+        await t.pumpAndSettle();
+        expect(metrics(), isNot(same(previous)));
+        expect(t.takeException(), isNull);
+      }
+
+      await expectRemeasured(() async {
+        t.view.physicalSize = const Size(1520, 1000) * 1.25;
+      });
+      await expectRemeasured(() async {
+        t.view.devicePixelRatio = 1.75;
+        t.view.physicalSize = const Size(1520, 1000) * 1.75;
+      });
+      final diameter = metrics().dateDiameter as double;
+      await expectRemeasured(() => repump(scale: 1.3));
+      expect(metrics().dateDiameter, greaterThan(diameter));
+      await expectRemeasured(() => repump(font: 'Ahem'));
+      expect(metrics().dateStyle.fontFamily, 'Ahem');
+      await expectRemeasured(
+        () => t.binding.handleSystemMessage({'type': 'fontsChange'}),
+      );
+      await expectRemeasured(() => repump(locale: const Locale('en')));
+      expect(find.text('Mon'), findsWidgets);
+      await expectRemeasured(() => repump(direction: TextDirection.rtl));
+      expect(
+        t.getTopLeft(_cell(DateTime(2026, 8, 31))).dx,
+        greaterThan(t.getTopLeft(_cell(DateTime(2026, 9, 6))).dx),
+      );
+      await t.tap(_cell(DateTime(2026, 9, 9)));
+      await t.pumpAndSettle();
+      expect(provider.selectedGeneralDate, DateTime(2026, 9, 9));
+
+      await expectRemeasured(() => provider.updateLocaleCode('en'));
+      expect(metrics().lunarHeight, 0);
+      await expectRemeasured(() => provider.updateLocaleCode('zh-Hant'));
+      expect(metrics().lunarHeight, greaterThan(0));
+      await expectRemeasured(
+        () => provider.updateGeneralDisplaySettings(showLunarCalendar: false),
+      );
+      expect(metrics().lunarHeight, 0);
+      await expectRemeasured(
+        () => provider.updateGeneralDisplaySettings(showWeekends: false),
+      );
+      expect(_cell(DateTime(2026, 9, 6)), findsNothing);
+    },
+    variant: _desktop,
+  );
+
+  testWidgets(
+    'desktop month cached measurements follow live four, five and six week pages',
+    (t) async {
+      final provider = await _mount(t, date: DateTime(2026, 9, 8));
+      Object metrics(DateTime date) =>
+          (t.widget(_cell(date)) as dynamic).metrics as Object;
+      var previous = metrics(DateTime(2026, 9, 8));
+      for (final (date, rows) in [
+        (DateTime(2021, 2, 18), 4),
+        (DateTime(2026, 4, 18), 5),
+        (DateTime(2026, 8, 18), 6),
+      ]) {
+        await provider.setSelectedGeneralDate(date);
+        await t.pumpAndSettle();
+        final current = metrics(date);
+        expect(current, isNot(same(previous)));
+        expect(
+          find.byWidgetPredicate((widget) {
+            final key = widget.key;
+            return key is ValueKey<String> &&
+                key.value.startsWith('general-month-day-cell-');
+          }),
+          findsNWidgets(rows * 7),
+        );
+        previous = current;
+      }
+      expect(t.takeException(), isNull);
+    },
+    variant: _desktop,
+  );
+
   for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
     testWidgets(
       'month snapshots survive stored selection and display updates: $platform',
