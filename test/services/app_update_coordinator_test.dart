@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/update_service.dart';
@@ -16,6 +16,7 @@ import 'package:sked/widgets/app_update_dialog.dart';
 import 'package:sked/services/microsoft_store_update_service.dart';
 
 import '../support/workspace_harness.dart';
+import '../support/data_transfer_codec.dart';
 
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
@@ -98,7 +99,10 @@ Future<TimetableProvider> _createProvider({
     ignoredUpdateVersion: ignoredVersion,
     includePrereleaseUpdates: includePrereleases,
   );
-  final provider = TimetableProvider(storage: _MemoryStorage(data));
+  final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
+    storage: _MemoryStorage(data),
+  );
   await provider.load();
   return provider;
 }
@@ -109,8 +113,8 @@ Future<BuildContext> _pumpHarness(
 ) async {
   late BuildContext context;
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,

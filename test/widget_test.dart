@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_strings.dart';
 import 'package:sked/main.dart' hide main;
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
@@ -40,10 +41,10 @@ import 'package:flutter_localizations/flutter_localizations.dart'
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:provider/provider.dart';
 
 import 'support/school_import_preparation.dart';
 import 'support/timetable_storage_fakes.dart';
+import 'support/data_transfer_codec.dart';
 
 class MemorySecretStore implements SecretStore {
   MemorySecretStore([String initialValue = '']) : value = initialValue.trim();
@@ -153,8 +154,8 @@ Future<BuildContext> _pumpUpdateHarness(
 }) async {
   late BuildContext context;
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: _buildLocalizedApp(
         Builder(
           builder: (buildContext) {
@@ -411,6 +412,7 @@ void main() {
 
     test('provider 支持导入单课表和节次模板', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -436,6 +438,7 @@ void main() {
 
     test('provider 切换模式不会清空学生课表或通用日程', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -464,6 +467,7 @@ void main() {
 
     test('provider 支持通用日程事件增删和每周重复展开', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -519,6 +523,7 @@ void main() {
 
     test('重命名通用日程不会删除已有事件', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -540,6 +545,7 @@ void main() {
 
     test('weekly 事件不会在 recurrence end date 之后再生成 occurrence', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -575,6 +581,7 @@ void main() {
 
     test('weekly occurrence 保留原事件 duration', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -603,6 +610,7 @@ void main() {
 
     test('跨午夜 occurrence duration 正确', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -661,6 +669,7 @@ void main() {
 
     test('共享节次时间集编辑会直接全局生效', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -690,6 +699,7 @@ void main() {
 
     test('仍被引用的节次时间集不能删除', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -702,6 +712,7 @@ void main() {
 
     test('删除最后一个课表后进入空状态数据', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: AppData(
             activeMode: AppMode.student,
@@ -983,6 +994,7 @@ void main() {
       'theme settings stay independent between student and general modes',
       () async {
         final provider = TimetableProvider(
+          dataTransferCodec: inlineDataTransferCodec,
           storage: MemoryTimetableStorage(
             initialData: buildInitialAppData(buildDefaultPeriodTimes()),
           ),
@@ -1154,6 +1166,7 @@ void main() {
       final storage = MemoryTimetableStorage(initialData: _buildTestAppData());
       final secrets = MemorySecretStore();
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         secretStore: secrets,
       );
@@ -1171,13 +1184,17 @@ void main() {
 
       expect(provider.liveCourseOutlineMode, liveCourseOutlineModeAllDisplayed);
 
-      final reloaded = TimetableProvider(storage: storage);
+      final reloaded = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
+        storage: storage,
+      );
       await reloaded.load();
       expect(reloaded.liveCourseOutlineMode, liveCourseOutlineModeAllDisplayed);
     });
 
     test('首次加载无本地数据时会按系统语言初始化英文', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(),
         systemLocaleCodeResolver: () => 'en',
       );
@@ -1263,6 +1280,7 @@ void main() {
 
     test('已有本地语言设置时不会被系统语言覆盖', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(localeCode: 'zh'),
         ),
@@ -1275,6 +1293,7 @@ void main() {
 
     test('导入课表后会自动生成课程颜色映射且同名课程共用同色', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -1370,6 +1389,7 @@ void main() {
         ),
       );
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: initialData),
       );
       await provider.load();
@@ -1492,6 +1512,7 @@ void main() {
         ),
       );
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: duplicatedDefaultColor),
       );
       await provider.load();
@@ -1582,6 +1603,7 @@ void main() {
       final storage = MemoryTimetableStorage(initialData: _buildTestAppData());
       final secrets = MemorySecretStore();
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         secretStore: secrets,
       );
@@ -1610,6 +1632,7 @@ void main() {
       expect(storage.encodedData, isNot(contains('sk-test')));
 
       final reloaded = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         secretStore: secrets,
       );
@@ -1642,6 +1665,7 @@ void main() {
         );
         final secrets = MemorySecretStore();
         final provider = TimetableProvider(
+          dataTransferCodec: inlineDataTransferCodec,
           storage: storage,
           secretStore: secrets,
         );
@@ -1798,6 +1822,7 @@ void main() {
       tester,
     ) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -1813,8 +1838,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -1887,13 +1912,14 @@ void main() {
 
     testWidgets('默认自定义模式显示自定义提示词编辑器', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -1914,6 +1940,7 @@ void main() {
 
     testWidgets('自定义提示词可重置为默认提示词', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -1929,8 +1956,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -1973,6 +2000,7 @@ void main() {
 
     testWidgets('解析页不再嵌套AI API 配置入口', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -1987,8 +2015,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2017,6 +2045,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(localeCode: 'en'),
         ),
@@ -2024,8 +2053,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2065,6 +2094,7 @@ void main() {
 
     testWidgets('课表导入任务可直接进入已启用课表的解析 API 配置', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -2079,8 +2109,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2124,6 +2154,7 @@ void main() {
           await tester.binding.setSurfaceSize(null);
         });
         final provider = TimetableProvider(
+          dataTransferCodec: inlineDataTransferCodec,
           storage: MemoryTimetableStorage(
             initialData: _buildTestAppData().copyWith(
               activeMode: AppMode.general,
@@ -2133,8 +2164,8 @@ void main() {
         await provider.load();
 
         await tester.pumpWidget(
-          ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
+          AppScope(
+            app: provider,
             child: const MaterialApp(
               locale: Locale('en'),
               localizationsDelegates: [
@@ -2174,6 +2205,7 @@ void main() {
 
     testWidgets('文本 / HTML 解析页在配置不完整时提示设置位置', (tester) async {
       final incompleteProvider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -2188,8 +2220,8 @@ void main() {
       await incompleteProvider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: incompleteProvider,
+        AppScope(
+          app: incompleteProvider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2215,6 +2247,7 @@ void main() {
 
     testWidgets('文本 / HTML 解析页会区分自定义配置缺失与完整状态', (tester) async {
       final incompleteProvider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -2229,8 +2262,8 @@ void main() {
       await incompleteProvider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: incompleteProvider,
+        AppScope(
+          app: incompleteProvider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2251,6 +2284,7 @@ void main() {
       expect(find.textContaining('自定义解析配置不完整'), findsOneWidget);
 
       final completeProvider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -2266,8 +2300,8 @@ void main() {
       await completeProvider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: completeProvider,
+        AppScope(
+          app: completeProvider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2291,6 +2325,7 @@ void main() {
 
     test('网页解析导入会保留 customFields 并导入内含节次时间集', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -2325,6 +2360,7 @@ void main() {
 
     test('网页解析导入丢弃内含节次时会复用现有节次时间集', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -2350,6 +2386,7 @@ void main() {
 
     test('网页解析导入覆盖当前课表时也能导入内含节次时间集', () async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -2375,6 +2412,7 @@ void main() {
 
     testWidgets('网页解析导入结果页默认显示解析结果中的开学时间并允许切换节次时间集策略', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -2459,6 +2497,7 @@ void main() {
         periodTimeSets: const [],
       );
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(
             studentMode: emptyStudentMode,
@@ -2500,6 +2539,7 @@ void main() {
 
     testWidgets('文本 / HTML 解析页在请求进行中会禁用重复提交并只请求一次', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -2522,8 +2562,8 @@ void main() {
       );
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: const Locale('zh'),
             localizationsDelegates: const [
@@ -2575,6 +2615,7 @@ void main() {
 
     testWidgets('文本 / HTML 解析页成功后会把导入结果写入 provider', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
             const AiApiSettings(
@@ -2623,15 +2664,13 @@ void main() {
                   unawaited(
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) =>
-                            ChangeNotifierProvider<TimetableProvider>.value(
-                              value: provider,
-                              child: SchoolHtmlImportPage(
-                                api: fakeApi,
-                                contentPreparer:
-                                    prepareSchoolImportContentForTest,
-                              ),
-                            ),
+                        builder: (_) => AppScope(
+                          app: provider,
+                          child: SchoolHtmlImportPage(
+                            api: fakeApi,
+                            contentPreparer: prepareSchoolImportContentForTest,
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -2679,13 +2718,14 @@ void main() {
   group('节次时间集选择', () {
     testWidgets('当前选择的节次时间集不显示勾选图标', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: const Locale('zh'),
             localizationsDelegates: const [
@@ -2730,13 +2770,14 @@ void main() {
   group('课表显示设置', () {
     testWidgets('关闭跟随主题色时会初始化自定义描边颜色', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2780,13 +2821,14 @@ void main() {
 
     testWidgets('关闭课程描边后 provider 会保存设置', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2819,13 +2861,14 @@ void main() {
 
     testWidgets('描边宽度显示会带单位', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2854,6 +2897,7 @@ void main() {
 
     testWidgets('五彩缤纷模式会显示 UI 配色和课程颜色列表', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: () {
             final themed = _buildTestAppData();
@@ -2870,8 +2914,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -2913,6 +2957,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: () {
             final themed = _buildTestAppData();
@@ -2945,8 +2990,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -3024,6 +3069,7 @@ void main() {
 
     testWidgets('单调主题色模式会隐藏五彩缤纷列表并显示原主题色入口', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: () {
             final themed = _buildTestAppData();
@@ -3039,8 +3085,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -3063,13 +3109,14 @@ void main() {
 
     testWidgets('调整描边宽度后 provider 会保存设置', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -3106,13 +3153,14 @@ void main() {
 
     testWidgets('切换描边目标后 provider 会保存模式', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -3160,6 +3208,7 @@ void main() {
 
     testWidgets('课程文字色支持自动配色与自定义颜色切换', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(
             themeColorMode: themeColorModeColorful,
@@ -3169,8 +3218,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: [
@@ -3251,6 +3300,7 @@ void main() {
   group('主页与编辑器', () {
     testWidgets('未加载时先显示加载态', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
 
@@ -3262,6 +3312,7 @@ void main() {
     testWidgets('进入后台时会保存待写入的通用日程选中日期', (tester) async {
       final storage = MemoryTimetableStorage(initialData: _buildTestAppData());
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         uiStateSaveDelay: const Duration(days: 1),
       );
@@ -3291,14 +3342,15 @@ void main() {
         privacyPolicyAcceptedAtIso: null,
       );
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: initialData),
       );
       await provider.load();
       provider.injectRemotePrivacyPolicyVersion('2026-04-20');
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: const Locale('zh'),
             localizationsDelegates: const [
@@ -3330,13 +3382,14 @@ void main() {
 
     testWidgets('主页显示精简标题、右上角添加课程并保留唯一主操作', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: const Locale('zh'),
             localizationsDelegates: const [
@@ -3390,13 +3443,14 @@ void main() {
       final appData = _buildTestAppData();
       final course = appData.studentMode.timetables.first.courses.first;
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: appData),
       );
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: _buildLocalizedApp(
             CourseDetailsSheet(
               timetableId: provider.activeTimetable.id,
@@ -3418,6 +3472,7 @@ void main() {
 
     testWidgets('手动检测更新时的更新弹窗只包含 GitHub 更新入口', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -3455,6 +3510,7 @@ void main() {
 
     testWidgets('检测更新失败时会显示错误弹窗并提供 GitHub 更新入口', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -3485,6 +3541,7 @@ void main() {
 
     testWidgets('启动时检测更新失败保持静默且不忽略未知版本', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
       await provider.load();
@@ -3530,6 +3587,7 @@ void main() {
         ],
       );
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(
             activeMode: AppMode.general,
@@ -3544,8 +3602,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: _buildLocalizedApp(
             const GeneralScheduleHomeScreen(),
             locale: const Locale('en'),
@@ -3588,6 +3646,7 @@ void main() {
         ],
       );
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(
             activeMode: AppMode.general,
@@ -3602,8 +3661,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: _buildLocalizedApp(
             const GeneralScheduleHomeScreen(),
             locale: const Locale('en'),
@@ -3645,6 +3704,7 @@ void main() {
         ],
       );
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(
             activeMode: AppMode.general,
@@ -3659,8 +3719,8 @@ void main() {
       await provider.load();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: _buildLocalizedApp(
             const GeneralScheduleHomeScreen(),
             locale: const Locale('en'),
@@ -3692,6 +3752,7 @@ void main() {
 
         const calendar = GeneralSchedule(id: 'cal1', name: 'Work', events: []);
         final provider = TimetableProvider(
+          dataTransferCodec: inlineDataTransferCodec,
           storage: MemoryTimetableStorage(
             initialData: _buildTestAppData().copyWith(
               activeMode: AppMode.general,
@@ -3707,8 +3768,8 @@ void main() {
         await provider.load();
 
         await tester.pumpWidget(
-          ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
+          AppScope(
+            app: provider,
             child: _buildLocalizedApp(
               const GeneralScheduleHomeScreen(),
               locale: const Locale('en'),
@@ -3757,6 +3818,7 @@ void main() {
 
     testWidgets('没有课表时显示新建和导入引导', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: AppData(
             activeMode: AppMode.student,
@@ -4435,6 +4497,7 @@ void main() {
 
     testWidgets('MyApp 在五彩缤纷模式下会覆盖 primary secondary tertiary', (tester) async {
       final provider = TimetableProvider(
+        dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(
             themeColorMode: themeColorModeColorful,
@@ -4489,6 +4552,7 @@ void main() {
       'MyApp uses Material 3 while respecting the selected seed color',
       (tester) async {
         final provider = TimetableProvider(
+          dataTransferCodec: inlineDataTransferCodec,
           storage: MemoryTimetableStorage(
             initialData: _buildTestAppData().copyWith(
               themeColorMode: themeColorModeSingle,

@@ -12,11 +12,14 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/main.dart' show MyApp;
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/theme/app_theme.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryStorage implements TimetableStorage {
   _MemoryStorage(this.data);
@@ -99,6 +102,7 @@ Future<TimetableProvider> _providerFor(
   AppMode mode = AppMode.student,
 }) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
@@ -117,8 +121,8 @@ Widget _appFor(
   bool enabled = true,
   Future<void> Function()? onOpenSettings,
 }) {
-  return ChangeNotifierProvider<TimetableProvider>.value(
-    value: provider,
+  return AppScope(
+    app: provider,
     child: MaterialApp(
       locale: locale,
       localizationsDelegates: appLocalizationsDelegates,

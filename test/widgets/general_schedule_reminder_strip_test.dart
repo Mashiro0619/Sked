@@ -2,13 +2,15 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -98,6 +100,7 @@ Future<TimetableProvider> _createProvider() async {
         ),
       );
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(initial),
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,
@@ -113,8 +116,8 @@ Future<void> _pumpReminderScreen(
   required _TrackingTimerFactory timers,
 }) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,
@@ -206,8 +209,8 @@ void main() {
     addTearDown(tickerEnabled.dispose);
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: const Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,
