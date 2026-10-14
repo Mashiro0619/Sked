@@ -14,10 +14,14 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
+
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/settings_list.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -66,6 +70,7 @@ Future<TimetableProvider> _createProvider(
   _BlockingTimetableStorage storage,
 ) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
@@ -88,8 +93,8 @@ class _ThemeSettingsHost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    return AppScope(
+      app: provider,
       child: Consumer<TimetableProvider>(
         builder: (context, provider, child) {
           return MaterialApp(
@@ -1186,8 +1191,8 @@ void main() {
     storage.blockNextSave();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: const MaterialApp(
           locale: Locale('en'),
           localizationsDelegates: appLocalizationsDelegates,

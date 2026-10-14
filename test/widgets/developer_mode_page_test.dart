@@ -6,12 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
+
 import 'package:sked/screens/developer_mode_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/agenda_coordinator.dart';
@@ -19,6 +20,8 @@ import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _DeveloperPageStorage implements TimetableStorage {
   _DeveloperPageStorage(this.data);
@@ -55,6 +58,7 @@ Future<(TimetableProvider, _DeveloperPageStorage)> _createProvider({
     buildInitialAppData(buildDefaultPeriodTimes(), localeCode: localeCode),
   );
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => localeCode,
   );
@@ -72,8 +76,8 @@ Future<void> _pumpDeveloperPage(
   AndroidProductivityBridge? productivityBridge,
 }) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
@@ -105,8 +109,8 @@ Future<void> _pumpSettingsPage(
     buildSignature: '',
   );
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,

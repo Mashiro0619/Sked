@@ -3,14 +3,16 @@ import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/language_settings_page.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -70,6 +72,7 @@ class _RetryableTimetableStorage implements TimetableStorage {
 
 Future<TimetableProvider> _createProvider(TimetableStorage storage) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
@@ -84,8 +87,8 @@ Future<void> _pumpHostPage(
   EdgeInsets viewPadding = EdgeInsets.zero,
 }) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,

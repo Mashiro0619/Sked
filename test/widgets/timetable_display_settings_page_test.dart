@@ -3,15 +3,18 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/gestures.dart' show kPrimaryButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
+
 import 'package:sked/screens/timetable_display_settings_page.dart';
 import 'package:sked/widgets/settings_list.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -34,6 +37,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
 Future<TimetableProvider> _createProvider() async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
@@ -53,8 +57,8 @@ Future<void> _pumpPage(
   TextScaler textScaler = TextScaler.noScaling,
 }) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,

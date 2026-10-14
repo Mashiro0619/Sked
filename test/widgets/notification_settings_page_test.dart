@@ -6,11 +6,15 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
+
 import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _NotificationSettingsStorage implements TimetableStorage {
   _NotificationSettingsStorage(this.data);
@@ -30,6 +34,7 @@ class _NotificationSettingsStorage implements TimetableStorage {
 
 Future<TimetableProvider> _provider() async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _NotificationSettingsStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     ),
@@ -48,8 +53,8 @@ void main() {
       final service = AgendaNotificationService(enabled: false);
       addTearDown(service.dispose);
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -102,7 +107,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider<TimetableProvider>.value(value: provider),
+            ...AppScope.providersFor(provider),
             Provider<AgendaCoordinator>.value(value: coordinator),
           ],
           child: MaterialApp(
@@ -181,7 +186,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider<TimetableProvider>.value(value: provider),
+            ...AppScope.providersFor(provider),
             Provider<AgendaCoordinator>.value(value: coordinator),
           ],
           child: MaterialApp(
@@ -258,7 +263,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<TimetableProvider>.value(value: provider),
+          ...AppScope.providersFor(provider),
           Provider<AgendaCoordinator>.value(value: coordinator),
         ],
         child: MaterialApp(

@@ -2,17 +2,20 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
+
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/services/school_import_http_consent.dart';
 import 'package:sked/services/secret_store.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -258,6 +261,7 @@ Future<TimetableProvider> _createProvider({
   TimetableStorage? storage,
 }) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage ?? _MemoryTimetableStorage(_buildTestData()),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     secretStore: secretStore ?? _MemorySecretStore('sk-test'),
@@ -274,8 +278,8 @@ Future<void> _pumpPage(
   SchoolImportHttpConsentStore? httpConsentStore,
 }) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,
@@ -295,8 +299,8 @@ Future<void> _pumpPageFromHost(
   TimetableProvider provider,
 ) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,

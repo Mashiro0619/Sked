@@ -7,12 +7,12 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -278,8 +278,8 @@ Future<void> _pumpSettingsPage(
     buildSignature: '',
   );
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
@@ -338,8 +338,8 @@ Future<void> _pumpSettingsHostPage(
     buildSignature: '',
   );
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,
@@ -353,15 +353,14 @@ Future<void> _pumpSettingsHostPage(
                     unawaited(
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) =>
-                              ChangeNotifierProvider<TimetableProvider>.value(
-                                value: provider,
-                                child: SettingsPage(
-                                  initialDestination: provider.isStudentMode
-                                      ? SettingsDestination.student
-                                      : SettingsDestination.general,
-                                ),
-                              ),
+                          builder: (_) => AppScope(
+                            app: provider,
+                            child: SettingsPage(
+                              initialDestination: provider.isStudentMode
+                                  ? SettingsDestination.student
+                                  : SettingsDestination.general,
+                            ),
+                          ),
                         ),
                       ),
                     );
