@@ -1,7 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +9,7 @@ import 'package:sked/widgets/sked_date_picker.dart';
 
 import '../test/support/mobile_layout_data.dart';
 import '../test/support/workspace_harness.dart';
+import 'support/visual_capture_session.dart';
 
 Finder key(String value) => find.byKey(ValueKey(value));
 void main() {
@@ -21,14 +18,9 @@ void main() {
     t,
   ) async {
     await DesktopWindowBridge.instance.initialize();
-    final out = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/mobile-calendar-spacing-after',
-      ),
+    final captures = VisualCaptureSession(
+      defaultOutput: '.scratch/mobile-calendar-spacing-after',
     );
-    await out.create(recursive: true);
-    final manifest = <Map<String, Object?>>[];
     final today = normalizeDateOnly(DateTime.now());
     final cases = <(String, Size, double, Brightness, TargetPlatform, String)>[
       (
@@ -156,12 +148,39 @@ void main() {
               paragraph.getMaxIntrinsicWidth(double.infinity),
               lessThanOrEqualTo(paragraph.size.width + .01),
             );
+            final date = find.descendant(
+              of: key('general-date-title-button'),
+              matching: find.byType(Text),
+            );
+            // Native fonts can fit a longer candidate than the widget-test
+            // font. Visible dates stay readable; semantics retain full dates.
             expect(
-              find.descendant(
-                of: key('general-date-title-button'),
-                matching: find.text('9/22–24'),
+              t.widget<Text>(date).data,
+              anyOf('2026/9/22–24', '9/22–24', '22–24'),
+            );
+            final dateParagraph = t.renderObject<RenderParagraph>(date);
+            expect(dateParagraph.didExceedMaxLines, isFalse);
+            expect(
+              dateParagraph.getMaxIntrinsicWidth(double.infinity),
+              lessThanOrEqualTo(dateParagraph.size.width + .01),
+            );
+            final semantics = t
+                .widget<Semantics>(
+                  find
+                      .ancestor(
+                        of: key('general-date-title-button'),
+                        matching: find.byType(Semantics),
+                      )
+                      .first,
+                )
+                .properties;
+            final localizations = MaterialLocalizations.of(t.element(date));
+            expect(
+              semantics.label,
+              allOf(
+                contains(localizations.formatFullDate(DateTime(2026, 9, 22))),
+                contains(localizations.formatFullDate(DateTime(2026, 9, 24))),
               ),
-              findsOneWidget,
             );
           }
           const verify = bool.fromEnvironment('SKED_VISUAL_VERIFY');
@@ -198,34 +217,18 @@ void main() {
             }
           }
 
-          expect(t.takeException(), isNull, reason: '$name $scene');
-          final render =
-              boundary.currentContext!.findRenderObject()!
-                  as RenderRepaintBoundary;
-          final image = await render.toImage(
+          await captures.capture(
+            t,
+            boundary: find.byKey(boundary),
+            name: '$name-$scene',
             pixelRatio: size.width < 600 ? 2 : 1,
-          );
-          try {
-            final bytes = (await image.toByteData(
-              format: ui.ImageByteFormat.png,
-            ))!;
-            final file = '$name-$scene.png';
-            await File('${out.path}/$file')
-                .writeAsBytes(bytes.buffer.asUint8List());
-            manifest.add({
-              'file': file,
-              'widthDp': size.width,
-              'heightDp': size.height,
+            metadata: {
               'textScale': scale,
               'brightness': brightness.name,
-              'platformStyle': platform.name,
               'locale': language,
               'today': today.toIso8601String(),
-              'evidence': 'Actual homepage on Windows Flutter; Android safe areas and geometry simulated, not device acceptance.',
-            });
-          } finally {
-            image.dispose();
-          }
+            },
+          );
         }
 
         await t.pumpWidget(
@@ -294,7 +297,6 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
       DesktopWindowBridge.instance.available = false;
     }
-    await File('${out.path}/manifest.json')
-        .writeAsString(const JsonEncoder.withIndent('  ').convert(manifest));
+    await captures.writeManifest(expectedCount: cases.length * 6);
   });
 }

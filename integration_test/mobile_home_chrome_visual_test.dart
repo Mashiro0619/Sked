@@ -1,9 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,6 +7,7 @@ import 'package:sked/services/desktop_window_bridge.dart';
 
 import '../test/support/mobile_layout_data.dart';
 import '../test/support/workspace_harness.dart';
+import 'support/visual_capture_session.dart';
 
 Finder key(String value) => find.byKey(ValueKey(value));
 void main() {
@@ -20,14 +16,9 @@ void main() {
     t,
   ) async {
     await DesktopWindowBridge.instance.initialize();
-    final out = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/mobile-home-chrome-after',
-      ),
+    final captures = VisualCaptureSession(
+      defaultOutput: '.scratch/mobile-home-chrome-after',
     );
-    await out.create(recursive: true);
-    final manifest = <Map<String, Object?>>[];
     final today = normalizeDateOnly(DateTime.now());
     final cases = <(String, Size, double, Brightness, TargetPlatform, String)>[
       (
@@ -137,34 +128,21 @@ void main() {
         );
         final boundary = GlobalKey();
         Future<void> capture(String scene) async {
-          expect(t.takeException(), isNull, reason: '$name $scene');
-          final render =
-              boundary.currentContext!.findRenderObject()!
-                  as RenderRepaintBoundary;
-          final image = await render.toImage(
+          final bar = key('adaptive-shell-navigation-bar');
+          await captures.capture(
+            t,
+            boundary: find.byKey(boundary),
+            name: '$name-$scene',
             pixelRatio: size.width < 600 ? 2 : 1,
-          );
-          try {
-            final bytes = (await image.toByteData(
-              format: ui.ImageByteFormat.png,
-            ))!;
-            final file = '$name-$scene.png';
-            await File('${out.path}/$file')
-                .writeAsBytes(bytes.buffer.asUint8List());
-            manifest.add({
-              'file': file,
-              'widthDp': size.width,
-              'heightDp': size.height,
+            metadata: {
               'textScale': scale,
               'brightness': brightness.name,
-              'platformStyle': platform.name,
               'locale': language,
               'today': today.toIso8601String(),
-              'evidence': 'Actual homepage on Windows Flutter; Android safe areas and geometry simulated, not device acceptance.',
-            });
-          } finally {
-            image.dispose();
-          }
+              if (bar.evaluate().isNotEmpty)
+                'navigationHeight': t.getSize(bar).height,
+            },
+          );
         }
 
         await t.pumpWidget(
@@ -191,8 +169,22 @@ void main() {
         );
         await t.pumpAndSettle();
         await capture('general-selected-other');
+        final customStart = addCalendarDays(startOfWeekMonday(today), 3);
+        final range = GeneralDateRange(
+          customStart,
+          addCalendarDays(customStart, 9),
+        );
+        await p.setGeneralDateRange(range, focusedDate: customStart);
+        await t.pumpAndSettle();
+        expect(p.customGeneralDateRange, range);
+        await capture('general-custom');
+        await p.clearGeneralDateRange();
+        await t.pumpAndSettle();
+        expect(p.customGeneralDateRange, isNull);
+        await capture('general-week');
         await p.switchMode(AppMode.student);
         await t.pumpAndSettle();
+        expect(p.activeMode, AppMode.student);
         await capture('student-home');
         await t.pumpWidget(const SizedBox.shrink());
         await t.pumpAndSettle();
@@ -202,7 +194,6 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
       DesktopWindowBridge.instance.available = false;
     }
-    await File('${out.path}/manifest.json')
-        .writeAsString(const JsonEncoder.withIndent('  ').convert(manifest));
+    await captures.writeManifest(expectedCount: cases.length * 5);
   });
 }
