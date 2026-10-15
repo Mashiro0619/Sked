@@ -138,6 +138,7 @@ class TimetableProvider extends ChangeNotifier {
     _defaults = AppDataDefaults(
       session: _session,
       localeCodeResolver: _systemLocaleCodeResolver,
+      codec: dataTransferCodec,
     );
     _studentView = StudentViewState(_session);
     _persistence = AppPersistence(
@@ -221,6 +222,7 @@ class TimetableProvider extends ChangeNotifier {
       backups: _backups,
       secrets: _schoolImportSecrets,
       privacy: _privacy,
+      codec: dataTransferCodec,
       notifyViewChanged: () {
         if (!_isDisposed) notifyListeners();
       },

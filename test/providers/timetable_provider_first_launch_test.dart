@@ -7,6 +7,8 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 
+import '../support/data_transfer_codec.dart';
+
 class _NoopSecretStore implements SecretStore {
   const _NoopSecretStore();
 
@@ -50,6 +52,7 @@ class _ControllableStorage implements TimetableStorage {
 
 Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
     privacyService: const _NoopPrivacyService(),

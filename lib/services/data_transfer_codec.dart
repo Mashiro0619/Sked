@@ -34,6 +34,14 @@ class GeneralImportCandidate {
   final List<GeneralCalendarIcsImportWarning> warnings;
 }
 
+/// A canonical archive snapshot with its durable comparison already made.
+class NormalizedStoredAppData {
+  const NormalizedStoredAppData({required this.data, required this.changed});
+
+  final AppData data;
+  final bool changed;
+}
+
 /// Pure transfer work runs outside the native UI isolate. Candidates contain
 /// only imported data; merging and durable writes remain with the live session.
 /// The computation boundary is injectable for deterministic widget fixtures.
@@ -112,6 +120,14 @@ class DataTransferCodec {
 
   Future<AppData> normalize(AppData data, {required String localeCode}) =>
       _run(_normalize, (data, localeCode), debugLabel: 'sked.data.normalize');
+
+  Future<NormalizedStoredAppData> normalizeForLoad(
+    AppData data, {
+    required String localeCode,
+  }) => _run(_normalizeForLoad, (
+    data,
+    localeCode,
+  ), debugLabel: 'sked.storage.normalize');
 }
 
 const _service = ImportExportService();
@@ -185,6 +201,14 @@ AppBackupData _decodeBackup((String, String) input) {
 AppData _normalize((AppData, String) input) =>
     _service.normalizeAppData(input.$1, localeCode: input.$2);
 
+NormalizedStoredAppData _normalizeForLoad((AppData, String) input) {
+  final normalized = _normalize(input);
+  return NormalizedStoredAppData(
+    data: normalized,
+    changed: !_jsonLikeEquals(normalized.toJson(), input.$1.toJson()),
+  );
+}
+
 bool _hasBundledPeriodTimeSets(ImportExportEnvelope envelope) {
   if (isImportExportSchema(envelope.schema, timetableDataSchema)) {
     return _hasPeriodTimeSetList(envelope.data['periodTimeSets']) ||
@@ -207,4 +231,24 @@ bool _hasLegacyTimetablePeriodConfig(Object? value) {
   return config is Map &&
       (_hasPeriodTimeSetList(config['periodTimes']) ||
           config['dailyPeriods'] is num);
+}
+
+bool _jsonLikeEquals(Object? a, Object? b) {
+  if (identical(a, b)) return true;
+  if (a is Map && b is Map) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      if (!_jsonLikeEquals(entry.value, b[entry.key])) return false;
+    }
+    return true;
+  }
+  if (a is List && b is List) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!_jsonLikeEquals(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  return a == b;
 }

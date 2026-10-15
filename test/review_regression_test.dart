@@ -1,4 +1,5 @@
 import 'support/agenda_coordinator_harness.dart';
+import 'support/data_transfer_codec.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -161,6 +162,7 @@ Future<TimetableProvider> providerFor(
   ProbeSecrets? secrets,
 }) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     secretStore: secrets ?? ProbeSecrets(),
     systemLocaleCodeResolver: () => 'en',

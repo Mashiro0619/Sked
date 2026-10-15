@@ -7,7 +7,7 @@ import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../models/timetable_models.dart';
 import '../services/app_backup_restore_journal.dart';
-import '../services/import_export_service.dart';
+import '../services/data_transfer_codec.dart';
 import '../services/privacy_service.dart';
 import 'app_backup_controller.dart';
 import 'app_data_defaults.dart';
@@ -31,7 +31,7 @@ class AppLifecycle extends ObservableViewState {
     required this._secrets,
     required this._privacy,
     required this._notifyViewChanged,
-    this._imports = const ImportExportService(),
+    this._codec = const DataTransferCodec(),
   }) {
     initializePublication();
   }
@@ -44,7 +44,7 @@ class AppLifecycle extends ObservableViewState {
   final SchoolImportSecretController _secrets;
   final PrivacyService _privacy;
   final VoidCallback _notifyViewChanged;
-  final ImportExportService _imports;
+  final DataTransferCodec _codec;
   String? _storagePath;
 
   AppRepository get _repository => _session.repository;
@@ -220,7 +220,6 @@ class AppLifecycle extends ObservableViewState {
         fresh,
         await _secrets.readForInitialization(),
       );
-      fresh = _imports.normalizeAppData(fresh, localeCode: fresh.localeCode);
       await _repository.startFreshAfterRecovery(fresh);
       _data = fresh;
       _storagePath = await _repository.filePath();
@@ -260,10 +259,11 @@ class AppLifecycle extends ObservableViewState {
       return;
     }
 
-    var normalized = _imports.normalizeAppData(
+    final prepared = await _codec.normalizeForLoad(
       fileData,
       localeCode: fileData.localeCode,
     );
+    var normalized = prepared.data;
     final legacyApiKey = normalized.aiApiSettings.customApiKey;
     final secureApiKey = await _secrets.readForInitialization();
     final secureApiKeyReadKnown = _secrets.isPersistenceKnown;
@@ -291,8 +291,7 @@ class AppLifecycle extends ObservableViewState {
     final shouldWriteBack =
         _repository.canWrite &&
         canDropLegacyApiKey &&
-        (!_jsonLikeEquals(normalized.toJson(), fileData.toJson()) ||
-            legacyApiKey.isNotEmpty);
+        (prepared.changed || legacyApiKey.isNotEmpty);
     var sanitizedMainSnapshotIsDurable = !shouldWriteBack;
     if (shouldWriteBack) {
       try {
@@ -416,24 +415,4 @@ DateTime? _parsePrivacyPolicyVersion(String? value) {
     return null;
   }
   return tryParseStrictIsoDate(value);
-}
-
-bool _jsonLikeEquals(Object? a, Object? b) {
-  if (identical(a, b)) return true;
-  if (a is Map && b is Map) {
-    if (a.length != b.length) return false;
-    for (final entry in a.entries) {
-      if (!b.containsKey(entry.key)) return false;
-      if (!_jsonLikeEquals(entry.value, b[entry.key])) return false;
-    }
-    return true;
-  }
-  if (a is List && b is List) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (!_jsonLikeEquals(a[i], b[i])) return false;
-    }
-    return true;
-  }
-  return a == b;
 }

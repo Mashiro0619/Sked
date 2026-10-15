@@ -17,6 +17,53 @@ void main() {
   const service = ImportExportService();
 
   test(
+    'loaded canonical archives do not need a redundant durable write',
+    () async {
+      final canonical = service.normalizeAppData(_data(), localeCode: 'en');
+      final data = canonical.copyWith(
+        aiApiSettings: canonical.aiApiSettings.copyWith(
+          customApiKey: 'runtime-key',
+        ),
+      );
+
+      final prepared = await codec.normalizeForLoad(data, localeCode: 'en');
+
+      expect(prepared.changed, isFalse);
+      expect(prepared.data.aiApiSettings.customApiKey, 'runtime-key');
+      expect(prepared.data.toJson(), data.toJson());
+    },
+  );
+
+  test(
+    'loaded legacy repairs are reported with their canonical snapshot',
+    () async {
+      final canonical = service.normalizeAppData(_data(), localeCode: 'en');
+      final originalSet = canonical.studentMode.periodTimeSets.first;
+      final dirty = canonical.copyWith(
+        studentMode: canonical.studentMode.copyWith(
+          periodTimeSets: [
+            originalSet.copyWith(name: '  Repaired periods  '),
+            ...canonical.studentMode.periodTimeSets.skip(1),
+          ],
+        ),
+      );
+
+      final prepared = await codec.normalizeForLoad(dirty, localeCode: 'en');
+
+      expect(prepared.changed, isTrue);
+      expect(
+        prepared.data.studentMode.periodTimeSets.first.name,
+        'Repaired periods',
+      );
+      expect(
+        dirty.studentMode.periodTimeSets.first.name,
+        '  Repaired periods  ',
+      );
+      expect(prepared.data.studentMode.periodTimeSets.first.id, originalSet.id);
+    },
+  );
+
+  test(
     'candidate metadata preserves full, empty and legacy period-set choices',
     () async {
       final data = _data();
