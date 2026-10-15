@@ -21,7 +21,12 @@ import '../controllers/settings_commands.dart';
 import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/general_commands.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../providers/workspace_theme_target.dart';
 import '../theme/app_theme.dart';
 import '../widgets/settings_preview_layout.dart';
@@ -259,11 +264,16 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }) async {
     // Restore rotates the data session before it obtains the mutation lock.
     // Retained entry callbacks must not create a draft in that new session.
-    if (!mounted || !context.mounted || target.source.maintenance.isReserved) {
-      return;
-    }
+    if (!mounted || !context.mounted) return;
+    final maintenance = context.read<AppDataMaintenance>();
+    if (maintenance.isReserved) return;
     final task = SkedTaskSession(
-      provider: target.source,
+      maintenance: maintenance,
+      workspaceView: context.read<WorkspaceViewState>(),
+      workspaces: context.read<WorkspaceCommands>(),
+      targetChanges: targetExists == null
+          ? null
+          : context.read<GeneralViewState>(),
       workspace: target.activeMode,
       ownerRoute: ModalRoute.of(context),
       isOwnerActive: () => mounted,
@@ -302,9 +312,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     unawaited(runUiCommand(debugLabel: debugLabel, command: command));
   }
 
-  void _switchWorkspace(WorkspaceThemeTarget provider, String value) {
+  void _switchWorkspace(String value) {
     final target = AppMode.values.singleWhere((mode) => mode.value == value);
-    if (provider.source.workspaceView.isEnabled(target)) {
+    if (context.read<WorkspaceViewState>().isEnabled(target)) {
       setState(() => _targetMode = target);
       widget.onWorkspaceChanged?.call(target);
     }
@@ -356,10 +366,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }
 
   Widget _buildOverview(WorkspaceThemeTarget provider, AppLocalizations l) {
-    final source = provider.source;
-    final workspace = source.workspaceView;
+    final workspace = context.read<WorkspaceViewState>();
     final controls = <Widget>[
-      _buildPanelDisplayChoice(source.settingsView, source.settingsCommands, l),
+      _buildPanelDisplayChoice(
+        context.read<SettingsViewState>(),
+        context.read<SettingsCommands>(),
+        l,
+      ),
       if (workspace.enabledWorkspaces.length > 1)
         SettingsChoiceTile<String>(
           key: const ValueKey('theme-workspace-target'),
@@ -381,7 +394,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
               ),
           ],
           onSelected: (value) {
-            if (value != null) _switchWorkspace(provider, value);
+            if (value != null) _switchWorkspace(value);
           },
         ),
       SettingsChoiceTile<String>(
@@ -460,23 +473,18 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     );
   }
 
-  Future<void> _openOutlineSettingsPage(
-    BuildContext context,
-    WorkspaceThemeTarget provider,
-  ) async {
+  Future<void> _openOutlineSettingsPage(BuildContext context) async {
     if (_outlineSettingsPageOpen ||
         uiCommandBusy ||
-        provider.source.maintenance.isReserved) {
+        context.read<AppDataMaintenance>().isReserved) {
       return;
     }
+    final scope = AppScope.capture(context)!;
     _outlineSettingsPageOpen = true;
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider.source,
-            child: const _ThemeSettingsOutlinePage(),
-          ),
+          builder: (_) => scope.wrap(const _ThemeSettingsOutlinePage()),
         ),
       );
     } finally {
@@ -486,15 +494,19 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TimetableProvider>(
-      builder: (context, source, child) {
-        final workspace = source.workspaceView;
-        final settings = source.settingsView;
-        final commands = source.settingsCommands;
+    return Consumer3<SettingsViewState, WorkspaceViewState, GeneralViewState>(
+      builder: (context, settings, workspace, general, child) {
+        final commands = context.read<SettingsCommands>();
         final target = _targetMode != null && workspace.isEnabled(_targetMode!)
             ? _targetMode!
             : workspace.activeMode;
-        final provider = WorkspaceThemeTarget(source, target);
+        final provider = WorkspaceThemeTarget(
+          settings: settings,
+          settingsCommands: commands,
+          general: general,
+          generalCommands: context.read<GeneralCommands>(),
+          activeMode: target,
+        );
         final l10n = AppLocalizations.of(context);
         if (widget.embedded) return _buildOverview(provider, l10n);
         final hasCustomColor = !_isPresetThemeColor(
@@ -560,7 +572,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                 selected: {provider.activeMode.value},
                                 onSelectionChanged: (selection) {
                                   if (selection.isEmpty) return;
-                                  _switchWorkspace(provider, selection.first);
+                                  _switchWorkspace(selection.first);
                                 },
                               ),
                             _AppearanceChoiceField(
@@ -789,9 +801,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                               effectiveOutlineColorValue:
                                   effectiveOutlineColorValue,
                               outlineWidth: outlineWidth,
-                              onTap: () => unawaited(
-                                _openOutlineSettingsPage(context, provider),
-                              ),
+                              onTap: () =>
+                                  unawaited(_openOutlineSettingsPage(context)),
                             ),
                           ),
                         ],
@@ -1332,7 +1343,7 @@ class _SingleThemeColorSection extends StatelessWidget {
                         ),
                         colorValue: colorValue,
                         selected: provider.themeSeedColorValue == colorValue,
-                        onTap: provider.source.maintenance.isReserved
+                        onTap: context.watch<AppDataMaintenance>().isReserved
                             ? null
                             : () => onSelectColor(colorValue),
                       ),
@@ -1387,7 +1398,7 @@ class _OutlineSettingsCard extends StatelessWidget {
       children: [
         ExpressiveTap(
           borderRadius: BorderRadius.circular(20),
-          onTap: provider.source.maintenance.isReserved ? null : onTap,
+          onTap: context.watch<AppDataMaintenance>().isReserved ? null : onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

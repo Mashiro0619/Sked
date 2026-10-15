@@ -47,7 +47,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   @override
   void initState() {
     super.initState();
-    final settings = context.read<TimetableProvider>().settingsView;
+    final settings = context.read<SettingsViewState>();
     _derivedThemeColorValue = _derivedOutlineColorValue(
       settings.data.studentMode.themeSeedColorValue,
     );
@@ -63,7 +63,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   Future<void> _apply() async {
     if (_blocked || !_canApply) return;
     FocusScope.of(context).unfocus();
-    final commands = context.read<TimetableProvider>().settingsCommands;
+    final commands = context.read<SettingsCommands>();
     final saved = await runUiCommand(
       debugLabel: 'Update live course outline settings',
       command: () => commands.updateLiveCourseOutlineSettings(

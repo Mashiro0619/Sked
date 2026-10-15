@@ -55,11 +55,23 @@ void main() {
         expect(provider.appData.enabledWorkspaces, provider.enabledWorkspaces);
         expect(provider.appData.themeSeedColorValue, 0xff123456);
         expect(
-          WorkspaceThemeTarget(provider, AppMode.student).themeSeedColorValue,
+          WorkspaceThemeTarget(
+            settings: provider.settingsView,
+            settingsCommands: provider.settingsCommands,
+            general: provider.generalView,
+            generalCommands: provider.generalCommands,
+            activeMode: AppMode.student,
+          ).themeSeedColorValue,
           0xff123456,
         );
         expect(
-          WorkspaceThemeTarget(provider, AppMode.general).themeSeedColorValue,
+          WorkspaceThemeTarget(
+            settings: provider.settingsView,
+            settingsCommands: provider.settingsCommands,
+            general: provider.generalView,
+            generalCommands: provider.generalCommands,
+            activeMode: AppMode.general,
+          ).themeSeedColorValue,
           0xffabcdef,
         );
         expect(provider.committedAppData, same(original));

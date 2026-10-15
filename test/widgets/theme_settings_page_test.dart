@@ -15,6 +15,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
+import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/providers/timetable_provider.dart';
 
 import 'package:sked/screens/theme_settings_page.dart';
@@ -95,8 +96,8 @@ class _ThemeSettingsHost extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppScope(
       app: provider,
-      child: Consumer<TimetableProvider>(
-        builder: (context, provider, child) {
+      child: Consumer<SettingsViewState>(
+        builder: (context, settings, child) {
           return MaterialApp(
             locale: locale,
             localizationsDelegates: appLocalizationsDelegates,
@@ -110,10 +111,10 @@ class _ThemeSettingsHost extends StatelessWidget {
               child: child!,
             ),
             theme: buildAppTheme(
-              seedColor: Color(provider.themeSeedColorValue),
+              seedColor: Color(settings.themeSeedColorValue),
               brightness: Brightness.light,
-              themeColorMode: provider.themeColorMode,
-              colorfulUiColorValues: provider.colorfulUiColorValues,
+              themeColorMode: settings.themeColorMode,
+              colorfulUiColorValues: settings.colorfulUiColorValues,
             ),
             home: const ThemeSettingsPage(),
           );

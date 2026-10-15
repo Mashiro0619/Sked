@@ -33,13 +33,23 @@ void main() {
   test('explicit theme target writes colors without switching the current workspace', () async {
     final p = await workspaceProvider();
     addTearDown(p.dispose);
-    final general = WorkspaceThemeTarget(p, AppMode.general);
+    final general = WorkspaceThemeTarget(
+      settings: p.settingsView,
+      settingsCommands: p.settingsCommands,
+      general: p.generalView,
+      generalCommands: p.generalCommands,
+      activeMode: AppMode.general,
+    );
     await general.updateThemeColorMode(themeColorModeColorful);
     final calendar = p.generalSchedules.first;
-    await general.updateGeneralSchedule(
-      calendar.copyWith(colorValue: 0xff123456),
+    await general.updateGeneralScheduleColor(calendar.id, 0xff123456);
+    final student = WorkspaceThemeTarget(
+      settings: p.settingsView,
+      settingsCommands: p.settingsCommands,
+      general: p.generalView,
+      generalCommands: p.generalCommands,
+      activeMode: AppMode.student,
     );
-    final student = WorkspaceThemeTarget(p, AppMode.student);
     final courseName = p.timetables.expand((table) => table.courses).first.name;
     await student.updateCourseNameColorValue(courseName, 0xff654321);
     expect(p.activeMode, AppMode.student);

@@ -183,7 +183,13 @@ void main() {
         );
         final provider = await _providerFor(storage);
         addTearDown(provider.dispose);
-        final target = WorkspaceThemeTarget(provider, AppMode.student);
+        final target = WorkspaceThemeTarget(
+          settings: provider.settingsView,
+          settingsCommands: provider.settingsCommands,
+          general: provider.generalView,
+          generalCommands: provider.generalCommands,
+          activeMode: AppMode.student,
+        );
         final originalGeneral = provider.appData.generalMode.toJson();
 
         await target.updateColorfulCourseTextSettings(
@@ -232,8 +238,11 @@ void main() {
 
         await expectLater(
           WorkspaceThemeTarget(
-            provider,
-            AppMode.student,
+            settings: provider.settingsView,
+            settingsCommands: provider.settingsCommands,
+            general: provider.generalView,
+            generalCommands: provider.generalCommands,
+            activeMode: AppMode.student,
           ).updateColorfulCourseTextSettings(
             mode: colorfulCourseTextColorModeCustom,
             customColorValue: 0xFF123456,
