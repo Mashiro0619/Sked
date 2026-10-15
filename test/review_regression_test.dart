@@ -173,21 +173,21 @@ Future<TimetableProvider> providerFor(
     ),
   );
   addTearDown(provider.dispose);
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
 Future<TimetableProvider> _studentProviderAtWeek12(ProbeStorage storage) async {
   final provider = await providerFor(storage);
-  await provider.addTimetable(
+  await provider.studentCommands.addTimetable(
     TimetableConfig(
       name: 'Week rollback',
       startDate: anchor,
       totalWeeks: 20,
-      periodTimeSetId: provider.activePeriodTimeSet.id,
+      periodTimeSetId: provider.studentView.activePeriodTimeSet.id,
     ),
   );
-  await provider.setSelectedWeek(12);
+  await provider.studentCommands.setSelectedWeek(12);
   return provider;
 }
 
@@ -264,14 +264,14 @@ void main() {
       );
       secrets.failWrite = true;
       await expectLater(
-        provider.updateCustomSchoolImportApiKey('probe-new'),
+        provider.schoolImportSecrets.update('probe-new'),
         throwsStateError,
       );
-      expect(provider.customSchoolImportApiKey, 'probe-old');
-      expect(await provider.prepareForWindowClose(), isTrue);
-      expect(await provider.prepareForWindowClose(), isTrue);
-      await provider.setWorkspaceEnabled(AppMode.student, false);
-      expect(provider.isWorkspaceEnabled(AppMode.student), isFalse);
+      expect(provider.settingsView.customSchoolImportApiKey, 'probe-old');
+      expect(await provider.shutdown.prepareForWindowClose(), isTrue);
+      expect(await provider.shutdown.prepareForWindowClose(), isTrue);
+      await provider.workspaces.setEnabled(AppMode.student, false);
+      expect(provider.workspaceView.isEnabled(AppMode.student), isFalse);
     },
   );
 
@@ -286,18 +286,21 @@ void main() {
       secrets.failWrite = true;
       secrets.failRead = true;
       await expectLater(
-        provider.updateCustomSchoolImportApiKey('probe-new'),
+        provider.schoolImportSecrets.update('probe-new'),
         throwsStateError,
       );
-      await expectLater(provider.prepareForWindowClose(), throwsStateError);
       await expectLater(
-        provider.setWorkspaceEnabled(AppMode.student, false),
+        provider.shutdown.prepareForWindowClose(),
+        throwsStateError,
+      );
+      await expectLater(
+        provider.workspaces.setEnabled(AppMode.student, false),
         throwsStateError,
       );
       secrets.failRead = false;
-      expect(await provider.prepareForWindowClose(), isTrue);
-      expect(provider.customSchoolImportApiKey, 'probe-old');
-      await provider.setWorkspaceEnabled(AppMode.student, false);
+      expect(await provider.shutdown.prepareForWindowClose(), isTrue);
+      expect(provider.settingsView.customSchoolImportApiKey, 'probe-old');
+      await provider.workspaces.setEnabled(AppMode.student, false);
     },
   );
 
@@ -312,7 +315,7 @@ void main() {
       secrets.failRead = true;
       secrets.failWrite = true;
       await expectLater(
-        provider.updateCustomSchoolImportApiKey('probe-first'),
+        provider.schoolImportSecrets.update('probe-first'),
         throwsStateError,
       );
       secrets.failRead = false;
@@ -323,12 +326,12 @@ void main() {
         entered.complete();
         return release.future;
       };
-      final close = provider.prepareForWindowClose();
+      final close = provider.shutdown.prepareForWindowClose();
       await entered.future;
-      await provider.updateCustomSchoolImportApiKey('probe-second');
+      await provider.schoolImportSecrets.update('probe-second');
       release.complete('probe-old');
       expect(await close, isTrue);
-      expect(provider.customSchoolImportApiKey, 'probe-second');
+      expect(provider.settingsView.customSchoolImportApiKey, 'probe-second');
       expect(secrets.value, 'probe-second');
     },
   );
@@ -394,12 +397,12 @@ END:VCALENDAR''',
     );
     final expected = DateTime.utc(2026, 9, 9, 23, 30).toLocal();
     expect(
-      provider.generalSchedules.single.events.single.startDateTimeIso,
+      provider.generalView.schedules.single.events.single.startDateTimeIso,
       endsWith('Z'),
     );
     expect(
-      provider
-          .generalOccurrencesForRange(
+      provider.generalView
+          .occurrencesForRange(
             startInclusive: expected.subtract(const Duration(hours: 1)),
             endExclusive: expected.add(const Duration(hours: 1)),
           )
@@ -426,14 +429,14 @@ END:VCALENDAR''',
       await coordinator.start();
       expect(errors.single, isA<TimeoutException>());
       storage.readOnly = false;
-      await provider.retryStorageLoad();
-      await provider.saveGeneralEvent(event());
+      await provider.lifecycle.retryStorageLoad();
+      await provider.generalCommands.saveEvent(event());
       await waitFor(() => gateway.scheduled.length == 1);
       expect(coordinator.isStarted, isTrue);
       expect(bridge.intents.hasListener, isTrue);
       expect(gateway.scheduled, hasLength(1));
       await coordinator.onResume();
-      await provider.deleteGeneralEvent(event().id);
+      await provider.generalCommands.deleteEvent(event().id);
       await waitFor(() => gateway.scheduled.isEmpty);
       expect(gateway.scheduled, isEmpty);
       await coordinator.start();
@@ -458,7 +461,7 @@ END:VCALENDAR''',
       ready.complete();
       await waitFor(() => coordinator.isStarted);
       expect(coordinator.isStarted, isTrue);
-      await provider.saveGeneralEvent(event());
+      await provider.generalCommands.saveEvent(event());
       await waitFor(() => gateway.scheduled.length == 1);
       expect(gateway.scheduled, hasLength(1));
     },
@@ -469,19 +472,22 @@ END:VCALENDAR''',
     () async {
       final storage = ProbeStorage(baseData());
       final provider = await providerFor(storage);
-      await provider.addTimetable(
+      await provider.studentCommands.addTimetable(
         TimetableConfig(
           name: 'Review timetable',
           startDate: DateTime.now(),
           totalWeeks: 20,
-          periodTimeSetId: provider.activePeriodTimeSet.id,
+          periodTimeSetId: provider.studentView.activePeriodTimeSet.id,
         ),
       );
-      await provider.setSelectedWeek(12);
+      await provider.studentCommands.setSelectedWeek(12);
       storage.nextSaveError = StateError('probe app-data write failure');
-      await expectLater(provider.saveGeneralEvent(event()), throwsStateError);
-      expect(provider.selectedWeek, 12);
-      expect(provider.generalSchedules.single.events, isEmpty);
+      await expectLater(
+        provider.generalCommands.saveEvent(event()),
+        throwsStateError,
+      );
+      expect(provider.studentView.selectedWeek, 12);
+      expect(provider.generalView.schedules.single.events, isEmpty);
     },
   );
 
@@ -490,19 +496,19 @@ END:VCALENDAR''',
     () async {
       final storage = ProbeStorage(baseData());
       final provider = await _studentProviderAtWeek12(storage);
-      final timetableId = provider.activeTimetable.id;
+      final timetableId = provider.studentView.activeTimetable.id;
       storage.nextSaveError = const StorageWriteException(
         'week-count save failed',
       );
       await expectLater(
-        provider.updateTimetableConfig(
-          provider.activeTimetable.config.copyWith(totalWeeks: 8),
+        provider.studentCommands.updateTimetableConfig(
+          provider.studentView.activeTimetable.config.copyWith(totalWeeks: 8),
         ),
         throwsA(isA<StorageWriteException>()),
       );
-      expect(provider.activeTimetable.id, timetableId);
-      expect(provider.activeTimetable.config.totalWeeks, 20);
-      expect(provider.selectedWeek, 12);
+      expect(provider.studentView.activeTimetable.id, timetableId);
+      expect(provider.studentView.activeTimetable.config.totalWeeks, 20);
+      expect(provider.studentView.selectedWeek, 12);
     },
   );
 
@@ -510,11 +516,11 @@ END:VCALENDAR''',
     'successful week-count reduction still clamps the selected week',
     () async {
       final provider = await _studentProviderAtWeek12(ProbeStorage(baseData()));
-      await provider.updateTimetableConfig(
-        provider.activeTimetable.config.copyWith(totalWeeks: 8),
+      await provider.studentCommands.updateTimetableConfig(
+        provider.studentView.activeTimetable.config.copyWith(totalWeeks: 8),
       );
-      expect(provider.activeTimetable.config.totalWeeks, 8);
-      expect(provider.selectedWeek, 8);
+      expect(provider.studentView.activeTimetable.config.totalWeeks, 8);
+      expect(provider.studentView.selectedWeek, 8);
     },
   );
 
@@ -532,19 +538,19 @@ END:VCALENDAR''',
           'delayed config failure',
         );
         final failure = expectLater(
-          provider.updateTimetableConfig(
-            provider.activeTimetable.config.copyWith(totalWeeks: 8),
+          provider.studentCommands.updateTimetableConfig(
+            provider.studentView.activeTimetable.config.copyWith(totalWeeks: 8),
           ),
           throwsA(isA<StorageWriteException>()),
         );
         await entered.future;
-        expect(provider.selectedWeek, 8);
-        await provider.setSelectedWeek(6);
-        await provider.setSelectedWeek(nextWeek);
+        expect(provider.studentView.selectedWeek, 8);
+        await provider.studentCommands.setSelectedWeek(6);
+        await provider.studentCommands.setSelectedWeek(nextWeek);
         release.complete();
         await failure;
-        expect(provider.activeTimetable.config.totalWeeks, 20);
-        expect(provider.selectedWeek, nextWeek);
+        expect(provider.studentView.activeTimetable.config.totalWeeks, 20);
+        expect(provider.studentView.selectedWeek, nextWeek);
       },
     );
   }
@@ -560,17 +566,17 @@ END:VCALENDAR''',
       storage.saveGate = release;
       storage.nextSaveError = const StorageWriteException('extension failed');
       final failure = expectLater(
-        provider.updateTimetableConfig(
-          provider.activeTimetable.config.copyWith(totalWeeks: 30),
+        provider.studentCommands.updateTimetableConfig(
+          provider.studentView.activeTimetable.config.copyWith(totalWeeks: 30),
         ),
         throwsA(isA<StorageWriteException>()),
       );
       await entered.future;
-      await provider.setSelectedWeek(25);
+      await provider.studentCommands.setSelectedWeek(25);
       release.complete();
       await failure;
-      expect(provider.activeTimetable.config.totalWeeks, 20);
-      expect(provider.selectedWeek, 20);
+      expect(provider.studentView.activeTimetable.config.totalWeeks, 20);
+      expect(provider.studentView.selectedWeek, 20);
     },
   );
 
@@ -580,7 +586,7 @@ END:VCALENDAR''',
       () async {
         final storage = ProbeStorage(baseData());
         final provider = await _studentProviderAtWeek12(storage);
-        final first = provider.activeTimetable;
+        final first = provider.studentView.activeTimetable;
         // Seed a distinct identity instead of racing two millisecond-based
         // addTimetable IDs in a fast in-memory test.
         final second = first.copyWith(
@@ -593,17 +599,19 @@ END:VCALENDAR''',
             timetables: [first, second],
           ),
         );
-        await provider.retryStorageLoad();
-        await provider.setSelectedWeek(12);
+        await provider.lifecycle.retryStorageLoad();
+        await provider.studentCommands.setSelectedWeek(12);
         storage.nextSaveError = const StorageWriteException('delete failed');
         await expectLater(
-          provider.deleteTimetable(deleteActive ? first.id : second.id),
+          provider.studentCommands.deleteTimetable(
+            deleteActive ? first.id : second.id,
+          ),
           throwsA(isA<StorageWriteException>()),
         );
-        expect(provider.timetables, hasLength(2));
-        expect(provider.activeTimetable.id, first.id);
+        expect(provider.studentView.timetables, hasLength(2));
+        expect(provider.studentView.activeTimetable.id, first.id);
         expect(
-          provider.selectedWeek,
+          provider.studentView.selectedWeek,
           deleteActive ? currentWeekFor(first.config) : 12,
         );
       },
@@ -627,10 +635,10 @@ END:VCALENDAR''',
       final provider = await providerFor(storage);
       failRotation = true;
       await expectLater(
-        provider.saveGeneralEvent(event()),
+        provider.generalCommands.saveEvent(event()),
         throwsA(isA<StorageWriteException>()),
       );
-      expect(provider.generalSchedules.single.events, isEmpty);
+      expect(provider.generalView.schedules.single.events, isEmpty);
       final mainPath = await storage.filePath();
       expect(
         AppData.decode(await File(mainPath).readAsString())
@@ -642,8 +650,8 @@ END:VCALENDAR''',
       );
       expect(await File('$mainPath.tmp').exists(), isFalse);
       failRotation = false;
-      await provider.retryStorageLoad();
-      expect(provider.generalSchedules.single.events, isEmpty);
+      await provider.lifecycle.retryStorageLoad();
+      expect(provider.generalView.schedules.single.events, isEmpty);
       final gateway = MemoryAgendaNotificationGateway();
       final restarted = coordinatorFor(
         await providerFor(storage),
@@ -677,7 +685,7 @@ END:VCALENDAR''',
               await coordinator.start();
               runtime.failActivation = phase == 'activation';
               runtime.failRead = phase == 'fence-read';
-              await provider.saveGeneralEvent(event());
+              await provider.generalCommands.saveEvent(event());
               await waitFor(() => handled.isNotEmpty);
               attemptsAtFailure = runtime.activations + runtime.reads;
               runtime.failActivation = false;
@@ -731,16 +739,16 @@ END:VCALENDAR''',
       storage.saveGate = release;
       storage.nextSaveError = StateError('probe delayed write failure');
       final failure = expectLater(
-        provider.saveGeneralEvent(event()),
+        provider.generalCommands.saveEvent(event()),
         throwsStateError,
       );
       await entered.future;
       expect(
-        provider.appData.generalMode.schedules.single.events,
+        provider.workspaceView.data.generalMode.schedules.single.events,
         hasLength(1),
       );
       expect(
-        provider.committedAppData.generalMode.schedules.single.events,
+        provider.session.committedData.generalMode.schedules.single.events,
         isEmpty,
       );
       await coordinator.onResume();
@@ -749,7 +757,10 @@ END:VCALENDAR''',
       await failure;
       await settle();
       expect(scheduledBeforeFailure, 0);
-      expect(provider.appData.generalMode.schedules.single.events, isEmpty);
+      expect(
+        provider.workspaceView.data.generalMode.schedules.single.events,
+        isEmpty,
+      );
       expect(gateway.scheduled, isEmpty);
     },
   );
@@ -975,20 +986,23 @@ END:VCALENDAR''',
         recoveryArtifacts: const ['memory://evidence'],
       );
       await expectLater(
-        provider.saveGeneralEvent(event()),
+        provider.generalCommands.saveEvent(event()),
         throwsA(isA<StorageWriteStateUnknownException>()),
       );
-      expect(provider.isStorageWriteStateUnknown, isTrue);
-      expect(provider.canWrite, isFalse);
-      expect(provider.recoveryArtifacts, contains('memory://evidence'));
+      expect(provider.lifecycle.isStorageWriteStateUnknown, isTrue);
+      expect(provider.session.canWrite, isFalse);
+      expect(
+        provider.lifecycle.recoveryArtifacts,
+        contains('memory://evidence'),
+      );
       storage.readOnly = true;
-      await provider.retryStorageLoad();
-      expect(provider.isStorageWriteStateUnknown, isTrue);
+      await provider.lifecycle.retryStorageLoad();
+      expect(provider.lifecycle.isStorageWriteStateUnknown, isTrue);
       storage.readOnly = false;
-      await provider.retryStorageLoad();
-      expect(provider.isStorageWriteStateUnknown, isFalse);
-      expect(provider.canWrite, isTrue);
-      expect(provider.generalSchedules.single.events, isEmpty);
+      await provider.lifecycle.retryStorageLoad();
+      expect(provider.lifecycle.isStorageWriteStateUnknown, isFalse);
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.generalView.schedules.single.events, isEmpty);
     },
   );
 
@@ -1004,17 +1018,17 @@ END:VCALENDAR''',
       rollbackError: StateError('rollback'),
     );
     final first = expectLater(
-      provider.saveGeneralEvent(event()),
+      provider.generalCommands.saveEvent(event()),
       throwsA(isA<StorageWriteStateUnknownException>()),
     );
     await entered.future;
     final second = expectLater(
-      provider.saveGeneralEvent(event('second')),
+      provider.generalCommands.saveEvent(event('second')),
       throwsA(isA<AcceptedWriteBlockedException>()),
     );
     release.complete();
     await Future.wait([first, second]);
-    expect(provider.isStorageWriteStateUnknown, isTrue);
+    expect(provider.lifecycle.isStorageWriteStateUnknown, isTrue);
     expect(storage.data.generalMode.schedules.single.events, isEmpty);
   });
 
@@ -1030,7 +1044,7 @@ END:VCALENDAR''',
     await coordinator.start();
     storage.nextSaveError = const StorageWriteException('failed');
     await expectLater(
-      provider.saveGeneralEvent(event()),
+      provider.generalCommands.saveEvent(event()),
       throwsA(isA<StorageWriteException>()),
     );
     final original = storage.data;
@@ -1041,14 +1055,14 @@ END:VCALENDAR''',
         ],
       ),
     );
-    await provider.retryStorageLoad();
+    await provider.lifecycle.retryStorageLoad();
     await waitFor(() => gateway.scheduled.length == 1);
     expect(gateway.scheduled, hasLength(1));
     await coordinator.beginDataClear();
     storage.readOnly = true;
-    await provider.retryStorageLoad();
+    await provider.lifecycle.retryStorageLoad();
     storage.readOnly = false;
-    await provider.retryStorageLoad();
+    await provider.lifecycle.retryStorageLoad();
     await coordinator.reconcileRecovery();
     expect((await runtime.readProjectionFence()).blocked, isTrue);
     expect(gateway.scheduled, isEmpty);
@@ -1101,9 +1115,9 @@ END:VCALENDAR''',
       startDateTimeIso: '2026-09-26T23:30:00.000Z',
       endDateTimeIso: '2026-09-27T00:30:00.000Z',
     );
-    await provider.saveGeneralEvent(utc);
-    final occurrence = provider
-        .generalOccurrencesForRange(
+    await provider.generalCommands.saveEvent(utc);
+    final occurrence = provider.generalView
+        .occurrencesForRange(
           startInclusive: DateTime.utc(2026, 9, 26),
           endExclusive: DateTime.utc(2026, 9, 28),
         )
@@ -1135,10 +1149,13 @@ END:VCALENDAR''',
     );
     expect(await router.route(AgendaAction(target: target)), isTrue);
     expect(
-      provider.selectedGeneralDate,
+      provider.generalView.selectedDate,
       normalizeDateOnly(occurrence.start.toLocal()),
     );
-    await provider.updateGeneralScheduleVisibility(utc.calendarId, false);
+    await provider.generalCommands.updateScheduleVisibility(
+      utc.calendarId,
+      false,
+    );
     expect(
       resolveNotificationOccurrence(
         provider.generalView,
@@ -1148,8 +1165,11 @@ END:VCALENDAR''',
       ),
       isNull,
     );
-    await provider.updateGeneralScheduleVisibility(utc.calendarId, true);
-    await provider.deleteGeneralEvent(utc.id);
+    await provider.generalCommands.updateScheduleVisibility(
+      utc.calendarId,
+      true,
+    );
+    await provider.generalCommands.deleteEvent(utc.id);
     expect(
       resolveNotificationOccurrence(
         provider.generalView,
@@ -1205,7 +1225,7 @@ END:VCALENDAR''',
         rollbackError: StateError('rollback'),
       );
       await expectLater(
-        provider.saveGeneralEvent(event()),
+        provider.generalCommands.saveEvent(event()),
         throwsA(isA<StorageWriteStateUnknownException>()),
       );
       await tester.pumpWidget(
@@ -1220,8 +1240,8 @@ END:VCALENDAR''',
         findsOneWidget,
       );
       await tester.pumpWidget(const SizedBox.shrink());
-      await provider.retryStorageLoad();
-      expect(provider.isStorageWriteStateUnknown, isFalse);
+      await provider.lifecycle.retryStorageLoad();
+      expect(provider.lifecycle.isStorageWriteStateUnknown, isFalse);
     },
   );
 }

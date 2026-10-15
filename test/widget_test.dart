@@ -415,23 +415,24 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      final exportedTimetable = provider.exportActiveTimetableJson();
-      final originalCount = provider.timetables.length;
-      await provider.importTimetableJson(
+      final exportedTimetable = provider.transfers.exportActiveTimetableJson();
+      final originalCount = provider.studentView.timetables.length;
+      await provider.transfers.importTimetableJson(
         exportedTimetable,
         mode: TimetableImportMode.addAsNew,
       );
-      expect(provider.timetables.length, originalCount + 1);
+      expect(provider.studentView.timetables.length, originalCount + 1);
 
-      final exportedPeriodTimes = provider.exportActivePeriodTimesJson();
-      final importedPeriodTimes = provider.importPeriodTimesJson(
+      final exportedPeriodTimes = provider.transfers
+          .exportActivePeriodTimesJson();
+      final importedPeriodTimes = provider.transfers.importPeriodTimesJson(
         exportedPeriodTimes,
       );
       expect(
         importedPeriodTimes.length,
-        provider.activePeriodTimeSet.periodTimes.length,
+        provider.studentView.activePeriodTimeSet.periodTimes.length,
       );
       expect(importedPeriodTimes.first.index, 1);
     });
@@ -441,7 +442,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       final event = GeneralEvent(
         id: 'evt_general',
@@ -450,19 +451,22 @@ void main() {
         endDateTimeIso: '2026-05-22T10:00:00.000',
       );
 
-      await provider.switchMode(AppMode.general);
-      await provider.saveGeneralEvent(event);
-      await provider.switchMode(AppMode.student);
+      await provider.workspaces.switchMode(AppMode.general);
+      await provider.generalCommands.saveEvent(event);
+      await provider.workspaces.switchMode(AppMode.student);
 
-      expect(provider.isStudentMode, isTrue);
-      expect(provider.activeTimetable.config.name, '测试课表A');
-      expect(provider.activeGeneralSchedule.events.single.title, '通用会议');
+      expect(provider.workspaceView.isStudentMode, isTrue);
+      expect(provider.studentView.activeTimetable.config.name, '测试课表A');
+      expect(provider.generalView.activeSchedule.events.single.title, '通用会议');
 
-      await provider.switchMode(AppMode.general);
+      await provider.workspaces.switchMode(AppMode.general);
 
-      expect(provider.isGeneralMode, isTrue);
-      expect(provider.activeTimetable.config.name, '测试课表A');
-      expect(provider.activeGeneralSchedule.events.single.id, 'evt_general');
+      expect(provider.workspaceView.isGeneralMode, isTrue);
+      expect(provider.studentView.activeTimetable.config.name, '测试课表A');
+      expect(
+        provider.generalView.activeSchedule.events.single.id,
+        'evt_general',
+      );
     });
 
     test('provider 支持通用日程事件增删和每周重复展开', () async {
@@ -470,7 +474,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       final oneTimeEvent = GeneralEvent(
         id: 'evt_one_time',
@@ -487,10 +491,10 @@ void main() {
         recurrenceEndDateIso: '2026-06-01',
       );
 
-      await provider.saveGeneralEvent(oneTimeEvent);
-      await provider.saveGeneralEvent(weeklyEvent);
+      await provider.generalCommands.saveEvent(oneTimeEvent);
+      await provider.generalCommands.saveEvent(weeklyEvent);
 
-      final firstWeek = provider.generalOccurrencesForRange(
+      final firstWeek = provider.generalView.occurrencesForRange(
         startInclusive: DateTime(2026, 5, 18),
         endExclusive: DateTime(2026, 5, 25),
       );
@@ -499,7 +503,7 @@ void main() {
         containsAll(['evt_one_time', 'evt_weekly']),
       );
 
-      final secondWeek = provider.generalOccurrencesForRange(
+      final secondWeek = provider.generalView.occurrencesForRange(
         startInclusive: DateTime(2026, 5, 25),
         endExclusive: DateTime(2026, 6, 1),
       );
@@ -509,14 +513,14 @@ void main() {
         isNot(contains('evt_one_time')),
       );
 
-      await provider.deleteGeneralEvent('evt_one_time');
+      await provider.generalCommands.deleteEvent('evt_one_time');
 
       expect(
-        provider.activeGeneralSchedule.events.map((event) => event.id),
+        provider.generalView.activeSchedule.events.map((event) => event.id),
         isNot(contains('evt_one_time')),
       );
       expect(
-        provider.activeGeneralSchedule.events.map((event) => event.id),
+        provider.generalView.activeSchedule.events.map((event) => event.id),
         contains('evt_weekly'),
       );
     });
@@ -526,10 +530,10 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      final scheduleId = provider.activeGeneralSchedule.id;
-      await provider.saveGeneralEvent(
+      final scheduleId = provider.generalView.activeSchedule.id;
+      await provider.generalCommands.saveEvent(
         GeneralEvent(
           id: 'evt_keep',
           title: '保留事件',
@@ -537,10 +541,10 @@ void main() {
           endDateTimeIso: '2026-05-22T10:00:00.000',
         ),
       );
-      await provider.renameGeneralSchedule(scheduleId, '重命名日程');
+      await provider.generalCommands.renameSchedule(scheduleId, '重命名日程');
 
-      expect(provider.activeGeneralSchedule.name, '重命名日程');
-      expect(provider.activeGeneralSchedule.events.single.id, 'evt_keep');
+      expect(provider.generalView.activeSchedule.name, '重命名日程');
+      expect(provider.generalView.activeSchedule.events.single.id, 'evt_keep');
     });
 
     test('weekly 事件不会在 recurrence end date 之后再生成 occurrence', () async {
@@ -548,9 +552,9 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.saveGeneralEvent(
+      await provider.generalCommands.saveEvent(
         GeneralEvent(
           id: 'evt_end_test',
           title: '截止测试',
@@ -562,7 +566,7 @@ void main() {
       );
 
       // Recurrence ends on June 1; week containing June 8 should have no occurrence.
-      final beyondEnd = provider.generalOccurrencesForRange(
+      final beyondEnd = provider.generalView.occurrencesForRange(
         startInclusive: DateTime(2026, 6, 8),
         endExclusive: DateTime(2026, 6, 15),
       );
@@ -572,7 +576,7 @@ void main() {
       );
 
       // Week containing the end date itself should include it.
-      final onEnd = provider.generalOccurrencesForRange(
+      final onEnd = provider.generalView.occurrencesForRange(
         startInclusive: DateTime(2026, 6, 1),
         endExclusive: DateTime(2026, 6, 8),
       );
@@ -584,9 +588,9 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.saveGeneralEvent(
+      await provider.generalCommands.saveEvent(
         GeneralEvent(
           id: 'evt_90min',
           title: '90分钟课程',
@@ -596,7 +600,7 @@ void main() {
         ),
       );
 
-      final occurrences = provider.generalOccurrencesForRange(
+      final occurrences = provider.generalView.occurrencesForRange(
         startInclusive: DateTime(2026, 5, 25),
         endExclusive: DateTime(2026, 6, 1),
       );
@@ -613,7 +617,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       final event = GeneralEvent(
         id: 'evt_overnight',
@@ -622,9 +626,9 @@ void main() {
         endDateTimeIso: '2026-05-23T01:00:00.000',
       );
 
-      await provider.saveGeneralEvent(event);
+      await provider.generalCommands.saveEvent(event);
 
-      final occurrences = provider.generalOccurrencesForRange(
+      final occurrences = provider.generalView.occurrencesForRange(
         startInclusive: DateTime(2026, 5, 22),
         endExclusive: DateTime(2026, 5, 23),
       );
@@ -672,11 +676,14 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      final currentSet = provider.activePeriodTimeSet;
-      await provider.assignPeriodTimeSetToTimetable('backup', currentSet.id);
-      await provider.updatePeriodTimeSet(
+      final currentSet = provider.studentView.activePeriodTimeSet;
+      await provider.studentCommands.assignPeriodTimeSetToTimetable(
+        'backup',
+        currentSet.id,
+      );
+      await provider.studentCommands.updatePeriodTimeSet(
         currentSet.copyWith(
           name: '全局新节次',
           periodTimes: buildPeriodTimesForCount(
@@ -686,13 +693,20 @@ void main() {
         ),
       );
 
-      expect(provider.periodTimeSetForId(currentSet.id)?.name, '全局新节次');
       expect(
-        provider.periodTimesForTimetable(provider.timetables.first).length,
+        provider.studentView.periodTimeSetForId(currentSet.id)?.name,
+        '全局新节次',
+      );
+      expect(
+        provider.studentView
+            .periodTimesForTimetable(provider.studentView.timetables.first)
+            .length,
         14,
       );
       expect(
-        provider.periodTimesForTimetable(provider.timetables.last).length,
+        provider.studentView
+            .periodTimesForTimetable(provider.studentView.timetables.last)
+            .length,
         14,
       );
     });
@@ -702,10 +716,12 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       expect(
-        () => provider.deletePeriodTimeSet(provider.activePeriodTimeSet.id),
+        () => provider.studentCommands.deletePeriodTimeSet(
+          provider.studentView.activePeriodTimeSet.id,
+        ),
         throwsA(isA<FormatException>()),
       );
     });
@@ -742,11 +758,11 @@ void main() {
           ),
         ),
       );
-      await provider.load();
-      await provider.deleteTimetable('only');
+      await provider.lifecycle.load();
+      await provider.studentCommands.deleteTimetable('only');
 
-      expect(provider.activeTimetableOrNull, isNull);
-      expect(provider.timetables, isEmpty);
+      expect(provider.studentView.activeTimetableOrNull, isNull);
+      expect(provider.studentView.timetables, isEmpty);
     });
 
     test('节次数量可以超过默认模板长度并自动补齐', () {
@@ -999,56 +1015,70 @@ void main() {
             initialData: buildInitialAppData(buildDefaultPeriodTimes()),
           ),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
-        await provider.updateThemeSeedColorValue(0xFF00897B);
-        await provider.updateColorfulUiColorValue(
+        await provider.settingsCommands.updateThemeSeedColorValue(0xFF00897B);
+        await provider.settingsCommands.updateColorfulUiColorValue(
           colorfulUiPrimaryKey,
           0xFF112233,
         );
 
-        expect(provider.studentMode.themeSeedColorValue, 0xFF00897B);
+        expect(provider.studentView.data.themeSeedColorValue, 0xFF00897B);
         expect(
-          provider.studentMode.colorfulUiColorValues[colorfulUiPrimaryKey],
+          provider.studentView.data.colorfulUiColorValues[colorfulUiPrimaryKey],
           0xFF112233,
         );
         expect(
-          provider.generalMode.themeSeedColorValue,
+          provider.generalView.visibleData.themeSeedColorValue,
           defaultThemeSeedColorValue,
         );
-        expect(provider.generalMode.colorfulUiColorValues, isEmpty);
+        expect(provider.generalView.visibleData.colorfulUiColorValues, isEmpty);
 
-        await provider.switchMode(AppMode.general);
-        expect(provider.themeSeedColorValue, defaultThemeSeedColorValue);
-        expect(provider.colorfulUiColorValues, isEmpty);
+        await provider.workspaces.switchMode(AppMode.general);
+        expect(
+          provider.settingsView.themeSeedColorValue,
+          defaultThemeSeedColorValue,
+        );
+        expect(provider.settingsView.colorfulUiColorValues, isEmpty);
 
-        await provider.updateThemeColorMode(themeColorModeColorful);
-        await provider.updateThemeSeedColorValue(0xFF3949AB);
-        await provider.updateColorfulUiColorValue(
+        await provider.settingsCommands.updateThemeColorMode(
+          themeColorModeColorful,
+        );
+        await provider.settingsCommands.updateThemeSeedColorValue(0xFF3949AB);
+        await provider.settingsCommands.updateColorfulUiColorValue(
           colorfulGeneralLunarTextColorKey,
           0xFF445566,
         );
 
-        expect(provider.generalMode.themeColorMode, themeColorModeColorful);
-        expect(provider.generalMode.themeSeedColorValue, 0xFF3949AB);
+        expect(
+          provider.generalView.visibleData.themeColorMode,
+          themeColorModeColorful,
+        );
+        expect(
+          provider.generalView.visibleData.themeSeedColorValue,
+          0xFF3949AB,
+        );
         expect(
           provider
-              .generalMode
+              .generalView
+              .visibleData
               .colorfulUiColorValues[colorfulGeneralLunarTextColorKey],
           0xFF445566,
         );
-        expect(provider.studentMode.themeColorMode, defaultThemeColorMode);
-        expect(provider.studentMode.themeSeedColorValue, 0xFF00897B);
+        expect(provider.studentView.data.themeColorMode, defaultThemeColorMode);
+        expect(provider.studentView.data.themeSeedColorValue, 0xFF00897B);
 
-        await provider.switchMode(AppMode.student);
-        expect(provider.themeColorMode, defaultThemeColorMode);
-        expect(provider.themeSeedColorValue, 0xFF00897B);
+        await provider.workspaces.switchMode(AppMode.student);
+        expect(provider.settingsView.themeColorMode, defaultThemeColorMode);
+        expect(provider.settingsView.themeSeedColorValue, 0xFF00897B);
         expect(
-          provider.colorfulUiColorValues[colorfulUiPrimaryKey],
+          provider.settingsView.colorfulUiColorValues[colorfulUiPrimaryKey],
           0xFF112233,
         );
         expect(
-          provider.colorfulUiColorValues[colorfulGeneralLunarTextColorKey],
+          provider
+              .settingsView
+              .colorfulUiColorValues[colorfulGeneralLunarTextColorKey],
           isNull,
         );
       },
@@ -1170,26 +1200,32 @@ void main() {
         storage: storage,
         secretStore: secrets,
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.updateLiveCourseOutlineSettings(
-        enabled: provider.liveCourseOutlineEnabled,
-        followTheme: provider.liveCourseOutlineFollowTheme,
-        colorValue: provider.liveCourseOutlineColorValue,
+      await provider.settingsCommands.updateLiveCourseOutlineSettings(
+        enabled: provider.settingsView.liveCourseOutlineEnabled,
+        followTheme: provider.settingsView.liveCourseOutlineFollowTheme,
+        colorValue: provider.settingsView.liveCourseOutlineColorValue,
         customColorInitialized:
-            provider.liveCourseOutlineCustomColorInitialized,
+            provider.settingsView.liveCourseOutlineCustomColorInitialized,
         mode: liveCourseOutlineModeAllDisplayed,
-        width: provider.liveCourseOutlineWidth,
+        width: provider.settingsView.liveCourseOutlineWidth,
       );
 
-      expect(provider.liveCourseOutlineMode, liveCourseOutlineModeAllDisplayed);
+      expect(
+        provider.settingsView.liveCourseOutlineMode,
+        liveCourseOutlineModeAllDisplayed,
+      );
 
       final reloaded = TimetableProvider(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
       );
-      await reloaded.load();
-      expect(reloaded.liveCourseOutlineMode, liveCourseOutlineModeAllDisplayed);
+      await reloaded.lifecycle.load();
+      expect(
+        reloaded.settingsView.liveCourseOutlineMode,
+        liveCourseOutlineModeAllDisplayed,
+      );
     });
 
     test('首次加载无本地数据时会按系统语言初始化英文', () async {
@@ -1198,10 +1234,10 @@ void main() {
         storage: MemoryTimetableStorage(),
         systemLocaleCodeResolver: () => 'en',
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      expect(provider.localeCode, 'en');
-      expect(provider.activePeriodTimeSet.name, 'Default periods');
+      expect(provider.settingsView.localeCode, 'en');
+      expect(provider.studentView.activePeriodTimeSet.name, 'Default periods');
     });
 
     test('非 UI 字符串助手会复用生成本地化内容', () {
@@ -1286,9 +1322,9 @@ void main() {
         ),
         systemLocaleCodeResolver: () => 'en',
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      expect(provider.localeCode, 'zh');
+      expect(provider.settingsView.localeCode, 'zh');
     });
 
     test('导入课表后会自动生成课程颜色映射且同名课程共用同色', () async {
@@ -1296,7 +1332,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       final importData = TimetableExportData(
         timetables: [
@@ -1366,18 +1402,21 @@ void main() {
         ],
       );
 
-      await provider.importSelectedTimetablesJson(
+      await provider.transfers.importSelectedTimetablesJson(
         encodeTimetableDataEnvelope(importData),
         timetableIds: const ['imported'],
         mode: TimetableImportMode.addAsNew,
       );
 
-      expect(provider.courseNameColorValues['离散数学'], isNotNull);
-      expect(provider.courseNameColorValues['大学物理'], isNotNull);
-      expect(provider.courseNameColorValues.keys, contains('高等数学'));
+      expect(provider.settingsView.courseNameColorValues['离散数学'], isNotNull);
+      expect(provider.settingsView.courseNameColorValues['大学物理'], isNotNull);
       expect(
-        provider.courseNameColorValues['离散数学'],
-        isNot(provider.courseNameColorValues['大学物理']),
+        provider.settingsView.courseNameColorValues.keys,
+        contains('高等数学'),
+      );
+      expect(
+        provider.settingsView.courseNameColorValues['离散数学'],
+        isNot(provider.settingsView.courseNameColorValues['大学物理']),
       );
     });
 
@@ -1392,7 +1431,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: initialData),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       final importData = TimetableExportData(
         timetables: [
@@ -1447,15 +1486,18 @@ void main() {
         ],
       );
 
-      await provider.importSelectedTimetablesJson(
+      await provider.transfers.importSelectedTimetablesJson(
         encodeTimetableDataEnvelope(importData),
         timetableIds: const ['imported'],
         mode: TimetableImportMode.addAsNew,
       );
 
-      expect(provider.courseNameColorValues['高等数学'], 0xFF123456);
-      expect(provider.courseNameColorValues['大学英语'], isNotNull);
-      expect(provider.courseNameColorValues['大学英语'], isNot(0xFF123456));
+      expect(provider.settingsView.courseNameColorValues['高等数学'], 0xFF123456);
+      expect(provider.settingsView.courseNameColorValues['大学英语'], isNotNull);
+      expect(
+        provider.settingsView.courseNameColorValues['大学英语'],
+        isNot(0xFF123456),
+      );
     });
 
     test('加载旧数据时会自动拆开重复的默认课程配色', () async {
@@ -1515,11 +1557,14 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: duplicatedDefaultColor),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      expect(provider.courseNameColorValues['大学英语B1'], 0xFFE57373);
-      expect(provider.courseNameColorValues['大学语文'], isNotNull);
-      expect(provider.courseNameColorValues['大学语文'], isNot(0xFFE57373));
+      expect(provider.settingsView.courseNameColorValues['大学英语B1'], 0xFFE57373);
+      expect(provider.settingsView.courseNameColorValues['大学语文'], isNotNull);
+      expect(
+        provider.settingsView.courseNameColorValues['大学语文'],
+        isNot(0xFFE57373),
+      );
     });
 
     test('跟随主题色的描边派生色会比旧实现更浅但仍深于原色', () {
@@ -1607,24 +1652,27 @@ void main() {
         storage: storage,
         secretStore: secrets,
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.updateCustomSchoolImportTextSettings(
+      await provider.settingsCommands.updateCustomSchoolImportTextSettings(
         baseUrl: 'https://api.example.com/v1',
         model: 'gpt-4.1-mini',
         prompt: 'Prefer preserving original location text.',
       );
-      await provider.updateCustomSchoolImportApiKey('sk-test');
+      await provider.schoolImportSecrets.update('sk-test');
 
       expect(
-        provider.schoolImportParserSource,
+        provider.settingsView.schoolImportParserSource,
         schoolImportParserSourceCustomOpenAi,
       );
-      expect(provider.customSchoolImportBaseUrl, 'https://api.example.com/v1');
-      expect(provider.customSchoolImportApiKey, 'sk-test');
-      expect(provider.customSchoolImportModel, 'gpt-4.1-mini');
       expect(
-        provider.customSchoolImportPrompt,
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://api.example.com/v1',
+      );
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-test');
+      expect(provider.settingsView.customSchoolImportModel, 'gpt-4.1-mini');
+      expect(
+        provider.settingsView.customSchoolImportPrompt,
         'Prefer preserving original location text.',
       );
       expect(secrets.value, 'sk-test');
@@ -1636,16 +1684,19 @@ void main() {
         storage: storage,
         secretStore: secrets,
       );
-      await reloaded.load();
+      await reloaded.lifecycle.load();
       expect(
-        reloaded.schoolImportParserSource,
+        reloaded.settingsView.schoolImportParserSource,
         schoolImportParserSourceCustomOpenAi,
       );
-      expect(reloaded.customSchoolImportBaseUrl, 'https://api.example.com/v1');
-      expect(reloaded.customSchoolImportApiKey, 'sk-test');
-      expect(reloaded.customSchoolImportModel, 'gpt-4.1-mini');
       expect(
-        reloaded.customSchoolImportPrompt,
+        reloaded.settingsView.customSchoolImportBaseUrl,
+        'https://api.example.com/v1',
+      );
+      expect(reloaded.settingsView.customSchoolImportApiKey, 'sk-test');
+      expect(reloaded.settingsView.customSchoolImportModel, 'gpt-4.1-mini');
+      expect(
+        reloaded.settingsView.customSchoolImportPrompt,
         'Prefer preserving original location text.',
       );
     });
@@ -1670,9 +1721,9 @@ void main() {
           secretStore: secrets,
         );
 
-        await provider.load();
+        await provider.lifecycle.load();
 
-        expect(provider.customSchoolImportApiKey, 'sk-test');
+        expect(provider.settingsView.customSchoolImportApiKey, 'sk-test');
         expect(secrets.value, 'sk-test');
         expect(storage.encodedData, isNot(contains('customApiKey')));
         expect(storage.encodedData, isNot(contains('sk-test')));
@@ -1835,7 +1886,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -1915,7 +1966,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -1953,7 +2004,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -1980,7 +2031,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        provider.customSchoolImportPrompt,
+        provider.settingsView.customSchoolImportPrompt,
         'Only keep course name and weekday.',
       );
       final resetPromptButton = find.text('重置默认提示词');
@@ -1990,7 +2041,7 @@ void main() {
       await tester.tap(resetPromptButton);
       await tester.pumpAndSettle();
 
-      expect(provider.customSchoolImportPrompt, isEmpty);
+      expect(provider.settingsView.customSchoolImportPrompt, isEmpty);
       final textField = tester.widget<TextField>(find.byType(TextField).last);
       expect(
         textField.controller?.text,
@@ -2012,7 +2063,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2050,7 +2101,7 @@ void main() {
           initialData: _buildTestAppData().copyWith(localeCode: 'en'),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2087,7 +2138,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(simplified);
       await tester.pumpAndSettle();
-      expect(provider.localeCode, 'zh');
+      expect(provider.settingsView.localeCode, 'zh');
       expect(find.byType(LanguageSettingsPage), findsNothing);
       expect(languageEntry, findsOneWidget);
     });
@@ -2106,7 +2157,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2161,7 +2212,7 @@ void main() {
             ),
           ),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
         await tester.pumpWidget(
           AppScope(
@@ -2217,7 +2268,7 @@ void main() {
           ),
         ),
       );
-      await incompleteProvider.load();
+      await incompleteProvider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2259,7 +2310,7 @@ void main() {
           ),
         ),
       );
-      await incompleteProvider.load();
+      await incompleteProvider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2297,7 +2348,7 @@ void main() {
           ),
         ),
       );
-      await completeProvider.load();
+      await completeProvider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2328,7 +2379,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       final response = _buildSchoolImportResponse(
         periodTimes: const [
@@ -2338,8 +2389,8 @@ void main() {
         customFields: const {'课程群': '654321'},
       );
 
-      final beforeSetCount = provider.periodTimeSets.length;
-      await provider.applySchoolImportRequest(
+      final beforeSetCount = provider.studentView.periodTimeSets.length;
+      await provider.studentCommands.applySchoolImportRequest(
         SchoolImportApplyRequest(
           response: response,
           mode: TimetableImportMode.addAsNew,
@@ -2347,15 +2398,21 @@ void main() {
         ),
       );
 
-      expect(provider.periodTimeSets.length, beforeSetCount + 1);
-      expect(provider.activeTimetable.config.name, 'Imported timetable');
-      expect(provider.activeTimetable.config.startDate, DateTime(2026, 2, 23));
+      expect(provider.studentView.periodTimeSets.length, beforeSetCount + 1);
       expect(
-        provider.activeTimetable.courses.first.customFields['课程群'],
+        provider.studentView.activeTimetable.config.name,
+        'Imported timetable',
+      );
+      expect(
+        provider.studentView.activeTimetable.config.startDate,
+        DateTime(2026, 2, 23),
+      );
+      expect(
+        provider.studentView.activeTimetable.courses.first.customFields['课程群'],
         '654321',
       );
-      expect(provider.activePeriodTimeSet.periodTimes.length, 2);
-      expect(provider.activePeriodTimeSet.name, 'Imported periods');
+      expect(provider.studentView.activePeriodTimeSet.periodTimes.length, 2);
+      expect(provider.studentView.activePeriodTimeSet.name, 'Imported periods');
     });
 
     test('网页解析导入丢弃内含节次时会复用现有节次时间集', () async {
@@ -2363,12 +2420,12 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      final beforeSetIds = provider.periodTimeSets
+      final beforeSetIds = provider.studentView.periodTimeSets
           .map((item) => item.id)
           .toList();
-      await provider.applySchoolImportRequest(
+      await provider.studentCommands.applySchoolImportRequest(
         SchoolImportApplyRequest(
           response: _buildSchoolImportResponse(),
           mode: TimetableImportMode.addAsNew,
@@ -2378,10 +2435,13 @@ void main() {
       );
 
       expect(
-        provider.periodTimeSets.map((item) => item.id).toList(),
+        provider.studentView.periodTimeSets.map((item) => item.id).toList(),
         beforeSetIds,
       );
-      expect(provider.activeTimetable.config.periodTimeSetId, 'set2');
+      expect(
+        provider.studentView.activeTimetable.config.periodTimeSetId,
+        'set2',
+      );
     });
 
     test('网页解析导入覆盖当前课表时也能导入内含节次时间集', () async {
@@ -2389,11 +2449,11 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      final currentId = provider.activeTimetable.id;
-      final beforeSetCount = provider.periodTimeSets.length;
-      await provider.applySchoolImportRequest(
+      final currentId = provider.studentView.activeTimetable.id;
+      final beforeSetCount = provider.studentView.periodTimeSets.length;
+      await provider.studentCommands.applySchoolImportRequest(
         SchoolImportApplyRequest(
           response: _buildSchoolImportResponse(
             timetableName: 'Replaced timetable',
@@ -2404,10 +2464,16 @@ void main() {
         ),
       );
 
-      expect(provider.activeTimetable.id, currentId);
-      expect(provider.activeTimetable.config.name, 'Replaced timetable');
-      expect(provider.activeTimetable.courses.first.customFields['备注'], '覆盖导入');
-      expect(provider.periodTimeSets.length, beforeSetCount + 1);
+      expect(provider.studentView.activeTimetable.id, currentId);
+      expect(
+        provider.studentView.activeTimetable.config.name,
+        'Replaced timetable',
+      );
+      expect(
+        provider.studentView.activeTimetable.courses.first.customFields['备注'],
+        '覆盖导入',
+      );
+      expect(provider.studentView.periodTimeSets.length, beforeSetCount + 1);
     });
 
     testWidgets('网页解析导入结果页默认显示解析结果中的开学时间并允许切换节次时间集策略', (tester) async {
@@ -2415,7 +2481,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       final response = _buildSchoolImportResponse(
         startDate: '2026-03-09T00:00:00.000',
         periodTimes: const [
@@ -2451,7 +2517,7 @@ void main() {
                             response: response,
                             canReplaceCurrent: true,
                             initialPeriodTimeSetId:
-                                provider.activePeriodTimeSet.id,
+                                provider.studentView.activePeriodTimeSet.id,
                           ),
                         );
                   },
@@ -2487,7 +2553,7 @@ void main() {
       expect(sheetResult!.importBundledPeriodTimeSet, isFalse);
       expect(
         sheetResult!.targetPeriodTimeSetId,
-        provider.activePeriodTimeSet.id,
+        provider.studentView.activePeriodTimeSet.id,
       );
     });
 
@@ -2504,7 +2570,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       final response = _buildSchoolImportResponse();
 
       await tester.pumpWidget(
@@ -2551,7 +2617,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       final completer = Completer<void>();
       final fakeApi = FakeSchoolImportApi(
         onImport: (_, _) async* {
@@ -2627,7 +2693,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       final fakeApi = FakeSchoolImportApi(
         onImport: (_, _) => Stream.fromIterable([
           ParseDelta(
@@ -2705,13 +2771,16 @@ void main() {
 
       expect(fakeApi.callCount, 1);
       expect(fakeApi.lastPayload?.html, '星期一 第三、四节 语文');
-      expect(provider.activeTimetable.config.name, 'Widget imported timetable');
       expect(
-        provider.activeTimetable.courses.first.customFields['来源'],
+        provider.studentView.activeTimetable.config.name,
+        'Widget imported timetable',
+      );
+      expect(
+        provider.studentView.activeTimetable.courses.first.customFields['来源'],
         'widget-test',
       );
-      expect(provider.periodTimeSets.length, 3);
-      expect(provider.activePeriodTimeSet.name, 'Imported periods');
+      expect(provider.studentView.periodTimeSets.length, 3);
+      expect(provider.studentView.activePeriodTimeSet.name, 'Imported periods');
     });
   });
 
@@ -2721,7 +2790,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2744,7 +2813,7 @@ void main() {
                         showPeriodTimeSetPickerDialog(
                           context,
                           selectedPeriodTimeSetId:
-                              provider.activePeriodTimeSet.id,
+                              provider.studentView.activePeriodTimeSet.id,
                         ),
                       );
                     },
@@ -2772,7 +2841,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2798,8 +2867,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(provider.liveCourseOutlineFollowTheme, isTrue);
-      expect(provider.liveCourseOutlineCustomColorInitialized, isFalse);
+      expect(provider.settingsView.liveCourseOutlineFollowTheme, isTrue);
+      expect(
+        provider.settingsView.liveCourseOutlineCustomColorInitialized,
+        isFalse,
+      );
 
       await tester.tap(
         find.byKey(const ValueKey('live-course-outline-follow-theme-row')),
@@ -2808,12 +2880,15 @@ void main() {
       await tester.tap(find.text('应用设置'));
       await tester.pumpAndSettle();
 
-      expect(provider.liveCourseOutlineFollowTheme, isFalse);
-      expect(provider.liveCourseOutlineCustomColorInitialized, isTrue);
+      expect(provider.settingsView.liveCourseOutlineFollowTheme, isFalse);
       expect(
-        provider.liveCourseOutlineColorValue,
+        provider.settingsView.liveCourseOutlineCustomColorInitialized,
+        isTrue,
+      );
+      expect(
+        provider.settingsView.liveCourseOutlineColorValue,
         deriveLiveCourseOutlineColorFromSeed(
-          Color(provider.themeSeedColorValue),
+          Color(provider.settingsView.themeSeedColorValue),
         ).toARGB32(),
       );
     });
@@ -2823,7 +2898,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2855,7 +2930,7 @@ void main() {
       await tester.tap(find.text('应用设置'));
       await tester.pumpAndSettle();
 
-      expect(provider.liveCourseOutlineEnabled, isFalse);
+      expect(provider.settingsView.liveCourseOutlineEnabled, isFalse);
     });
 
     testWidgets('描边宽度显示会带单位', (tester) async {
@@ -2863,7 +2938,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2910,7 +2985,7 @@ void main() {
           }(),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -2986,7 +3061,7 @@ void main() {
           }(),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3081,7 +3156,7 @@ void main() {
           }(),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3111,7 +3186,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3145,7 +3220,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        provider.liveCourseOutlineWidth,
+        provider.settingsView.liveCourseOutlineWidth,
         greaterThan(defaultLiveCourseOutlineWidth),
       );
     });
@@ -3155,7 +3230,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3201,7 +3276,10 @@ void main() {
       await tester.tap(find.text('应用设置'));
       await tester.pumpAndSettle();
 
-      expect(provider.liveCourseOutlineMode, liveCourseOutlineModeAllDisplayed);
+      expect(
+        provider.settingsView.liveCourseOutlineMode,
+        liveCourseOutlineModeAllDisplayed,
+      );
       expect(find.text('当前页全部课程'), findsOneWidget);
     });
 
@@ -3214,7 +3292,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3263,11 +3341,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        provider.colorfulCourseTextColorMode,
+        provider.settingsView.colorfulCourseTextColorMode,
         colorfulCourseTextColorModeCustom,
       );
       expect(
-        provider.colorfulUiColorValues[colorfulCourseTextColorKey],
+        provider.settingsView.colorfulUiColorValues[colorfulCourseTextColorKey],
         0xFF123456,
       );
 
@@ -3286,11 +3364,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        provider.colorfulCourseTextColorMode,
+        provider.settingsView.colorfulCourseTextColorMode,
         colorfulCourseTextColorModeAuto,
       );
       expect(
-        provider.colorfulUiColorValues[colorfulCourseTextColorKey],
+        provider.settingsView.colorfulUiColorValues[colorfulCourseTextColorKey],
         0xFF123456,
       );
     });
@@ -3316,13 +3394,13 @@ void main() {
         uiStateSaveDelay: const Duration(days: 1),
       );
       addTearDown(provider.dispose);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
 
       await tester.pumpWidget(MyApp(provider: provider));
       await tester.pump();
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 19));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 19));
 
       expect(storage.saveCount, 0);
 
@@ -3344,8 +3422,8 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: initialData),
       );
-      await provider.load();
-      provider.injectRemotePrivacyPolicyVersion('2026-04-20');
+      await provider.lifecycle.load();
+      provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-04-20');
 
       await tester.pumpWidget(
         AppScope(
@@ -3374,9 +3452,12 @@ void main() {
       await tester.tap(find.text('同意并继续'));
       await tester.pumpAndSettle();
 
-      expect(provider.hasAcceptedCurrentPrivacyPolicy, isTrue);
+      expect(provider.lifecycle.hasAcceptedCurrentPrivacyPolicy, isTrue);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(find.text('第 ${provider.selectedWeek} 周'), findsOneWidget);
+      expect(
+        find.text('第 ${provider.studentView.selectedWeek} 周'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('主页显示精简标题、右上角添加课程并保留唯一主操作', (tester) async {
@@ -3384,7 +3465,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3404,8 +3485,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('第 ${provider.selectedWeek} 周'), findsOneWidget);
-      expect(find.text(provider.activeTimetable.config.name), findsOneWidget);
+      expect(
+        find.text('第 ${provider.studentView.selectedWeek} 周'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(provider.studentView.activeTimetable.config.name),
+        findsOneWidget,
+      );
       expect(find.byTooltip('添加课程'), findsOneWidget);
       expect(find.byType(SkedPrimaryFab), findsNothing);
       expect(find.byType(FloatingActionButton), findsNothing);
@@ -3445,14 +3532,14 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: appData),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
           app: provider,
           child: _buildLocalizedApp(
             CourseDetailsSheet(
-              timetableId: provider.activeTimetable.id,
+              timetableId: provider.studentView.activeTimetable.id,
               courseId: course.id,
               weekday: course.dayOfWeek,
               conflictKey: null,
@@ -3474,7 +3561,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       final context = await _pumpUpdateHarness(tester, provider: provider);
 
       final future = AppUpdateCoordinator.checkForUpdates(
@@ -3511,7 +3598,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       final context = await _pumpUpdateHarness(tester, provider: provider);
 
       final future = AppUpdateCoordinator.checkForUpdates(
@@ -3541,7 +3628,7 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       final context = await _pumpUpdateHarness(tester, provider: provider);
 
       final future = AppUpdateCoordinator.checkForUpdates(
@@ -3555,7 +3642,7 @@ void main() {
       expect(find.byType(AppUpdateDialog), findsNothing);
       expect(find.text('检测更新失败'), findsNothing);
       expect(find.text('忽略此版本'), findsNothing);
-      expect(provider.ignoredUpdateVersion, isNull);
+      expect(provider.settingsView.ignoredUpdateVersion, isNull);
       await future;
     });
 
@@ -3595,7 +3682,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3654,7 +3741,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3680,7 +3767,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Upcoming'), findsNothing);
-      expect(provider.generalReminderItems(now: now), isEmpty);
+      expect(provider.generalView.reminderItems(now: now), isEmpty);
     });
 
     testWidgets('general list view exposes quick date jump controls', (
@@ -3712,7 +3799,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(
         AppScope(
@@ -3761,7 +3848,7 @@ void main() {
             ),
           ),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
         await tester.pumpWidget(
           AppScope(
@@ -3807,7 +3894,7 @@ void main() {
           tester.getBottomRight(find.text('Sun')).dx,
           lessThanOrEqualTo(390),
         );
-        expect(provider.selectedGeneralDate.day, 18);
+        expect(provider.generalView.selectedDate.day, 18);
         expect(tester.takeException(), isNull);
       },
     );
@@ -3840,7 +3927,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(MyApp(provider: provider));
       await tester.pumpAndSettle();
@@ -4506,7 +4593,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await tester.pumpWidget(MyApp(provider: provider));
       await tester.pumpAndSettle();
@@ -4557,7 +4644,7 @@ void main() {
             ),
           ),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
         await tester.pumpWidget(MyApp(provider: provider));
         await tester.pumpAndSettle();
