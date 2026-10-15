@@ -222,7 +222,6 @@ void main() {
                                   onPressed: () => unawaited(
                                     showPeriodTimeSetPickerDialog(
                                       anchor,
-                                      provider: p,
                                       anchorContext: anchor,
                                       selectedPeriodTimeSetId:
                                           p.periodTimeSets.first.id,

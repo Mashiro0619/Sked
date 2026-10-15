@@ -209,7 +209,6 @@ void main() {
           final updates = _Updates();
           final task = AppUpdateCoordinator.checkForUpdates(
             tester.element(find.byType(Scaffold).first),
-            provider: p,
             source: UpdateCheckSource.startup,
             updateService: updates,
             distribution: const UpdateDistribution(UpdateChannel.github),

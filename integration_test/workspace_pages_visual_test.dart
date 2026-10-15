@@ -187,7 +187,7 @@ void main() {
           (
             'import-review',
             (p, n) => SchoolImportParsePage(
-              provider: p,
+              configureImport: true,
               stream: Stream.value(
                 ParseDone(
                   response: SchoolImportResponse.fromJson(<String, dynamic>{

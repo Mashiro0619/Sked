@@ -30,8 +30,9 @@ extension _HomeScreenImports on _HomeScreenState {
             final page = TextImportPage(
               title: l10n.importTimetableText,
               onSubmit: (context, content) {
-                if (!SkedTaskSessionScope.isCurrent(context))
+                if (!SkedTaskSessionScope.isCurrent(context)) {
                   return Future.value(false);
+                }
                 return TimetableImportFlow.importTimetablesFromSource(
                   context,
                   content,
