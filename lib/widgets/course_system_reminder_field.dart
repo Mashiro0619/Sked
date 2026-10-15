@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/settings_view_state.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/agenda_notification_service.dart';
 import 'workspace_editor_form.dart';
@@ -104,9 +104,10 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final provider = context.watch<TimetableProvider?>();
-    final settings =
-        provider?.appData.notificationSettings ?? const NotificationSettings();
+    final settings = context.select<SettingsViewState?, NotificationSettings>(
+      (settings) =>
+          settings?.notificationSettings ?? const NotificationSettings(),
+    );
     final defaultMinutes = settings.courseDefaultMinutesBefore;
     final inherited = l.courseReminderInherit(
       defaultMinutes == null
