@@ -12,7 +12,10 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/general_commands.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/workspace_view_state.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
@@ -40,13 +43,13 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
   Widget build(BuildContext context) {
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        final display = provider.generalView.data;
-        final commands = provider.generalCommands;
+    return Consumer3<GeneralViewState, SettingsViewState, WorkspaceViewState>(
+      builder: (context, general, settings, workspace, child) {
+        final display = general.data;
+        final commands = context.read<GeneralCommands>();
         final workspaceFallback =
-            provider.workspaceView.enabledWorkspaces.length > 1 &&
-            provider.settingsView.hideHomeWorkspaceNavigation;
+            workspace.enabledWorkspaces.length > 1 &&
+            settings.hideHomeWorkspaceNavigation;
         return Scaffold(
           appBar: WorkbenchAppBar(
             automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),

@@ -14,7 +14,8 @@ import 'package:provider/provider.dart';
 import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/constants.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
@@ -42,12 +43,11 @@ class _TimetableDisplaySettingsPageState
   @override
   Widget build(BuildContext context) {
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        final settings = provider.settingsView;
-        final commands = provider.settingsCommands;
+    return Consumer2<SettingsViewState, WorkspaceViewState>(
+      builder: (context, settings, workspace, child) {
+        final commands = context.read<SettingsCommands>();
         final workspaceFallback =
-            provider.workspaceView.enabledWorkspaces.length > 1 &&
+            workspace.enabledWorkspaces.length > 1 &&
             settings.hideHomeWorkspaceNavigation;
         final l10n = AppLocalizations.of(context);
         return Scaffold(
