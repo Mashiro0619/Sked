@@ -53,8 +53,8 @@ void main() {
         locale: scene.locale,
         storage: WorkspaceMemoryStorage(_fixtureData(scene)),
       );
-      await provider.setSelectedWeek(3);
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.studentCommands.setSelectedWeek(3);
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.overlay,
       );
       addTearDown(() async {
@@ -85,7 +85,7 @@ void main() {
       final details = find.byType(CourseDetailsSheet);
       expect(details, findsOneWidget);
       final detailsElement = tester.element(details);
-      final course = provider.activeTimetable.courses.single;
+      final course = provider.studentView.activeTimetable.courses.single;
       final strings = AppLocalizations.of(detailsElement);
       final edit = find.descendant(
         of: details,
@@ -124,13 +124,13 @@ void main() {
         expect(edit.hitTestable(), findsOneWidget);
         await _capture(tester, '${scene.name}-editor-return');
 
-        await provider.updateWorkspacePanelDisplayMode(
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
         await tester.pumpAndSettle();
         expect(tester.element(details), same(detailsElement));
         await _capture(tester, '${scene.name}-docked');
-        await provider.updateWorkspacePanelDisplayMode(
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.overlay,
         );
         await tester.pumpAndSettle();

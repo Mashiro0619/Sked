@@ -338,7 +338,7 @@ void main() {
         );
         await t.pumpAndSettle();
         expect(k('add-calendar-field'), findsOneWidget);
-        expect(p.generalSchedules, hasLength(count));
+        expect(p.generalView.schedules, hasLength(count));
         await capture('add');
         await t.pumpWidget(const SizedBox.shrink());
         await t.pumpAndSettle();

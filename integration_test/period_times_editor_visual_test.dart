@@ -121,7 +121,9 @@ void main() {
               brightness: brightness,
               textScale: scale,
               textDirection: direction,
-              home: PeriodTimesPage(periodTimeSetId: p.periodTimeSets.first.id),
+              home: PeriodTimesPage(
+                periodTimeSetId: p.studentView.periodTimeSets.first.id,
+              ),
             ),
           ),
         );

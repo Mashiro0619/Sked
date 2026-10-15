@@ -57,7 +57,9 @@ void main() {
             mode: AppMode.general,
             storage: storage,
           );
-          if (scale == 2) await p.updateThemeSeedColorValue(0xff008577);
+          if (scale == 2) {
+            await p.settingsCommands.updateThemeSeedColorValue(0xff008577);
+          }
           final key = GlobalKey();
           await t.pumpWidget(
             RepaintBoundary(

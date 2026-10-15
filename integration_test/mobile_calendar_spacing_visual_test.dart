@@ -286,7 +286,7 @@ void main() {
         await tap('sked-date-month-year');
         await capture('years-direct');
         await tap('sked-date-picker-close');
-        await p.switchMode(AppMode.student);
+        await p.workspaces.switchMode(AppMode.student);
         await t.pumpAndSettle();
         await capture('student-home');
         await t.pumpWidget(const SizedBox.shrink());

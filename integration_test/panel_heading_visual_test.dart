@@ -98,10 +98,12 @@ void main() {
             ? categoryManagerStorage(locale: scene.locale)
             : WorkspaceMemoryStorage(_fixtureData(mode, scene.locale)),
       );
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.overlay,
       );
-      if (mode == AppMode.student) await provider.setSelectedWeek(3);
+      if (mode == AppMode.student) {
+        await provider.studentCommands.setSelectedWeek(3);
+      }
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
@@ -144,7 +146,7 @@ void main() {
                   brightness: scene.brightness,
                   home: switch (group) {
                     _Group.pickers => _PickerGallery(
-                      config: provider.activeTimetable.config,
+                      config: provider.studentView.activeTimetable.config,
                     ),
                     _Group.secondary => const Scaffold(
                       key: ValueKey('heading-secondary-home'),
@@ -316,7 +318,7 @@ Future<void> _courseScenes(
   expect(controller.text, draft);
   await capture('editor-return', [_panelHeading(editor)]);
   if (scene.name == 'zh') {
-    await provider.updateWorkspacePanelDisplayMode(
+    await provider.settingsCommands.updateWorkspacePanelDisplayMode(
       WorkspacePanelDisplayMode.sideBySide,
     );
     await tester.pumpAndSettle();
@@ -364,7 +366,7 @@ Future<void> _timetableScenes(
     await _tap(tester, _key('workspace-editor-close'));
     expect(editor, findsNothing);
   }
-  expect(provider.timetables, hasLength(1));
+  expect(provider.studentView.timetables, hasLength(1));
 }
 
 Future<void> _openStudentResources(WidgetTester tester) async {
@@ -383,7 +385,7 @@ Future<void> _eventScenes(
   _Scene scene,
   _Capture capture,
 ) async {
-  final calendar = provider.generalSchedules.first;
+  final calendar = provider.generalView.schedules.first;
   final event = calendar.events.single;
   await _tap(
     tester,

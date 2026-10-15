@@ -345,21 +345,25 @@ void main() {
             t.widget<Slider>(slider).onChanged!(160);
             t.widget<Slider>(slider).onChangeEnd!(160);
             await t.pumpAndSettle();
-            await p.updateGeneralDisplaySettings(defaultView: generalViewWeek);
-            await p.setGeneralDateRange(
+            await p.generalCommands.updateDisplaySettings(
+              defaultView: generalViewWeek,
+            );
+            await p.generalNavigation.setDateRange(
               GeneralDateRange(DateTime(2026, 9, 3), DateTime(2026, 9, 12)),
             );
-            await p.switchMode(AppMode.general);
+            await p.workspaces.switchMode(AppMode.general);
             await pump();
             await capture('custom-width');
-            await p.clearGeneralDateRange();
-            await p.updateGeneralDisplaySettings(defaultView: generalViewMonth);
-            await p.setSelectedGeneralDate(DateTime(2026, 9, 3));
+            await p.generalNavigation.clearDateRange();
+            await p.generalCommands.updateDisplaySettings(
+              defaultView: generalViewMonth,
+            );
+            await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 3));
           }
-          await p.switchMode(AppMode.general);
+          await p.workspaces.switchMode(AppMode.general);
           await pump();
           await capture('month-empty');
-          await p.setSelectedGeneralDate(DateTime(2026, 9, 23));
+          await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 23));
           await t.pumpAndSettle();
           await capture('month-events');
           await captureSidebar('general');

@@ -197,7 +197,7 @@ void main() {
 
         await pump();
         for (final mode in [AppMode.general, AppMode.student]) {
-          await p.switchMode(mode);
+          await p.workspaces.switchMode(mode);
           await t.pumpAndSettle();
           final details = find.byType(
             mode == AppMode.student
@@ -212,7 +212,7 @@ void main() {
           await tap(
             mode == AppMode.student
                 ? key(
-                    'timetable-course-hit-${p.activeTimetable.courses.first.id}',
+                    'timetable-course-hit-${p.studentView.activeTimetable.courses.first.id}',
                   )
                 : key(
                     'general-timed-occurrence-mobile-day-21-2026-09-21T08:10:00.000',
@@ -247,7 +247,7 @@ void main() {
               DateTime(2026, 9, 21),
               DateTime(2026, 9, 27),
             );
-            await p.setGeneralDateRange(original);
+            await p.generalNavigation.setDateRange(original);
             await t.pumpAndSettle();
             await tap(key('general-date-title-button'));
             expect(find.byType(SkedDatePicker), findsOneWidget);
@@ -258,14 +258,14 @@ void main() {
             await gesture.moveBy(const Offset(25, 0));
             await gesture.moveTo(t.getCenter(key('sked-date-2026-09-26')));
             await t.pumpAndSettle();
-            expect(p.customGeneralDateRange, original);
+            expect(p.generalView.customDateRange, original);
             await capture('general-range-touch-preview');
             await gesture.up();
             await t.pumpAndSettle();
-            expect(p.customGeneralDateRange!.dayCount, 5);
+            expect(p.generalView.customDateRange!.dayCount, 5);
             await capture('general-range-touch-applied');
-            await p.clearGeneralDateRange();
-            await p.setSelectedGeneralDate(DateTime(2026, 9, 23));
+            await p.generalNavigation.clearDateRange();
+            await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 23));
             await t.pumpAndSettle();
           }
 

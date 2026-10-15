@@ -174,17 +174,17 @@ void main() {
           customStart,
           addCalendarDays(customStart, 9),
         );
-        await p.setGeneralDateRange(range, focusedDate: customStart);
+        await p.generalNavigation.setDateRange(range, focusedDate: customStart);
         await t.pumpAndSettle();
-        expect(p.customGeneralDateRange, range);
+        expect(p.generalView.customDateRange, range);
         await capture('general-custom');
-        await p.clearGeneralDateRange();
+        await p.generalNavigation.clearDateRange();
         await t.pumpAndSettle();
-        expect(p.customGeneralDateRange, isNull);
+        expect(p.generalView.customDateRange, isNull);
         await capture('general-week');
-        await p.switchMode(AppMode.student);
+        await p.workspaces.switchMode(AppMode.student);
         await t.pumpAndSettle();
-        expect(p.activeMode, AppMode.student);
+        expect(p.workspaceView.activeMode, AppMode.student);
         await capture('student-home');
         await t.pumpWidget(const SizedBox.shrink());
         await t.pumpAndSettle();

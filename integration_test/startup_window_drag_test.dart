@@ -109,7 +109,7 @@ void main() {
         expect((dragged['movedY'] as num).abs(), greaterThan(5));
         evidence.add({...dragged, 'case': '$name-caption-drag'});
         expect(onboarding, findsOneWidget);
-        expect(provider.acceptedPrivacyPolicyVersion, isNull);
+        expect(provider.lifecycle.acceptedPrivacyPolicyVersion, isNull);
         final captured = await window('capture', name: '$name-onboarding');
         expect(captured['maximizeHit'], 9);
         evidence.add(captured);

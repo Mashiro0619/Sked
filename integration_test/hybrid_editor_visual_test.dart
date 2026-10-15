@@ -52,7 +52,7 @@ void main() {
         locale: locale,
         storage: storage,
       );
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.overlay,
       );
       addTearDown(() async {
@@ -191,13 +191,13 @@ void main() {
           await tester.pumpAndSettle();
           await _capture(tester, '$name-more');
         }
-        await provider.updateWorkspacePanelDisplayMode(
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
         await tester.pumpAndSettle();
         expect(tester.element(editor), same(element));
         await _capture(tester, '$name-docked');
-        await provider.updateWorkspacePanelDisplayMode(
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.overlay,
         );
         await tester.pumpAndSettle();
@@ -357,8 +357,8 @@ Future<void> _openEditor(
   }
   final event = group == _EditorGroup.event;
   final frame = find.byType(WorkspaceFrame);
-  final table = provider.activeTimetable;
-  final calendar = provider.generalSchedules.first;
+  final table = provider.studentView.activeTimetable;
+  final calendar = provider.generalView.schedules.first;
   final anchor = find.byKey(
     ValueKey(event ? 'general-add-event' : 'student-add-course'),
   );
@@ -373,22 +373,24 @@ Future<void> _openEditor(
       workspace: event ? AppMode.general : AppMode.student,
       builder: (_) => event
           ? GeneralEventEditorSheet(
-              calendars: provider.generalSchedules,
+              calendars: provider.generalView.schedules,
               activeCalendarId: calendar.id,
               initialDate: DateTime(2026, 10, 9),
               initialEvent: editing ? calendar.events.single : null,
-              onSave: provider.saveGeneralEvent,
+              onSave: provider.generalCommands.saveEvent,
             )
           : CourseEditorSheet(
-              periodTimes: provider.periodTimesForTimetable(table),
+              periodTimes: provider.studentView.periodTimesForTimetable(table),
               totalWeeks: table.config.totalWeeks,
               dayOfWeek: 1,
               initialPeriods: const [1, 2],
               initialStartMinutes: 480,
               initialEndMinutes: 575,
               initialCourse: editing ? table.courses.single : null,
-              onSave: (course) =>
-                  provider.saveCourse(course, timetableId: table.id),
+              onSave: (course) => provider.studentCommands.saveCourse(
+                course,
+                timetableId: table.id,
+              ),
             ),
     ),
   );

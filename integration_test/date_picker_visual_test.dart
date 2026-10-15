@@ -112,8 +112,8 @@ void main() {
               platform == TargetPlatform.windows;
           tester.view.physicalSize = size;
           final p = await denseWorkbenchProvider(locale: 'zh');
-          await p.setSelectedGeneralDate(DateTime(2026, 9, 10));
-          await p.updateGeneralDisplaySettings(
+          await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 10));
+          await p.generalCommands.updateDisplaySettings(
             dateLabelFormat: generalDateLabelFormatLocalized,
             viewSwitchBehavior: generalViewSwitchBehaviorMenu,
           );
@@ -183,12 +183,12 @@ void main() {
             expect(report['movedX'], 0);
             expect(report['movedY'], 0);
             expect(
-              p.customGeneralDateRange,
+              p.generalView.customDateRange,
               GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13)),
             );
             nativeEvidence.add(report);
-            await p.clearGeneralDateRange();
-            await p.setSelectedGeneralDate(DateTime(2026, 9, 10));
+            await p.generalNavigation.clearDateRange();
+            await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 10));
             tester.view.devicePixelRatio = 1;
             tester.view.physicalSize = size;
             await tester.pumpAndSettle();
@@ -231,11 +231,11 @@ void main() {
             );
             await drag.moveTo(tester.getCenter(day('sked-date-2026-09-13')));
             await tester.pumpAndSettle();
-            expect(p.customGeneralDateRange, isNull);
+            expect(p.generalView.customDateRange, isNull);
             await capture('sidebar-drag-preview');
             await drag.cancel();
             await tester.pumpAndSettle();
-            expect(p.customGeneralDateRange, isNull);
+            expect(p.generalView.customDateRange, isNull);
           }
           await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
           await tester.pumpAndSettle();
@@ -254,8 +254,8 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
-          expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
-          expect(p.customGeneralDateRange, isNull);
+          expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
+          expect(p.generalView.customDateRange, isNull);
           await capture('range-start');
           await tester.tap(
             find.descendant(
@@ -265,13 +265,15 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(
-            p.customGeneralDateRange,
+            p.generalView.customDateRange,
             GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13)),
           );
-          expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+          expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
           await capture('custom-five-days');
           if (platform == TargetPlatform.windows) {
-            await p.updateHomeWorkspaceNavigationCollapsed(true);
+            await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+              true,
+            );
             await tester.pumpAndSettle();
             await tester.tap(
               find.byKey(const ValueKey('general-day-agenda-toggle')),
@@ -282,7 +284,9 @@ void main() {
                 .widget<WorkspaceFrame>(find.byType(WorkspaceFrame))
                 .controller
                 .close();
-            await p.updateHomeWorkspaceNavigationCollapsed(false);
+            await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+              false,
+            );
             await tester.pumpAndSettle();
           }
           await tester.ensureVisible(button);
@@ -336,7 +340,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
-          expect(p.customGeneralDateRange!.dayCount, 14);
+          expect(p.generalView.customDateRange!.dayCount, 14);
           await capture('custom-fourteen-days');
           await tester.ensureVisible(button);
           await tester.tap(button);
@@ -369,7 +373,7 @@ void main() {
               Offset(-scroll.position.maxScrollExtent - 160, 0),
             );
             await tester.pumpAndSettle();
-            expect(p.customGeneralDateRange!.start, DateTime(2026, 9, 9));
+            expect(p.generalView.customDateRange!.start, DateTime(2026, 9, 9));
             expect(tester.getTopLeft(find.text('07:00')), timeRuler);
             final lastHeader = find.byKey(
               const ValueKey('general-week-day-header-2026-09-22T00:00:00.000'),

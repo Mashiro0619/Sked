@@ -63,7 +63,9 @@ void main() {
                 : AppMode.general,
             locale: 'zh',
           );
-          await p.updateGeneralDisplaySettings(defaultView: generalViewWeek);
+          await p.generalCommands.updateDisplaySettings(
+            defaultView: generalViewWeek,
+          );
           final boundary = GlobalKey();
           await t.pumpWidget(
             RepaintBoundary(
@@ -133,7 +135,7 @@ void main() {
             }
             await t.tap(k('adaptive-shell-general-destination'));
             await t.pumpAndSettle();
-            expect(p.activeMode, AppMode.general);
+            expect(p.workspaceView.activeMode, AppMode.general);
             await capture('general-selected');
           } else {
             expect(k('general-resource-menu'), findsNothing);

@@ -47,7 +47,7 @@ Future<TimetableProvider> _load(Directory directory) async {
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -114,69 +114,72 @@ void main() {
 
       final first = await _load(source);
       providers.add(first);
-      expect(first.canWrite, isTrue);
+      expect(first.session.canWrite, isTrue);
       _expectSnapshot(
-        first.appData.studentMode.toJson(),
+        first.workspaceView.data.studentMode.toJson(),
         sample.studentMode.toJson(),
       );
       _expectSnapshot(
-        first.appData.generalMode.toJson(),
+        first.workspaceView.data.generalMode.toJson(),
         sample.generalMode.toJson(),
       );
-      expect(first.timetables, isNotEmpty);
-      final table = first.timetables.first;
+      expect(first.studentView.timetables, isNotEmpty);
+      final table = first.studentView.timetables.first;
       final course = table.courses.first.copyWith(
         name: 'RC smoke edited course',
       );
-      await first.saveCourse(course, timetableId: table.id);
-      final calendar = first.generalSchedules.firstWhere(
+      await first.studentCommands.saveCourse(course, timetableId: table.id);
+      final calendar = first.generalView.schedules.firstWhere(
         (item) => item.events.isNotEmpty,
       );
       final event = calendar.events.first.copyWith(
         title: 'RC smoke edited event',
       );
-      await first.saveGeneralEvent(event);
-      await first.flushPendingUiStateSaves();
+      await first.generalCommands.saveEvent(event);
+      await first.persistence.flushPendingUiStateSaves();
 
       first.dispose();
       providers.remove(first);
       final reopened = await _load(source);
       providers.add(reopened);
-      expect(reopened.timetables.first.courses.first.name, course.name);
       expect(
-        reopened.generalSchedules
+        reopened.studentView.timetables.first.courses.first.name,
+        course.name,
+      );
+      expect(
+        reopened.generalView.schedules
             .expand((item) => item.events)
             .singleWhere((item) => item.id == event.id)
             .title,
         event.title,
       );
-      final exported = await reopened.exportAppDataJson();
+      final exported = await reopened.backups.exportJson();
       final backup = File(path.join(temporary.path, 'backup.json'));
       await backup.writeAsString(exported, flush: true);
 
       final destination = await _load(restored);
       providers.add(destination);
-      await destination.importAppDataJson(
+      await destination.backups.importJson(
         await backup.readAsString(),
         mode: AppImportMode.replaceAll,
       );
-      await destination.flushPendingUiStateSaves();
+      await destination.persistence.flushPendingUiStateSaves();
       destination.dispose();
       providers.remove(destination);
       final afterRestore = await _load(restored);
       providers.add(afterRestore);
-      expect(afterRestore.canWrite, isTrue);
+      expect(afterRestore.session.canWrite, isTrue);
       expect(
-        afterRestore.appData.studentMode.toJson(),
-        reopened.appData.studentMode.toJson(),
+        afterRestore.workspaceView.data.studentMode.toJson(),
+        reopened.workspaceView.data.studentMode.toJson(),
       );
       expect(
-        afterRestore.appData.generalMode.toJson(),
-        reopened.appData.generalMode.toJson(),
+        afterRestore.workspaceView.data.generalMode.toJson(),
+        reopened.workspaceView.data.generalMode.toJson(),
       );
       expect(
-        afterRestore.appData.enabledWorkspaces,
-        reopened.appData.enabledWorkspaces,
+        afterRestore.workspaceView.data.enabledWorkspaces,
+        reopened.workspaceView.data.enabledWorkspaces,
       );
       expect(
         await File(path.join(restored.path, 'Sked_backup_restore_journal.json'))
@@ -195,10 +198,10 @@ void main() {
         find.byKey(const ValueKey('workspace-resource-mode-general')),
       );
       await t.pumpAndSettle();
-      expect(afterRestore.activeMode, AppMode.general);
+      expect(afterRestore.workspaceView.activeMode, AppMode.general);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
-      await afterRestore.flushPendingUiStateSaves();
+      await afterRestore.persistence.flushPendingUiStateSaves();
     },
   );
 }

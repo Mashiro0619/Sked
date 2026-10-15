@@ -154,8 +154,9 @@ void main() {
           ('period-manager', (p, n) => const PeriodTimeSetManagerPage()),
           (
             'period-editor',
-            (p, n) =>
-                PeriodTimesPage(periodTimeSetId: p.periodTimeSets.first.id),
+            (p, n) => PeriodTimesPage(
+              periodTimeSetId: p.studentView.periodTimeSets.first.id,
+            ),
           ),
           (
             'school-sites',
@@ -232,12 +233,13 @@ void main() {
             mode: name == 'category-editor' ? AppMode.general : AppMode.student,
           );
           if (name == 'import-source') {
-            await provider.updateCustomSchoolImportTextSettings(
-              baseUrl: 'https://example.invalid/v1',
-              model: 'visual-fixture-model',
-              prompt: provider.customSchoolImportPrompt,
-            );
-            await provider.updateCustomSchoolImportApiKey(
+            await provider.settingsCommands
+                .updateCustomSchoolImportTextSettings(
+                  baseUrl: 'https://example.invalid/v1',
+                  model: 'visual-fixture-model',
+                  prompt: provider.settingsView.customSchoolImportPrompt,
+                );
+            await provider.schoolImportSecrets.update(
               'visual-fixture-not-a-real-key',
             );
           }
@@ -312,7 +314,7 @@ void main() {
               );
             }
             await tester.pumpAndSettle();
-            final calendar = provider.generalSchedules.first;
+            final calendar = provider.generalView.schedules.first;
             final tile = find.byKey(
               ValueKey('calendar-manager-tile-${calendar.id}'),
             );
@@ -329,7 +331,7 @@ void main() {
               find.byKey(const ValueKey('rename-calendar-field')),
               findsOneWidget,
             );
-            expect(provider.generalSchedules.first.isVisible, isTrue);
+            expect(provider.generalView.schedules.first.isVisible, isTrue);
           }
           expect(
             tester.takeException(),

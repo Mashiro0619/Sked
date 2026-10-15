@@ -147,7 +147,7 @@ void main() {
                 : count == 18
                 ? 5
                 : 1;
-            await provider.setSelectedWeek(selected);
+            await provider.studentCommands.setSelectedWeek(selected);
             final boundary = GlobalKey();
             await tester.pumpWidget(
               RepaintBoundary(
@@ -217,18 +217,21 @@ void main() {
             }
             await tester.sendKeyEvent(LogicalKeyboardKey.enter);
             await tester.pumpAndSettle();
-            expect(provider.selectedWeek, count == 100 ? 100 : selected);
+            expect(
+              provider.studentView.selectedWeek,
+              count == 100 ? 100 : selected,
+            );
             expect(find.byType(SkedWeekPicker), findsNothing);
             if (count == 18) await capture('closed');
             if (count == 18 &&
                 platform == TargetPlatform.android &&
                 size.width < 600) {
-              await provider.updateStudentToolbarNavigationHiddenIds(const [
-                'week',
-              ]);
-              await provider.updateStudentToolbarHiddenItemsBehavior(
-                toolbarHiddenItemsBehaviorMore,
-              );
+              await provider.settingsCommands
+                  .updateStudentToolbarNavigationHiddenIds(const ['week']);
+              await provider.settingsCommands
+                  .updateStudentToolbarHiddenItemsBehavior(
+                    toolbarHiddenItemsBehaviorMore,
+                  );
               await tester.pumpAndSettle();
               await tester.tap(
                 find.byKey(const ValueKey('student-toolbar-more-button')),

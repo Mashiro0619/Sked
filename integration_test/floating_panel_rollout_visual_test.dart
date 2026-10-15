@@ -224,7 +224,7 @@ void main() {
                                       anchor,
                                       anchorContext: anchor,
                                       selectedPeriodTimeSetId:
-                                          p.periodTimeSets.first.id,
+                                          p.studentView.periodTimeSets.first.id,
                                     ),
                                   ),
                                   child: Text(l.periodTimeSets),

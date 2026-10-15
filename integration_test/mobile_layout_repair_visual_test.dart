@@ -265,10 +265,10 @@ void main() {
             await t.pumpAndSettle();
             await capture('general-scroll');
           }
-          await p.switchMode(AppMode.student);
+          await p.workspaces.switchMode(AppMode.student);
           await t.pumpAndSettle();
           await capture('student-fit');
-          await p.updateFitWeekColumnsToWidth(false);
+          await p.settingsCommands.updateFitWeekColumnsToWidth(false);
           await t.pumpAndSettle();
           await capture('student-scroll');
           final studentContext = t.element(

@@ -167,8 +167,8 @@ void main() {
           }
         }
 
-        await p.switchMode(AppMode.student);
-        await p.setSelectedWeek(2);
+        await p.workspaces.switchMode(AppMode.student);
+        await p.studentCommands.setSelectedWeek(2);
         await t.pumpWidget(
           RepaintBoundary(
             key: boundary,
@@ -209,7 +209,7 @@ void main() {
         }
         await capture('week-jump');
         await tap(key('sked-week-picker-close'));
-        await p.switchMode(AppMode.general);
+        await p.workspaces.switchMode(AppMode.general);
         await t.pumpAndSettle();
         await tap(
           key('general-timed-occurrence-mobile-day-21-2026-09-21T08:10:00.000'),

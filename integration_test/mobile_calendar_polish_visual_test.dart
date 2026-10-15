@@ -242,22 +242,22 @@ void main() {
           await gesture.moveTo(t.getCenter(key('sked-date-2026-09-26')));
           await t.pump();
           await capture('week-drag-preview');
-          expect(p.customGeneralDateRange, isNull);
+          expect(p.generalView.customDateRange, isNull);
           await gesture.up();
           await t.pumpAndSettle();
           expect(
-            p.customGeneralDateRange,
+            p.generalView.customDateRange,
             GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 26)),
           );
           await capture('week-drag-applied');
-          await p.clearGeneralDateRange();
-          await p.setSelectedGeneralDate(DateTime(2026, 9, 23));
+          await p.generalNavigation.clearDateRange();
+          await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 23));
           await t.pumpAndSettle();
         } else {
           await t.tap(key('sked-date-picker-close'));
           await t.pumpAndSettle();
         }
-        await p.setGeneralDateRange(
+        await p.generalNavigation.setDateRange(
           GeneralDateRange(DateTime(2026, 9, 21), DateTime(2026, 9, 27)),
         );
         await t.pumpAndSettle();
@@ -266,9 +266,9 @@ void main() {
         await capture('custom-picker');
         await t.tap(key('sked-date-picker-close'));
         await t.pumpAndSettle();
-        await p.clearGeneralDateRange();
-        await p.setSelectedGeneralDate(DateTime(2026, 9, 23));
-        await p.switchMode(AppMode.student);
+        await p.generalNavigation.clearDateRange();
+        await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 23));
+        await p.workspaces.switchMode(AppMode.student);
         await t.pumpAndSettle();
         await capture('student-home');
         await t.pumpWidget(const SizedBox.shrink());

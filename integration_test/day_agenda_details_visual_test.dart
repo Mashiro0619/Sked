@@ -133,7 +133,7 @@ void main() {
             final scroll = body.position.pixels;
             await capture('independent');
             if (fixed) {
-              await p.setSelectedGeneralDate(DateTime(2026, 9, 29));
+              await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 29));
             } else {
               await t.tap(
                 find.descendant(

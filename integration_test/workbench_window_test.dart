@@ -99,7 +99,9 @@ void main() {
       mode: AppMode.general,
       locale: 'zh',
     );
-    await provider.updateHomeWorkspaceNavigationCollapsed(false);
+    await provider.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+      false,
+    );
     final preferences = DeveloperUiPreferences.memory();
     await window('resize');
     await tester.pumpWidget(
@@ -109,8 +111,9 @@ void main() {
         developerUiPreferences: preferences,
       ),
     );
-    DesktopWindowBridge.instance.prepareClose = provider.prepareForWindowClose;
-    await provider.switchMode(AppMode.student);
+    DesktopWindowBridge.instance.prepareClose =
+        provider.shutdown.prepareForWindowClose;
+    await provider.workspaces.switchMode(AppMode.student);
     await capture('windows-student-no-modal');
     await tester.tap(find.byKey(const ValueKey('student-week-picker-button')));
     await tester.pumpAndSettle();
@@ -146,7 +149,7 @@ void main() {
           .a,
       0,
     );
-    await provider.switchMode(AppMode.general);
+    await provider.workspaces.switchMode(AppMode.general);
     await capture('windows-week');
     final next = tester.getRect(
       find.byKey(const ValueKey('general-date-picker')),

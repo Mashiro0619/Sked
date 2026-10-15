@@ -195,7 +195,7 @@ void main() {
           storage: WorkspaceMemoryStorage(_sample(locale, mode, scene)),
         );
         try {
-          await p.setSelectedWeek(1);
+          await p.studentCommands.setSelectedWeek(1);
           final boundary = GlobalKey();
           final versions = version.split('+');
           Widget settings() => SettingsPage(
@@ -269,7 +269,7 @@ void main() {
           if (scene.startsWith('course-')) {
             await tap(
               _key(
-                'timetable-course-hit-${p.activeTimetable.courses.first.id}',
+                'timetable-course-hit-${p.studentView.activeTimetable.courses.first.id}',
               ),
             );
             final details = find.byType(CourseDetailsSheet);

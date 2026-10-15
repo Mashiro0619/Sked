@@ -17,8 +17,9 @@ Future<void> main() async {
     mode: AppMode.general,
     locale: 'zh',
   );
-  await provider.updateHomeWorkspaceNavigationCollapsed(false);
-  DesktopWindowBridge.instance.prepareClose = provider.prepareForWindowClose;
+  await provider.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false);
+  DesktopWindowBridge.instance.prepareClose =
+      provider.shutdown.prepareForWindowClose;
   runApp(_Preview(provider: provider));
 }
 

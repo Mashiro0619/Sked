@@ -61,7 +61,7 @@ void main() {
       ),
     );
     await capture('details-overlay');
-    await p.updateWorkspacePanelDisplayMode(
+    await p.settingsCommands.updateWorkspacePanelDisplayMode(
       WorkspacePanelDisplayMode.sideBySide,
     );
     await capture('details-side-by-side');
@@ -69,7 +69,9 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(k('general-reminders-action'));
     await capture('reminders-side-by-side');
-    await p.updateWorkspacePanelDisplayMode(WorkspacePanelDisplayMode.overlay);
+    await p.settingsCommands.updateWorkspacePanelDisplayMode(
+      WorkspacePanelDisplayMode.overlay,
+    );
     await capture('reminders-overlay');
     await t.sendKeyEvent(LogicalKeyboardKey.escape);
     await t.pumpAndSettle();
@@ -77,13 +79,15 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(k('general-day-agenda-toggle'));
     await capture('agenda-overlay');
-    await p.updateWorkspacePanelDisplayMode(
+    await p.settingsCommands.updateWorkspacePanelDisplayMode(
       WorkspacePanelDisplayMode.sideBySide,
     );
     await capture('agenda-side-by-side');
     await t.sendKeyEvent(LogicalKeyboardKey.escape);
     await t.pumpAndSettle();
-    await p.updateWorkspacePanelDisplayMode(WorkspacePanelDisplayMode.overlay);
+    await p.settingsCommands.updateWorkspacePanelDisplayMode(
+      WorkspacePanelDisplayMode.overlay,
+    );
     await t.pumpWidget(
       RepaintBoundary(
         key: boundary,

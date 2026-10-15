@@ -61,12 +61,12 @@ void main() {
               ),
             );
             final anchor = t.element(button);
-            final table = p.activeTimetableOrNull;
+            final table = p.studentView.activeTimetableOrNull;
             final calendar = editing
-                ? p.generalSchedules.firstWhere(
+                ? p.generalView.schedules.firstWhere(
                     (calendar) => calendar.events.isNotEmpty,
                   )
-                : p.generalSchedules.first;
+                : p.generalView.schedules.first;
             final c = table?.courses.firstOrNull;
             final e = calendar.events.firstOrNull;
             final saveGate = Completer<void>();
@@ -85,14 +85,16 @@ void main() {
               workspace: mode,
               builder: (_) => mode == AppMode.general
                   ? GeneralEventEditorSheet(
-                      calendars: p.generalSchedules,
+                      calendars: p.generalView.schedules,
                       activeCalendarId: calendar.id,
                       initialDate: DateTime(2026, 10, 4),
                       initialEvent: editing ? e : null,
                       onSave: save,
                     )
                   : CourseEditorSheet(
-                      periodTimes: p.periodTimesForTimetable(table!),
+                      periodTimes: p.studentView.periodTimesForTimetable(
+                        table!,
+                      ),
                       totalWeeks: table.config.totalWeeks,
                       dayOfWeek: 1,
                       initialCourse: editing ? c : null,
@@ -183,7 +185,7 @@ void main() {
             }
             await capture('floating');
             if (scale == 1) {
-              await p.updateWorkspacePanelDisplayMode(
+              await p.settingsCommands.updateWorkspacePanelDisplayMode(
                 WorkspacePanelDisplayMode.sideBySide,
               );
               await capture('docked');
@@ -209,7 +211,7 @@ void main() {
             expect(saveButton.hitTestable(), findsOneWidget);
             if (editing && scale == 1) {
               t.view.physicalSize = const Size(1600, 1100);
-              await p.updateWorkspacePanelDisplayMode(
+              await p.settingsCommands.updateWorkspacePanelDisplayMode(
                 WorkspacePanelDisplayMode.overlay,
               );
               await t.pumpAndSettle();

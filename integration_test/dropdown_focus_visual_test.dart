@@ -71,7 +71,7 @@ void main() {
             mode: AppMode.general,
             locale: 'zh',
           );
-          await p.updateThemeMode(brightness.name);
+          await p.settingsCommands.updateThemeMode(brightness.name);
           final boundary = GlobalKey();
           await t.pumpWidget(
             RepaintBoundary(

@@ -99,7 +99,7 @@ void main() {
               FocusHighlightStrategy.alwaysTouch;
           t.view.physicalSize = size;
           final provider = await denseWorkbenchProvider(locale: 'zh');
-          await provider.setGeneralDateRange(
+          await provider.generalNavigation.setDateRange(
             GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 20)),
           );
           final boundary = GlobalKey();
@@ -225,7 +225,7 @@ void main() {
                 GeneralDateRange(DateTime(2026, 9, 29), DateTime(2026, 10, 4)),
               ),
             ]) {
-              await provider.setGeneralDateRange(range);
+              await provider.generalNavigation.setDateRange(range);
               await t.pumpAndSettle();
               await capture(state);
             }
@@ -234,11 +234,13 @@ void main() {
             await t.sendKeyEvent(LogicalKeyboardKey.escape);
             await t.pumpAndSettle();
           }
-          await provider.updateGeneralDisplaySettings(
+          await provider.generalCommands.updateDisplaySettings(
             viewSwitchBehavior: generalViewSwitchBehaviorMenu,
           );
-          await provider.clearGeneralDateRange();
-          await provider.setSelectedGeneralDate(DateTime(2026, 9, 9));
+          await provider.generalNavigation.clearDateRange();
+          await provider.generalNavigation.setSelectedDate(
+            DateTime(2026, 9, 9),
+          );
           for (final view in [
             generalViewWeek,
             generalViewDay,
@@ -249,7 +251,9 @@ void main() {
               // than reusing the previously opened sheet and its owner.
               await t.pumpWidget(const SizedBox.shrink());
               await t.pumpAndSettle();
-              await provider.updateGeneralDisplaySettings(defaultView: view);
+              await provider.generalCommands.updateDisplaySettings(
+                defaultView: view,
+              );
               await mountWorkbench();
             } else {
               // Switch the active view through its actual command. Changing the

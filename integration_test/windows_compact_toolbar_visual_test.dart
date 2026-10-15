@@ -100,9 +100,11 @@ void main() {
       }
 
       for (final mode in [AppMode.student, AppMode.general]) {
-        if (p.activeMode != mode) await p.switchMode(mode);
+        if (p.workspaceView.activeMode != mode) {
+          await p.workspaces.switchMode(mode);
+        }
         await t.pumpAndSettle();
-        expect(p.activeMode, mode);
+        expect(p.workspaceView.activeMode, mode);
         await capture(mode.value);
         if (!baseline) {
           final more = find.byKey(

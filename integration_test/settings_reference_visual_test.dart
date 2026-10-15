@@ -113,7 +113,7 @@ void main() {
           t.view.viewPadding = insets;
           final p = await workspaceProvider(locale: language);
           // Use the same saved brightness for the page and its live preview.
-          await p.updateThemeMode(brightness.name);
+          await p.settingsCommands.updateThemeMode(brightness.name);
           final boundary = GlobalKey();
           await t.pumpWidget(
             RepaintBoundary(

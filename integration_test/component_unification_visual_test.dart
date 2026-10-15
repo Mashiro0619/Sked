@@ -147,7 +147,7 @@ Future<void> _openTimetable(
   TimetableProvider provider,
 ) async {
   final l = AppLocalizations.of(tester.element(find.byType(HomeScreen)));
-  final id = provider.activeTimetable.id;
+  final id = provider.studentView.activeTimetable.id;
   final row = _key('resource-timetable-$id');
   final edit = _key('resource-timetable-edit-$id');
   if (row.hitTestable().evaluate().isEmpty) {
@@ -308,7 +308,9 @@ void main() {
                   .copyWith(activeMode: mode),
             ),
           );
-          await provider.updateWorkspacePanelDisplayMode(profile.mode);
+          await provider.settingsCommands.updateWorkspacePanelDisplayMode(
+            profile.mode,
+          );
           final boundary = GlobalKey();
           tester.view.padding = safe;
           tester.view.viewInsets = const FakeViewPadding();
@@ -394,7 +396,8 @@ void main() {
                   builder: (_) => SchoolWebImportResultSheet(
                     response: _reviewFixture(),
                     canReplaceCurrent: true,
-                    initialPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    initialPeriodTimeSetId:
+                        provider.studentView.periodTimeSets.first.id,
                   ),
                 ),
               );
@@ -411,7 +414,7 @@ void main() {
                 tester,
                 course
                     ? _key(
-                        'timetable-course-hit-${provider.activeTimetable.courses.first.id}',
+                        'timetable-course-hit-${provider.studentView.activeTimetable.courses.first.id}',
                       )
                     : _key(
                         'general-timed-occurrence-mobile-day-21-2026-09-21T08:10:00.000',
@@ -562,7 +565,7 @@ void main() {
                 tester,
                 find.descendant(
                   of: _key('calendar-manager-tile-mobile-calendar'),
-                  matching: find.text(provider.activeGeneralSchedule.name),
+                  matching: find.text(provider.generalView.activeSchedule.name),
                 ),
               );
               await capture('category-rename');

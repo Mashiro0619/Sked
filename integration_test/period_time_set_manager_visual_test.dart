@@ -144,7 +144,7 @@ void main() {
             await t.pumpAndSettle();
             await t.tap(find.text('Open manager'));
             await t.pumpAndSettle();
-            final set = p.periodTimeSets.first;
+            final set = p.studentView.periodTimeSets.first;
             await t.tap(_key('period-time-set-${set.id}'));
             await t.pumpAndSettle();
             final l = AppLocalizations.of(
