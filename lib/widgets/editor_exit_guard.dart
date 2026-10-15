@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 import 'sked_confirmation_dialog.dart';
 import '../models/app_mode.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/workspace_commands.dart';
 import 'adaptive_navigation_scope.dart';
 
 /// Completes an editor only after a successful mutation or an authorized exit.
@@ -28,7 +28,7 @@ mixin EditorExitGuard<T extends StatefulWidget> on State<T> {
   VoidCallback? _unregisterPageExitGuard;
   ModalRoute<dynamic>? _guardedRoute;
   RegisterAdaptivePageExitGuard? _pageExitRegistrar;
-  TimetableProvider? _exitProvider;
+  WorkspaceCommands? _workspaceCommands;
   bool _askingToDiscard = false;
   bool get hasUnsavedDraft => draftFingerprint != _originalDraft;
 
@@ -50,11 +50,11 @@ mixin EditorExitGuard<T extends StatefulWidget> on State<T> {
           ? registrar(route, _prepareWorkspaceExit)
           : null;
     }
-    final provider = Provider.of<TimetableProvider?>(context, listen: false);
-    if (identical(provider, _exitProvider)) return;
+    final commands = context.read<WorkspaceCommands?>();
+    if (identical(commands, _workspaceCommands)) return;
     _unregisterExitGuard?.call();
-    _exitProvider = provider;
-    _unregisterExitGuard = provider?.registerWorkspaceExitGuard(
+    _workspaceCommands = commands;
+    _unregisterExitGuard = commands?.registerExitGuard(
       editorWorkspace,
       _prepareWorkspaceExit,
     );

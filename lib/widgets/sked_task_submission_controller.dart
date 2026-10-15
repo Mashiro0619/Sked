@@ -1,6 +1,8 @@
 import 'package:provider/provider.dart';
 
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../models/app_mode.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -75,7 +77,9 @@ mixin SkedTaskSubmissionHost<T extends StatefulWidget> on State<T> {
     final session =
         inherited ??
         (_ownedSubmissionSession = SkedTaskSession(
-          provider: Provider.of<TimetableProvider?>(context, listen: false),
+          maintenance: context.read<AppDataMaintenance?>(),
+          workspaceView: context.read<WorkspaceViewState?>(),
+          workspaces: context.read<WorkspaceCommands?>(),
           workspace: submissionWorkspace,
           isOwnerActive: () => mounted,
         ));

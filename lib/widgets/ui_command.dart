@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
 
 Future<bool> runUiCommandWithFeedback({
   required BuildContext context,

@@ -5,30 +5,35 @@ import 'package:provider/provider.dart';
 
 import '../models/app_mode.dart';
 import 'sked_confirmation_dialog.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 
 /// A disabled domain must also disappear from routes pushed above the shell.
 /// Removing only the shell's offstage page would leave a browser or parser alive.
 mixin WorkspaceRouteLifecycle<T extends StatefulWidget> on State<T> {
   AppMode get routeWorkspace;
   bool get routeWorkspaceEnabled =>
-      _workspaceProvider?.isWorkspaceEnabled(routeWorkspace) != false;
+      _workspaceView?.isEnabled(routeWorkspace) != false;
   Future<bool> prepareWorkspaceDisable() async => true;
   void workspaceDisabled() {}
-  TimetableProvider? _workspaceProvider;
+  WorkspaceViewState? _workspaceView;
+  WorkspaceCommands? _workspaceCommands;
   VoidCallback? _unregisterWorkspaceGuard;
   bool _removalScheduled = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final provider = Provider.of<TimetableProvider?>(context, listen: false);
-    if (!identical(provider, _workspaceProvider)) {
-      _workspaceProvider?.removeListener(_checkWorkspace);
+    final view = context.read<WorkspaceViewState?>();
+    final commands = context.read<WorkspaceCommands?>();
+    if (!identical(view, _workspaceView) ||
+        !identical(commands, _workspaceCommands)) {
+      _workspaceView?.removeListener(_checkWorkspace);
       _unregisterWorkspaceGuard?.call();
-      _workspaceProvider = provider;
-      provider?.addListener(_checkWorkspace);
-      _unregisterWorkspaceGuard = provider?.registerWorkspaceExitGuard(
+      _workspaceView = view;
+      _workspaceCommands = commands;
+      view?.addListener(_checkWorkspace);
+      _unregisterWorkspaceGuard = commands?.registerExitGuard(
         routeWorkspace,
         prepareWorkspaceDisable,
       );
@@ -38,7 +43,7 @@ mixin WorkspaceRouteLifecycle<T extends StatefulWidget> on State<T> {
 
   void _checkWorkspace() {
     if (!mounted ||
-        _workspaceProvider?.isWorkspaceEnabled(routeWorkspace) != false ||
+        _workspaceView?.isEnabled(routeWorkspace) != false ||
         _removalScheduled) {
       return;
     }
@@ -58,7 +63,7 @@ mixin WorkspaceRouteLifecycle<T extends StatefulWidget> on State<T> {
 
   @override
   void dispose() {
-    _workspaceProvider?.removeListener(_checkWorkspace);
+    _workspaceView?.removeListener(_checkWorkspace);
     _unregisterWorkspaceGuard?.call();
     super.dispose();
   }
