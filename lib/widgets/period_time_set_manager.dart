@@ -4,7 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/student_commands.dart';
+import '../controllers/student_view_state.dart';
+import '../providers/app_scope.dart';
 import '../models/app_mode.dart';
 import 'workspace_route_lifecycle.dart';
 import '../screens/period_times_page.dart';
@@ -32,14 +34,16 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
   Future<bool> prepareWorkspaceDisable() async => !uiCommandBusy;
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<TimetableProvider>();
+    final studentView = context.watch<StudentViewState>();
+    final studentCommands = context.read<StudentCommands>();
+    final appScope = AppScope.capture(context)!;
     final l = AppLocalizations.of(context);
     Future<void> createSet() async {
       String? createdId;
       final saved = await runUiCommand(
         debugLabel: 'Create period time set',
         command: () async {
-          createdId = (await p.addPeriodTimeSet()).id;
+          createdId = (await studentCommands.addPeriodTimeSet()).id;
         },
       );
       if (saved && mounted) setState(() => _newSetId = createdId);
@@ -61,13 +65,13 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
         title: l.noPeriodTimeAvailable,
       ),
       items: [
-        for (final set in p.periodTimeSets)
+        for (final set in studentView.periodTimeSets)
           CollectionItem(
             id: set.id,
             title: set.name,
             subtitle: l.periodTimeSetUsageSummary(
               set.periodTimes.length,
-              p.timetablesUsingPeriodTimeSet(set.id).length,
+              studentView.timetablesUsingPeriodTimeSet(set.id).length,
             ),
             tileBuilder: (selected, openDetail) => ExpressiveDialogOption(
               key: ValueKey('period-time-set-${set.id}'),
@@ -76,7 +80,7 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
               subtitle: Text(
                 l.periodTimeSetUsageSummary(
                   set.periodTimes.length,
-                  p.timetablesUsingPeriodTimeSet(set.id).length,
+                  studentView.timetablesUsingPeriodTimeSet(set.id).length,
                 ),
               ),
               trailing: const Icon(Icons.chevron_right),
@@ -85,10 +89,8 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
             ),
           ),
       ],
-      detailBuilder: (id) => ChangeNotifierProvider<TimetableProvider>.value(
-        value: p,
-        child: PeriodTimesPage(periodTimeSetId: id, embedded: true),
-      ),
+      detailBuilder: (id) =>
+          appScope.wrap(PeriodTimesPage(periodTimeSetId: id, embedded: true)),
     );
   }
 }

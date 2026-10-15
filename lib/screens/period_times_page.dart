@@ -16,7 +16,14 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/data_transfer_controller.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_commands.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
+import '../providers/app_scope.dart';
 import '../services/export_service.dart';
 import '../services/text_file_picker.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -92,7 +99,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   var _isHandlingPop = false;
   Timer? _autoSaveDebounce;
   Future<bool>? _autoSaveFlushOperation;
-  TimetableProvider? _pendingAutoSaveProvider;
+  ({StudentViewState view, StudentCommands commands})? _pendingAutoSaveOwner;
   PeriodTimeSet? _pendingAutoSaveValue;
   var _autoSaveRevision = 0;
   int? _pendingAutoSaveRevision;
@@ -131,8 +138,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
           : null;
     }
     if (_loading) {
-      final provider = context.read<TimetableProvider>();
-      final periodTimeSet = provider.periodTimeSetForId(widget.periodTimeSetId);
+      final studentView = context.read<StudentViewState>();
+      final periodTimeSet = studentView.periodTimeSetForId(
+        widget.periodTimeSetId,
+      );
       if (periodTimeSet != null) {
         _nameController.text = periodTimeSet.name;
         _periodTimes = periodTimeSet.periodTimes
@@ -182,7 +191,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final exists =
-        context.watch<TimetableProvider>().periodTimeSetForId(
+        context.watch<StudentViewState>().periodTimeSetForId(
           widget.periodTimeSetId,
         ) !=
         null;
@@ -597,7 +606,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     _allowPop = false;
     final revision = ++_autoSaveRevision;
     if (_hasInvalidPeriodTimes) {
-      _pendingAutoSaveProvider = null;
+      _pendingAutoSaveOwner = null;
       _pendingAutoSaveValue = null;
       _pendingAutoSaveRevision = null;
       _failedAutoSaveRevision = null;
@@ -606,7 +615,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       setState(() {});
       return;
     }
-    _pendingAutoSaveProvider = context.read<TimetableProvider>();
+    _pendingAutoSaveOwner = (
+      view: context.read<StudentViewState>(),
+      commands: context.read<StudentCommands>(),
+    );
     _pendingAutoSaveValue = _currentAutoSaveValue();
     _pendingAutoSaveRevision = revision;
     _failedAutoSaveRevision = null;
@@ -624,9 +636,9 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   Future<bool> _flushPendingAutoSave() async {
-    final pendingProvider = _pendingAutoSaveProvider;
-    if (pendingProvider != null &&
-        pendingProvider.periodTimeSetForId(widget.periodTimeSetId) == null) {
+    final pendingOwner = _pendingAutoSaveOwner;
+    if (pendingOwner != null &&
+        pendingOwner.view.periodTimeSetForId(widget.periodTimeSetId) == null) {
       // A removed shared resource cannot receive this page's delayed draft.
       _discardPendingAutoSave();
       return true;
@@ -662,7 +674,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   Future<bool>? _startAutoSaveOperation() {
-    if (_pendingAutoSaveProvider == null ||
+    if (_pendingAutoSaveOwner == null ||
         _pendingAutoSaveValue == null ||
         _pendingAutoSaveRevision == null ||
         _failedAutoSaveRevision == _pendingAutoSaveRevision) {
@@ -683,10 +695,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     _setAutoSaveInProgress(true);
     try {
       while (true) {
-        final provider = _pendingAutoSaveProvider;
+        final owner = _pendingAutoSaveOwner;
         final value = _pendingAutoSaveValue;
         final revision = _pendingAutoSaveRevision;
-        if (provider == null || value == null || revision == null) {
+        if (owner == null || value == null || revision == null) {
           _failedAutoSaveRevision = null;
           final canPop =
               _persistedAutoSaveRevision == _autoSaveRevision &&
@@ -699,13 +711,13 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
           return true;
         }
 
-        _pendingAutoSaveProvider = null;
+        _pendingAutoSaveOwner = null;
         _pendingAutoSaveValue = null;
         _pendingAutoSaveRevision = null;
         _autoSaveDebounce?.cancel();
         _autoSaveDebounce = null;
         try {
-          await provider.updatePeriodTimeSet(value);
+          await owner.commands.updatePeriodTimeSet(value);
           _persistedAutoSaveRevision = math.max(
             _persistedAutoSaveRevision,
             revision,
@@ -713,7 +725,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         } catch (error, stackTrace) {
           debugPrint('Period time auto-save failed: $error\n$stackTrace');
           if (_pendingAutoSaveValue == null && revision == _autoSaveRevision) {
-            _pendingAutoSaveProvider = provider;
+            _pendingAutoSaveOwner = owner;
             _pendingAutoSaveValue = value;
             _pendingAutoSaveRevision = revision;
             _failedAutoSaveRevision = revision;
@@ -805,7 +817,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   void _discardPendingAutoSave() {
     _autoSaveDebounce?.cancel();
     _autoSaveDebounce = null;
-    _pendingAutoSaveProvider = null;
+    _pendingAutoSaveOwner = null;
     _pendingAutoSaveValue = null;
     _pendingAutoSaveRevision = null;
     _failedAutoSaveRevision = null;
@@ -857,7 +869,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   Future<void> _deleteSet() async {
-    final provider = context.read<TimetableProvider>();
+    final studentCommands = context.read<StudentCommands>();
     final navigator = Navigator.of(context);
     final route = ModalRoute.of(context);
     final confirmed = await showExpressiveDialog<bool>(
@@ -894,7 +906,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       return;
     }
     try {
-      await provider.deletePeriodTimeSet(widget.periodTimeSetId);
+      await studentCommands.deletePeriodTimeSet(widget.periodTimeSetId);
       if (mounted && route?.isCurrent == true) {
         navigator.pop(true);
       }
@@ -904,7 +916,8 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   Future<void> _importTemplate() async {
-    final provider = context.read<TimetableProvider>();
+    final transfers = context.read<DataTransferController>();
+    final settingsView = context.read<SettingsViewState>();
     final l10n = AppLocalizations.of(context);
     final source = await widget.textFilePicker(
       allowedExtensions: const ['json'],
@@ -916,11 +929,11 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       return;
     }
     try {
-      final imported = provider.importPeriodTimesJson(source);
+      final imported = transfers.importPeriodTimesJson(source);
       final count = imported.length;
       if (count == 0) {
         throw FormatException(
-          noPeriodTimesInImportMessage(localeCode: provider.localeCode),
+          noPeriodTimesInImportMessage(localeCode: settingsView.localeCode),
         );
       }
       setState(() {
@@ -938,54 +951,66 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
 
   Future<void> _importTemplateFromText() async {
     final l10n = AppLocalizations.of(context);
-    final provider = context.read<TimetableProvider>();
+    final studentView = context.read<StudentViewState>();
+    final transfers = context.read<DataTransferController>();
+    final settingsView = context.read<SettingsViewState>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspaceView = context.read<WorkspaceViewState>();
+    final workspaces = context.read<WorkspaceCommands>();
+    final appScope = AppScope.capture(context)!;
     final ownerRoute = ModalRoute.of(context);
     await Navigator.of(context, rootNavigator: widget.embedded).push(
       MaterialPageRoute(
-        builder: (_) => SkedTaskRouteGuard(
-          provider: provider,
-          workspace: AppMode.student,
-          isOwnerActive: () =>
-              mounted && !_retired && ownerRoute?.isActive != false,
-          isTargetCurrent: () =>
-              provider.periodTimeSetForId(widget.periodTimeSetId) != null,
-          child: TextImportPage(
-            title: l10n.importPeriodTemplateText,
-            onSubmit: (_, content) async {
-              if (!mounted || _retired) {
-                return false;
-              }
-              if (provider.periodTimeSetForId(widget.periodTimeSetId) == null) {
-                return false;
-              }
-              try {
-                final imported = provider.importPeriodTimesJson(content);
-                final count = imported.length;
-                if (count == 0) {
-                  throw FormatException(
-                    noPeriodTimesInImportMessage(
-                      localeCode: provider.localeCode,
-                    ),
-                  );
-                }
-                if (!mounted) {
+        builder: (_) => appScope.wrap(
+          SkedTaskRouteGuard(
+            maintenance: maintenance,
+            workspaceView: workspaceView,
+            workspaces: workspaces,
+            targetChanges: studentView,
+            workspace: AppMode.student,
+            isOwnerActive: () =>
+                mounted && !_retired && ownerRoute?.isActive != false,
+            isTargetCurrent: () =>
+                studentView.periodTimeSetForId(widget.periodTimeSetId) != null,
+            child: TextImportPage(
+              title: l10n.importPeriodTemplateText,
+              onSubmit: (_, content) async {
+                if (!mounted || _retired) {
                   return false;
                 }
-                setState(() {
-                  _periodTimes = imported;
-                  _resetPeriodRowKeys();
-                });
-                _scheduleAutoSave();
-                _showMessage(l10n.importedPeriodTimesCount(count));
-                return true;
-              } on FormatException catch (error) {
-                _showMessage(error.message);
-                return false;
-              } catch (_) {
-                _showMessage(l10n.importFailedCheckContent);
-                return false;
-              }
-            },
+                if (studentView.periodTimeSetForId(widget.periodTimeSetId) ==
+                    null) {
+                  return false;
+                }
+                try {
+                  final imported = transfers.importPeriodTimesJson(content);
+                  final count = imported.length;
+                  if (count == 0) {
+                    throw FormatException(
+                      noPeriodTimesInImportMessage(
+                        localeCode: settingsView.localeCode,
+                      ),
+                    );
+                  }
+                  if (!mounted) {
+                    return false;
+                  }
+                  setState(() {
+                    _periodTimes = imported;
+                    _resetPeriodRowKeys();
+                  });
+                  _scheduleAutoSave();
+                  _showMessage(l10n.importedPeriodTimesCount(count));
+                  return true;
+                } on FormatException catch (error) {
+                  _showMessage(error.message);
+                  return false;
+                } catch (_) {
+                  _showMessage(l10n.importFailedCheckContent);
+                  return false;
+                }
+              },
+            ),
           ),
         ),
       ),

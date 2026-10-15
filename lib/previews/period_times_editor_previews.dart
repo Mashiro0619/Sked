@@ -1,8 +1,8 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:provider/provider.dart';
 
 import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../screens/period_times_page.dart';
 import '../utils/constants.dart';
 import 'sked_preview_support.dart';
@@ -50,8 +50,8 @@ class _PeriodTimesEditorPreviewHostState
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<TimetableProvider>.value(
-      value: _provider,
+    return AppScope(
+      app: _provider,
       child: const PeriodTimesPage(periodTimeSetId: defaultPeriodTimeSetId),
     );
   }
