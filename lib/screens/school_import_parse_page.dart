@@ -15,6 +15,7 @@ import 'dart:convert';
 
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/sked_tooltip.dart';
 
@@ -24,7 +25,13 @@ import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_lifecycle.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_view_state.dart';
+import '../providers/app_scope.dart';
 import '../services/school_import_api.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/school_import_replace_confirmation.dart';
@@ -66,7 +73,7 @@ class SchoolImportParsePage extends StatefulWidget {
   const SchoolImportParsePage({
     super.key,
     required this.stream,
-    this.provider,
+    this.configureImport = false,
     this.canReplaceCurrent = false,
     this.initialPeriodTimeSetId,
     this.maxPreviewCodeUnits = 4096,
@@ -78,7 +85,11 @@ class SchoolImportParsePage extends StatefulWidget {
   static const int defaultMaxEditableCodeUnits = 64 * 1024;
 
   final Stream<SchoolImportStreamEvent> stream;
-  final TimetableProvider? provider;
+
+  /// Enables the import settings and request result explicitly. A stream
+  /// preview remains a preview even when it is inside an application scope.
+  /// The surrounding scope supplies typed state; [onApply] controls persistence.
+  final bool configureImport;
   final bool canReplaceCurrent;
   final String? initialPeriodTimeSetId;
   final int maxPreviewCodeUnits;
@@ -105,6 +116,14 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   Future<bool> prepareWorkspaceDisable() async => !_isApplying;
 
   static const _followResumeTolerance = 1.0;
+
+  StudentViewState? _student;
+  SettingsViewState? _settings;
+  AppLifecycle? _lifecycle;
+  AppDataMaintenance? _maintenance;
+  AppDataClearController? _dataClear;
+  WorkspaceViewState? _workspaceView;
+  Listenable? _importChanges;
 
   final _textBuffer = StringBuffer();
   final _scrollController = ScrollController();
@@ -150,13 +169,13 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       _pickerOpen ||
       _isApplying;
 
-  bool get _hasDirectImportConfiguration => widget.provider != null;
+  bool get _hasDirectImportConfiguration => widget.configureImport;
 
   bool get _hasBundledPeriodTimeSet =>
       _response?.timetable.periodTimeSet.periodTimes.isNotEmpty ?? false;
 
   List<PeriodTimeSet> get _periodTimeSets =>
-      widget.provider?.periodTimeSets ?? const <PeriodTimeSet>[];
+      _student?.periodTimeSets ?? const <PeriodTimeSet>[];
 
   PeriodTimeSet? get _selectedExistingPeriodTimeSet {
     for (final item in _periodTimeSets) {
@@ -166,10 +185,10 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   bool get _canSave => canSaveSchoolImport(
-    lifecycle: widget.provider?.lifecycle,
-    maintenance: widget.provider?.maintenance,
-    dataClear: widget.provider?.dataClear,
-    workspaceView: widget.provider?.workspaceView,
+    lifecycle: _lifecycle,
+    maintenance: _maintenance,
+    dataClear: _dataClear,
+    workspaceView: _workspaceView,
   );
 
   bool get _canSubmitConfiguredImport =>
@@ -201,7 +220,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   @override
   void initState() {
     super.initState();
-    widget.provider?.addListener(_handlePeriodTimeSetsChanged);
     _subscription = widget.stream.listen(
       _handleEvent,
       onError: (Object error, StackTrace stackTrace) {
@@ -212,6 +230,69 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       },
       cancelOnError: false,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindImportState();
+  }
+
+  @override
+  void didUpdateWidget(covariant SchoolImportParsePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.configureImport != widget.configureImport) {
+      _bindImportState();
+    }
+  }
+
+  void _bindImportState() {
+    final student = widget.configureImport
+        ? context.watch<StudentViewState>()
+        : null;
+    final settings = widget.configureImport
+        ? context.watch<SettingsViewState>()
+        : null;
+    final lifecycle = widget.configureImport
+        ? context.watch<AppLifecycle>()
+        : null;
+    final maintenance = widget.configureImport
+        ? context.watch<AppDataMaintenance>()
+        : null;
+    final dataClear = widget.configureImport
+        ? context.watch<AppDataClearController>()
+        : null;
+    final workspaceView = widget.configureImport
+        ? context.watch<WorkspaceViewState>()
+        : null;
+    if (identical(student, _student) &&
+        identical(settings, _settings) &&
+        identical(lifecycle, _lifecycle) &&
+        identical(maintenance, _maintenance) &&
+        identical(dataClear, _dataClear) &&
+        identical(workspaceView, _workspaceView)) {
+      return;
+    }
+    _importChanges?.removeListener(_handlePeriodTimeSetsChanged);
+    _student = student;
+    _settings = settings;
+    _lifecycle = lifecycle;
+    _maintenance = maintenance;
+    _dataClear = dataClear;
+    _workspaceView = workspaceView;
+    _importChanges = Listenable.merge([
+      student,
+      settings,
+      lifecycle,
+      maintenance,
+      dataClear,
+      workspaceView,
+    ])..addListener(_handlePeriodTimeSetsChanged);
+    if (_isDone) {
+      _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(
+        _selectedPeriodTimeSetId,
+      );
+    }
   }
 
   void _handleEvent(SchoolImportStreamEvent event) {
@@ -256,7 +337,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   @override
   void dispose() {
     unawaited(_cancelSubscription());
-    widget.provider?.removeListener(_handlePeriodTimeSetsChanged);
+    _importChanges?.removeListener(_handlePeriodTimeSetsChanged);
     _nameController?.removeListener(_handleImportNameChanged);
     _totalWeeksController?.removeListener(_handleTotalWeeksChanged);
     _nameController?.dispose();
@@ -309,7 +390,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     if (_periodTimeSets.any((item) => item.id == preferredId)) {
       return preferredId;
     }
-    final activeId = widget.provider?.activePeriodTimeSetOrNull?.id;
+    final activeId = _student?.activePeriodTimeSetOrNull?.id;
     if (activeId != null &&
         _periodTimeSets.any((item) => item.id == activeId)) {
       return activeId;
@@ -528,14 +609,18 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   Future<void> _openEditor() async {
     if (!_canEdit || _isBusy || !mounted) return;
     final initialText = _editorTextWithImportDraft();
+    final scope = AppScope.capture(context);
     setState(() => _isOpeningEditor = true);
     final result = await Navigator.of(context)
         .push<SchoolImportResultEditorOutcome>(
           MaterialPageRoute(
-            builder: (_) => SchoolImportResultEditorPage(
-              initialText: initialText,
-              maxEditableCodeUnits: widget.maxEditableCodeUnits,
-            ),
+            builder: (_) {
+              final page = SchoolImportResultEditorPage(
+                initialText: initialText,
+                maxEditableCodeUnits: widget.maxEditableCodeUnits,
+              );
+              return scope?.wrap(page) ?? page;
+            },
           ),
         );
     if (!mounted) return;
@@ -616,8 +701,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   Future<void> _pickPeriodTimeSet() async {
-    final provider = widget.provider;
-    if (provider == null || _isBusy || _hasPopped || !_canSave) {
+    if (_student == null || _isBusy || _hasPopped || !_canSave) {
       return;
     }
     final result = await _runPicker(
@@ -640,8 +724,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         !_canSave) {
       return;
     }
-    final dataSession = widget.provider?.dataSessionToken;
-    final replacementId = widget.provider?.activeTimetableOrNull?.id;
+    final dataSession = _maintenance?.dataSessionToken;
+    final replacementId = _student?.activeTimetableOrNull?.id;
     final name = _nameController?.text.trim() ?? _response!.timetable.name;
     final parsedWeeks = int.tryParse(_totalWeeksController?.text.trim() ?? '');
     final totalWeeks = normalizeTimetableWeeks(
@@ -669,9 +753,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         !routeWorkspaceEnabled ||
         !confirmed ||
         !_canSave ||
-        !identical(dataSession, widget.provider?.dataSessionToken) ||
+        !identical(dataSession, _maintenance?.dataSessionToken) ||
         (mode == TimetableImportMode.replaceActive &&
-            replacementId != widget.provider?.activeTimetableOrNull?.id)) {
+            replacementId != _student?.activeTimetableOrNull?.id)) {
       return;
     }
     final selected = _selectedExistingPeriodTimeSet;
@@ -1170,7 +1254,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     final timetableName = name.isNotEmpty ? name : 'Imported timetable';
     return importedPeriodTimeSetName(
       timetableName,
-      localeCode: widget.provider?.localeCode ?? defaultLocaleCode,
+      localeCode: _settings?.localeCode ?? defaultLocaleCode,
     );
   }
 
@@ -1390,9 +1474,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SchoolImportSaveFeedback(
-                    lifecycle: widget.provider?.lifecycle,
-                    maintenance: widget.provider?.maintenance,
-                    dataClear: widget.provider?.dataClear,
+                    lifecycle: _lifecycle,
+                    maintenance: _maintenance,
+                    dataClear: _dataClear,
                     isSaving: _isApplying,
                     error: _applyError,
                     onRecoveryBusyChanged: (busy) =>

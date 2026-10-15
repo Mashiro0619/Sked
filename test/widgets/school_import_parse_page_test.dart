@@ -160,6 +160,7 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
   WidgetTester tester,
   StreamController<SchoolImportStreamEvent> controller,
   TimetableProvider provider, {
+  bool configureImport = true,
   bool canReplaceCurrent = false,
   TextScaler textScaler = TextScaler.noScaling,
   int maxEditableCodeUnits = SchoolImportParsePage.defaultMaxEditableCodeUnits,
@@ -182,7 +183,7 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
                     MaterialPageRoute(
                       builder: (_) => SchoolImportParsePage(
                         stream: controller.stream,
-                        provider: provider,
+                        configureImport: configureImport,
                         canReplaceCurrent: canReplaceCurrent,
                         maxEditableCodeUnits: maxEditableCodeUnits,
                         initialPeriodTimeSetId:
@@ -205,6 +206,45 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
+  testWidgets(
+    'an application scope does not enable direct import for a stream preview',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final controller = StreamController<SchoolImportStreamEvent>();
+      addTearDown(controller.close);
+      final before = provider.appData.toJson();
+      final results = await _pumpDirectPage(
+        tester,
+        controller,
+        provider,
+        configureImport: false,
+      );
+      controller.add(ParseDone(response: _response()));
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SchoolImportParsePage)),
+      );
+      expect(
+        find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('school-import-parse-timetable-name')),
+        findsNothing,
+      );
+      await tester.tap(
+        find.widgetWithText(FilledButton, l10n.schoolImportParsePageContinue),
+      );
+      await tester.pumpAndSettle();
+      expect(results, hasLength(1));
+      expect(results.single!.applyRequest, isNull);
+      expect(results.single!.importApplied, isFalse);
+      expect(provider.appData.toJson(), before);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'desktop import period set picker stays next to its source field',
     (tester) async {

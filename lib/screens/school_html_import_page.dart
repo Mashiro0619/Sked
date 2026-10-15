@@ -700,7 +700,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                       parent: owner,
                       child: SchoolImportParsePage(
                         stream: stream,
-                        provider: provider,
+                        configureImport: true,
                         canReplaceCurrent: canReplaceCurrent,
                         initialPeriodTimeSetId:
                             provider.activePeriodTimeSetOrNull?.id ??
