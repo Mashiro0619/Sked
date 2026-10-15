@@ -21,7 +21,12 @@ class _ListCalendarSourceState extends State<_ListCalendarSource> {
   final _projection = GeneralListProjectionCache();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.view,
+    builder: (context, _) => _buildSnapshot(context),
+  );
+
+  Widget _buildSnapshot(BuildContext context) {
     final start = normalizeDateOnly(widget.date);
     final occurrences = widget.view.occurrencesForQuery(
       widget.filter.toQuery(

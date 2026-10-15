@@ -43,9 +43,10 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   Future<bool> prepareWorkspaceDisable() async => !_actionInProgress;
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TimetableProvider>();
+    final commands = context.read<GeneralCommands>();
+    final general = context.watch<GeneralViewState>();
     final l10n = AppLocalizations.of(context);
-    if (widget.desktopPanel) return _buildDesktop(context, provider);
+    if (widget.desktopPanel) return _buildDesktop(context, general);
     return PopScope(
       canPop: !_actionsDisabled,
       child: Scaffold(
@@ -94,9 +95,9 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
               child: ListView.builder(
                 key: const PageStorageKey('calendar-manager-list'),
                 padding: const EdgeInsets.all(12),
-                itemCount: provider.generalSchedules.length,
+                itemCount: general.schedules.length,
                 itemBuilder: (context, index) {
-                  final schedule = provider.generalSchedules[index];
+                  final schedule = general.schedules[index];
                   return _CalendarManagerTile(
                     schedule: schedule,
                     eventCountLabel: l10n.generalScheduleEventCount(
@@ -106,7 +107,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                     onToggleVisibility: () => unawaited(
                       _runCalendarAction(
                         debugLabel: 'Update general calendar visibility',
-                        action: () => provider.updateGeneralScheduleVisibility(
+                        action: () => commands.updateScheduleVisibility(
                           schedule.id,
                           !schedule.isVisible,
                         ),
@@ -129,7 +130,8 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     );
   }
 
-  Widget _buildDesktop(BuildContext context, TimetableProvider provider) {
+  Widget _buildDesktop(BuildContext context, GeneralViewState general) {
+    final commands = context.read<GeneralCommands>();
     final l = AppLocalizations.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
     final explicitHeight =
@@ -154,7 +156,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
             key: const ValueKey('category-manager-panel'),
             contentOwnsScroll: true,
             title: Text(
-              '${l.categoryManagerTitle} · ${provider.generalSchedules.length}',
+              '${l.categoryManagerTitle} · ${general.schedules.length}',
             ),
             titleAction: inline ? add : null,
             titleBottom: inline
@@ -173,10 +175,10 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                 shrinkWrap: !explicitHeight,
                 primary: false,
                 padding: EdgeInsets.zero,
-                itemCount: provider.generalSchedules.length,
+                itemCount: general.schedules.length,
                 separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final schedule = provider.generalSchedules[index];
+                  final schedule = general.schedules[index];
                   return _DesktopCalendarManagerRow(
                     schedule: schedule,
                     disabled: _actionsDisabled,
@@ -192,11 +194,11 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                       _runCalendarAction(
                         debugLabel: 'Update calendar visibility',
                         action: () async {
-                          final latest = provider.generalSchedules
+                          final latest = general.schedules
                               .where((item) => item.id == schedule.id)
                               .firstOrNull;
                           if (latest != null) {
-                            await provider.updateGeneralScheduleVisibility(
+                            await commands.updateScheduleVisibility(
                               latest.id,
                               !latest.isVisible,
                             );
@@ -240,9 +242,18 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   }
 
   Future<void> _editCalendarColor(String id, BuildContext anchor) async {
-    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) return;
-    final provider = context.read<TimetableProvider>();
-    final schedule = provider.generalSchedules
+    if (!mounted ||
+        _actionsDisabled ||
+        !SkedTaskSessionScope.isCurrent(context)) {
+      return;
+    }
+    final commands = context.read<GeneralCommands>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspace = context.read<WorkspaceViewState>();
+    final workspaces = context.read<WorkspaceCommands>();
+    final appScope = AppScope.capture(context);
+    final general = context.read<GeneralViewState>();
+    final schedule = general.schedules
         .where((item) => item.id == id)
         .firstOrNull;
     if (schedule == null) return;
@@ -259,19 +270,26 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
         isSessionCurrent: () =>
             mounted &&
             owner?.session.isCurrent != false &&
-            provider.generalSchedules.any((item) => item.id == id),
-        builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
-          child: SkedTaskRouteGuard(
+            general.schedules.any((item) => item.id == id),
+        builder: (_) {
+          final child = SkedTaskRouteGuard(
             workspace: AppMode.general,
-            provider: provider,
+            maintenance: maintenance,
+            workspaceView: workspace,
+            workspaces: workspaces,
+            targetChanges: general,
             isTargetCurrent: () =>
-                provider.generalSchedules.any((item) => item.id == id),
+                general.schedules.any((item) => item.id == id),
             isOwnerActive: () => mounted && owner?.session.isCurrent != false,
             parent: owner?.session,
-            child: _CalendarColorDialog(provider: provider, schedule: schedule),
-          ),
-        ),
+            child: _CalendarColorDialog(
+              view: general,
+              commands: commands,
+              schedule: schedule,
+            ),
+          );
+          return appScope?.wrap(child) ?? child;
+        },
       );
     } finally {
       if (mounted) setState(() => _childTaskOpen = false);
@@ -282,13 +300,17 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     GeneralSchedule? schedule,
     BuildContext? anchorContext,
   }) async {
-    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) return;
-    final provider = context.read<TimetableProvider>();
+    if (!mounted ||
+        _actionsDisabled ||
+        !SkedTaskSessionScope.isCurrent(context)) {
+      return;
+    }
+    final general = context.read<GeneralViewState>();
     setState(() => _childTaskOpen = true);
     try {
       await _showCalendarNameTask(
         context,
-        provider,
+        general,
         schedule: schedule,
         anchorContext: anchorContext,
       );
@@ -301,7 +323,9 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     required String debugLabel,
     required Future<void> Function() action,
   }) async {
-    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) {
+    if (!mounted ||
+        _actionsDisabled ||
+        !SkedTaskSessionScope.isCurrent(context)) {
       return;
     }
     await taskSubmission.run(
@@ -312,27 +336,40 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   }
 
   Future<void> _deleteCalendar(GeneralSchedule schedule) async {
-    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) return;
-    final provider = context.read<TimetableProvider>();
+    if (!mounted ||
+        _actionsDisabled ||
+        !SkedTaskSessionScope.isCurrent(context)) {
+      return;
+    }
+    final commands = context.read<GeneralCommands>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspace = context.read<WorkspaceViewState>();
+    final workspaces = context.read<WorkspaceCommands>();
+    final appScope = AppScope.capture(context);
+    final general = context.read<GeneralViewState>();
     final owner = SkedTaskSessionScope.maybeOf(context);
     setState(() => _childTaskOpen = true);
     try {
       await showExpressiveDialog<void>(
         context: context,
         waitForTransitionComplete: true,
-        builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
-          child: SkedTaskRouteGuard(
+        builder: (_) {
+          final child = SkedTaskRouteGuard(
             workspace: AppMode.general,
-            provider: provider,
+            maintenance: maintenance,
+            workspaceView: workspace,
+            workspaces: workspaces,
+            targetChanges: general,
             isOwnerActive: () => mounted && owner?.session.isCurrent != false,
             parent: owner?.session,
             child: _DeleteCalendarDialog(
-              provider: provider,
+              view: general,
+              commands: commands,
               schedule: schedule,
             ),
-          ),
-        ),
+          );
+          return appScope?.wrap(child) ?? child;
+        },
       );
     } finally {
       if (mounted) setState(() => _childTaskOpen = false);
@@ -341,9 +378,14 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
 }
 
 class _CalendarNameDialog extends StatefulWidget {
-  const _CalendarNameDialog({required this.provider, this.schedule});
+  const _CalendarNameDialog({
+    required this.view,
+    required this.commands,
+    this.schedule,
+  });
 
-  final TimetableProvider provider;
+  final GeneralViewState view;
+  final GeneralCommands commands;
   final GeneralSchedule? schedule;
 
   @override
@@ -381,18 +423,21 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
   @override
   Widget guardDiscardConfirmation(Widget dialog) {
     final owner = SkedTaskSessionScope.maybeOf(context);
-    return SkedTaskRouteGuard(
+    final appScope = AppScope.capture(context);
+    final child = SkedTaskRouteGuard(
       workspace: AppMode.general,
-      provider: widget.provider,
+      maintenance: context.read<AppDataMaintenance>(),
+      workspaceView: context.read<WorkspaceViewState>(),
+      workspaces: context.read<WorkspaceCommands>(),
+      targetChanges: widget.view,
       isTargetCurrent: () =>
           widget.schedule == null ||
-          widget.provider.generalSchedules.any(
-            (item) => item.id == widget.schedule!.id,
-          ),
+          widget.view.schedules.any((item) => item.id == widget.schedule!.id),
       isOwnerActive: () => mounted && owner?.session.isCurrent != false,
       parent: owner?.session,
       child: dialog,
     );
+    return appScope?.wrap(child) ?? child;
   }
 
   @override
@@ -423,11 +468,11 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
           ? 'Add general calendar'
           : 'Rename general calendar',
       command: () => widget.schedule == null
-          ? widget.provider.addGeneralSchedule(
+          ? widget.commands.addSchedule(
               name: name,
-              colorValue: _nextCalendarColor(widget.provider.generalSchedules),
+              colorValue: _nextCalendarColor(widget.view.schedules),
             )
-          : widget.provider.renameGeneralSchedule(widget.schedule!.id, name),
+          : widget.commands.renameSchedule(widget.schedule!.id, name),
     );
     if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
     if (saved) {
@@ -489,9 +534,14 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
 }
 
 class _DeleteCalendarDialog extends StatefulWidget {
-  const _DeleteCalendarDialog({required this.provider, required this.schedule});
+  const _DeleteCalendarDialog({
+    required this.view,
+    required this.commands,
+    required this.schedule,
+  });
 
-  final TimetableProvider provider;
+  final GeneralViewState view;
+  final GeneralCommands commands;
   final GeneralSchedule schedule;
 
   @override
@@ -515,15 +565,13 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog>
     if (_busy ||
         _popped ||
         !SkedTaskSessionScope.isCurrent(context) ||
-        !widget.provider.generalSchedules.any(
-          (item) => item.id == widget.schedule.id,
-        )) {
+        !widget.view.schedules.any((item) => item.id == widget.schedule.id)) {
       return;
     }
     final deleted = await taskSubmission.run(
       context: context,
       debugLabel: 'Delete general calendar',
-      command: () => widget.provider.deleteGeneralSchedule(widget.schedule.id),
+      command: () => widget.commands.deleteSchedule(widget.schedule.id),
     );
     if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
     if (deleted) {
@@ -771,13 +819,19 @@ class _CalendarManagerTileActions extends StatelessWidget {
 
 Future<void> _showCalendarNameTask(
   BuildContext context,
-  TimetableProvider provider, {
+  GeneralViewState general, {
   GeneralSchedule? schedule,
   BuildContext? anchorContext,
   SkedFloatingPlacement placement = SkedFloatingPlacement.below,
   bool Function()? isOwnerActive,
   SkedTaskSession? lifetime,
 }) {
+  if (!context.mounted) return Future<void>.value();
+  final commands = context.read<GeneralCommands>();
+  final maintenance = context.read<AppDataMaintenance>();
+  final workspace = context.read<WorkspaceViewState>();
+  final workspaces = context.read<WorkspaceCommands>();
+  final appScope = AppScope.capture(context);
   // Capture the scope while the owner is active, not via ancestor lookups after
   // a parent route has been removed but its exit transition is still mounted.
   final owner = SkedTaskSessionScope.maybeOf(context);
@@ -789,21 +843,28 @@ Future<void> _showCalendarNameTask(
       anchorContext: anchorContext,
       placement: placement,
     ),
-    builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
-      child: SkedTaskRouteGuard(
+    builder: (_) {
+      final child = SkedTaskRouteGuard(
         workspace: AppMode.general,
-        provider: provider,
+        maintenance: maintenance,
+        workspaceView: workspace,
+        workspaces: workspaces,
+        targetChanges: general,
         isTargetCurrent: () =>
             schedule == null ||
-            provider.generalSchedules.any((item) => item.id == schedule.id),
+            general.schedules.any((item) => item.id == schedule.id),
         parent: lifetime ?? owner?.session,
         isOwnerActive:
             isOwnerActive ??
             () => context.mounted && owner?.session.isCurrent != false,
-        child: _CalendarNameDialog(provider: provider, schedule: schedule),
-      ),
-    ),
+        child: _CalendarNameDialog(
+          view: general,
+          commands: commands,
+          schedule: schedule,
+        ),
+      );
+      return appScope?.wrap(child) ?? child;
+    },
   );
 }
 
@@ -913,8 +974,13 @@ class _DesktopCalendarManagerRow extends StatelessWidget {
 }
 
 class _CalendarColorDialog extends StatefulWidget {
-  const _CalendarColorDialog({required this.provider, required this.schedule});
-  final TimetableProvider provider;
+  const _CalendarColorDialog({
+    required this.view,
+    required this.commands,
+    required this.schedule,
+  });
+  final GeneralViewState view;
+  final GeneralCommands commands;
   final GeneralSchedule schedule;
   @override
   State<_CalendarColorDialog> createState() => _CalendarColorDialogState();
@@ -954,10 +1020,8 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
     final saved = await taskSubmission.run(
       context: context,
       debugLabel: 'Update category color',
-      command: () => widget.provider.updateGeneralScheduleColor(
-        widget.schedule.id,
-        _selected,
-      ),
+      command: () =>
+          widget.commands.updateScheduleColor(widget.schedule.id, _selected),
     );
     if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
     if (saved) _close();
@@ -967,8 +1031,8 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final latest = context
-        .watch<TimetableProvider>()
-        .generalSchedules
+        .watch<GeneralViewState>()
+        .schedules
         .where((item) => item.id == widget.schedule.id)
         .firstOrNull;
     final resolved = effectiveGeneralCalendarColorValue(context, _selected);

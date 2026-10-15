@@ -34,7 +34,8 @@ Timer _createGeneralReminderTimer(Duration delay, VoidCallback callback) {
 
 class _ReminderStrip extends StatefulWidget {
   const _ReminderStrip({
-    required this.provider,
+    required this.view,
+    required this.commands,
     required this.filter,
     required this.active,
     required this.onOccurrenceTap,
@@ -45,7 +46,8 @@ class _ReminderStrip extends StatefulWidget {
     this.isOwnerActive,
   });
 
-  final TimetableProvider provider;
+  final GeneralViewState view;
+  final GeneralCommands commands;
   final _GeneralOccurrenceFilter filter;
   final bool active;
   final _GeneralOccurrenceTap onOccurrenceTap;
@@ -160,7 +162,7 @@ class _ReminderStripState extends State<_ReminderStrip>
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: widget.provider,
+    listenable: widget.view,
     builder: (context, _) => _buildContent(context),
   );
 
@@ -172,7 +174,7 @@ class _ReminderStripState extends State<_ReminderStrip>
       await runUiCommandWithFeedback(
         context: context,
         debugLabel: 'Dismiss reminder',
-        command: () => widget.provider.dismissGeneralReminder(occurrence),
+        command: () => widget.commands.dismissReminder(occurrence),
       );
     } finally {
       _handling.remove(key);
@@ -186,7 +188,7 @@ class _ReminderStripState extends State<_ReminderStrip>
       startInclusive: now.subtract(const Duration(hours: 24)),
       endExclusive: now.add(const Duration(hours: 24)),
     );
-    final items = widget.provider.generalReminderItems(
+    final items = widget.view.reminderItems(
       now: now,
       occurrenceFilter: reminderFilter,
     );
@@ -213,7 +215,8 @@ class _ReminderStripState extends State<_ReminderStrip>
                 }
                 await widget.pane.show<void>(
                   (context) => _ReminderStrip(
-                    provider: widget.provider,
+                    view: widget.view,
+                    commands: widget.commands,
                     filter: widget.filter,
                     active: true,
                     pane: widget.pane,

@@ -117,7 +117,12 @@ class _MonthCalendarSourceState extends State<_MonthCalendarSource> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.view,
+    builder: (context, _) => _buildSnapshot(context),
+  );
+
+  Widget _buildSnapshot(BuildContext context) {
     final data = widget.view.data;
     var selectedDate = normalizeDateOnly(widget.date);
     if (!data.showWeekends && selectedDate.weekday > DateTime.friday) {

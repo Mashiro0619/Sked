@@ -4,14 +4,22 @@ part of 'general_schedule_home_screen.dart';
 /// and input no longer belong to its agenda or reminder source list.
 class _EventListDetailsHost extends StatefulWidget {
   const _EventListDetailsHost({
-    required this.provider,
+    required this.view,
+    required this.commands,
+    required this.workspace,
+    required this.maintenance,
+    required this.settings,
     required this.pane,
     required this.isOwnerActive,
     required this.onEdit,
     required this.canEdit,
     required this.child,
   });
-  final TimetableProvider provider;
+  final GeneralViewState view;
+  final GeneralCommands commands;
+  final WorkspaceViewState workspace;
+  final AppDataMaintenance maintenance;
+  final SettingsViewState settings;
   final WorkspacePaneController pane;
   final bool Function() isOwnerActive;
   final Future<void> Function(GeneralEventOccurrence, GeneralEventEditScope)
@@ -25,6 +33,7 @@ class _EventListDetailsHost extends StatefulWidget {
 class _EventListDetailsHostState extends State<_EventListDetailsHost>
     with WidgetsBindingObserver {
   late final ReminderDetailSessionController session;
+  late Listenable _changes;
   final _portal = OverlayPortalController();
   _EventListDetailsBindingState? _source;
   // Entry identity can change without changing the selected content session.
@@ -56,8 +65,8 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
 
   bool get independent => session.independent;
   bool get _validData =>
-      identical(_dataSession, widget.provider.dataSessionToken) &&
-      widget.provider.isWorkspaceEnabled(AppMode.general);
+      identical(_dataSession, widget.maintenance.dataSessionToken) &&
+      widget.workspace.isEnabled(AppMode.general);
   bool get _canInteract =>
       mounted &&
       _foreground &&
@@ -71,8 +80,13 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   void initState() {
     super.initState();
     session = ReminderDetailSessionController()..addListener(_changed);
-    _dataSession = widget.provider.dataSessionToken;
-    widget.provider.addListener(_providerChanged);
+    _dataSession = widget.maintenance.dataSessionToken;
+    _changes = Listenable.merge([
+      widget.view,
+      widget.workspace,
+      widget.maintenance,
+      widget.settings,
+    ])..addListener(_domainChanged);
     widget.pane.addListener(_ownerChanged);
     _unregister = widget.pane.registerPriorityDismiss(_priorityDismiss);
     WidgetsBinding.instance.addObserver(this);
@@ -94,14 +108,22 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   @override
   void didUpdateWidget(_EventListDetailsHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.provider, widget.provider)) {
-      oldWidget.provider.removeListener(_providerChanged);
-      widget.provider.addListener(_providerChanged);
+    if (!identical(oldWidget.view, widget.view) ||
+        !identical(oldWidget.workspace, widget.workspace) ||
+        !identical(oldWidget.maintenance, widget.maintenance) ||
+        !identical(oldWidget.settings, widget.settings)) {
+      _changes.removeListener(_domainChanged);
+      _changes = Listenable.merge([
+        widget.view,
+        widget.workspace,
+        widget.maintenance,
+        widget.settings,
+      ])..addListener(_domainChanged);
     }
     _scheduleSync();
   }
 
-  void _providerChanged() {
+  void _domainChanged() {
     _scheduleSync();
   }
 
@@ -162,9 +184,9 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   }
 
   void _validate() {
-    if (!identical(_dataSession, widget.provider.dataSessionToken)) {
+    if (!identical(_dataSession, widget.maintenance.dataSessionToken)) {
       _retire();
-      _dataSession = widget.provider.dataSessionToken;
+      _dataSession = widget.maintenance.dataSessionToken;
     }
     if (!_validData ||
         !widget.isOwnerActive() ||
@@ -193,7 +215,7 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   }
 
   GeneralEventOccurrence? _resolveOccurrence(GeneralEventOccurrence snapshot) {
-    final calendar = widget.provider.generalSchedules
+    final calendar = widget.view.schedules
         .where((item) => item.id == snapshot.calendar.id)
         .firstOrNull;
     final event = calendar?.events
@@ -641,12 +663,12 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
       key: ValueKey('reminder-detail-session-$version'),
       builder: (_) => GeneralEventDetailsSheet(
         occurrence: occurrence,
-        notificationSettings: widget.provider.notificationSettings,
-        onShowCalendar: () => widget.provider.updateGeneralScheduleVisibility(
+        notificationSettings: widget.settings.notificationSettings,
+        onShowCalendar: () => widget.commands.updateScheduleVisibility(
           occurrence.calendar.id,
           true,
         ),
-        isReminderHandled: widget.provider.isGeneralReminderHandled(occurrence),
+        isReminderHandled: widget.view.isReminderHandled(occurrence),
         onBeforeAction: () => currentOccurrence() != null && detach(),
         canEdit: () => _canInteract && widget.canEdit(),
         onBusyChanged: (value) {
@@ -681,26 +703,26 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
           await widget.onEdit(latest, scope);
         },
         onDismissReminder: () => command(
-          widget.provider.dismissGeneralReminder,
+          widget.commands.dismissReminder,
           message: l.reminderHandled,
         ),
         onRestoreReminder: () => command(
-          widget.provider.restoreGeneralReminder,
+          widget.commands.restoreReminder,
           message: l.reminderRestored,
         ),
         onDuplicate: () => command((latest) async {
-          await widget.provider.duplicateGeneralOccurrence(latest);
+          await widget.commands.duplicateOccurrence(latest);
         }, message: l.eventDuplicated),
         onDeleteThis: () =>
-            command(widget.provider.deleteGeneralOccurrence, deleting: true),
+            command(widget.commands.deleteOccurrence, deleting: true),
         onDeleteFuture: occurrence.event.recurrenceRule.isRepeating
             ? () => command(
-                widget.provider.deleteFutureGeneralOccurrences,
+                widget.commands.deleteFutureOccurrences,
                 deleting: true,
               )
             : null,
         onDeleteAll: () => command(
-          (latest) => widget.provider.deleteGeneralEvent(latest.event.id),
+          (latest) => widget.commands.deleteEvent(latest.event.id),
           deleting: true,
         ),
       ),
@@ -882,7 +904,7 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    widget.provider.removeListener(_providerChanged);
+    _changes.removeListener(_domainChanged);
     widget.pane.removeListener(_ownerChanged);
     _unregister?.call();
     session.removeListener(_changed);

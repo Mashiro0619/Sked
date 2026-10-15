@@ -9,8 +9,12 @@ import 'sked_tooltip.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:provider/provider.dart';
 
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../l10n/app_localizations.dart';
 import 'ui_command.dart';
 import 'sked_popup_menu.dart';
@@ -48,8 +52,7 @@ class WorkspaceNavigationScope extends InheritedWidget {
 }
 
 void selectWorkspace(BuildContext context, AppMode mode) {
-  if (!context.mounted ||
-      !context.read<TimetableProvider>().isWorkspaceEnabled(mode)) {
+  if (!context.mounted || !context.read<WorkspaceViewState>().isEnabled(mode)) {
     return;
   }
   final navigation = WorkspaceNavigationScope.maybeOf(context);
@@ -61,14 +64,19 @@ void selectWorkspace(BuildContext context, AppMode mode) {
     runUiCommandWithFeedback(
       context: context,
       debugLabel: 'Switch workspace',
-      command: () => context.read<TimetableProvider>().switchMode(mode),
+      command: () => context.read<WorkspaceCommands>().switchMode(mode),
     ),
   );
 }
 
 bool needsMobileWorkspaceMenu(BuildContext context) {
-  final p = context.watch<TimetableProvider>();
-  return p.hasMultipleWorkspaces && p.hideHomeWorkspaceNavigation;
+  final hasMultipleWorkspaces = context.select<WorkspaceViewState, bool>(
+    (view) => view.enabledWorkspaces.length > 1,
+  );
+  final hidden = context.select<SettingsViewState, bool>(
+    (view) => view.hideHomeWorkspaceNavigation,
+  );
+  return hasMultipleWorkspaces && hidden;
 }
 
 List<PopupMenuEntry<T>> workspaceMenuItems<T>(
@@ -76,12 +84,12 @@ List<PopupMenuEntry<T>> workspaceMenuItems<T>(
   required T Function(AppMode) valueFor,
   required String keyPrefix,
 }) {
-  final p = context.read<TimetableProvider>();
+  final workspace = context.read<WorkspaceViewState>();
   final scope = WorkspaceNavigationScope.maybeOf(context);
   final l = AppLocalizations.of(context);
-  final current = scope?.selectedMode ?? p.activeMode;
+  final current = scope?.selectedMode ?? workspace.activeMode;
   return [
-    for (final mode in p.enabledWorkspaces)
+    for (final mode in workspace.enabledWorkspaces)
       SkedCheckedPopupMenuItem<T>(
         key: ValueKey('$keyPrefix-${mode.value}'),
         value: valueFor(mode),
@@ -97,16 +105,26 @@ class WorkspaceModeMenu extends StatelessWidget {
   const WorkspaceModeMenu({super.key});
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TimetableProvider>();
+    final workspace = context
+        .select<
+          WorkspaceViewState,
+          ({AppMode activeMode, Set<AppMode> enabledWorkspaces})
+        >(
+          (view) => (
+            activeMode: view.activeMode,
+            enabledWorkspaces: view.enabledWorkspaces,
+          ),
+        );
     final l10n = AppLocalizations.of(context);
-    if (!provider.hasMultipleWorkspaces) return const SizedBox.shrink();
+    if (workspace.enabledWorkspaces.length < 2) return const SizedBox.shrink();
     if (WorkbenchChromeMetrics.compactTouch(context)) {
       return SkedPopupMenuButton<AppMode>(
         tooltip: l10n.settingsSectionWorkspace,
         icon: const Icon(Icons.swap_horiz),
         enabled: WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true,
         onSelected: (mode) {
-          if (context.mounted && provider.isWorkspaceEnabled(mode)) {
+          if (context.mounted &&
+              context.read<WorkspaceViewState>().isEnabled(mode)) {
             selectWorkspace(context, mode);
           }
         },
@@ -127,10 +145,10 @@ class WorkspaceModeMenu extends StatelessWidget {
       enabled: WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true,
       onSelected: (mode) => selectWorkspace(context, mode),
       itemBuilder: (_) => [
-        for (final mode in provider.enabledWorkspaces)
+        for (final mode in workspace.enabledWorkspaces)
           CheckedPopupMenuItem(
             value: mode,
-            checked: provider.activeMode == mode,
+            checked: workspace.activeMode == mode,
             child: Text(
               mode == AppMode.student
                   ? l10n.studentTimetable
@@ -165,7 +183,23 @@ class WorkspaceResourcePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<TimetableProvider>();
+    final workspace = context
+        .select<
+          WorkspaceViewState,
+          ({AppMode activeMode, Set<AppMode> enabledWorkspaces})
+        >(
+          (view) => (
+            activeMode: view.activeMode,
+            enabledWorkspaces: view.enabledWorkspaces,
+          ),
+        );
+    final preferences = context
+        .select<SettingsViewState, ({bool collapsed, bool hidden})>(
+          (view) => (
+            collapsed: view.homeWorkspaceNavigationCollapsed,
+            hidden: view.hideHomeWorkspaceNavigation,
+          ),
+        );
     final scope = WorkspaceNavigationScope.maybeOf(context);
     final layout = WorkspaceCanvasScope.maybeOf(context);
     final m = WorkbenchChromeMetrics.of(context);
@@ -183,7 +217,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
         collapsed &&
         (resourceScope != null
             ? !resourceScope.canExpandInline
-            : !p.homeWorkspaceNavigationCollapsed);
+            : !preferences.collapsed);
     final enabled = scope?.enabled ?? true;
     void toggle() {
       if (scope != null) {
@@ -194,16 +228,20 @@ class WorkspaceResourcePanel extends StatelessWidget {
         runUiCommandWithFeedback(
           context: context,
           debugLabel: 'Toggle resources',
-          command: () => p.updateHomeWorkspaceNavigationCollapsed(
-            !p.homeWorkspaceNavigationCollapsed,
-          ),
+          command: () => context
+              .read<SettingsCommands>()
+              .updateHomeWorkspaceNavigationCollapsed(
+                !context
+                    .read<SettingsViewState>()
+                    .homeWorkspaceNavigationCollapsed,
+              ),
         ),
       );
     }
 
     final showModes =
-        p.hasMultipleWorkspaces &&
-        (drawer || !p.hideHomeWorkspaceNavigation) &&
+        workspace.enabledWorkspaces.length > 1 &&
+        (drawer || !preferences.hidden) &&
         (scope?.integrated ?? true);
     final factor = WorkbenchLayoutPolicy.textFactor(m.textScale);
     final compactWidth =
@@ -371,7 +409,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
           final navigation = <Widget>[
             if (showModes) ...[
               const SizedBox(height: 8),
-              for (final mode in p.enabledWorkspaces)
+              for (final mode in workspace.enabledWorkspaces)
                 navigationAction(
                   id: 'workspace-resource-mode-${mode.value}',
                   title: mode == AppMode.student
@@ -380,7 +418,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
                   icon: mode == AppMode.student
                       ? Icons.school_outlined
                       : Icons.event_note_outlined,
-                  selected: p.activeMode == mode,
+                  selected: workspace.activeMode == mode,
                   onTap: enabled ? () => selectWorkspace(context, mode) : null,
                 ),
             ],
@@ -409,7 +447,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
                                   }
                                 : null,
                             icon: Icon(
-                              p.isStudentMode
+                              workspace.activeMode == AppMode.student
                                   ? Icons.view_week_outlined
                                   : Icons.category_outlined,
                             ),
@@ -564,9 +602,14 @@ class _ResourcePaneReveal extends StatelessWidget {
 
 /// Only show the fallback when no visible navigation can switch workspaces.
 bool needsWorkspaceMenu(BuildContext context) {
-  final p = context.watch<TimetableProvider>();
-  if (!p.hasMultipleWorkspaces) return false;
-  if (p.hideHomeWorkspaceNavigation) return true;
+  final hasMultipleWorkspaces = context.select<WorkspaceViewState, bool>(
+    (view) => view.enabledWorkspaces.length > 1,
+  );
+  final hidden = context.select<SettingsViewState, bool>(
+    (view) => view.hideHomeWorkspaceNavigation,
+  );
+  if (!hasMultipleWorkspaces) return false;
+  if (hidden) return true;
   return WorkspaceCanvasScope.maybeOf(context)?.resources != true &&
       (WorkspaceNavigationScope.maybeOf(context)?.integrated ?? true);
 }
@@ -576,18 +619,20 @@ Future<void> openWorkspaceTransfer(
   AppMode mode, {
   required SettingsTransferDirection direction,
 }) {
+  if (!context.mounted) return Future.value();
+  final appScope = AppScope.capture(context);
   WorkspaceResourceScope.maybeOf(context)?.close();
   return Navigator.of(context, rootNavigator: true).push<void>(
     MaterialPageRoute(
-      builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-        value: context.read<TimetableProvider>(),
-        child: SettingsPage(
+      builder: (_) {
+        final page = SettingsPage(
           transferDirection: direction,
           initialDestination: mode == AppMode.student
               ? SettingsDestination.student
               : SettingsDestination.general,
-        ),
-      ),
+        );
+        return appScope?.wrap(page) ?? page;
+      },
     ),
   );
 }

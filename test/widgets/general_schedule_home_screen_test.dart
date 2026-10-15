@@ -6,13 +6,13 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/theme/app_theme.dart';
@@ -20,6 +20,8 @@ import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/workbench_resource_widgets.dart';
+
+import '../support/data_transfer_codec.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -39,19 +41,13 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://general-home-test';
 }
 
-class _DomainQueryProvider extends TimetableProvider {
-  _DomainQueryProvider(TimetableStorage storage)
-    : super(
-        storage: storage,
-        systemLocaleCodeResolver: () => defaultLocaleCode,
-        uiStateSaveDelay: Duration.zero,
-      );
-
-  @override
-  List<GeneralEventOccurrence> generalOccurrencesForQuery(
-    GeneralOccurrenceQuery query,
-  ) => throw StateError('The calendar view must query GeneralViewState');
-}
+TimetableProvider _createDomainApp(TimetableStorage storage) =>
+    TimetableProvider(
+      dataTransferCodec: inlineDataTransferCodec,
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      uiStateSaveDelay: Duration.zero,
+    );
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -151,6 +147,7 @@ AppData _buildGeneralDataWithCalendars(
 
 Future<TimetableProvider> _createProvider() async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
@@ -166,6 +163,7 @@ Future<TimetableProvider> _createProvider() async {
 
 Future<TimetableProvider> _createGeneralProvider(AppData data) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
@@ -178,6 +176,7 @@ Future<TimetableProvider> _createProviderWithStorage(
   TimetableStorage storage,
 ) async {
   final provider = TimetableProvider(
+    dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
@@ -221,8 +220,8 @@ Future<void> _pumpGeneralScheduleHomeScreen(
     buildSignature: '',
   );
   await tester.pumpWidget(
-    ChangeNotifierProvider<TimetableProvider>.value(
-      value: provider,
+    AppScope(
+      app: provider,
       child: MaterialApp(
         locale: appLocaleFromCode(provider.localeCode),
         localizationsDelegates: appLocalizationsDelegates,
@@ -429,8 +428,8 @@ void main() {
       );
       addTearDown(provider.dispose);
       await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
+        AppScope(
+          app: provider,
           child: MaterialApp(
             locale: appLocaleFromCode(provider.localeCode),
             localizationsDelegates: appLocalizationsDelegates,
@@ -471,8 +470,8 @@ void main() {
     );
     addTearDown(provider.dispose);
     await tester.pumpWidget(
-      ChangeNotifierProvider<TimetableProvider>.value(
-        value: provider,
+      AppScope(
+        app: provider,
         child: MaterialApp(
           locale: appLocaleFromCode(provider.localeCode),
           localizationsDelegates: appLocalizationsDelegates,
@@ -1112,6 +1111,100 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final (view, renderer) in [
+    (generalViewList, '_ListCalendarView'),
+    (generalViewMonth, '_MonthCalendarView'),
+    (generalViewWeek, '_CalendarTimeline'),
+  ]) {
+    testWidgets(
+      'student edits leave the $view renderer and projection untouched',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(900, 1000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final base = _buildGeneralDataWithCalendars([
+          GeneralSchedule(
+            id: 'cal1',
+            name: 'Calendar',
+            events: [
+              GeneralEvent(
+                id: 'general-event',
+                calendarId: 'cal1',
+                title: 'General event',
+                startDateTimeIso: '2026-06-16T09:00:00.000',
+                endDateTimeIso: '2026-06-16T10:00:00.000',
+              ),
+            ],
+          ),
+        ], activeId: 'cal1');
+        final provider = await _createGeneralProvider(
+          base.copyWith(
+            generalMode: base.generalMode.copyWith(defaultView: view),
+            studentMode: base.studentMode.copyWith(
+              activeTimetableId: 'classes',
+              timetables: [
+                TimetableData(
+                  id: 'classes',
+                  config: TimetableConfig(
+                    name: 'Classes',
+                    startDate: DateTime(2026, 6),
+                    totalWeeks: 16,
+                    periodTimeSetId: defaultPeriodTimeSetId,
+                  ),
+                  courses: const [],
+                ),
+              ],
+            ),
+          ),
+        );
+        await _pumpGeneralScheduleHomeScreen(tester, provider);
+        final rendered = find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == renderer,
+        );
+        final before = tester.widgetList<Widget>(rendered).toList();
+        expect(before, isNotEmpty);
+        var publications = 0;
+        void changed() => publications++;
+        provider.generalView.addListener(changed);
+        await tester.runAsync(
+          () => provider.studentCommands.saveCourse(
+            const CourseItem(
+              id: 'student-only',
+              name: 'Student course',
+              teacher: '',
+              location: '',
+              dayOfWeek: 1,
+              semesterWeeks: [1],
+              periods: [1],
+              startMinutes: 540,
+              endMinutes: 600,
+              timeRange: '09:00-10:00',
+              credit: 0,
+              remarks: '',
+              customFields: {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        provider.generalView.removeListener(changed);
+        expect(
+          provider.studentView.timetables.single.courses.single.name,
+          'Student course',
+        );
+        expect(publications, 0);
+        final after = tester.widgetList<Widget>(rendered).toList();
+        expect(after, hasLength(before.length));
+        for (var index = 0; index < before.length; index++) {
+          expect(
+            after[index],
+            same(before[index]),
+            reason: 'The general renderer was rebuilt for a student edit.',
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('empty list view renders its empty state', (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1144,7 +1237,7 @@ void main() {
       final base = _buildGeneralDataWithCalendars([
         GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
       ], activeId: 'cal1');
-      final provider = _DomainQueryProvider(
+      final provider = _createDomainApp(
         _MemoryTimetableStorage(
           base.copyWith(
             generalMode: base.generalMode.copyWith(
@@ -1187,7 +1280,7 @@ void main() {
     final base = _buildGeneralDataWithCalendars([
       GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
     ], activeId: 'cal1');
-    final provider = _DomainQueryProvider(
+    final provider = _createDomainApp(
       _MemoryTimetableStorage(
         base.copyWith(
           generalMode: base.generalMode.copyWith(defaultView: generalViewMonth),
@@ -1237,7 +1330,7 @@ void main() {
       final base = _buildGeneralDataWithCalendars([
         GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
       ], activeId: 'cal1');
-      final provider = _DomainQueryProvider(
+      final provider = _createDomainApp(
         _MemoryTimetableStorage(
           base.copyWith(
             generalMode: base.generalMode.copyWith(defaultView: view),
