@@ -4,6 +4,8 @@
 
 当前尺寸规则以本页「统一拖拽调整大小」为准，后续按日期保留历史设计及验收记录。Windows 引擎中的测试指针与系统级鼠标验收分别记录。
 
+采集脚本现已归并到 [统一场景入口](../integration_test/README.md)。下文源码路径指对应场景模块，重跑使用 `capture_scenarios_test.dart` 并选择 `SKED_CAPTURE_SCENE`；原有细分组参数继续保留。示例命令已迁移，历史测试计数、截图目录和验收边界仍属于各节记录的当时版本。
+
 ## 统一拖拽调整大小（2026-10-11）
 
 桌面工作区域使用共用分隔条；独立内容浮窗提供四边及四角缩放。日期、时间、颜色等小型选择器、悬停预览和触屏底部任务继续按内容及平台布局。
@@ -26,7 +28,7 @@
 
 新增回归入口包括 `sked_resizable_test.dart`、`desktop_workspace_resize_test.dart`、`desktop_region_resize_test.dart`、`desktop_layout_preferences_test.dart` 和 `desktop_layout_lifecycle_test.dart`，覆盖鼠标实际边界、RTL、方向光标、重置、草稿／焦点、尺寸重载及保存／清除竞态。原有工作区几何、独立详情、分类管理和移动布局回归继续保留。
 
-Windows 实际字体验收入口为 `integration_test/desktop_resize_visual_test.dart`，使用内存样例数据和 Flutter 测试鼠标事件，截图及几何记录输出到 `.scratch/desktop-resize-visual/`。系统级 Computer Use 的窗口发现因 `codex app-server` 路径不存在而失败，该项仍未标记通过；Windows 引擎测试不能替代此项。
+Windows 实际字体验收入口为 `integration_test/capture_scenarios/desktop_resize.dart`，使用内存样例数据和 Flutter 测试鼠标事件，截图及几何记录输出到 `.scratch/desktop-resize-visual/`。系统级 Computer Use 的窗口发现因 `codex app-server` 路径不存在而失败，该项仍未标记通过；Windows 引擎测试不能替代此项。
 
 ## 桌面分类管理：入口旁透明模态（2026-10-02）
 
@@ -46,7 +48,7 @@ Windows 实际字体验收入口为 `integration_test/desktop_resize_visual_test
 
 相关回归共 **606 项通过**，包括完整编辑器、主题、日期／时间、草稿守卫、传输入口、资源导航与手机分支；最后收紧颜色标题为最多两行后，分类专项 **26 项复验通过**。全项目静态检查无问题，534 个 Dart 文件格式检查无变更，差异空白检查通过。Windows 分类管理／颜色矩阵 **72 张**截图，原分类流程与触控几何回归 **19 张**截图；已核对正常中文列表、深色颜色面板、自定义主题大字号及 RTL 窄窗的代表场景。
 
-Windows 实际字体截图由 `integration_test/category_manager_panel_visual_test.dart` 生成到 `.scratch/category-manager-panel-visual/`，覆盖中英文、浅／深／自定义主题、RTL、1×／1.5×／2×、长名称、多分类及窄矮窗。旧分类视觉回归继续包含 Android 几何／安全区／输入法模拟，不能视为 Android 实机验收。
+Windows 实际字体截图由 `integration_test/capture_scenarios/category_panels.dart` 生成到 `.scratch/category-manager-panel-visual/`，覆盖中英文、浅／深／自定义主题、RTL、1×／1.5×／2×、长名称、多分类及窄矮窗。旧分类视觉回归继续包含 Android 几何／安全区／输入法模拟，不能视为 Android 实机验收。
 
 **原生鼠标拖动仍未验收。** 受保护的注入工具报告 `blocked: Test window must own foreground focus.`（同目录 `native.json`），未绕过前台、命中和按键归属保护。截图中的模拟拖动及 widget 测试不替代原生操作。
 
@@ -88,7 +90,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 - 当前来源滚动、锚点移出可视区、固定栏被隐藏或源列表销毁会收起临时预览。其他列表滚动不关闭它。Offstage 的固定栏不参与锚定；关闭／重开期间每个列表仍独占 GlobalKey，避免路由动画间重用元素。
 - 成功／失败、在途删除、旧快照重解析、编辑器冲突和原生子确认使用同一份保护，不另建详情路由。提醒启动倒计时仅联动实际提醒来源，不受当天安排的构建或悬停误干扰。
 
-专项回归：`test/widgets/day_agenda_details_test.dart`；Windows 实际字体验收：`integration_test/day_agenda_details_visual_test.dart`，截图输出 `.scratch/day-agenda-details-visual/`。包含浮动／固定入口、中英文、浅深色、1×／1.5×／2×、RTL、源列表关闭／换日及窄窗。本轮截图使用模拟指针，不宣称完成原生鼠标注入验收。
+专项回归：`test/widgets/day_agenda_details_test.dart`；Windows 实际字体验收：`integration_test/capture_scenarios/day_agenda.dart`，截图输出 `.scratch/day-agenda-details-visual/`。包含浮动／固定入口、中英文、浅深色、1×／1.5×／2×、RTL、源列表关闭／换日及窄窗。本轮截图使用模拟指针，不宣称完成原生鼠标注入验收。
 
 本轮验收：新增 19 项当天安排专项测试，相关回归合计 **473 项通过**，覆盖提醒、详情安全保护、月视图、手机、选择器与大字号溢出菜单。Windows 当天安排视觉测试生成 **48 张**截图，已检查中文浮动预览、关闭源列表后的独立详情和深色固定栏；共享宿主的提醒视觉回归另生成 **60 张**截图并通过。全项目静态检查无问题，529 个 Dart 文件格式检查无变更，差异空白检查通过。
 
@@ -115,7 +117,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 - 优先退出处理只接管临时预览；独立详情不在提醒列表的退出链上。异步回调检查事件、会话版本、数据会话和工作区有效性，使用自己的关闭回调而非盲目 Navigator.pop。事件删除、数据替换、工作区失效会撤销独立详情和计时器；根级确认正常位于其上方。
 - 不新增依赖、持久化偏好或备份格式；新增按钮接入简体、繁体、英文及现有回退本地化。
 
-验证入口：`reminder_detail_session_controller_test.dart`、`reminder_hover_details_test.dart`、`reminder_companion_details_test.dart`。Windows 实际字体及原生输入入口为 `integration_test/reminder_hover_visual_test.dart`，本轮输出 `.scratch/reminder-independent-visual/`。原生脚本逐条检查测试 PID、前台、命中窗口和按键占用，不绕过保护。
+验证入口：`reminder_detail_session_controller_test.dart`、`reminder_hover_details_test.dart`、`reminder_companion_details_test.dart`。Windows 实际字体及原生输入入口为 `integration_test/capture_scenarios/reminder_hover.dart`，本轮输出 `.scratch/reminder-independent-visual/`。原生脚本逐条检查测试 PID、前台、命中窗口和按键占用，不绕过保护。
 
 ### 独立化初版验收（审查前）
 
@@ -144,7 +146,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 - 启动后首次桌面日程工作区可交互时，有未处理提醒才展示一次查看浮层，10 秒后自动收起。启动时的非活动工作区、空列表、触控端或繁忙／有其他路由的场景跳过本次，不延迟到切换工作区后再弹出，也不会强制切换工作区。一次性状态属于应用壳会话，不写入设置、备份或提醒 acknowledgement。
 - 悬停暂停剩余计时，移出后续计；拖动、按下、滚动或键盘操作取消本次自动收起，窗口后台时暂停。自动关闭只能作用于它自己的仍为当前任务的路由，不能关闭新的编辑器、确认框或其他任务。
 - 手动打开不计时；自动预览显示期间点击提醒入口，退出旧预览后转为不计时的手动列表，不能叠出两个面板。关闭、自动收起均不等于「已处理」，不会清空铃铛计数。
-- 实际字体截图入口：`integration_test/reminder_summary_visual_test.dart`；本地证据目录：`.scratch/reminder-summary-visual/`。截图覆盖中英文、浅／深色及 1×／1.5×／2× 字号与矮窗滚动。截图和组件指针测试不代表原生鼠标验收。
+- 实际字体截图入口：`integration_test/capture_scenarios/reminder_summary.dart`；本地证据目录：`.scratch/reminder-summary-visual/`。截图覆盖中英文、浅／深色及 1×／1.5×／2× 字号与矮窗滚动。截图和组件指针测试不代表原生鼠标验收。
 - 本轮相关回归 323 项通过，覆盖排序、启动／空列表／繁忙跳过、10 秒关闭、悬停与后台暂停、拖动／滚动／键盘接管、手动重开、显式处理失败重试、新路由保护、RTL、手机与编辑器。Windows 视觉测试通过并生成 14 张实际字体截图；检查暗色状态文字后修正对比度，并加入至少 4.5:1 的测试。全项目静态检查无问题，519 个 Dart 文件格式检查无变更，差异空白检查通过。
 
 ## 日程编辑器补齐（2026-10-01）
@@ -167,7 +169,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 
 复现：
 
-`flutter test -d windows --no-pub integration_test/general_event_floating_pickers_visual_test.dart --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/general-floating-visual --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
+`flutter test -d windows --no-pub integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=event-pickers --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/general-floating-visual --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
 
 ## 当前范围
 
@@ -191,7 +193,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 - 最后针对默认参数兼容性及其调用方重跑 93 项测试通过；新增测试对比非浮层 scope 下原生 AlertDialog 与适配组件的默认参数和正文几何。
 - 菜单入口焦点恢复追加回归 45 项通过：关闭动画结束且调用方重新启用按钮后，恢复到稳定的菜单触发按钮，而非已销毁的菜单项。
 - 全项目 `flutter analyze --no-pub`、格式及差异空白检查通过。
-- `integration_test/floating_panel_rollout_visual_test.dart` 的 3 项 Windows 集成测试通过，输出 76 张截图，包括查看面板、分类表单、日期、时间、节次时间方案和菜单。
+- `integration_test/capture_scenarios/floating_panels.dart` 的 3 项 Windows 集成测试通过，输出 76 张截图，包括查看面板、分类表单、日期、时间、节次时间方案和菜单。
 - 截图覆盖默认紫色与自定义青绿色、浅／深色、中／英文和 1×／1.5×／2× 字号；查看了代表性表单、日期、时间及大字号深色选择器截图。
 - 原生鼠标验收：DPI 120，确认测试窗口为前台且起止点属于该窗口后发送鼠标输入；面板移动约 50.4 × 35.2 dp，原生窗口移动 0 × 0 px，最大化区域命中仍为 HTMAXBUTTON（9）。前台保护最初拦截了输入；按测试 PID 请求激活后重试通过，未绕过保护。
 
@@ -199,7 +201,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 
 ## 复现
 
-`flutter test -d windows --no-pub integration_test/floating_panel_rollout_visual_test.dart --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/floating-panel-rollout --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
+`flutter test -d windows --no-pub integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=floating-panels --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/floating-panel-rollout --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
 
 原生鼠标步骤需要允许测试窗口获得前台焦点；如果它仍被遮挡或鼠标按键已经按下，测试应失败并保留保护，而不是向其他窗口注入输入。
 
@@ -282,7 +284,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 
 - 全项目测试：4091 项通过，1 项时区专项测试因未设置 `SKED_DST_TEST_ZONE`／`TZ` 跳过；全项目静态检查、变更 Dart 文件格式与差异检查通过。
 - 自动化覆盖：新增／编辑、并排与覆盖、拖动后重排、格子和菜单锚点、背景输入隔离、Tab／Esc、草稿守卫、目标失效、子选择器返回、异步保存及独立详情恢复。内容回归验证独立桌面分支、横向标签与控件对齐、600／480 dp 下的换行、窄窗回退、RTL 操作区对齐、草稿与光标保留、最小点击区域及原保存流程。
-- Windows 实际字体矩阵由 `integration_test/workspace_editor_visual_test.dart` 生成，测试通过并输出 64 张截图，覆盖课程／日程、新增／编辑、中英文、浅深色、1×／1.5×／2× 字号、RTL、并排、720×420 矮窗、保存中及保存失败。已检查专用桌面表单的代表性布局与错误状态；本轮视觉专项 40 项通过，不与全项目计数相加。首轮全量中的 3 项通知回调短延迟测试失败，通知服务隔离 107 项复验及后续完整复跑均通过，未修改通知代码。证据存放在本地 `.scratch/desktop-editor-visual/`，不提交截图和运行日志。
+- Windows 实际字体矩阵由 `integration_test/capture_scenarios/workspace_editor.dart` 生成，测试通过并输出 64 张截图，覆盖课程／日程、新增／编辑、中英文、浅深色、1×／1.5×／2× 字号、RTL、并排、720×420 矮窗、保存中及保存失败。已检查专用桌面表单的代表性布局与错误状态；本轮视觉专项 40 项通过，不与全项目计数相加。首轮全量中的 3 项通知回调短延迟测试失败，通知服务隔离 107 项复验及后续完整复跑均通过，未修改通知代码。证据存放在本地 `.scratch/desktop-editor-visual/`，不提交截图和运行日志。
 - 原生鼠标拖动由用户自行验收；自动化输入与截图不记作原生拖动验收。
 
 ### 编辑器打开时的窗口拖动（2026-10-05）
@@ -301,7 +303,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 
 位置回归位于 `test/widgets/floating_panel_anchor_regression_test.dart` 和 `test/widgets/sked_floating_route_anchor_test.dart`，同时覆盖安全边界、来源移除、偏移／缩放宿主及交接后的稳定性。导入字段和导入流程在各自现有测试中补充入口定位断言。
 
-Windows 截图入口为 `integration_test/floating_panel_anchor_visual_test.dart`，按 `--dart-define=SKED_VISUAL_GROUP=student` 与 `--dart-define=SKED_VISUAL_GROUP=general` 分组执行。截图和原生运行记录存放于本地 `.scratch/floating-panel-anchor/`；跨组连续运行曾发生原生堆错误，分组运行的七个场景均通过，详情见该目录的 `validation.md`。
+Windows 截图入口为 `integration_test/capture_scenarios/floating_panel_anchors.dart`，按 `--dart-define=SKED_VISUAL_GROUP=student` 与 `--dart-define=SKED_VISUAL_GROUP=general` 分组执行。截图和原生运行记录存放于本地 `.scratch/floating-panel-anchor/`；跨组连续运行曾发生原生堆错误，分组运行的七个场景均通过，详情见该目录的 `validation.md`。
 
 最终联合回归覆盖 73 个测试文件，1,327 项全部通过；全项目 `flutter analyze --no-pub`、变更 Dart 格式检查及 `git diff --check` 通过。普通 Windows 调试应用构建成功，输出 `build/windows/x64/runner/Debug/sked.exe`。本地完整日志为 `.scratch/floating-anchor-final-regressions.log` 与 `.scratch/floating-anchor-windows-build.log`。
 
@@ -329,11 +331,11 @@ Windows 截图入口为 `integration_test/floating_panel_anchor_visual_test.dart
 
 本次比例修正的最终联合回归覆盖 59 个测试文件，**956 项全部通过**，其中包括上一轮的 11 项入口定位专项。全项目 `flutter analyze --no-pub` 无问题，20 个变更 Dart 文件格式检查无变更，`git diff --check` 通过。
 
-Windows 实际字体入口为 `integration_test/hybrid_editor_visual_test.dart`，课程、日程、课表分别运行，三组共 **12 项全部通过**，输出 30 张 PNG。除正常新建／编辑外，还覆盖展开、全天、并排、480／320 dp、720×420 矮窗及保存失败。中英文 1× 均验证日程开始标签、日期、时间和全天同行，以及起止日期列对齐；已检查三类正常面板、更多展开和窄窗截图。截图使用独立内存数据与 Flutter 测试指针，不作为原生鼠标拖动验收。
+Windows 实际字体入口为 `integration_test/capture_scenarios/editor_layouts.dart`，课程、日程、课表分别运行，三组共 **12 项全部通过**，输出 30 张 PNG。除正常新建／编辑外，还覆盖展开、全天、并排、480／320 dp、720×420 矮窗及保存失败。中英文 1× 均验证日程开始标签、日期、时间和全天同行，以及起止日期列对齐；已检查三类正常面板、更多展开和窄窗截图。截图使用独立内存数据与 Flutter 测试指针，不作为原生鼠标拖动验收。
 
 ```powershell
 foreach ($editorGroup in @('course', 'event', 'timetable')) {
-  flutter test --no-pub -d windows integration_test/hybrid_editor_visual_test.dart --dart-define=SKED_VISUAL_GROUP=$editorGroup --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/compact-editor-visual --reporter expanded
+  flutter test --no-pub -d windows integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=editor-layouts --dart-define=SKED_VISUAL_GROUP=$editorGroup --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/compact-editor-visual --reporter expanded
 }
 ```
 
@@ -349,7 +351,7 @@ foreach ($editorGroup in @('course', 'event', 'timetable')) {
 
 标题使用 18 sp 半粗文字，与统一尺寸的编辑／关闭按钮垂直居中；320 dp 窄面板仍保持三个元素同排。标题拖动区域的文字也居中，按钮继续位于拖动区域之外。`WorkspaceViewPanel` 通过可选的头部配置启用这些变化，其他查看面板继续使用原默认值。移动端布局、课程数据和冲突处理不变。
 
-专项测试为 `test/widgets/course_details_spacing_test.dart`，覆盖间距、值列对齐、长备注滚动、窄窗标题操作、自定义字段及移动分支。实际字体入口为 `integration_test/course_details_spacing_visual_test.dart`，使用与反馈截图一致的独立内存课程数据，通过课程卡片的真实入口打开详情；支持 `SKED_VISUAL_GROUP=zh/en/rtl`，输出目录由 `SKED_VISUAL_OUTPUT` 指定。中文场景验证编辑返回、并排、320 dp、矮窗及滚动；另有长标题／地点、英文和暗色 RTL 2× 场景。
+专项测试为 `test/widgets/course_details_spacing_test.dart`，覆盖间距、值列对齐、长备注滚动、窄窗标题操作、自定义字段及移动分支。实际字体入口为 `integration_test/capture_scenarios/course_details.dart`，使用与反馈截图一致的独立内存课程数据，通过课程卡片的真实入口打开详情；支持 `SKED_VISUAL_GROUP=zh/en/rtl`，输出目录由 `SKED_VISUAL_OUTPUT` 指定。中文场景验证编辑返回、并排、320 dp、矮窗及滚动；另有长标题／地点、英文和暗色 RTL 2× 场景。
 
 最终 22 个相关测试文件共 **233 项通过**，含 8 项新增间距／排版专项及既有入口定位、拖动、窗口调宽和课程编辑回归；全项目静态分析、4 个变更 Dart 文件格式和差异空白检查通过。Windows 四个实际字体场景全部通过，生成并检查 **10 张截图**，保存在 `.scratch/course-details-spacing-visual/`。日志为 `.scratch/course-details-spacing-regressions.log`、`.scratch/course-details-spacing-analyze.log` 及 `.scratch/course-details-spacing-visual-{zh,en,rtl}.log`。原生鼠标验收范围不变。
 
@@ -390,10 +392,10 @@ foreach ($editorGroup in @('course', 'event', 'timetable')) {
 
 最终相关回归覆盖 **73 个文件、1,174 项全部通过**。共享提交从暂存树另行导出，47 项组件／布局回归通过；这是独立运行，不与最终计数相加。全项目静态分析、变更 Dart 格式和差异空白检查通过。
 
-实际字体入口为 `integration_test/panel_heading_visual_test.dart`，提供 `course`、`timetable`、`event`、`categories`、`pickers`、`secondary` 分组和 `SKED_VISUAL_SCENE=zh/en/rtl`。复现课程编辑与周次选择的父子面板，覆盖普通、嵌套、窄矮、并排、暗色和 RTL 大字号，并为截图保存标题与关闭按钮矩形、合成样式 manifest。样例数据和外部动作均在内存中隔离。
+实际字体入口为 `integration_test/capture_scenarios/panel_headings.dart`，提供 `course`、`timetable`、`event`、`categories`、`pickers`、`secondary` 分组和 `SKED_VISUAL_SCENE=zh/en/rtl`。复现课程编辑与周次选择的父子面板，覆盖普通、嵌套、窄矮、并排、暗色和 RTL 大字号，并为截图保存标题与关闭按钮矩形、合成样式 manifest。样例数据和外部动作均在内存中隔离。
 
 ```powershell
-flutter test --no-pub -d windows integration_test/panel_heading_visual_test.dart --dart-define=SKED_VISUAL_GROUP=course --dart-define=SKED_VISUAL_SCENE=zh --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/panel-heading-visual --reporter expanded
+flutter test --no-pub -d windows integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=panel-headings --dart-define=SKED_VISUAL_GROUP=course --dart-define=SKED_VISUAL_SCENE=zh --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/panel-heading-visual --reporter expanded
 ```
 
 Windows 首次把课程三种语言连续放在一个进程运行时，在第二场发生测试进程中断且无 Dart 断言失败；后续逐场启动独立进程验证。截图与 manifest 位于 `.scratch/panel-heading-visual/`，回归日志为 `.scratch/panel-heading-final-regressions.log`，各 Windows 场景日志为 `.scratch/panel-heading-visual-{group}-{scene}.log`。合成指针测试不替代原生鼠标拖动验收。

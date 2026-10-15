@@ -92,15 +92,15 @@
 
 ## 视觉矩阵与证据入口
 
-原有 [mobile_tasks_visual_test.dart](../integration_test/mobile_tasks_visual_test.dart) 保留手机任务与外观菜单的场景。本轮课表／课程／日程及其他组件家族的完整对照矩阵位于 [component_unification_visual_test.dart](../integration_test/component_unification_visual_test.dart)。后者支持 `SKED_VISUAL_PROFILE`（单个或逗号分隔的配置名）、`SKED_VISUAL_OUTPUT`（绝对输出目录）和 `SKED_VISUAL_REVISION`（源码版本标识）。
+手机任务与外观菜单的场景位于 [mobile_tasks.dart](../integration_test/capture_scenarios/mobile_tasks.dart)，课表／课程／日程及其他组件家族的完整对照矩阵位于 [component_gallery.dart](../integration_test/capture_scenarios/component_gallery.dart)。通过 [统一采集入口](../integration_test/README.md) 的 `SKED_CAPTURE_SCENE=mobile-tasks` 或 `component-gallery` 分别选择。后者继续支持 `SKED_VISUAL_PROFILE`（单个或逗号分隔的配置名）、`SKED_VISUAL_OUTPUT`（绝对输出目录）和 `SKED_VISUAL_REVISION`（源码版本标识）。
 
 在 Windows 上分两个独立进程运行，不把原生 Windows 和模拟 Android 配置合并为同一进程：
 
 ```powershell
 $skedVisualRoot = Join-Path (Get-Location) '.scratch/component-unification'
 $skedTouchProfiles = 'phone-393-zh,phone-320-2x-ime,phone-landscape,phone-landscape-ime,phone-dark-rtl,tablet-1280-en'
-flutter test integration_test/component_unification_visual_test.dart -d windows --dart-define="SKED_VISUAL_PROFILE=$skedTouchProfiles" --dart-define="SKED_VISUAL_OUTPUT=$skedVisualRoot/windows-touch-final" --reporter expanded
-flutter test integration_test/component_unification_visual_test.dart -d windows --dart-define=SKED_VISUAL_PROFILE=windows-overlay,windows-side-by-side --dart-define="SKED_VISUAL_OUTPUT=$skedVisualRoot/windows-desktop-final" --reporter expanded
+flutter test integration_test/capture_scenarios_test.dart -d windows --dart-define=SKED_CAPTURE_SCENE=component-gallery --dart-define="SKED_VISUAL_PROFILE=$skedTouchProfiles" --dart-define="SKED_VISUAL_OUTPUT=$skedVisualRoot/windows-touch-final" --reporter expanded
+flutter test integration_test/capture_scenarios_test.dart -d windows --dart-define=SKED_CAPTURE_SCENE=component-gallery --dart-define=SKED_VISUAL_PROFILE=windows-overlay,windows-side-by-side --dart-define="SKED_VISUAL_OUTPUT=$skedVisualRoot/windows-desktop-final" --reporter expanded
 ```
 
 手机和 Windows 代表配置还采集时间／重复选择、分类管理／重命名、详情进入编辑、放弃草稿确认、设置及导入复核。导入复核采集使用本地解析结果数据，其 manifest 单独标注未经过源网页和网络解析；这些链路由导入流回归测试另行验证。
