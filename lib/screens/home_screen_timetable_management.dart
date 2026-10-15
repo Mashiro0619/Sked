@@ -2,18 +2,18 @@ part of 'home_screen.dart';
 
 extension _HomeScreenTimetableManagement on _HomeScreenState {
   Future<void> _showTimetablePicker(
-    BuildContext context,
-    TimetableProvider provider, {
+    BuildContext context, {
     required double availableWidth,
     BuildContext? anchorContext,
   }) async {
-    if (_timetablePickerOpen || !mounted) return;
+    if (_timetablePickerOpen || !mounted || !context.mounted) return;
+    final student = context.read<StudentViewState>();
     _setTimetablePickerOpen(true);
     try {
       final panel = _TimetablePickerPanel(
-        provider: provider,
+        student: student,
         onSwitch: (pickerContext, timetable) =>
-            _switchTimetableFromPicker(pickerContext, provider, timetable),
+            _switchTimetableFromPicker(pickerContext, timetable),
         onEdit: (pickerContext, timetable) async {
           final editor = WorkspaceEditorConfiguration(
             anchorRect: WorkspaceEditorConfiguration(
@@ -23,12 +23,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           completeSkedTaskRoute(pickerContext);
           await WidgetsBinding.instance.endOfFrame;
           if (!context.mounted) return false;
-          return _openTimetableItemDialog(
-            context,
-            provider,
-            timetable,
-            editor: editor,
-          );
+          return _openTimetableItemDialog(context, timetable, editor: editor);
         },
         onCreate: (pickerContext) async {
           final editor = WorkspaceEditorConfiguration(
@@ -39,7 +34,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           completeSkedTaskRoute(pickerContext);
           await WidgetsBinding.instance.endOfFrame;
           if (!context.mounted) return false;
-          return _openCreateTimetableDialog(context, provider, editor: editor);
+          return _openCreateTimetableDialog(context, editor: editor);
         },
       );
       if (WorkbenchChromeMetrics.of(context).desktop) {
@@ -81,40 +76,43 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
   }
 
   Future<void> _showWeekPicker(
-    BuildContext context,
-    TimetableProvider provider, {
+    BuildContext context, {
     BuildContext? anchorContext,
   }) async {
     if (_weekPickerOpen ||
         !mounted ||
+        !context.mounted ||
         !widget.active ||
         !widget.interactive ||
         _weekNavigationTarget != null ||
         _weekPageScrolling) {
       return;
     }
-    final timetable = provider.activeTimetableOrNull;
-    if (timetable == null || !provider.isWorkspaceEnabled(AppMode.student)) {
+    final student = context.read<StudentViewState>();
+    final workspace = context.read<WorkspaceViewState>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final timetable = student.activeTimetableOrNull;
+    if (timetable == null || !workspace.isEnabled(AppMode.student)) {
       return;
     }
     final config = timetable.config;
-    final selectedWeek = provider.selectedWeek;
-    final dataSession = provider.dataSessionToken;
-    final activeMode = provider.activeMode;
+    final selectedWeek = student.selectedWeek;
+    final dataSession = maintenance.dataSessionToken;
+    final activeMode = workspace.activeMode;
     final resumeBoundary =
-        provider.appData.workspaceReminderNotBefore[AppMode.student];
+        workspace.data.workspaceReminderNotBefore[AppMode.student];
     final navigationGeneration = _weekNavigationGeneration;
     var selectionReturned = false;
     bool ownerCurrent() {
-      final current = provider.activeTimetableOrNull;
+      final current = student.activeTimetableOrNull;
       return mounted &&
           context.mounted &&
           widget.active &&
           widget.interactive &&
-          identical(provider.dataSessionToken, dataSession) &&
-          provider.isWorkspaceEnabled(AppMode.student) &&
-          provider.activeMode == activeMode &&
-          provider.appData.workspaceReminderNotBefore[AppMode.student] ==
+          identical(maintenance.dataSessionToken, dataSession) &&
+          workspace.isEnabled(AppMode.student) &&
+          workspace.activeMode == activeMode &&
+          workspace.data.workspaceReminderNotBefore[AppMode.student] ==
               resumeBoundary &&
           current?.id == timetable.id &&
           current?.config.startDate == config.startDate &&
@@ -123,7 +121,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
 
     bool selectionCurrent() =>
         ownerCurrent() &&
-        provider.selectedWeek == selectedWeek &&
+        student.selectedWeek == selectedWeek &&
         navigationGeneration == _weekNavigationGeneration &&
         _weekNavigationTarget == null;
     _setWeekPickerOpen(true);
@@ -143,10 +141,9 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
       _setWeekPickerOpen(false);
       if (accepted && week != selectedWeek) {
         await _animateToWeek(
-          provider,
           week,
           isSessionCurrent: () =>
-              ownerCurrent() && provider.selectedWeek == selectedWeek,
+              ownerCurrent() && student.selectedWeek == selectedWeek,
         );
       }
     } finally {
@@ -155,19 +152,17 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
   }
 
   Future<bool> _openCreateTimetableDialog(
-    BuildContext context,
-    TimetableProvider provider, {
+    BuildContext context, {
     WorkspaceEditorConfiguration? editor,
   }) {
+    if (!mounted || !context.mounted) return Future.value(false);
+    final student = context.read<StudentViewState>();
     final l10n = AppLocalizations.of(context);
     final periodTimeSetId =
-        provider.activePeriodTimeSetOrNull?.id ??
-        (provider.periodTimeSets.isEmpty
-            ? ''
-            : provider.periodTimeSets.first.id);
+        student.activePeriodTimeSetOrNull?.id ??
+        (student.periodTimeSets.isEmpty ? '' : student.periodTimeSets.first.id);
     return _openTimetableConfigDialog(
       context,
-      provider,
       editor: editor,
       initialConfig: TimetableConfig(
         name: l10n.newTimetableName,
@@ -180,13 +175,11 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
 
   Future<bool> _openTimetableItemDialog(
     BuildContext context,
-    TimetableProvider provider,
     TimetableData timetable, {
     WorkspaceEditorConfiguration? editor,
   }) {
     return _openTimetableConfigDialog(
       context,
-      provider,
       initialConfig: timetable.config,
       timetable: timetable,
       editor: editor,
@@ -194,16 +187,20 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
   }
 
   Future<bool> _openTimetableConfigDialog(
-    BuildContext context,
-    TimetableProvider provider, {
+    BuildContext context, {
     required TimetableConfig initialConfig,
     TimetableData? timetable,
     WorkspaceEditorConfiguration? editor,
   }) async {
     final creating = timetable == null;
-    if (_timetableItemDialogOpen || _courseEditorOpen || !mounted) {
+    if (_timetableItemDialogOpen ||
+        _courseEditorOpen ||
+        !mounted ||
+        !context.mounted) {
       return false;
     }
+    final student = context.read<StudentViewState>();
+    final commands = context.read<StudentCommands>();
     _setTimetableItemDialogOpen(true);
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: initialConfig.name);
@@ -275,7 +272,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                   if (!(formKey.currentState?.validate() ?? false)) {
                     return;
                   }
-                  if (provider.periodTimeSetForId(selectedPeriodTimeSetId) ==
+                  if (student.periodTimeSetForId(selectedPeriodTimeSetId) ==
                       null) {
                     showUiFailureFeedback(
                       context: context,
@@ -307,8 +304,8 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                         periodTimeSetId: selectedPeriodTimeSetId,
                       );
                       return creating
-                          ? provider.addTimetable(config)
-                          : provider.updateTimetableConfigFor(
+                          ? commands.addTimetable(config)
+                          : commands.updateTimetableConfigFor(
                               timetable.id,
                               config,
                             );
@@ -345,7 +342,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                         ),
                         confirmLabel: l10n.delete,
                         debugLabel: 'Delete timetable',
-                        onConfirm: () => provider.deleteTimetable(timetable.id),
+                        onConfirm: () => commands.deleteTimetable(timetable.id),
                       ),
                     );
                     if (!context.mounted || deleted != true) return;
@@ -383,7 +380,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                       weeksController: weeksController,
                       startDateLabel: formatDate(selectedStartDate),
                       periodTimeSetSummary: () {
-                        final selected = provider.periodTimeSetForId(
+                        final selected = student.periodTimeSetForId(
                           selectedPeriodTimeSetId,
                         );
                         return selected == null

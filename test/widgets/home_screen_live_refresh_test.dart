@@ -146,6 +146,52 @@ Future<void> _pumpTimetableScreen(
 }
 
 void main() {
+  testWidgets(
+    'unrelated domains and unused period sets keep the timetable grid',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final clock = _MutableClock(DateTime(2026, 6, 16, 9, 49, 30));
+      final timers = _TrackingTimerFactory();
+      await _pumpTimetableScreen(
+        tester,
+        provider: provider,
+        clock: clock,
+        timers: timers,
+      );
+      final grid = tester.widget<TimetableGrid>(find.byType(TimetableGrid));
+
+      await provider.generalCommands.addSchedule(name: 'Personal events');
+      await tester.pump();
+      expect(
+        tester.widget<TimetableGrid>(find.byType(TimetableGrid)),
+        same(grid),
+      );
+      await provider.settingsCommands.updateIncludePrereleaseUpdates(true);
+      await tester.pump();
+      expect(
+        tester.widget<TimetableGrid>(find.byType(TimetableGrid)),
+        same(grid),
+      );
+      await provider.studentCommands.addPeriodTimeSet();
+      await tester.pump();
+      expect(
+        tester.widget<TimetableGrid>(find.byType(TimetableGrid)),
+        same(grid),
+      );
+
+      await provider.settingsCommands.updateShowTimetableGridLines(
+        !grid.showGridLines,
+      );
+      await tester.pump();
+      expect(
+        tester.widget<TimetableGrid>(find.byType(TimetableGrid)).showGridLines,
+        !grid.showGridLines,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
   test(
     'live timetable refresh uses elapsed time within the current minute',
     () {

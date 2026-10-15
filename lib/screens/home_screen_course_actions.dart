@@ -3,10 +3,10 @@ part of 'home_screen.dart';
 extension _HomeScreenCourseActions on _HomeScreenState {
   Future<void> _openDetails(
     BuildContext context,
-    TimetableProvider provider,
     TimetableCourseTapInfo info,
   ) async {
-    final student = provider.studentView;
+    if (!mounted || !context.mounted) return;
+    final student = context.read<StudentViewState>();
     final timetableId = student.activeTimetableOrNull?.id;
     if (!mounted || _courseEditorOpen || timetableId == null) return;
     if (_courseDetailsOpen) {
@@ -15,14 +15,16 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       await Future<void>.delayed(Duration.zero);
       if (!mounted || !context.mounted || _pane.isOpen) return;
     }
+    final commands = context.read<StudentCommands>();
     _setCourseDetailsOpen(true);
     try {
-      final canDismiss = provider.settingsView.closeCoursePopupOnOutsideTap;
+      final canDismiss = context
+          .read<SettingsViewState>()
+          .closeCoursePopupOnOutsideTap;
       final mobile = WorkbenchChromeMetrics.compactTouch(context);
       Future<void> edit(CourseItem course) {
         final task = _openEditor(
           context,
-          provider,
           course: course,
           timetableId: timetableId,
         );
@@ -77,7 +79,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
               !info.isFullConflict || info.conflictKey == null
               ? null
               : (course) async {
-                  await provider.studentCommands.setDisplayedCourseForConflict(
+                  await commands.setDisplayedCourseForConflict(
                     info.conflictKey!,
                     course.id,
                   );
@@ -94,15 +96,15 @@ extension _HomeScreenCourseActions on _HomeScreenState {
   }
 
   Future<void> _openEditor(
-    BuildContext context,
-    TimetableProvider provider, {
+    BuildContext context, {
     CourseItem? course,
     WorkspaceEditorConfiguration? editor,
     String? timetableId,
     int? weekday,
     TimetableEmptySlotTapInfo? emptySlot,
   }) async {
-    final student = provider.studentView;
+    if (!mounted || !context.mounted) return;
+    final student = context.read<StudentViewState>();
     final timetable = timetableId == null
         ? student.activeTimetableOrNull
         : student.timetables
@@ -117,17 +119,20 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         ? null
         : timetable.courses.where((item) => item.id == course.id).firstOrNull;
     if (course != null && initialCourse == null) return;
+    final commands = context.read<StudentCommands>();
     final task = CourseTaskController(
-      commands: provider.studentCommands,
+      commands: commands,
       view: student,
-      workspaceView: provider.workspaceView,
-      maintenance: provider.maintenance,
+      workspaceView: context.read<WorkspaceViewState>(),
+      maintenance: context.read<AppDataMaintenance>(),
       timetable: timetable,
       initialCourse: initialCourse,
     );
     _setCourseEditorOpen(true);
     try {
-      final canDismiss = provider.settingsView.closeCoursePopupOnOutsideTap;
+      final canDismiss = context
+          .read<SettingsViewState>()
+          .closeCoursePopupOnOutsideTap;
       await showAppModalSheet<CourseEditorResult>(
         context: context,
         workspacePane: _pane,

@@ -32,7 +32,13 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../models/workspace_context_snapshot.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_session.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_commands.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../providers/app_scope.dart';
 import '../previews/sked_preview_support.dart';
 import '../theme/app_motion.dart';
@@ -241,18 +247,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _openSettingsPage(TimetableProvider provider) async {
+  Future<void> _openSettingsPage() async {
     if (_settingsPageOpen || !mounted) {
       return;
     }
+    final appScope = AppScope.capture(context);
     _setSettingsPageOpen(true);
     try {
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const SettingsPage(),
-          ),
+          builder: (_) =>
+              appScope?.wrap(const SettingsPage()) ?? const SettingsPage(),
         ),
       );
     } finally {
@@ -262,23 +267,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<bool> _switchTimetableFromPicker(
     BuildContext pickerContext,
-    TimetableProvider provider,
     TimetableData targetTimetable,
   ) async {
-    if (_timetableSwitchInProgress) {
+    if (!mounted || !pickerContext.mounted || _timetableSwitchInProgress) {
       return false;
     }
+    final student = context.read<StudentViewState>();
+    final commands = context.read<StudentCommands>();
     _setTimetableSwitchInProgress(true);
     try {
       var saved = true;
       // The picker can remain open while another command updates the
-      // provider. Compare against the live selection instead of the snapshot
+      // student data. Compare against the live selection instead of the snapshot
       // captured when the panel was opened.
-      if (targetTimetable.id != provider.activeTimetableOrNull?.id) {
+      if (targetTimetable.id != student.activeTimetableOrNull?.id) {
         saved = await runUiCommandWithFeedback(
           context: pickerContext,
           debugLabel: 'Switch timetable',
-          command: () => provider.switchTimetable(targetTimetable.id),
+          command: () => commands.switchTimetable(targetTimetable.id),
         );
       }
       return saved;
@@ -289,315 +295,293 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<TimetableProvider, _StudentHomeSnapshot>(
-      selector: (_, provider) => _StudentHomeSnapshot.from(provider),
-      builder: (context, snapshot, child) {
-        final provider = context.read<TimetableProvider>();
-        final l10n = AppLocalizations.of(context);
-        if (!snapshot.isLoaded) {
-          return _wrapStandalone(
-            const SafeArea(child: Center(child: CircularProgressIndicator())),
-          );
-        }
-        return _wrapStandalone(
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final timetable = snapshot.activeTimetable;
-                final desktop = WorkbenchChromeMetrics.of(context).desktop;
-                final compactTouch = WorkbenchChromeMetrics.compactTouch(
-                  context,
-                  width: constraints.maxWidth,
-                );
-                final horizontalInset = !desktop && constraints.maxWidth < 600
-                    ? 8.0
-                    : 0.0;
-                final showSettingsHere =
-                    widget.showSettingsAction &&
-                    WorkspaceCanvasScope.maybeOf(context)?.resources != true;
-                final settingsAction = !widget.settingsEnabled
-                    ? null
-                    : widget.settingsAction ??
-                          (_settingsPageOpen
+    final isLoaded = context.select<AppSessionReadiness, bool>(
+      (readiness) => readiness.isLoaded,
+    );
+    final snapshot = context.select<StudentViewState, _StudentHomeSnapshot>(
+      _StudentHomeSnapshot.from,
+    );
+    final l10n = AppLocalizations.of(context);
+    if (!isLoaded) {
+      return _wrapStandalone(
+        const SafeArea(child: Center(child: CircularProgressIndicator())),
+      );
+    }
+    return _wrapStandalone(
+      SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final timetable = snapshot.activeTimetable;
+            final desktop = WorkbenchChromeMetrics.of(context).desktop;
+            final compactTouch = WorkbenchChromeMetrics.compactTouch(
+              context,
+              width: constraints.maxWidth,
+            );
+            final horizontalInset = !desktop && constraints.maxWidth < 600
+                ? 8.0
+                : 0.0;
+            final showSettingsHere =
+                widget.showSettingsAction &&
+                WorkspaceCanvasScope.maybeOf(context)?.resources != true;
+            final settingsAction = !widget.settingsEnabled
+                ? null
+                : widget.settingsAction ??
+                      (_settingsPageOpen ? null : () => _openSettingsPage());
+
+            if (timetable == null) {
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  desktop || compactTouch ? 0 : 8,
+                  horizontalInset,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Desktop chrome needs a drag surface even when the
+                    // resource panel owns the settings action.
+                    _EmptyTimetableToolbar(
+                      key: const ValueKey('student-workspace-toolbar'),
+                      title: l10n.appTitle,
+                      showSettingsAction: showSettingsHere,
+                      settingsFocusNode: widget.settingsFocusNode,
+                      onOpenSettings: settingsAction,
+                      onManagePeriodTimeSets: widget.interactive
+                          ? () => _managePeriodTimeSets()
+                          : null,
+                    ),
+                    Expanded(
+                      child: WorkspaceCanvasBody(
+                        child: _EmptyTimetableState(
+                          onCreate: _timetableItemDialogOpen
                               ? null
-                              : () => _openSettingsPage(provider));
-
-                if (timetable == null) {
-                  return Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalInset,
-                      desktop || compactTouch ? 0 : 8,
-                      horizontalInset,
-                      0,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Desktop chrome needs a drag surface even when the
-                        // resource panel owns the settings action.
-                        _EmptyTimetableToolbar(
-                          key: const ValueKey('student-workspace-toolbar'),
-                          title: l10n.appTitle,
-                          showSettingsAction: showSettingsHere,
-                          settingsFocusNode: widget.settingsFocusNode,
-                          onOpenSettings: settingsAction,
-                          onManagePeriodTimeSets: widget.interactive
-                              ? () => _managePeriodTimeSets(provider)
-                              : null,
-                        ),
-                        Expanded(
-                          child: WorkspaceCanvasBody(
-                            child: _EmptyTimetableState(
-                              onCreate: _timetableItemDialogOpen
-                                  ? null
-                                  : (anchor) => _openCreateTimetableDialog(
-                                      context,
-                                      provider,
-                                      editor: WorkspaceEditorConfiguration(
-                                        anchorContext: anchor,
-                                      ),
-                                    ),
-                              onImport: _fileImportInProgress
-                                  ? null
-                                  : () =>
-                                        _importTimetableData(context, provider),
-                              onImportFromText: _textImportPageOpen
-                                  ? null
-                                  : () => _importTimetablesFromText(
-                                      context,
-                                      provider,
-                                    ),
-                              onImportFromWeb: _schoolWebImportPageOpen
-                                  ? null
-                                  : () => _importTimetableFromWeb(
-                                      context,
-                                      provider,
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final config = timetable.config;
-                final week = snapshot.selectedWeek;
-                final view = View.of(context);
-                final rawKeyboardInset =
-                    view.viewInsets.bottom / view.devicePixelRatio;
-                final keyboardVisible =
-                    rawKeyboardInset > 0 ||
-                    MediaQuery.viewInsetsOf(context).bottom > 0;
-                final inlineAdd = desktop || constraints.maxWidth >= 600;
-                final addVisible =
-                    (desktop || snapshot.showAddCourseFab) &&
-                    widget.active &&
-                    widget.interactive &&
-                    !_courseEditorOpen &&
-                    !keyboardVisible;
-                // Keep the viewport full-height so the grid remains visible
-                // behind the FAB. The clearance is added only to the
-                // scrollable grid content, allowing the final course to be
-                // brought above the button without painting a blank strip.
-                final fabVisible = addVisible && !inlineAdd;
-                final fabContentInset = fabVisible ? 80.0 : 0.0;
-                _ensurePageController(week);
-                _ensureLocalViewState(config: config, selectedWeek: week);
-                final viewMode = _viewMode!;
-                final selectedWeekday = _selectedWeekday!;
-                final realCurrentWeek = currentWeekFor(config);
-                final weekSwipeEnabled =
-                    snapshot.enableWeekSwipeNavigation &&
-                    widget.active &&
-                    widget.interactive &&
-                    !_courseEditorOpen &&
-                    !_courseDetailsOpen &&
-                    !_weekPickerOpen &&
-                    !_timetablePickerOpen &&
-                    !_timetableItemDialogOpen &&
-                    !_timetableSwitchInProgress &&
-                    !_settingsPageOpen &&
-                    _weekNavigationTarget == null;
-                final longPressAddEnabled =
-                    snapshot.enableLongPressAddCourse &&
-                    widget.active &&
-                    widget.interactive &&
-                    !_courseEditorOpen &&
-                    !_courseDetailsOpen;
-
-                return Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalInset,
-                    desktop || compactTouch ? 0 : 8,
-                    horizontalInset,
-                    0,
-                  ),
-                  child: Stack(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _StudentWorkspaceToolbar(
-                            onAddCourse: inlineAdd && addVisible
-                                ? (anchor) => _openEditor(
-                                    context,
-                                    provider,
-                                    editor: WorkspaceEditorConfiguration(
-                                      anchorContext: anchor,
-                                    ),
-                                  )
-                                : null,
-                            showAddLabel: constraints.maxWidth >= 760,
-                            timetable: timetable,
-                            week: week,
-                            onStep: widget.interactive
-                                ? (delta) => _jumpWeekBy(provider, delta)
-                                : null,
-                            weekNavigationDirection:
-                                _weekNavigationTarget == week
-                                ? _weekNavigationDirection
-                                : 0,
-                            viewMode: viewMode,
-                            navigationOrder: snapshot.toolbarNavigationOrder,
-                            hiddenNavigationIds:
-                                snapshot.hiddenToolbarNavigationIds,
-                            hiddenItemsBehavior:
-                                snapshot.toolbarHiddenItemsBehavior,
-                            compactWidth: constraints.maxWidth < 600,
-                            compactHeight: constraints.maxHeight < 600,
-                            interactive: widget.interactive,
-                            showSettings: showSettingsHere,
-                            settingsFocusNode: widget.settingsFocusNode,
-                            onOpenTimetablePicker: _timetablePickerOpen
-                                ? null
-                                : (anchor) => _showTimetablePicker(
-                                    context,
-                                    provider,
-                                    availableWidth: constraints.maxWidth,
+                              : (anchor) => _openCreateTimetableDialog(
+                                  context,
+                                  editor: WorkspaceEditorConfiguration(
                                     anchorContext: anchor,
                                   ),
-                            onManagePeriodTimeSets: widget.interactive
-                                ? () => _managePeriodTimeSets(provider)
-                                : null,
-                            onOpenWeekPicker: _weekPickerOpen
-                                ? null
-                                : (anchor) => _showWeekPicker(
-                                    context,
-                                    provider,
-                                    anchorContext: anchor,
-                                  ),
-                            onJumpToToday: widget.interactive
-                                ? () => unawaited(
-                                    _jumpToToday(provider, realCurrentWeek),
-                                  )
-                                : null,
-                            onViewChanged: widget.interactive
-                                ? (value) => setState(() => _viewMode = value)
-                                : null,
-                            onOpenSettings: settingsAction,
-                          ),
-                          Expanded(
-                            child: WorkspaceCanvasBody(
-                              // This spacing belongs to the grid, not the
-                              // shared body edge used to position task panes.
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  top: compactTouch ? 0 : 4,
                                 ),
-                                child: _TimetableWeekPager(
-                                  controller: _pageController!,
-                                  provider: provider,
-                                  timetable: timetable,
-                                  config: config,
-                                  committedWeek: week,
-                                  active: widget.active,
-                                  interactive: widget.interactive,
-                                  swipeEnabled: weekSwipeEnabled,
-                                  viewMode: viewMode,
-                                  selectedWeekday: selectedWeekday,
-                                  fitDaySelectorToWidth:
-                                      snapshot.fitDaySelectorToWidth,
-                                  fitWeekColumnsToWidth:
-                                      snapshot.fitWeekColumnsToWidth,
-                                  shortcutFocusNode:
-                                      widget.weekShortcutFocusNode,
-                                  bottomContentInset: fabContentInset,
-                                  onPageScrollStateChanged: (scrolling) {
-                                    _weekPageScrolling = scrolling;
-                                  },
-                                  onWeekSettled: (settledWeek) =>
-                                      _settleWeekFromPager(
-                                        provider,
-                                        settledWeek,
-                                      ),
-                                  onWeekdaySelected: (weekday) {
-                                    if (_selectedWeekday == weekday) return;
-                                    setState(() => _selectedWeekday = weekday);
-                                  },
-                                  onJumpWeekBy: (offset) =>
-                                      _jumpWeekBy(provider, offset),
-                                  onCourseTap: (info) =>
-                                      _openDetails(context, provider, info),
-                                  onEmptySlotTap: longPressAddEnabled
-                                      ? (slotInfo) => _openEditor(
-                                          context,
-                                          provider,
-                                          weekday: slotInfo.weekday,
-                                          emptySlot: slotInfo,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                          onImport: _fileImportInProgress
+                              ? null
+                              : () => _importTimetableData(context),
+                          onImportFromText: _textImportPageOpen
+                              ? null
+                              : () => _importTimetablesFromText(context),
+                          onImportFromWeb: _schoolWebImportPageOpen
+                              ? null
+                              : () => _importTimetableFromWeb(context),
+                        ),
                       ),
-                      if (fabVisible)
-                        PositionedDirectional(
-                          end: 12,
-                          bottom: 16,
-                          child: Builder(
-                            builder: (anchor) => SkedPrimaryFab(
-                              heroTag: 'student-add-course',
-                              tooltip: l10n.addCourse,
-                              onPressed: () => _openEditor(
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final config = timetable.config;
+            final week = snapshot.selectedWeek;
+            final view = View.of(context);
+            final rawKeyboardInset =
+                view.viewInsets.bottom / view.devicePixelRatio;
+            final keyboardVisible =
+                rawKeyboardInset > 0 ||
+                MediaQuery.viewInsetsOf(context).bottom > 0;
+            final inlineAdd = desktop || constraints.maxWidth >= 600;
+            final addVisible =
+                (desktop || snapshot.showAddCourseFab) &&
+                widget.active &&
+                widget.interactive &&
+                !_courseEditorOpen &&
+                !keyboardVisible;
+            // Keep the viewport full-height so the grid remains visible
+            // behind the FAB. The clearance is added only to the
+            // scrollable grid content, allowing the final course to be
+            // brought above the button without painting a blank strip.
+            final fabVisible = addVisible && !inlineAdd;
+            final fabContentInset = fabVisible ? 80.0 : 0.0;
+            _ensurePageController(week);
+            _ensureLocalViewState(config: config, selectedWeek: week);
+            final viewMode = _viewMode!;
+            final selectedWeekday = _selectedWeekday!;
+            final realCurrentWeek = currentWeekFor(config);
+            final weekSwipeEnabled =
+                snapshot.enableWeekSwipeNavigation &&
+                widget.active &&
+                widget.interactive &&
+                !_courseEditorOpen &&
+                !_courseDetailsOpen &&
+                !_weekPickerOpen &&
+                !_timetablePickerOpen &&
+                !_timetableItemDialogOpen &&
+                !_timetableSwitchInProgress &&
+                !_settingsPageOpen &&
+                _weekNavigationTarget == null;
+            final longPressAddEnabled =
+                snapshot.enableLongPressAddCourse &&
+                widget.active &&
+                widget.interactive &&
+                !_courseEditorOpen &&
+                !_courseDetailsOpen;
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalInset,
+                desktop || compactTouch ? 0 : 8,
+                horizontalInset,
+                0,
+              ),
+              child: Stack(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _StudentWorkspaceToolbar(
+                        onAddCourse: inlineAdd && addVisible
+                            ? (anchor) => _openEditor(
                                 context,
-                                provider,
                                 editor: WorkspaceEditorConfiguration(
                                   anchorContext: anchor,
                                 ),
+                              )
+                            : null,
+                        showAddLabel: constraints.maxWidth >= 760,
+                        timetable: timetable,
+                        week: week,
+                        onStep: widget.interactive
+                            ? (delta) => _jumpWeekBy(delta)
+                            : null,
+                        weekNavigationDirection: _weekNavigationTarget == week
+                            ? _weekNavigationDirection
+                            : 0,
+                        viewMode: viewMode,
+                        navigationOrder: snapshot.toolbarNavigationOrder,
+                        hiddenNavigationIds:
+                            snapshot.hiddenToolbarNavigationIds,
+                        hiddenItemsBehavior:
+                            snapshot.toolbarHiddenItemsBehavior,
+                        compactWidth: constraints.maxWidth < 600,
+                        compactHeight: constraints.maxHeight < 600,
+                        interactive: widget.interactive,
+                        showSettings: showSettingsHere,
+                        settingsFocusNode: widget.settingsFocusNode,
+                        onOpenTimetablePicker: _timetablePickerOpen
+                            ? null
+                            : (anchor) => _showTimetablePicker(
+                                context,
+                                availableWidth: constraints.maxWidth,
+                                anchorContext: anchor,
                               ),
-                              icon: const Icon(Icons.add),
-                              label: constraints.maxWidth >= 760
-                                  ? Text(l10n.addCourse)
+                        onManagePeriodTimeSets: widget.interactive
+                            ? () => _managePeriodTimeSets()
+                            : null,
+                        onOpenWeekPicker: _weekPickerOpen
+                            ? null
+                            : (anchor) => _showWeekPicker(
+                                context,
+                                anchorContext: anchor,
+                              ),
+                        onJumpToToday: widget.interactive
+                            ? () => unawaited(_jumpToToday(realCurrentWeek))
+                            : null,
+                        onViewChanged: widget.interactive
+                            ? (value) => setState(() => _viewMode = value)
+                            : null,
+                        onOpenSettings: settingsAction,
+                      ),
+                      Expanded(
+                        child: WorkspaceCanvasBody(
+                          // This spacing belongs to the grid, not the
+                          // shared body edge used to position task panes.
+                          child: Padding(
+                            padding: EdgeInsets.only(top: compactTouch ? 0 : 4),
+                            child: _TimetableWeekPager(
+                              controller: _pageController!,
+                              snapshot: snapshot,
+                              timetable: timetable,
+                              config: config,
+                              committedWeek: week,
+                              active: widget.active,
+                              interactive: widget.interactive,
+                              swipeEnabled: weekSwipeEnabled,
+                              viewMode: viewMode,
+                              selectedWeekday: selectedWeekday,
+                              fitDaySelectorToWidth:
+                                  snapshot.fitDaySelectorToWidth,
+                              fitWeekColumnsToWidth:
+                                  snapshot.fitWeekColumnsToWidth,
+                              shortcutFocusNode: widget.weekShortcutFocusNode,
+                              bottomContentInset: fabContentInset,
+                              onPageScrollStateChanged: (scrolling) {
+                                _weekPageScrolling = scrolling;
+                              },
+                              onWeekSettled: (settledWeek) =>
+                                  _settleWeekFromPager(settledWeek),
+                              onWeekdaySelected: (weekday) {
+                                if (_selectedWeekday == weekday) return;
+                                setState(() => _selectedWeekday = weekday);
+                              },
+                              onJumpWeekBy: (offset) => _jumpWeekBy(offset),
+                              onCourseTap: (info) =>
+                                  _openDetails(context, info),
+                              onEmptySlotTap: longPressAddEnabled
+                                  ? (slotInfo) => _openEditor(
+                                      context,
+                                      weekday: slotInfo.weekday,
+                                      emptySlot: slotInfo,
+                                    )
                                   : null,
                             ),
                           ),
                         ),
+                      ),
                     ],
                   ),
-                );
-              },
-            ),
-          ),
-        );
-      },
+                  if (fabVisible)
+                    PositionedDirectional(
+                      end: 12,
+                      bottom: 16,
+                      child: Builder(
+                        builder: (anchor) => SkedPrimaryFab(
+                          heroTag: 'student-add-course',
+                          tooltip: l10n.addCourse,
+                          onPressed: () => _openEditor(
+                            context,
+                            editor: WorkspaceEditorConfiguration(
+                              anchorContext: anchor,
+                            ),
+                          ),
+                          icon: const Icon(Icons.add),
+                          label: constraints.maxWidth >= 760
+                              ? Text(l10n.addCourse)
+                              : null,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
-  Future<void> _managePeriodTimeSets(TimetableProvider provider) async {
-    if (_periodTimeSetManagerOpen || _courseEditorOpen || !widget.interactive) {
+  Future<void> _managePeriodTimeSets() async {
+    if (!mounted ||
+        _periodTimeSetManagerOpen ||
+        _courseEditorOpen ||
+        !widget.interactive) {
       return;
     }
+    final appScope = AppScope.capture(context);
     _periodTimeSetManagerOpen = true;
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const PeriodTimeSetManagerPage(),
-          ),
+          builder: (_) =>
+              appScope?.wrap(const PeriodTimeSetManagerPage()) ??
+              const PeriodTimeSetManagerPage(),
         ),
       );
     } finally {
@@ -606,119 +590,144 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _wrapStandalone(Widget workspace) {
-    final framed = Consumer<TimetableProvider>(
-      builder: (context, preferences, _) => WorkspaceFrame(
-        controller: _pane,
-        contextSnapshot: WorkspaceContextSnapshot(
-          enabledWorkspaces: preferences.enabledWorkspaces,
-          mode: AppMode.student,
-          view: _viewMode?.name ?? 'week',
-          resourceId: preferences.activeTimetableOrNull?.id,
-        ),
-        active: widget.active,
-        resourcesCollapsed: preferences.homeWorkspaceNavigationCollapsed,
-        panelDisplayMode: preferences.workspacePanelDisplayMode,
-        canvas: workspace,
-        resources: Consumer<TimetableProvider>(
-          builder: (context, provider, _) {
-            final l10n = AppLocalizations.of(context);
-            return WorkspaceResourcePanel(
-              title: l10n.timetable,
-              // The editor owns its source timetable; background navigation
-              // must remain available without retargeting that draft.
-              onOpenResourcesAt: widget.interactive
-                  ? (anchor) => _showTimetablePicker(
-                      context,
-                      provider,
-                      availableWidth: 560,
-                      anchorContext: anchor,
-                    )
-                  : null,
-              settingsFocusNode: widget.settingsFocusNode,
-              onSettings: widget.showSettingsAction && widget.settingsEnabled
-                  ? widget.settingsAction ?? () => _openSettingsPage(provider)
-                  : null,
-
-              headerActions: [
-                Builder(
-                  builder: (anchor) => IconButton(
-                    tooltip: l10n.createTimetable,
-                    icon: const Icon(Icons.add),
-                    onPressed: _courseEditorOpen || _timetableItemDialogOpen
-                        ? null
-                        : () => _openCreateTimetableDialog(
-                            context,
-                            provider,
-                            editor: WorkspaceEditorConfiguration(
-                              anchorContext: anchor,
-                            ),
-                          ),
-                  ),
+    final framed = Builder(
+      builder: (context) {
+        final enabledWorkspaces = context
+            .select<WorkspaceViewState, Set<AppMode>>(
+              (view) => view.enabledWorkspaces,
+            );
+        final resourceId = context.select<StudentViewState, String?>(
+          (view) => view.activeTimetableOrNull?.id,
+        );
+        final preferences = context
+            .select<
+              SettingsViewState,
+              ({bool collapsed, WorkspacePanelDisplayMode panelMode})
+            >(
+              (view) => (
+                collapsed: view.homeWorkspaceNavigationCollapsed,
+                panelMode: view.workspacePanelDisplayMode,
+              ),
+            );
+        return WorkspaceFrame(
+          controller: _pane,
+          contextSnapshot: WorkspaceContextSnapshot(
+            enabledWorkspaces: enabledWorkspaces,
+            mode: AppMode.student,
+            view: _viewMode?.name ?? 'week',
+            resourceId: resourceId,
+          ),
+          active: widget.active,
+          resourcesCollapsed: preferences.collapsed,
+          panelDisplayMode: preferences.panelMode,
+          canvas: workspace,
+          resources:
+              Selector<
+                StudentViewState,
+                ({List<TimetableData> timetables, String? activeId})
+              >(
+                selector: (_, view) => (
+                  timetables: view.timetables,
+                  activeId: view.activeTimetableOrNull?.id,
                 ),
-                Builder(
-                  builder: (anchor) => SkedPopupMenuButton<String>(
-                    key: const ValueKey('student-resource-menu'),
-                    // Popup defaults otherwise override the compact icon theme.
-                    style: WorkbenchChromeMetrics.of(context).iconStyle,
-                    tooltip: l10n.more,
-                    icon: const Icon(Icons.more_horiz),
-                    onSelected: (value) => value == 'periods'
-                        ? _managePeriodTimeSets(provider)
-                        : openWorkspaceTransfer(
+                builder: (context, resources, _) {
+                  final l10n = AppLocalizations.of(context);
+                  return WorkspaceResourcePanel(
+                    title: l10n.timetable,
+                    // The editor owns its source timetable; background navigation
+                    // must remain available without retargeting that draft.
+                    onOpenResourcesAt: widget.interactive
+                        ? (anchor) => _showTimetablePicker(
                             context,
-                            AppMode.student,
-                            direction: value == 'import'
-                                ? SettingsTransferDirection.import
-                                : SettingsTransferDirection.export,
-                          ),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'periods',
-                        child: Text(l10n.managePeriodTimeSets),
-                      ),
-                      PopupMenuItem(
-                        value: 'import',
-                        child: Text(l10n.importAction),
-                      ),
-                      PopupMenuItem(
-                        value: 'export',
-                        child: Text(l10n.exportAction),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              children: [
-                for (final timetable in provider.timetables)
-                  TimetableResourceRow(
-                    key: ValueKey('resource-timetable-${timetable.id}'),
-                    timetableId: timetable.id,
-                    name: timetable.config.name,
-                    selected:
-                        timetable.id == provider.activeTimetableOrNull?.id,
-                    onSelected: widget.interactive
-                        ? () => _switchTimetableFromPicker(
-                            context,
-                            provider,
-                            timetable,
+                            availableWidth: 560,
+                            anchorContext: anchor,
                           )
                         : null,
-                    onEditAt: _courseEditorOpen || _timetableItemDialogOpen
-                        ? null
-                        : (anchor) => _openTimetableItemDialog(
-                            context,
-                            provider,
-                            timetable,
-                            editor: WorkspaceEditorConfiguration(
-                              anchorContext: anchor,
+                    settingsFocusNode: widget.settingsFocusNode,
+                    onSettings:
+                        widget.showSettingsAction && widget.settingsEnabled
+                        ? widget.settingsAction ?? () => _openSettingsPage()
+                        : null,
+
+                    headerActions: [
+                      Builder(
+                        builder: (anchor) => IconButton(
+                          tooltip: l10n.createTimetable,
+                          icon: const Icon(Icons.add),
+                          onPressed:
+                              _courseEditorOpen || _timetableItemDialogOpen
+                              ? null
+                              : () => _openCreateTimetableDialog(
+                                  context,
+                                  editor: WorkspaceEditorConfiguration(
+                                    anchorContext: anchor,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      Builder(
+                        builder: (anchor) => SkedPopupMenuButton<String>(
+                          key: const ValueKey('student-resource-menu'),
+                          // Popup defaults otherwise override the compact icon theme.
+                          style: WorkbenchChromeMetrics.of(context).iconStyle,
+                          tooltip: l10n.more,
+                          icon: const Icon(Icons.more_horiz),
+                          onSelected: (value) => value == 'periods'
+                              ? _managePeriodTimeSets()
+                              : openWorkspaceTransfer(
+                                  context,
+                                  AppMode.student,
+                                  direction: value == 'import'
+                                      ? SettingsTransferDirection.import
+                                      : SettingsTransferDirection.export,
+                                ),
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              value: 'periods',
+                              child: Text(l10n.managePeriodTimeSets),
                             ),
-                          ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
+                            PopupMenuItem(
+                              value: 'import',
+                              child: Text(l10n.importAction),
+                            ),
+                            PopupMenuItem(
+                              value: 'export',
+                              child: Text(l10n.exportAction),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    children: [
+                      for (final timetable in resources.timetables)
+                        TimetableResourceRow(
+                          key: ValueKey('resource-timetable-${timetable.id}'),
+                          timetableId: timetable.id,
+                          name: timetable.config.name,
+                          selected: timetable.id == resources.activeId,
+                          onSelected: widget.interactive
+                              ? () => _switchTimetableFromPicker(
+                                  context,
+                                  timetable,
+                                )
+                              : null,
+                          onEditAt:
+                              _courseEditorOpen || _timetableItemDialogOpen
+                              ? null
+                              : (anchor) => _openTimetableItemDialog(
+                                  context,
+                                  timetable,
+                                  editor: WorkspaceEditorConfiguration(
+                                    anchorContext: anchor,
+                                  ),
+                                ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+        );
+      },
     );
     if (widget.embedded) return framed;
     return Scaffold(key: widget.scaffoldKey, body: framed);
@@ -763,12 +772,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _jumpWeekBy(TimetableProvider provider, int offset) async {
-    final timetable = provider.activeTimetableOrNull;
+  Future<void> _jumpWeekBy(int offset) async {
+    if (!mounted) return;
+    final student = context.read<StudentViewState>();
+    final timetable = student.activeTimetableOrNull;
     if (timetable == null || offset == 0) {
       return;
     }
-    final currentWeek = _weekNavigationTarget ?? provider.selectedWeek;
+    final currentWeek = _weekNavigationTarget ?? student.selectedWeek;
     final targetWeek = (currentWeek + offset).clamp(
       1,
       timetable.config.totalWeeks,
@@ -776,21 +787,21 @@ class _HomeScreenState extends State<HomeScreen> {
     if (targetWeek == currentWeek) {
       return;
     }
-    await _animateToWeek(provider, targetWeek);
+    await _animateToWeek(targetWeek);
   }
 
-  Future<void> _settleWeekFromPager(
-    TimetableProvider provider,
-    int settledWeek,
-  ) async {
-    final timetable = provider.activeTimetableOrNull;
+  Future<void> _settleWeekFromPager(int settledWeek) async {
+    if (!mounted) return;
+    final student = context.read<StudentViewState>();
+    final timetable = student.activeTimetableOrNull;
     if (!mounted || timetable == null || _weekNavigationTarget != null) return;
     final targetWeek = settledWeek.clamp(1, timetable.config.totalWeeks);
-    if (targetWeek == provider.selectedWeek) return;
+    if (targetWeek == student.selectedWeek) return;
 
+    final commands = context.read<StudentCommands>();
     setState(() => _weekNavigationTarget = targetWeek);
     try {
-      await provider.setSelectedWeek(targetWeek);
+      await commands.setSelectedWeek(targetWeek);
     } finally {
       if (_weekNavigationTarget == targetWeek) {
         if (mounted) {
@@ -802,31 +813,34 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _jumpToToday(
-    TimetableProvider provider,
-    int realCurrentWeek,
-  ) async {
+  Future<void> _jumpToToday(int realCurrentWeek) async {
     final todayWeekday = normalizeDayOfWeek(DateTime.now().weekday);
     if (_selectedWeekday != todayWeekday && mounted) {
       setState(() => _selectedWeekday = todayWeekday);
     }
-    await _animateToWeek(provider, realCurrentWeek);
+    await _animateToWeek(realCurrentWeek);
   }
 
   Future<void> _animateToWeek(
-    TimetableProvider provider,
     int week, {
     bool Function()? isSessionCurrent,
   }) async {
-    if (isSessionCurrent?.call() == false) return;
+    if (!mounted || isSessionCurrent?.call() == false) return;
+    final student = context.read<StudentViewState>();
+    final commands = context.read<StudentCommands>();
+    final sessionChanges = Listenable.merge([
+      student,
+      context.read<AppDataMaintenance>(),
+      context.read<WorkspaceViewState>(),
+    ]);
     var sessionValid = true;
     void validateSession() {
       sessionValid = sessionValid && isSessionCurrent?.call() != false;
     }
 
-    if (isSessionCurrent != null) provider.addListener(validateSession);
+    if (isSessionCurrent != null) sessionChanges.addListener(validateSession);
     final navigationGeneration = ++_weekNavigationGeneration;
-    final originWeek = _weekNavigationTarget ?? provider.selectedWeek;
+    final originWeek = _weekNavigationTarget ?? student.selectedWeek;
     final direction = week.compareTo(originWeek).sign;
     if (mounted) {
       setState(() {
@@ -858,9 +872,11 @@ class _HomeScreenState extends State<HomeScreen> {
           navigationGeneration != _weekNavigationGeneration) {
         return;
       }
-      await provider.setSelectedWeek(week);
+      await commands.setSelectedWeek(week);
     } finally {
-      if (isSessionCurrent != null) provider.removeListener(validateSession);
+      if (isSessionCurrent != null) {
+        sessionChanges.removeListener(validateSession);
+      }
       if (navigationGeneration == _weekNavigationGeneration) {
         _weekNavigationTarget = null;
         if (mounted && _weekNavigationDirection != 0) {
@@ -873,10 +889,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _StudentHomeSnapshot {
   const _StudentHomeSnapshot({
-    required this.isLoaded,
     required this.activeTimetable,
-    required this.timetables,
-    required this.periodTimeSets,
+    required this.periodTimes,
     required this.selectedWeek,
     required this.localeCode,
     required this.preserveTimetableGaps,
@@ -905,15 +919,16 @@ class _StudentHomeSnapshot {
     required this.toolbarHiddenItemsBehavior,
   });
 
-  factory _StudentHomeSnapshot.from(TimetableProvider provider) {
-    final data = provider.studentMode;
+  factory _StudentHomeSnapshot.from(StudentViewState student) {
+    final data = student.data;
+    final timetable = student.activeTimetableOrNull;
     return _StudentHomeSnapshot(
-      isLoaded: provider.isLoaded,
-      activeTimetable: provider.activeTimetableOrNull,
-      timetables: data.timetables,
-      periodTimeSets: data.periodTimeSets,
-      selectedWeek: provider.selectedWeek,
-      localeCode: provider.localeCode,
+      activeTimetable: timetable,
+      periodTimes: timetable == null
+          ? const []
+          : student.periodTimesForTimetable(timetable),
+      selectedWeek: student.selectedWeek,
+      localeCode: student.localeCode,
       preserveTimetableGaps: data.preserveTimetableGaps,
       showPastEndedCourses: data.showPastEndedCourses,
       showFutureCourses: data.showFutureCourses,
@@ -941,10 +956,8 @@ class _StudentHomeSnapshot {
     );
   }
 
-  final bool isLoaded;
   final TimetableData? activeTimetable;
-  final List<TimetableData> timetables;
-  final List<PeriodTimeSet> periodTimeSets;
+  final List<CoursePeriodTime> periodTimes;
   final int selectedWeek;
   final String localeCode;
   final bool preserveTimetableGaps;
@@ -972,13 +985,14 @@ class _StudentHomeSnapshot {
   final List<String> hiddenToolbarNavigationIds;
   final String toolbarHiddenItemsBehavior;
 
+  String? displayedCourseIdForConflict(String key) =>
+      conflictDisplayCourseIds[key];
+
   @override
   bool operator ==(Object other) {
     return other is _StudentHomeSnapshot &&
-        other.isLoaded == isLoaded &&
         identical(other.activeTimetable, activeTimetable) &&
-        identical(other.timetables, timetables) &&
-        identical(other.periodTimeSets, periodTimeSets) &&
+        identical(other.periodTimes, periodTimes) &&
         other.selectedWeek == selectedWeek &&
         other.localeCode == localeCode &&
         other.preserveTimetableGaps == preserveTimetableGaps &&
@@ -1012,10 +1026,8 @@ class _StudentHomeSnapshot {
 
   @override
   int get hashCode => Object.hashAll([
-    isLoaded,
     identityHashCode(activeTimetable),
-    identityHashCode(timetables),
-    identityHashCode(periodTimeSets),
+    identityHashCode(periodTimes),
     selectedWeek,
     localeCode,
     preserveTimetableGaps,

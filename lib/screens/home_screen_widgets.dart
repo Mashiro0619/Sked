@@ -595,7 +595,16 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
 
   Widget _desktopCompact(BuildContext context, DateTime first, DateTime last) {
     final l = AppLocalizations.of(context);
-    final p = context.watch<TimetableProvider>();
+    final workspace = context
+        .select<
+          WorkspaceViewState,
+          ({AppMode activeMode, Set<AppMode> enabledWorkspaces})
+        >(
+          (view) => (
+            activeMode: view.activeMode,
+            enabledWorkspaces: view.enabledWorkspaces,
+          ),
+        );
     final assistant = AssistantPaneScope.of(context);
     final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
     return WorkbenchCompactCalendarBar(
@@ -687,7 +696,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 : (_) => onOpenSettings!(),
           ),
         if (needsWorkspaceMenu(context))
-          for (final mode in p.enabledWorkspaces)
+          for (final mode in workspace.enabledWorkspaces)
             WorkbenchOverflowAction(
               id: 'workspace-menu-${mode.value}',
               label: mode == AppMode.student
@@ -696,8 +705,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               icon: mode == AppMode.student
                   ? Icons.school_outlined
                   : Icons.event_note_outlined,
-              selected: p.activeMode == mode,
-              dividerBefore: mode == p.enabledWorkspaces.first,
+              selected: workspace.activeMode == mode,
+              dividerBefore: mode == workspace.enabledWorkspaces.first,
               onSelected: (_) => selectWorkspace(context, mode),
             ),
       ],
@@ -996,13 +1005,13 @@ class _DayStripMetrics {
 
 class _TimetablePickerPanel extends StatefulWidget {
   const _TimetablePickerPanel({
-    required this.provider,
+    required this.student,
     required this.onSwitch,
     required this.onEdit,
     required this.onCreate,
   });
 
-  final TimetableProvider provider;
+  final StudentViewState student;
   final Future<bool> Function(BuildContext context, TimetableData timetable)
   onSwitch;
   final Future<bool> Function(BuildContext context, TimetableData timetable)
@@ -1041,7 +1050,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
       closePanel =
           completed &&
           closeWhenNoTimetables &&
-          widget.provider.timetables.isEmpty;
+          widget.student.timetables.isEmpty;
     } finally {
       if (mounted && !closePanel) {
         setState(() => _childDialogOpen = false);
@@ -1106,15 +1115,14 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
               Flexible(
                 fit: floating ? FlexFit.loose : FlexFit.tight,
                 child: ListenableBuilder(
-                  listenable: widget.provider,
+                  listenable: widget.student,
                   builder: (context, _) {
-                    final selectedId =
-                        widget.provider.activeTimetableOrNull?.id;
+                    final selectedId = widget.student.activeTimetableOrNull?.id;
                     return ListView(
                       shrinkWrap: floating,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
-                        for (final item in widget.provider.timetables)
+                        for (final item in widget.student.timetables)
                           _TimetableDrawerItem(
                             timetable: item,
                             selected: item.id == selectedId,
@@ -1207,7 +1215,7 @@ class _TimetableDrawerItem extends StatelessWidget {
 class _TimetableWeekPager extends StatefulWidget {
   const _TimetableWeekPager({
     required this.controller,
-    required this.provider,
+    required this.snapshot,
     required this.timetable,
     required this.config,
     required this.committedWeek,
@@ -1229,7 +1237,7 @@ class _TimetableWeekPager extends StatefulWidget {
   });
 
   final PageController controller;
-  final TimetableProvider provider;
+  final _StudentHomeSnapshot snapshot;
   final TimetableData timetable;
   final TimetableConfig config;
   final int committedWeek;
@@ -1583,19 +1591,19 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
     final realCurrentWeek = currentWeekFor(widget.config);
     final liveCourseTarget = currentOrNextCourseTargetFor(
       timetable: widget.timetable,
-      periodTimes: widget.provider.periodTimesForTimetable(widget.timetable),
+      periodTimes: widget.snapshot.periodTimes,
       selectedWeek: pageWeek,
       realCurrentWeek: realCurrentWeek,
       now: _now(),
       displayedCourseIdForConflict:
-          widget.provider.displayedCourseIdForConflict,
+          widget.snapshot.displayedCourseIdForConflict,
     );
     final liveCourseOutlineColorValue =
-        widget.provider.liveCourseOutlineFollowTheme
+        widget.snapshot.liveCourseOutlineFollowTheme
         ? deriveLiveCourseOutlineColorFromSeed(
-            Color(widget.provider.themeSeedColorValue),
+            Color(widget.snapshot.themeSeedColorValue),
           ).toARGB32()
-        : widget.provider.liveCourseOutlineColorValue;
+        : widget.snapshot.liveCourseOutlineColorValue;
     final horizontalHandoffEnabled =
         widget.swipeEnabled &&
         ((widget.viewMode == _StudentTimetableView.day &&
@@ -1637,33 +1645,31 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
                 child: TimetableGrid(
                   key: ValueKey('student-timetable-grid-$pageWeek'),
                   timetable: widget.timetable,
-                  periodTimes: widget.provider.periodTimesForTimetable(
-                    widget.timetable,
-                  ),
+                  periodTimes: widget.snapshot.periodTimes,
                   weekDateStart: weekStart,
                   selectedWeek: pageWeek,
                   realCurrentWeek: realCurrentWeek,
-                  localeCode: widget.provider.localeCode,
-                  preserveGaps: widget.provider.preserveTimetableGaps,
-                  showPastEndedCourses: widget.provider.showPastEndedCourses,
-                  showFutureCourses: widget.provider.showFutureCourses,
-                  showGridLines: widget.provider.showTimetableGridLines,
-                  themeColorMode: widget.provider.themeColorMode,
-                  courseNameColorValues: widget.provider.courseNameColorValues,
+                  localeCode: widget.snapshot.localeCode,
+                  preserveGaps: widget.snapshot.preserveTimetableGaps,
+                  showPastEndedCourses: widget.snapshot.showPastEndedCourses,
+                  showFutureCourses: widget.snapshot.showFutureCourses,
+                  showGridLines: widget.snapshot.showTimetableGridLines,
+                  themeColorMode: widget.snapshot.themeColorMode,
+                  courseNameColorValues: widget.snapshot.courseNameColorValues,
                   colorfulCourseTextColorMode:
-                      widget.provider.colorfulCourseTextColorMode,
+                      widget.snapshot.colorfulCourseTextColorMode,
                   colorfulCourseTextColorValue: widget
-                      .provider
+                      .snapshot
                       .colorfulUiColorValues[colorfulCourseTextColorKey],
                   displayedCourseIdForConflict:
-                      widget.provider.displayedCourseIdForConflict,
+                      widget.snapshot.displayedCourseIdForConflict,
                   liveCourseTarget: liveCourseTarget,
                   liveCourseOutlineEnabled:
-                      widget.provider.liveCourseOutlineEnabled,
-                  liveCourseOutlineMode: widget.provider.liveCourseOutlineMode,
+                      widget.snapshot.liveCourseOutlineEnabled,
+                  liveCourseOutlineMode: widget.snapshot.liveCourseOutlineMode,
                   liveCourseOutlineColorValue: liveCourseOutlineColorValue,
                   liveCourseOutlineWidth:
-                      widget.provider.liveCourseOutlineWidth,
+                      widget.snapshot.liveCourseOutlineWidth,
                   visibleWeekdays: widget.viewMode == _StudentTimetableView.day
                       ? [widget.selectedWeekday]
                       : const <int>[1, 2, 3, 4, 5, 6, 7],
@@ -1890,11 +1896,25 @@ class _EmptyTimetableToolbar extends StatelessWidget {
       );
     }
     if (compactTouch) {
-      final p = context.watch<TimetableProvider>();
+      final navigation = context
+          .select<
+            SettingsViewState,
+            ({
+              List<String> order,
+              List<String> hiddenIds,
+              String hiddenBehavior,
+            })
+          >(
+            (view) => (
+              order: view.studentToolbarNavigationOrder,
+              hiddenIds: view.studentHiddenToolbarNavigationIds,
+              hiddenBehavior: view.studentToolbarHiddenItemsBehavior,
+            ),
+          );
       final placement = MobileToolbarLayout.resolve(
-        order: p.studentToolbarNavigationOrder,
-        hiddenIds: p.studentHiddenToolbarNavigationIds,
-        hiddenBehavior: p.studentToolbarHiddenItemsBehavior,
+        order: navigation.order,
+        hiddenIds: navigation.hiddenIds,
+        hiddenBehavior: navigation.hiddenBehavior,
         defaultOrder: studentToolbarNavigationDefaultOrder,
         hasFixedMenuItems: onManagePeriodTimeSets != null,
         availableIds: {
