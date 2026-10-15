@@ -1,4 +1,4 @@
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_clear_controller.dart';
 import 'agenda_coordinator.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_notification_service.dart';
@@ -27,12 +27,12 @@ class AppDataClearCoordinator {
   final AgendaCoordinator? agendaCoordinator;
   final DesktopLayoutPreferences? desktopLayoutPreferences;
 
-  Future<void> clearAndExit(TimetableProvider provider) async {
+  Future<void> clearAndExit(AppDataClearController dataClear) async {
     final layout = desktopLayoutPreferences ?? DesktopLayoutPreferences();
     var layoutFrozen = false;
     var dataCleared = false;
     try {
-      await provider.runExclusiveDataClear(
+      await dataClear.run(
         clear: () async {
           // This queue is intentionally separate from business persistence.
           // Drain it before deleting files so a late resize cannot recreate them.

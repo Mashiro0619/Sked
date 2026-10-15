@@ -14,6 +14,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/controllers/app_data_clear_controller.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
@@ -121,7 +122,7 @@ class _FakeDataClearCoordinator extends AppDataClearCoordinator {
   Object? failure;
 
   @override
-  Future<void> clearAndExit(TimetableProvider provider) async {
+  Future<void> clearAndExit(AppDataClearController dataClear) async {
     calls += 1;
     final error = failure;
     if (error != null) throw error;
@@ -130,8 +131,8 @@ class _FakeDataClearCoordinator extends AppDataClearCoordinator {
 
 class _CommittedDataClearCoordinator extends AppDataClearCoordinator {
   @override
-  Future<void> clearAndExit(TimetableProvider provider) {
-    return provider.runExclusiveDataClear(
+  Future<void> clearAndExit(AppDataClearController dataClear) {
+    return dataClear.run(
       clear: () async {},
       exit: () async => throw StateError('exit failed'),
     );

@@ -166,30 +166,51 @@ void main() {
     expect(await unsupported.exists(), isFalse);
   });
 
-  test('coordinator clears and exits under the provider write lease', () async {
-    final storage = _MemoryStorage()
-      ..data = buildInitialAppData(buildDefaultPeriodTimes());
-    final provider = TimetableProvider(
-      storage: storage,
-      secretStore: secrets,
-      schoolSiteService: SchoolSiteService(
-        store: _MemorySchoolSiteStore(),
-        coordinator: SchoolSiteStorageCoordinator(),
-      ),
-    );
-    await provider.load();
-    addTearDown(provider.dispose);
-    final clearService = _FakeClearService();
-    final exitController = _FakeExitController();
+  test(
+    'coordinator publishes the clear lifecycle under its write lease',
+    () async {
+      final storage = _MemoryStorage()
+        ..data = buildInitialAppData(buildDefaultPeriodTimes());
+      final provider = TimetableProvider(
+        storage: storage,
+        secretStore: secrets,
+        schoolSiteService: SchoolSiteService(
+          store: _MemorySchoolSiteStore(),
+          coordinator: SchoolSiteStorageCoordinator(),
+        ),
+      );
+      await provider.load();
+      addTearDown(provider.dispose);
+      final clearService = _FakeClearService();
+      final exitController = _FakeExitController();
 
-    await AppDataClearCoordinator(
-      clearService: clearService,
-      exitController: exitController,
-    ).clearAndExit(provider);
+      final originalSession = provider.maintenance.dataSessionToken;
+      final observed = <(bool, bool)>[];
+      provider.dataClear.addListener(() {
+        observed.add((
+          provider.dataClear.isActive,
+          provider.dataClear.isCommitted,
+        ));
+      });
 
-    expect(clearService.calls, 1);
-    expect(exitController.calls, 1);
-  });
+      final clearing = AppDataClearCoordinator(
+        clearService: clearService,
+        exitController: exitController,
+      ).clearAndExit(provider.dataClear);
+
+      expect(provider.dataClear.isActive, isTrue);
+      expect(
+        provider.maintenance.dataSessionToken,
+        isNot(same(originalSession)),
+      );
+      await clearing;
+
+      expect(clearService.calls, 1);
+      expect(exitController.calls, 1);
+      expect(observed, [(true, false), (true, true)]);
+      expect(provider.maintenance.isReserved, isTrue);
+    },
+  );
 
   test(
     'coordinator fences headless projection without a foreground agenda owner',
@@ -212,7 +233,7 @@ void main() {
         clearService: _FakeClearService(),
         exitController: _FakeExitController(),
         projectionFenceStore: fenceStore,
-      ).clearAndExit(provider);
+      ).clearAndExit(provider.dataClear);
 
       expect((await fenceStore.readProjectionFence()).blocked, isTrue);
     },
@@ -271,7 +292,7 @@ void main() {
         clearService: _FakeClearService(),
         exitController: _FakeExitController(),
         notificationService: service,
-      ).clearAndExit(provider);
+      ).clearAndExit(provider.dataClear);
 
       expect(gateway.scheduled, isEmpty);
     },
@@ -303,7 +324,7 @@ void main() {
       final operation = AppDataClearCoordinator(
         clearService: clearService,
         exitController: exitController,
-      ).clearAndExit(provider);
+      ).clearAndExit(provider.dataClear);
 
       if (exitThrows) {
         await expectLater(operation, throwsStateError);
@@ -344,6 +365,13 @@ void main() {
     await provider.load();
     storage.saveCount = 0;
     addTearDown(provider.dispose);
+    final observed = <(bool, bool)>[];
+    provider.dataClear.addListener(() {
+      observed.add((
+        provider.dataClear.isActive,
+        provider.dataClear.isCommitted,
+      ));
+    });
     final clearService = _FakeClearService()
       ..nextError = StateError('clear failed');
     final coordinator = AppDataClearCoordinator(
@@ -351,7 +379,12 @@ void main() {
       exitController: _FakeExitController(),
     );
 
-    await expectLater(coordinator.clearAndExit(provider), throwsStateError);
+    await expectLater(
+      coordinator.clearAndExit(provider.dataClear),
+      throwsStateError,
+    );
+    expect(provider.maintenance.isReserved, isFalse);
+    expect(observed, [(true, false), (false, false)]);
 
     await provider.updateLocaleCode('zh');
     expect(storage.data?.localeCode, 'zh');
@@ -361,8 +394,14 @@ void main() {
     expect(schoolSiteStore.saveCount, 1);
 
     clearService.onClear = () async => storage.data = null;
-    await expectLater(coordinator.clearAndExit(provider), completes);
+    await expectLater(coordinator.clearAndExit(provider.dataClear), completes);
     expect(clearService.calls, 2);
+    expect(observed, [
+      (true, false),
+      (false, false),
+      (true, false),
+      (true, true),
+    ]);
     expect(storage.data, isNull);
     await expectLater(
       provider.updateLocaleCode('en'),
@@ -404,7 +443,7 @@ void main() {
       final operation = AppDataClearCoordinator(
         clearService: clearService,
         exitController: _FakeExitController(),
-      ).clearAndExit(provider);
+      ).clearAndExit(provider.dataClear);
 
       await Future<void>.delayed(Duration.zero);
       expect(clearService.started.isCompleted, isFalse);
@@ -451,7 +490,7 @@ void main() {
       final clearOperation = AppDataClearCoordinator(
         clearService: clearService,
         exitController: _FakeExitController(),
-      ).clearAndExit(provider);
+      ).clearAndExit(provider.dataClear);
       await clearService.started.future;
 
       var shutdownCompleted = false;

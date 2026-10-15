@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import '../controllers/app_session.dart';
 import '../controllers/app_backup_controller.dart';
 import '../controllers/app_data_defaults.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_quiescence.dart';
 import '../controllers/app_lifecycle.dart';
 import '../controllers/observable_view_state.dart';
 import '../controllers/app_data_maintenance.dart';
@@ -66,7 +68,6 @@ String _defaultSystemLocaleCodeResolver() {
 abstract class _TimetableProviderBase extends ChangeNotifier {
   AppSession get _session;
   AppDataMaintenance get _maintenance;
-  AppPersistence get _persistence;
   WorkspaceCommands get _workspaces;
   AppSession get session => _session;
   Stream<AppDataCommit> get committedData => _session.commits;
@@ -121,24 +122,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
 
   void _ensureAppBackupRestoreMutationAllowed() =>
       _maintenance.ensureMutationAllowed();
-
-  AppDataSessionToken _reserveAppBackupRestore() {
-    _persistence.flushScheduledUiStateSave();
-    return _maintenance.reserve();
-  }
-
-  void _releaseAppBackupRestore(AppDataSessionToken token) =>
-      _maintenance.release(token);
-
-  Future<T> _runWithAppBackupRestoreLease<T>(
-    AppDataSessionToken token,
-    Future<T> Function() action, {
-    bool allowRecoveryBlocked = false,
-  }) => _maintenance.runWithLease(
-    token,
-    action,
-    allowRecoveryBlocked: allowRecoveryBlocked,
-  );
 }
 
 class TimetableProvider extends _TimetableProviderBase
@@ -279,6 +262,22 @@ class TimetableProvider extends _TimetableProviderBase
         if (!_isDisposed) notifyListeners();
       },
     );
+    _quiescence = AppQuiescence(
+      session: _session,
+      persistence: _persistence,
+      secrets: _schoolImportSecrets,
+      schoolSites: _schoolSites,
+      transactions: _workspaceTransactions,
+    );
+    _dataClear = AppDataClearController(
+      maintenance: _maintenance,
+      persistence: _persistence,
+      schoolSites: _schoolSites,
+      quiescence: _quiescence,
+      notifyViewChanged: () {
+        if (!_isDisposed) notifyListeners();
+      },
+    );
     _viewUpdates = AppViewUpdates([
       _studentView,
       _generalView,
@@ -293,9 +292,10 @@ class TimetableProvider extends _TimetableProviderBase
   late final AppBackupController _backups;
   late final AppDataDefaults _defaults;
   late final AppLifecycle _lifecycle;
+  late final AppQuiescence _quiescence;
+  late final AppDataClearController _dataClear;
   @override
   late final AppDataMaintenance _maintenance;
-  @override
   late final AppPersistence _persistence;
   late final DataTransferController _transfers;
   @override
@@ -321,7 +321,6 @@ class TimetableProvider extends _TimetableProviderBase
 
   final Future<void> Function(Future<void> Function()) _workspaceMutationLock;
 
-  int get _appDataMutationEpoch => _session.mutationEpoch;
   final _workspaceTransactions = WorkspaceTransactions();
 
   @override
@@ -584,10 +583,6 @@ class TimetableProvider extends _TimetableProviderBase
     moveCustomRange: moveCustomRange,
   );
 
-  var _dataClearReserved = false;
-  Future<void>? _dataClearInFlight;
-  SchoolSiteRestoreLease? _permanentDataClearSchoolSiteLease;
-
   bool get isLoaded => _session.isLoaded;
 
   /// The latest in-memory application snapshot. Consumers that need a
@@ -613,10 +608,10 @@ class TimetableProvider extends _TimetableProviderBase
   /// held after a successful clear, because the in-memory [appData] snapshot
   /// is then permanently stale. External consumers such as platform planners
   /// must use this gate before projecting that snapshot.
-  bool get isDataClearActive => _dataClearReserved;
+  bool get isDataClearActive => _dataClear.isActive;
 
-  bool get isDataClearCommitted =>
-      _dataClearReserved && _permanentDataClearSchoolSiteLease != null;
+  bool get isDataClearCommitted => _dataClear.isCommitted;
+  AppDataClearController get dataClear => _dataClear;
   List<String> get recoveryArtifacts => _lifecycle.recoveryArtifacts;
   bool get canStartFreshAfterRecovery => _lifecycle.canStartFreshAfterRecovery;
 
@@ -1032,7 +1027,7 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   Future<void> quiesceForShutdown() async {
-    final dataClear = _dataClearInFlight;
+    final dataClear = _dataClear.inFlight;
     if (dataClear != null) {
       try {
         await dataClear;
@@ -1046,39 +1041,12 @@ class TimetableProvider extends _TimetableProviderBase
         );
       }
     }
-    await _quiesceForShutdown(
+    await _quiescence.drain(
       // A committed clear intentionally keeps a permanent school-site lease.
       // Waiting for that queue again would deadlock application teardown after
       // SystemNavigator.pop returns.
       waitForSchoolSites: !isDataClearCommitted,
     );
-  }
-
-  Future<void> _quiesceForShutdown({required bool waitForSchoolSites}) async {
-    while (true) {
-      final appDataEpoch = _appDataMutationEpoch;
-      final secretEpoch = _schoolImportSecrets.mutationEpoch;
-      try {
-        await flushPendingUiStateSaves();
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Final deferred UI state save failed during shutdown: '
-          '$error\n$stackTrace',
-        );
-      }
-      await Future.wait<void>([
-        _repository.waitForPendingWrites(),
-        _schoolImportSecrets.waitForPendingWrites(),
-        if (waitForSchoolSites) _schoolSites.waitForPendingOperations(),
-      ]);
-      await Future<void>.microtask(() {});
-      if (appDataEpoch == _appDataMutationEpoch &&
-          secretEpoch == _schoolImportSecrets.mutationEpoch &&
-          _persistence.isIdle &&
-          _workspaceTransactions.isIdle) {
-        return;
-      }
-    }
   }
 
   /// Prevents new writes while local data is removed and the process exits.
@@ -1091,60 +1059,7 @@ class TimetableProvider extends _TimetableProviderBase
   Future<void> runExclusiveDataClear({
     required Future<void> Function() clear,
     required Future<void> Function() exit,
-  }) {
-    if (_dataClearReserved || _permanentDataClearSchoolSiteLease != null) {
-      return Future<void>.error(
-        StateError('A local app-data clear is already active or complete.'),
-      );
-    }
-    final operation = _runExclusiveDataClear(clear: clear, exit: exit);
-    _dataClearInFlight = operation;
-    operation.whenComplete(() {
-      if (identical(_dataClearInFlight, operation)) {
-        _dataClearInFlight = null;
-      }
-    }).ignore();
-    return operation;
-  }
-
-  Future<void> _runExclusiveDataClear({
-    required Future<void> Function() clear,
-    required Future<void> Function() exit,
-  }) async {
-    _dataClearReserved = true;
-    if (!_isDisposed) notifyListeners();
-    final token = _reserveAppBackupRestore();
-    final schoolSiteLeaseFuture = _schoolSites.reserveRestore();
-    SchoolSiteRestoreLease? schoolSiteLease;
-    var dataWasCleared = false;
-    try {
-      await _runWithAppBackupRestoreLease(token, () async {
-        // reserveRestore blocks new writes synchronously and resolves only
-        // after previously accepted school-site operations have completed.
-        schoolSiteLease = await schoolSiteLeaseFuture;
-        await _quiesceForShutdown(waitForSchoolSites: false);
-        await clear();
-
-        dataWasCleared = true;
-        _permanentDataClearSchoolSiteLease = schoolSiteLease;
-        schoolSiteLease = null;
-        await exit();
-      }, allowRecoveryBlocked: true);
-    } finally {
-      if (!dataWasCleared) {
-        // The lease may still be queued behind another maintenance operation.
-        // Await it before releasing so its synchronous reservation cannot leak.
-        try {
-          final lease = schoolSiteLease ?? await schoolSiteLeaseFuture;
-          await lease.release();
-        } finally {
-          _releaseAppBackupRestore(token);
-          _dataClearReserved = false;
-          if (!_isDisposed) notifyListeners();
-        }
-      }
-    }
-  }
+  }) => _dataClear.run(clear: clear, exit: exit);
 
   @override
   void notifyListeners() {
@@ -1162,6 +1077,7 @@ class TimetableProvider extends _TimetableProviderBase
     _workspaceView.dispose();
     _settingsView.dispose();
     _lifecycle.dispose();
+    _dataClear.dispose();
     _maintenance.dispose();
     unawaited(_session.close());
     super.dispose();

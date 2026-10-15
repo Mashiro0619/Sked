@@ -481,7 +481,10 @@ void main() {
           }),
           exitController: _ExitController(error: StateError('exit failed')),
         );
-        await expectLater(coordinator.clearAndExit(provider), throwsStateError);
+        await expectLater(
+          coordinator.clearAndExit(provider.dataClear),
+          throwsStateError,
+        );
         p.setPreferredSize(_resources, const PreferredRegionSize(width: 360));
         expect(await p.flush(), isTrue);
         expect(p.preferenceFor(_resources)?.width, clearFails ? 360 : null);

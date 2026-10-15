@@ -5,6 +5,7 @@ import 'package:provider/single_child_widget.dart';
 
 import '../controllers/app_backup_controller.dart';
 import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_data_clear_controller.dart';
 import '../controllers/app_lifecycle.dart';
 import '../controllers/app_persistence.dart';
 import '../controllers/app_session.dart';
@@ -58,6 +59,7 @@ class AppScope extends StatelessWidget {
     ChangeNotifierProvider<SettingsViewState>.value(value: app.settingsView),
     Provider<SettingsCommands>.value(value: app.settingsCommands),
     ChangeNotifierProvider<AppDataMaintenance>.value(value: app.maintenance),
+    ChangeNotifierProvider<AppDataClearController>.value(value: app.dataClear),
     Provider<AppPersistence>.value(value: app.persistence),
     Provider<SchoolImportSecretController>.value(
       value: app.schoolImportSecrets,

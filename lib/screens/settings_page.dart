@@ -994,7 +994,7 @@ class _SettingsPageState extends State<SettingsPage>
     _setFlowOpen(_SettingsFlow.clearAppData, true);
     setState(() => _clearingAppData = true);
     try {
-      await _dataClearCoordinator.clearAndExit(provider);
+      await _dataClearCoordinator.clearAndExit(provider.dataClear);
     } catch (error, stackTrace) {
       debugPrint('Clearing local app data failed: $error\n$stackTrace');
       if (mounted) {
