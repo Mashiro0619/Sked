@@ -22,7 +22,17 @@ import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/app_locale.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_lifecycle.dart';
+import '../controllers/app_session.dart';
+import '../controllers/data_transfer_controller.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../providers/app_scope.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/app_update_coordinator.dart';
@@ -187,77 +197,85 @@ class _SettingsPageState extends State<SettingsPage>
   Widget build(BuildContext context) {
     final nestedPage =
         context.findAncestorWidgetOfExactType<SettingsPage>() != null;
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, _) {
-        final l = AppLocalizations.of(context);
-        final catalog = settingsCatalog(
-          l,
-          provider.enabledWorkspaces,
-          canClearData: !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
-        );
-        final content = PopScope(
-          canPop:
-              !uiCommandBusy &&
-              !_clearingAppData &&
-              !provider.isDataClearActive,
-          child: SettingsInteractionBlocker(
-            blocked:
-                uiCommandBusy || _clearingAppData || provider.isDataClearActive,
-            child: widget.initialDestination != null
-                ? _buildDestination(widget.initialDestination!, provider)
-                : AdaptiveSettingsScaffold(
-                    catalog: catalog,
-                    overviewBuilder:
-                        (context, controller, keys, open, header) =>
-                            _buildOverview(
-                              context,
-                              provider,
-                              controller,
-                              keys,
-                              open,
-                              header,
-                            ),
-                    builder: (entry) => SettingsPage(
-                      initialDestination: entry.destination,
-                      initialWorkspace:
-                          entry.destination == SettingsDestination.appearance
-                          ? _appearanceWorkspace
-                          : entry.workspace,
-                      onThemeWorkspaceChanged: _setAppearanceWorkspace,
-                      packageInfoLoader: widget.packageInfoLoader,
-                      dataClearCoordinator: widget.dataClearCoordinator,
-                      urlLauncher: widget.urlLauncher,
-                      storeUpdateService: widget.storeUpdateService,
-                      updateDistribution: widget.updateDistribution,
-                      notificationService: widget.notificationService,
-                    ),
-                  ),
-          ),
-        );
-        // The retained settings navigator owns one status footer. Nested
-        // destinations remain navigable and do not repeat the same notice.
-        if (nestedPage) {
-          return content;
-        }
-        return Column(
-          children: [
-            Expanded(child: content),
-            if (provider.isRestoringAppBackup && !provider.isDataClearActive)
-              const _BackupRestoreStatus(),
-          ],
-        );
-      },
+    return Consumer5<
+      SettingsViewState,
+      WorkspaceViewState,
+      AppLifecycle,
+      AppDataMaintenance,
+      AppDataClearController
+    >(
+      builder:
+          (context, settings, workspace, lifecycle, maintenance, dataClear, _) {
+            final l = AppLocalizations.of(context);
+            final catalog = settingsCatalog(
+              l,
+              workspace.enabledWorkspaces,
+              canClearData:
+                  !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
+            );
+            final content = PopScope(
+              canPop:
+                  !uiCommandBusy && !_clearingAppData && !dataClear.isActive,
+              child: SettingsInteractionBlocker(
+                blocked:
+                    uiCommandBusy || _clearingAppData || dataClear.isActive,
+                child: widget.initialDestination != null
+                    ? _buildDestination(widget.initialDestination!)
+                    : AdaptiveSettingsScaffold(
+                        catalog: catalog,
+                        overviewBuilder:
+                            (context, controller, keys, open, header) =>
+                                _buildOverview(
+                                  context,
+                                  controller,
+                                  keys,
+                                  open,
+                                  header,
+                                ),
+                        builder: (entry) => SettingsPage(
+                          initialDestination: entry.destination,
+                          initialWorkspace:
+                              entry.destination ==
+                                  SettingsDestination.appearance
+                              ? _appearanceWorkspace
+                              : entry.workspace,
+                          onThemeWorkspaceChanged: _setAppearanceWorkspace,
+                          packageInfoLoader: widget.packageInfoLoader,
+                          dataClearCoordinator: widget.dataClearCoordinator,
+                          urlLauncher: widget.urlLauncher,
+                          storeUpdateService: widget.storeUpdateService,
+                          updateDistribution: widget.updateDistribution,
+                          notificationService: widget.notificationService,
+                        ),
+                      ),
+              ),
+            );
+            // The retained settings navigator owns one status footer. Nested
+            // destinations remain navigable and do not repeat the same notice.
+            if (nestedPage) {
+              return content;
+            }
+            return Column(
+              children: [
+                Expanded(child: content),
+                if (maintenance.isReserved && !dataClear.isActive)
+                  const _BackupRestoreStatus(),
+              ],
+            );
+          },
     );
   }
 
   Widget _buildOverview(
     BuildContext pageContext,
-    TimetableProvider provider,
     ScrollController controller,
     Map<String, GlobalKey> keys,
     ValueChanged<SettingsDestination> open,
     Widget headerSliver,
   ) {
+    final settings = pageContext.read<SettingsViewState>();
+    final workspace = pageContext.read<WorkspaceViewState>();
+    final lifecycle = pageContext.read<AppLifecycle>();
     final l = AppLocalizations.of(context);
     Widget group(String id, String title, List<Widget> children) =>
         KeyedSubtree(
@@ -294,13 +312,13 @@ class _SettingsPageState extends State<SettingsPage>
       scrollViewKey: const PageStorageKey('settings-overview-scroll'),
       topPadding: 16,
       children: [
-        if (provider.lastRecoveryStatus != RecoveryStatus.none)
+        if (lifecycle.lastRecoveryStatus != RecoveryStatus.none)
           Padding(
             key: const ValueKey('settings-recovery-notice'),
             padding: const EdgeInsets.only(bottom: 16),
-            child: _RecoveryNoticeTile(status: provider.lastRecoveryStatus),
+            child: _RecoveryNoticeTile(status: lifecycle.lastRecoveryStatus),
           ),
-        if (provider.isWorkspaceEnabled(AppMode.student))
+        if (workspace.isEnabled(AppMode.student))
           group('student', l.studentTimetable, [
             link(
               'settings-student-display',
@@ -310,7 +328,7 @@ class _SettingsPageState extends State<SettingsPage>
               subtitle: l.timetableDisplaySettingsDesc,
             ),
           ]),
-        if (provider.isWorkspaceEnabled(AppMode.general))
+        if (workspace.isEnabled(AppMode.general))
           group('general', l.generalSchedule, [
             link(
               'settings-general-display',
@@ -350,7 +368,7 @@ class _SettingsPageState extends State<SettingsPage>
                 l.language,
                 Icons.language,
                 SettingsDestination.language,
-                value: languageLabelForLocaleCode(provider.localeCode, l10n: l),
+                value: languageLabelForLocaleCode(settings.localeCode, l10n: l),
               ),
               link(
                 'settings-appearance-details',
@@ -371,21 +389,21 @@ class _SettingsPageState extends State<SettingsPage>
           ),
         ]),
         group('data', l.settingsDataPrivacy, [
-          if (provider.isWorkspaceEnabled(AppMode.student))
+          if (workspace.isEnabled(AppMode.student))
             link(
               'settings-student-transfer',
               l.dataImportExport,
               Icons.school_outlined,
               SettingsDestination.student,
             ),
-          if (provider.isWorkspaceEnabled(AppMode.general))
+          if (workspace.isEnabled(AppMode.general))
             link(
               'settings-general-transfer',
               l.generalScheduleImportExport,
               Icons.import_export,
               SettingsDestination.general,
             ),
-          _appBackupControl(provider, l),
+          _appBackupControl(l),
           link(
             'settings-data-privacy',
             l.settingsDataPrivacy,
@@ -395,7 +413,7 @@ class _SettingsPageState extends State<SettingsPage>
           ),
         ]),
         group('about', l.settingsSectionAbout, [
-          ..._aboutControls(pageContext, provider, l).where(
+          ..._aboutControls(pageContext, l).where(
             (item) => item.key == const ValueKey('settings-check-for-updates'),
           ),
           link(
@@ -409,10 +427,9 @@ class _SettingsPageState extends State<SettingsPage>
     );
   }
 
-  Widget _buildDestination(
-    SettingsDestination destination,
-    TimetableProvider provider,
-  ) {
+  Widget _buildDestination(SettingsDestination destination) {
+    final workspace = context.read<WorkspaceViewState>();
+    final maintenance = context.read<AppDataMaintenance>();
     final l10n = AppLocalizations.of(context);
     if (destination == SettingsDestination.appearance) {
       return ThemeSettingsPage(
@@ -436,7 +453,7 @@ class _SettingsPageState extends State<SettingsPage>
       );
     }
     final mode = destination.workspace;
-    if (mode != null && !provider.isWorkspaceEnabled(mode)) {
+    if (mode != null && !workspace.isEnabled(mode)) {
       return const SizedBox.shrink();
     }
     if (destination == SettingsDestination.studentPreferences) {
@@ -490,20 +507,19 @@ class _SettingsPageState extends State<SettingsPage>
                       ? _dataTransferController.studentPageContent(
                           context,
                           busy: busy,
-                          importEnabled: !provider.isRestoringAppBackup,
+                          importEnabled: !maintenance.isReserved,
                           direction: widget.transferDirection,
-                          onAction: (action) => unawaited(
-                            _performStudentTransfer(provider, action),
-                          ),
+                          onAction: (action) =>
+                              unawaited(_performStudentTransfer(action)),
                           additionalImports: [
                             SettingsTransferPageTile(
                               key: const ValueKey('transfer-school-web'),
                               icon: Icons.language_outlined,
                               title: l10n.schoolWebImportEntry,
                               subtitle: l10n.schoolWebImportEntryDesc,
-                              onTap: busy || provider.isRestoringAppBackup
+                              onTap: busy || maintenance.isReserved
                                   ? null
-                                  : () => _openSchoolSitesPage(provider),
+                                  : () => _openSchoolSitesPage(),
                             ),
                           ],
                           importConfiguration: [
@@ -514,18 +530,17 @@ class _SettingsPageState extends State<SettingsPage>
                               subtitle: l10n.schoolImportParserSettingsDesc,
                               onTap: busy
                                   ? null
-                                  : () => _openParserSettingsPage(provider),
+                                  : () => _openParserSettingsPage(),
                             ),
                           ],
                         )
                       : _dataTransferController.generalPageContent(
                           context,
                           busy: busy,
-                          importEnabled: !provider.isRestoringAppBackup,
+                          importEnabled: !maintenance.isReserved,
                           direction: widget.transferDirection,
-                          onAction: (action) => unawaited(
-                            _performGeneralTransfer(provider, action),
-                          ),
+                          onAction: (action) =>
+                              unawaited(_performGeneralTransfer(action)),
                         ),
                 ),
               ],
@@ -534,8 +549,8 @@ class _SettingsPageState extends State<SettingsPage>
         ),
       );
     }
-    final privacyChildren = _privacyControls(provider, l10n);
-    final aboutChildren = _aboutControls(context, provider, l10n);
+    final privacyChildren = _privacyControls(l10n);
+    final aboutChildren = _aboutControls(context, l10n);
 
     final (title, children) = switch (destination) {
       SettingsDestination.about => (l10n.settingsSectionAbout, aboutChildren),
@@ -581,30 +596,27 @@ class _SettingsPageState extends State<SettingsPage>
     );
   }
 
-  Widget _appBackupControl(TimetableProvider provider, AppLocalizations l10n) =>
-      SettingsConnectedTile(
-        key: const ValueKey('settings-app-backup'),
-        leading: const Icon(Icons.inventory_2_outlined),
-        title: l10n.appBackupTitle,
-        subtitle: l10n.backupWorkspaceSelection,
-        trailing: const Icon(Icons.keyboard_arrow_up),
-        onTap: _isFlowOpen(_SettingsFlow.appDataActions)
-            ? null
-            : () => _showAppDataActions(provider),
-      );
+  Widget _appBackupControl(AppLocalizations l10n) => SettingsConnectedTile(
+    key: const ValueKey('settings-app-backup'),
+    leading: const Icon(Icons.inventory_2_outlined),
+    title: l10n.appBackupTitle,
+    subtitle: l10n.backupWorkspaceSelection,
+    trailing: const Icon(Icons.keyboard_arrow_up),
+    onTap: _isFlowOpen(_SettingsFlow.appDataActions)
+        ? null
+        : () => _showAppDataActions(),
+  );
 
-  List<Widget> _privacyControls(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
+  List<Widget> _privacyControls(AppLocalizations l10n) {
+    final lifecycle = context.read<AppLifecycle>();
     return [
       SettingsConnectedTile(
         leading: const Icon(Icons.privacy_tip_outlined),
         title: l10n.privacyPolicyTitle,
-        subtitle: provider.acceptedPrivacyPolicyVersion == null
+        subtitle: lifecycle.acceptedPrivacyPolicyVersion == null
             ? l10n.privacyPolicyEntryDesc
             : l10n.privacyPolicyAcceptedVersionLabel(
-                provider.acceptedPrivacyPolicyVersion!,
+                lifecycle.acceptedPrivacyPolicyVersion!,
               ),
         trailing: const Icon(Icons.chevron_right),
         onTap: _isFlowOpen(_SettingsFlow.privacyPolicy)
@@ -630,16 +642,15 @@ class _SettingsPageState extends State<SettingsPage>
           foregroundColor: Theme.of(context).colorScheme.error,
           onTap: _clearingAppData || _isFlowOpen(_SettingsFlow.clearAppData)
               ? null
-              : () => _confirmClearAppData(provider),
+              : () => _confirmClearAppData(),
         ),
     ];
   }
 
-  List<Widget> _aboutControls(
-    BuildContext pageContext,
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
+  List<Widget> _aboutControls(BuildContext pageContext, AppLocalizations l10n) {
+    final settings = pageContext.read<SettingsViewState>();
+    final commands = pageContext.read<SettingsCommands>();
+    final appSession = pageContext.read<AppSession>();
     final updateEntryBusy =
         uiCommandBusy ||
         _isFlowOpen(_SettingsFlow.updateCheck) ||
@@ -681,7 +692,7 @@ class _SettingsPageState extends State<SettingsPage>
       _DeveloperModeEntryTile(
         key: const ValueKey('settings-check-for-updates'),
         title: l10n.checkForUpdates,
-        subtitle: _buildUpdateSubtitle(provider, l10n),
+        subtitle: _buildUpdateSubtitle(l10n),
         onTap: updateEntryBusy ? null : _checkForUpdates,
         onLongPress: updateEntryBusy
             ? null
@@ -691,18 +702,18 @@ class _SettingsPageState extends State<SettingsPage>
       ),
       SettingsSwitchTile(
         key: const ValueKey('settings-include-prerelease-updates'),
-        value: provider.includePrereleaseUpdates,
+        value: settings.includePrereleaseUpdates,
         icon: Icons.science_outlined,
         title: l10n.includePrereleaseUpdates,
         subtitle: _updateDistribution?.isStore == true
             ? '${l10n.includePrereleaseUpdatesDesc} ${l10n.storePrereleaseNotice}'
             : l10n.includePrereleaseUpdatesDesc,
-        onChanged: updateEntryBusy || !provider.canWrite
+        onChanged: updateEntryBusy || !appSession.canWrite
             ? null
             : (value) => unawaited(
                 runUiCommand(
                   debugLabel: 'Updating prerelease update preference',
-                  command: () => provider.updateIncludePrereleaseUpdates(value),
+                  command: () => commands.updateIncludePrereleaseUpdates(value),
                 ),
               ),
       ),
@@ -734,14 +745,12 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _openParserSettingsPage(TimetableProvider provider) async {
+  Future<void> _openParserSettingsPage() async {
+    final scope = AppScope.capture(context)!;
     await _guardFlow(_SettingsFlow.parserSettingsPage, () async {
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const SchoolImportParserSettingsPage(),
-          ),
+          builder: (_) => scope.wrap(const SchoolImportParserSettingsPage()),
         ),
       );
     });
@@ -764,19 +773,17 @@ class _SettingsPageState extends State<SettingsPage>
     });
   }
 
-  String _buildUpdateSubtitle(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
+  String _buildUpdateSubtitle(AppLocalizations l10n) {
+    final settings = context.read<SettingsViewState>();
     final versionLabel = _currentVersion.isEmpty
         ? l10n.currentVersionLabel
         : '${l10n.currentVersionLabel} $_currentVersion';
-    final availableUpdateVersion = provider.availableUpdateVersion;
+    final availableUpdateVersion = settings.availableUpdateVersion;
     if (availableUpdateVersion == null ||
         availableUpdateVersion.isEmpty ||
         !_isNewerThanCurrentVersion(
           availableUpdateVersion,
-          includePrereleases: provider.includePrereleaseUpdates,
+          includePrereleases: settings.includePrereleaseUpdates,
         )) {
       return versionLabel;
     }
@@ -786,6 +793,12 @@ class _SettingsPageState extends State<SettingsPage>
   String _backupFileName() => 'Sked_backup.json';
 
   Future<void> _loadCurrentVersion() async {
+    final settings = context.read<SettingsViewState>();
+    final lifecycle = context.read<AppLifecycle>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final token = maintenance.dataSessionToken;
+    bool isCurrent() =>
+        mounted && identical(token, maintenance.dataSessionToken);
     String currentVersion;
     try {
       currentVersion = await loadCurrentAppVersion(
@@ -799,15 +812,15 @@ class _SettingsPageState extends State<SettingsPage>
       return;
     }
     setState(() => _currentVersion = currentVersion);
-    final provider = context.read<TimetableProvider>();
-    final availableUpdateVersion = provider.availableUpdateVersion;
+    if (!isCurrent()) return;
+    final availableUpdateVersion = settings.availableUpdateVersion;
     if (availableUpdateVersion == null || availableUpdateVersion.isEmpty) {
       return;
     }
     int comparison;
     try {
       comparison =
-          !provider.includePrereleaseUpdates &&
+          !settings.includePrereleaseUpdates &&
               isPrereleaseUpdateVersion(availableUpdateVersion)
           ? -1
           : compareUpdateVersions(availableUpdateVersion, currentVersion);
@@ -820,28 +833,31 @@ class _SettingsPageState extends State<SettingsPage>
         return true;
       }());
       await _clearAvailableUpdateVersionIfUnchanged(
-        provider,
+        lifecycle,
+        settings,
         availableUpdateVersion,
       );
       return;
     }
     if (comparison <= 0) {
       await _clearAvailableUpdateVersionIfUnchanged(
-        provider,
+        lifecycle,
+        settings,
         availableUpdateVersion,
       );
     }
   }
 
   Future<void> _clearAvailableUpdateVersionIfUnchanged(
-    TimetableProvider provider,
+    AppLifecycle lifecycle,
+    SettingsViewState settings,
     String capturedVersion,
   ) async {
-    if (provider.availableUpdateVersion != capturedVersion) {
+    if (settings.availableUpdateVersion != capturedVersion) {
       return;
     }
     try {
-      await provider.updateAvailableUpdateVersion(null);
+      await lifecycle.updateAvailableUpdateVersion(null);
     } catch (error, stackTrace) {
       debugPrint(
         'Clearing the stale available update version failed: '
@@ -866,16 +882,13 @@ class _SettingsPageState extends State<SettingsPage>
     if (_isFlowOpen(_SettingsFlow.updateCheck)) return;
     await _guardFlow(_SettingsFlow.developerModePage, () async {
       if (!mounted || !pageContext.mounted) return;
-      final provider = pageContext.read<TimetableProvider>();
+      final scope = AppScope.capture(pageContext)!;
       unawaited(Feedback.forLongPress(pageContext));
       // The overview's State lives above the settings navigator. Use the
       // rendered entry's route for both overview and About-page navigation.
       await Navigator.of(pageContext).push<void>(
         MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const DeveloperModePage(),
-          ),
+          builder: (_) => scope.wrap(const DeveloperModePage()),
         ),
       );
     });
@@ -961,7 +974,11 @@ class _SettingsPageState extends State<SettingsPage>
     });
   }
 
-  Future<void> _confirmClearAppData(TimetableProvider provider) async {
+  Future<void> _confirmClearAppData() async {
+    final dataClear = context.read<AppDataClearController>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final token = maintenance.dataSessionToken;
+    final coordinator = _dataClearCoordinator;
     if (_clearingAppData || _isFlowOpen(_SettingsFlow.clearAppData)) return;
     final confirmed = await showExpressiveDialog<bool>(
       context: context,
@@ -989,18 +1006,22 @@ class _SettingsPageState extends State<SettingsPage>
         );
       },
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true ||
+        !mounted ||
+        !identical(token, maintenance.dataSessionToken)) {
+      return;
+    }
 
     _setFlowOpen(_SettingsFlow.clearAppData, true);
     setState(() => _clearingAppData = true);
     try {
-      await _dataClearCoordinator.clearAndExit(provider.dataClear);
+      await coordinator.clearAndExit(dataClear);
     } catch (error, stackTrace) {
       debugPrint('Clearing local app data failed: $error\n$stackTrace');
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         _showMessage(
-          provider.isDataClearCommitted
+          dataClear.isCommitted
               ? l10n.clearAppDataExitFailed
               : l10n.clearAppDataFailed,
         );
@@ -1009,66 +1030,99 @@ class _SettingsPageState extends State<SettingsPage>
       // A completed clear is intentionally a permanent maintenance state.
       // Keep the page blocked if the platform exit unexpectedly returns or
       // fails, so the user cannot interact with stale in-memory data.
-      if (mounted && !provider.isDataClearCommitted) {
+      if (mounted && !dataClear.isCommitted) {
         setState(() => _clearingAppData = false);
         _setFlowOpen(_SettingsFlow.clearAppData, false);
       }
     }
   }
 
-  Future<void> _performStudentTransfer(
-    TimetableProvider provider,
-    SettingsStudentDataAction action,
-  ) => _guardFlow(_SettingsFlow.studentDataActions, () async {
-    switch (action) {
-      case SettingsStudentDataAction.importTimetables:
-        await TimetableImportFlow.importTimetables(context);
-      case SettingsStudentDataAction.importTimetablesText:
-        await _importTimetablesFromText(provider);
-      case SettingsStudentDataAction.importSchoolHtml:
-        await _openSchoolHtmlImportPage(provider);
-      case SettingsStudentDataAction.exportTimetablesShare:
-        await _exportTimetables(provider, share: true);
-      case SettingsStudentDataAction.exportTimetablesSave:
-        await _exportTimetables(provider, share: false);
-      case SettingsStudentDataAction.exportTimetablesText:
-        await _exportTimetablesAsText(provider);
-    }
-  });
+  Future<void> _performStudentTransfer(SettingsStudentDataAction action) =>
+      _guardFlow(_SettingsFlow.studentDataActions, () async {
+        switch (action) {
+          case SettingsStudentDataAction.importTimetables:
+            await TimetableImportFlow.importTimetables(context);
+          case SettingsStudentDataAction.importTimetablesText:
+            await _importTimetablesFromText();
+          case SettingsStudentDataAction.importSchoolHtml:
+            await _openSchoolHtmlImportPage();
+          case SettingsStudentDataAction.exportTimetablesShare:
+            await _exportTimetables(share: true);
+          case SettingsStudentDataAction.exportTimetablesSave:
+            await _exportTimetables(share: false);
+          case SettingsStudentDataAction.exportTimetablesText:
+            await _exportTimetablesAsText();
+        }
+      });
 
-  Future<void> _showAppDataActions(TimetableProvider provider) async {
+  Future<void> _showAppDataActions() async {
+    final lifecycle = context.read<AppLifecycle>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final backups = context.read<AppBackupController>();
+    final appSession = context.read<AppSession>();
+    final workspace = context.read<WorkspaceViewState>();
+    final scope = AppScope.capture(context)!;
+    final token = maintenance.dataSessionToken;
+    bool isCurrent() =>
+        mounted && identical(token, maintenance.dataSessionToken);
     await _guardFlow(_SettingsFlow.appDataActions, () async {
       await _dataTransferController.runAppDataFlow(
         context,
-        hasRecoveryArtifacts: () => provider.recoveryArtifacts.isNotEmpty,
-        restoreEnabled: !provider.isRestoringAppBackup,
+        hasRecoveryArtifacts: () => lifecycle.recoveryArtifacts.isNotEmpty,
+        restoreEnabled: !maintenance.isReserved,
         onAction: (action) async {
+          if (!isCurrent()) return;
           switch (action) {
             case SettingsAppDataAction.restoreBackupFile:
-              await _restoreAppDataFromFile(provider);
+              await _restoreAppDataFromFile(
+                backups: backups,
+                maintenance: maintenance,
+                appSession: appSession,
+                workspace: workspace,
+              );
             case SettingsAppDataAction.restoreBackupText:
-              await _restoreAppDataFromText(provider);
+              await _restoreAppDataFromText(
+                backups: backups,
+                maintenance: maintenance,
+                appSession: appSession,
+                workspace: workspace,
+                scope: scope,
+              );
             case SettingsAppDataAction.shareBackupFile:
-              await _exportAppDataBackup(provider, share: true);
+              await _exportAppDataBackup(
+                backups: backups,
+                maintenance: maintenance,
+                share: true,
+              );
             case SettingsAppDataAction.saveBackupFile:
-              await _exportAppDataBackup(provider, share: false);
+              await _exportAppDataBackup(
+                backups: backups,
+                maintenance: maintenance,
+                share: false,
+              );
             case SettingsAppDataAction.copyBackupText:
-              await _exportAppDataBackupAsText(provider);
+              await _exportAppDataBackupAsText(
+                backups: backups,
+                maintenance: maintenance,
+              );
             case SettingsAppDataAction.showRecoveryArtifacts:
-              await _showRecoveryArtifacts(provider);
+              await _showRecoveryArtifacts(lifecycle, isCurrent);
           }
         },
       );
     });
   }
 
-  Future<void> _showRecoveryArtifacts(TimetableProvider provider) async {
-    final artifacts = provider.recoveryArtifacts;
-    if (artifacts.isEmpty || !mounted) return;
+  Future<void> _showRecoveryArtifacts(
+    AppLifecycle lifecycle,
+    bool Function() isCurrent,
+  ) async {
+    final artifacts = lifecycle.recoveryArtifacts;
+    if (artifacts.isEmpty || !isCurrent()) return;
     final exportableArtifacts = <String>{};
     for (final artifact in artifacts) {
       try {
-        if (await provider.readRecoveryArtifact(artifact) != null) {
+        if (await lifecycle.readRecoveryArtifact(artifact) != null) {
           exportableArtifacts.add(artifact);
         }
       } catch (error, stackTrace) {
@@ -1077,7 +1131,7 @@ class _SettingsPageState extends State<SettingsPage>
         );
       }
     }
-    if (!mounted) return;
+    if (!mounted || !isCurrent()) return;
     final action = await showExpressiveDialog<_SettingsRecoveryArtifactAction>(
       context: context,
       builder: (dialogContext) {
@@ -1128,32 +1182,34 @@ class _SettingsPageState extends State<SettingsPage>
         );
       },
     );
-    if (!mounted || action == null) return;
+    if (!isCurrent() || action == null) return;
     if (action.artifactPath == null) {
       await Clipboard.setData(ClipboardData(text: artifacts.join('\n')));
       if (mounted) _showMessage(AppLocalizations.of(context).copiedToClipboard);
       return;
     }
-    await _exportRecoveryArtifact(provider, action.artifactPath!);
+    await _exportRecoveryArtifact(lifecycle, action.artifactPath!, isCurrent);
   }
 
   Future<void> _exportRecoveryArtifact(
-    TimetableProvider provider,
+    AppLifecycle lifecycle,
     String artifactPath,
+    bool Function() isCurrent,
   ) async {
     final l10n = AppLocalizations.of(context);
     try {
-      final bytes = await provider.readRecoveryArtifact(artifactPath);
+      final bytes = await lifecycle.readRecoveryArtifact(artifactPath);
       if (bytes == null) {
         throw StateError('Recovery artifact is no longer available.');
       }
+      if (!isCurrent()) return;
       final fileName = _settingsRecoveryArtifactFileName(artifactPath);
       final result = await _exportService.saveBytes(
         fileName: fileName,
         bytes: bytes,
         mimeType: 'application/json',
       );
-      if (!mounted || result.status == ExportSaveStatus.cancelled) return;
+      if (!isCurrent() || result.status == ExportSaveStatus.cancelled) return;
       if (result.status == ExportSaveStatus.saved) {
         _showMessage(l10n.savedToPath(result.path ?? fileName));
         return;
@@ -1164,48 +1220,80 @@ class _SettingsPageState extends State<SettingsPage>
         mimeType: 'application/json',
       );
     } catch (_) {
-      if (mounted) _showMessage(l10n.saveFailedRetry);
+      if (isCurrent()) _showMessage(l10n.saveFailedRetry);
     }
   }
 
-  Future<void> _restoreAppDataFromFile(TimetableProvider provider) async {
-    final session = provider.maintenance.dataSessionToken;
+  Future<void> _restoreAppDataFromFile({
+    required AppBackupController backups,
+    required AppDataMaintenance maintenance,
+    required AppSession appSession,
+    required WorkspaceViewState workspace,
+  }) async {
+    final session = maintenance.dataSessionToken;
     final source = await _pickTextFile(allowedExtensions: const ['json']);
     if (source == null ||
         !mounted ||
-        !identical(session, provider.maintenance.dataSessionToken)) {
+        !identical(session, maintenance.dataSessionToken)) {
       return;
     }
-    await _restoreAppDataSource(provider, source, context);
+    await _restoreAppDataSource(
+      source,
+      context,
+      backups: backups,
+      maintenance: maintenance,
+      appSession: appSession,
+      workspace: workspace,
+      session: session,
+    );
   }
 
-  Future<void> _restoreAppDataFromText(TimetableProvider provider) async {
+  Future<void> _restoreAppDataFromText({
+    required AppBackupController backups,
+    required AppDataMaintenance maintenance,
+    required AppSession appSession,
+    required WorkspaceViewState workspace,
+    required CapturedAppScope scope,
+  }) async {
     final l10n = AppLocalizations.of(context);
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TextImportPage(
-          title: l10n.restoreBackupTextTitle,
-          submitText: l10n.restoreBackupConfirmAction,
-          onSubmit: (context, content) {
-            return _restoreAppDataSource(provider, content, context);
-          },
+        builder: (_) => scope.wrap(
+          TextImportPage(
+            title: l10n.restoreBackupTextTitle,
+            submitText: l10n.restoreBackupConfirmAction,
+            onSubmit: (context, content) {
+              return _restoreAppDataSource(
+                content,
+                context,
+                backups: backups,
+                maintenance: maintenance,
+                appSession: appSession,
+                workspace: workspace,
+                session: maintenance.dataSessionToken,
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
   Future<bool> _restoreAppDataSource(
-    TimetableProvider provider,
     String source,
-    BuildContext feedbackContext,
-  ) async {
-    if (!_canStartBackupRestore(provider, feedbackContext)) return false;
-    final backups = provider.backups;
-    final session = provider.maintenance.dataSessionToken;
+    BuildContext feedbackContext, {
+    required AppBackupController backups,
+    required AppDataMaintenance maintenance,
+    required AppSession appSession,
+    required WorkspaceViewState workspace,
+    required AppDataSessionToken session,
+  }) async {
+    if (!_canStartBackupRestore(maintenance, feedbackContext)) return false;
     bool isCurrent() =>
         mounted &&
         feedbackContext.mounted &&
-        identical(session, provider.maintenance.dataSessionToken);
+        identical(session, maintenance.dataSessionToken);
+    if (!isCurrent()) return false;
     PreparedAppBackup prepared;
     try {
       prepared = await backups.prepareJson(source);
@@ -1269,10 +1357,10 @@ class _SettingsPageState extends State<SettingsPage>
                             : l10n.generalSchedule,
                       ),
                       subtitle: Text(
-                        '${provider.workspaceView.isEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary} → ${restored.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary}',
+                        '${workspace.isEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary} → ${restored.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary}',
                       ),
                       trailing: Icon(
-                        provider.workspaceView.isEnabled(mode) ==
+                        workspace.isEnabled(mode) ==
                                 restored.isWorkspaceEnabled(mode)
                             ? Icons.remove
                             : Icons.swap_horiz,
@@ -1298,7 +1386,7 @@ class _SettingsPageState extends State<SettingsPage>
     if (confirmed != true || !feedbackContext.mounted || !isCurrent()) {
       return false;
     }
-    if (!_canStartBackupRestore(provider, feedbackContext)) return false;
+    if (!_canStartBackupRestore(maintenance, feedbackContext)) return false;
     final l10n = AppLocalizations.of(feedbackContext);
     final successMessage = l10n.restoreBackupSuccessMessage;
     final failureMessage = l10n.restoreBackupFailureMessage;
@@ -1318,7 +1406,7 @@ class _SettingsPageState extends State<SettingsPage>
       }
       return false;
     } catch (_) {
-      if (!provider.canWrite) return false;
+      if (!appSession.canWrite) return false;
       if (feedbackContext.mounted) {
         ScaffoldMessenger.of(feedbackContext)
             .showSnackBar(SnackBar(content: Text(failureMessage)));
@@ -1328,10 +1416,10 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   bool _canStartBackupRestore(
-    TimetableProvider provider,
+    AppDataMaintenance maintenance,
     BuildContext feedbackContext,
   ) {
-    if (!provider.isRestoringAppBackup) return true;
+    if (!maintenance.isReserved) return true;
     if (feedbackContext.mounted) {
       ScaffoldMessenger.of(feedbackContext).showSnackBar(
         SnackBar(
@@ -1344,16 +1432,16 @@ class _SettingsPageState extends State<SettingsPage>
     return false;
   }
 
-  Future<void> _exportAppDataBackup(
-    TimetableProvider provider, {
+  Future<void> _exportAppDataBackup({
+    required AppBackupController backups,
+    required AppDataMaintenance maintenance,
     required bool share,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final session = provider.maintenance.dataSessionToken;
+    final session = maintenance.dataSessionToken;
     try {
-      final content = await provider.backups.exportJson();
-      if (!mounted ||
-          !identical(session, provider.maintenance.dataSessionToken)) {
+      final content = await backups.exportJson();
+      if (!mounted || !identical(session, maintenance.dataSessionToken)) {
         return;
       }
       final fileName = _backupFileName();
@@ -1369,13 +1457,15 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _exportAppDataBackupAsText(TimetableProvider provider) async {
+  Future<void> _exportAppDataBackupAsText({
+    required AppBackupController backups,
+    required AppDataMaintenance maintenance,
+  }) async {
     final l10n = AppLocalizations.of(context);
-    final session = provider.maintenance.dataSessionToken;
+    final session = maintenance.dataSessionToken;
     try {
-      final content = await provider.backups.exportJson();
-      if (!mounted ||
-          !identical(session, provider.maintenance.dataSessionToken)) {
+      final content = await backups.exportJson();
+      if (!mounted || !identical(session, maintenance.dataSessionToken)) {
         return;
       }
       await showTextExportDialog(
@@ -1390,65 +1480,79 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _openSchoolSitesPage(TimetableProvider provider) async {
+  Future<void> _openSchoolSitesPage() async {
     await _guardFlow(_SettingsFlow.schoolSitesPage, () async {
       await TimetableImportFlow.openSchoolSitesPage(context);
     });
   }
 
-  Future<void> _importTimetablesFromText(TimetableProvider provider) async {
+  SkedTaskSession _captureWorkspaceTask(AppMode mode) {
+    return SkedTaskSession(
+      maintenance: context.read<AppDataMaintenance>(),
+      workspaceView: context.read<WorkspaceViewState>(),
+      workspaces: context.read<WorkspaceCommands>(),
+      workspace: mode,
+      parent: SkedTaskSessionScope.maybeOf(context)?.session,
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () => mounted,
+    );
+  }
+
+  Future<void> _importTimetablesFromText() async {
+    final task = _captureWorkspaceTask(AppMode.student);
     final l10n = AppLocalizations.of(context);
     final appScope = AppScope.capture(context)!;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => appScope.wrap(
-          SkedTaskRouteGuard(
-            provider: provider,
-            workspace: AppMode.student,
-            child: TextImportPage(
-              title: l10n.importTimetableText,
-              onSubmit: (context, content) {
-                return TimetableImportFlow.importTimetablesFromSource(
-                  context,
-                  content,
-                );
-              },
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => appScope.wrap(
+            SkedTaskRouteGuard(
+              parent: task,
+              workspace: AppMode.student,
+              child: TextImportPage(
+                title: l10n.importTimetableText,
+                onSubmit: (context, content) {
+                  if (!task.isCurrent) return Future<bool>.value(false);
+                  return TimetableImportFlow.importTimetablesFromSource(
+                    context,
+                    content,
+                  );
+                },
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      task.dispose();
+    }
   }
 
-  Future<void> _openSchoolHtmlImportPage(TimetableProvider provider) async {
+  Future<void> _openSchoolHtmlImportPage() async {
+    final scope = AppScope.capture(context)!;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
-          child: const SchoolHtmlImportPage(),
-        ),
+        builder: (_) => scope.wrap(const SchoolHtmlImportPage()),
       ),
     );
   }
 
-  Future<void> _exportTimetablesAsText(TimetableProvider provider) async {
+  Future<void> _exportTimetablesAsText() async {
+    final student = context.read<StudentViewState>();
+    final transfers = context.read<DataTransferController>();
     final l10n = AppLocalizations.of(context);
-    final task = SkedTaskSession(
-      provider: provider,
-      workspace: AppMode.student,
-      ownerRoute: ModalRoute.of(context),
-    );
+    final task = _captureWorkspaceTask(AppMode.student);
     bool isCurrent() => mounted && task.isCurrent;
     try {
-      final activeId = provider.studentView.activeTimetableOrNull?.id;
+      final activeId = student.activeTimetableOrNull?.id;
       final selectedIds = await _pickTimetableIds(
-        timetables: provider.studentView.timetables,
+        timetables: student.timetables,
         title: l10n.selectTimetablesToExport,
         confirmText: l10n.copyText,
         initialSelectedIds: activeId == null ? const [] : [activeId],
       );
       if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
-      final content = await provider.transfers.exportTimetables(selectedIds);
+      final content = await transfers.exportTimetables(selectedIds);
       if (!mounted || !task.isCurrent) return;
       await showTextExportDialog(
         context,
@@ -1464,27 +1568,22 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _exportTimetables(
-    TimetableProvider provider, {
-    required bool share,
-  }) async {
+  Future<void> _exportTimetables({required bool share}) async {
+    final student = context.read<StudentViewState>();
+    final transfers = context.read<DataTransferController>();
     final l10n = AppLocalizations.of(context);
-    final task = SkedTaskSession(
-      provider: provider,
-      workspace: AppMode.student,
-      ownerRoute: ModalRoute.of(context),
-    );
+    final task = _captureWorkspaceTask(AppMode.student);
     bool isCurrent() => mounted && task.isCurrent;
     try {
-      final activeId = provider.studentView.activeTimetableOrNull?.id;
+      final activeId = student.activeTimetableOrNull?.id;
       final selectedIds = await _pickTimetableIds(
-        timetables: provider.studentView.timetables,
+        timetables: student.timetables,
         title: l10n.selectTimetablesToExport,
         confirmText: share ? l10n.share : l10n.save,
         initialSelectedIds: activeId == null ? const [] : [activeId],
       );
       if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
-      final content = await provider.transfers.exportTimetables(selectedIds);
+      final content = await transfers.exportTimetables(selectedIds);
       if (!mounted || !task.isCurrent) return;
       const fileName = 'Sked_timetables.json';
       if (share) {
@@ -1630,39 +1729,31 @@ class _SettingsPageState extends State<SettingsPage>
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _performGeneralTransfer(
-    TimetableProvider provider,
-    SettingsGeneralDataAction action,
-  ) => _guardFlow(_SettingsFlow.generalDataActions, () async {
-    switch (action) {
-      case SettingsGeneralDataAction.importSchedulesJsonFile:
-        await _importGeneralSchedulesFile(provider, ics: false);
-      case SettingsGeneralDataAction.importSchedulesJsonText:
-        await _importGeneralSchedulesText(provider, ics: false);
-      case SettingsGeneralDataAction.importSchedulesIcsFile:
-        await _importGeneralSchedulesFile(provider, ics: true);
-      case SettingsGeneralDataAction.importSchedulesIcsText:
-        await _importGeneralSchedulesText(provider, ics: true);
-      case SettingsGeneralDataAction.exportSchedulesJsonShare:
-        await _exportGeneralSchedules(provider, share: true);
-      case SettingsGeneralDataAction.exportSchedulesJsonSave:
-        await _exportGeneralSchedules(provider, share: false);
-      case SettingsGeneralDataAction.exportSchedulesJsonText:
-        await _exportGeneralSchedulesAsText(
-          provider,
-          format: _ExportFormat.json,
-        );
-      case SettingsGeneralDataAction.exportSchedulesIcsShare:
-        await _exportGeneralSchedules(provider, share: true, ics: true);
-      case SettingsGeneralDataAction.exportSchedulesIcsSave:
-        await _exportGeneralSchedules(provider, share: false, ics: true);
-      case SettingsGeneralDataAction.exportSchedulesIcsText:
-        await _exportGeneralSchedulesAsText(
-          provider,
-          format: _ExportFormat.ics,
-        );
-    }
-  });
+  Future<void> _performGeneralTransfer(SettingsGeneralDataAction action) =>
+      _guardFlow(_SettingsFlow.generalDataActions, () async {
+        switch (action) {
+          case SettingsGeneralDataAction.importSchedulesJsonFile:
+            await _importGeneralSchedulesFile(ics: false);
+          case SettingsGeneralDataAction.importSchedulesJsonText:
+            await _importGeneralSchedulesText(ics: false);
+          case SettingsGeneralDataAction.importSchedulesIcsFile:
+            await _importGeneralSchedulesFile(ics: true);
+          case SettingsGeneralDataAction.importSchedulesIcsText:
+            await _importGeneralSchedulesText(ics: true);
+          case SettingsGeneralDataAction.exportSchedulesJsonShare:
+            await _exportGeneralSchedules(share: true);
+          case SettingsGeneralDataAction.exportSchedulesJsonSave:
+            await _exportGeneralSchedules(share: false);
+          case SettingsGeneralDataAction.exportSchedulesJsonText:
+            await _exportGeneralSchedulesAsText(format: _ExportFormat.json);
+          case SettingsGeneralDataAction.exportSchedulesIcsShare:
+            await _exportGeneralSchedules(share: true, ics: true);
+          case SettingsGeneralDataAction.exportSchedulesIcsSave:
+            await _exportGeneralSchedules(share: false, ics: true);
+          case SettingsGeneralDataAction.exportSchedulesIcsText:
+            await _exportGeneralSchedulesAsText(format: _ExportFormat.ics);
+        }
+      });
 
   Future<List<String>?> _pickGeneralScheduleIds({
     required List<GeneralSchedule> schedules,
@@ -1836,71 +1927,81 @@ class _SettingsPageState extends State<SettingsPage>
     );
   }
 
-  Future<void> _importGeneralSchedulesFile(
-    TimetableProvider provider, {
-    required bool ics,
-  }) async {
-    final task = SkedTaskSession(
-      provider: provider,
-      workspace: AppMode.general,
-      ownerRoute: ModalRoute.of(context),
-    );
+  Future<void> _importGeneralSchedulesFile({required bool ics}) async {
+    final general = context.read<GeneralViewState>();
+    final transfers = context.read<DataTransferController>();
+    final task = _captureWorkspaceTask(AppMode.general);
     try {
       final source = await _pickTextFile(
         allowedExtensions: [ics ? 'ics' : 'json'],
       );
       if (source == null || !mounted || !task.isCurrent) return;
-      await _importGeneralSchedulesSource(provider, source, context, ics: ics);
+      await _importGeneralSchedulesSource(
+        source,
+        context,
+        ics: ics,
+        transfers: transfers,
+        general: general,
+        owner: task,
+      );
     } finally {
       task.dispose();
     }
   }
 
-  Future<void> _importGeneralSchedulesText(
-    TimetableProvider provider, {
-    required bool ics,
-  }) async {
+  Future<void> _importGeneralSchedulesText({required bool ics}) async {
+    final general = context.read<GeneralViewState>();
+    final transfers = context.read<DataTransferController>();
+    final task = _captureWorkspaceTask(AppMode.general);
+    final scope = AppScope.capture(context)!;
     final l10n = AppLocalizations.of(context);
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SkedTaskRouteGuard(
-          provider: provider,
-          workspace: AppMode.general,
-          child: TextImportPage(
-            title: ics ? l10n.importIcs : l10n.importGeneralSchedules,
-            labelText: ics ? l10n.icsContent : null,
-            hintText: ics ? l10n.pasteIcsContentHint : null,
-            onSubmit: (context, content) => _importGeneralSchedulesSource(
-              provider,
-              content,
-              context,
-              ics: ics,
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => scope.wrap(
+            SkedTaskRouteGuard(
+              parent: task,
+              workspace: AppMode.general,
+              child: TextImportPage(
+                title: ics ? l10n.importIcs : l10n.importGeneralSchedules,
+                labelText: ics ? l10n.icsContent : null,
+                hintText: ics ? l10n.pasteIcsContentHint : null,
+                onSubmit: (context, content) => _importGeneralSchedulesSource(
+                  content,
+                  context,
+                  ics: ics,
+                  transfers: transfers,
+                  general: general,
+                  owner: task,
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      task.dispose();
+    }
   }
 
   Future<bool> _importGeneralSchedulesSource(
-    TimetableProvider provider,
     String content,
     BuildContext feedbackContext, {
     required bool ics,
+    required DataTransferController transfers,
+    required GeneralViewState general,
+    required SkedTaskSession owner,
   }) async {
     final l10n = AppLocalizations.of(feedbackContext);
     final task = SkedTaskSession(
-      provider: provider,
-      workspace: AppMode.general,
+      parent: owner,
       ownerRoute: ModalRoute.of(feedbackContext),
-      parent: SkedTaskSessionScope.maybeOf(feedbackContext)?.session,
+      isOwnerActive: () => mounted && feedbackContext.mounted,
     );
     bool isCurrent() => mounted && feedbackContext.mounted && task.isCurrent;
     try {
-      final prepared = await provider.transfers.prepareSchedules(
-        content,
-        ics: ics,
-      );
+      if (!isCurrent()) return false;
+      final prepared = await transfers.prepareSchedules(content, ics: ics);
       if (!feedbackContext.mounted || !isCurrent()) return false;
       final preview = prepared.value.schedules;
       final selectedIds = ics
@@ -1919,8 +2020,7 @@ class _SettingsPageState extends State<SettingsPage>
 
       var mode = GeneralScheduleImportMode.addAsNew;
       String? replacementScheduleId;
-      if (selectedIds.length == 1 &&
-          provider.generalView.activeScheduleOrNull != null) {
+      if (selectedIds.length == 1 && general.activeScheduleOrNull != null) {
         final choice = await showExpressiveDialog<String>(
           context: feedbackContext,
           builder: (ctx) {
@@ -1954,14 +2054,14 @@ class _SettingsPageState extends State<SettingsPage>
         if (choice == null || !isCurrent()) return false;
         if (choice == 'replace') {
           replacementScheduleId = await _pickGeneralScheduleReplacementId(
-            schedules: provider.generalView.schedules,
+            schedules: general.schedules,
           );
           if (replacementScheduleId == null || !isCurrent()) return false;
           mode = GeneralScheduleImportMode.replaceActive;
         }
       }
 
-      final result = await provider.transfers.applySchedules(
+      final result = await transfers.applySchedules(
         prepared,
         scheduleIds: selectedIds,
         mode: mode,
@@ -2010,34 +2110,28 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _exportGeneralSchedules(
-    TimetableProvider provider, {
+  Future<void> _exportGeneralSchedules({
     required bool share,
     bool ics = false,
   }) async {
+    final general = context.read<GeneralViewState>();
+    final transfers = context.read<DataTransferController>();
     final l10n = AppLocalizations.of(context);
-    final task = SkedTaskSession(
-      provider: provider,
-      workspace: AppMode.general,
-      ownerRoute: ModalRoute.of(context),
-    );
+    final task = _captureWorkspaceTask(AppMode.general);
     bool isCurrent() => mounted && task.isCurrent;
     try {
       final selectedIds = await _pickGeneralScheduleIds(
-        schedules: provider.generalView.schedules,
+        schedules: general.schedules,
         title: ics
             ? l10n.selectCalendarsToExportIcs
             : l10n.selectSchedulesToExport,
         confirmText: share ? l10n.share : l10n.save,
         initialSelectedIds: _defaultGeneralScheduleSelectionIds(
-          provider.generalView.schedules,
+          general.schedules,
         ),
       );
       if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
-      final content = await provider.transfers.exportSchedules(
-        selectedIds,
-        ics: ics,
-      );
+      final content = await transfers.exportSchedules(selectedIds, ics: ics);
       if (!mounted || !task.isCurrent) return;
       final payload = ExportPayload(
         fileName: 'Sked_general_schedules.${ics ? 'ics' : 'json'}',
@@ -2059,34 +2153,28 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _exportGeneralSchedulesAsText(
-    TimetableProvider provider, {
+  Future<void> _exportGeneralSchedulesAsText({
     required _ExportFormat format,
   }) async {
+    final general = context.read<GeneralViewState>();
+    final transfers = context.read<DataTransferController>();
     final l10n = AppLocalizations.of(context);
     final ics = format == _ExportFormat.ics;
-    final task = SkedTaskSession(
-      provider: provider,
-      workspace: AppMode.general,
-      ownerRoute: ModalRoute.of(context),
-    );
+    final task = _captureWorkspaceTask(AppMode.general);
     bool isCurrent() => mounted && task.isCurrent;
     try {
       final selectedIds = await _pickGeneralScheduleIds(
-        schedules: provider.generalView.schedules,
+        schedules: general.schedules,
         title: ics
             ? l10n.selectCalendarsToCopyIcs
             : l10n.selectSchedulesToExport,
         confirmText: l10n.copyText,
         initialSelectedIds: _defaultGeneralScheduleSelectionIds(
-          provider.generalView.schedules,
+          general.schedules,
         ),
       );
       if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
-      final content = await provider.transfers.exportSchedules(
-        selectedIds,
-        ics: ics,
-      );
+      final content = await transfers.exportSchedules(selectedIds, ics: ics);
       if (!mounted || !task.isCurrent) return;
       await showTextExportDialog(
         context,

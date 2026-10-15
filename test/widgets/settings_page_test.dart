@@ -404,6 +404,58 @@ Finder _generalSelectionTile(String name) {
 }
 
 void main() {
+  testWidgets(
+    'late version metadata cannot clear a replacement session badge',
+    (tester) async {
+      final data = _buildStudentData().copyWith(
+        availableUpdateVersion: '0.9.0',
+      );
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      final metadata = Completer<PackageInfo>();
+      addTearDown(() async {
+        if (!metadata.isCompleted) {
+          metadata.complete(
+            PackageInfo(
+              appName: 'Sked',
+              packageName: 'com.mashiro.sked',
+              version: '1.0.0',
+              buildNumber: '1',
+            ),
+          );
+        }
+        await tester.pumpWidget(const SizedBox());
+        provider.dispose();
+      });
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        content: SettingsPage(
+          initialDestination: SettingsDestination.about,
+          packageInfoLoader: () => metadata.future,
+          updateDistribution: const UpdateDistribution(UpdateChannel.github),
+        ),
+      );
+      final writesBeforeMetadata = storage.saveCount;
+      final reservation = provider.maintenance.reserve();
+      provider.maintenance.release(reservation);
+      metadata.complete(
+        PackageInfo(
+          appName: 'Sked',
+          packageName: 'com.mashiro.sked',
+          version: '1.0.0',
+          buildNumber: '1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(provider.settingsView.availableUpdateVersion, '0.9.0');
+      expect(storage.saveCount, writesBeforeMetadata);
+      expect(find.textContaining('1.0.0'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('clear data requires confirmation and runs once', (tester) async {
     final provider = await _createProvider(_buildStudentData());
     final coordinator = _FakeDataClearCoordinator();

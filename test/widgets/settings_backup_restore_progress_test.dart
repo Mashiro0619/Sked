@@ -17,6 +17,7 @@ import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/screens/workspace_features_page.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/ui_command.dart';
+import 'package:sked/widgets/text_transfer_widgets.dart';
 
 import '../support/workspace_harness.dart';
 import '../support/data_transfer_codec.dart';
@@ -131,6 +132,71 @@ Switch _switchIn(WidgetTester tester, Finder row) => tester.widget<Switch>(
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets(
+    'text backup restore can retry after a recoverable failure',
+    (tester) async {
+      _viewport(tester);
+      final (provider, storage) = await _fixture();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        provider.dispose();
+      });
+      final source = encodeAppBackup(
+        provider.session.committedData.copyWith(
+          hideHomeWorkspaceNavigation: true,
+        ),
+        [],
+      );
+      await tester.pumpWidget(
+        WorkspaceHarness(provider: provider, home: const SettingsPage()),
+      );
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      );
+      await _open(tester, _key('settings-app-backup'));
+      await _open(tester, find.text(l10n.restoreBackupTextTitle));
+      final originalTextPage = tester.state(find.byType(TextImportPage));
+      await tester.enterText(find.byType(TextField), source);
+      final submit = find.widgetWithText(
+        FilledButton,
+        l10n.restoreBackupConfirmAction,
+      );
+      await _open(tester, submit);
+      expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
+      final previousSession = provider.maintenance.dataSessionToken;
+      storage.saveError = StateError('disk full');
+      await tester.tap(submit.last);
+      await tester.pumpAndSettle();
+
+      expect(
+        provider.maintenance.dataSessionToken,
+        isNot(same(previousSession)),
+      );
+      expect(provider.maintenance.isReserved, isFalse);
+      expect(provider.session.canWrite, isTrue);
+      expect(tester.state(find.byType(TextImportPage)), same(originalTextPage));
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        source,
+      );
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
+
+      await _open(tester, submit);
+      expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
+      await tester.tap(submit.last);
+      await tester.pumpAndSettle();
+      expect(find.byType(TextImportPage), findsNothing);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
+      expect(provider.maintenance.isReserved, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
+  );
 
   testWidgets(
     'a late backup preview cannot open confirmation in a new session',
