@@ -110,10 +110,9 @@ Future<void> _pumpImportButton(
               body: Center(
                 child: FilledButton(
                   onPressed: () => source == null
-                      ? TimetableImportFlow.importTimetables(context, provider)
+                      ? TimetableImportFlow.importTimetables(context)
                       : TimetableImportFlow.importTimetablesFromSource(
                           context,
-                          provider,
                           source,
                         ),
                   child: const Text('Import'),

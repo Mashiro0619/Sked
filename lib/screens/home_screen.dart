@@ -33,6 +33,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../models/workspace_context_snapshot.dart';
 import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../previews/sked_preview_support.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';

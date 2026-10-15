@@ -4,10 +4,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../controllers/app_data_maintenance.dart';
 import '../controllers/data_transfer_controller.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_view_state.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../services/text_file_picker.dart';
 import '../services/data_transfer_codec.dart';
 import '../widgets/expressive_dialog.dart';
@@ -30,29 +34,38 @@ class TimetableImportFlow {
 
   static var _importTimetablesInProgress = false;
 
-  static Future<void> importTimetables(
-    BuildContext context,
-    TimetableProvider provider,
-  ) async {
+  static Future<void> importTimetables(BuildContext context) async {
     if (_importTimetablesInProgress) {
       return;
     }
+    final transfers = context.read<DataTransferController>();
+    final studentView = context.read<StudentViewState>();
+    final settingsView = context.read<SettingsViewState>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspaceView = context.read<WorkspaceViewState>();
     _importTimetablesInProgress = true;
-    final dataSession = provider.maintenance.dataSessionToken;
+    final dataSession = maintenance.dataSessionToken;
     final workspaceBoundary =
-        provider.workspaceView.data.workspaceReminderNotBefore[AppMode.student];
+        workspaceView.data.workspaceReminderNotBefore[AppMode.student];
     try {
       final source = await _pickJsonSource();
       if (source == null ||
           !context.mounted ||
-          !identical(dataSession, provider.maintenance.dataSessionToken) ||
-          !provider.workspaceView.isEnabled(AppMode.student) ||
+          !identical(dataSession, maintenance.dataSessionToken) ||
+          !workspaceView.isEnabled(AppMode.student) ||
           workspaceBoundary !=
-              provider.workspaceView.data.workspaceReminderNotBefore[AppMode
-                  .student]) {
+              workspaceView.data.workspaceReminderNotBefore[AppMode.student]) {
         return;
       }
-      await importTimetablesFromSource(context, provider, source);
+      await _importTimetablesFromSource(
+        context,
+        source,
+        transfers: transfers,
+        studentView: studentView,
+        settingsView: settingsView,
+        maintenance: maintenance,
+        workspaceView: workspaceView,
+      );
     } catch (error, stackTrace) {
       debugPrint('Picking a timetable import file failed: $error\n$stackTrace');
       if (context.mounted) {
@@ -68,21 +81,45 @@ class TimetableImportFlow {
 
   static Future<bool> importTimetablesFromSource(
     BuildContext context,
-    TimetableProvider provider,
     String source,
   ) async {
+    final transfers = context.read<DataTransferController>();
+    final studentView = context.read<StudentViewState>();
+    final settingsView = context.read<SettingsViewState>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspaceView = context.read<WorkspaceViewState>();
+    return _importTimetablesFromSource(
+      context,
+      source,
+      transfers: transfers,
+      studentView: studentView,
+      settingsView: settingsView,
+      maintenance: maintenance,
+      workspaceView: workspaceView,
+    );
+  }
+
+  // A file picker may outlive its source scope. Continue with the domain
+  // instances captured at entry, just as a prepared candidate keeps its owner.
+  static Future<bool> _importTimetablesFromSource(
+    BuildContext context,
+    String source, {
+    required DataTransferController transfers,
+    required StudentViewState studentView,
+    required SettingsViewState settingsView,
+    required AppDataMaintenance maintenance,
+    required WorkspaceViewState workspaceView,
+  }) async {
     final l10n = AppLocalizations.of(context);
-    final transfers = provider.transfers;
-    final dataSession = provider.maintenance.dataSessionToken;
+    final dataSession = maintenance.dataSessionToken;
     final workspaceBoundary =
-        provider.workspaceView.data.workspaceReminderNotBefore[AppMode.student];
+        workspaceView.data.workspaceReminderNotBefore[AppMode.student];
     bool isCurrent() =>
         context.mounted &&
-        identical(dataSession, provider.maintenance.dataSessionToken) &&
-        provider.workspaceView.isEnabled(AppMode.student) &&
+        identical(dataSession, maintenance.dataSessionToken) &&
+        workspaceView.isEnabled(AppMode.student) &&
         workspaceBoundary ==
-            provider.workspaceView.data.workspaceReminderNotBefore[AppMode
-                .student];
+            workspaceView.data.workspaceReminderNotBefore[AppMode.student];
 
     PreparedDataImport<TimetableImportCandidate> prepared;
     try {
@@ -90,9 +127,7 @@ class TimetableImportFlow {
     } on FormatException catch (error) {
       if (!context.mounted || !isCurrent()) return false;
       final message = error.message == 'Unsupported import file type.'
-          ? importFileTypeMismatchMessage(
-              localeCode: provider.settingsView.localeCode,
-            )
+          ? importFileTypeMismatchMessage(localeCode: settingsView.localeCode)
           : error.message;
       _showMessage(context, message);
       return false;
@@ -128,7 +163,7 @@ class TimetableImportFlow {
 
     var mode = TimetableImportMode.addAsNew;
     String? replacementTimetableId;
-    final replacementTimetable = provider.studentView.activeTimetableOrNull;
+    final replacementTimetable = studentView.activeTimetableOrNull;
     if (selectedIds.length == 1 && replacementTimetable != null) {
       final pickedMode = await showExpressiveDialog<TimetableImportMode>(
         context: context,
@@ -175,7 +210,7 @@ class TimetableImportFlow {
     }
     final importChoice = await _pickImportBundledPeriodTimeSets(
       context,
-      provider,
+      studentView,
       hasBundledPeriodTimeSets: preview.hasBundledPeriodTimeSets,
     );
     if (importChoice == null || !isCurrent()) {
@@ -208,34 +243,26 @@ class TimetableImportFlow {
     }
   }
 
-  static Future<void> openSchoolSitesPage(
-    BuildContext context,
-    TimetableProvider provider,
-  ) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
-          child: SchoolSitesPage(),
-        ),
-      ),
-    );
+  static Future<void> openSchoolSitesPage(BuildContext context) async {
+    final appScope = AppScope.capture(context)!;
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => appScope.wrap(SchoolSitesPage())));
   }
 
   static Future<_TimetableImportChoice?> _pickImportBundledPeriodTimeSets(
     BuildContext context,
-    TimetableProvider provider, {
+    StudentViewState studentView, {
     required bool hasBundledPeriodTimeSets,
   }) async {
     if (!hasBundledPeriodTimeSets) {
-      return _pickExistingPeriodTimeSet(context, provider);
+      return _pickExistingPeriodTimeSet(context, studentView);
     }
     if (!context.mounted) {
       return null;
     }
     final l10n = AppLocalizations.of(context);
-    final canDiscardBundledSets =
-        provider.studentView.periodTimeSets.isNotEmpty;
+    final canDiscardBundledSets = studentView.periodTimeSets.isNotEmpty;
     final dialogBody = canDiscardBundledSets
         ? l10n.importPeriodTimeSetDialogBody
         : '${l10n.importPeriodTimeSetDialogBody}\n\n${l10n.importDiscardPeriodTimeSetUnavailable}';
@@ -285,14 +312,14 @@ class TimetableImportFlow {
     }
     return _pickExistingPeriodTimeSet(
       context,
-      provider,
+      studentView,
       anchorRect: discardAnchor,
     );
   }
 
   static Future<_TimetableImportChoice?> _pickExistingPeriodTimeSet(
     BuildContext context,
-    TimetableProvider provider, {
+    StudentViewState studentView, {
     Rect? anchorRect,
   }) async {
     if (!context.mounted) return null;
@@ -300,8 +327,8 @@ class TimetableImportFlow {
       context,
       anchorRect: anchorRect,
       selectedPeriodTimeSetId:
-          provider.studentView.activePeriodTimeSetOrNull?.id ??
-          provider.studentView.periodTimeSets.firstOrNull?.id ??
+          studentView.activePeriodTimeSetOrNull?.id ??
+          studentView.periodTimeSets.firstOrNull?.id ??
           '',
     );
     if (selectedPeriodTimeSetId == null || selectedPeriodTimeSetId.isEmpty) {

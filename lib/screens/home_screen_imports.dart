@@ -10,7 +10,7 @@ extension _HomeScreenImports on _HomeScreenState {
     }
     _setFileImportInProgress(true);
     try {
-      await TimetableImportFlow.importTimetables(context, provider);
+      await TimetableImportFlow.importTimetables(context);
     } finally {
       _setFileImportInProgress(false);
     }
@@ -25,18 +25,20 @@ extension _HomeScreenImports on _HomeScreenState {
     }
     _setTextImportPageOpen(true);
     final l10n = AppLocalizations.of(context);
+    final appScope = AppScope.capture(context)!;
     try {
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => TextImportPage(
-            title: l10n.importTimetableText,
-            onSubmit: (context, content) {
-              return TimetableImportFlow.importTimetablesFromSource(
-                context,
-                provider,
-                content,
-              );
-            },
+          builder: (_) => appScope.wrap(
+            TextImportPage(
+              title: l10n.importTimetableText,
+              onSubmit: (context, content) {
+                return TimetableImportFlow.importTimetablesFromSource(
+                  context,
+                  content,
+                );
+              },
+            ),
           ),
         ),
       );
@@ -54,7 +56,7 @@ extension _HomeScreenImports on _HomeScreenState {
     }
     _setSchoolWebImportPageOpen(true);
     try {
-      await TimetableImportFlow.openSchoolSitesPage(context, provider);
+      await TimetableImportFlow.openSchoolSitesPage(context);
     } finally {
       _setSchoolWebImportPageOpen(false);
     }

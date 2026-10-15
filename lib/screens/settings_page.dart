@@ -23,6 +23,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/app_locale.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/app_update_coordinator.dart';
 import '../services/microsoft_store_update_service.dart';
@@ -1022,7 +1023,7 @@ class _SettingsPageState extends State<SettingsPage>
   ) => _guardFlow(_SettingsFlow.studentDataActions, () async {
     switch (action) {
       case SettingsStudentDataAction.importTimetables:
-        await TimetableImportFlow.importTimetables(context, provider);
+        await TimetableImportFlow.importTimetables(context);
       case SettingsStudentDataAction.importTimetablesText:
         await _importTimetablesFromText(provider);
       case SettingsStudentDataAction.importSchoolHtml:
@@ -1392,26 +1393,28 @@ class _SettingsPageState extends State<SettingsPage>
 
   Future<void> _openSchoolSitesPage(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.schoolSitesPage, () async {
-      await TimetableImportFlow.openSchoolSitesPage(context, provider);
+      await TimetableImportFlow.openSchoolSitesPage(context);
     });
   }
 
   Future<void> _importTimetablesFromText(TimetableProvider provider) async {
     final l10n = AppLocalizations.of(context);
+    final appScope = AppScope.capture(context)!;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SkedTaskRouteGuard(
-          provider: provider,
-          workspace: AppMode.student,
-          child: TextImportPage(
-            title: l10n.importTimetableText,
-            onSubmit: (context, content) {
-              return TimetableImportFlow.importTimetablesFromSource(
-                context,
-                provider,
-                content,
-              );
-            },
+        builder: (_) => appScope.wrap(
+          SkedTaskRouteGuard(
+            provider: provider,
+            workspace: AppMode.student,
+            child: TextImportPage(
+              title: l10n.importTimetableText,
+              onSubmit: (context, content) {
+                return TimetableImportFlow.importTimetablesFromSource(
+                  context,
+                  content,
+                );
+              },
+            ),
           ),
         ),
       ),
