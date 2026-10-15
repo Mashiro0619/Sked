@@ -4,7 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';

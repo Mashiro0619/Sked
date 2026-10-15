@@ -5,7 +5,7 @@ import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 
 class _ControlledTimetableStorage implements TimetableStorage {
   _ControlledTimetableStorage(this.data);
@@ -53,11 +53,11 @@ Future<void> _waitForSaveCount(
   expect(storage.saveCount, greaterThanOrEqualTo(expected));
 }
 
-TimetableProvider _providerWith(
+AppRuntime _providerWith(
   _ControlledTimetableStorage storage, {
   Duration uiStateSaveDelay = const Duration(hours: 1),
 }) {
-  return TimetableProvider(
+  return AppRuntime(
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: uiStateSaveDelay,

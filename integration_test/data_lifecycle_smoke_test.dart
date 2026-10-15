@@ -7,7 +7,8 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 import 'package:sked/services/privacy_service.dart';
@@ -32,8 +33,8 @@ class _Privacy extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
-Future<TimetableProvider> _load(Directory directory) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _load(Directory directory) async {
+  final provider = AppRuntime(
     storage: IoTimetableStorage(directoryProvider: () async => directory),
     secretStore: _Secrets(),
     privacyService: _Privacy(),
@@ -72,7 +73,7 @@ void main() {
       final temporary = await Directory.systemTemp.createTemp(
         'sked_data_smoke_',
       );
-      final providers = <TimetableProvider>[];
+      final providers = <AppRuntime>[];
       addTearDown(() async {
         for (final provider in providers) {
           provider.dispose();

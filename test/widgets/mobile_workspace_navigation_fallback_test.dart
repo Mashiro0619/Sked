@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/workspace_features_page.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
@@ -49,7 +49,7 @@ void _viewport(WidgetTester t, Size size) {
   addTearDown(t.view.reset);
 }
 
-Future<TimetableProvider> _mount(
+Future<AppRuntime> _mount(
   WidgetTester t, {
   bool empty = false,
   bool hidden = true,

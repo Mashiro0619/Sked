@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/general_calendar_ics_service.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -36,7 +36,7 @@ void main() {
       final storage = _MemoryTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -95,7 +95,7 @@ void main() {
     final storage = _MemoryTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -138,7 +138,7 @@ void main() {
         ),
       ),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -192,7 +192,7 @@ void main() {
           ),
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -228,7 +228,7 @@ void main() {
         ),
       );
       final storage = _MemoryTimetableStorage(initial);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -268,7 +268,7 @@ void main() {
       final storage = _MemoryTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -299,7 +299,7 @@ void main() {
       final storage = _MemoryTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -349,7 +349,7 @@ void main() {
         ),
       ],
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
           generalMode: GeneralScheduleData(
@@ -381,7 +381,7 @@ void main() {
   });
 
   test('deleting the last calendar creates a default calendar', () async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()),
       ),
@@ -402,7 +402,7 @@ void main() {
 
   test('duplicates the selected occurrence as a one-time event', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryTimetableStorage(initial),
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -462,7 +462,7 @@ void main() {
 
   test('dismisses and restores general reminder occurrences', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryTimetableStorage(initial),
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -511,7 +511,7 @@ void main() {
     'general reminder items exclude events without configured reminders',
     () async {
       final initial = buildInitialAppData(buildDefaultPeriodTimes());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: _MemoryTimetableStorage(initial),
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -563,7 +563,7 @@ void main() {
         ),
       ),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -606,7 +606,7 @@ void main() {
           ),
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -692,7 +692,7 @@ void main() {
           ),
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -728,7 +728,7 @@ void main() {
   test(
     'general JSON import returns structured result for selected calendars',
     () async {
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: _MemoryTimetableStorage(
           buildInitialAppData(buildDefaultPeriodTimes()),
         ),
@@ -766,7 +766,7 @@ void main() {
   );
 
   test('general JSON import can replace the active calendar', () async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()),
       ),
@@ -814,7 +814,7 @@ void main() {
     final storage = _MemoryTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -871,7 +871,7 @@ END:VCALENDAR
   test(
     'malformed general JSON import fails before mutating calendars',
     () async {
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: _MemoryTimetableStorage(
           buildInitialAppData(buildDefaultPeriodTimes()),
         ),
@@ -896,7 +896,7 @@ END:VCALENDAR
   test(
     'general ICS import returns structured localized-warning data',
     () async {
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: _MemoryTimetableStorage(
           buildInitialAppData(buildDefaultPeriodTimes()),
         ),
@@ -933,7 +933,7 @@ END:VCALENDAR
   test(
     'general ICS import failures are localized by provider locale',
     () async {
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: _MemoryTimetableStorage(
           buildInitialAppData(buildDefaultPeriodTimes())
               .copyWith(localeCode: 'zh'),
@@ -962,7 +962,7 @@ END:VCALENDAR
     'general popup dismiss setting does not mutate student setting',
     () async {
       final initial = buildInitialAppData(buildDefaultPeriodTimes());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: _MemoryTimetableStorage(initial),
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -982,7 +982,7 @@ END:VCALENDAR
   test('general view switch behavior persists independently', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
     final storage = _MemoryTimetableStorage(initial);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -1017,7 +1017,7 @@ END:VCALENDAR
     () async {
       final initial = buildInitialAppData(buildDefaultPeriodTimes());
       final storage = _MemoryTimetableStorage(initial);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -1055,7 +1055,7 @@ END:VCALENDAR
   test('general date label format persists all values independently', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
     final storage = _MemoryTimetableStorage(initial);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -1093,7 +1093,7 @@ END:VCALENDAR
     () async {
       final initial = buildInitialAppData(buildDefaultPeriodTimes());
       final storage = _MemoryTimetableStorage(initial);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -1130,7 +1130,7 @@ END:VCALENDAR
   test('failed general time grid hour height save rolls back', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
     final storage = _MemoryTimetableStorage(initial);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -1159,7 +1159,7 @@ END:VCALENDAR
   test('failed general date label format save rolls back', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
     final storage = _MemoryTimetableStorage(initial);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -1188,7 +1188,7 @@ END:VCALENDAR
   test('event FAB setting persists and rolls back on failure', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
     final storage = _MemoryTimetableStorage(initial);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -1214,7 +1214,7 @@ END:VCALENDAR
   test('long-press event add persists and rolls back on failure', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
     final storage = _MemoryTimetableStorage(initial);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -1244,7 +1244,7 @@ END:VCALENDAR
     () async {
       final initial = buildInitialAppData(buildDefaultPeriodTimes());
       final storage = _MemoryTimetableStorage(initial);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );

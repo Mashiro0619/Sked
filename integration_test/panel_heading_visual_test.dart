@@ -10,7 +10,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/update_distribution.dart';
@@ -271,7 +271,7 @@ Future<void> _secondaryScenes(WidgetTester tester, _Capture capture) async {
 
 Future<void> _courseScenes(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
   _Scene scene,
   _Capture capture,
 ) async {
@@ -328,7 +328,7 @@ Future<void> _courseScenes(
 
 Future<void> _timetableScenes(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
   _Scene scene,
   _Capture capture,
 ) async {
@@ -381,7 +381,7 @@ Future<void> _openStudentResources(WidgetTester tester) async {
 
 Future<void> _eventScenes(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
   _Scene scene,
   _Capture capture,
 ) async {

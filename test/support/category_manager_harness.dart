@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 
 import 'workspace_harness.dart';
@@ -43,7 +43,7 @@ WorkspaceMemoryStorage categoryManagerStorage({
   ),
 );
 Widget categoryManagerHarness(
-  TimetableProvider p, {
+  AppRuntime p, {
   String locale = 'en',
   double scale = 1,
   TextDirection direction = TextDirection.ltr,

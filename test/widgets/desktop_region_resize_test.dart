@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -31,7 +31,7 @@ void _viewport(WidgetTester t, Size size) {
 
 Future<void> _mount(
   WidgetTester t,
-  TimetableProvider provider,
+  AppRuntime provider,
   DesktopLayoutPreferences preferences, {
   Widget? home,
   TextDirection direction = TextDirection.ltr,
@@ -118,7 +118,7 @@ String _importDraft() => jsonEncode({
   ],
 });
 
-Future<TimetableProvider> _calendarProvider({String view = generalViewWeek}) {
+Future<AppRuntime> _calendarProvider({String view = generalViewWeek}) {
   final base = mobileLayoutData(locale: 'en');
   const calendar = 'resize-calendar';
   return workspaceProvider(

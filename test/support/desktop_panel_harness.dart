@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 
 import 'workspace_harness.dart';
@@ -51,7 +51,7 @@ WorkspaceMemoryStorage desktopPanelStorage({
 }
 
 Widget desktopPanelHarness(
-  TimetableProvider provider, {
+  AppRuntime provider, {
   String locale = 'en',
   double scale = 1,
   Brightness brightness = Brightness.light,

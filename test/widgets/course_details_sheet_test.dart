@@ -8,7 +8,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/sked_task_route.dart';
@@ -51,7 +51,7 @@ CourseItem _course({required String id, required String name}) {
   );
 }
 
-Future<TimetableProvider> _createProvider({
+Future<AppRuntime> _createProvider({
   String courseAName = 'Course A',
   String courseBName = 'Course B',
 }) async {
@@ -84,7 +84,7 @@ Future<TimetableProvider> _createProvider({
           ],
         ),
       );
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,

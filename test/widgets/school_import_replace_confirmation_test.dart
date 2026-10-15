@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/widgets/school_import_replace_confirmation.dart';
 import 'package:sked/widgets/sked_task_route.dart';
 import 'package:sked/widgets/sked_task_session.dart';
@@ -18,7 +19,7 @@ class _ConfirmationRun {
 
 Future<_ConfirmationRun> _openConfirmation(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   SkedTaskSession? parent,
 }) async {
   final run = _ConfirmationRun();

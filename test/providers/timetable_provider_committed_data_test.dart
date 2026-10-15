@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/models/app_data_commit.dart'
+    show AppDataCommit, AppDataDomain;
 
 class _MemoryStorage implements TimetableStorage {
   _MemoryStorage(this.data);
@@ -40,7 +42,7 @@ void main() {
       final storage = _MemoryStorage(
         buildInitialAppData(buildDefaultPeriodTimes()),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => 'en',
         uiStateSaveDelay: Duration.zero,
@@ -85,7 +87,7 @@ void main() {
     final storage = _MemoryStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => 'en',
     );
@@ -130,7 +132,7 @@ void main() {
   });
 
   test('closing the provider closes committed stream', () async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryStorage(buildInitialAppData(buildDefaultPeriodTimes())),
       systemLocaleCodeResolver: () => 'en',
     );
@@ -144,7 +146,7 @@ void main() {
     final storage = _MemoryStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => 'en',
     );
@@ -198,7 +200,7 @@ void main() {
         localeCode: initial.localeCode,
       ),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => 'en',
     );

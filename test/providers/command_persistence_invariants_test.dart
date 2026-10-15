@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 import 'package:sked/services/import_export_service.dart';
 import 'package:sked/services/student_timetable_service.dart';
@@ -74,9 +74,9 @@ AppData _seed({bool emptyStudent = false}) {
   );
 }
 
-Future<(MemoryTimetableStorage, TimetableProvider)> _open(AppData data) async {
+Future<(MemoryTimetableStorage, AppRuntime)> _open(AppData data) async {
   final storage = MemoryTimetableStorage(initialData: data);
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,

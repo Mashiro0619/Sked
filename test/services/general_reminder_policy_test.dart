@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
@@ -461,7 +461,7 @@ END:VCALENDAR
           remindHiddenGeneralCalendars: true,
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: _MemoryStorage(data),
         systemLocaleCodeResolver: () => 'en',
         uiStateSaveDelay: Duration.zero,

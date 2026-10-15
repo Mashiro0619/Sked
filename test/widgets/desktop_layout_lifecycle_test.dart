@@ -18,9 +18,7 @@ void main() {
     addTearDown(layout.dispose);
     final provider = await workspaceProvider();
     addTearDown(provider.dispose);
-    await t.pumpWidget(
-      MyApp(provider: provider, desktopLayoutPreferences: layout),
-    );
+    await t.pumpWidget(MyApp(app: provider, desktopLayoutPreferences: layout));
     expect(find.byType(AppHomeScreen), findsNothing);
     read.complete('''{"version":1,"regions":{"resources":{"width":300}}}''');
     await t.pumpAndSettle();
@@ -43,9 +41,7 @@ void main() {
     addTearDown(layout.dispose);
     final provider = await workspaceProvider();
     addTearDown(provider.dispose);
-    await t.pumpWidget(
-      MyApp(provider: provider, desktopLayoutPreferences: layout),
-    );
+    await t.pumpWidget(MyApp(app: provider, desktopLayoutPreferences: layout));
     await t.pumpAndSettle();
     layout.setPreferredSize(
       DesktopLayoutRegion.resources,
@@ -78,7 +74,7 @@ void main() {
       addTearDown(provider.dispose);
       await provider.lifecycle.acceptPrivacyPolicyCurrentVersion();
       await t.pumpWidget(
-        MyApp(provider: provider, desktopLayoutPreferences: layout),
+        MyApp(app: provider, desktopLayoutPreferences: layout),
       );
       await t.pumpAndSettle();
       layout.setPreferredSize(

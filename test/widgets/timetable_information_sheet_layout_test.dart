@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
@@ -45,7 +45,7 @@ void _viewport(WidgetTester t, Size size) {
   addTearDown(t.view.reset);
 }
 
-Future<TimetableProvider> _open(
+Future<AppRuntime> _open(
   WidgetTester t, {
   bool editing = false,
   String locale = 'en',

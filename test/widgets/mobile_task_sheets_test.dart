@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
@@ -41,7 +42,7 @@ class _Storage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(TimetableProvider, _Storage)> _home(
+Future<(AppRuntime, _Storage)> _home(
   WidgetTester t,
   AppMode mode, {
   double scale = 1,
@@ -75,7 +76,7 @@ Future<void> _tap(WidgetTester t, Finder f) async {
   await t.pumpAndSettle();
 }
 
-Future<void> _openDetails(WidgetTester t, TimetableProvider p) async {
+Future<void> _openDetails(WidgetTester t, AppRuntime p) async {
   await _tap(
     t,
     p.workspaceView.activeMode == AppMode.student

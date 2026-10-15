@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/widgets/course_system_reminder_field.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';

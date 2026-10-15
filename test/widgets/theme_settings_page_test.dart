@@ -16,7 +16,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/controllers/settings_view_state.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/theme/app_theme.dart';
@@ -67,10 +67,8 @@ class _BlockingTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://theme-settings-test';
 }
 
-Future<TimetableProvider> _createProvider(
-  _BlockingTimetableStorage storage,
-) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider(_BlockingTimetableStorage storage) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -87,7 +85,7 @@ class _ThemeSettingsHost extends StatelessWidget {
     this.viewPadding = EdgeInsets.zero,
   });
 
-  final TimetableProvider provider;
+  final AppRuntime provider;
   final Locale locale;
   final TextScaler textScaler;
   final EdgeInsets viewPadding;

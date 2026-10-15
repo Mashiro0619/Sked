@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
@@ -19,7 +19,7 @@ Finder get _moreEvents => _key('general-more-occurrences-sheet');
 
 Future<void> _mount(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   Size size = const Size(1440, 1000),
 }) async {
   tester.view.devicePixelRatio = 1;
@@ -33,7 +33,7 @@ Future<void> _mount(
   await tester.pumpAndSettle();
 }
 
-Future<TimetableProvider> _courseProvider() async {
+Future<AppRuntime> _courseProvider() async {
   final initial = buildInitialAppData(
     buildDefaultPeriodTimes(),
     localeCode: 'en',
@@ -79,7 +79,7 @@ Future<TimetableProvider> _courseProvider() async {
   return provider;
 }
 
-Future<TimetableProvider> _generalProvider({
+Future<AppRuntime> _generalProvider({
   required List<GeneralEvent> events,
   String view = generalViewWeek,
   bool collapsed = false,

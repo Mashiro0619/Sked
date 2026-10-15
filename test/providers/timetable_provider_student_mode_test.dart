@@ -3,7 +3,8 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
@@ -152,8 +153,8 @@ void main() {
     );
   }
 
-  TimetableProvider providerWith(AppData data, {SecretStore? secretStore}) {
-    return TimetableProvider(
+  AppRuntime providerWith(AppData data, {SecretStore? secretStore}) {
+    return AppRuntime(
       storage: _MemoryTimetableStorage(data),
       systemLocaleCodeResolver: () => defaultLocaleCode,
       secretStore: secretStore,
@@ -227,7 +228,7 @@ void main() {
     test('course FAB setting persists and rolls back on failure', () async {
       final original = appData();
       final storage = _MemoryTimetableStorage(original);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -251,7 +252,7 @@ void main() {
     test('long-press course add persists and rolls back on failure', () async {
       final original = appData();
       final storage = _MemoryTimetableStorage(original);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -275,7 +276,7 @@ void main() {
     test('rolls back timetable layout settings when save fails', () async {
       final original = appData();
       final storage = _MemoryTimetableStorage(original);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -296,7 +297,7 @@ void main() {
         null,
         recoveryStatus: RecoveryStatus.failedBackupRestore,
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -315,7 +316,7 @@ void main() {
     test('rolls back school import state when save fails', () async {
       final original = appData();
       final storage = _MemoryTimetableStorage(original);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -365,7 +366,7 @@ void main() {
           ],
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -410,7 +411,7 @@ void main() {
       );
       final storage = _MemoryTimetableStorage(original)
         ..saveFailures.add(Exception('disk full'));
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -555,7 +556,7 @@ void main() {
           ],
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -593,7 +594,7 @@ void main() {
             ],
           ),
         );
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
         );
@@ -717,7 +718,7 @@ void main() {
             periodTimeSets: [periodSet(count: 2)],
           ),
         );
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
           secretStore: _MemorySecretStore(),
@@ -762,7 +763,7 @@ void main() {
             ],
           ),
         );
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
           secretStore: _MemorySecretStore(),
@@ -922,7 +923,7 @@ void main() {
           ),
         );
         final storage = _MemoryTimetableStorage(original);
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
           secretStore: secrets,

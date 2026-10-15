@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
@@ -15,7 +15,7 @@ const phones = TargetPlatformVariant({
   TargetPlatform.android,
   TargetPlatform.iOS,
 });
-Future<TimetableProvider> mount(WidgetTester t, AppMode mode) async {
+Future<AppRuntime> mount(WidgetTester t, AppMode mode) async {
   t.view.devicePixelRatio = 1;
   t.view.physicalSize = const Size(393, 1000);
   addTearDown(t.view.reset);

@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/timetable_import_flow.dart';
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
@@ -35,11 +35,11 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://timetable-import-flow-test';
 }
 
-Future<TimetableProvider> _createProvider({
+Future<AppRuntime> _createProvider({
   DataTransferCodec codec = inlineDataTransferCodec,
 }) async {
   final periodTimes = buildDefaultPeriodTimes();
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: codec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(periodTimes, localeCode: defaultLocaleCode).copyWith(
@@ -96,7 +96,7 @@ class _PendingTimetableCodec extends DataTransferCodec {
 
 Future<void> _pumpImportButton(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   String? source,
 }) async {
   await tester.pumpWidget(
@@ -130,20 +130,19 @@ Future<void> _pumpImportButton(
 }
 
 void main() {
-  String withoutPeriodTimes(TimetableProvider provider) =>
-      encodeTimetableDataEnvelope(
-        TimetableExportData(
-          timetables: [
-            provider.studentView.activeTimetable.copyWith(
-              id: 'incoming',
-              config: provider.studentView.activeTimetable.config.copyWith(
-                name: 'Imported',
-              ),
-            ),
-          ],
-          periodTimeSets: const [],
+  String withoutPeriodTimes(AppRuntime provider) => encodeTimetableDataEnvelope(
+    TimetableExportData(
+      timetables: [
+        provider.studentView.activeTimetable.copyWith(
+          id: 'incoming',
+          config: provider.studentView.activeTimetable.config.copyWith(
+            name: 'Imported',
+          ),
         ),
-      );
+      ],
+      periodTimeSets: const [],
+    ),
+  );
 
   testWidgets(
     'late parsing cannot open choices in a replacement data session',

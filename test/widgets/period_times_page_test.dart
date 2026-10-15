@@ -14,7 +14,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/services/export_service.dart';
 import 'package:sked/services/text_file_picker.dart';
@@ -128,8 +128,8 @@ AppData _initialData() => buildInitialAppData(
   localeCode: defaultLocaleCode,
 );
 
-Future<TimetableProvider> _createProvider({TimetableStorage? storage}) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider({TimetableStorage? storage}) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage ?? _MemoryTimetableStorage(_initialData()),
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -140,7 +140,7 @@ Future<TimetableProvider> _createProvider({TimetableStorage? storage}) async {
 
 Future<void> _pumpPeriodTimesPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   ExportService? exportService,
   PeriodTimesTextPicker? textFilePicker,
   TextScaler textScaler = TextScaler.noScaling,

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/general_calendar_service.dart';
 import 'package:sked/services/settings_service.dart';
 
@@ -249,10 +249,8 @@ void main() {
   });
 
   group('TimetableProvider toolbar navigation persistence', () {
-    Future<TimetableProvider> loadProvider(
-      _MemoryTimetableStorage storage,
-    ) async {
-      final provider = TimetableProvider(
+    Future<AppRuntime> loadProvider(_MemoryTimetableStorage storage) async {
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );

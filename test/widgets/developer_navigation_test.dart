@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/developer_mode_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
@@ -25,7 +25,7 @@ void _viewport(WidgetTester t, Size size) {
 
 Future<void> _pumpSettings(
   WidgetTester t,
-  TimetableProvider provider,
+  AppRuntime provider,
   DeveloperUiPreferences preferences,
 ) async {
   await t.pumpWidget(

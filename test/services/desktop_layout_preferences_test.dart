@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
@@ -455,7 +455,7 @@ void main() {
           initialValues: {_resources: const PreferredRegionSize(width: 300)},
         );
         addTearDown(p.dispose);
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           storage: _MemoryStorage(),
           secretStore: _Secrets(),
           schoolSiteService: SchoolSiteService(

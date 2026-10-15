@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
@@ -37,8 +37,8 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://parse-page-test';
 }
 
-Future<TimetableProvider> _createProvider() async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider() async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
@@ -159,7 +159,7 @@ Future<void> _pumpPage(
 Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
   WidgetTester tester,
   StreamController<SchoolImportStreamEvent> controller,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   bool configureImport = true,
   bool canReplaceCurrent = false,
   TextScaler textScaler = TextScaler.noScaling,

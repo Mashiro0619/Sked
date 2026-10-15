@@ -8,7 +8,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -66,10 +66,10 @@ class _PendingTimetableStorage implements TimetableStorage {
   }
 }
 
-Future<TimetableProvider> _createProvider({
+Future<AppRuntime> _createProvider({
   String localeCode = defaultLocaleCode,
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
@@ -85,7 +85,7 @@ Future<TimetableProvider> _createProvider({
 
 Future<void> _pumpPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   Locale locale = const Locale('en'),
   EdgeInsets viewPadding = EdgeInsets.zero,
   TextScaler textScaler = TextScaler.noScaling,
@@ -348,7 +348,7 @@ void main() {
         localeCode: defaultLocaleCode,
       ).copyWith(activeMode: AppMode.general);
       final storage = _PendingTimetableStorage(initialData);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,

@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart'
+    show AppImportMode, WorkspaceChangeCancelledException;
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/widgets/adaptive_collection_scaffold.dart';
 import 'package:sked/widgets/sked_task_dialog.dart';
@@ -48,7 +50,7 @@ void viewport(WidgetTester t, Size size) {
   addTearDown(t.view.resetPhysicalSize);
 }
 
-Future<(TimetableProvider, _RecordingStorage)> start(
+Future<(AppRuntime, _RecordingStorage)> start(
   WidgetTester t, {
   int count = 1,
   double scale = 1,

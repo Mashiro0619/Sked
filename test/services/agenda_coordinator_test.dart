@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
@@ -185,11 +185,11 @@ class _ConcurrentScheduleGateway extends MemoryAgendaNotificationGateway {
   }
 }
 
-Future<TimetableProvider> _provider() async =>
+Future<AppRuntime> _provider() async =>
     _providerWithData(buildInitialAppData(buildDefaultPeriodTimes()));
 
-Future<TimetableProvider> _providerWithData(AppData data) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _providerWithData(AppData data) async {
+  final provider = AppRuntime(
     storage: _MemoryStorage(data),
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,
@@ -755,7 +755,7 @@ void main() {
   );
 
   test('reports an explicit readiness failure and does not start', () async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryStorage(buildInitialAppData(buildDefaultPeriodTimes())),
       systemLocaleCodeResolver: () => 'en',
       uiStateSaveDelay: Duration.zero,
@@ -779,7 +779,7 @@ void main() {
   });
 
   test('dispose releases a pending readiness wait', () async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _MemoryStorage(buildInitialAppData(buildDefaultPeriodTimes())),
       systemLocaleCodeResolver: () => 'en',
       uiStateSaveDelay: Duration.zero,
@@ -877,7 +877,7 @@ void main() {
   test('does not persist handled actions when provider saving fails', () async {
     final anchor = DateTime(2026, 8, 3, 8);
     final base = _dataWithEvent();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: _FailingSaveStorage(base),
       systemLocaleCodeResolver: () => 'en',
       uiStateSaveDelay: Duration.zero,
@@ -1141,7 +1141,7 @@ void main() {
 }
 
 class _ThrowingActionRouter extends AgendaActionRouter {
-  _ThrowingActionRouter({required TimetableProvider provider})
+  _ThrowingActionRouter({required AppRuntime provider})
     : super(
         workspace: provider.workspaceView,
         workspaces: provider.workspaces,

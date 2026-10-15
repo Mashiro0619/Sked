@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/language_settings_page.dart';
 import 'package:sked/screens/period_times_page.dart';
@@ -41,7 +41,7 @@ class _Storage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(TimetableProvider, _Storage)> _fixture() async {
+Future<(AppRuntime, _Storage)> _fixture() async {
   final seed = await workspaceProvider();
   final storage = _Storage(seed.workspaceView.data);
   seed.dispose();

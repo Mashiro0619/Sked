@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart'
+    show AppImportMode, WorkspaceChangeCancelledException;
 import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/widgets/sked_time_picker.dart';
 
@@ -30,7 +32,7 @@ class _ExitStorage extends WorkspaceMemoryStorage {
 
 Future<void> _openEditor(
   WidgetTester t,
-  TimetableProvider p, {
+  AppRuntime p, {
   bool asHome = false,
 }) async {
   t.view.devicePixelRatio = 1;

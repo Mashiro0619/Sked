@@ -10,12 +10,13 @@ import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/controllers/student_commands.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 
 import '../support/workspace_harness.dart';
 
 class _ViewCounts {
-  _ViewCounts(TimetableProvider app) {
+  _ViewCounts(AppRuntime app) {
     app.studentView.addListener(() => student += 1);
     app.generalView.addListener(() => general += 1);
     app.settingsView.addListener(() => settings += 1);

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 
@@ -24,8 +24,7 @@ const _fields = <String, dynamic>{
 
 Finder _customFields() => find.byKey(const ValueKey('course-custom-fields'));
 
-Future<({TimetableProvider provider, WorkspaceMemoryStorage storage})>
-_openEditor(
+Future<({AppRuntime provider, WorkspaceMemoryStorage storage})> _openEditor(
   WidgetTester tester, {
   required bool phone,
   Map<String, dynamic> fields = _fields,
@@ -102,7 +101,7 @@ _openEditor(
 }
 
 void _expectStoredFields(
-  ({TimetableProvider provider, WorkspaceMemoryStorage storage}) state,
+  ({AppRuntime provider, WorkspaceMemoryStorage storage}) state,
   Map<String, dynamic> fields,
 ) {
   expect(

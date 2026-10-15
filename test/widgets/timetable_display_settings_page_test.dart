@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 
 import 'package:sked/screens/timetable_display_settings_page.dart';
 import 'package:sked/widgets/settings_list.dart';
@@ -35,8 +35,8 @@ class _MemoryTimetableStorage implements TimetableStorage {
   }
 }
 
-Future<TimetableProvider> _createProvider() async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider() async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
@@ -52,7 +52,7 @@ Future<TimetableProvider> _createProvider() async {
 
 Future<void> _pumpPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   EdgeInsets viewPadding = EdgeInsets.zero,
   TextScaler textScaler = TextScaler.noScaling,
 }) async {

@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/screens/workspace_features_page.dart';
@@ -26,7 +26,7 @@ class _PendingStorage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(TimetableProvider, _PendingStorage)> _fixture() async {
+Future<(AppRuntime, _PendingStorage)> _fixture() async {
   final seed = await workspaceProvider();
   final storage = _PendingStorage(seed.workspaceView.data);
   seed.dispose();

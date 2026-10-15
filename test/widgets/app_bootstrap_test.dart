@@ -9,7 +9,7 @@ import 'package:sked/data/app_repository.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/main.dart' hide main;
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/app_instance_lease.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/privacy_service.dart';
@@ -55,7 +55,7 @@ class _FakeLease implements AppInstanceLease {
   }
 }
 
-TimetableProvider _provider() => TimetableProvider(
+AppRuntime _provider() => AppRuntime(
   dataTransferCodec: inlineDataTransferCodec,
   storage: _MemoryStorage(),
   systemLocaleCodeResolver: () => 'en',
@@ -135,7 +135,7 @@ void main() {
     final app = _provider();
     addTearDown(app.dispose);
     await app.lifecycle.load();
-    await tester.pumpWidget(MyApp(provider: app));
+    await tester.pumpWidget(MyApp(app: app));
     await tester.pumpAndSettle();
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
 
@@ -172,7 +172,7 @@ void main() {
     addTearDown(tester.platformDispatcher.clearLocaleTestValue);
 
     await tester.pumpWidget(
-      AppBootstrap(lease: _FakeLease([false]), providerFactory: _provider),
+      AppBootstrap(lease: _FakeLease([false]), runtimeFactory: _provider),
     );
     await tester.pumpAndSettle();
 
@@ -193,7 +193,7 @@ void main() {
     await tester.pumpWidget(
       AppBootstrap(
         lease: lease,
-        providerFactory: () {
+        runtimeFactory: () {
           providerFactoryCalls += 1;
           return _provider();
         },
@@ -219,7 +219,7 @@ void main() {
     final lease = _FakeLease([const FileSystemException('denied'), true]);
 
     await tester.pumpWidget(
-      AppBootstrap(lease: lease, providerFactory: _provider),
+      AppBootstrap(lease: lease, runtimeFactory: _provider),
     );
     await tester.pumpAndSettle();
 
@@ -242,7 +242,7 @@ void main() {
     await tester.pumpWidget(
       AppBootstrap(
         lease: lease,
-        providerFactory: () {
+        runtimeFactory: () {
           providerFactoryCalls += 1;
           return _provider();
         },
@@ -265,7 +265,7 @@ void main() {
     final lease = _FakeLease([false, retryResult.future]);
 
     await tester.pumpWidget(
-      AppBootstrap(lease: lease, providerFactory: _provider),
+      AppBootstrap(lease: lease, runtimeFactory: _provider),
     );
     await tester.pumpAndSettle();
 
@@ -292,7 +292,7 @@ void main() {
     await tester.pumpWidget(
       AppBootstrap(
         lease: lease,
-        providerFactory: () {
+        runtimeFactory: () {
           providerFactoryCalls += 1;
           if (providerFactoryCalls == 1) {
             throw StateError('provider creation failed');
@@ -323,7 +323,7 @@ void main() {
         loadCompleter: loadCompleter,
         quiesceCompleter: quiesceCompleter,
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         repository: repository,
         secretStore: _MemorySecrets(),
         backupRestoreJournal: _EmptyJournal(),
@@ -334,7 +334,7 @@ void main() {
       final lease = _FakeLease([true]);
 
       await tester.pumpWidget(
-        AppBootstrap(lease: lease, providerFactory: () => provider),
+        AppBootstrap(lease: lease, runtimeFactory: () => provider),
       );
       await tester.pump();
       expect(find.byType(MyApp), findsOneWidget);

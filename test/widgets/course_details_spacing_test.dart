@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/workspace_view_panel.dart';
 
@@ -24,7 +24,7 @@ Finder _primary(IconData icon) =>
 class _Fixture {
   _Fixture(this.provider, this.course);
 
-  final TimetableProvider provider;
+  final AppRuntime provider;
   final CourseItem course;
   int editCount = 0;
   int closeCount = 0;

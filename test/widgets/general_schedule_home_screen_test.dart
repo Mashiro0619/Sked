@@ -11,7 +11,7 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -41,13 +41,12 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://general-home-test';
 }
 
-TimetableProvider _createDomainApp(TimetableStorage storage) =>
-    TimetableProvider(
-      dataTransferCodec: inlineDataTransferCodec,
-      storage: storage,
-      systemLocaleCodeResolver: () => defaultLocaleCode,
-      uiStateSaveDelay: Duration.zero,
-    );
+AppRuntime _createDomainApp(TimetableStorage storage) => AppRuntime(
+  dataTransferCodec: inlineDataTransferCodec,
+  storage: storage,
+  systemLocaleCodeResolver: () => defaultLocaleCode,
+  uiStateSaveDelay: Duration.zero,
+);
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -145,8 +144,8 @@ AppData _buildGeneralDataWithCalendars(
   );
 }
 
-Future<TimetableProvider> _createProvider() async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider() async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
@@ -161,8 +160,8 @@ Future<TimetableProvider> _createProvider() async {
   return provider;
 }
 
-Future<TimetableProvider> _createGeneralProvider(AppData data) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createGeneralProvider(AppData data) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -172,10 +171,8 @@ Future<TimetableProvider> _createGeneralProvider(AppData data) async {
   return provider;
 }
 
-Future<TimetableProvider> _createProviderWithStorage(
-  TimetableStorage storage,
-) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProviderWithStorage(TimetableStorage storage) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -202,7 +199,7 @@ final _registeredProviderTeardowns = Expando<bool>();
 
 Future<void> _pumpGeneralScheduleHomeScreen(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   ThemeData? theme,
   TextScaler textScaler = TextScaler.noScaling,
   TextDirection? textDirection,

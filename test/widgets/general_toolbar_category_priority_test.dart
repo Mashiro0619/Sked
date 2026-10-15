@@ -2,7 +2,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 
 import '../support/mobile_layout_data.dart';
@@ -28,7 +28,7 @@ class _Storage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(TimetableProvider, _Storage)> home(
+Future<(AppRuntime, _Storage)> home(
   WidgetTester t, {
   double width = 500,
   double scale = 1,

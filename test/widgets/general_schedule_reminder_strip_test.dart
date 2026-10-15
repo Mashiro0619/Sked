@@ -7,7 +7,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -73,7 +73,7 @@ class _TrackingTimer implements Timer {
   }
 }
 
-Future<TimetableProvider> _createProvider() async {
+Future<AppRuntime> _createProvider() async {
   final initial =
       buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en').copyWith(
         activeMode: AppMode.general,
@@ -99,7 +99,7 @@ Future<TimetableProvider> _createProvider() async {
           ],
         ),
       );
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(initial),
     systemLocaleCodeResolver: () => 'en',
@@ -111,7 +111,7 @@ Future<TimetableProvider> _createProvider() async {
 
 Future<void> _pumpReminderScreen(
   WidgetTester tester, {
-  required TimetableProvider provider,
+  required AppRuntime provider,
   required _MutableClock clock,
   required _TrackingTimerFactory timers,
 }) async {

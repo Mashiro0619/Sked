@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/services/export_service.dart';
@@ -177,8 +177,8 @@ class _RetryThenShareExportService extends ExportService {
   }
 }
 
-Future<TimetableProvider> _createProvider() async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider() async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
@@ -195,7 +195,7 @@ Future<TimetableProvider> _createProvider() async {
 
 Future<void> _pumpSchoolSitesPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   ExportService? exportService,
   SchoolSiteService? siteService,
   Future<String?> Function()? pickJsonSource,

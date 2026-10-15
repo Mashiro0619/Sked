@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 
 import '../support/workspace_harness.dart';
 

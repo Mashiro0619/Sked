@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/models/app_data_commit.dart' show AppDataCommit;
 import 'package:sked/providers/workspace_theme_target.dart';
 
 class _ControllableStorage implements TimetableStorage {
@@ -28,8 +29,8 @@ class _ControllableStorage implements TimetableStorage {
   }
 }
 
-Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _providerFor(_ControllableStorage storage) async {
+  final provider = AppRuntime(
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
   );

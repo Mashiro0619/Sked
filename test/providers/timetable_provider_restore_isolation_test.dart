@@ -6,7 +6,11 @@ import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart'
+    show AppBackupRestoreException, AppImportMode;
+import 'package:sked/controllers/app_data_maintenance.dart'
+    show AppBackupRestoreInProgressException;
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
@@ -133,13 +137,13 @@ class _MemoryBackupRestoreJournal extends AppBackupRestoreJournal {
 AppData _appData(String localeCode) =>
     buildInitialAppData(buildDefaultPeriodTimes(), localeCode: localeCode);
 
-Future<TimetableProvider> _provider({
+Future<AppRuntime> _provider({
   required _MemoryTimetableStorage appStorage,
   required _MemorySchoolSiteStore siteStore,
   required _MemorySecretStore secrets,
   required _MemoryBackupRestoreJournal journal,
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     storage: appStorage,
     schoolSiteService: SchoolSiteService(store: siteStore),
     secretStore: secrets,

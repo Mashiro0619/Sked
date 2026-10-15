@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_runtime_mutation_lock.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
@@ -43,7 +43,7 @@ class _NavigationStorage extends WorkspaceMemoryStorage {
 GeneralDateRange get _customRange =>
     GeneralDateRange(DateTime(2026, 9, 3), DateTime(2026, 9, 12));
 
-Future<(TimetableProvider, _NavigationStorage)> _setup() async {
+Future<(AppRuntime, _NavigationStorage)> _setup() async {
   final base = mobileLayoutData();
   final storage = _NavigationStorage(
     base.copyWith(
@@ -74,7 +74,7 @@ Future<(TimetableProvider, _NavigationStorage)> _setup() async {
   return (provider, storage);
 }
 
-Future<void> _phone(WidgetTester t, TimetableProvider provider) async {
+Future<void> _phone(WidgetTester t, AppRuntime provider) async {
   t.view.devicePixelRatio = 1;
   t.view.physicalSize = const Size(393, 852);
   t.view.padding = const FakeViewPadding(top: 24, bottom: 24);

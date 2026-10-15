@@ -13,7 +13,9 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_data_maintenance.dart'
+    show AppBackupRestoreInProgressException;
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
@@ -115,10 +117,10 @@ AppData _buildConfiguredCustomParserData({
   );
 }
 
-Future<TimetableProvider> _createProvider({
+Future<AppRuntime> _createProvider({
   String baseUrl = 'https://api.example.com/v1',
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(
       _buildConfiguredCustomParserData(baseUrl: baseUrl),
@@ -130,7 +132,7 @@ Future<TimetableProvider> _createProvider({
   return provider;
 }
 
-Future<TimetableProvider> _createProviderWithoutActivePeriodTimeSet() async {
+Future<AppRuntime> _createProviderWithoutActivePeriodTimeSet() async {
   final provider = await _createProvider();
   // Inspect an unresolved active reference through the real student view,
   // retaining a live set that the import form can select as its fallback.
@@ -212,7 +214,7 @@ Future<AppLocalizations> _pumpAndCaptureL10n(WidgetTester tester) async {
 
 Future<void> _pumpSchoolHtmlImportPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   SchoolImportApi? api,
   SchoolImportHttpConsentStore? httpConsentStore,
   http.Client Function()? httpClientFactory,
@@ -243,7 +245,7 @@ Future<void> _pumpSchoolHtmlImportPage(
 
 Future<void> _pumpSchoolHtmlImportPageHost(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
 ) async {
   await tester.pumpWidget(
     AppScope(

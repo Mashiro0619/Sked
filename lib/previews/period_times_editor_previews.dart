@@ -1,7 +1,8 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+
 import '../providers/app_scope.dart';
 import '../screens/period_times_page.dart';
 import '../utils/constants.dart';
@@ -38,7 +39,7 @@ class _PeriodTimesEditorPreviewHost extends StatefulWidget {
 
 class _PeriodTimesEditorPreviewHostState
     extends State<_PeriodTimesEditorPreviewHost> {
-  late final TimetableProvider _provider = TimetableProvider(
+  late final AppRuntime _provider = AppRuntime(
     systemLocaleCodeResolver: () => 'en',
   );
 

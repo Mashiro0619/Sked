@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 
 import '../test/support/workspace_harness.dart';
@@ -25,7 +25,7 @@ Future<void> main() async {
 
 class _Preview extends StatefulWidget {
   const _Preview({required this.provider});
-  final TimetableProvider provider;
+  final AppRuntime provider;
   @override
   State<_Preview> createState() => _PreviewState();
 }

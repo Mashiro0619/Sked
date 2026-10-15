@@ -7,7 +7,7 @@ import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/app_storage_layout_io.dart';
@@ -171,7 +171,7 @@ void main() {
         flush: true,
       );
       final secrets = _MemorySecretStore();
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: IoTimetableStorage(layout: layout),
         secretStore: secrets,
         systemLocaleCodeResolver: () => 'en',
@@ -205,7 +205,7 @@ void main() {
       );
       var failScrub = true;
       final secrets = _MemorySecretStore();
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: IoTimetableStorage(
           layout: layout,
           beforeLegacySecretArtifactReplace: (_) async {
@@ -505,7 +505,7 @@ void main() {
       }),
       flush: true,
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       secretStore: _MemorySecretStore(),
       systemLocaleCodeResolver: () => 'en',

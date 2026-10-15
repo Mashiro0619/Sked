@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
@@ -28,7 +28,7 @@ typedef FloatingAnchorCapture = Future<void> Function(
 
 Future<void> _mount(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   Size size = const Size(1366, 768),
   Widget? app,
 }) async {
@@ -52,7 +52,7 @@ Future<void> _mount(
   await tester.pumpAndSettle();
 }
 
-Future<TimetableProvider> _studentProvider({
+Future<AppRuntime> _studentProvider({
   int weekday = 1,
   int period = 1,
   int timetableCount = 1,
@@ -112,7 +112,7 @@ Future<TimetableProvider> _studentProvider({
   return provider;
 }
 
-Future<TimetableProvider> _overflowProvider() {
+Future<AppRuntime> _overflowProvider() {
   final initial = buildInitialAppData(
     buildDefaultPeriodTimes(),
     localeCode: 'en',

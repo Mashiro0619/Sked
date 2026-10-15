@@ -22,7 +22,7 @@ import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/app_storage_layout_io.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
@@ -157,11 +157,11 @@ AppData baseData() {
   );
 }
 
-Future<TimetableProvider> providerFor(
+Future<AppRuntime> providerFor(
   TimetableStorage storage, {
   ProbeSecrets? secrets,
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     secretStore: secrets ?? ProbeSecrets(),
@@ -177,7 +177,7 @@ Future<TimetableProvider> providerFor(
   return provider;
 }
 
-Future<TimetableProvider> _studentProviderAtWeek12(ProbeStorage storage) async {
+Future<AppRuntime> _studentProviderAtWeek12(ProbeStorage storage) async {
   final provider = await providerFor(storage);
   await provider.studentCommands.addTimetable(
     TimetableConfig(
@@ -206,7 +206,7 @@ AgendaNotificationService serviceFor(
 }
 
 AgendaCoordinator coordinatorFor(
-  TimetableProvider provider,
+  AppRuntime provider,
   AgendaNotificationService service, {
   AndroidProductivityBridge? bridge,
   Duration timeout = const Duration(seconds: 15),

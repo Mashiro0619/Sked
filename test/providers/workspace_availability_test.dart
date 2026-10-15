@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/providers/workspace_theme_target.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart'
+    show AppImportMode, WorkspaceChangeCancelledException;
 
 import '../support/workspace_harness.dart';
 
@@ -146,9 +148,9 @@ void main() {
     },
   );
 
-  Future<(TimetableProvider, _Storage)> setup() async {
+  Future<(AppRuntime, _Storage)> setup() async {
     final storage = _Storage();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => 'en',
     );

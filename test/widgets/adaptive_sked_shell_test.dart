@@ -18,7 +18,9 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/main.dart' show MyApp;
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_lifecycle.dart'
+    show bundledPrivacyPolicyVersion;
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
@@ -102,11 +104,11 @@ AppData _shellData({AppMode mode = AppMode.student, bool populated = false}) {
   );
 }
 
-Future<TimetableProvider> _providerFor(
+Future<AppRuntime> _providerFor(
   TimetableStorage storage, {
   AppMode mode = AppMode.student,
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -120,7 +122,7 @@ Future<TimetableProvider> _providerFor(
 }
 
 Widget _appFor(
-  TimetableProvider provider, {
+  AppRuntime provider, {
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
   EdgeInsets safePadding = EdgeInsets.zero,
@@ -179,7 +181,7 @@ Widget _appFor(
   );
 }
 
-Future<void> _changeStudentSelection(TimetableProvider provider) async {
+Future<void> _changeStudentSelection(AppRuntime provider) async {
   final student = provider.studentView;
   final nextWeek = student.selectedWeek == 1 ? 2 : 1;
   var notifications = 0;
@@ -241,7 +243,7 @@ FocusNode _globalSettingsNode(WidgetTester tester) {
       .focusNode!;
 }
 
-Future<TimetableProvider> _resourceShell(
+Future<AppRuntime> _resourceShell(
   WidgetTester tester, {
   TimetableStorage? storage,
   bool collapsed = false,
@@ -1594,7 +1596,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(390, 844));
 
-    await tester.pumpWidget(MyApp(provider: provider));
+    await tester.pumpWidget(MyApp(app: provider));
     await tester.pumpAndSettle();
     MaterialApp materialApp() =>
         tester.widget<MaterialApp>(find.byType(MaterialApp));

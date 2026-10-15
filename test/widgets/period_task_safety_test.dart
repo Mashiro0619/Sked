@@ -7,7 +7,8 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/controllers/app_backup_controller.dart'
+    show AppImportMode, WorkspaceChangeCancelledException;
 import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 

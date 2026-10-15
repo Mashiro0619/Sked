@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
@@ -38,7 +38,7 @@ class Storage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(TimetableProvider, Storage)> mount(
+Future<(AppRuntime, Storage)> mount(
   WidgetTester t, {
   double width = 1000,
   double scale = 1,

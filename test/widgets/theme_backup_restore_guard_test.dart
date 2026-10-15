@@ -8,7 +8,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_lifecycle.dart'
+    show bundledPrivacyPolicyVersion;
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
@@ -126,7 +129,7 @@ AppData _colorData(AppData source, int color, String colorMode) =>
       ),
     );
 
-Future<(TimetableProvider, _Storage, _RestoreGate)> _fixture({
+Future<(AppRuntime, _Storage, _RestoreGate)> _fixture({
   AppMode mode = AppMode.student,
   String colorMode = themeColorModeColorful,
 }) async {
@@ -147,7 +150,7 @@ Future<(TimetableProvider, _Storage, _RestoreGate)> _fixture({
   return (provider, storage, gate);
 }
 
-List<String> _colorRowKeys(TimetableProvider provider, AppMode mode) => [
+List<String> _colorRowKeys(AppRuntime provider, AppMode mode) => [
   for (final key in [
     colorfulUiPrimaryKey,
     colorfulUiSecondaryKey,

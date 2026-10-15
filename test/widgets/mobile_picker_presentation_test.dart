@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_time_picker.dart';
 import 'package:sked/widgets/sked_week_picker.dart';
@@ -25,7 +26,7 @@ void _size(WidgetTester t, Size size) {
 
 Future<void> _open(
   WidgetTester t,
-  TimetableProvider p,
+  AppRuntime p,
   String kind,
   List<Object?> results, {
   double scale = 1,

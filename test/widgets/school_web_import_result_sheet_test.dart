@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
@@ -82,10 +82,8 @@ SchoolImportResponse _buildResponse({
   );
 }
 
-Future<TimetableProvider> _createProvider({
-  _MemoryTimetableStorage? storage,
-}) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider({_MemoryTimetableStorage? storage}) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage:
         storage ??
@@ -106,7 +104,7 @@ PeriodTimeSet _extraPeriodTimeSet({required String name}) {
 
 Future<void> _pumpPreviewSheet(
   WidgetTester tester, {
-  required TimetableProvider provider,
+  required AppRuntime provider,
   required SchoolImportResponse response,
   bool canReplaceCurrent = false,
   TextScaler textScaler = TextScaler.noScaling,
@@ -777,7 +775,7 @@ void main() {
             name: 'First provider selection',
             periodTimes: buildDefaultPeriodTimes().take(2).toList(),
           );
-      TimetableProvider currentProvider = firstProvider;
+      AppRuntime currentProvider = firstProvider;
       StateSetter? setHostState;
 
       await tester.pumpWidget(

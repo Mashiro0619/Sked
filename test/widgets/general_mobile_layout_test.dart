@@ -5,7 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
@@ -45,7 +45,7 @@ void _size(WidgetTester t, Size size) {
 
 Future<void> _home(
   WidgetTester t,
-  TimetableProvider p, {
+  AppRuntime p, {
   double scale = 1,
   Brightness brightness = Brightness.light,
   Widget? wrapper,

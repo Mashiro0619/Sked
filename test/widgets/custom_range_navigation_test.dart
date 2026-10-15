@@ -7,7 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
@@ -57,7 +58,7 @@ class _Storage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(TimetableProvider, _Storage)> _setup({
+Future<(AppRuntime, _Storage)> _setup({
   GeneralDateRange? range,
   bool weekends = false,
 }) async {
@@ -135,11 +136,7 @@ Future<(TimetableProvider, _Storage)> _setup({
 
 GeneralDateRange get _five =>
     GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13));
-Future<void> _pump(
-  WidgetTester t,
-  TimetableProvider p, {
-  double scale = 1,
-}) async {
+Future<void> _pump(WidgetTester t, AppRuntime p, {double scale = 1}) async {
   await t.pumpWidget(
     WorkspaceHarness(provider: p, locale: const Locale('zh'), textScale: scale),
   );

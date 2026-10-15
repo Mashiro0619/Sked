@@ -3,7 +3,7 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
@@ -13,7 +13,7 @@ import '../support/workspace_harness.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
-Future<(TimetableProvider, DesktopLayoutPreferences)> _mount(
+Future<(AppRuntime, DesktopLayoutPreferences)> _mount(
   WidgetTester t, {
   double dockedWidth = 440,
   bool rtl = false,

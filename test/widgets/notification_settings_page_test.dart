@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 
 import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/services/agenda_coordinator.dart';
@@ -34,8 +34,8 @@ class _NotificationSettingsStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://notification-settings';
 }
 
-Future<TimetableProvider> _provider() async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _provider() async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _NotificationSettingsStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),

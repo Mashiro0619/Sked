@@ -3,7 +3,7 @@ import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -43,7 +43,7 @@ void main() {
       final initial = buildInitialAppData(buildDefaultPeriodTimes())
           .copyWith(activeMode: AppMode.general, localeCode: 'de');
       final storage = _MemoryTimetableStorage(initial);
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
@@ -91,7 +91,7 @@ void main() {
       courses: const [],
     );
     final storage = _MemoryTimetableStorage(initial);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
@@ -127,7 +127,7 @@ void main() {
         initial,
         recoveryStatus: RecoveryStatus.ioFailure,
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );

@@ -1,5 +1,5 @@
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 
 import 'workspace_harness.dart';
@@ -137,7 +137,7 @@ AppData denseWorkbenchData({
   );
 }
 
-Future<TimetableProvider> denseWorkbenchProvider({
+Future<AppRuntime> denseWorkbenchProvider({
   AppMode mode = AppMode.general,
   String view = generalViewWeek,
   bool mobileToolbarHidden = false,

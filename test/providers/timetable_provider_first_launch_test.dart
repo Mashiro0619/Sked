@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/main.dart' hide main;
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_lifecycle.dart'
+    show bundledPrivacyPolicyVersion;
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 
@@ -50,8 +52,8 @@ class _ControllableStorage implements TimetableStorage {
   }
 }
 
-Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _providerFor(_ControllableStorage storage) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
@@ -104,7 +106,7 @@ void main() {
     final storage = _ControllableStorage(null);
     final provider = await _providerFor(storage);
 
-    await tester.pumpWidget(MyApp(provider: provider));
+    await tester.pumpWidget(MyApp(app: provider));
     await tester.pumpAndSettle();
 
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));

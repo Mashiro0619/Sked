@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
+import 'package:sked/controllers/app_data_maintenance.dart'
+    show AppBackupRestoreInProgressException;
 
 import '../support/workspace_harness.dart';
 
@@ -20,7 +23,7 @@ class _Storage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(_Storage, TimetableProvider)> _setup({
+Future<(_Storage, AppRuntime)> _setup({
   Future<void> Function(Future<void> Function())? lock,
 }) async {
   final seed = await workspaceProvider(mode: AppMode.general);

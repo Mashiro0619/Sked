@@ -9,7 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
@@ -320,7 +320,7 @@ AppData _fixtureData(AppMode mode, String locale) {
 
 Future<void> _openEditor(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
   _EditorGroup group, {
   required bool editing,
 }) async {

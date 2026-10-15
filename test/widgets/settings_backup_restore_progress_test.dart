@@ -8,7 +8,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
+import 'package:sked/controllers/app_data_maintenance.dart'
+    show AppBackupRestoreInProgressException;
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/screens/language_settings_page.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
@@ -69,7 +72,7 @@ class _PendingBackupCodec extends DataTransferCodec {
   }
 }
 
-Future<(TimetableProvider, _Storage)> _fixture({
+Future<(AppRuntime, _Storage)> _fixture({
   DataTransferCodec codec = inlineDataTransferCodec,
 }) async {
   final seed = await workspaceProvider();

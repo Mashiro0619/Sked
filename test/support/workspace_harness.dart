@@ -12,7 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -88,7 +88,7 @@ class _Privacy extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
-Future<TimetableProvider> workspaceProvider({
+Future<AppRuntime> workspaceProvider({
   AppMode mode = AppMode.student,
   String locale = 'en',
   WorkspaceMemoryStorage? storage,
@@ -102,7 +102,7 @@ Future<TimetableProvider> workspaceProvider({
         : DeveloperSampleLanguage.english,
     now: DateTime(2026, 9, 8, 9),
   );
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: codec,
     storage:
         storage ??
@@ -133,7 +133,7 @@ class WorkspaceHarness extends StatefulWidget {
     this.fontFamily,
     this.seedColor = const Color(0xff6750a4),
   });
-  final TimetableProvider provider;
+  final AppRuntime provider;
   final Widget? home;
   final DeveloperUiPreferences? developerUiPreferences;
   final DesktopLayoutPreferences? layoutPreferences;

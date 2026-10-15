@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/secret_store.dart';
 
 class _RecordingStorage implements TimetableStorage {
@@ -134,11 +134,11 @@ class _ControlledSecretStore implements SecretStore {
       _completers[index].completeError(error, StackTrace.current);
 }
 
-Future<TimetableProvider> _provider({
+Future<AppRuntime> _provider({
   required _RecordingStorage storage,
   required SecretStore secrets,
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     storage: storage,
     secretStore: secrets,
     systemLocaleCodeResolver: () => 'en',

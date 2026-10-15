@@ -5,7 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
@@ -21,7 +22,7 @@ Finder get list => k('general-reminders-list');
 Finder row(String text) => find.descendant(of: list, matching: find.text(text));
 Finder inside(String key) => find.descendant(of: details, matching: k(key));
 final desktop = TargetPlatformVariant.only(TargetPlatform.windows);
-Future<TimetableProvider> mount(
+Future<AppRuntime> mount(
   WidgetTester t, {
   bool automatic = false,
   bool shell = false,

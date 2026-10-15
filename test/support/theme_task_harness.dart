@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/widgets/sked_task_dialog.dart';
 
@@ -22,7 +22,7 @@ class ThemeTaskStorage extends WorkspaceMemoryStorage {
 }
 
 Finder themeTaskKey(String value) => find.byKey(ValueKey(value));
-Future<(TimetableProvider, ThemeTaskStorage)> mountThemeTask(
+Future<(AppRuntime, ThemeTaskStorage)> mountThemeTask(
   WidgetTester t, {
   String kind = 'seed',
   GlobalKey? captureKey,

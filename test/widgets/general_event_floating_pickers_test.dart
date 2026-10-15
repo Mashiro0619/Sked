@@ -1,5 +1,7 @@
 import 'package:flutter/gestures.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart'
+    show AppImportMode, WorkspaceChangeCancelledException;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -32,7 +34,7 @@ GeneralEvent event({
   ],
 );
 
-Future<TimetableProvider> mount(
+Future<AppRuntime> mount(
   WidgetTester t, {
   double scale = 1,
   String locale = 'en',

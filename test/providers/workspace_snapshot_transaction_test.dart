@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/models/app_data_commit.dart' show AppDataCommit;
 import 'package:sked/providers/workspace_theme_target.dart';
 
 import '../support/workspace_harness.dart';

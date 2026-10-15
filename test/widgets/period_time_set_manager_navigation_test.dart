@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/widgets/desktop_window_host.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
@@ -36,7 +36,7 @@ class _Storage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<(TimetableProvider, _Storage)> _fixture({
+Future<(AppRuntime, _Storage)> _fixture({
   bool hasTimetables = true,
   bool secondSet = true,
 }) async {
@@ -67,7 +67,7 @@ Future<(TimetableProvider, _Storage)> _fixture({
 
 Future<void> _openManager(
   WidgetTester t,
-  TimetableProvider p, {
+  AppRuntime p, {
   Size size = const Size(1280, 800),
   double textScale = 1,
 }) async {
@@ -105,7 +105,7 @@ Future<void> _select(WidgetTester t, String id) async {
 String _draftName(WidgetTester t) =>
     t.widget<TextField>(_name).controller!.text;
 
-Map<String, String> _bindings(TimetableProvider p) => {
+Map<String, String> _bindings(AppRuntime p) => {
   for (final timetable in p.studentView.timetables)
     timetable.id: timetable.config.periodTimeSetId,
 };
@@ -119,7 +119,7 @@ Completer<void> _blockWrites(_Storage storage) {
   return pending;
 }
 
-Future<void> _invalidDraft(WidgetTester t, TimetableProvider p) async {
+Future<void> _invalidDraft(WidgetTester t, AppRuntime p) async {
   final end = p.studentView.periodTimeSets.first.periodTimes.first.endMinutes;
   await t.tap(_key('period-start-time-action').first);
   await t.pumpAndSettle();

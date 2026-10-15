@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/privacy_service.dart';
@@ -34,7 +34,7 @@ Finder _tooltipWithMessage(String message) => find.byWidgetPredicate(
 Widget _browserApp({
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
-  TimetableProvider? provider,
+  AppRuntime? provider,
   Widget? home,
   SchoolWebImportWebViewBuilder? webViewBuilder,
   Future<List<SchoolSite>> Function()? loadSites,
@@ -88,7 +88,7 @@ class _NoopPrivacyService extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
-Future<TimetableProvider> _createConfiguredProvider() async {
+Future<AppRuntime> _createConfiguredProvider() async {
   final initial =
       buildInitialAppData(
         buildDefaultPeriodTimes(),
@@ -101,7 +101,7 @@ Future<TimetableProvider> _createConfiguredProvider() async {
           customModel: 'gpt-test',
         ),
       );
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(initial),
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -669,9 +669,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final provider = TimetableProvider(
-          dataTransferCodec: inlineDataTransferCodec,
-        );
+        final provider = AppRuntime(dataTransferCodec: inlineDataTransferCodec);
         addTearDown(provider.dispose);
 
         await tester.pumpWidget(
@@ -721,9 +719,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final provider = TimetableProvider(
-        dataTransferCodec: inlineDataTransferCodec,
-      );
+      final provider = AppRuntime(dataTransferCodec: inlineDataTransferCodec);
       addTearDown(provider.dispose);
 
       await tester.pumpWidget(

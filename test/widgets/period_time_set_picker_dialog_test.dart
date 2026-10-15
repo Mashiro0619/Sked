@@ -11,7 +11,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
@@ -49,10 +49,8 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://period-picker-test';
 }
 
-Future<TimetableProvider> _createProvider({
-  _MemoryTimetableStorage? storage,
-}) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider({_MemoryTimetableStorage? storage}) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage:
         storage ??

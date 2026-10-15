@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_notification_fingerprint.dart';
 import 'package:sked/services/agenda_projection_service.dart';
@@ -25,8 +25,8 @@ class _MemoryStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://agenda-action-router';
 }
 
-Future<TimetableProvider> _loadProvider(AppData data) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _loadProvider(AppData data) async {
+  final provider = AppRuntime(
     storage: _MemoryStorage(data),
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,

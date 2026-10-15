@@ -14,7 +14,7 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
@@ -41,7 +41,7 @@ class UiPerformanceSession {
   }) : storage = UiPerformanceMemoryStorage(data),
        layout = DesktopLayoutPreferences.memory(),
        developer = DeveloperUiPreferences.memory(visible: false) {
-    provider = TimetableProvider(
+    provider = AppRuntime(
       storage: storage,
       dataTransferCodec: dataTransferCodec,
       secretStore: _MemorySecrets(),
@@ -59,7 +59,7 @@ class UiPerformanceSession {
   final UiPerformanceMemoryStorage storage;
   final DesktopLayoutPreferences layout;
   final DeveloperUiPreferences developer;
-  late final TimetableProvider provider;
+  late final AppRuntime provider;
 
   Future<void> load() async {
     await provider.lifecycle.load();

@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/desktop_window_host.dart';
@@ -39,7 +39,7 @@ class _StartupStorage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<TimetableProvider> _pumpStartup(
+Future<AppRuntime> _pumpStartup(
   WidgetTester t, {
   Size size = const Size(1280, 800),
   double scale = 1,
@@ -53,10 +53,7 @@ Future<TimetableProvider> _pumpStartup(
   final source = storage ?? _StartupStorage();
   final provider = loaded
       ? await workspaceProvider(storage: source)
-      : TimetableProvider(
-          dataTransferCodec: inlineDataTransferCodec,
-          storage: source,
-        );
+      : AppRuntime(dataTransferCodec: inlineDataTransferCodec, storage: source);
   addTearDown(provider.dispose);
   await t.pumpWidget(
     WorkspaceHarness(

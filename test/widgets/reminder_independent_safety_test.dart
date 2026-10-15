@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
@@ -66,7 +67,7 @@ WorkspaceMemoryStorage fixture({
   return storage;
 }
 
-Future<TimetableProvider> mount(
+Future<AppRuntime> mount(
   WidgetTester t, {
   WorkspaceMemoryStorage? storage,
   double scale = 1,
@@ -108,7 +109,7 @@ Future<void> closeList(WidgetTester t) async {
   expect(list, findsNothing);
 }
 
-GeneralEvent study(TimetableProvider p) =>
+GeneralEvent study(AppRuntime p) =>
     p.generalView.schedules.single.events.firstWhere((e) => e.id == 'study');
 
 Future<void> confirmDelete(WidgetTester t, {bool repeating = false}) async {

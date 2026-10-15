@@ -2,7 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/models/app_data_commit.dart'
+    show AppDataCommit, AppDataDomain;
+import 'package:sked/controllers/app_backup_controller.dart'
+    show AppImportMode, WorkspaceChangeCancelledException;
+import 'package:sked/controllers/app_data_maintenance.dart'
+    show AppBackupRestoreInProgressException;
 
 import '../support/workspace_harness.dart';
 

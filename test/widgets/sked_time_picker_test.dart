@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart';
-import 'package:sked/providers/timetable_provider.dart' show AppImportMode;
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 
 import 'dart:async';
 import 'dart:ui' show SemanticsAction;

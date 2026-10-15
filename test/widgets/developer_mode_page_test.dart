@@ -13,7 +13,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 
 import 'package:sked/screens/developer_mode_page.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -53,13 +53,13 @@ class _DeveloperPageStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://developer-mode-page';
 }
 
-Future<(TimetableProvider, _DeveloperPageStorage)> _createProvider({
+Future<(AppRuntime, _DeveloperPageStorage)> _createProvider({
   String localeCode = 'en',
 }) async {
   final storage = _DeveloperPageStorage(
     buildInitialAppData(buildDefaultPeriodTimes(), localeCode: localeCode),
   );
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => localeCode,
@@ -71,7 +71,7 @@ Future<(TimetableProvider, _DeveloperPageStorage)> _createProvider({
 
 Future<void> _pumpDeveloperPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
   AgendaCoordinator? agendaCoordinator,
@@ -99,10 +99,7 @@ Future<void> _pumpDeveloperPage(
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpSettingsPage(
-  WidgetTester tester,
-  TimetableProvider provider,
-) async {
+Future<void> _pumpSettingsPage(WidgetTester tester, AppRuntime provider) async {
   PackageInfo.setMockInitialValues(
     appName: 'Sked',
     packageName: 'com.example.sked',
@@ -175,7 +172,7 @@ void _mockAndroidNotificationDiagnostics({
 }
 
 AgendaCoordinator _developerNotificationCoordinator(
-  TimetableProvider provider,
+  AppRuntime provider,
   MemoryAgendaNotificationGateway gateway, {
   MemoryAgendaNotificationRuntimeStore? runtimeStore,
 }) {

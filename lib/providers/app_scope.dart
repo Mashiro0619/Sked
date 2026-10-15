@@ -22,14 +22,14 @@ import '../controllers/student_commands.dart';
 import '../controllers/student_view_state.dart';
 import '../controllers/workspace_commands.dart';
 import '../controllers/workspace_view_state.dart';
-import 'timetable_provider.dart';
+import '../app_runtime.dart';
 
 /// Registers the application's typed state and commands for screens and routes.
 /// The owning app controls their lifetime; scopes may reuse the same instances.
 class AppScope extends StatelessWidget {
   const AppScope({super.key, required this.app, required this.child});
 
-  final TimetableProvider app;
+  final AppRuntime app;
   final Widget child;
 
   /// Captures the current composition without subscribing to its owner. Routes
@@ -40,9 +40,8 @@ class AppScope extends StatelessWidget {
     return owner == null ? null : CapturedAppScope._(owner.app);
   }
 
-  static List<SingleChildWidget> providersFor(TimetableProvider app) => [
+  static List<SingleChildWidget> providersFor(AppRuntime app) => [
     _AppScopeAnchor(app: app),
-    ChangeNotifierProvider<TimetableProvider>.value(value: app),
     Provider<AppSession>.value(value: app.session),
     ChangeNotifierProvider<AppLifecycle>.value(value: app.lifecycle),
     ListenableProvider<ValueListenable<AppSessionReadiness>>.value(
@@ -82,7 +81,7 @@ class AppScope extends StatelessWidget {
 class CapturedAppScope {
   const CapturedAppScope._(this._app);
 
-  final TimetableProvider _app;
+  final AppRuntime _app;
 
   Widget wrap(Widget child) => AppScope(app: _app, child: child);
 }
@@ -90,7 +89,7 @@ class CapturedAppScope {
 class _AppScopeAnchor extends SingleChildStatelessWidget {
   const _AppScopeAnchor({required this.app});
 
-  final TimetableProvider app;
+  final AppRuntime app;
 
   @override
   Widget buildWithChild(BuildContext context, Widget? child) =>
@@ -100,7 +99,7 @@ class _AppScopeAnchor extends SingleChildStatelessWidget {
 class _AppScopeOwner extends InheritedWidget {
   const _AppScopeOwner({required this.app, required super.child});
 
-  final TimetableProvider app;
+  final AppRuntime app;
 
   @override
   bool updateShouldNotify(_AppScopeOwner oldWidget) => false;

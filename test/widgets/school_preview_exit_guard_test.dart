@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
@@ -46,7 +46,7 @@ SchoolImportResponse _response() => SchoolImportResponse(
   ),
 );
 
-Future<TimetableProvider> _mount(
+Future<AppRuntime> _mount(
   WidgetTester tester, {
   required List<SchoolImportApplyRequest?> results,
   Future<void> Function(SchoolImportApplyRequest)? onApply,

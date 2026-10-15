@@ -71,7 +71,7 @@ void main() {
           addTearDown(layouts.dispose);
           await provider.lifecycle.acceptPrivacyPolicyCurrentVersion();
           await tester.pumpWidget(
-            MyApp(provider: provider, desktopLayoutPreferences: layouts),
+            MyApp(app: provider, desktopLayoutPreferences: layouts),
           );
           await tester.pumpAndSettle();
           try {

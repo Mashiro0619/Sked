@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/theme/general_calendar_color_theme.dart';
@@ -22,7 +22,7 @@ Finder _inside(Finder cell, String key) =>
     find.descendant(of: cell, matching: _key(key));
 final _desktop = TargetPlatformVariant.only(TargetPlatform.windows);
 
-Future<TimetableProvider> _mount(
+Future<AppRuntime> _mount(
   WidgetTester t, {
   bool dense = false,
   DateTime? date,

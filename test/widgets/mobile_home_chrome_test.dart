@@ -2,7 +2,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/widgets/sked_calendar_day_label.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
@@ -33,7 +33,7 @@ void size(WidgetTester t, Size value) {
   addTearDown(t.view.resetViewPadding);
 }
 
-Future<(TimetableProvider, _Storage)> home(
+Future<(AppRuntime, _Storage)> home(
   WidgetTester t, {
   double scale = 1,
   bool dayView = false,

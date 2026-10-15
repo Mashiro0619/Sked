@@ -18,7 +18,10 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
+import 'package:sked/controllers/app_lifecycle.dart'
+    show bundledPrivacyPolicyVersion;
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/school_sites_page.dart';
@@ -203,7 +206,7 @@ class _RecoveryTimetableStorage
   }
 }
 
-Future<TimetableProvider> _createRecoveryProvider({
+Future<AppRuntime> _createRecoveryProvider({
   required TimetableStorage storage,
   required StorageLoadStatus status,
   required RecoveryStatus recoveryStatus,
@@ -212,7 +215,7 @@ Future<TimetableProvider> _createRecoveryProvider({
   Object? recoveryArtifactReadError,
   PrivacyService privacyService = const _NoopPrivacyService(),
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _RecoveryTimetableStorage(
       storage: storage,
@@ -420,9 +423,9 @@ AppData _buildLegacySystemFirstLaunchData() {
   );
 }
 
-Future<TimetableProvider> _createProvider() async {
+Future<AppRuntime> _createProvider() async {
   final data = _buildPopulatedStudentData();
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -433,7 +436,7 @@ Future<TimetableProvider> _createProvider() async {
   return provider;
 }
 
-Future<TimetableProvider> _createEmptyProvider(
+Future<AppRuntime> _createEmptyProvider(
   _BlockingTimetableStorage storage,
 ) async {
   final data = buildInitialAppData(
@@ -441,7 +444,7 @@ Future<TimetableProvider> _createEmptyProvider(
     localeCode: defaultLocaleCode,
   ).copyWith(activeMode: AppMode.student);
   storage.data = data;
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -454,7 +457,7 @@ Future<TimetableProvider> _createEmptyProvider(
 
 Future<void> _pumpHomeScreenWithProvider(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   TextScaler textScaler = TextScaler.noScaling,
   Locale locale = const Locale('en'),
   TextDirection? textDirection,
@@ -502,7 +505,7 @@ Future<void> _pumpHomeScreenWithProvider(
 
 Future<void> _pumpAppHomeScreenWithProvider(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   ExportService recoveryExportService = const ExportService(),
   bool settle = true,
   Locale locale = const Locale('en'),
@@ -585,7 +588,7 @@ void _expectFirstLaunchCardsStacked(WidgetTester tester) {
 
 Future<void> _pumpHomeScreenHostPage(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
 ) async {
   await _resetWidgetTree(tester);
   await tester.pumpWidget(
@@ -629,7 +632,7 @@ Future<void> _resetWidgetTree(WidgetTester tester) async {
   await tester.pump();
 }
 
-Future<TimetableProvider> _pumpHomeScreen(WidgetTester tester) async {
+Future<AppRuntime> _pumpHomeScreen(WidgetTester tester) async {
   final provider = await _createProvider();
   await _pumpHomeScreenWithProvider(tester, provider);
   return provider;
@@ -655,7 +658,7 @@ Future<void> _saveTimetableDialog(WidgetTester tester) async {
   await tester.tap(save);
 }
 
-String _selectedWeekTitle(TimetableProvider provider) {
+String _selectedWeekTitle(AppRuntime provider) {
   return 'Week ${provider.studentView.selectedWeek}';
 }
 
@@ -679,7 +682,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
       final storage = _MemoryTimetableStorage(_buildPopulatedStudentData());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         privacyService: const _NoopPrivacyService(),
@@ -1078,7 +1081,7 @@ void main() {
   testWidgets('write gate transition clears settings child routes', (
     tester,
   ) async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _FailingTimetableStorage(
         _buildPopulatedStudentData().copyWith(
@@ -1161,7 +1164,7 @@ void main() {
   ) async {
     final semanticsHandle = tester.ensureSemantics();
     final storage = _MemoryTimetableStorage(null);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1211,7 +1214,7 @@ void main() {
   testWidgets('legacy system-themed initial data still shows onboarding', (
     tester,
   ) async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildLegacySystemFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1234,7 +1237,7 @@ void main() {
     tester,
   ) async {
     final data = _buildDefaultFirstLaunchData();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(
         data.copyWith(
@@ -1273,7 +1276,7 @@ void main() {
       'disabled long-press ${scenario.name} add skips first-launch onboarding',
       (tester) async {
         final data = scenario.update(_buildDefaultFirstLaunchData());
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           dataTransferCodec: inlineDataTransferCodec,
           storage: _MemoryTimetableStorage(data),
           systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1297,7 +1300,7 @@ void main() {
     tester,
   ) async {
     final data = _buildDefaultFirstLaunchData();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(
         data.copyWith(
@@ -1321,7 +1324,7 @@ void main() {
     tester,
   ) async {
     final data = _buildDefaultFirstLaunchData();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(
         data.copyWith(homeWorkspaceNavigationCollapsed: true),
@@ -1359,7 +1362,7 @@ void main() {
       (tester) async {
         final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
         final privacyService = _BlockingPrivacyService();
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           dataTransferCodec: inlineDataTransferCodec,
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1426,7 +1429,7 @@ void main() {
         (width: 1200, hidden: false),
       ]) {
         final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
-        final provider = TimetableProvider(
+        final provider = AppRuntime(
           dataTransferCodec: inlineDataTransferCodec,
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1491,7 +1494,7 @@ void main() {
             schedules: [schedule, extraSchedule],
           ),
         );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(initialData),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1514,7 +1517,7 @@ void main() {
     (tester) async {
       final semanticsHandle = tester.ensureSemantics();
       final storage = _BlockingTimetableStorage(_buildDefaultFirstLaunchData());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1627,7 +1630,7 @@ void main() {
   ) async {
     final initialData = _buildDefaultFirstLaunchData();
     final storage = _FailingTimetableStorage(initialData);
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1668,7 +1671,7 @@ void main() {
             return true;
           });
       final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1768,7 +1771,7 @@ void main() {
   testWidgets('first launch privacy consent is one inline sentence', (
     tester,
   ) async {
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1803,7 +1806,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1120, 680));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1831,7 +1834,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1876,7 +1879,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(575, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final storage = _BlockingTimetableStorage(_buildDefaultFirstLaunchData());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1929,7 +1932,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(900, 360));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1975,7 +1978,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1120, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2002,7 +2005,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(576, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2033,7 +2036,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2088,7 +2091,7 @@ void main() {
         privacyPolicyAcceptedAtIso: null,
       ),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2143,7 +2146,7 @@ void main() {
         privacyPolicyAcceptedAtIso: null,
       ),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2172,7 +2175,7 @@ void main() {
     tester,
   ) async {
     final privacyService = _BlockingPrivacyService();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(
         _buildPopulatedStudentData().copyWith(
@@ -2198,7 +2201,7 @@ void main() {
     'newer persisted privacy acceptance remains valid without networking',
     (tester) async {
       final privacyService = _RecordingPrivacyService();
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: _MemoryTimetableStorage(
           _buildPopulatedStudentData().copyWith(
@@ -2237,7 +2240,7 @@ void main() {
           privacyPolicyAcceptedAtIso: acceptedAt,
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2260,10 +2263,8 @@ void main() {
   );
 
   test('privacy version comparison fails closed', () async {
-    Future<TimetableProvider> providerWithAcceptedVersion(
-      String version,
-    ) async {
-      final provider = TimetableProvider(
+    Future<AppRuntime> providerWithAcceptedVersion(String version) async {
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: _MemoryTimetableStorage(
           _buildPopulatedStudentData().copyWith(
@@ -2292,7 +2293,7 @@ void main() {
 
   test('active privacy policy version only moves forward', () async {
     final privacyService = _MutablePrivacyService();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildPopulatedStudentData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2320,7 +2321,7 @@ void main() {
 
   test('invalid active privacy policy version cannot be accepted', () async {
     final storage = _MemoryTimetableStorage(_buildPopulatedStudentData());
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2379,7 +2380,7 @@ void main() {
   ) async {
     final storage = _MemoryTimetableStorage(_buildPopulatedStudentData())
       ..failSaves = true;
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2434,7 +2435,7 @@ void main() {
       final storage = _MemoryTimetableStorage(
         _buildMultiTimetableStudentData(),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2468,7 +2469,7 @@ void main() {
   ) async {
     final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData())
       ..failSaves = true;
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2518,7 +2519,7 @@ void main() {
     final storage = _BlockingTimetableStorage(
       _buildMultiTimetableStudentData(),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2577,7 +2578,7 @@ void main() {
     tester,
   ) async {
     final storage = _MemoryTimetableStorage(_buildPopulatedStudentData());
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -2724,7 +2725,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(581, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final base = _buildPopulatedStudentData();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(
         base.copyWith(
@@ -3509,7 +3510,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildLongCourseStudentData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -3651,7 +3652,7 @@ void main() {
     tester,
   ) async {
     final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -3868,7 +3869,7 @@ void main() {
   ) async {
     final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData())
       ..failSaves = true;
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -3915,7 +3916,7 @@ void main() {
     tester,
   ) async {
     final storage = _BlockingTimetableStorage(_buildPopulatedStudentData());
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -3971,7 +3972,7 @@ void main() {
     final storage = _MemoryTimetableStorage(
       _buildMultiPeriodTimeSetStudentData(),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -4007,7 +4008,7 @@ void main() {
   ) async {
     final storage = _MemoryTimetableStorage(_buildPopulatedStudentData())
       ..failSaves = true;
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -4075,7 +4076,7 @@ void main() {
     final storage = _BlockingTimetableStorage(
       _buildMultiTimetableStudentData(),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -4122,7 +4123,7 @@ void main() {
     final storage = _BlockingTimetableStorage(
       _buildMultiTimetableStudentData(),
     );
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -4161,7 +4162,7 @@ void main() {
   ) async {
     final semantics = tester.ensureSemantics();
     final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData());
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -4188,7 +4189,7 @@ void main() {
   ) async {
     final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData())
       ..failSaves = true;
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -4331,7 +4332,7 @@ void main() {
           ],
         ),
       );
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: _MemoryTimetableStorage(data),
         systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -4410,7 +4411,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final base = _buildPopulatedStudentData();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(
         base.copyWith(

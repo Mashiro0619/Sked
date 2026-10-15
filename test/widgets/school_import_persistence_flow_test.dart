@@ -14,7 +14,9 @@ import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_lifecycle.dart'
+    show bundledPrivacyPolicyVersion;
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
@@ -65,7 +67,7 @@ class _NoPrivacyRequest extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
-void _replaceDataSession(TimetableProvider provider) {
+void _replaceDataSession(AppRuntime provider) {
   final reservation = provider.maintenance.reserve();
   provider.maintenance.release(reservation);
 }
@@ -112,7 +114,7 @@ class _Api extends SchoolImportApi {
   }
 }
 
-Future<(TimetableProvider, _Storage)> _provider() async {
+Future<(AppRuntime, _Storage)> _provider() async {
   final initial = buildInitialAppData(
     buildDefaultPeriodTimes(),
     localeCode: 'en',
@@ -145,7 +147,7 @@ Future<(TimetableProvider, _Storage)> _provider() async {
       ),
     ),
   );
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     storage: storage,
     dataTransferCodec: inlineDataTransferCodec,
     systemLocaleCodeResolver: () => 'en',
@@ -157,7 +159,7 @@ Future<(TimetableProvider, _Storage)> _provider() async {
 
 Future<GlobalKey<NavigatorState>> _openHtmlReview(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
   _Api api, {
   TargetPlatform platform = TargetPlatform.windows,
   bool appHome = false,

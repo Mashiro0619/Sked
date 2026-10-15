@@ -9,7 +9,7 @@ import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/sked_task_route.dart';
 import 'package:sked/widgets/sked_adaptive_picker_dialog.dart';
 import 'package:sked/widgets/sked_task_dialog.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';

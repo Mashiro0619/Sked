@@ -11,7 +11,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_display_settings_page.dart';
 import 'package:sked/screens/developer_mode_page.dart';
 import 'package:sked/screens/notification_settings_page.dart';
@@ -87,12 +87,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
     final cases =
-        <
-          (
-            String,
-            Widget? Function(TimetableProvider, AgendaNotificationService),
-          )
-        >[
+        <(String, Widget? Function(AppRuntime, AgendaNotificationService))>[
           for (final category in [
             SettingsDestination.appearance,
             SettingsDestination.notifications,

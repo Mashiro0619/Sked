@@ -8,7 +8,8 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/update_service.dart';
 import 'package:sked/services/update_distribution.dart';
@@ -89,7 +90,7 @@ UpdateCheckResult _updateResult({required bool hasUpdate}) {
   );
 }
 
-Future<TimetableProvider> _createProvider({
+Future<AppRuntime> _createProvider({
   String? availableVersion,
   String? ignoredVersion,
   bool? includePrereleases,
@@ -99,7 +100,7 @@ Future<TimetableProvider> _createProvider({
     ignoredUpdateVersion: ignoredVersion,
     includePrereleaseUpdates: includePrereleases,
   );
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryStorage(data),
   );
@@ -109,7 +110,7 @@ Future<TimetableProvider> _createProvider({
 
 Future<BuildContext> _pumpHarness(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
 ) async {
   late BuildContext context;
   await tester.pumpWidget(

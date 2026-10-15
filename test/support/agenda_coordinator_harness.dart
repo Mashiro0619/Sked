@@ -1,4 +1,4 @@
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_service.dart';
@@ -7,7 +7,7 @@ import 'package:sked/services/android_productivity_bridge.dart';
 
 /// Composes the same domain instances for notification and UI behavior tests.
 AgendaCoordinator buildTestAgendaCoordinator({
-  required TimetableProvider provider,
+  required AppRuntime provider,
   AgendaNotificationService? notificationService,
   AgendaProjectionService? projection,
   AgendaActionRouter? actionRouter,

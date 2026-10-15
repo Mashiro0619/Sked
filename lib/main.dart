@@ -23,7 +23,7 @@ import 'l10n/app_locale.dart';
 import 'l10n/app_localization_delegates.dart';
 import 'l10n/app_localizations.dart';
 import 'models/timetable_models.dart';
-import 'providers/timetable_provider.dart';
+import 'app_runtime.dart';
 import 'providers/app_scope.dart';
 import 'screens/app_home_screen.dart';
 import 'services/app_instance_lease.dart';
@@ -63,7 +63,7 @@ void _registerLicenses() {
   });
 }
 
-typedef TimetableProviderFactory = TimetableProvider Function();
+typedef AppRuntimeFactory = AppRuntime Function();
 
 enum _AppBootstrapStatus { acquiring, ready, blocked, failed }
 
@@ -71,12 +71,12 @@ class AppBootstrap extends StatefulWidget {
   AppBootstrap({
     super.key,
     AppInstanceLease? lease,
-    TimetableProviderFactory? providerFactory,
+    AppRuntimeFactory? runtimeFactory,
   }) : lease = lease ?? AppInstanceLease(),
-       providerFactory = providerFactory ?? TimetableProvider.new;
+       runtimeFactory = runtimeFactory ?? AppRuntime.new;
 
   final AppInstanceLease lease;
-  final TimetableProviderFactory providerFactory;
+  final AppRuntimeFactory runtimeFactory;
 
   @override
   State<AppBootstrap> createState() => _AppBootstrapState();
@@ -84,11 +84,11 @@ class AppBootstrap extends StatefulWidget {
 
 class _AppBootstrapState extends State<AppBootstrap> {
   late final AppInstanceLease _lease;
-  late final TimetableProviderFactory _providerFactory;
+  late final AppRuntimeFactory _runtimeFactory;
   var _status = _AppBootstrapStatus.acquiring;
-  TimetableProvider? _provider;
+  AppRuntime? _app;
   DesktopLayoutPreferences? _desktopLayout;
-  Future<void>? _providerLoad;
+  Future<void>? _appLoad;
   Future<void>? _acquireOperation;
   var _attemptInProgress = false;
   var _leaseOwned = false;
@@ -97,19 +97,19 @@ class _AppBootstrapState extends State<AppBootstrap> {
   void initState() {
     super.initState();
     _lease = widget.lease;
-    _providerFactory = widget.providerFactory;
+    _runtimeFactory = widget.runtimeFactory;
     _startLeaseAcquisition();
   }
 
   void _startLeaseAcquisition() {
-    if (_attemptInProgress || _provider != null) return;
+    if (_attemptInProgress || _app != null) return;
     final operation = _acquireLease();
     _acquireOperation = operation;
     unawaited(operation);
   }
 
   Future<void> _acquireLease() async {
-    if (_attemptInProgress || _provider != null) return;
+    if (_attemptInProgress || _app != null) return;
     _attemptInProgress = true;
     if (mounted && _status != _AppBootstrapStatus.acquiring) {
       setState(() => _status = _AppBootstrapStatus.acquiring);
@@ -129,12 +129,12 @@ class _AppBootstrapState extends State<AppBootstrap> {
       }
 
       try {
-        final provider = _providerFactory();
-        _provider = provider;
+        final app = _runtimeFactory();
+        _app = app;
         _desktopLayout = DesktopLayoutPreferences();
         unawaited(_desktopLayout!.load());
-        final load = provider.lifecycle.load();
-        _providerLoad = load;
+        final load = app.lifecycle.load();
+        _appLoad = load;
         unawaited(
           load.then<void>(
             (_) {},
@@ -190,8 +190,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
     }
 
     try {
-      final provider = _provider;
-      final load = _providerLoad;
+      final app = _app;
+      final load = _appLoad;
       if (load != null) {
         try {
           await load;
@@ -201,11 +201,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
           );
         }
       }
-      if (provider != null) {
+      if (app != null) {
         try {
-          await provider.shutdown.quiesce();
+          await app.shutdown.quiesce();
         } finally {
-          provider.dispose();
+          app.dispose();
         }
       }
     } catch (error, stackTrace) {
@@ -240,11 +240,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = _provider;
-    if (_status == _AppBootstrapStatus.ready && provider != null) {
+    final app = _app;
+    if (_status == _AppBootstrapStatus.ready && app != null) {
       return MyApp(
-        provider: provider,
-        providerReady: _providerLoad,
+        app: app,
+        dataReady: _appLoad,
         desktopLayoutPreferences: _desktopLayout,
       );
     }
@@ -371,13 +371,13 @@ class _AppBootstrapGateState extends State<_AppBootstrapGate> {
 class MyApp extends StatefulWidget {
   const MyApp({
     super.key,
-    required this.provider,
-    this.providerReady,
+    required this.app,
+    this.dataReady,
     this.desktopLayoutPreferences,
   });
 
-  final TimetableProvider provider;
-  final Future<void>? providerReady;
+  final AppRuntime app;
+  final Future<void>? dataReady;
   final DesktopLayoutPreferences? desktopLayoutPreferences;
 
   @override
@@ -409,11 +409,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     unawaited(_developerUi.load());
     _agendaCoordinator = _createAgendaCoordinator();
     _agendaCoordinator.setForegroundActive(true);
-    unawaited(_agendaCoordinator.start(dataReady: widget.providerReady));
+    unawaited(_agendaCoordinator.start(dataReady: widget.dataReady));
   }
 
   AgendaCoordinator _createAgendaCoordinator() {
-    final app = widget.provider;
+    final app = widget.app;
     return AgendaCoordinator(
       session: app.session,
       dataClear: app.dataClear,
@@ -482,7 +482,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (!await _developerUi.waitForPendingSave()) {
         throw StateError('Developer UI preference save failed');
       }
-      return await widget.provider.shutdown.prepareForWindowClose();
+      return await widget.app.shutdown.prepareForWindowClose();
     } catch (_) {
       final context = _navigatorKey.currentContext;
       if (context != null && context.mounted) {
@@ -506,12 +506,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(MyApp oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.provider != widget.provider) {
-      _flushPendingUiStateSaves(oldWidget.provider.persistence);
+    if (oldWidget.app != widget.app) {
+      _flushPendingUiStateSaves(oldWidget.app.persistence);
       _agendaCoordinator.dispose();
       _agendaCoordinator = _createAgendaCoordinator();
       _agendaCoordinator.setForegroundActive(true);
-      unawaited(_agendaCoordinator.start(dataReady: widget.providerReady));
+      unawaited(_agendaCoordinator.start(dataReady: widget.dataReady));
     }
   }
 
@@ -522,7 +522,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       _agendaCoordinator.setForegroundActive(false);
-      _flushPendingUiStateSaves(widget.provider.persistence);
+      _flushPendingUiStateSaves(widget.app.persistence);
       _flushDesktopLayoutPreferences(_desktopLayout);
     }
     if (state == AppLifecycleState.resumed) {
@@ -550,7 +550,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
     _windowModals.dispose();
     _updatePrompts.dispose();
-    _flushPendingUiStateSaves(widget.provider.persistence);
+    _flushPendingUiStateSaves(widget.app.persistence);
     super.dispose();
   }
 
@@ -562,9 +562,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       disableAnimations: features.disableAnimations,
       reduceMotion: features.reduceMotion,
       child: AppScope(
-        app: widget.provider,
+        app: widget.app,
         child: Selector<SettingsViewState, _AppShellSnapshot>(
-          selector: (_, provider) => _AppShellSnapshot.from(provider),
+          selector: (_, settings) => _AppShellSnapshot.from(settings),
           builder: (context, snapshot, child) {
             return MultiProvider(
               providers: [
@@ -645,7 +645,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     AgendaTarget target,
   ) async {
     final courseId = target.courseId;
-    final timetable = widget.provider.studentView.timetables
+    final timetable = widget.app.studentView.timetables
         .where((item) => item.id == target.timetableId)
         .firstOrNull;
     if (courseId == null || timetable == null) return;
@@ -661,7 +661,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     await showAppModalSheet<void>(
       context: context,
       useRootNavigator: true,
-      isDismissible: widget.provider.settingsView.closeCoursePopupOnOutsideTap,
+      isDismissible: widget.app.settingsView.closeCoursePopupOnOutsideTap,
       enableDrag: true,
       maxWidth: 860,
       builder: (sheetContext) => CourseDetailsSheet(
@@ -699,7 +699,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     CourseItem course, {
     required String timetableId,
   }) async {
-    final student = widget.provider.studentView;
+    final student = widget.app.studentView;
     final timetable = student.timetables
         .where((item) => item.id == timetableId)
         .firstOrNull;
@@ -709,10 +709,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         .firstOrNull;
     if (currentCourse == null) return;
     final task = CourseTaskController(
-      commands: widget.provider.studentCommands,
+      commands: widget.app.studentCommands,
       view: student,
-      workspaceView: widget.provider.workspaceView,
-      maintenance: widget.provider.maintenance,
+      workspaceView: widget.app.workspaceView,
+      maintenance: widget.app.maintenance,
       timetable: timetable,
       initialCourse: currentCourse,
     );
@@ -721,7 +721,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       useRootNavigator: true,
       workspace: AppMode.student,
       isSessionCurrent: () => task.isCurrent,
-      isDismissible: widget.provider.settingsView.closeCoursePopupOnOutsideTap,
+      isDismissible: widget.app.settingsView.closeCoursePopupOnOutsideTap,
       enableDrag: true,
       maxWidth: appSheetWidthExpanded,
       builder: (_) => CourseTaskEditor(task: task),
@@ -733,10 +733,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     AgendaTarget target,
   ) async {
     final occurrence = resolveNotificationOccurrence(
-      widget.provider.generalView,
+      widget.app.generalView,
       target,
       includeHiddenCalendars:
-          widget.provider.settingsView.remindHiddenGeneralCalendars,
+          widget.app.settingsView.remindHiddenGeneralCalendars,
     );
     if (occurrence == null || !context.mounted) return;
     await _openGeneralOccurrenceDetails(context, occurrence);
@@ -746,8 +746,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     BuildContext context,
     GeneralEventOccurrence occurrence,
   ) async {
-    final general = widget.provider.generalView;
-    final commands = widget.provider.generalCommands;
+    final general = widget.app.generalView;
+    final commands = widget.app.generalCommands;
     GeneralEventOccurrence? currentOccurrence() =>
         resolveCurrentGeneralOccurrence(general, occurrence);
     var mutating = false;
@@ -826,16 +826,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     GeneralEventEditScope scope,
   ) async {
     if (!context.mounted) return;
-    final general = widget.provider.generalView;
+    final general = widget.app.generalView;
     final task = GeneralEventTaskController(
-      commands: widget.provider.generalCommands,
+      commands: widget.app.generalCommands,
       view: general,
-      workspaceView: widget.provider.workspaceView,
-      maintenance: widget.provider.maintenance,
+      workspaceView: widget.app.workspaceView,
+      maintenance: widget.app.maintenance,
       updates: Listenable.merge([
         general,
-        widget.provider.workspaceView,
-        widget.provider.maintenance,
+        widget.app.workspaceView,
+        widget.app.maintenance,
       ]),
       occurrence: occurrence,
       scope: scope,
@@ -848,10 +848,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       isDismissible: general.data.closeEventPopupOnOutsideTap,
       enableDrag: true,
       maxWidth: appSheetWidthExpanded,
-      builder: (_) => GeneralEventTaskEditor(
-        task: task,
-        settings: widget.provider.settingsView,
-      ),
+      builder: (_) =>
+          GeneralEventTaskEditor(task: task, settings: widget.app.settingsView),
     );
     final event = task.savedEvent;
     if (!context.mounted) return;

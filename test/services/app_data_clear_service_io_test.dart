@@ -12,7 +12,9 @@ import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
+import 'package:sked/controllers/app_data_maintenance.dart'
+    show AppBackupRestoreInProgressException;
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/app_exit_controller.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
@@ -171,7 +173,7 @@ void main() {
     () async {
       final storage = _MemoryStorage()
         ..data = buildInitialAppData(buildDefaultPeriodTimes());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         secretStore: secrets,
         schoolSiteService: SchoolSiteService(
@@ -217,7 +219,7 @@ void main() {
     () async {
       final storage = _MemoryStorage()
         ..data = buildInitialAppData(buildDefaultPeriodTimes());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         secretStore: secrets,
         schoolSiteService: SchoolSiteService(
@@ -244,7 +246,7 @@ void main() {
     () async {
       final storage = _MemoryStorage()
         ..data = buildInitialAppData(buildDefaultPeriodTimes());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         secretStore: secrets,
         schoolSiteService: SchoolSiteService(
@@ -304,7 +306,7 @@ void main() {
       final storage = _MemoryStorage()
         ..data = buildInitialAppData(buildDefaultPeriodTimes());
       final schoolSiteCoordinator = SchoolSiteStorageCoordinator();
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         secretStore: secrets,
         schoolSiteService: SchoolSiteService(
@@ -357,7 +359,7 @@ void main() {
       coordinator: schoolSiteCoordinator,
     );
     await externalSchoolSites.loadSitesResult();
-    final provider = TimetableProvider(
+    final provider = AppRuntime(
       storage: storage,
       secretStore: secrets,
       schoolSiteService: providerSchoolSites,
@@ -425,7 +427,7 @@ void main() {
         coordinator: schoolSiteCoordinator,
       );
       await externalSchoolSites.loadSitesResult();
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         secretStore: secrets,
         schoolSiteService: providerSchoolSites,
@@ -475,7 +477,7 @@ void main() {
     () async {
       final storage = _MemoryStorage()
         ..data = buildInitialAppData(buildDefaultPeriodTimes());
-      final provider = TimetableProvider(
+      final provider = AppRuntime(
         storage: storage,
         secretStore: secrets,
         schoolSiteService: SchoolSiteService(

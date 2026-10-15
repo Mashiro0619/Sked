@@ -13,7 +13,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/controllers/app_data_clear_controller.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -229,7 +229,7 @@ String _buildGeneralImportSource() {
   );
 }
 
-Future<TimetableProvider> _createProvider(
+Future<AppRuntime> _createProvider(
   AppData? data, {
   RecoveryStatus recoveryStatus = RecoveryStatus.none,
   Map<String, String> recoverySources = const {},
@@ -238,7 +238,7 @@ Future<TimetableProvider> _createProvider(
   SchoolSiteService? schoolSiteService,
   DataTransferCodec codec = inlineDataTransferCodec,
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: codec,
     storage:
         storage ??
@@ -258,7 +258,7 @@ Future<TimetableProvider> _createProvider(
 
 Future<void> _pumpSettingsPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   Future<PackageInfo> Function()? packageInfoLoader,
   AppDataClearCoordinator? dataClearCoordinator,
   SettingsUrlLauncher? urlLauncher,
@@ -329,7 +329,7 @@ void _resetTestViewport(WidgetTester tester) {
 
 Future<void> _pumpSettingsHostPage(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
 ) async {
   PackageInfo.setMockInitialValues(
     appName: 'Sked',
@@ -386,7 +386,7 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 
 Future<void> _openGeneralDataActions(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
 ) async {
   await _pumpSettingsPage(
     tester,
@@ -1810,10 +1810,7 @@ void main() {
         'END:VCALENDAR';
     final source = ics ? icsSource : _buildGeneralImportSource();
 
-    Future<void> submitText(
-      WidgetTester tester,
-      TimetableProvider provider,
-    ) async {
+    Future<void> submitText(WidgetTester tester, AppRuntime provider) async {
       await _openGeneralDataActions(tester, provider);
       await tester.tap(find.text('Paste $format'));
       await _pumpRouteTransition(tester);

@@ -9,7 +9,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/language_settings_page.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -70,8 +70,8 @@ class _RetryableTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://language-settings-retry-test';
 }
 
-Future<TimetableProvider> _createProvider(TimetableStorage storage) async {
-  final provider = TimetableProvider(
+Future<AppRuntime> _createProvider(TimetableStorage storage) async {
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -82,7 +82,7 @@ Future<TimetableProvider> _createProvider(TimetableStorage storage) async {
 
 Future<void> _pumpHostPage(
   WidgetTester tester,
-  TimetableProvider provider, {
+  AppRuntime provider, {
   TextScaler textScaler = TextScaler.noScaling,
   EdgeInsets viewPadding = EdgeInsets.zero,
 }) async {

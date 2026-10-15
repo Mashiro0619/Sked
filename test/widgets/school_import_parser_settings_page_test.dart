@@ -8,7 +8,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
@@ -256,11 +256,11 @@ AppData _buildTestData() {
   );
 }
 
-Future<TimetableProvider> _createProvider({
+Future<AppRuntime> _createProvider({
   SecretStore? secretStore,
   TimetableStorage? storage,
 }) async {
-  final provider = TimetableProvider(
+  final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage ?? _MemoryTimetableStorage(_buildTestData()),
     systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -273,7 +273,7 @@ Future<TimetableProvider> _createProvider({
 
 Future<void> _pumpPage(
   WidgetTester tester,
-  TimetableProvider provider,
+  AppRuntime provider,
   SchoolImportApi api, {
   SchoolImportHttpConsentStore? httpConsentStore,
 }) async {
@@ -294,10 +294,7 @@ Future<void> _pumpPage(
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpPageFromHost(
-  WidgetTester tester,
-  TimetableProvider provider,
-) async {
+Future<void> _pumpPageFromHost(WidgetTester tester, AppRuntime provider) async {
   await tester.pumpWidget(
     AppScope(
       app: provider,

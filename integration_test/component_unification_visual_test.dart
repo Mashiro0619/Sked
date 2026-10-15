@@ -12,7 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/models/school_import_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
@@ -142,10 +142,7 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _openTimetable(
-  WidgetTester tester,
-  TimetableProvider provider,
-) async {
+Future<void> _openTimetable(WidgetTester tester, AppRuntime provider) async {
   final l = AppLocalizations.of(tester.element(find.byType(HomeScreen)));
   final id = provider.studentView.activeTimetable.id;
   final row = _key('resource-timetable-$id');
