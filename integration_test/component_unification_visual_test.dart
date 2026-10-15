@@ -395,7 +395,6 @@ void main() {
                     response: _reviewFixture(),
                     canReplaceCurrent: true,
                     initialPeriodTimeSetId: provider.periodTimeSets.first.id,
-                    provider: provider,
                   ),
                 ),
               );

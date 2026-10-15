@@ -1076,7 +1076,6 @@ void main() {
                         enableDrag: false,
                         builder: (_) => SchoolWebImportResultSheet(
                           response: _response(),
-                          provider: provider,
                           canReplaceCurrent: true,
                           initialPeriodTimeSetId:
                               provider.periodTimeSets.first.id,

@@ -74,7 +74,6 @@ Future<TimetableProvider> _mount(
                     response: _response(),
                     canReplaceCurrent: false,
                     initialPeriodTimeSetId: provider.periodTimeSets.first.id,
-                    provider: provider,
                     onApply: onApply,
                   ),
                 ),

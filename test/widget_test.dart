@@ -2452,7 +2452,6 @@ void main() {
                             canReplaceCurrent: true,
                             initialPeriodTimeSetId:
                                 provider.activePeriodTimeSet.id,
-                            provider: provider,
                           ),
                         );
                   },
@@ -2524,7 +2523,6 @@ void main() {
               response: response,
               canReplaceCurrent: true,
               initialPeriodTimeSetId: '',
-              provider: provider,
             ),
           ),
         ),

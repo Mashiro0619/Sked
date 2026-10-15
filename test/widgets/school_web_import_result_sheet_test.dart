@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +22,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
 
   AppData? data;
+  Completer<void>? saveGate;
 
   @override
   Future<StorageLoadResult> load() async =>
@@ -27,27 +30,12 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<void> save(AppData data) async {
+    await saveGate?.future;
     this.data = data;
   }
 
   @override
   Future<String?> filePath() async => 'memory://sheet-test';
-}
-
-class _SilentNotificationTimetableProvider extends TimetableProvider {
-  _SilentNotificationTimetableProvider({
-    required super.storage,
-    required super.systemLocaleCodeResolver,
-  }) : super(dataTransferCodec: inlineDataTransferCodec);
-
-  var suppressNotifications = false;
-
-  @override
-  void notifyListeners() {
-    if (!suppressNotifications) {
-      super.notifyListeners();
-    }
-  }
 }
 
 SchoolImportResponse _buildResponse({
@@ -94,24 +82,14 @@ SchoolImportResponse _buildResponse({
   );
 }
 
-Future<TimetableProvider> _createProvider() async {
+Future<TimetableProvider> _createProvider({
+  _MemoryTimetableStorage? storage,
+}) async {
   final provider = TimetableProvider(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(
-      buildInitialAppData(buildDefaultPeriodTimes()),
-    ),
-    systemLocaleCodeResolver: () => defaultLocaleCode,
-  );
-  await provider.load();
-  return provider;
-}
-
-Future<_SilentNotificationTimetableProvider>
-_createSilentNotificationProvider() async {
-  final provider = _SilentNotificationTimetableProvider(
-    storage: _MemoryTimetableStorage(
-      buildInitialAppData(buildDefaultPeriodTimes()),
-    ),
+    storage:
+        storage ??
+        _MemoryTimetableStorage(buildInitialAppData(buildDefaultPeriodTimes())),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
   await provider.load();
@@ -166,7 +144,6 @@ Future<void> _pumpPreviewSheet(
                         response: response,
                         canReplaceCurrent: canReplaceCurrent,
                         initialPeriodTimeSetId: initialPeriodTimeSetId,
-                        provider: provider,
                       ),
                     );
                 onResult?.call(result);
@@ -787,7 +764,7 @@ void main() {
   );
 
   testWidgets(
-    'rebinds its period-time-set listener when the provider changes',
+    'rebinds its typed state listeners when the application scope changes',
     (tester) async {
       final firstProvider = await _createProvider();
       final replacementProvider = await _createProvider();
@@ -807,12 +784,14 @@ void main() {
           home: StatefulBuilder(
             builder: (context, setState) {
               setHostState = setState;
-              return Scaffold(
-                body: SchoolWebImportResultSheet(
-                  response: _buildResponse(),
-                  canReplaceCurrent: false,
-                  initialPeriodTimeSetId: selectedFromFirst.id,
-                  provider: currentProvider,
+              return AppScope(
+                app: currentProvider,
+                child: Scaffold(
+                  body: SchoolWebImportResultSheet(
+                    response: _buildResponse(),
+                    canReplaceCurrent: false,
+                    initialPeriodTimeSetId: selectedFromFirst.id,
+                  ),
                 ),
               );
             },
@@ -914,7 +893,10 @@ void main() {
   testWidgets(
     'repairs a just-removed discard target without closing the preview',
     (tester) async {
-      final provider = await _createSilentNotificationProvider();
+      final storage = _MemoryTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _createProvider(storage: storage);
       addTearDown(provider.dispose);
       final initial = provider.periodTimeSets.single;
       final replacement = await provider.addPeriodTimeSet(
@@ -947,30 +929,35 @@ void main() {
       await tester.tap(find.text(l10n.discardBundledPeriodTimeSets));
       await tester.pumpAndSettle();
 
-      provider.suppressNotifications = true;
-      await provider.deletePeriodTimeSet(initial.id);
-      provider.suppressNotifications = false;
-
-      // Do not rebuild before the tap: this intentionally reproduces the
-      // narrow gap where an already-enabled button sees a deleted target.
+      // A real deletion changes the shared snapshot before its pending save
+      // publishes the domain view. Exercise the still-enabled button inside
+      // that gap without suppressing either domain or provider notifications.
+      final writeGate = Completer<void>();
+      storage.saveGate = writeGate;
+      final deletion = provider.studentCommands.deletePeriodTimeSet(initial.id);
       final importButton = find.widgetWithText(
         FilledButton,
         l10n.importAsNewTimetable,
       );
-      await tester.tap(importButton);
-      await tester.pumpAndSettle();
-
-      expect(results, isEmpty);
-      expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
-      expect(
-        find.text(
-          _sheetL10n(tester).periodTimeSetSummary(
-            replacement.name,
-            replacement.periodTimes.length,
+      try {
+        await tester.tap(importButton);
+        await tester.pumpAndSettle();
+        expect(results, isEmpty);
+        expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+        expect(
+          find.text(
+            _sheetL10n(tester).periodTimeSetSummary(
+              replacement.name,
+              replacement.periodTimes.length,
+            ),
           ),
-        ),
-        findsWidgets,
-      );
+          findsWidgets,
+        );
+      } finally {
+        writeGate.complete();
+        await deletion;
+      }
+      await tester.pumpAndSettle();
       expect(
         tester.widget<FilledButton>(importButton).onPressed,
         isNotNull,

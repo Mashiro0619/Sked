@@ -10,13 +10,20 @@ import '../theme/sked_surface.dart';
 import '../widgets/expressive_motion.dart';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
 import 'sked_date_picker.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_lifecycle.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
 import 'school_import_replace_confirmation.dart';
@@ -32,14 +39,12 @@ class SchoolWebImportResultSheet extends StatefulWidget {
     required this.response,
     required this.canReplaceCurrent,
     required this.initialPeriodTimeSetId,
-    required this.provider,
     this.onApply,
   });
 
   final SchoolImportResponse response;
   final bool canReplaceCurrent;
   final String initialPeriodTimeSetId;
-  final TimetableProvider provider;
 
   /// When supplied, persistence runs before returning the configured request.
   /// The task's exit guard protects edited configuration and in-flight writes.
@@ -74,11 +79,23 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
   @override
   Widget guardDiscardConfirmation(Widget dialog) => SkedTaskRouteGuard(
     parent: SkedTaskSessionScope.maybeOf(context)?.session,
-    provider: widget.provider,
+    maintenance: _maintenance,
+    workspaceView: _workspaceView,
+    workspaces: _workspaces,
     workspace: AppMode.student,
     isOwnerActive: () => mounted && !_hasPopped,
     child: dialog,
   );
+
+  late StudentViewState _student;
+  late SettingsViewState _settings;
+  late AppLifecycle _lifecycle;
+  late AppDataMaintenance _maintenance;
+  late AppDataClearController _dataClear;
+  late WorkspaceViewState _workspaceView;
+  late WorkspaceCommands _workspaces;
+  Listenable? _importChanges;
+  bool _draftInitialized = false;
 
   late final TextEditingController _nameController;
   late DateTime _startDate;
@@ -100,15 +117,15 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
   /// Do not retain a sheet-open-time snapshot here. The picker can create,
   /// edit, or delete sets while this sheet stays open, and its selection has to
   /// resolve against the same source that ultimately validates the import.
-  List<PeriodTimeSet> get _periodTimeSets => widget.provider.periodTimeSets;
+  List<PeriodTimeSet> get _periodTimeSets => _student.periodTimeSets;
 
   bool get _canDiscardBundledPeriodTimeSet => _periodTimeSets.isNotEmpty;
 
   bool get _canSave => canSaveSchoolImport(
-    lifecycle: widget.provider.lifecycle,
-    maintenance: widget.provider.maintenance,
-    dataClear: widget.provider.dataClear,
-    workspaceView: widget.provider.workspaceView,
+    lifecycle: _lifecycle,
+    maintenance: _maintenance,
+    dataClear: _dataClear,
+    workspaceView: _workspaceView,
   );
 
   bool get _canSubmitImport =>
@@ -134,23 +151,52 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
       text: widget.response.timetable.name,
     )..addListener(_handleNameChanged);
     _startDate = normalizeDateOnly(widget.response.timetable.startDate);
-    _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(
-      widget.initialPeriodTimeSetId,
-    );
+    _selectedPeriodTimeSetId = widget.initialPeriodTimeSetId;
     _importBundledPeriodTimeSet = _hasBundledPeriodTimeSet;
-    initializeDraftGuard();
-    widget.provider.addListener(_handlePeriodTimeSetsChanged);
   }
 
   @override
-  void didUpdateWidget(covariant SchoolWebImportResultSheet oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.provider, widget.provider)) {
-      oldWidget.provider.removeListener(_handlePeriodTimeSetsChanged);
-      widget.provider.addListener(_handlePeriodTimeSetsChanged);
-      _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(
-        _selectedPeriodTimeSetId,
-      );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final student = context.watch<StudentViewState>();
+    final settings = context.watch<SettingsViewState>();
+    final lifecycle = context.watch<AppLifecycle>();
+    final maintenance = context.watch<AppDataMaintenance>();
+    final dataClear = context.watch<AppDataClearController>();
+    final workspaceView = context.watch<WorkspaceViewState>();
+    final workspaces = context.watch<WorkspaceCommands>();
+    if (_importChanges != null &&
+        identical(student, _student) &&
+        identical(settings, _settings) &&
+        identical(lifecycle, _lifecycle) &&
+        identical(maintenance, _maintenance) &&
+        identical(dataClear, _dataClear) &&
+        identical(workspaceView, _workspaceView) &&
+        identical(workspaces, _workspaces)) {
+      return;
+    }
+    _importChanges?.removeListener(_handlePeriodTimeSetsChanged);
+    _student = student;
+    _settings = settings;
+    _lifecycle = lifecycle;
+    _maintenance = maintenance;
+    _dataClear = dataClear;
+    _workspaceView = workspaceView;
+    _workspaces = workspaces;
+    _importChanges = Listenable.merge([
+      student,
+      settings,
+      lifecycle,
+      maintenance,
+      dataClear,
+      workspaceView,
+    ])..addListener(_handlePeriodTimeSetsChanged);
+    _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(
+      _selectedPeriodTimeSetId,
+    );
+    if (!_draftInitialized) {
+      _draftInitialized = true;
+      initializeDraftGuard();
     }
   }
 
@@ -163,7 +209,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
 
   @override
   void dispose() {
-    widget.provider.removeListener(_handlePeriodTimeSetsChanged);
+    _importChanges?.removeListener(_handlePeriodTimeSetsChanged);
     _nameController.removeListener(_handleNameChanged);
     _nameController.dispose();
     super.dispose();
@@ -279,9 +325,9 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SchoolImportSaveFeedback(
-              lifecycle: widget.provider.lifecycle,
-              maintenance: widget.provider.maintenance,
-              dataClear: widget.provider.dataClear,
+              lifecycle: _lifecycle,
+              maintenance: _maintenance,
+              dataClear: _dataClear,
               isSaving: _isApplying,
               error: _applyError,
               onRecoveryBusyChanged: (busy) =>
@@ -383,7 +429,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
       return preferredId;
     }
 
-    final activeId = widget.provider.activePeriodTimeSetOrNull?.id;
+    final activeId = _student.activePeriodTimeSetOrNull?.id;
     if (activeId != null && periodTimeSets.any((item) => item.id == activeId)) {
       return activeId;
     }
@@ -401,10 +447,10 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
         ? editedTimetableName
         : (widget.response.timetable.name.trim().isNotEmpty
               ? widget.response.timetable.name.trim()
-              : untitledTimetableName(localeCode: widget.provider.localeCode));
+              : untitledTimetableName(localeCode: _settings.localeCode));
     return importedPeriodTimeSetName(
       timetableName,
-      localeCode: widget.provider.localeCode,
+      localeCode: _settings.localeCode,
     );
   }
 
@@ -455,8 +501,8 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
         !_canSave) {
       return;
     }
-    final dataSession = widget.provider.dataSessionToken;
-    final replacementId = widget.provider.activeTimetableOrNull?.id;
+    final dataSession = _maintenance.dataSessionToken;
+    final replacementId = _student.activeTimetableOrNull?.id;
     setState(() => _weekRangeConfirmationOpen = true);
     bool confirmed;
     try {
@@ -472,9 +518,9 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
         !routeWorkspaceEnabled ||
         !confirmed ||
         !_canSave ||
-        !identical(dataSession, widget.provider.dataSessionToken) ||
+        !identical(dataSession, _maintenance.dataSessionToken) ||
         (mode == TimetableImportMode.replaceActive &&
-            replacementId != widget.provider.activeTimetableOrNull?.id)) {
+            replacementId != _student.activeTimetableOrNull?.id)) {
       return;
     }
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();

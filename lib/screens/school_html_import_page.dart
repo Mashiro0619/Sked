@@ -745,7 +745,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
             response: response,
             canReplaceCurrent: canReplaceCurrent,
             initialPeriodTimeSetId: selectedPeriodTimeSetId,
-            provider: provider,
             onApply: applyFromReview,
           ),
         );
