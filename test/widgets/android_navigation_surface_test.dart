@@ -102,7 +102,7 @@ void main() {
               await t.tapAt(Offset(width * .75, 850 - inset / 2));
               await t.pumpAndSettle();
               expect(
-                p.activeMode,
+                p.workspaceView.activeMode,
                 AppMode.student,
                 reason: 'The system inset is not a destination target.',
               );
@@ -161,7 +161,7 @@ void main() {
             }
             await t.tap(_key('adaptive-shell-general-destination'));
             await t.pumpAndSettle();
-            expect(p.activeMode, AppMode.general);
+            expect(p.workspaceView.activeMode, AppMode.general);
             expect(t.getRect(_bar), barRect);
             expect(t.takeException(), isNull);
           },

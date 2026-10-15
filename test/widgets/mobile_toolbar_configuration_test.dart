@@ -21,7 +21,7 @@ Future<TimetableProvider> mount(WidgetTester t, AppMode mode) async {
   addTearDown(t.view.reset);
   final p = await workspaceProvider(mode: mode);
   addTearDown(p.dispose);
-  await p.updateHideHomeWorkspaceNavigation(true);
+  await p.settingsCommands.updateHideHomeWorkspaceNavigation(true);
   await t.pumpWidget(WorkspaceHarness(provider: p));
   await t.pumpAndSettle();
   return p;
@@ -101,7 +101,7 @@ void main() {
             : AppMode.student;
         await t.tap(key('${mode.value}-more-workspace-${target.value}'));
         await t.pumpAndSettle();
-        expect(p.activeMode, target);
+        expect(p.workspaceView.activeMode, target);
         expect(t.takeException(), isNull);
       },
       variant: phones,
@@ -142,8 +142,8 @@ void main() {
         await gesture.up();
         await t.pumpAndSettle();
         final order = mode == AppMode.student
-            ? p.studentToolbarNavigationOrder
-            : p.generalToolbarNavigationOrder;
+            ? p.settingsView.studentToolbarNavigationOrder
+            : p.generalView.data.toolbarNavigationOrder;
         expect(order.indexOf('settings'), lessThan(order.indexOf('workspace')));
         await returnHome(t);
         expect(find.byType(WorkspaceModeMenu).hitTestable(), findsOneWidget);
@@ -193,8 +193,11 @@ void main() {
       expect(key('general-calendar-manager-action'), findsNothing);
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.pumpAndSettle();
-      await p.updateGeneralToolbarNavigationVisibility('category', false);
-      await p.updateGeneralToolbarHiddenItemsBehavior(
+      await p.generalCommands.updateToolbarNavigationVisibility(
+        'category',
+        false,
+      );
+      await p.generalCommands.updateToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehaviorMore,
       );
       await t.pumpAndSettle();
@@ -203,10 +206,10 @@ void main() {
       expect(key('general-calendar-manager-action'), findsOneWidget);
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.pumpAndSettle();
-      await p.updateGeneralToolbarHiddenItemsBehavior(
+      await p.generalCommands.updateToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehaviorRemove,
       );
-      await p.updateGeneralToolbarNavigationVisibility('more', false);
+      await p.generalCommands.updateToolbarNavigationVisibility('more', false);
       await t.pumpAndSettle();
       await more(t, AppMode.general);
       expect(key('general-calendar-manager-action'), findsNothing);
@@ -220,7 +223,10 @@ void main() {
     'protected More is shown enabled in configuration even for an old hidden-More preference',
     (t) async {
       final p = await mount(t, AppMode.student);
-      await p.updateStudentToolbarNavigationVisibility('more', false);
+      await p.settingsCommands.updateStudentToolbarNavigationVisibility(
+        'more',
+        false,
+      );
       await t.pumpAndSettle();
       await openDisplay(t, AppMode.student);
       await t.ensureVisible(switchFor('more'));
@@ -228,7 +234,7 @@ void main() {
       expect(t.widget<Switch>(switchFor('more')).value, isTrue);
       expect(t.widget<Switch>(switchFor('more')).onChanged, isNull);
       expect(
-        p.studentHiddenToolbarNavigationIds,
+        p.settingsView.studentHiddenToolbarNavigationIds,
         contains('more'),
         reason: 'Layout safety does not rewrite the saved preference.',
       );

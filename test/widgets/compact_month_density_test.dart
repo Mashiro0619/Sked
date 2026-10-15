@@ -81,7 +81,7 @@ void main() {
             );
             expect(find.text('当天没有日程'), findsOneWidget);
             expect(find.byIcon(Icons.event_available_outlined), findsNothing);
-            await p.updateGeneralDisplaySettings(showWeekends: false);
+            await p.generalCommands.updateDisplaySettings(showWeekends: false);
             await t.pumpAndSettle();
             final weekdays = t.widget<GridView>(
               find

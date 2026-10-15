@@ -369,7 +369,7 @@ void main() {
         _size(t, const Size(1440, 900));
         final p = await workspaceProvider(mode: AppMode.general);
         addTearDown(p.dispose);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         final results = <TimeOfDay?>[];
         await t.pumpWidget(
           WorkspaceHarness(
@@ -395,9 +395,9 @@ void main() {
         await t.pumpAndSettle();
         await t.enterText(_key('sked-time-minute-input'), '18');
         if (replaceData) {
-          await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+          await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         } else {
-          await p.setWorkspaceEnabled(AppMode.general, false);
+          await p.workspaces.setEnabled(AppMode.general, false);
         }
         await t.pumpAndSettle();
         expect(find.byType(SkedTimePicker), findsNothing);

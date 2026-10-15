@@ -645,7 +645,7 @@ void main() {
       );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      await provider.setWorkspaceEnabled(AppMode.general, false);
+      await provider.workspaces.setEnabled(AppMode.general, false);
       await tester.pumpAndSettle();
       expect(find.byType(SkedDatePicker), findsNothing);
       expect(results, [null]);

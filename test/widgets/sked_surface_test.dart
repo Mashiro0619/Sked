@@ -116,10 +116,10 @@ void main() {
         _size(t, const Size(1440, 900));
         final p = await workspaceProvider(mode: AppMode.general);
         final boundary = GlobalKey();
-        await p.updateWorkspacePanelDisplayMode(
+        await p.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.automatic,
         );
-        await p.updateHomeWorkspaceNavigationCollapsed(true);
+        await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(true);
         await t.pumpWidget(
           RepaintBoundary(
             key: boundary,
@@ -150,7 +150,7 @@ void main() {
         await t.dragFrom(aboveAgenda, const Offset(60, 0));
         await t.pumpAndSettle();
         expect(calls, contains('startDrag'));
-        await p.updateHomeWorkspaceNavigationCollapsed(false);
+        await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false);
         await t.pumpAndSettle();
         expect(
           SkedSurface.colorOf(t.element(_key('general-selected-day-agenda'))),

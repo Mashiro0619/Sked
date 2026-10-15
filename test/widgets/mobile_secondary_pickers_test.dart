@@ -61,7 +61,7 @@ Future<(TimetableProvider, _Storage)> home(
   );
   final p = await workspaceProvider(storage: storage, locale: 'zh');
   addTearDown(p.dispose);
-  await p.setSelectedWeek(weeks == 1 ? 1 : 2);
+  await p.studentCommands.setSelectedWeek(weeks == 1 ? 1 : 2);
   await t.pumpWidget(
     WorkspaceHarness(
       provider: p,
@@ -150,7 +150,7 @@ void main() {
           if (scale == 1) expect(surface.height, lessThanOrEqualTo(288));
           await tap(t, key('sked-week-picker-close'));
           expect(storage.writes, before);
-          await p.switchMode(AppMode.general);
+          await p.workspaces.switchMode(AppMode.general);
           await t.pumpAndSettle();
           await editEvent(t);
           final beforePicker = storage.writes;
@@ -223,7 +223,7 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(marker(t, 'sked-date-touch-marker-2026-09-21').color, isNotNull);
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       await tap(t, day(22));
       expect(storage.writes, before);
       expect(find.byType(SkedDatePicker), findsOneWidget);
@@ -284,16 +284,16 @@ void main() {
       t.view.viewInsets = const FakeViewPadding();
       await t.pumpAndSettle();
       await pickDate(t);
-      await p.setWorkspaceEnabled(AppMode.general, false);
+      await p.workspaces.setEnabled(AppMode.general, false);
       await t.pumpAndSettle();
       // The existing editor guard rejects workspace changes while a picker is
       // active. Do not bypass that guard as part of a visual-only repair.
-      expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+      expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
       expect(find.byType(SkedDatePicker), findsOneWidget);
       await tap(t, key('sked-date-cancel'));
-      await p.setWorkspaceEnabled(AppMode.general, false);
+      await p.workspaces.setEnabled(AppMode.general, false);
       await t.pumpAndSettle();
-      expect(p.isWorkspaceEnabled(AppMode.general), isFalse);
+      expect(p.workspaceView.isEnabled(AppMode.general), isFalse);
       expect(find.byType(SkedDatePicker), findsNothing);
       expect(find.byType(GeneralEventEditorSheet), findsNothing);
       expect(t.takeException(), isNull);
@@ -307,7 +307,7 @@ void main() {
       (t) async {
         size(t, const Size(360, 850));
         final (p, storage) = await home(t, mode: AppMode.student, weeks: count);
-        if (count == 100) await p.setSelectedWeek(90);
+        if (count == 100) await p.studentCommands.setSelectedWeek(90);
         await t.pumpAndSettle();
         final before = storage.writes;
         await tap(t, key('student-week-picker-button'));
@@ -320,7 +320,7 @@ void main() {
           19 => 5,
           _ => 5,
         });
-        final selected = p.selectedWeek;
+        final selected = p.studentView.selectedWeek;
         final rect = t.getRect(week(selected));
         final viewport = t.getRect(key('sked-week-picker-grid'));
         expect(rect.top, greaterThanOrEqualTo(viewport.top - .5));
@@ -333,12 +333,12 @@ void main() {
         }
         await t.sendKeyEvent(LogicalKeyboardKey.end);
         await t.pumpAndSettle();
-        expect(p.selectedWeek, selected);
+        expect(p.studentView.selectedWeek, selected);
         expect(storage.writes, before);
         expect(marker(t, 'student-week-touch-marker-$count').border, isNotNull);
         await t.sendKeyEvent(LogicalKeyboardKey.space);
         await t.pumpAndSettle();
-        expect(p.selectedWeek, count);
+        expect(p.studentView.selectedWeek, count);
         expect(find.byType(SkedWeekPicker), findsNothing);
         expect(storage.writes, before);
         expect(t.takeException(), isNull);

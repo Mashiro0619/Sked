@@ -294,13 +294,13 @@ void main() {
         _size(t, const Size(360, 800));
         final p = await workspaceProvider();
         addTearDown(p.dispose);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         final results = <Object?>[];
         await _open(t, p, kind, results);
         if (replaceData) {
-          await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+          await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         } else {
-          await p.setWorkspaceEnabled(
+          await p.workspaces.setEnabled(
             kind == 'week' ? AppMode.student : AppMode.general,
             false,
           );

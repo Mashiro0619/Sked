@@ -249,7 +249,7 @@ void main() {
     addTearDown(p.dispose);
     await t.pumpWidget(WorkspaceHarness(provider: p));
     await t.pumpAndSettle();
-    final id = p.activeTimetable.id;
+    final id = p.studentView.activeTimetable.id;
     expect(opacity(t, id), 0);
     final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(
@@ -276,7 +276,7 @@ void main() {
     await t.tap(key('workspace-resource-collapse'));
     await t.pumpAndSettle();
     expect(key('workspace-resource-scrim'), findsOneWidget);
-    final id = p.activeTimetable.id;
+    final id = p.studentView.activeTimetable.id;
     expect(opacity(t, id), 0);
     final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(

@@ -41,7 +41,7 @@ void main() {
       addTearDown(t.view.resetPhysicalSize);
       final p = await workspaceProvider(mode: AppMode.general);
       addTearDown(p.dispose);
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 10));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 10));
       await t.pumpWidget(WorkspaceHarness(provider: p));
       await t.pumpAndSettle();
       final sidebar = find.byKey(
@@ -59,7 +59,7 @@ void main() {
       await drag.up();
       await t.pumpAndSettle();
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13)),
       );
       expect(commands, isNot(contains('startDrag')));

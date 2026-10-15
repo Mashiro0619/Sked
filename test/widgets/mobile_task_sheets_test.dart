@@ -78,8 +78,10 @@ Future<void> _tap(WidgetTester t, Finder f) async {
 Future<void> _openDetails(WidgetTester t, TimetableProvider p) async {
   await _tap(
     t,
-    p.activeMode == AppMode.student
-        ? _key('timetable-course-hit-${p.activeTimetable.courses.first.id}')
+    p.workspaceView.activeMode == AppMode.student
+        ? _key(
+            'timetable-course-hit-${p.studentView.activeTimetable.courses.first.id}',
+          )
         : _key(
             'general-timed-occurrence-mobile-day-21-2026-09-21T08:10:00.000',
           ),
@@ -343,12 +345,12 @@ void main() {
       ) async {
         _size(t, const Size(360, 850));
         final (p, _) = await _home(t, mode);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         await _openDetails(t, p);
         if (replaced) {
-          await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+          await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         } else {
-          await p.setWorkspaceEnabled(mode, false);
+          await p.workspaces.setEnabled(mode, false);
         }
         await t.pumpAndSettle();
         expect(_details(mode), findsNothing);
@@ -389,11 +391,14 @@ void main() {
     (t) async {
       _size(t, const Size(393, 852));
       final (p, _) = await _home(t, AppMode.student);
-      final course = p.activeTimetable.courses.first;
+      final course = p.studentView.activeTimetable.courses.first;
       await _openDetails(t, p);
       await _editDetails(t, AppMode.student);
       await _tap(t, _key('course-start-time-action'));
-      await p.deleteCourse(course.id, timetableId: p.activeTimetable.id);
+      await p.studentCommands.deleteCourse(
+        course.id,
+        timetableId: p.studentView.activeTimetable.id,
+      );
       await t.pumpAndSettle();
       expect(find.byType(CourseEditorSheet), findsNothing);
       expect(find.byType(CourseDetailsSheet), findsNothing);

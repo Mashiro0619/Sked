@@ -152,7 +152,7 @@ void main() {
           await t.tap(key('sked-date-picker-close'));
           await t.pumpAndSettle();
           expect(storage.writes, before);
-          await p.switchMode(AppMode.student);
+          await p.workspaces.switchMode(AppMode.student);
           await t.pumpAndSettle();
           expectReadableDates(t);
           final toolbar = find.byType(SkedWorkspaceToolbar).hitTestable().first;
@@ -229,7 +229,7 @@ void main() {
           ),
         );
         await t.pumpAndSettle();
-        expect(p.timetables, isEmpty);
+        expect(p.studentView.timetables, isEmpty);
         final toolbar = t.getRect(key('student-workspace-toolbar'));
         final settings = t.getRect(key('student-toolbar-more-button'));
         final title = t.getRect(
@@ -301,7 +301,7 @@ void main() {
           find.descendant(of: selectedLabel, matching: find.byType(Container)),
         );
         expect((otherBadge.decoration as BoxDecoration).color, isNull);
-        expect(p.selectedGeneralDate, other);
+        expect(p.generalView.selectedDate, other);
         expect(
           t
               .widget<Semantics>(
@@ -316,7 +316,7 @@ void main() {
               .selected,
           isTrue,
         );
-        await p.switchMode(AppMode.student);
+        await p.workspaces.switchMode(AppMode.student);
         await t.pumpAndSettle();
         final course = key('timetable-day-header-${today.weekday}')
             .hitTestable()
@@ -374,8 +374,11 @@ void main() {
       final today = DateTime.now();
       expect(semantics.label, contains('${today.year}'));
       expect(semantics.onLongPress, isNotNull);
-      expect(p.generalToolbarNavigationOrder, [...order, 'workspace']);
-      expect(p.generalHiddenToolbarNavigationIds, ['view']);
+      expect(p.generalView.data.toolbarNavigationOrder, [
+        ...order,
+        'workspace',
+      ]);
+      expect(p.generalView.data.hiddenToolbarNavigationIds, ['view']);
       expect(storage.writes, before);
       expect(t.takeException(), isNull);
     },

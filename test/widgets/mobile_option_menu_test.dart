@@ -170,12 +170,12 @@ void main() {
       );
       await t.pumpAndSettle();
       final field = _key('theme-brightness-mode-choice-list');
-      final original = p.appData.generalMode.themeMode;
+      final original = p.workspaceView.data.generalMode.themeMode;
       storage.saveError = StateError('theme choice disk busy');
       await _open(t, field);
       await t.tap(_item('暗黑'));
       await t.pumpAndSettle();
-      expect(p.appData.generalMode.themeMode, original);
+      expect(p.workspaceView.data.generalMode.themeMode, original);
       expect(
         t
             .widget<SkedDropdownMenu<String>>(
@@ -217,7 +217,7 @@ void main() {
         addTearDown(revision.dispose);
         final selections = <int?>[];
         final navigator = GlobalKey<NavigatorState>();
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         await t.pumpWidget(
           WorkspaceHarness(
             provider: p,
@@ -254,9 +254,9 @@ void main() {
         await _open(t, _key('choice'));
         final stale = t.widget<MenuItemButton>(_item('Two')).onPressed!;
         if (change == 'replace') {
-          await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+          await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         } else if (change == 'workspace') {
-          await p.setWorkspaceEnabled(AppMode.general, false);
+          await p.workspaces.setEnabled(AppMode.general, false);
         } else if (change == 'route') {
           navigator.currentState!.push<void>(
             MaterialPageRoute(
@@ -394,7 +394,7 @@ void main() {
       await _open(t, _key('theme-brightness-mode-choice-list'));
       await t.tap(find.text('Dark').last);
       await t.pumpAndSettle();
-      expect(p.appData.studentMode.themeMode, 'dark');
+      expect(p.workspaceView.data.studentMode.themeMode, 'dark');
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
