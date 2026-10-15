@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_content_sanitizer.dart';
 import '../services/school_import_http_consent.dart';
@@ -658,8 +659,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
             MaterialPageRoute(
               settings: RouteSettings(arguments: recoveryDraft),
               builder: (_) => themes.wrap(
-                ChangeNotifierProvider<TimetableProvider>.value(
-                  value: provider,
+                AppScope(
+                  app: provider,
                   child: KeyedSubtree(
                     key: transitionAnchor,
                     child: SkedTaskRouteGuard(

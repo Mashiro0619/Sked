@@ -8,7 +8,12 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/student_commands.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
+import '../providers/app_scope.dart';
 import '../screens/period_times_page.dart';
 import 'expressive_dialog.dart';
 import 'editor_exit_guard.dart';
@@ -20,13 +25,21 @@ import 'period_time_set_manager.dart';
 /// Returns the choice to the owning form. Selecting never commits a binding.
 Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext context, {
-  required TimetableProvider provider,
   BuildContext? anchorContext,
   Rect? anchorRect,
   required String selectedPeriodTimeSetId,
 }) async {
+  final studentView = context.read<StudentViewState>();
+  final studentCommands = context.read<StudentCommands>();
+  final workspaceView = context.read<WorkspaceViewState>();
+  final workspaces = context.read<WorkspaceCommands>();
+  final maintenance = context.read<AppDataMaintenance>();
+  final appScope = AppScope.capture(context)!;
   final session = SkedTaskSession(
-    provider: provider,
+    maintenance: maintenance,
+    workspaceView: workspaceView,
+    workspaces: workspaces,
+    targetChanges: studentView,
     workspace: AppMode.student,
     ownerRoute: ModalRoute.of(context),
     isOwnerActive: () => context.mounted,
@@ -57,15 +70,14 @@ Future<String?> showPeriodTimeSetPickerDialog(
         Future<void> openPeriodTimePage(String periodTimeSetId) async {
           await Navigator.of(dialogContext).push(
             MaterialPageRoute(
-              builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-                value: provider,
-                child: PeriodTimesPage(periodTimeSetId: periodTimeSetId),
+              builder: (_) => appScope.wrap(
+                PeriodTimesPage(periodTimeSetId: periodTimeSetId),
               ),
             ),
           );
         }
 
-        return StatefulBuilder(
+        final picker = StatefulBuilder(
           builder: (dialogContext, refreshDialog) {
             Future<void> runBusy({
               required String debugLabel,
@@ -93,7 +105,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
             }
 
             return PeriodTimeSetPickerDialogView(
-              periodTimeSets: provider.periodTimeSets,
+              periodTimeSets: studentView.periodTimeSets,
               selectedPeriodTimeSetId: currentSelectedId,
               busy: busy,
               blocked: busy || popped,
@@ -104,13 +116,10 @@ Future<String?> showPeriodTimeSetPickerDialog(
                     await Navigator.of(dialogContext).push<void>(
                       MaterialPageRoute(
                         builder: (_) =>
-                            ChangeNotifierProvider<TimetableProvider>.value(
-                              value: provider,
-                              child: const PeriodTimeSetManagerPage(),
-                            ),
+                            appScope.wrap(const PeriodTimeSetManagerPage()),
                       ),
                     );
-                    if (provider.periodTimeSetForId(currentSelectedId) ==
+                    if (studentView.periodTimeSetForId(currentSelectedId) ==
                         null) {
                       currentSelectedId = '';
                     }
@@ -127,7 +136,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
                         context: dialogContext,
                         debugLabel: 'Create period time set',
                         command: () async {
-                          created = await provider.addPeriodTimeSet();
+                          created = await studentCommands.addPeriodTimeSet();
                         },
                       );
                       if (!saved ||
@@ -149,7 +158,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
                     action: () async {
                       await openPeriodTimePage(item.id);
                       final stillExists =
-                          provider.periodTimeSetForId(item.id) != null;
+                          studentView.periodTimeSetForId(item.id) != null;
                       if (!stillExists && currentSelectedId == item.id) {
                         currentSelectedId = '';
                       }
@@ -158,12 +167,13 @@ Future<String?> showPeriodTimeSetPickerDialog(
                 );
               },
               onSelect: (id) {
-                if (provider.periodTimeSetForId(id) != null) popOnce(id);
+                if (studentView.periodTimeSetForId(id) != null) popOnce(id);
               },
               onCancel: popOnce,
             );
           },
         );
+        return appScope.wrap(picker);
       },
     );
   } finally {

@@ -484,7 +484,6 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                 final selected =
                                     await showPeriodTimeSetPickerDialog(
                                       context,
-                                      provider: provider,
                                       anchorContext:
                                           periodTimeSetAnchor.currentContext,
                                       selectedPeriodTimeSetId:

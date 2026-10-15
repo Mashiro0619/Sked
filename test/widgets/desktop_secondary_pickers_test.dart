@@ -165,7 +165,6 @@ void main() {
                 onPressed: () async {
                   selection = await showPeriodTimeSetPickerDialog(
                     anchor,
-                    provider: p,
                     anchorContext: anchor,
                     selectedPeriodTimeSetId: p.periodTimeSets.first.id,
                   );

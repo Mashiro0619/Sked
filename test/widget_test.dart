@@ -2435,6 +2435,7 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => AppScope(app: provider, child: child!),
           home: Builder(
             builder: (context) => Scaffold(
               body: Center(
@@ -2517,6 +2518,7 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => AppScope(app: provider, child: child!),
           home: Scaffold(
             body: SchoolWebImportResultSheet(
               response: response,
@@ -2743,7 +2745,6 @@ void main() {
                       unawaited(
                         showPeriodTimeSetPickerDialog(
                           context,
-                          provider: provider,
                           selectedPeriodTimeSetId:
                               provider.activePeriodTimeSet.id,
                         ),

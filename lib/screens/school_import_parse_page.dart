@@ -619,7 +619,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     final result = await _runPicker(
       () => showPeriodTimeSetPickerDialog(
         context,
-        provider: provider,
         anchorContext: _periodTimeSetAnchor.currentContext,
         selectedPeriodTimeSetId: _selectedPeriodTimeSetId,
       ),

@@ -298,7 +298,6 @@ class TimetableImportFlow {
     if (!context.mounted) return null;
     final selectedPeriodTimeSetId = await showPeriodTimeSetPickerDialog(
       context,
-      provider: provider,
       anchorRect: anchorRect,
       selectedPeriodTimeSetId:
           provider.studentView.activePeriodTimeSetOrNull?.id ??

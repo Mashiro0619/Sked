@@ -10,6 +10,7 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/services/school_import_api.dart';
@@ -170,7 +171,7 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-        child: child!,
+        child: AppScope(app: provider, child: child!),
       ),
       home: Builder(
         builder: (context) => Scaffold(

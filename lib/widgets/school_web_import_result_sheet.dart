@@ -201,7 +201,6 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
               final result = await _runPicker(
                 () => showPeriodTimeSetPickerDialog(
                   context,
-                  provider: widget.provider,
                   anchorContext: _periodTimeSetAnchor.currentContext,
                   selectedPeriodTimeSetId: _selectedPeriodTimeSetId,
                 ),

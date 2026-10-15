@@ -106,7 +106,6 @@ void main() {
                   unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      provider: provider,
                       selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
                     ),
                   );
@@ -190,7 +189,6 @@ void main() {
                 onPressed: () => unawaited(
                   showPeriodTimeSetPickerDialog(
                     context,
-                    provider: provider,
                     selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
                   ),
                 ),
@@ -255,7 +253,6 @@ void main() {
                 onPressed: () => unawaited(
                   showPeriodTimeSetPickerDialog(
                     context,
-                    provider: provider,
                     selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
                   ),
                 ),
@@ -322,7 +319,6 @@ void main() {
                   unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      provider: provider,
                       selectedPeriodTimeSetId: defaultSet.id,
                     ),
                   );
@@ -429,7 +425,6 @@ void main() {
                   onPressed: () => unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      provider: provider,
                       selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
                     ),
                   ),
@@ -484,7 +479,6 @@ void main() {
                   results.add(
                     await showPeriodTimeSetPickerDialog(
                       context,
-                      provider: provider,
                       selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
                     ),
                   );
@@ -526,7 +520,6 @@ void main() {
                 onPressed: () async {
                   final result = await showPeriodTimeSetPickerDialog(
                     context,
-                    provider: provider,
                     selectedPeriodTimeSetId: '',
                   );
                   results.add(result);
@@ -581,7 +574,6 @@ void main() {
                 onPressed: () async {
                   final result = await showPeriodTimeSetPickerDialog(
                     context,
-                    provider: provider,
                     selectedPeriodTimeSetId: '',
                   );
                   results.add(result);
@@ -626,7 +618,6 @@ void main() {
                   unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      provider: provider,
                       selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
                     ),
                   );
@@ -685,7 +676,6 @@ void main() {
                     unawaited(
                       showPeriodTimeSetPickerDialog(
                         context,
-                        provider: provider,
                         selectedPeriodTimeSetId: deletedSet.id,
                       ),
                     );
@@ -747,7 +737,6 @@ void main() {
                 onPressed: () async {
                   final result = await showPeriodTimeSetPickerDialog(
                     context,
-                    provider: provider,
                     selectedPeriodTimeSetId: '',
                   );
                   results.add(result);
@@ -809,7 +798,6 @@ void main() {
                   unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      provider: provider,
                       selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
                     ),
                   );

@@ -71,7 +71,6 @@ void main() {
                 onPressed: () async {
                   selected = await showPeriodTimeSetPickerDialog(
                     context,
-                    provider: p,
                     selectedPeriodTimeSetId: p.periodTimeSets.first.id,
                   );
                   completed = true;
@@ -228,7 +227,6 @@ void main() {
                 onPressed: () async {
                   result = await showPeriodTimeSetPickerDialog(
                     context,
-                    provider: p,
                     selectedPeriodTimeSetId: original,
                   );
                 },

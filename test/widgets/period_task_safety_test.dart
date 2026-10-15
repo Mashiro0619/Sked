@@ -55,7 +55,6 @@ void main() {
                 builder: (context) => TextButton(
                   onPressed: () => showPeriodTimeSetPickerDialog(
                     context,
-                    provider: p,
                     selectedPeriodTimeSetId: p.periodTimeSets.first.id,
                   ),
                   child: const Text('Open'),

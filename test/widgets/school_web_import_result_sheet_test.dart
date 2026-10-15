@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
@@ -151,7 +152,7 @@ Future<void> _pumpPreviewSheet(
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: textScaler, viewInsets: viewInsets),
-        child: child!,
+        child: AppScope(app: provider, child: child!),
       ),
       home: Builder(
         builder: (context) => Scaffold(
