@@ -92,7 +92,7 @@ Future<TimetableProvider> _createProvider({
         _MemoryTimetableStorage(buildInitialAppData(buildDefaultPeriodTimes())),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -114,7 +114,7 @@ Future<void> _pumpPreviewSheet(
   Locale locale = const Locale('en'),
   ValueChanged<SchoolImportApplyRequest?>? onResult,
 }) {
-  final periodTimeSets = provider.periodTimeSets;
+  final periodTimeSets = provider.studentView.periodTimeSets;
   final initialPeriodTimeSetId = periodTimeSets.isEmpty
       ? ''
       : periodTimeSets.first.id;
@@ -690,7 +690,7 @@ void main() {
 
     expect(find.byType(SkedDatePicker), findsNothing);
     expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
-    final before = provider.appData.toJson();
+    final before = provider.workspaceView.data.toJson();
     await tester.tap(startDateTile);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('sked-date-2026-05-27')));
@@ -700,7 +700,7 @@ void main() {
       find.descendant(of: startDateTile, matching: find.text('2026-05-27')),
       findsOneWidget,
     );
-    expect(provider.appData.toJson(), before);
+    expect(provider.workspaceView.data.toJson(), before);
   });
 
   testWidgets(
@@ -708,7 +708,7 @@ void main() {
     (tester) async {
       final provider = await _createProvider();
       addTearDown(provider.dispose);
-      final initial = provider.periodTimeSets.single;
+      final initial = provider.studentView.periodTimeSets.single;
       final added = _extraPeriodTimeSet(name: 'Added set');
       final response = _buildResponse();
 
@@ -722,7 +722,7 @@ void main() {
         tester.element(find.byType(SchoolWebImportResultSheet)),
       ).periodTimeSetSummary(initial.name, initial.periodTimes.length);
       expect(find.text(initialSummary), findsOneWidget);
-      final created = await provider.addPeriodTimeSet(
+      final created = await provider.studentCommands.addPeriodTimeSet(
         name: added.name,
         periodTimes: added.periodTimes,
       );
@@ -744,7 +744,9 @@ void main() {
       ).periodTimeSetSummary(added.name, added.periodTimes.length);
       expect(find.text(addedSheetSummary), findsOneWidget);
 
-      await provider.updatePeriodTimeSet(created.copyWith(name: 'Renamed set'));
+      await provider.studentCommands.updatePeriodTimeSet(
+        created.copyWith(name: 'Renamed set'),
+      );
       await tester.pumpAndSettle();
       final renamedSheetSummary = AppLocalizations.of(
         tester.element(find.byType(SchoolWebImportResultSheet)),
@@ -753,12 +755,12 @@ void main() {
 
       // The picker now selected the new set. Deleting it while the preview is
       // still open repairs the preview selection to a live remaining set.
-      await provider.deletePeriodTimeSet(created.id);
+      await provider.studentCommands.deletePeriodTimeSet(created.id);
       await tester.pumpAndSettle();
       expect(find.text('Added set'), findsNothing);
       expect(find.text(renamedSheetSummary), findsNothing);
       expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
-      expect(provider.periodTimeSetForId(initial.id), isNotNull);
+      expect(provider.studentView.periodTimeSetForId(initial.id), isNotNull);
       expect(tester.takeException(), isNull);
     },
   );
@@ -770,10 +772,11 @@ void main() {
       final replacementProvider = await _createProvider();
       addTearDown(firstProvider.dispose);
       addTearDown(replacementProvider.dispose);
-      final selectedFromFirst = await firstProvider.addPeriodTimeSet(
-        name: 'First provider selection',
-        periodTimes: buildDefaultPeriodTimes().take(2).toList(),
-      );
+      final selectedFromFirst = await firstProvider.studentCommands
+          .addPeriodTimeSet(
+            name: 'First provider selection',
+            periodTimes: buildDefaultPeriodTimes().take(2).toList(),
+          );
       TimetableProvider currentProvider = firstProvider;
       StateSetter? setHostState;
 
@@ -814,7 +817,8 @@ void main() {
       setHostState!(() => currentProvider = replacementProvider);
       await tester.pumpAndSettle();
 
-      final replacementSet = replacementProvider.periodTimeSets.single;
+      final replacementSet =
+          replacementProvider.studentView.periodTimeSets.single;
       final replacementL10n = _sheetL10n(tester);
       expect(
         find.text(
@@ -834,7 +838,7 @@ void main() {
     (tester) async {
       final provider = await _createProvider();
       addTearDown(provider.dispose);
-      final initial = provider.periodTimeSets.single;
+      final initial = provider.studentView.periodTimeSets.single;
       final response = _buildResponse(
         periodTimeSet: const ImportedPeriodTimeSetDraft(
           name: 'Bundled periods',
@@ -869,7 +873,7 @@ void main() {
         isNotNull,
       );
 
-      await provider.deletePeriodTimeSet(initial.id);
+      await provider.studentCommands.deletePeriodTimeSet(initial.id);
       await tester.pumpAndSettle();
 
       final importButton = find.widgetWithText(
@@ -898,8 +902,8 @@ void main() {
       );
       final provider = await _createProvider(storage: storage);
       addTearDown(provider.dispose);
-      final initial = provider.periodTimeSets.single;
-      final replacement = await provider.addPeriodTimeSet(
+      final initial = provider.studentView.periodTimeSets.single;
+      final replacement = await provider.studentCommands.addPeriodTimeSet(
         name: 'Replacement set',
         periodTimes: buildDefaultPeriodTimes().take(2).toList(),
       );

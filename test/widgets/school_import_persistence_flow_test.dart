@@ -151,7 +151,7 @@ Future<(TimetableProvider, _Storage)> _provider() async {
     systemLocaleCodeResolver: () => 'en',
     privacyService: const _NoPrivacyRequest(),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return (provider, storage);
 }
 
@@ -309,7 +309,7 @@ void main() {
       storage.failures = 1;
       await _tapImport(tester);
       await tester.pumpAndSettle();
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(find.byType(SchoolImportParsePage), findsOneWidget);
       expect(
         tester.widget<TextField>(_name).controller!.text,
@@ -337,7 +337,7 @@ void main() {
       );
       await tester.tap(find.widgetWithText(TextButton, 'Retry'));
       await tester.pumpAndSettle();
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       await _tapImport(tester);
       await tester.pumpAndSettle();
       expect(find.byType(SchoolImportParsePage), findsNothing);
@@ -396,7 +396,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SchoolImportParsePage), findsNothing);
       expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(storage.attempts, writes);
       expect(tester.takeException(), isNull);
     },
@@ -483,7 +483,7 @@ void main() {
           }
           await _tapImport(tester);
           await _pumpReview(tester, legacy: legacy);
-          expect(provider.canWrite, isFalse);
+          expect(provider.session.canWrite, isFalse);
           expect(storage.attempts, writes + 1);
           if (outcome != 'unknown') {
             expect(review, findsOneWidget);
@@ -507,7 +507,7 @@ void main() {
                 ),
               );
               await _pumpReview(tester, legacy: legacy);
-              expect(provider.canWrite, isTrue);
+              expect(provider.session.canWrite, isTrue);
               await _tapImport(tester);
               await tester.pumpAndSettle();
               expect(find.byType(SchoolWebImportPage), findsOneWidget);
@@ -561,7 +561,7 @@ void main() {
                   ),
                   same(browser),
                 );
-                expect(provider.canWrite, isFalse);
+                expect(provider.session.canWrite, isFalse);
                 expect(storage.attempts, writes + 1);
 
                 await tester.tap(cancel);
@@ -584,7 +584,7 @@ void main() {
               _replaceDataSession(provider);
               await tester.pumpAndSettle();
             case 'unknown':
-              expect(provider.isStorageWriteStateUnknown, isTrue);
+              expect(provider.lifecycle.isStorageWriteStateUnknown, isTrue);
           }
           if (outcome != 'retry') {
             expect(
@@ -634,7 +634,7 @@ void main() {
         find.byKey(const ValueKey('data-recovery-screen')),
         findsOneWidget,
       );
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(tester.takeException(), isNull);
     },
   );
@@ -653,8 +653,8 @@ void main() {
       );
       await _tapImport(tester);
       await tester.pumpAndSettle();
-      expect(provider.canWrite, isFalse);
-      expect(provider.isStorageWriteStateUnknown, isTrue);
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.lifecycle.isStorageWriteStateUnknown, isTrue);
       expect(
         find.byType(SchoolImportParsePage, skipOffstage: false),
         findsNothing,
@@ -693,7 +693,7 @@ void main() {
         );
         await tester.tap(find.widgetWithText(TextButton, 'Retry'));
         await tester.pumpAndSettle();
-        expect(provider.canWrite, isFalse);
+        expect(provider.session.canWrite, isFalse);
         expect(
           find.byType(SchoolImportParsePage, skipOffstage: false),
           findsNothing,
@@ -793,7 +793,7 @@ void main() {
           storage.gate!.complete();
           storage.gate = null;
           await tester.pumpAndSettle();
-          expect(provider.canWrite, isFalse);
+          expect(provider.session.canWrite, isFalse);
           expect(
             find.textContaining('Sked cannot access local storage right now.'),
             findsOneWidget,
@@ -813,7 +813,7 @@ void main() {
 
           await tester.tap(find.widgetWithText(TextButton, 'Retry'));
           await tester.pumpAndSettle();
-          expect(provider.canWrite, isTrue);
+          expect(provider.session.canWrite, isTrue);
           expect(
             tester.widget<TextField>(_name).controller!.text,
             'Corrected timetable',
@@ -960,22 +960,22 @@ void main() {
     (tester) async {
       final (provider, storage) = await _provider();
       addTearDown(provider.dispose);
-      await provider.addTimetable(
+      await provider.studentCommands.addTimetable(
         TimetableConfig(
           name: 'Another timetable',
           startDate: DateTime(2026, 5, 25),
           totalWeeks: 18,
-          periodTimeSetId: provider.periodTimeSets.first.id,
+          periodTimeSetId: provider.studentView.periodTimeSets.first.id,
         ),
       );
-      final otherId = provider.activeTimetableOrNull!.id;
-      await provider.switchTimetable('existing');
+      final otherId = provider.studentView.activeTimetableOrNull!.id;
+      await provider.studentCommands.switchTimetable('existing');
       final api = _Api();
       await _openHtmlReview(tester, provider, api);
       await tester.enterText(_name, 'Keep the unsubmitted draft');
       await tester.tap(_replace);
       await tester.pumpAndSettle();
-      await provider.switchTimetable(otherId);
+      await provider.studentCommands.switchTimetable(otherId);
       final baseline = storage.attempts;
       await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
       await tester.pumpAndSettle();
@@ -1078,8 +1078,9 @@ void main() {
                           response: _response(),
                           canReplaceCurrent: true,
                           initialPeriodTimeSetId:
-                              provider.periodTimeSets.first.id,
-                          onApply: provider.applySchoolImportRequest,
+                              provider.studentView.periodTimeSets.first.id,
+                          onApply:
+                              provider.studentCommands.applySchoolImportRequest,
                         ),
                       ),
                     );

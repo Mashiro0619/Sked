@@ -126,7 +126,7 @@ Future<TimetableProvider> _createProvider({
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 

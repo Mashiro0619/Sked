@@ -44,12 +44,12 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetViewInsets);
       final p = await workspaceProvider();
-      await p.updateCustomSchoolImportTextSettings(
+      await p.settingsCommands.updateCustomSchoolImportTextSettings(
         baseUrl: 'https://example.invalid/v1',
         model: 'fixture-model',
-        prompt: p.customSchoolImportPrompt,
+        prompt: p.settingsView.customSchoolImportPrompt,
       );
-      await p.updateCustomSchoolImportApiKey('memory-fixture');
+      await p.schoolImportSecrets.update('memory-fixture');
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: p,

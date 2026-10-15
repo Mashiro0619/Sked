@@ -107,7 +107,7 @@ Future<TimetableProvider> _createConfiguredProvider() async {
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 

@@ -73,7 +73,8 @@ Future<TimetableProvider> _mount(
                   builder: (_) => SchoolWebImportResultSheet(
                     response: _response(),
                     canReplaceCurrent: false,
-                    initialPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    initialPeriodTimeSetId:
+                        provider.studentView.periodTimeSets.first.id,
                     onApply: onApply,
                   ),
                 ),
@@ -112,7 +113,7 @@ void main() {
     (tester) async {
       final results = <SchoolImportApplyRequest?>[];
       final provider = await _mount(tester, results: results);
-      final originalTables = provider.timetables
+      final originalTables = provider.studentView.timetables
           .map((table) => table.id)
           .toList();
       final state = tester.state(_preview);
@@ -170,7 +171,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(_preview, findsNothing);
       expect(results, [null]);
-      expect(provider.timetables.map((table) => table.id), originalTables);
+      expect(
+        provider.studentView.timetables.map((table) => table.id),
+        originalTables,
+      );
       expect(find.text('Review imported data').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
     },

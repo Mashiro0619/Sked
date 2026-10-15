@@ -45,7 +45,7 @@ Future<TimetableProvider> _createProvider() async {
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -187,8 +187,11 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
                         canReplaceCurrent: canReplaceCurrent,
                         maxEditableCodeUnits: maxEditableCodeUnits,
                         initialPeriodTimeSetId:
-                            provider.activePeriodTimeSetOrNull?.id ??
-                            provider.periodTimeSets.firstOrNull?.id,
+                            provider
+                                .studentView
+                                .activePeriodTimeSetOrNull
+                                ?.id ??
+                            provider.studentView.periodTimeSets.firstOrNull?.id,
                       ),
                     ),
                   );
@@ -213,7 +216,7 @@ void main() {
       addTearDown(provider.dispose);
       final controller = StreamController<SchoolImportStreamEvent>();
       addTearDown(controller.close);
-      final before = provider.appData.toJson();
+      final before = provider.workspaceView.data.toJson();
       final results = await _pumpDirectPage(
         tester,
         controller,
@@ -240,7 +243,7 @@ void main() {
       expect(results, hasLength(1));
       expect(results.single!.applyRequest, isNull);
       expect(results.single!.importApplied, isFalse);
-      expect(provider.appData.toJson(), before);
+      expect(provider.workspaceView.data.toJson(), before);
       expect(tester.takeException(), isNull);
     },
   );
@@ -636,7 +639,7 @@ void main() {
       final results = await _pumpDirectPage(tester, controller, provider);
       controller.add(ParseDone(response: _response()));
       await tester.pumpAndSettle();
-      final before = provider.appData.toJson();
+      final before = provider.workspaceView.data.toJson();
       final date = find.byKey(const ValueKey('school-import-parse-start-date'));
       await tester.ensureVisible(date);
       await tester.tap(date);
@@ -660,7 +663,7 @@ void main() {
         find.descendant(of: date, matching: find.text('2026-05-27')),
         findsOneWidget,
       );
-      expect(provider.appData.toJson(), before);
+      expect(provider.workspaceView.data.toJson(), before);
       final l = AppLocalizations.of(
         tester.element(find.byType(SchoolImportParsePage)),
       );
@@ -672,7 +675,7 @@ void main() {
         results.single!.response.timetable.startDate,
         DateTime(2026, 5, 27),
       );
-      expect(provider.appData.toJson(), before);
+      expect(provider.workspaceView.data.toJson(), before);
       expect(tester.takeException(), isNull);
     },
   );

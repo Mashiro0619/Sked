@@ -93,7 +93,7 @@ void main() {
         final provider = await workspaceProvider();
         addTearDown(provider.dispose);
         if (retirement == 'workspace disable') {
-          await provider.setWorkspaceEnabled(AppMode.general, true);
+          await provider.workspaces.setEnabled(AppMode.general, true);
         }
         final parent = retirement == 'parent disposal'
             ? SkedTaskSession()
@@ -118,16 +118,16 @@ void main() {
           case 'owner removal':
             run.ownerRoute.navigator!.removeRoute(run.ownerRoute);
           case 'workspace disable':
-            await provider.setWorkspaceEnabled(AppMode.student, false);
+            await provider.workspaces.setEnabled(AppMode.student, false);
           case 'target change':
-            final original = provider.activeTimetableOrNull!;
-            await provider.addTimetable(
+            final original = provider.studentView.activeTimetableOrNull!;
+            await provider.studentCommands.addTimetable(
               original.config.copyWith(name: 'Another timetable'),
             );
-            await provider.switchTimetable(original.id);
+            await provider.studentCommands.switchTimetable(original.id);
           case 'data replacement':
-            final backup = await provider.exportAppDataJson();
-            await provider.importAppDataJson(
+            final backup = await provider.backups.exportJson();
+            await provider.backups.importJson(
               backup,
               mode: AppImportMode.replaceAll,
             );
