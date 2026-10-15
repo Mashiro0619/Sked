@@ -145,7 +145,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           if (route.isFirst) return true;
           final draft = route.settings.arguments;
           if (draft is! SchoolImportRecoveryDraft ||
-              !draft.canRetainFor(provider)) {
+              !draft.canRetainFor(provider.maintenance)) {
             return false;
           }
           _observeRetainedRecoveryDraft(route, provider);

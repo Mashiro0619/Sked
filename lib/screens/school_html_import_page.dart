@@ -17,6 +17,10 @@ import '../models/school_import_models.dart';
 import '../providers/timetable_provider.dart';
 import '../providers/app_scope.dart';
 import '../controllers/student_commands.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_lifecycle.dart';
+import '../controllers/workspace_view_state.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_content_sanitizer.dart';
 import '../services/school_import_http_consent.dart';
@@ -561,6 +565,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     final l10n = AppLocalizations.of(context);
     final provider = context.read<TimetableProvider>();
     final studentCommands = context.read<StudentCommands>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final lifecycle = context.read<AppLifecycle>();
+    final dataClear = context.read<AppDataClearController>();
+    final workspaceView = context.read<WorkspaceViewState>();
     final validationMessage = _validateBeforeSubmit(provider, l10n);
     if (validationMessage != null) {
       _showMessage(validationMessage);
@@ -604,7 +612,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     var importApplied = false;
     var applyAttempted = false;
     final recoveryDraft = SchoolImportRecoveryDraft(
-      provider: provider,
+      maintenance: maintenance,
+      lifecycle: lifecycle,
+      dataClear: dataClear,
+      workspaceView: workspaceView,
       isPendingImport: () =>
           owner.isCurrent && applyAttempted && !importApplied,
     );
