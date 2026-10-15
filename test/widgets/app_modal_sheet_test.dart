@@ -2,12 +2,20 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:sked/controllers/app_session.dart';
+import 'package:sked/controllers/settings_commands.dart';
+import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/ui_command.dart';
 import 'package:sked/widgets/workspace_editor.dart';
+import 'package:sked/widgets/workspace_frame.dart';
+
+import '../support/workspace_harness.dart';
 
 Widget _localizedApp(Widget home) {
   return MaterialApp(
@@ -19,6 +27,119 @@ Widget _localizedApp(Widget home) {
 }
 
 void main() {
+  for (final (platform, size) in [
+    (TargetPlatform.windows, const Size(1280, 850)),
+    (TargetPlatform.android, const Size(390, 844)),
+  ]) {
+    testWidgets(
+      'a modal task retains the nearest domain across its $platform host',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        addTearDown(tester.view.reset);
+        final outer = await workspaceProvider(locale: 'en');
+        final inner = await workspaceProvider(locale: 'ja');
+        final pane = WorkspacePaneController();
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox());
+          pane.dispose();
+          inner.dispose();
+          outer.dispose();
+        });
+
+        await tester.pumpWidget(
+          AppScope(
+            app: outer,
+            child: _localizedApp(
+              Scaffold(
+                body: WorkspaceFrame(
+                  controller: pane,
+                  resources: const SizedBox.shrink(),
+                  resourcesCollapsed: true,
+                  canvas: AppScope(
+                    app: inner,
+                    child: Builder(
+                      builder: (context) => Center(
+                        child: TextButton(
+                          onPressed: () => unawaited(
+                            showAppModalSheet<void>(
+                              context: context,
+                              workspacePane: pane,
+                              panePresentation: WorkspacePanePresentation.view,
+                              builder: (taskContext) {
+                                expect(
+                                  taskContext.read<AppSession>(),
+                                  same(inner.session),
+                                );
+                                final close = TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(taskContext).pop(),
+                                  child: const Text('Close task'),
+                                );
+                                final setting = TextButton(
+                                  onPressed: () => unawaited(
+                                    taskContext
+                                        .read<SettingsCommands>()
+                                        .updateLocaleCode('zh'),
+                                  ),
+                                  child: Text(
+                                    taskContext
+                                        .watch<SettingsViewState>()
+                                        .localeCode,
+                                  ),
+                                );
+                                if (platform == TargetPlatform.windows) {
+                                  return WorkspaceViewPanel(
+                                    title: const Text('Scoped settings'),
+                                    headerAction: close,
+                                    child: setting,
+                                  );
+                                }
+                                return AppSheetScaffold(
+                                  title: const Text('Scoped settings'),
+                                  actions: [close],
+                                  child: setting,
+                                );
+                              },
+                            ),
+                          ),
+                          child: const Text('Open scoped task'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open scoped task'));
+        await tester.pumpAndSettle();
+        expect(pane.hasPaneTasks, platform == TargetPlatform.windows);
+        expect(pane.hasModalTasks, platform == TargetPlatform.android);
+        expect(find.text('ja').hitTestable(), findsOneWidget);
+        await tester.tap(find.text('ja'));
+        await tester.pumpAndSettle();
+        expect(find.text('zh'), findsOneWidget);
+        expect(inner.settingsView.localeCode, 'zh');
+        expect(outer.settingsView.localeCode, 'en');
+
+        expect(find.text('Close task').hitTestable(), findsOneWidget);
+        await tester.tap(find.text('Close task'));
+        await tester.pumpAndSettle();
+        expect(pane.isOpen, isFalse);
+        expect(find.text('Scoped settings'), findsNothing);
+        await inner.settingsCommands.updateLocaleCode('en');
+        await tester.pump();
+        expect(inner.settingsView.localeCode, 'en');
+        expect(find.text('Open scoped task'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
   for (final scale in [1.0, 2.0]) {
     testWidgets(
       'a 101dp editor viewport retains complete commands and its draft at $scale text',

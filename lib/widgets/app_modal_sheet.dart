@@ -11,8 +11,14 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../models/app_mode.dart';
-import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../services/desktop_layout_preferences.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_guarded_bottom_sheet_route.dart';
@@ -55,11 +61,25 @@ Future<T?> showAppModalSheet<T>({
   // An editor opened from a phone details task must stay above that modal
   // even if the window was widened while the details were open.
   final bottomTask = compact || workspacePane?.hasModalTasks == true;
-  final provider = Provider.of<TimetableProvider?>(context, listen: false);
+  final scope = AppScope.capture(context);
+  final targetChanges = isSessionCurrent == null
+      ? null
+      : switch (workspace) {
+          AppMode.student => context.read<StudentViewState?>(),
+          AppMode.general => context.read<GeneralViewState?>(),
+          null => Listenable.merge([
+            context.read<StudentViewState?>(),
+            context.read<GeneralViewState?>(),
+            context.read<SettingsViewState?>(),
+          ]),
+        };
   final ownerRoute = ModalRoute.of(context);
   final focus = FocusManager.instance.primaryFocus;
   final taskSession = SkedTaskSession(
-    provider: provider,
+    maintenance: context.read<AppDataMaintenance?>(),
+    workspaceView: context.read<WorkspaceViewState?>(),
+    workspaces: context.read<WorkspaceCommands?>(),
+    targetChanges: targetChanges,
     workspace: workspace,
     parent: session ?? SkedTaskSessionScope.maybeOf(context)?.session,
     ownerRoute: ownerRoute,
@@ -71,10 +91,14 @@ Future<T?> showAppModalSheet<T>({
     taskSession.dispose();
     return null;
   }
-  Widget content(BuildContext sheetContext) => SkedTaskRouteGuard(
-    parent: taskSession,
-    child: Builder(builder: builder),
-  );
+  Widget content(BuildContext sheetContext) {
+    final task = SkedTaskRouteGuard(
+      parent: taskSession,
+      child: Builder(builder: builder),
+    );
+    return scope?.wrap(task) ?? task;
+  }
+
   if (workspacePane != null && !bottomTask) {
     try {
       final result = await workspacePane.show<T>(
@@ -130,7 +154,7 @@ Future<T?> showAppModalSheet<T>({
     builder: (sheetContext) {
       final media = MediaQuery.of(sheetContext);
       final colors = Theme.of(sheetContext).colorScheme;
-      final task = _AppBottomSheetScope(
+      return _AppBottomSheetScope(
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle(
             systemNavigationBarColor: colors.surface,
@@ -153,12 +177,6 @@ Future<T?> showAppModalSheet<T>({
           ),
         ),
       );
-      return provider == null
-          ? task
-          : ChangeNotifierProvider<TimetableProvider>.value(
-              value: provider,
-              child: task,
-            );
     },
   );
   T? result;
