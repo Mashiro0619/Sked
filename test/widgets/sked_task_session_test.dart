@@ -202,8 +202,8 @@ void main() {
         workspace: AppMode.general,
       );
       addTearDown(session.dispose);
-      final backup = await p.exportAppDataJson();
-      await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+      final backup = await p.backups.exportJson();
+      await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
       expect(session.isCurrent, isFalse);
     },
   );
