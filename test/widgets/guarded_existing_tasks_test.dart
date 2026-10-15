@@ -215,7 +215,7 @@ void main() {
 
       await _completeWrite(tester, storage);
       expect(sheet, findsNothing);
-      expect(provider.activeTimetable.id, 'guarded-second');
+      expect(provider.studentView.activeTimetable.id, 'guarded-second');
       expect(storage.writes, before + 1);
       await _tap(tester, _key('student-timetable-picker-button'));
       expect(_key('timetable-picker-close').hitTestable(), findsOneWidget);
@@ -252,14 +252,14 @@ void main() {
       expect(details, findsNothing);
       expect(find.byType(BottomSheet), findsNothing);
       expect(storage.writes, before + 1);
-      final table = provider.activeTimetable;
+      final table = provider.studentView.activeTimetable;
       final conflictKey = buildConflictKeyForCourses(
         table.id,
         1,
         table.courses,
       );
       expect(
-        provider.studentMode.conflictDisplayCourseIds[conflictKey],
+        provider.studentView.data.conflictDisplayCourseIds[conflictKey],
         'guarded-b',
       );
       await _tap(tester, _key('timetable-course-hit-guarded-b'));
@@ -276,7 +276,7 @@ void main() {
         tester,
         mobileLayoutData(locale: 'en'),
       );
-      final beforeEvents = provider.generalSchedules
+      final beforeEvents = provider.generalView.schedules
           .expand((calendar) => calendar.events)
           .map((event) => event.id)
           .toSet();
@@ -297,7 +297,7 @@ void main() {
       await _completeWrite(tester, storage);
       expect(details, findsNothing);
       expect(find.byType(BottomSheet), findsNothing);
-      final afterEvents = provider.generalSchedules
+      final afterEvents = provider.generalView.schedules
           .expand((calendar) => calendar.events)
           .map((event) => event.id)
           .toSet();

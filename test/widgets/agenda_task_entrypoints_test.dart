@@ -69,20 +69,20 @@ void main() {
           final layouts = DesktopLayoutPreferences.memory();
           addTearDown(provider.dispose);
           addTearDown(layouts.dispose);
-          await provider.acceptPrivacyPolicyCurrentVersion();
+          await provider.lifecycle.acceptPrivacyPolicyCurrentVersion();
           await tester.pumpWidget(
             MyApp(provider: provider, desktopLayoutPreferences: layouts),
           );
           await tester.pumpAndSettle();
           try {
-            final table = provider.activeTimetable;
+            final table = provider.studentView.activeTimetable;
             final course = table.courses.first;
-            final calendar = provider.generalSchedules.first;
+            final calendar = provider.generalView.schedules.first;
             final event = calendar.events.firstWhere(
               (item) => item.id == 'mobile-day-21',
             );
-            final occurrence = provider
-                .generalOccurrencesForRange(
+            final occurrence = provider.generalView
+                .occurrencesForRange(
                   startInclusive: DateTime(2026, 9, 21),
                   endExclusive: DateTime(2026, 9, 22),
                 )
@@ -176,12 +176,12 @@ void main() {
             expect(editor, findsNothing);
             expect(
               mode == AppMode.student
-                  ? provider.timetables
+                  ? provider.studentView.timetables
                         .firstWhere((item) => item.id == table.id)
                         .courses
                         .firstWhere((item) => item.id == course.id)
                         .name
-                  : provider.generalSchedules
+                  : provider.generalView.schedules
                         .firstWhere((item) => item.id == calendar.id)
                         .events
                         .firstWhere((item) => item.id == event.id)

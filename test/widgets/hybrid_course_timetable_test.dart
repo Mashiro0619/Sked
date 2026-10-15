@@ -149,7 +149,7 @@ void main() {
                   totalWeeks: 18,
                   dayOfWeek: 1,
                   initialCourse: editing
-                      ? provider.activeTimetable.courses.first
+                      ? provider.studentView.activeTimetable.courses.first
                       : null,
                 ),
               ),

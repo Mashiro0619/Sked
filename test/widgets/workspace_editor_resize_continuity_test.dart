@@ -28,7 +28,7 @@ Future<(TimetableProvider, DesktopLayoutPreferences)> _mount(
   });
   final provider = await workspaceProvider();
   addTearDown(provider.dispose);
-  await provider.updateWorkspacePanelDisplayMode(
+  await provider.settingsCommands.updateWorkspacePanelDisplayMode(
     WorkspacePanelDisplayMode.automatic,
   );
   final preferences = DesktopLayoutPreferences.memory(
@@ -175,13 +175,13 @@ void main() {
         );
         await t.pumpAndSettle();
         expect(t.getSize(surface).width, closeTo(704, .01));
-        await provider.updateWorkspacePanelDisplayMode(
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
         await t.pumpAndSettle();
         expect(t.getSize(surface).width, closeTo(664, .01));
         expect(_key('workspace-editor-barrier'), findsNothing);
-        await provider.updateWorkspacePanelDisplayMode(
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.overlay,
         );
         await t.pumpAndSettle();

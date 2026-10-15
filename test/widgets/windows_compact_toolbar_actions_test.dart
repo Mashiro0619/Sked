@@ -113,10 +113,10 @@ void main() {
       await _choose(t, 'student-week-picker-button');
       expect(find.byType(SkedWeekPicker), findsOneWidget);
       await _choose(t, 'student-week-option-2');
-      expect(p.selectedWeek, 2);
+      expect(p.studentView.selectedWeek, 2);
       await _more(t, AppMode.student);
       await _choose(t, 'student-previous-week');
-      expect(p.selectedWeek, 1);
+      expect(p.studentView.selectedWeek, 1);
       await _more(t, AppMode.student);
       expect(
         t
@@ -127,7 +127,7 @@ void main() {
         isFalse,
       );
       await _choose(t, 'student-next-week');
-      expect(p.selectedWeek, 2);
+      expect(p.studentView.selectedWeek, 2);
       await _more(t, AppMode.student);
       await _choose(t, 'student-view-choice-day');
       await _more(t, AppMode.student);
@@ -161,14 +161,14 @@ void main() {
       await t.pumpAndSettle();
       await _more(t, AppMode.student);
       await _choose(t, 'workspace-menu-general');
-      expect(p.activeMode, AppMode.general);
+      expect(p.workspaceView.activeMode, AppMode.general);
       expect(
         _key('general-desktop-toolbar-more').hitTestable(),
         findsOneWidget,
       );
       await _more(t, AppMode.general);
       await _choose(t, 'workspace-menu-student');
-      expect(p.activeMode, AppMode.student);
+      expect(p.workspaceView.activeMode, AppMode.student);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -188,7 +188,7 @@ void main() {
       await _escape(t);
       await _more(t, AppMode.general);
       await _choose(t, 'general-view-choice-week');
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(storage.data.generalMode.customDateRange, isNull);
       expect(storage.writes, writes + 1);
       await _more(t, AppMode.general);
@@ -218,7 +218,7 @@ void main() {
       expect(rect.left, greaterThanOrEqualTo(0));
       expect(rect.right, lessThanOrEqualTo(330));
       await _escape(t);
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       await _more(t, AppMode.general);
       await _choose(t, 'general-reminders-action');
       expect(_key('general-reminders-list'), findsOneWidget);
@@ -262,7 +262,7 @@ void main() {
         storage.gate = null;
         await t.pumpAndSettle();
       }
-      expect(p.customGeneralDateRange, range);
+      expect(p.generalView.customDateRange, range);
       expect(
         t.widget<TextButton>(_key('general-date-picker')).onPressed,
         isNotNull,
@@ -271,7 +271,7 @@ void main() {
       expect(find.text(l.saveFailedRetry), findsOneWidget);
       await _more(t, AppMode.general);
       await _choose(t, 'general-view-choice-week');
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(storage.writes, writes + 2);
       expect(t.takeException(), isNull);
     },
@@ -316,7 +316,7 @@ void main() {
       expect(_key('sked-date-picker-content'), findsNothing);
       expect(_key('general-resource-date-picker'), findsOneWidget);
       expect(storage.writes, writes);
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(_key('general-view-switcher').hitTestable(), findsOneWidget);
       t.view.physicalSize = const Size(330, 1000);
       await t.pumpAndSettle();
@@ -379,7 +379,9 @@ void main() {
       await _choose(t, 'workspace-resource-open');
       expect(_key('workspace-resource-scrim'), findsNothing);
       expect(
-        _key('calendar-manager-tile-${p.generalMode.activeScheduleId}'),
+        _key(
+          'calendar-manager-tile-${p.generalView.visibleData.activeScheduleId}',
+        ),
         findsOneWidget,
       );
       expect(_key('category-manager-panel'), findsOneWidget);
@@ -429,7 +431,7 @@ void main() {
         await t.pumpAndSettle();
         expect(_key('workspace-menu-student').hitTestable(), findsOneWidget);
         await _choose(t, 'workspace-menu-student');
-        expect(p.activeMode, AppMode.student);
+        expect(p.workspaceView.activeMode, AppMode.student);
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),

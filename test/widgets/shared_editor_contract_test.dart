@@ -97,7 +97,7 @@ Future<TimetableProvider> _open(
     ),
   );
   addTearDown(provider.dispose);
-  await provider.updateWorkspacePanelDisplayMode(mode);
+  await provider.settingsCommands.updateWorkspacePanelDisplayMode(mode);
   await tester.pumpWidget(
     WorkspaceHarness(
       provider: provider,
@@ -109,7 +109,7 @@ Future<TimetableProvider> _open(
   await tester.pumpAndSettle();
   final l = AppLocalizations.of(tester.element(find.byType(Scaffold).first));
   if (kind == _EditorKind.timetable) {
-    final id = provider.activeTimetable.id;
+    final id = provider.studentView.activeTimetable.id;
     final row = _key('resource-timetable-$id');
     if (row.hitTestable().evaluate().isEmpty) {
       final picker = _key('student-timetable-picker-button').hitTestable();
@@ -275,7 +275,7 @@ void main() {
             scale: profile.$2,
             mode: WorkspacePanelDisplayMode.overlay,
           );
-          final originalData = provider.activeTimetable.config.name;
+          final originalData = provider.studentView.activeTimetable.config.name;
           final root = _root(kind);
           final host = find.descendant(
             of: root,
@@ -362,7 +362,10 @@ void main() {
               lessThanOrEqualTo(profile.$1.height - profile.$3),
             );
           }
-          expect(provider.activeTimetable.config.name, originalData);
+          expect(
+            provider.studentView.activeTimetable.config.name,
+            originalData,
+          );
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
         },

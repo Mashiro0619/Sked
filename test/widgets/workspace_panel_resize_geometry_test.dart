@@ -58,10 +58,12 @@ void main() {
             addTearDown(t.view.resetDevicePixelRatio);
             final p = await workspaceProvider(mode: workspace);
             addTearDown(p.dispose);
-            await p.updateWorkspacePanelDisplayMode(mode);
-            await p.updateHomeWorkspaceNavigationCollapsed(collapsed);
+            await p.settingsCommands.updateWorkspacePanelDisplayMode(mode);
+            await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+              collapsed,
+            );
             if (workspace == AppMode.general) {
-              await p.setSelectedGeneralDate(DateTime(2026, 9, 8));
+              await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 8));
             }
             final preferences = DeveloperUiPreferences.memory(visible: true);
             addTearDown(preferences.dispose);
@@ -211,7 +213,7 @@ void main() {
             await t.pumpAndSettle();
             expect(_calendarRect(t), calendar);
             expectStableCommands();
-            expect(p.workspacePanelDisplayMode, mode);
+            expect(p.settingsView.workspacePanelDisplayMode, mode);
             expect(t.takeException(), isNull);
             await t.pumpWidget(const SizedBox.shrink());
           },
@@ -241,7 +243,7 @@ void main() {
             storage: storage,
           );
           addTearDown(p.dispose);
-          await p.updateWorkspacePanelDisplayMode(mode);
+          await p.settingsCommands.updateWorkspacePanelDisplayMode(mode);
           final preferences = DeveloperUiPreferences.memory(visible: true);
           addTearDown(preferences.dispose);
           final clock = ReminderSummaryClock();
@@ -365,7 +367,7 @@ void main() {
           await t.pumpAndSettle();
           expect(_calendarRect(t), canvasWithoutTasks);
           expect(assistant.draft.text, 'Keep the two-pane draft');
-          expect(p.workspacePanelDisplayMode, mode);
+          expect(p.settingsView.workspacePanelDisplayMode, mode);
           expect(t.takeException(), isNull);
           await t.pumpWidget(const SizedBox.shrink());
         },

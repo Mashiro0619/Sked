@@ -169,7 +169,7 @@ void main() {
       );
       expect(_key('workspace-editor-drag'), findsOneWidget);
       expect(_key('workspace-editor-barrier'), findsOneWidget);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 28));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 28));
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
     },
@@ -225,7 +225,7 @@ void main() {
         storage: desktopPanelStorage(),
       );
       addTearDown(p.dispose);
-      await p.updateWorkspacePanelDisplayMode(
+      await p.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
       await t.pumpWidget(desktopPanelHarness(p));
@@ -240,7 +240,7 @@ void main() {
       await t.pumpAndSettle();
       expect(_key('general-selected-day-agenda'), findsOneWidget);
       expect(_key('general-day-agenda-toggle'), findsNothing);
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 30));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 30));
       await t.pumpAndSettle();
       await t.tap(_key('general-day-agenda-add'));
       await t.pumpAndSettle();

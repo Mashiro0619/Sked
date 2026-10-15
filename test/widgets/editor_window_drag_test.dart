@@ -97,7 +97,7 @@ void main() {
         await t.tapAt(buttonPoint, kind: PointerDeviceKind.mouse);
         await t.pumpAndSettle();
         expect(t.element(editor), same(element));
-        expect(p.activeMode, mode);
+        expect(p.workspaceView.activeMode, mode);
         await t.pump(const Duration(milliseconds: 350));
         commands.clear();
         await t.tapAt(blank, kind: PointerDeviceKind.mouse);
@@ -166,7 +166,7 @@ void main() {
       t.view.physicalSize = const Size(1440, 1000);
       addTearDown(t.view.reset);
       final seed = await workspaceProvider(mode: AppMode.general);
-      final storage = _SaveStorage(seed.appData);
+      final storage = _SaveStorage(seed.workspaceView.data);
       seed.dispose();
       final p = await workspaceProvider(
         mode: AppMode.general,

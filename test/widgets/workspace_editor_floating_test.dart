@@ -24,11 +24,11 @@ void main() {
         final p = await workspaceProvider(mode: mode);
         addTearDown(p.dispose);
         if (mode == AppMode.general) {
-          await p.updateGeneralDisplaySettings(
+          await p.generalCommands.updateDisplaySettings(
             closeEventPopupOnOutsideTap: false,
           );
         } else {
-          await p.updateCloseCoursePopupOnOutsideTap(false);
+          await p.settingsCommands.updateCloseCoursePopupOnOutsideTap(false);
         }
         await t.pumpWidget(WorkspaceHarness(provider: p));
         await t.pumpAndSettle();
@@ -50,7 +50,7 @@ void main() {
         await t.pumpAndSettle();
         await t.tapAt(const Offset(620, 910));
         await t.pumpAndSettle();
-        expect(p.activeMode, mode);
+        expect(p.workspaceView.activeMode, mode);
         expect(t.element(editor), same(element));
         expect(find.byType(AlertDialog), findsNothing);
         final paneFocus = t
@@ -91,7 +91,7 @@ void main() {
       addTearDown(t.view.reset);
       final p = await workspaceProvider(mode: AppMode.general);
       addTearDown(p.dispose);
-      await p.updateWorkspacePanelDisplayMode(
+      await p.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
       final prefs = DeveloperUiPreferences.memory(visible: true);
@@ -110,14 +110,14 @@ void main() {
       expect(editor, findsOneWidget);
       expect(key('workspace-editor-barrier'), findsNothing);
       await t.enterText(key('assistant-draft'), 'Assistant draft');
-      await p.updateWorkspacePanelDisplayMode(
+      await p.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.overlay,
       );
       await t.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsNothing);
       expect(key('workspace-editor-barrier'), findsOneWidget);
       expect(t.element(editor), same(element));
-      await p.updateWorkspacePanelDisplayMode(
+      await p.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
       await t.pumpAndSettle();
@@ -290,7 +290,7 @@ void main() {
         addTearDown(t.view.reset);
         final p = await workspaceProvider(mode: AppMode.general);
         addTearDown(p.dispose);
-        await p.updateWorkspacePanelDisplayMode(
+        await p.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.automatic,
         );
         await t.pumpWidget(WorkspaceHarness(provider: p));

@@ -152,7 +152,7 @@ void main() {
     viewport(t);
     final p = await workspaceProvider();
     addTearDown(p.dispose);
-    final before = p.appData.toJson();
+    final before = p.workspaceView.data.toJson();
     String? selection;
     await t.pumpWidget(
       WorkspaceHarness(
@@ -166,7 +166,8 @@ void main() {
                   selection = await showPeriodTimeSetPickerDialog(
                     anchor,
                     anchorContext: anchor,
-                    selectedPeriodTimeSetId: p.periodTimeSets.first.id,
+                    selectedPeriodTimeSetId:
+                        p.studentView.periodTimeSets.first.id,
                   );
                 },
                 child: const Text('Open'),
@@ -186,13 +187,13 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(SkedFloatingSurface), findsNothing);
     expect(selection, isNull);
-    expect(p.appData.toJson(), before);
+    expect(p.workspaceView.data.toJson(), before);
     await t.tap(find.text('Open'));
     await t.pumpAndSettle();
-    await t.tap(find.text(p.periodTimeSets.first.name));
+    await t.tap(find.text(p.studentView.periodTimeSets.first.name));
     await t.pumpAndSettle();
-    expect(selection, p.periodTimeSets.first.id);
-    expect(p.appData.toJson(), before);
+    expect(selection, p.studentView.periodTimeSets.first.id);
+    expect(p.workspaceView.data.toJson(), before);
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox());
   }, variant: desktop);
@@ -203,7 +204,7 @@ void main() {
       viewport(t);
       final p = await workspaceProvider();
       addTearDown(p.dispose);
-      final seed = p.themeSeedColorValue;
+      final seed = p.settingsView.themeSeedColorValue;
       await t.pumpWidget(
         WorkspaceHarness(provider: p, home: const ThemeSettingsPage()),
       );
@@ -218,7 +219,7 @@ void main() {
       await t.pumpAndSettle();
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.pumpAndSettle();
-      expect(p.themeSeedColorValue, seed);
+      expect(p.settingsView.themeSeedColorValue, seed);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
     },

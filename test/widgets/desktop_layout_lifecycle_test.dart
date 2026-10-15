@@ -76,7 +76,7 @@ void main() {
       addTearDown(layout.dispose);
       final provider = await workspaceProvider();
       addTearDown(provider.dispose);
-      await provider.acceptPrivacyPolicyCurrentVersion();
+      await provider.lifecycle.acceptPrivacyPolicyCurrentVersion();
       await t.pumpWidget(
         MyApp(provider: provider, desktopLayoutPreferences: layout),
       );

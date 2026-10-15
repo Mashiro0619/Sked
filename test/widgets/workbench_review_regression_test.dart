@@ -100,13 +100,15 @@ void main() {
       _viewport(tester, const Size(1920, 1080));
       final p = await workspaceProvider();
       addTearDown(p.dispose);
-      await p.updateWorkspacePanelDisplayMode(
+      await p.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
-      final original = p.activeTimetable;
-      await p.addTimetable(original.config.copyWith(name: 'Another timetable'));
-      final other = p.activeTimetable;
-      await p.switchTimetable(original.id);
+      final original = p.studentView.activeTimetable;
+      await p.studentCommands.addTimetable(
+        original.config.copyWith(name: 'Another timetable'),
+      );
+      final other = p.studentView.activeTimetable;
+      await p.studentCommands.switchTimetable(original.id);
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       final l = AppLocalizations.of(
@@ -123,23 +125,23 @@ void main() {
       await _openTimetablePicker(tester);
       await tester.tap(find.text(other.config.name).hitTestable());
       await tester.pumpAndSettle();
-      expect(p.activeTimetable.id, other.id);
+      expect(p.studentView.activeTimetable.id, other.id);
       expect(tester.state(editor), same(editorState));
       await tester.tap(
         find.descendant(of: editor, matching: find.text(l.save)).last,
       );
       await tester.pumpAndSettle();
       expect(editor, findsNothing);
-      final originalAfter = p.timetables.singleWhere(
+      final originalAfter = p.studentView.timetables.singleWhere(
         (t) => t.id == original.id,
       );
       expect(
         originalAfter.courses.where((c) => c.name == 'Draft for original'),
         hasLength(1),
       );
-      expect(p.activeTimetable.courses, other.courses);
+      expect(p.studentView.activeTimetable.courses, other.courses);
       expect(
-        p.activeTimetable.id,
+        p.studentView.activeTimetable.id,
         other.id,
         reason: 'Saving the draft must not force navigation back',
       );
@@ -155,14 +157,16 @@ void main() {
         _viewport(tester, const Size(1920, 1080));
         final p = await workspaceProvider();
         addTearDown(p.dispose);
-        await p.updateWorkspacePanelDisplayMode(
+        await p.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
-        final original = p.activeTimetable;
+        final original = p.studentView.activeTimetable;
         final course = original.courses.first;
-        await p.addTimetable(original.config.copyWith(name: 'Other table'));
-        final other = p.activeTimetable;
-        await p.switchTimetable(original.id);
+        await p.studentCommands.addTimetable(
+          original.config.copyWith(name: 'Other table'),
+        );
+        final other = p.studentView.activeTimetable;
+        await p.studentCommands.switchTimetable(original.id);
         await tester.pumpWidget(WorkspaceHarness(provider: p));
         await tester.pumpAndSettle();
         final l = await _openExistingCourseEditor(tester, course);
@@ -177,7 +181,7 @@ void main() {
         await _openTimetablePicker(tester);
         await tester.tap(find.text(other.config.name).hitTestable());
         await tester.pumpAndSettle();
-        expect(p.activeTimetable.id, other.id);
+        expect(p.studentView.activeTimetable.id, other.id);
         expect(editor, findsOneWidget);
         expect(tester.state(editor), same(editorState));
         expect(find.byType(AlertDialog), findsNothing);
@@ -199,7 +203,7 @@ void main() {
         }
         await tester.pumpAndSettle();
         expect(editor, findsNothing);
-        final targetCourses = p.timetables
+        final targetCourses = p.studentView.timetables
             .singleWhere((t) => t.id == original.id)
             .courses
             .where((c) => c.id == course.id);
@@ -216,8 +220,8 @@ void main() {
             findsOneWidget,
           );
         }
-        expect(p.activeTimetable.id, other.id);
-        expect(p.activeTimetable.courses, other.courses);
+        expect(p.studentView.activeTimetable.id, other.id);
+        expect(p.studentView.activeTimetable.courses, other.courses);
         expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -231,11 +235,13 @@ void main() {
         _viewport(tester, const Size(1000, 900));
         final p = await workspaceProvider();
         addTearDown(p.dispose);
-        final original = p.activeTimetable;
+        final original = p.studentView.activeTimetable;
         final course = original.courses.first;
-        await p.addTimetable(original.config.copyWith(name: 'Remaining table'));
-        final other = p.activeTimetable;
-        await p.switchTimetable(original.id);
+        await p.studentCommands.addTimetable(
+          original.config.copyWith(name: 'Remaining table'),
+        );
+        final other = p.studentView.activeTimetable;
+        await p.studentCommands.switchTimetable(original.id);
         await tester.pumpWidget(WorkspaceHarness(provider: p));
         await tester.pumpAndSettle();
         await _openExistingCourseEditor(tester, course);
@@ -244,7 +250,7 @@ void main() {
             .descendant(of: editor, matching: find.byType(TextField))
             .first;
         if (dirty) await tester.enterText(title, 'Retained draft');
-        await p.deleteTimetable(original.id);
+        await p.studentCommands.deleteTimetable(original.id);
         await tester.pumpAndSettle();
         expect(editor, findsNothing);
         expect(find.byType(AlertDialog), findsNothing);
@@ -252,11 +258,11 @@ void main() {
           find.byType(CourseDetailsSheet, skipOffstage: false),
           findsNothing,
         );
-        final before = p.appData.toJson();
+        final before = p.workspaceView.data.toJson();
         await tester.pump(const Duration(seconds: 1));
-        expect(p.appData.toJson(), before);
-        expect(p.activeTimetable.id, other.id);
-        expect(p.activeTimetable.courses, other.courses);
+        expect(p.workspaceView.data.toJson(), before);
+        expect(p.studentView.activeTimetable.id, other.id);
+        expect(p.studentView.activeTimetable.courses, other.courses);
         expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -268,15 +274,17 @@ void main() {
     (tester) async {
       _viewport(tester, const Size(1000, 900));
       final seed = await workspaceProvider();
-      final storage = WorkspaceMemoryStorage(seed.appData);
+      final storage = WorkspaceMemoryStorage(seed.workspaceView.data);
       seed.dispose();
       final p = await workspaceProvider(storage: storage);
       addTearDown(p.dispose);
-      final original = p.activeTimetable;
+      final original = p.studentView.activeTimetable;
       final course = original.courses.first;
-      await p.addTimetable(original.config.copyWith(name: 'Other table'));
-      final other = p.activeTimetable;
-      await p.switchTimetable(original.id);
+      await p.studentCommands.addTimetable(
+        original.config.copyWith(name: 'Other table'),
+      );
+      final other = p.studentView.activeTimetable;
+      await p.studentCommands.switchTimetable(original.id);
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       final l = await _openExistingCourseEditor(tester, course);
@@ -286,9 +294,9 @@ void main() {
         find.descendant(of: editor, matching: find.byType(TextField)).first,
         'Retry original',
       );
-      await p.switchTimetable(other.id);
+      await p.studentCommands.switchTimetable(other.id);
       await tester.pumpAndSettle();
-      final before = p.appData.toJson();
+      final before = p.workspaceView.data.toJson();
       final save = find
           .descendant(of: editor, matching: find.text(l.save))
           .last;
@@ -297,20 +305,20 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.state(editor), same(editorState));
       expect(find.text(l.saveFailedRetry), findsOneWidget);
-      expect(p.appData.toJson(), before);
+      expect(p.workspaceView.data.toJson(), before);
       expect(storage.data.toJson(), before);
       await tester.tap(save);
       await tester.pumpAndSettle();
       expect(editor, findsNothing);
-      final saved = p.timetables
+      final saved = p.studentView.timetables
           .singleWhere((t) => t.id == original.id)
           .courses
           .where((c) => c.id == course.id);
       expect(saved, hasLength(1));
       expect(saved.single.name, 'Retry original');
-      expect(p.activeTimetable.id, other.id);
-      expect(p.activeTimetable.courses, other.courses);
-      expect(storage.data.toJson(), p.appData.toJson());
+      expect(p.studentView.activeTimetable.id, other.id);
+      expect(p.studentView.activeTimetable.courses, other.courses);
+      expect(storage.data.toJson(), p.workspaceView.data.toJson());
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -322,11 +330,11 @@ void main() {
     _viewport(tester, const Size(1920, 1080));
     final p = await workspaceProvider();
     addTearDown(p.dispose);
-    await p.updateWorkspacePanelDisplayMode(
+    await p.settingsCommands.updateWorkspacePanelDisplayMode(
       WorkspacePanelDisplayMode.sideBySide,
     );
-    final original = p.activeTimetable;
-    final source = p.exportSelectedTimetablesJson([original.id]);
+    final original = p.studentView.activeTimetable;
+    final source = p.transfers.exportSelectedTimetablesJson([original.id]);
     await tester.pumpWidget(WorkspaceHarness(provider: p));
     await tester.pumpAndSettle();
     final l = AppLocalizations.of(
@@ -345,12 +353,12 @@ void main() {
     await tester.tap(find.text(l.importAction).last);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPage), findsWidgets);
-    await p.importSelectedTimetablesJson(
+    await p.transfers.importSelectedTimetablesJson(
       source,
       timetableIds: [original.id],
       mode: TimetableImportMode.addAsNew,
     );
-    final importedId = p.activeTimetable.id;
+    final importedId = p.studentView.activeTimetable.id;
     expect(importedId, isNot(original.id));
     Navigator.of(
       tester.element(find.byType(SettingsPage).last),
@@ -364,19 +372,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(editor, findsNothing);
     expect(
-      p.timetables
+      p.studentView.timetables
           .singleWhere((t) => t.id == original.id)
           .courses
           .where((c) => c.name == 'Original timetable draft'),
       hasLength(1),
     );
     expect(
-      p.activeTimetable.courses.any(
+      p.studentView.activeTimetable.courses.any(
         (c) => c.name == 'Original timetable draft',
       ),
       isFalse,
     );
-    expect(p.activeTimetable.id, importedId);
+    expect(p.studentView.activeTimetable.id, importedId);
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
 
@@ -391,7 +399,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       final l = await _openOutline(tester);
-      final original = p.liveCourseOutlineEnabled;
+      final original = p.settingsView.liveCourseOutlineEnabled;
       final page = find.byKey(const ValueKey('theme-outline-settings-page'));
       final state = tester.state(page);
       await _changeOutline(tester, original);
@@ -407,7 +415,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.state(page), same(state));
-      expect(p.liveCourseOutlineEnabled, original);
+      expect(p.settingsView.liveCourseOutlineEnabled, original);
       expect(
         tester
             .widget<Switch>(
@@ -432,7 +440,7 @@ void main() {
         findsOneWidget,
         reason: 'Confirmed navigation should finish the originally requested category change',
       );
-      expect(p.liveCourseOutlineEnabled, original);
+      expect(p.settingsView.liveCourseOutlineEnabled, original);
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant({
@@ -474,9 +482,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       final l = await _openOutline(tester);
-      final original = p.liveCourseOutlineEnabled;
+      final original = p.settingsView.liveCourseOutlineEnabled;
       await _changeOutline(tester, original);
-      final close = p.prepareForWindowClose();
+      final close = p.shutdown.prepareForWindowClose();
       await tester.pumpAndSettle();
       expect(find.text(l.unsavedChangesMessage), findsOneWidget);
       await tester.tap(
@@ -493,9 +501,9 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('theme-outline-page-apply')));
       await tester.pumpAndSettle();
-      expect(p.liveCourseOutlineEnabled, !original);
+      expect(p.settingsView.liveCourseOutlineEnabled, !original);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(await p.prepareForWindowClose(), isTrue);
+      expect(await p.shutdown.prepareForWindowClose(), isTrue);
       expect(tester.takeException(), isNull);
     },
   );
@@ -511,14 +519,17 @@ void main() {
       _viewport(tester, const Size(1440, 900));
       final p = await workspaceProvider();
       addTearDown(p.dispose);
-      await p.updateTimetableConfig(
-        p.activeTimetable.config.copyWith(startDate: semesterStart),
+      await p.studentCommands.updateTimetableConfig(
+        p.studentView.activeTimetable.config.copyWith(startDate: semesterStart),
       );
       for (final week in [1, 2, 18]) {
-        await p.setSelectedWeek(week);
+        await p.studentCommands.setSelectedWeek(week);
         await tester.pumpWidget(WorkspaceHarness(provider: p));
         await tester.pumpAndSettle();
-        final expectedStart = startOfWeekFor(p.activeTimetable.config, week);
+        final expectedStart = startOfWeekFor(
+          p.studentView.activeTimetable.config,
+          week,
+        );
         final expectedEnd = addCalendarDays(expectedStart, 6);
         final grid = tester.widget<TimetableGrid>(
           find.byKey(ValueKey('student-timetable-grid-$week')),

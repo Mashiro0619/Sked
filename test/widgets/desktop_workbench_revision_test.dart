@@ -55,7 +55,7 @@ void main() {
       );
       expect(find.byType(CheckboxListTile), findsNothing);
       expect(
-        p.appData.generalMode.hiddenToolbarNavigationIds,
+        p.workspaceView.data.generalMode.hiddenToolbarNavigationIds,
         containsAll(['date', 'view']),
       );
       expect(
@@ -78,7 +78,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(GeneralScheduleHomeScreen), findsOneWidget);
-      expect(p.showAddEventFab, isFalse);
+      expect(p.generalView.data.showAddEventFab, isFalse);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
@@ -114,8 +114,8 @@ void main() {
         );
         await tester.tap(first);
         await tester.pumpAndSettle();
-        expect(p.generalSchedules.first.isVisible, isFalse);
-        expect(p.generalSchedules[3].isVisible, isTrue);
+        expect(p.generalView.schedules.first.isVisible, isFalse);
+        expect(p.generalView.schedules[3].isVisible, isTrue);
         expect(tester.widget<CalendarResourceRow>(first).visible, isFalse);
         expect(
           find.descendant(
@@ -275,7 +275,7 @@ void main() {
                   return rect.intersect(pager).width >= pager.width - 2;
                 });
             expect(visibleGrids, hasLength(1));
-            expect(p.selectedGeneralDate, DateTime(2026, 9, 8));
+            expect(p.generalView.selectedDate, DateTime(2026, 9, 8));
             expect(
               tester.takeException(),
               isNull,
@@ -466,7 +466,7 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: 'month $size $scale');
-          expect(p.selectedGeneralDate, DateTime(2026, 9, 8));
+          expect(p.generalView.selectedDate, DateTime(2026, 9, 8));
           final grids = find.byWidgetPredicate(
             (w) =>
                 w.key is ValueKey<String> &&
@@ -520,7 +520,7 @@ void main() {
         expect(date.hitTestable(), findsOneWidget);
         await tester.tap(date);
         await tester.pumpAndSettle();
-        expect(p.selectedGeneralDate, DateTime(2026, 9, 23));
+        expect(p.generalView.selectedDate, DateTime(2026, 9, 23));
         expect(
           find.descendant(
             of: agenda,
@@ -532,7 +532,7 @@ void main() {
       }
       tester.view.physicalSize = const Size(1280, 800);
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 23));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 23));
       expect(
         find.byKey(const ValueKey('general-month-stacked-agenda')),
         findsNothing,

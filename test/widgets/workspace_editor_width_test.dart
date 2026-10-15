@@ -121,7 +121,7 @@ void main() {
       await tester.drag(resize, const Offset(-40, 0));
       await tester.pumpAndSettle();
       expect(tester.getSize(panel).width, closeTo(width + 40, .01));
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
       await tester.pumpAndSettle();
@@ -134,7 +134,7 @@ void main() {
       await tester.drag(resize, const Offset(1000, 0));
       await tester.pumpAndSettle();
       expect(tester.getSize(panel).width, 320);
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.overlay,
       );
       await tester.pumpAndSettle();

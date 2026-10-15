@@ -151,14 +151,18 @@ void main() {
           }
           await t.enterText(title, 'Rebuilt editor draft');
           final countBefore = mode == AppMode.general
-              ? p.generalSchedules.expand((calendar) => calendar.events).length
-              : p.activeTimetable.courses.length;
+              ? p.generalView.schedules
+                    .expand((calendar) => calendar.events)
+                    .length
+              : p.studentView.activeTimetable.courses.length;
           await t.tap(find.widgetWithText(FilledButton, l.save));
           await t.pumpAndSettle();
           expect(editor, findsNothing);
           final countAfter = mode == AppMode.general
-              ? p.generalSchedules.expand((calendar) => calendar.events).length
-              : p.activeTimetable.courses.length;
+              ? p.generalView.schedules
+                    .expand((calendar) => calendar.events)
+                    .length
+              : p.studentView.activeTimetable.courses.length;
           expect(countAfter, countBefore + 1);
           expect(t.takeException(), isNull);
           await t.pumpWidget(const SizedBox());

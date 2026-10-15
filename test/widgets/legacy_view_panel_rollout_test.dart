@@ -75,7 +75,7 @@ Future<TimetableProvider> _courseProvider() async {
       ),
     ),
   );
-  await provider.setSelectedWeek(1);
+  await provider.studentCommands.setSelectedWeek(1);
   return provider;
 }
 
@@ -155,7 +155,7 @@ void main() {
       'course details use one view header and restore after editing: ${mode.name}',
       (tester) async {
         final provider = await _courseProvider();
-        await provider.updateWorkspacePanelDisplayMode(mode);
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(mode);
         await _mount(tester, provider);
         final course = _key('timetable-course-hit-view-panel-course');
         await tester.tap(course);
@@ -330,7 +330,7 @@ void main() {
         findsOneWidget,
       );
       await _closeView(tester);
-      expect(provider.allDayTimelineCollapsed, isTrue);
+      expect(provider.generalView.data.allDayTimelineCollapsed, isTrue);
 
       await tester.tap(_key('general-all-day-collapsed-3'));
       await tester.pumpAndSettle();

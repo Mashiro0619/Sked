@@ -144,15 +144,15 @@ void main() {
       addTearDown(provider.dispose);
       // A floating timetable editor blocks background actions; this case
       // deliberately exercises overlapping saves from a docked task.
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
-      await provider.addTimetable(
+      await provider.studentCommands.addTimetable(
         TimetableConfig(
           name: 'Original timetable',
           startDate: DateTime(2026, 9, 7),
           totalWeeks: 18,
-          periodTimeSetId: provider.periodTimeSets.first.id,
+          periodTimeSetId: provider.studentView.periodTimeSets.first.id,
         ),
       );
       await t.pumpWidget(WorkspaceHarness(provider: provider));
@@ -160,13 +160,15 @@ void main() {
       final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(
         location: t.getCenter(
-          _key('resource-timetable-${provider.activeTimetable.id}'),
+          _key('resource-timetable-${provider.studentView.activeTimetable.id}'),
         ),
       );
       addTearDown(mouse.removePointer);
       await t.pumpAndSettle();
       await t.tap(
-        _key('resource-timetable-edit-${provider.activeTimetable.id}'),
+        _key(
+          'resource-timetable-edit-${provider.studentView.activeTimetable.id}',
+        ),
       );
       await t.pumpAndSettle();
       final nameField = find.byType(TextField).first;
@@ -205,7 +207,10 @@ void main() {
       expect(completions, 1);
       expect(configResult, 'save');
       expect(t.state(editor), same(state));
-      expect(provider.activeTimetable.config.name, 'Renamed in background');
+      expect(
+        provider.studentView.activeTimetable.config.name,
+        'Renamed in background',
+      );
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox.shrink());
     },
@@ -360,7 +365,7 @@ void main() {
         storage: storage,
       );
       addTearDown(provider.dispose);
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
       await t.pumpWidget(WorkspaceHarness(provider: provider));

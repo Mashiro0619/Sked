@@ -186,7 +186,9 @@ void main() {
       expect(metrics(selected), same(firstMetrics));
       expect(painter().shouldRepaint(firstPainter), isFalse);
 
-      await provider.saveGeneralEvent(event.copyWith(title: 'Edited meeting'));
+      await provider.generalCommands.saveEvent(
+        event.copyWith(title: 'Edited meeting'),
+      );
       await t.pumpAndSettle();
       expect(metrics(selected), same(firstMetrics));
       expect(painter().shouldRepaint(firstPainter), isFalse);
@@ -285,18 +287,25 @@ void main() {
       );
       await t.tap(_cell(DateTime(2026, 9, 9)));
       await t.pumpAndSettle();
-      expect(provider.selectedGeneralDate, DateTime(2026, 9, 9));
+      expect(provider.generalView.selectedDate, DateTime(2026, 9, 9));
 
-      await expectRemeasured(() => provider.updateLocaleCode('en'));
-      expect(metrics().lunarHeight, 0);
-      await expectRemeasured(() => provider.updateLocaleCode('zh-Hant'));
-      expect(metrics().lunarHeight, greaterThan(0));
       await expectRemeasured(
-        () => provider.updateGeneralDisplaySettings(showLunarCalendar: false),
+        () => provider.settingsCommands.updateLocaleCode('en'),
       );
       expect(metrics().lunarHeight, 0);
       await expectRemeasured(
-        () => provider.updateGeneralDisplaySettings(showWeekends: false),
+        () => provider.settingsCommands.updateLocaleCode('zh-Hant'),
+      );
+      expect(metrics().lunarHeight, greaterThan(0));
+      await expectRemeasured(
+        () => provider.generalCommands.updateDisplaySettings(
+          showLunarCalendar: false,
+        ),
+      );
+      expect(metrics().lunarHeight, 0);
+      await expectRemeasured(
+        () =>
+            provider.generalCommands.updateDisplaySettings(showWeekends: false),
       );
       expect(_cell(DateTime(2026, 9, 6)), findsNothing);
     },
@@ -315,7 +324,7 @@ void main() {
         (DateTime(2026, 4, 18), 5),
         (DateTime(2026, 8, 18), 6),
       ]) {
-        await provider.setSelectedGeneralDate(date);
+        await provider.generalNavigation.setSelectedDate(date);
         await t.pumpAndSettle();
         final current = metrics(date);
         expect(current, isNot(same(previous)));
@@ -362,17 +371,19 @@ void main() {
         }
 
         final initial = occurrences();
-        final schedules = provider.generalSchedules;
+        final schedules = provider.generalView.schedules;
         await t.tap(_cell(DateTime(2026, 9, 9)));
         await t.pumpAndSettle();
-        expect(provider.generalSchedules, same(schedules));
+        expect(provider.generalView.schedules, same(schedules));
         expect(occurrences(), same(initial));
 
-        await provider.updateGeneralDisplaySettings(showLunarCalendar: false);
+        await provider.generalCommands.updateDisplaySettings(
+          showLunarCalendar: false,
+        );
         await t.pumpAndSettle();
         expect(occurrences(), same(initial));
 
-        await provider.saveGeneralEvent(
+        await provider.generalCommands.saveEvent(
           event.copyWith(title: 'Edited meeting'),
         );
         await t.pumpAndSettle();
@@ -382,7 +393,7 @@ void main() {
         await t.pumpAndSettle();
         expect(find.text('Edited meeting'), findsWidgets);
 
-        await provider.updateGeneralScheduleVisibility('empty', false);
+        await provider.generalCommands.updateScheduleVisibility('empty', false);
         await t.pumpAndSettle();
         expect(occurrences(), isEmpty);
         expect(find.text('Edited meeting'), findsNothing);
@@ -438,7 +449,7 @@ void main() {
         expect(t.getTopLeft(cell).dx, greaterThan(before));
         await drag.cancel();
         await t.pumpAndSettle();
-        expect(provider.selectedGeneralDate, selected);
+        expect(provider.generalView.selectedDate, selected);
         expect(
           rebuiltDays,
           isEmpty,
@@ -448,7 +459,7 @@ void main() {
         final nextSelection = DateTime(2026, 8, 18);
         await t.tap(_cell(nextSelection));
         await t.pumpAndSettle();
-        expect(provider.selectedGeneralDate, nextSelection);
+        expect(provider.generalView.selectedDate, nextSelection);
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(platform),
@@ -516,7 +527,7 @@ void main() {
         await checkLine();
         await drag.up();
         await t.pumpAndSettle();
-        expect(p.selectedGeneralDate.year, 2026);
+        expect(p.generalView.selectedDate.year, 2026);
         expect(t.takeException(), isNull);
       },
       variant: _desktop,
@@ -676,8 +687,8 @@ void main() {
             for (var i = 0; i < actual.length; i++) {
               _samePaint(actual[i], expected[i]);
             }
-            final selected = t.getRect(_cell(p.selectedGeneralDate));
-            final tint = background(p.selectedGeneralDate);
+            final selected = t.getRect(_cell(p.generalView.selectedDate));
+            final tint = background(p.generalView.selectedDate);
             final selectionPaint = await _pixels(t, boundary, [
               Offset(selected.left + 2.5 * pixel, selected.center.dy),
               Offset(selected.left + .5 * pixel, selected.center.dy),
@@ -696,7 +707,7 @@ void main() {
           }
 
           await checkAllLines();
-          await p.setSelectedGeneralDate(DateTime(2026, 9, 10));
+          await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 10));
           await t.pumpAndSettle();
           await checkAllLines();
           t.view.physicalSize = const Size(1501, 997) * dpr;
@@ -729,7 +740,7 @@ void main() {
           closeTo(t.getRect(_key('workspace-canvas-viewport')).bottom, 1),
         );
         final gridBefore = t.getRect(_key('desktop-month-grid-lines'));
-        await p.setSelectedGeneralDate(DateTime(2026, 9, 2));
+        await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 2));
         await t.pumpAndSettle();
         expect(t.getRect(empty), emptyRect);
         expect(t.getRect(busy), busyRect);
@@ -818,13 +829,13 @@ void main() {
       final frame = t.widget<WorkspaceFrame>(find.byType(WorkspaceFrame));
       await t.tap(_key('general-next-period'));
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 10, 15));
+      expect(p.generalView.selectedDate, DateTime(2026, 10, 15));
       await t.tap(_key('general-previous-period'));
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 15));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 15));
       await t.tap(_cell(DateTime(2026, 9, 23)));
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 23));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 23));
       expect(frame.controller.hasPaneTasks, isFalse);
       expect(
         find.descendant(
@@ -866,15 +877,15 @@ void main() {
         expect(t.getTopLeft(monday).dx, lessThan(t.getTopLeft(sunday).dx));
         await t.tap(sunday);
         await t.pumpAndSettle();
-        expect(p.selectedGeneralDate, DateTime(2026, 9, 6));
-        await p.setSelectedGeneralDate(DateTime(2026, 9, 8));
-        await p.updateGeneralDisplaySettings(showWeekends: false);
+        expect(p.generalView.selectedDate, DateTime(2026, 9, 6));
+        await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 8));
+        await p.generalCommands.updateDisplaySettings(showWeekends: false);
         await t.pumpAndSettle();
         expect(labels(), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
         expect(_cell(DateTime(2026, 9, 5)), findsNothing);
         expect(sunday, findsNothing);
         expect(monday, findsOneWidget);
-        expect(p.selectedGeneralDate, DateTime(2026, 9, 8));
+        expect(p.generalView.selectedDate, DateTime(2026, 9, 8));
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(platform),
@@ -992,7 +1003,7 @@ void main() {
           ui.Tristate.isTrue,
         );
         final other = today.add(Duration(days: today.day == 1 ? 1 : -1));
-        await p.setSelectedGeneralDate(other);
+        await p.generalNavigation.setSelectedDate(other);
         await t.pumpAndSettle();
         expect(t.getRect(day), rect);
         expect(
@@ -1354,7 +1365,7 @@ void main() {
               .borderRadius,
           BorderRadius.zero,
         );
-        expect(p.selectedGeneralDate, DateTime(2026, 9, 8));
+        expect(p.generalView.selectedDate, DateTime(2026, 9, 8));
         if (mode == WorkspacePanelDisplayMode.overlay) {
           expect(t.getRect(_key('workspace-canvas-viewport')), calendar);
           expect(t.getRect(_key('workspace-supporting-pane')), supporting);
@@ -1415,7 +1426,7 @@ void main() {
       final frame = t.widget<WorkspaceFrame>(find.byType(WorkspaceFrame));
       await t.tap(summaries.first);
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 9));
       expect(frame.controller.hasPaneTasks, isFalse);
       expect(
         find.descendant(

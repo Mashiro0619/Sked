@@ -40,7 +40,7 @@ Future<void> _mount(
     await tester.pumpAndSettle();
     provider.dispose();
   });
-  await provider.updateWorkspacePanelDisplayMode(
+  await provider.settingsCommands.updateWorkspacePanelDisplayMode(
     WorkspacePanelDisplayMode.overlay,
   );
   await tester.pumpWidget(
@@ -108,7 +108,7 @@ Future<TimetableProvider> _studentProvider({
       ),
     ),
   );
-  await provider.setSelectedWeek(1);
+  await provider.studentCommands.setSelectedWeek(1);
   return provider;
 }
 

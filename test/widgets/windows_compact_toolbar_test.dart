@@ -145,14 +145,14 @@ void main() {
         await t.pumpAndSettle();
         // At 2x text 1800dp cannot fit the expanded resource pane; this
         // opens a temporary drawer instead of changing the saved preference.
-        expect(p.homeWorkspaceNavigationCollapsed, scale == 2);
+        expect(p.settingsView.homeWorkspaceNavigationCollapsed, scale == 2);
         expect(
           _key('workspace-resource-scrim'),
           scale == 2 ? findsOneWidget : findsNothing,
         );
         await t.tap(_key('workspace-resource-collapse'));
         await t.pumpAndSettle();
-        expect(p.homeWorkspaceNavigationCollapsed, isTrue);
+        expect(p.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
         expect(
           t
               .getCenter(
