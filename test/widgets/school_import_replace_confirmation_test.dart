@@ -49,10 +49,7 @@ Future<_ConfirmationRun> _openConfirmation(
   );
   unawaited(Navigator.of(home).push(run.ownerRoute));
   await tester.pumpAndSettle();
-  run.completed = confirmSchoolImportReplacement(
-    run.ownerContext,
-    provider: provider,
-  );
+  run.completed = confirmSchoolImportReplacement(run.ownerContext);
   await tester.pumpAndSettle();
   return run;
 }

@@ -729,10 +729,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     setState(() => _replaceConfirmationOpen = true);
     bool confirmed;
     try {
-      confirmed = await confirmSchoolImportReplacement(
-        context,
-        provider: widget.provider,
-      );
+      confirmed = await confirmSchoolImportReplacement(context);
     } finally {
       if (mounted) {
         setState(() => _replaceConfirmationOpen = false);

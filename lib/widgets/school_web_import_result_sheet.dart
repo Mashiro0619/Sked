@@ -534,10 +534,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
     setState(() => _replaceConfirmationOpen = true);
     bool confirmed;
     try {
-      confirmed = await confirmSchoolImportReplacement(
-        context,
-        provider: widget.provider,
-      );
+      confirmed = await confirmSchoolImportReplacement(context);
     } finally {
       if (mounted) {
         setState(() => _replaceConfirmationOpen = false);
