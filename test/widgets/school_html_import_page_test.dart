@@ -6,7 +6,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -25,24 +24,7 @@ import 'package:sked/services/privacy_service.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 
 import '../support/data_transfer_codec.dart';
-
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://school-html-import-test';
-}
+import '../support/timetable_storage_fakes.dart';
 
 class _NoopPrivacyService extends PrivacyService {
   const _NoopPrivacyService();
@@ -122,8 +104,9 @@ Future<AppRuntime> _createProvider({
 }) async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(
+    storage: WorkspaceMemoryStorage(
       _buildConfiguredCustomParserData(baseUrl: baseUrl),
+      path: 'memory://school-html-import-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),

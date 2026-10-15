@@ -18,24 +18,6 @@ import 'package:sked/widgets/settings_list.dart';
 
 import '../support/data_transfer_codec.dart';
 
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://general-display-settings-test';
-}
-
 class _PendingTimetableStorage implements TimetableStorage {
   _PendingTimetableStorage(this.data);
 
@@ -71,11 +53,12 @@ Future<AppRuntime> _createProvider({
 }) async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(
+    storage: WorkspaceMemoryStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
         localeCode: localeCode,
       ).copyWith(activeMode: AppMode.general),
+      path: 'memory://general-display-settings-test',
     ),
     systemLocaleCodeResolver: () => localeCode,
   );

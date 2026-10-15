@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
@@ -18,30 +17,14 @@ import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 
 import '../support/data_transfer_codec.dart';
-
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://parse-page-test';
-}
+import '../support/timetable_storage_fakes.dart';
 
 Future<AppRuntime> _createProvider() async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(
+    storage: WorkspaceMemoryStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
+      path: 'memory://parse-page-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );

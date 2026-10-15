@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -14,24 +13,7 @@ import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/sked_task_route.dart';
 
 import '../support/data_transfer_codec.dart';
-
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://course-details-test';
-}
+import '../support/timetable_storage_fakes.dart';
 
 CourseItem _course({required String id, required String name}) {
   return CourseItem(
@@ -86,7 +68,7 @@ Future<AppRuntime> _createProvider({
       );
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(data),
+    storage: WorkspaceMemoryStorage(data, path: 'memory://course-details-test'),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
   await provider.lifecycle.load();

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -20,6 +19,7 @@ import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:flutter/services.dart';
 
 import '../support/data_transfer_codec.dart';
+import '../support/timetable_storage_fakes.dart';
 
 class _MemorySchoolSiteStore extends SchoolSiteStore {
   _MemorySchoolSiteStore(this.source) : super.base();
@@ -89,24 +89,6 @@ class _RecoverySchoolSiteStore extends SchoolSiteStore {
   Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
     return recoveryArtifactBytes;
   }
-}
-
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://school-sites-test';
 }
 
 class _NoopPrivacyService extends PrivacyService {
@@ -180,11 +162,12 @@ class _RetryThenShareExportService extends ExportService {
 Future<AppRuntime> _createProvider() async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(
+    storage: WorkspaceMemoryStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
         localeCode: defaultLocaleCode,
       ).copyWith(activeMode: AppMode.student),
+      path: 'memory://school-sites-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),

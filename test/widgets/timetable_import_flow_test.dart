@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -16,24 +15,7 @@ import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 
 import '../support/data_transfer_codec.dart';
-
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://timetable-import-flow-test';
-}
+import '../support/timetable_storage_fakes.dart';
 
 Future<AppRuntime> _createProvider({
   DataTransferCodec codec = inlineDataTransferCodec,
@@ -41,7 +23,7 @@ Future<AppRuntime> _createProvider({
   final periodTimes = buildDefaultPeriodTimes();
   final provider = AppRuntime(
     dataTransferCodec: codec,
-    storage: _MemoryTimetableStorage(
+    storage: WorkspaceMemoryStorage(
       buildInitialAppData(periodTimes, localeCode: defaultLocaleCode).copyWith(
         activeMode: AppMode.student,
         studentMode: StudentModeData(
@@ -67,6 +49,7 @@ Future<AppRuntime> _createProvider({
           ],
         ),
       ),
+      path: 'memory://timetable-import-flow-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );

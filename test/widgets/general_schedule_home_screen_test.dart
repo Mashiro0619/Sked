@@ -22,24 +22,7 @@ import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/workbench_resource_widgets.dart';
 
 import '../support/data_transfer_codec.dart';
-
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://general-home-test';
-}
+import '../support/timetable_storage_fakes.dart';
 
 AppRuntime _createDomainApp(TimetableStorage storage) => AppRuntime(
   dataTransferCodec: inlineDataTransferCodec,
@@ -147,11 +130,12 @@ AppData _buildGeneralDataWithCalendars(
 Future<AppRuntime> _createProvider() async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(
+    storage: WorkspaceMemoryStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
         localeCode: defaultLocaleCode,
       ),
+      path: 'memory://general-home-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
@@ -163,7 +147,7 @@ Future<AppRuntime> _createProvider() async {
 Future<AppRuntime> _createGeneralProvider(AppData data) async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(data),
+    storage: WorkspaceMemoryStorage(data, path: 'memory://general-home-test'),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
   );
@@ -1238,12 +1222,13 @@ void main() {
         GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
       ], activeId: 'cal1');
       final provider = _createDomainApp(
-        _MemoryTimetableStorage(
+        WorkspaceMemoryStorage(
           base.copyWith(
             generalMode: base.generalMode.copyWith(
               defaultView: generalViewList,
             ),
           ),
+          path: 'memory://general-home-test',
         ),
       );
       await provider.lifecycle.load();
@@ -1281,10 +1266,11 @@ void main() {
       GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
     ], activeId: 'cal1');
     final provider = _createDomainApp(
-      _MemoryTimetableStorage(
+      WorkspaceMemoryStorage(
         base.copyWith(
           generalMode: base.generalMode.copyWith(defaultView: generalViewMonth),
         ),
+        path: 'memory://general-home-test',
       ),
     );
     await provider.lifecycle.load();
@@ -1331,10 +1317,11 @@ void main() {
         GeneralSchedule(id: 'cal1', name: 'Calendar', events: [event]),
       ], activeId: 'cal1');
       final provider = _createDomainApp(
-        _MemoryTimetableStorage(
+        WorkspaceMemoryStorage(
           base.copyWith(
             generalMode: base.generalMode.copyWith(defaultView: view),
           ),
+          path: 'memory://general-home-test',
         ),
       );
       await provider.lifecycle.load();

@@ -61,8 +61,12 @@ String? _encodeInitialMemoryData(AppData? data) {
 
 /// Retains model identity for interaction tests and consumes one save failure.
 class WorkspaceMemoryStorage implements TimetableStorage {
-  WorkspaceMemoryStorage(this.data);
+  WorkspaceMemoryStorage(
+    this.data, {
+    this.path = 'memory://adaptive-workspaces',
+  });
   AppData data;
+  final String path;
   Object? saveError;
   @override
   Future<StorageLoadResult> load() async =>
@@ -78,5 +82,5 @@ class WorkspaceMemoryStorage implements TimetableStorage {
   }
 
   @override
-  Future<String?> filePath() async => 'memory://adaptive-workspaces';
+  Future<String?> filePath() async => path;
 }

@@ -3,7 +3,6 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/gestures.dart' show kPrimaryButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -15,34 +14,17 @@ import 'package:sked/screens/timetable_display_settings_page.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 import '../support/data_transfer_codec.dart';
-
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData data;
-
-  @override
-  Future<String?> filePath() async =>
-      'memory://timetable-display-settings-test';
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-}
+import '../support/timetable_storage_fakes.dart';
 
 Future<AppRuntime> _createProvider() async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(
+    storage: WorkspaceMemoryStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
         localeCode: defaultLocaleCode,
       ),
+      path: 'memory://timetable-display-settings-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );

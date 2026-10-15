@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -16,6 +15,7 @@ import 'package:sked/services/privacy_service.dart';
 import 'package:sked/widgets/expressive_empty_state.dart';
 
 import '../support/data_transfer_codec.dart';
+import '../support/timetable_storage_fakes.dart';
 
 const _site = SchoolSite(
   name: 'Example University',
@@ -63,24 +63,6 @@ Widget _browserApp({
   return AppScope(app: provider, child: app);
 }
 
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
-
-  AppData? data;
-
-  @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
-
-  @override
-  Future<void> save(AppData data) async {
-    this.data = data;
-  }
-
-  @override
-  Future<String?> filePath() async => 'memory://school-web-import-test';
-}
-
 class _NoopPrivacyService extends PrivacyService {
   const _NoopPrivacyService();
 
@@ -103,7 +85,10 @@ Future<AppRuntime> _createConfiguredProvider() async {
       );
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
-    storage: _MemoryTimetableStorage(initial),
+    storage: WorkspaceMemoryStorage(
+      initial,
+      path: 'memory://school-web-import-test',
+    ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
   );
