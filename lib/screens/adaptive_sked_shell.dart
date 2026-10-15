@@ -11,7 +11,10 @@ import '../widgets/sked_tooltip.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/workspace_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/settings_commands.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/workspace_navigation.dart';
@@ -38,13 +41,19 @@ const double _permanentDrawerWidth = 240;
 class AdaptiveSkedShell extends StatefulWidget {
   const AdaptiveSkedShell({
     super.key,
-    required this.provider,
+    required this.workspace,
+    required this.workspaces,
+    required this.settings,
+    required this.settingsCommands,
     required this.activeMode,
     this.enabled = true,
     required this.onOpenSettings,
   });
 
-  final TimetableProvider provider;
+  final WorkspaceViewState workspace;
+  final WorkspaceCommands workspaces;
+  final SettingsViewState settings;
+  final SettingsCommands settingsCommands;
   final AppMode activeMode;
   final bool enabled;
   final Future<void> Function() onOpenSettings;
@@ -83,16 +92,15 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     _reminderStartup = GeneralReminderStartupSession(
       eligible:
           widget.activeMode == AppMode.general &&
-          widget.provider.isWorkspaceEnabled(AppMode.general),
+          widget.workspace.isEnabled(AppMode.general),
     );
   }
 
   @override
   void didUpdateWidget(covariant AdaptiveSkedShell oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Ignore unrelated provider notifications while a mode write is still in
-    // flight. The provider mutates its in-memory snapshot optimistically, so
-    // only the completed command is allowed to move the shell selection.
+    // A domain update may rebuild the shell while a mode write is still in
+    // flight. Only the completed workspace command may move the selection.
     if (!uiCommandBusy &&
         !_modeSwitchInFlight &&
         oldWidget.activeMode != widget.activeMode) {
@@ -118,7 +126,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     try {
       final saved = await runUiCommand(
         debugLabel: 'Switch application workspace',
-        command: () => widget.provider.switchMode(target),
+        command: () => widget.workspaces.switchMode(target),
       );
       if (saved && mounted) {
         setState(() => _committedMode = target);
@@ -152,14 +160,14 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         !mounted) {
       return;
     }
-    final target = !widget.provider.homeWorkspaceNavigationCollapsed;
+    final target = !widget.settings.homeWorkspaceNavigationCollapsed;
     setState(() => _navigationToggleInFlight = true);
     try {
       await runUiCommandWithFeedback(
         context: context,
         debugLabel: 'Toggle large-screen workspace navigation',
-        command: () =>
-            widget.provider.updateHomeWorkspaceNavigationCollapsed(target),
+        command: () => widget.settingsCommands
+            .updateHomeWorkspaceNavigationCollapsed(target),
       );
     } finally {
       if (mounted) setState(() => _navigationToggleInFlight = false);
@@ -188,14 +196,14 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         final supportsCollapsibleNavigation =
             width >= _permanentDrawerBreakpoint;
         final hideWorkspaceNavigation =
-            widget.provider.hideHomeWorkspaceNavigation ||
-            !widget.provider.hasMultipleWorkspaces ||
+            widget.settings.hideHomeWorkspaceNavigation ||
+            widget.workspace.enabledWorkspaces.length < 2 ||
             (WorkbenchChromeMetrics.of(context).desktop ||
                 (width >= AppBreakpoints.expanded &&
                     MediaQuery.textScalerOf(context).scale(14) / 14 <= 1.5));
         final navigationCollapsed =
             supportsCollapsibleNavigation &&
-            widget.provider.homeWorkspaceNavigationCollapsed;
+            widget.settings.homeWorkspaceNavigationCollapsed;
         final navigationLayoutIdentity = hideWorkspaceNavigation
             ? 'hidden'
             : compact
@@ -229,7 +237,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             busy: uiCommandBusy,
             studentPreferredFocusNode: _studentWeekShortcutFocusNode,
             studentBuilder: (active, interactive) =>
-                !widget.provider.isWorkspaceEnabled(AppMode.student)
+                !widget.workspace.isEnabled(AppMode.student)
                 ? const SizedBox.shrink()
                 : HomeScreen(
                     key: const ValueKey('student-home'),
@@ -247,7 +255,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                         : null,
                   ),
             generalBuilder: (active, interactive) =>
-                !widget.provider.isWorkspaceEnabled(AppMode.general)
+                !widget.workspace.isEnabled(AppMode.general)
                 ? const SizedBox.shrink()
                 : GeneralScheduleHomeScreen(
                     key: const ValueKey('general-home'),

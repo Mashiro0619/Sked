@@ -1,3 +1,8 @@
+import 'package:sked/controllers/workspace_view_state.dart';
+import 'package:sked/controllers/workspace_commands.dart';
+import 'package:sked/controllers/settings_view_state.dart';
+import 'package:sked/controllers/settings_commands.dart';
+
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -225,24 +230,30 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
         home:
             home ??
             Builder(
-              builder: (context) => Consumer<TimetableProvider>(
-                builder: (_, p, _) => AdaptiveSkedShell(
-                  provider: p,
-                  activeMode: p.activeMode,
-                  onOpenSettings: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => SettingsPage(
-                        packageInfoLoader: () async => PackageInfo(
-                          appName: 'Sked',
-                          packageName: 'com.mashiro.sked.preview',
-                          version: '3.0.0',
-                          buildNumber: '1',
+              builder: (context) =>
+                  Consumer2<WorkspaceViewState, SettingsViewState>(
+                    builder: (_, workspace, settingsView, _) =>
+                        AdaptiveSkedShell(
+                          workspace: workspace,
+                          workspaces: context.read<WorkspaceCommands>(),
+                          settings: settingsView,
+                          settingsCommands: context.read<SettingsCommands>(),
+                          activeMode: workspace.activeMode,
+                          onOpenSettings: () =>
+                              Navigator.of(context).push<void>(
+                                MaterialPageRoute(
+                                  builder: (_) => SettingsPage(
+                                    packageInfoLoader: () async => PackageInfo(
+                                      appName: 'Sked',
+                                      packageName: 'com.mashiro.sked.preview',
+                                      version: '3.0.0',
+                                      buildNumber: '1',
+                                    ),
+                                  ),
+                                ),
+                              ),
                         ),
-                      ),
-                    ),
                   ),
-                ),
-              ),
             ),
       ),
     );

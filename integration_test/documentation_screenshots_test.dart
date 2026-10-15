@@ -1,3 +1,8 @@
+import 'package:sked/controllers/workspace_view_state.dart';
+import 'package:sked/controllers/workspace_commands.dart';
+import 'package:sked/controllers/settings_view_state.dart';
+import 'package:sked/controllers/settings_commands.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -10,7 +15,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
@@ -212,16 +216,25 @@ void main() {
                 home: scene == 'settings-desktop'
                     ? settings()
                     : Builder(
-                        builder: (context) => Consumer<TimetableProvider>(
-                          builder: (_, provider, _) => AdaptiveSkedShell(
-                            provider: provider,
-                            activeMode: provider.activeMode,
-                            onOpenSettings: () => Navigator.of(context)
-                                .push<void>(
-                                  MaterialPageRoute(builder: (_) => settings()),
-                                ),
-                          ),
-                        ),
+                        builder: (context) =>
+                            Consumer2<WorkspaceViewState, SettingsViewState>(
+                              builder: (_, workspace, settingsView, _) =>
+                                  AdaptiveSkedShell(
+                                    workspace: workspace,
+                                    workspaces: context
+                                        .read<WorkspaceCommands>(),
+                                    settings: settingsView,
+                                    settingsCommands: context
+                                        .read<SettingsCommands>(),
+                                    activeMode: workspace.activeMode,
+                                    onOpenSettings: () => Navigator.of(context)
+                                        .push<void>(
+                                          MaterialPageRoute(
+                                            builder: (_) => settings(),
+                                          ),
+                                        ),
+                                  ),
+                            ),
                       ),
               ),
             ),

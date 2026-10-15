@@ -47,9 +47,12 @@ Future<TimetableProvider> mount(
       session: automatic ? GeneralReminderStartupSession() : null,
       home: shell
           ? AnimatedBuilder(
-              animation: p,
+              animation: Listenable.merge([p.workspaceView, p.settingsView]),
               builder: (_, _) => AdaptiveSkedShell(
-                provider: p,
+                workspace: p.workspaceView,
+                workspaces: p.workspaces,
+                settings: p.settingsView,
+                settingsCommands: p.settingsCommands,
                 activeMode: p.activeMode,
                 onOpenSettings: () async {},
               ),

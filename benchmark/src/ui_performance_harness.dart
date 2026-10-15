@@ -1,3 +1,10 @@
+import 'package:sked/controllers/workspace_view_state.dart';
+import 'package:sked/controllers/workspace_commands.dart';
+import 'package:sked/controllers/settings_view_state.dart';
+import 'package:sked/controllers/settings_commands.dart';
+
+import 'package:sked/providers/app_scope.dart';
+
 import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
@@ -163,9 +170,7 @@ class _UiPerformanceAppState extends State<UiPerformanceApp> {
       reduceMotion: features.reduceMotion,
       child: MultiProvider(
         providers: [
-          ChangeNotifierProvider<TimetableProvider>.value(
-            value: session.provider,
-          ),
+          ...AppScope.providersFor(session.provider),
           ChangeNotifierProvider<DesktopLayoutPreferences>.value(
             value: session.layout,
           ),
@@ -197,24 +202,28 @@ class _UiPerformanceAppState extends State<UiPerformanceApp> {
             DesktopWindowHost(modalObserver: _modals, child: child!),
           ),
           home: Builder(
-            builder: (context) => Consumer<TimetableProvider>(
-              builder: (_, provider, _) => AdaptiveSkedShell(
-                provider: provider,
-                activeMode: provider.activeMode,
-                onOpenSettings: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => SettingsPage(
-                      packageInfoLoader: () async => PackageInfo(
-                        appName: 'Sked',
-                        packageName: 'com.mashiro.sked.ui_performance',
-                        version: '2.3.0',
-                        buildNumber: '0',
+            builder: (context) =>
+                Consumer2<WorkspaceViewState, SettingsViewState>(
+                  builder: (_, workspace, settingsView, _) => AdaptiveSkedShell(
+                    workspace: workspace,
+                    workspaces: context.read<WorkspaceCommands>(),
+                    settings: settingsView,
+                    settingsCommands: context.read<SettingsCommands>(),
+                    activeMode: workspace.activeMode,
+                    onOpenSettings: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => SettingsPage(
+                          packageInfoLoader: () async => PackageInfo(
+                            appName: 'Sked',
+                            packageName: 'com.mashiro.sked.ui_performance',
+                            version: '2.3.0',
+                            buildNumber: '0',
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
           ),
         ),
       ),

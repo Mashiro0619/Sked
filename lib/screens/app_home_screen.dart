@@ -651,7 +651,10 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                 )
               : AdaptiveSkedShell(
                   key: const ValueKey('adaptive-shell'),
-                  provider: provider,
+                  workspace: provider.workspaceView,
+                  workspaces: provider.workspaces,
+                  settings: provider.settingsView,
+                  settingsCommands: provider.settingsCommands,
                   activeMode: snapshot.isStudentMode
                       ? AppMode.student
                       : AppMode.general,

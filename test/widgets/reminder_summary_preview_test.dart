@@ -347,7 +347,10 @@ void main() {
         p,
         ReminderSummaryClock(),
         home: AdaptiveSkedShell(
-          provider: p,
+          workspace: p.workspaceView,
+          workspaces: p.workspaces,
+          settings: p.settingsView,
+          settingsCommands: p.settingsCommands,
           activeMode: AppMode.general,
           onOpenSettings: () async {},
         ),
@@ -383,7 +386,10 @@ void main() {
             home: ValueListenableBuilder<AppMode>(
               valueListenable: mode,
               builder: (_, active, _) => AdaptiveSkedShell(
-                provider: p,
+                workspace: p.workspaceView,
+                workspaces: p.workspaces,
+                settings: p.settingsView,
+                settingsCommands: p.settingsCommands,
                 activeMode: active,
                 onOpenSettings: () async {},
               ),

@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
-import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
@@ -58,7 +58,7 @@ class _PaneState extends State<_Pane> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<TimetableProvider>();
+    final settings = context.watch<SettingsViewState>();
     return SkedMotionPolicyScope(
       disableAnimations: false,
       reduceMotion: widget.reduceMotion,
@@ -67,7 +67,7 @@ class _PaneState extends State<_Pane> {
         child: Scaffold(
           body: WorkspaceFrame(
             controller: controller,
-            resourcesCollapsed: p.homeWorkspaceNavigationCollapsed,
+            resourcesCollapsed: settings.homeWorkspaceNavigationCollapsed,
             canvas: const SizedBox(key: ValueKey('test-canvas')),
             resources: WorkspaceResourcePanel(
               title: 'Resources',

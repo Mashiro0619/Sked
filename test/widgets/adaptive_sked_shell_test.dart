@@ -1,3 +1,8 @@
+import 'package:sked/controllers/workspace_view_state.dart';
+import 'package:sked/controllers/workspace_commands.dart';
+import 'package:sked/controllers/settings_view_state.dart';
+import 'package:sked/controllers/settings_commands.dart';
+
 import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'dart:async';
@@ -144,22 +149,47 @@ Widget _appFor(
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: Selector<TimetableProvider, (AppMode, bool, bool)>(
-        selector: (_, provider) => (
-          provider.activeMode,
-          provider.hideHomeWorkspaceNavigation,
-          provider.homeWorkspaceNavigationCollapsed,
-        ),
-        builder: (context, snapshot, child) => AdaptiveSkedShell(
-          key: const ValueKey('adaptive-shell-test'),
-          provider: context.read<TimetableProvider>(),
-          activeMode: snapshot.$1,
-          enabled: enabled,
-          onOpenSettings: () async => onOpenSettings?.call(),
-        ),
-      ),
+      home:
+          Selector2<
+            WorkspaceViewState,
+            SettingsViewState,
+            (AppMode, bool, bool, bool, bool)
+          >(
+            selector: (_, workspace, settings) => (
+              workspace.activeMode,
+              settings.hideHomeWorkspaceNavigation,
+              settings.homeWorkspaceNavigationCollapsed,
+              workspace.isEnabled(AppMode.student),
+              workspace.isEnabled(AppMode.general),
+            ),
+            builder: (context, snapshot, child) => AdaptiveSkedShell(
+              key: const ValueKey('adaptive-shell-test'),
+              workspace: context.read<WorkspaceViewState>(),
+              workspaces: context.read<WorkspaceCommands>(),
+              settings: context.read<SettingsViewState>(),
+              settingsCommands: context.read<SettingsCommands>(),
+              activeMode: snapshot.$1,
+              enabled: enabled,
+              onOpenSettings: () async => onOpenSettings?.call(),
+            ),
+          ),
     ),
   );
+}
+
+Future<void> _changeStudentSelection(TimetableProvider provider) async {
+  final student = provider.studentView;
+  final nextWeek = student.selectedWeek == 1 ? 2 : 1;
+  var notifications = 0;
+  void changed() => notifications++;
+  student.addListener(changed);
+  try {
+    await provider.studentCommands.setSelectedWeek(nextWeek);
+    expect(student.selectedWeek, nextWeek);
+    expect(notifications, 1);
+  } finally {
+    student.removeListener(changed);
+  }
 }
 
 NavigationIndicator _navigationIndicator(
@@ -1341,7 +1371,7 @@ void main() {
   testWidgets('mode switching keeps the committed workspace while saving', (
     tester,
   ) async {
-    final storage = _BlockingStorage(_shellData());
+    final storage = _BlockingStorage(_shellData(populated: true));
     final provider = await _providerFor(storage);
     var settingsCalls = 0;
     addTearDown(provider.dispose);
@@ -1442,9 +1472,9 @@ void main() {
       isTrue,
     );
 
-    // An unrelated provider notification must not expose the provider's
-    // optimistic mode before the persistence command has completed.
-    provider.notifyListeners();
+    // A real student-domain update must not expose the pending workspace
+    // before its persistence command has completed.
+    await _changeStudentSelection(provider);
     await tester.pump();
     expect(
       tester
@@ -1455,8 +1485,17 @@ void main() {
       0,
     );
 
-    await tester.tap(_globalSettingsAction(), warnIfMissed: false);
+    final settingsEntry = find.byKey(
+      const ValueKey('student-toolbar-more-button'),
+    );
+    expect(settingsEntry, findsOneWidget);
+    expect(
+      tester.widget<SkedPopupMenuButton<String>>(settingsEntry).enabled,
+      isFalse,
+    );
+    await tester.tap(settingsEntry, warnIfMissed: false);
     await tester.pump();
+    expect(find.byKey(const ValueKey('student-more-settings')), findsNothing);
     expect(settingsCalls, 0);
 
     await tester.tap(find.text('General schedule'), warnIfMissed: false);
@@ -1539,11 +1578,9 @@ void main() {
   testWidgets('MyApp keeps the committed theme during a pending mode save', (
     tester,
   ) async {
-    final base = _shellData().copyWith(
-      studentMode: _shellData().studentMode.copyWith(
-        themeMode: 'dark',
-        themeSeedColorValue: 0xFF112233,
-      ),
+    final base = _shellData(populated: true).copyWith(
+      studentMode: _shellData(populated: true).studentMode
+          .copyWith(themeMode: 'dark', themeSeedColorValue: 0xFF112233),
       generalMode: _shellData().generalMode.copyWith(
         themeMode: 'light',
         themeSeedColorValue: 0xFF445566,
@@ -1565,7 +1602,7 @@ void main() {
     await storage.firstSaveStarted.future;
     await tester.pump();
     expect(materialApp().themeMode, ThemeMode.dark);
-    provider.notifyListeners();
+    await _changeStudentSelection(provider);
     await tester.pump();
     expect(materialApp().themeMode, ThemeMode.dark);
 
@@ -1625,7 +1662,7 @@ void main() {
   testWidgets('failed mode save keeps the committed workspace selected', (
     tester,
   ) async {
-    final storage = _BlockingStorage(_shellData(), fail: true);
+    final storage = _BlockingStorage(_shellData(populated: true), fail: true);
     final provider = await _providerFor(storage);
     addTearDown(provider.dispose);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1635,7 +1672,7 @@ void main() {
 
     await tester.tap(find.text('General schedule'));
     await storage.firstSaveStarted.future;
-    provider.notifyListeners();
+    await _changeStudentSelection(provider);
     await tester.pump();
     storage.completeSave();
     await tester.pumpAndSettle();
