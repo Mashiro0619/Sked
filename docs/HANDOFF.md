@@ -114,7 +114,7 @@ git diff --check
 
 | 改动 | 现有验证入口示例 |
 | --- | --- |
-| 持久化、恢复、密钥 | [test/data](../test/data)、[test/providers](../test/providers)、[保存竞争测试](../test/providers/timetable_provider_save_race_test.dart) |
+| 持久化、恢复、密钥 | [test/data](../test/data)、[test/controllers](../test/controllers)、[保存竞争测试](../test/controllers/app_persistence_race_test.dart) |
 | 通知并发 | [notification_runtime_lock_order_test.dart](../test/services/notification_runtime_lock_order_test.dart) 及相关通知服务测试 |
 | 工作台、提醒、设置 | [面板几何测试](../test/widgets/workspace_panel_resize_geometry_test.dart)、[提醒预览测试](../test/widgets/reminder_summary_preview_test.dart)、[设置测试](../test/widgets/settings_page_test.dart) |
 | 更新 | [update_service_test.dart](../test/services/update_service_test.dart)、[app_update_coordinator_test.dart](../test/services/app_update_coordinator_test.dart)、[更新弹窗测试](../test/widgets/app_update_dialog_test.dart) |

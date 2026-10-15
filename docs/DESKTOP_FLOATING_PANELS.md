@@ -42,7 +42,7 @@ Windows 实际字体验收入口为 `integration_test/desktop_resize_visual_test
 
 ### 验证与证据
 
-专项测试为 `test/widgets/category_manager_panel_test.dart`、`test/widgets/category_manager_dialog_test.dart`、`test/providers/general_category_color_test.dart` 及服务测试，覆盖锚点、拖动重开、焦点、透明屏障、失败重试、原始色槽、外部字段更新、删除／替换／工作区失效与手机分支。
+专项测试为 `test/widgets/category_manager_panel_test.dart`、`test/widgets/category_manager_dialog_test.dart`、`test/controllers/general_category_color_test.dart` 及服务测试，覆盖锚点、拖动重开、焦点、透明屏障、失败重试、原始色槽、外部字段更新、删除／替换／工作区失效与手机分支。
 
 相关回归共 **606 项通过**，包括完整编辑器、主题、日期／时间、草稿守卫、传输入口、资源导航与手机分支；最后收紧颜色标题为最多两行后，分类专项 **26 项复验通过**。全项目静态检查无问题，534 个 Dart 文件格式检查无变更，差异空白检查通过。Windows 分类管理／颜色矩阵 **72 张**截图，原分类流程与触控几何回归 **19 张**截图；已核对正常中文列表、深色颜色面板、自定义主题大字号及 RTL 窄窗的代表场景。
 

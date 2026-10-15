@@ -12,7 +12,7 @@ import 'package:sked/services/agenda_notification_runtime_store.dart';
 import '../support/workspace_harness.dart';
 
 // UI tests exercise status/ retry presentation. Real cancellation and runtime
-// lock failures remain covered by services/workspace_availability_test.dart.
+// lock failures remain covered by ../controllers/workspace_availability_test.dart.
 class _NotificationService extends ChangeNotifier
     implements AgendaNotificationService {
   bool fail = true;
