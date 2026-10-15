@@ -78,17 +78,6 @@ class _CompletedSchoolImportApi extends SchoolImportApi {
   }
 }
 
-class _NoActivePeriodTimeSetProvider extends TimetableProvider {
-  _NoActivePeriodTimeSetProvider({
-    required super.storage,
-    required super.systemLocaleCodeResolver,
-    required super.privacyService,
-  }) : super(dataTransferCodec: inlineDataTransferCodec);
-
-  @override
-  PeriodTimeSet? get activePeriodTimeSetOrNull => null;
-}
-
 class _CloseTrackingClient extends http.BaseClient {
   final responseController = StreamController<List<int>>();
   bool sendCalled = false;
@@ -142,12 +131,29 @@ Future<TimetableProvider> _createProvider({
 }
 
 Future<TimetableProvider> _createProviderWithoutActivePeriodTimeSet() async {
-  final provider = _NoActivePeriodTimeSetProvider(
-    storage: _MemoryTimetableStorage(_buildConfiguredCustomParserData()),
-    systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: const _NoopPrivacyService(),
+  final provider = await _createProvider();
+  // Inspect an unresolved active reference through the real student view,
+  // retaining a live set that the import form can select as its fallback.
+  final data = provider.session.data;
+  provider.session.replaceData(
+    data.copyWith(
+      studentMode: data.studentMode.copyWith(
+        activeTimetableId: 'unresolved-active-timetable',
+        timetables: [
+          TimetableData(
+            id: 'unresolved-active-timetable',
+            config: TimetableConfig(
+              name: 'Unresolved period reference',
+              startDate: DateTime(2026, 5, 25),
+              totalWeeks: 18,
+              periodTimeSetId: 'removed-period-set',
+            ),
+            courses: const [],
+          ),
+        ],
+      ),
+    ),
   );
-  await provider.load();
   return provider;
 }
 
@@ -363,6 +369,8 @@ void main() {
     (tester) async {
       final provider = await _createProviderWithoutActivePeriodTimeSet();
       addTearDown(provider.dispose);
+      expect(provider.studentView.activePeriodTimeSetOrNull, isNull);
+      final fallback = provider.studentView.periodTimeSets.first;
       await _pumpSchoolHtmlImportPage(
         tester,
         provider,
@@ -404,7 +412,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SchoolWebImportResultSheet), findsNothing);
-      expect(provider.hasTimetables, isTrue);
+      expect(provider.studentView.hasTimetables, isTrue);
+      expect(
+        provider.studentView.activeTimetableOrNull!.config.periodTimeSetId,
+        fallback.id,
+      );
       expect(tester.takeException(), isNull);
     },
   );

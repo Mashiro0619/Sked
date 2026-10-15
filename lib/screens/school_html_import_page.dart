@@ -14,7 +14,10 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
-import '../providers/timetable_provider.dart';
+import '../models/timetable_models.dart' show AiApiSettings;
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
 import '../providers/app_scope.dart';
 import '../controllers/student_commands.dart';
 import '../controllers/app_data_clear_controller.dart';
@@ -144,8 +147,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   Widget build(BuildContext context) {
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
-    final provider = context.watch<TimetableProvider>();
-    final isConfigured = isSchoolImportParserConfigured(provider.aiApiSettings);
+    final settings = context.watch<SettingsViewState>().aiApiSettings;
+    final isConfigured = isSchoolImportParserConfigured(settings);
     return PopScope(
       canPop: !_isApplying,
       child: Scaffold(
@@ -166,10 +169,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           top: false,
           child: !isConfigured
               ? SchoolImportConfigRequiredView(
-                  message: schoolImportConfigMessage(
-                    provider.aiApiSettings,
-                    l10n,
-                  ),
+                  message: schoolImportConfigMessage(settings, l10n),
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
@@ -302,7 +302,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                                     ),
                                   _buildImportActions(
                                     l10n,
-                                    provider: provider,
                                     useHorizontalLayout: false,
                                   ),
                                 ],
@@ -340,9 +339,12 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
 
   Widget _buildImportActions(
     AppLocalizations l10n, {
-    required TimetableProvider provider,
     required bool useHorizontalLayout,
   }) {
+    final lifecycle = context.watch<AppLifecycle>();
+    final maintenance = context.watch<AppDataMaintenance>();
+    final dataClear = context.watch<AppDataClearController>();
+    final workspaceView = context.watch<WorkspaceViewState>();
     final prepareButton = FilledButton.tonalIcon(
       onPressed: _isSubmitting || _isApplying || _isPreparingContent
           ? null
@@ -370,10 +372,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
               _isApplying ||
               _isPreparingContent ||
               !canSaveSchoolImport(
-                lifecycle: provider.lifecycle,
-                maintenance: provider.maintenance,
-                dataClear: provider.dataClear,
-                workspaceView: provider.workspaceView,
+                lifecycle: lifecycle,
+                maintenance: maintenance,
+                dataClear: dataClear,
+                workspaceView: workspaceView,
               )
           ? null
           : _submit,
@@ -405,9 +407,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SchoolImportSaveFeedback(
-          lifecycle: provider.lifecycle,
-          maintenance: provider.maintenance,
-          dataClear: provider.dataClear,
+          lifecycle: lifecycle,
+          maintenance: maintenance,
+          dataClear: dataClear,
           onRecoveryBusyChanged: (busy) => setState(() => _isApplying = busy),
         ),
         actions,
@@ -423,10 +425,14 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       _showMessage(l10n.schoolHtmlImportEmpty);
       return false;
     }
-    final provider = context.read<TimetableProvider>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspaceView = context.read<WorkspaceViewState>();
+    final workspaces = context.read<WorkspaceCommands>();
     final generation = _submissionGeneration;
     final owner = SkedTaskSession(
-      provider: provider,
+      maintenance: maintenance,
+      workspaceView: workspaceView,
+      workspaces: workspaces,
       workspace: AppMode.student,
       ownerRoute: ModalRoute.of(context),
       isOwnerActive: () => mounted && generation == _submissionGeneration,
@@ -549,22 +555,15 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   }
 
   String? _validateBeforeSubmit(
-    TimetableProvider provider,
+    AiApiSettings parserSettings,
     AppLocalizations l10n,
   ) {
-    final blocked = schoolImportSaveBlockedMessage(
-      l10n,
-      lifecycle: provider.lifecycle,
-      maintenance: provider.maintenance,
-      dataClear: provider.dataClear,
-    );
-    if (blocked != null) return blocked;
     final html = _htmlController.text.trim();
     if (html.isEmpty) {
       return l10n.schoolHtmlImportEmpty;
     }
-    if (!isSchoolImportParserConfigured(provider.aiApiSettings)) {
-      return schoolImportConfigMessage(provider.aiApiSettings, l10n);
+    if (!isSchoolImportParserConfigured(parserSettings)) {
+      return schoolImportConfigMessage(parserSettings, l10n);
     }
     return null;
   }
@@ -575,13 +574,23 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     }
     final submissionGeneration = ++_submissionGeneration;
     final l10n = AppLocalizations.of(context);
-    final provider = context.read<TimetableProvider>();
+    final scope = AppScope.capture(context);
+    final settings = context.read<SettingsViewState>();
+    final student = context.read<StudentViewState>();
+    final workspaces = context.read<WorkspaceCommands>();
     final studentCommands = context.read<StudentCommands>();
     final maintenance = context.read<AppDataMaintenance>();
     final lifecycle = context.read<AppLifecycle>();
     final dataClear = context.read<AppDataClearController>();
     final workspaceView = context.read<WorkspaceViewState>();
-    final validationMessage = _validateBeforeSubmit(provider, l10n);
+    final validationMessage =
+        schoolImportSaveBlockedMessage(
+          l10n,
+          lifecycle: lifecycle,
+          maintenance: maintenance,
+          dataClear: dataClear,
+        ) ??
+        _validateBeforeSubmit(settings.aiApiSettings, l10n);
     if (validationMessage != null) {
       _showMessage(validationMessage);
       return;
@@ -591,9 +600,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     }
     if (!mounted || submissionGeneration != _submissionGeneration) return;
 
-    final localeCode = provider.localeCode;
-    final canReplaceCurrent = provider.activeTimetableOrNull != null;
-    final parserSettings = provider.aiApiSettings;
+    final localeCode = settings.localeCode;
+    final canReplaceCurrent = student.activeTimetableOrNull != null;
+    final parserSettings = settings.aiApiSettings;
     final sanitizedContent = _htmlController.text.trim();
 
     setState(() => _isSubmitting = true);
@@ -614,7 +623,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     }
 
     final owner = SkedTaskSession(
-      provider: provider,
+      maintenance: maintenance,
+      workspaceView: workspaceView,
+      workspaces: workspaces,
       workspace: AppMode.student,
       ownerRoute: ModalRoute.of(context),
       isOwnerActive: () =>
@@ -637,10 +648,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
         throw StateError('The import page is no longer active.');
       }
       if (!canSaveSchoolImport(
-        lifecycle: provider.lifecycle,
-        maintenance: provider.maintenance,
-        dataClear: provider.dataClear,
-        workspaceView: provider.workspaceView,
+        lifecycle: lifecycle,
+        maintenance: maintenance,
+        dataClear: dataClear,
+        workspaceView: workspaceView,
       )) {
         if (maintenance.isReserved) {
           throw const AppBackupRestoreInProgressException();
@@ -691,28 +702,26 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           final outcome = await reviewNavigator.push<SchoolImportParseOutcome>(
             MaterialPageRoute(
               settings: RouteSettings(arguments: recoveryDraft),
-              builder: (_) => themes.wrap(
-                AppScope(
-                  app: provider,
-                  child: KeyedSubtree(
-                    key: transitionAnchor,
-                    child: SkedTaskRouteGuard(
-                      parent: owner,
-                      child: SchoolImportParsePage(
-                        stream: stream,
-                        configureImport: true,
-                        canReplaceCurrent: canReplaceCurrent,
-                        initialPeriodTimeSetId:
-                            provider.activePeriodTimeSetOrNull?.id ??
-                            (provider.periodTimeSets.isEmpty
-                                ? ''
-                                : provider.periodTimeSets.first.id),
-                        onApply: applyFromReview,
-                      ),
+              builder: (_) {
+                final page = KeyedSubtree(
+                  key: transitionAnchor,
+                  child: SkedTaskRouteGuard(
+                    parent: owner,
+                    child: SchoolImportParsePage(
+                      stream: stream,
+                      configureImport: true,
+                      canReplaceCurrent: canReplaceCurrent,
+                      initialPeriodTimeSetId:
+                          student.activePeriodTimeSetOrNull?.id ??
+                          (student.periodTimeSets.isEmpty
+                              ? ''
+                              : student.periodTimeSets.first.id),
+                      onApply: applyFromReview,
                     ),
                   ),
-                ),
-              ),
+                );
+                return themes.wrap(scope?.wrap(page) ?? page);
+              },
             ),
           );
           // Navigator completes the route future when the pop starts, before
@@ -729,10 +738,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       if (!mounted || !owner.isCurrent || response == null) return;
       if (!importApplied) {
         final selectedPeriodTimeSetId =
-            provider.activePeriodTimeSetOrNull?.id ??
-            (provider.periodTimeSets.isEmpty
+            student.activePeriodTimeSetOrNull?.id ??
+            (student.periodTimeSets.isEmpty
                 ? ''
-                : provider.periodTimeSets.first.id);
+                : student.periodTimeSets.first.id);
         final importResult = await showAppModalSheet<SchoolImportApplyRequest>(
           context: context,
           useRootNavigator: true,
@@ -741,12 +750,15 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           enableDrag: true,
           routeSettings: RouteSettings(arguments: recoveryDraft),
           session: owner,
-          builder: (_) => SchoolWebImportResultSheet(
-            response: response,
-            canReplaceCurrent: canReplaceCurrent,
-            initialPeriodTimeSetId: selectedPeriodTimeSetId,
-            onApply: applyFromReview,
-          ),
+          builder: (_) {
+            final page = SchoolWebImportResultSheet(
+              response: response,
+              canReplaceCurrent: canReplaceCurrent,
+              initialPeriodTimeSetId: selectedPeriodTimeSetId,
+              onApply: applyFromReview,
+            );
+            return scope?.wrap(page) ?? page;
+          },
         );
         if (importResult == null || !importApplied) return;
       }
