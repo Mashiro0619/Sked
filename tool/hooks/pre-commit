@@ -32,6 +32,7 @@ if ! git diff --cached --name-only -z --diff-filter=ACMR -M -C > "$staged_paths"
   exit 1
 fi
 
+declare -a dart_paths=()
 declare -a unformatted_paths=()
 temporary_file_index=0
 
@@ -46,12 +47,28 @@ while IFS= read -r -d '' staged_path; do
         exit 1
       fi
 
-      if ! dart format --output=none --set-exit-if-changed "$temporary_file" >/dev/null 2>&1; then
-        unformatted_paths+=("$staged_path")
-      fi
+      dart_paths+=("$staged_path")
       ;;
   esac
 done < "$staged_paths"
+
+if ((${#dart_paths[@]} == 0)); then
+  exit 0
+fi
+
+# The usual all-formatted case needs only one Dart process, even for a large
+# migration. Passing the snapshot directory also avoids command-line limits.
+if dart format --output=none --set-exit-if-changed "$temporary_directory" >/dev/null 2>&1; then
+  exit 0
+fi
+
+# Only failed batches need individual checks to report the original paths.
+# Keep using the same captured blobs, never the possibly changed working tree.
+for ((index = 0; index < ${#dart_paths[@]}; index++)); do
+  if ! dart format --output=none --set-exit-if-changed "$temporary_directory/$index.dart" >/dev/null 2>&1; then
+    unformatted_paths+=("${dart_paths[$index]}")
+  fi
+done
 
 if ((${#unformatted_paths[@]} > 0)); then
   echo "Commit refused: some staged Dart files are not formatted."

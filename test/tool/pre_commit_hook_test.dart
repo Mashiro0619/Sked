@@ -129,6 +129,37 @@ void main() {
         0,
         reason: repairedRenamedIndex.stderr.toString(),
       );
+
+      // A batch must reject its unformatted member while preserving both the
+      // staged blobs and the deliberately different working-tree contents.
+      const pendingPath = 'lib/pending source.dart';
+      final pending = File(
+        '${repository.path}${Platform.pathSeparator}lib'
+        '${Platform.pathSeparator}pending source.dart',
+      );
+      await pending.writeAsString(_unformattedDart(_sourcePadding));
+      await _runGit(repository, <String>['add', pendingPath]);
+      await pending.writeAsString(_formattedDart(_sourcePadding));
+      final mixedBatch = await _runHook(repository, hook);
+      expect(mixedBatch.exitCode, 1);
+      expect(mixedBatch.stdout, contains('pending'));
+      expect(mixedBatch.stdout, isNot(contains('renamed')));
+      expect(await pending.readAsString(), _formattedDart(_sourcePadding));
+      final pendingBlob = await _runGit(repository, <String>[
+        'show',
+        ':$pendingPath',
+      ]);
+      expect(pendingBlob.stdout, _unformattedDart(_sourcePadding));
+
+      await _runGit(repository, <String>['add', pendingPath]);
+      await pending.writeAsString(_unformattedDart(_sourcePadding));
+      final repairedBatch = await _runHook(repository, hook);
+      expect(
+        repairedBatch.exitCode,
+        0,
+        reason: repairedBatch.stderr.toString(),
+      );
+      expect(await pending.readAsString(), _unformattedDart(_sourcePadding));
     } finally {
       await repository.delete(recursive: true);
     }
