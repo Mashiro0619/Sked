@@ -14,20 +14,20 @@ void main() {
         storage: storage,
       );
       addTearDown(p.dispose);
-      await p.renameGeneralSchedule('category-1', 'Current name');
-      await p.updateGeneralScheduleVisibility('category-1', false);
-      final before = p.generalSchedules[1];
+      await p.generalCommands.renameSchedule('category-1', 'Current name');
+      await p.generalCommands.updateScheduleVisibility('category-1', false);
+      final before = p.generalView.schedules[1];
       storage.saveError = StateError('Expected color failure');
       await expectLater(
-        p.updateGeneralScheduleColor('category-1', 0xff123456),
+        p.generalCommands.updateScheduleColor('category-1', 0xff123456),
         throwsStateError,
       );
-      expect(p.generalSchedules[1].colorValue, before.colorValue);
-      await p.updateGeneralScheduleColor(
+      expect(p.generalView.schedules[1].colorValue, before.colorValue);
+      await p.generalCommands.updateScheduleColor(
         'category-1',
         generalCalendarColorSlot6Value,
       );
-      final after = p.generalSchedules[1];
+      final after = p.generalView.schedules[1];
       expect(after.name, before.name);
       expect(after.isVisible, false);
       expect(after.events.length, before.events.length);
@@ -44,12 +44,12 @@ void main() {
       storage: categoryManagerStorage(),
     );
     addTearDown(p.dispose);
-    await p.deleteGeneralSchedule('category-1');
-    await p.updateGeneralScheduleColor('category-1', 0xff123456);
-    expect(p.generalSchedules.any((s) => s.id == 'category-1'), isFalse);
-    await p.setWorkspaceEnabled(AppMode.general, false);
+    await p.generalCommands.deleteSchedule('category-1');
+    await p.generalCommands.updateScheduleColor('category-1', 0xff123456);
+    expect(p.generalView.schedules.any((s) => s.id == 'category-1'), isFalse);
+    await p.workspaces.setEnabled(AppMode.general, false);
     await expectLater(
-      p.updateGeneralScheduleColor('category-0', 0xff123456),
+      p.generalCommands.updateScheduleColor('category-0', 0xff123456),
       throwsStateError,
     );
   });

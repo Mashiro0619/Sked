@@ -83,23 +83,23 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final saveGate = Completer<void>();
       storage.saveGates.add(saveGate);
       storage.saveErrors.add(null);
 
-      final modeSave = provider.switchMode(AppMode.student);
+      final modeSave = provider.workspaces.switchMode(AppMode.student);
       await _waitForSaveCount(storage, 1);
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
 
       saveGate.complete();
       await modeSave;
 
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 2));
 
-      await provider.flushPendingUiStateSaves();
+      await provider.persistence.flushPendingUiStateSaves();
       expect(storage.saveCount, 2);
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-02');
     },
@@ -138,36 +138,36 @@ void main() {
       );
       final storage = _ControlledTimetableStorage(initial);
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       final saveGate = Completer<void>();
       storage.saveGates.add(saveGate);
       storage.saveErrors.add(null);
 
-      final modeSave = provider.switchMode(AppMode.general);
+      final modeSave = provider.workspaces.switchMode(AppMode.general);
       await _waitForSaveCount(storage, 1);
 
-      expect(provider.activeMode, AppMode.student);
-      expect(provider.themeMode, 'dark');
-      expect(provider.themeSeedColorValue, 0xFF112233);
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(provider.settingsView.themeMode, 'dark');
+      expect(provider.settingsView.themeSeedColorValue, 0xFF112233);
       final nextWeek = provider.studentView.selectedWeek == 1 ? 2 : 1;
       await provider.studentCommands.setSelectedWeek(nextWeek);
       expect(provider.studentView.selectedWeek, nextWeek);
-      expect(provider.activeMode, AppMode.student);
-      expect(provider.themeMode, 'dark');
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(provider.settingsView.themeMode, 'dark');
 
       saveGate.complete();
       await modeSave;
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.themeMode, 'light');
-      expect(provider.themeSeedColorValue, 0xFF445566);
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.settingsView.themeMode, 'light');
+      expect(provider.settingsView.themeSeedColorValue, 0xFF445566);
     },
   );
 
   test('direct overlapping mode requests are serialized', () async {
     final storage = _ControlledTimetableStorage(_initialApp());
     final provider = _providerWith(storage);
-    await provider.load();
+    await provider.lifecycle.load();
     storage.saveCount = 0;
     storage.writeLog.clear();
     final firstGate = Completer<void>();
@@ -175,21 +175,21 @@ void main() {
     storage.saveGates.addAll([firstGate, secondGate]);
     storage.saveErrors.addAll([null, null]);
 
-    final first = provider.switchMode(AppMode.student);
+    final first = provider.workspaces.switchMode(AppMode.student);
     await _waitForSaveCount(storage, 1);
-    final second = provider.switchMode(AppMode.general);
+    final second = provider.workspaces.switchMode(AppMode.general);
     await Future<void>.delayed(Duration.zero);
     expect(storage.saveCount, 1);
-    expect(provider.activeMode, AppMode.general);
+    expect(provider.workspaceView.activeMode, AppMode.general);
 
     firstGate.complete();
     await first;
     await _waitForSaveCount(storage, 2);
-    expect(provider.activeMode, AppMode.student);
+    expect(provider.workspaceView.activeMode, AppMode.student);
 
     secondGate.complete();
     await second;
-    expect(provider.activeMode, AppMode.general);
+    expect(provider.workspaceView.activeMode, AppMode.general);
     expect(storage.data!.activeMode, AppMode.general);
     expect(storage.saveCount, 2);
   });
@@ -199,7 +199,7 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final saveGate = Completer<void>();
@@ -207,20 +207,20 @@ void main() {
       storage.saveErrors.add(Exception('disk full'));
 
       final modeSaveExpectation = expectLater(
-        provider.switchMode(AppMode.student),
+        provider.workspaces.switchMode(AppMode.student),
         throwsException,
       );
       await _waitForSaveCount(storage, 1);
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
       expect(storage.saveCount, 1);
 
       saveGate.complete();
       await modeSaveExpectation;
 
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 2));
 
-      await provider.flushPendingUiStateSaves();
+      await provider.persistence.flushPendingUiStateSaves();
       expect(storage.saveCount, 2);
       expect(storage.data!.activeMode, AppMode.general);
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-02');
@@ -232,26 +232,26 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final saveGate = Completer<void>();
       storage.saveGates.add(saveGate);
       storage.saveErrors.add(Exception('mode write failed'));
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
       final modeSaveExpectation = expectLater(
-        provider.switchMode(AppMode.student),
+        provider.workspaces.switchMode(AppMode.student),
         throwsException,
       );
       await _waitForSaveCount(storage, 1);
       saveGate.complete();
       await modeSaveExpectation;
 
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 2));
 
-      await provider.flushPendingUiStateSaves();
+      await provider.persistence.flushPendingUiStateSaves();
       expect(storage.saveCount, 2);
       expect(storage.data!.activeMode, AppMode.general);
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-02');
@@ -263,7 +263,7 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final saveGate = Completer<void>();
@@ -273,26 +273,26 @@ void main() {
       );
 
       final modeSaveExpectation = expectLater(
-        provider.switchMode(AppMode.student),
+        provider.workspaces.switchMode(AppMode.student),
         throwsA(isA<StorageWriteException>()),
       );
       await _waitForSaveCount(storage, 1);
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
 
       saveGate.complete();
       await modeSaveExpectation;
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 2));
 
       await expectLater(
-        provider.flushPendingUiStateSaves(),
+        provider.persistence.flushPendingUiStateSaves(),
         throwsA(isA<RecoveryWriteBlockedException>()),
       );
       expect(storage.saveCount, 1);
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 2));
     },
   );
 
@@ -301,7 +301,7 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final firstGate = Completer<void>();
@@ -310,11 +310,13 @@ void main() {
       storage.saveErrors.addAll([Exception('first write failed'), null]);
 
       final firstSaveExpectation = expectLater(
-        provider.switchMode(AppMode.student),
+        provider.workspaces.switchMode(AppMode.student),
         throwsException,
       );
       await _waitForSaveCount(storage, 1);
-      final secondSave = provider.updateGeneralDisplaySettings(dayStartHour: 5);
+      final secondSave = provider.generalCommands.updateDisplaySettings(
+        dayStartHour: 5,
+      );
 
       firstGate.complete();
       await firstSaveExpectation;
@@ -322,8 +324,8 @@ void main() {
       secondGate.complete();
       await secondSave;
 
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.generalDayStartHour, 5);
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.generalView.data.dayStartHour, 5);
       expect(storage.data!.activeMode, AppMode.general);
       expect(storage.data!.generalMode.dayStartHour, 5);
       expect(storage.writeLog, hasLength(1));
@@ -334,7 +336,7 @@ void main() {
     final initial = _initialApp();
     final storage = _ControlledTimetableStorage(initial);
     final provider = _providerWith(storage);
-    await provider.load();
+    await provider.lifecycle.load();
     storage.saveCount = 0;
     storage.writeLog.clear();
     final firstGate = Completer<void>();
@@ -342,12 +344,12 @@ void main() {
     storage.saveErrors.add(const StorageWriteException('storage unavailable'));
 
     final firstSaveExpectation = expectLater(
-      provider.switchMode(AppMode.student),
+      provider.workspaces.switchMode(AppMode.student),
       throwsA(isA<StorageWriteException>()),
     );
     await _waitForSaveCount(storage, 1);
     final secondSaveExpectation = expectLater(
-      provider.updateGeneralDisplaySettings(dayStartHour: 5),
+      provider.generalCommands.updateDisplaySettings(dayStartHour: 5),
       throwsA(isA<RecoveryWriteBlockedException>()),
     );
 
@@ -355,9 +357,9 @@ void main() {
     await firstSaveExpectation;
     await secondSaveExpectation;
 
-    expect(provider.canWrite, isFalse);
-    expect(provider.activeMode, initial.activeMode);
-    expect(provider.generalDayStartHour, 5);
+    expect(provider.session.canWrite, isFalse);
+    expect(provider.workspaceView.activeMode, initial.activeMode);
+    expect(provider.generalView.data.dayStartHour, 5);
     expect(storage.saveCount, 1);
     expect(storage.writeLog, isEmpty);
     expect(
@@ -369,19 +371,22 @@ void main() {
   test('lifecycle flush reports a deferred save failure once', () async {
     final storage = _ControlledTimetableStorage(_initialApp());
     final provider = _providerWith(storage);
-    await provider.load();
+    await provider.lifecycle.load();
     storage.saveCount = 0;
     storage.writeLog.clear();
     storage.saveGates.add(null);
     storage.saveErrors.add(Exception('disk full'));
 
-    await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+    await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
 
-    await expectLater(provider.flushPendingUiStateSaves(), throwsException);
+    await expectLater(
+      provider.persistence.flushPendingUiStateSaves(),
+      throwsException,
+    );
     expect(storage.saveCount, 1);
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 1));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 1));
 
-    await provider.flushPendingUiStateSaves();
+    await provider.persistence.flushPendingUiStateSaves();
     expect(storage.saveCount, 1);
   });
 
@@ -390,16 +395,16 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage, uiStateSaveDelay: Duration.zero);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final saveGate = Completer<void>();
       storage.saveGates.add(saveGate);
       storage.saveErrors.add(null);
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
       await _waitForSaveCount(storage, 1);
-      final flush = provider.flushPendingUiStateSaves();
+      final flush = provider.persistence.flushPendingUiStateSaves();
       await Future<void>.delayed(Duration.zero);
       expect(storage.saveCount, 1);
 
@@ -416,7 +421,7 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage, uiStateSaveDelay: Duration.zero);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       storage.saveGates.add(null);
@@ -426,14 +431,14 @@ void main() {
       var notifications = 0;
       provider.session.readiness.addListener(() => notifications += 1);
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
       final notificationsAfterEdit = notifications;
       await _waitForSaveCount(storage, 1);
-      for (var i = 0; i < 20 && provider.canWrite; i += 1) {
+      for (var i = 0; i < 20 && provider.session.canWrite; i += 1) {
         await Future<void>.delayed(Duration.zero);
       }
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(notifications, greaterThan(notificationsAfterEdit));
     },
   );
@@ -442,7 +447,7 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final started = Completer<void>();
@@ -453,10 +458,10 @@ void main() {
       provider.generalView.addListener(() => notifications += 1);
       provider.session.readiness.addListener(() => notifications += 1);
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
       final notificationsBeforeDispose = notifications;
       provider.dispose();
-      final flushed = provider.flushPendingUiStateSaves();
+      final flushed = provider.persistence.flushPendingUiStateSaves();
       await started.future;
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-01');
       gate.complete();
@@ -473,7 +478,7 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final started = [Completer<void>(), Completer<void>()];
@@ -481,12 +486,12 @@ void main() {
       storage.saveGates.addAll(gates);
       storage.onSaveStarted = (index) => started[index].complete();
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
-      final firstFlush = provider.flushPendingUiStateSaves();
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
+      final firstFlush = provider.persistence.flushPendingUiStateSaves();
       await started[0].future;
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 3));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 3));
       provider.dispose();
-      final finalFlush = provider.flushPendingUiStateSaves();
+      final finalFlush = provider.persistence.flushPendingUiStateSaves();
       gates[0].complete();
       await firstFlush;
       await started[1].future;
@@ -507,7 +512,7 @@ void main() {
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.writeLog.clear();
       final started = Completer<void>();
@@ -519,19 +524,19 @@ void main() {
       provider.generalView.addListener(() => notifications += 1);
       provider.session.readiness.addListener(() => notifications += 1);
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
       final notificationsBeforeDispose = notifications;
       provider.dispose();
       final observedFailure = expectLater(
-        provider.flushPendingUiStateSaves(),
+        provider.persistence.flushPendingUiStateSaves(),
         throwsA(isA<StorageWriteException>()),
       );
       await started.future;
       gate.complete();
       await observedFailure;
-      await provider.quiesceForShutdown();
+      await provider.shutdown.quiesce();
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(storage.writeLog, isEmpty);
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-01');
       expect(notifications, notificationsBeforeDispose);

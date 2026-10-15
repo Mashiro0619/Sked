@@ -10,8 +10,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('clearing a custom view and switching workspace never wait for notification projection', () async {
     final seed = await workspaceProvider(mode: AppMode.general);
-    final data = seed.appData.copyWith(
-      generalMode: seed.generalMode.copyWith(
+    final data = seed.workspaceView.data.copyWith(
+      generalMode: seed.generalView.visibleData.copyWith(
         selectedDateIso: '2026-09-03',
         customDateRange: GeneralDateRange(
           DateTime(2026, 9, 3),
@@ -32,8 +32,8 @@ void main() {
       await release.future;
     });
     await entered.future;
-    final navigation = provider.clearGeneralDateRange();
-    final workspaceSwitch = provider.switchMode(AppMode.student);
+    final navigation = provider.generalNavigation.clearDateRange();
+    final workspaceSwitch = provider.workspaces.switchMode(AppMode.student);
     var completed = false;
     try {
       await Future.wait([navigation, workspaceSwitch])
@@ -52,8 +52,8 @@ void main() {
       isTrue,
       reason: 'UI navigation must not queue behind unrelated platform notifications.',
     );
-    expect(provider.customGeneralDateRange, isNull);
+    expect(provider.generalView.customDateRange, isNull);
     expect(storage.data.generalMode.customDateRange, isNull);
-    expect(provider.activeMode, AppMode.student);
+    expect(provider.workspaceView.activeMode, AppMode.student);
   });
 }

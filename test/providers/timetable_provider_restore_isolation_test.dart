@@ -146,7 +146,7 @@ Future<TimetableProvider> _provider({
     backupRestoreJournal: journal,
     systemLocaleCodeResolver: () => 'en',
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -181,12 +181,12 @@ void main() {
     );
     final firstSaveStarted = siteStore.saveStarted.stream.first;
 
-    final firstRestore = provider.importAppDataJson(
+    final firstRestore = provider.backups.importJson(
       encodeAppBackup(_appData('zh'), firstSites),
       mode: AppImportMode.replaceAll,
     );
     await firstSaveStarted;
-    final secondRestore = provider.importAppDataJson(
+    final secondRestore = provider.backups.importJson(
       encodeAppBackup(_appData('ja'), secondSites),
       mode: AppImportMode.replaceAll,
     );
@@ -207,7 +207,7 @@ void main() {
       throwsA(isA<RecoveryWriteBlockedException>()),
     );
 
-    expect(provider.canWrite, isFalse);
+    expect(provider.session.canWrite, isFalse);
     expect(journal.source, isNotNull);
     final pending = (await journal.load()).backup!;
     expect(pending.appData.localeCode, 'zh');
@@ -230,7 +230,7 @@ void main() {
       );
       final siteSaveStarted = siteStore.saveStarted.stream.first;
 
-      final restore = provider.importAppDataJson(
+      final restore = provider.backups.importJson(
         encodeAppBackup(_appData('zh'), firstSites),
         mode: AppImportMode.replaceAll,
       );
@@ -238,37 +238,37 @@ void main() {
       final savesDuringRestore = appStorage.saveCount;
 
       await expectLater(
-        provider.updateLocaleCode('ja'),
+        provider.settingsCommands.updateLocaleCode('ja'),
         throwsA(isA<AppBackupRestoreInProgressException>()),
       );
       await expectLater(
-        provider.updateThemeMode('dark'),
+        provider.settingsCommands.updateThemeMode('dark'),
         throwsA(isA<AppBackupRestoreInProgressException>()),
       );
       await expectLater(
-        provider.updateCustomSchoolImportApiKey('sk-concurrent'),
+        provider.schoolImportSecrets.update('sk-concurrent'),
         throwsA(isA<AppBackupRestoreInProgressException>()),
       );
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppDataEnvelope(_appData('ja')),
           mode: AppImportMode.addAll,
         ),
         throwsA(isA<AppBackupRestoreInProgressException>()),
       );
       await expectLater(
-        provider.retryStorageLoad(),
+        provider.lifecycle.retryStorageLoad(),
         throwsA(isA<AppBackupRestoreInProgressException>()),
       );
 
-      expect(provider.localeCode, 'zh');
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.settingsView.localeCode, 'zh');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(appStorage.saveCount, savesDuringRestore);
 
       siteSaveGate.complete();
       await restore;
 
-      expect(provider.localeCode, 'zh');
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.data!.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
@@ -294,8 +294,8 @@ void main() {
         secrets: _MemorySecretStore('sk-old'),
         journal: journal,
       );
-      final persistedDate = provider.selectedGeneralDate;
-      await provider.setSelectedGeneralDate(
+      final persistedDate = provider.generalView.selectedDate;
+      await provider.generalNavigation.setSelectedDate(
         DateTime(
           persistedDate.year,
           persistedDate.month,
@@ -305,7 +305,7 @@ void main() {
       final saveStarted = appStorage.saveStarted.stream.first;
       final journalWriteStarted = journal.writeStarted.stream.first;
 
-      final restore = provider.importAppDataJson(
+      final restore = provider.backups.importJson(
         encodeAppBackup(_appData('zh'), firstSites),
         mode: AppImportMode.replaceAll,
       );
@@ -315,11 +315,11 @@ void main() {
       saveGate.complete();
       await journalWriteStarted;
 
-      expect(provider.selectedGeneralDate, persistedDate);
+      expect(provider.generalView.selectedDate, persistedDate);
       journalGate.complete();
       await restore;
 
-      expect(provider.localeCode, 'zh');
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.data!.localeCode, 'zh');
     },
   );
@@ -336,10 +336,10 @@ void main() {
       journal: _MemoryBackupRestoreJournal(),
     );
     final writeStarted = secrets.writeStarted.stream.first;
-    final secretSave = provider.updateCustomSchoolImportApiKey('sk-new');
+    final secretSave = provider.schoolImportSecrets.update('sk-new');
     await writeStarted;
 
-    final restore = provider.importAppDataJson(
+    final restore = provider.backups.importJson(
       encodeAppBackup(_appData('zh'), firstSites),
       mode: AppImportMode.replaceAll,
     );
@@ -348,8 +348,8 @@ void main() {
     await expectLater(secretSave, throwsStateError);
     await restore;
 
-    expect(provider.localeCode, 'zh');
-    expect(provider.customSchoolImportApiKey, isEmpty);
+    expect(provider.settingsView.localeCode, 'zh');
+    expect(provider.settingsView.customSchoolImportApiKey, isEmpty);
     expect(secrets.value, isEmpty);
   });
 }

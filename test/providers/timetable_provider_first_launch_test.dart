@@ -59,7 +59,7 @@ Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
     secretStore: const _NoopSecretStore(),
   );
   addTearDown(provider.dispose);
-  await provider.load();
+  await provider.lifecycle.load();
   storage.saveCount = 0;
   return provider;
 }
@@ -120,17 +120,20 @@ void main() {
   test('first launch commits mode and privacy acceptance once', () async {
     final storage = _ControllableStorage(_initialApp());
     final provider = await _providerFor(storage);
-    await provider.completeFirstLaunch(
+    await provider.lifecycle.completeFirstLaunch(
       AppMode.student,
       hideWorkspaceNavigation: true,
     );
 
-    final acceptedAt = provider.privacyPolicyAcceptedAt;
+    final acceptedAt = provider.lifecycle.privacyPolicyAcceptedAt;
     expect(storage.saveCount, 1);
-    expect(provider.activeMode, AppMode.student);
-    expect(provider.hideHomeWorkspaceNavigation, isTrue);
-    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
-    expect(provider.acceptedPrivacyPolicyVersion, bundledPrivacyPolicyVersion);
+    expect(provider.workspaceView.activeMode, AppMode.student);
+    expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
+    expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(
+      provider.lifecycle.acceptedPrivacyPolicyVersion,
+      bundledPrivacyPolicyVersion,
+    );
     expect(acceptedAt, isNotNull);
     expect(storage.data!.activeMode, AppMode.student);
     expect(storage.data!.hideHomeWorkspaceNavigation, isTrue);
@@ -144,7 +147,7 @@ void main() {
       acceptedAt!.toIso8601String(),
     );
 
-    await provider.completeFirstLaunch(
+    await provider.lifecycle.completeFirstLaunch(
       AppMode.student,
       hideWorkspaceNavigation: true,
     );
@@ -164,16 +167,16 @@ void main() {
       );
       final provider = await _providerFor(storage);
 
-      await provider.completeFirstLaunch(
+      await provider.lifecycle.completeFirstLaunch(
         AppMode.student,
         hideWorkspaceNavigation: false,
       );
 
       expect(storage.saveCount, 1);
-      expect(provider.activeMode, AppMode.student);
-      expect(provider.hideHomeWorkspaceNavigation, isFalse);
-      expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
-      expect(provider.acceptedPrivacyPolicyVersion, acceptedVersion);
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
+      expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
+      expect(provider.lifecycle.acceptedPrivacyPolicyVersion, acceptedVersion);
       expect(storage.data!.privacyPolicyAcceptedVersion, acceptedVersion);
       expect(storage.data!.privacyPolicyAcceptedAtIso, acceptedAtIso);
     },
@@ -185,10 +188,10 @@ void main() {
       final initial = _initialApp();
       final storage = _ControllableStorage(initial);
       final provider = await _providerFor(storage);
-      provider.injectRemotePrivacyPolicyVersion('invalid');
+      provider.lifecycle.injectRemotePrivacyPolicyVersion('invalid');
 
       await expectLater(
-        provider.completeFirstLaunch(
+        provider.lifecycle.completeFirstLaunch(
           AppMode.student,
           hideWorkspaceNavigation: true,
         ),
@@ -196,11 +199,11 @@ void main() {
       );
 
       expect(storage.saveCount, 0);
-      expect(provider.activeMode, initial.activeMode);
-      expect(provider.acceptedPrivacyPolicyVersion, isNull);
-      expect(provider.privacyPolicyAcceptedAt, isNull);
-      expect(provider.hideHomeWorkspaceNavigation, isFalse);
-      expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+      expect(provider.workspaceView.activeMode, initial.activeMode);
+      expect(provider.lifecycle.acceptedPrivacyPolicyVersion, isNull);
+      expect(provider.lifecycle.privacyPolicyAcceptedAt, isNull);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
+      expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
       expect(storage.data!.toJson(), initial.toJson());
     },
   );
@@ -217,7 +220,7 @@ void main() {
     storage.nextSaveError = StateError('save failed');
 
     await expectLater(
-      provider.completeFirstLaunch(
+      provider.lifecycle.completeFirstLaunch(
         AppMode.student,
         hideWorkspaceNavigation: true,
       ),
@@ -225,11 +228,14 @@ void main() {
     );
 
     expect(storage.saveCount, 1);
-    expect(provider.activeMode, initial.activeMode);
-    expect(provider.acceptedPrivacyPolicyVersion, acceptedVersion);
-    expect(provider.privacyPolicyAcceptedAt?.toIso8601String(), acceptedAtIso);
-    expect(provider.hideHomeWorkspaceNavigation, isFalse);
-    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(provider.workspaceView.activeMode, initial.activeMode);
+    expect(provider.lifecycle.acceptedPrivacyPolicyVersion, acceptedVersion);
+    expect(
+      provider.lifecycle.privacyPolicyAcceptedAt?.toIso8601String(),
+      acceptedAtIso,
+    );
+    expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
+    expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
     expect(storage.data!.toJson(), initial.toJson());
   });
 }

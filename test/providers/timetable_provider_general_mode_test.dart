@@ -41,9 +41,9 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
       addTearDown(provider.dispose);
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.updateGeneralToolbarNavigationOrder([
+      await provider.generalCommands.updateToolbarNavigationOrder([
         'view',
         'settings',
         'category',
@@ -52,7 +52,7 @@ void main() {
         'workspace',
       ]);
       expect(storage.saveCount, 1);
-      expect(provider.generalToolbarNavigationOrder, [
+      expect(provider.generalView.data.toolbarNavigationOrder, [
         'view',
         'settings',
         'category',
@@ -61,20 +61,20 @@ void main() {
         'workspace',
       ]);
 
-      await provider.updateGeneralToolbarNavigationVisibility(
+      await provider.generalCommands.updateToolbarNavigationVisibility(
         'category',
         false,
       );
       expect(storage.saveCount, 2);
-      expect(provider.generalHiddenToolbarNavigationIds, [
+      expect(provider.generalView.data.hiddenToolbarNavigationIds, [
         'workspace',
         'settings',
         'category',
       ]);
 
-      await provider.updateGeneralToolbarHiddenItemsBehavior('more');
+      await provider.generalCommands.updateToolbarHiddenItemsBehavior('more');
       expect(storage.saveCount, 3);
-      expect(provider.generalToolbarHiddenItemsBehavior, 'more');
+      expect(provider.generalView.data.toolbarHiddenItemsBehavior, 'more');
       expect(storage.data!.generalMode.toolbarNavigationOrder, [
         'view',
         'settings',
@@ -100,11 +100,11 @@ void main() {
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
 
-    await provider.load();
-    await provider.saveGeneralEvent(
+    await provider.lifecycle.load();
+    await provider.generalCommands.saveEvent(
       GeneralEvent(
         id: 'strict_round_trip',
-        calendarId: provider.activeGeneralSchedule.id,
+        calendarId: provider.generalView.activeSchedule.id,
         title: 'Strict round trip',
         startDateTimeIso: '2026-05-25T09:00:00.000',
         endDateTimeIso: '2026-05-25T10:00:00.000',
@@ -143,7 +143,7 @@ void main() {
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
     addTearDown(provider.dispose);
-    await provider.load();
+    await provider.lifecycle.load();
 
     final created = GeneralEvent(
       id: 'new_event',
@@ -152,18 +152,18 @@ void main() {
       startDateTimeIso: '2026-05-25T09:00:00.000',
       endDateTimeIso: '2026-05-25T10:00:00.000',
     );
-    await provider.saveGeneralEvent(created);
+    await provider.generalCommands.saveEvent(created);
 
-    expect(provider.activeGeneralSchedule.id, 'home');
+    expect(provider.generalView.activeSchedule.id, 'home');
     expect(storage.data!.generalMode.activeScheduleId, 'home');
 
-    await provider.switchGeneralSchedule('work');
-    await provider.saveGeneralEvent(created.copyWith(title: 'Edited'));
+    await provider.generalCommands.switchSchedule('work');
+    await provider.generalCommands.saveEvent(created.copyWith(title: 'Edited'));
 
-    expect(provider.activeGeneralSchedule.id, 'work');
+    expect(provider.generalView.activeSchedule.id, 'work');
     expect(storage.data!.generalMode.activeScheduleId, 'work');
     expect(
-      provider.generalSchedules
+      provider.generalView.schedules
           .singleWhere((item) => item.id == 'home')
           .events
           .single
@@ -197,17 +197,20 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
       addTearDown(provider.dispose);
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.updateGeneralScheduleVisibility('remembered', false);
+      await provider.generalCommands.updateScheduleVisibility(
+        'remembered',
+        false,
+      );
 
-      expect(provider.activeGeneralSchedule.id, 'visible');
+      expect(provider.generalView.activeSchedule.id, 'visible');
       expect(storage.data!.generalMode.activeScheduleId, 'visible');
 
-      await provider.deleteGeneralSchedule('visible');
+      await provider.generalCommands.deleteSchedule('visible');
 
-      expect(provider.visibleGeneralSchedules, isEmpty);
-      expect(provider.activeGeneralSchedule.id, 'hidden');
+      expect(provider.generalView.visibleSchedules, isEmpty);
+      expect(provider.generalView.activeSchedule.id, 'hidden');
       expect(storage.data!.generalMode.activeScheduleId, 'hidden');
     },
   );
@@ -230,11 +233,11 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
       addTearDown(provider.dispose);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.nextSaveError = StateError('save failed');
 
       await expectLater(
-        provider.saveGeneralEvent(
+        provider.generalCommands.saveEvent(
           GeneralEvent(
             id: 'unsaved',
             calendarId: 'home',
@@ -246,8 +249,11 @@ void main() {
         throwsStateError,
       );
 
-      expect(provider.activeGeneralSchedule.id, 'work');
-      expect(provider.generalSchedules.expand((item) => item.events), isEmpty);
+      expect(provider.generalView.activeSchedule.id, 'work');
+      expect(
+        provider.generalView.schedules.expand((item) => item.events),
+        isEmpty,
+      );
       expect(storage.data!.generalMode.activeScheduleId, 'work');
       expect(
         storage.data!.generalMode.schedules.expand((item) => item.events),
@@ -267,18 +273,20 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       var notifications = 0;
       provider.generalView.addListener(() => notifications += 1);
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 1, 14));
+      await provider.generalNavigation.setSelectedDate(
+        DateTime(2026, 6, 1, 14),
+      );
 
-      expect(provider.selectedGeneralDate, DateTime(2026, 6));
+      expect(provider.generalView.selectedDate, DateTime(2026, 6));
       expect(notifications, 1);
       expect(storage.saveCount, 0);
 
-      await provider.flushPendingUiStateSaves();
+      await provider.persistence.flushPendingUiStateSaves();
 
       expect(storage.saveCount, 1);
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-01');
@@ -296,19 +304,19 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 1));
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 3));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 1));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 3));
 
       expect(storage.saveCount, 0);
 
-      await provider.flushPendingUiStateSaves();
+      await provider.persistence.flushPendingUiStateSaves();
 
       expect(storage.saveCount, 1);
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 3));
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 3));
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-03');
     },
   );
@@ -354,12 +362,12 @@ void main() {
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
 
-    await provider.load();
-    final visibleOnly = provider.generalOccurrencesForRange(
+    await provider.lifecycle.load();
+    final visibleOnly = provider.generalView.occurrencesForRange(
       startInclusive: DateTime(2026, 5, 25),
       endExclusive: DateTime(2026, 5, 26),
     );
-    final allCalendars = provider.generalOccurrencesForRange(
+    final allCalendars = provider.generalView.occurrencesForRange(
       startInclusive: DateTime(2026, 5, 25),
       endExclusive: DateTime(2026, 5, 26),
       onlyVisibleCalendars: false,
@@ -380,16 +388,16 @@ void main() {
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
 
-    await provider.load();
-    final onlyCalendarId = provider.activeGeneralSchedule.id;
-    await provider.deleteGeneralSchedule(onlyCalendarId);
+    await provider.lifecycle.load();
+    final onlyCalendarId = provider.generalView.activeSchedule.id;
+    await provider.generalCommands.deleteSchedule(onlyCalendarId);
 
-    expect(provider.generalSchedules, hasLength(1));
+    expect(provider.generalView.schedules, hasLength(1));
     expect(
-      provider.activeGeneralSchedule.id,
-      provider.generalSchedules.single.id,
+      provider.generalView.activeSchedule.id,
+      provider.generalView.schedules.single.id,
     );
-    expect(provider.activeGeneralSchedule.events, isEmpty);
+    expect(provider.generalView.activeSchedule.events, isEmpty);
   });
 
   test('duplicates the selected occurrence as a one-time event', () async {
@@ -399,9 +407,9 @@ void main() {
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
 
-    await provider.load();
-    final calendarId = provider.activeGeneralSchedule.id;
-    await provider.saveGeneralEvent(
+    await provider.lifecycle.load();
+    final calendarId = provider.generalView.activeSchedule.id;
+    await provider.generalCommands.saveEvent(
       GeneralEvent(
         id: 'repeat1',
         calendarId: calendarId,
@@ -421,14 +429,16 @@ void main() {
       ),
     );
 
-    final occurrence = provider
-        .generalOccurrencesForRange(
+    final occurrence = provider.generalView
+        .occurrencesForRange(
           startInclusive: DateTime(2026, 5, 25),
           endExclusive: DateTime(2026, 5, 26),
         )
         .single;
 
-    final duplicated = await provider.duplicateGeneralOccurrence(occurrence);
+    final duplicated = await provider.generalCommands.duplicateOccurrence(
+      occurrence,
+    );
 
     expect(duplicated.id, isNot('repeat1'));
     expect(duplicated.title, 'Standup');
@@ -442,7 +452,7 @@ void main() {
     expect(duplicated.reminders.single.minutesBefore, 10);
     expect(duplicated.calendarId, calendarId);
 
-    final sameDay = provider.generalOccurrencesForRange(
+    final sameDay = provider.generalView.occurrencesForRange(
       startInclusive: DateTime(2026, 5, 25),
       endExclusive: DateTime(2026, 5, 26),
     );
@@ -457,9 +467,9 @@ void main() {
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
 
-    await provider.load();
-    final calendarId = provider.activeGeneralSchedule.id;
-    await provider.saveGeneralEvent(
+    await provider.lifecycle.load();
+    final calendarId = provider.generalView.activeSchedule.id;
+    await provider.generalCommands.saveEvent(
       GeneralEvent(
         id: 'reminder1',
         calendarId: calendarId,
@@ -471,26 +481,30 @@ void main() {
     );
 
     final now = DateTime(2026, 5, 25, 9, 55);
-    final initialItems = provider.generalReminderItems(now: now);
+    final initialItems = provider.generalView.reminderItems(now: now);
 
     expect(initialItems, hasLength(1));
     expect(initialItems.single.status, GeneralReminderStatus.upcoming);
 
-    await provider.dismissGeneralReminder(initialItems.single.occurrence);
+    await provider.generalCommands.dismissReminder(
+      initialItems.single.occurrence,
+    );
 
     expect(
-      provider.isGeneralReminderHandled(initialItems.single.occurrence),
+      provider.generalView.isReminderHandled(initialItems.single.occurrence),
       true,
     );
-    expect(provider.generalReminderItems(now: now), isEmpty);
+    expect(provider.generalView.reminderItems(now: now), isEmpty);
 
-    await provider.restoreGeneralReminder(initialItems.single.occurrence);
+    await provider.generalCommands.restoreReminder(
+      initialItems.single.occurrence,
+    );
 
     expect(
-      provider.isGeneralReminderHandled(initialItems.single.occurrence),
+      provider.generalView.isReminderHandled(initialItems.single.occurrence),
       false,
     );
-    expect(provider.generalReminderItems(now: now), hasLength(1));
+    expect(provider.generalView.reminderItems(now: now), hasLength(1));
   });
 
   test(
@@ -502,9 +516,9 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
-      final calendarId = provider.activeGeneralSchedule.id;
-      await provider.saveGeneralEvent(
+      await provider.lifecycle.load();
+      final calendarId = provider.generalView.activeSchedule.id;
+      await provider.generalCommands.saveEvent(
         GeneralEvent(
           id: 'overdue1',
           calendarId: calendarId,
@@ -515,7 +529,7 @@ void main() {
       );
 
       final now = DateTime(2026, 5, 25, 10);
-      final items = provider.generalReminderItems(now: now);
+      final items = provider.generalView.reminderItems(now: now);
 
       expect(items, isEmpty);
     },
@@ -554,11 +568,11 @@ void main() {
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
 
-    await provider.load();
-    await provider.deleteGeneralSchedule('cal1');
+    await provider.lifecycle.load();
+    await provider.generalCommands.deleteSchedule('cal1');
 
     expect(storage.data!.generalMode.reminderAcknowledgements, isEmpty);
-    expect(provider.generalSchedules, hasLength(1));
+    expect(provider.generalView.schedules, hasLength(1));
   });
 
   test(
@@ -617,15 +631,15 @@ void main() {
         ),
       );
 
-      await provider.load();
-      await provider.importSelectedGeneralSchedulesJson(
+      await provider.lifecycle.load();
+      await provider.transfers.importSelectedGeneralSchedulesJson(
         source,
         scheduleIds: const ['replacement'],
         mode: GeneralScheduleImportMode.replaceActive,
         replacementScheduleId: 'active',
       );
 
-      final items = provider.generalReminderItems(
+      final items = provider.generalView.reminderItems(
         now: DateTime(2026, 5, 25, 8, 55),
       );
       expect(storage.data!.generalMode.reminderAcknowledgements, isEmpty);
@@ -683,15 +697,15 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
-      final occurrence = provider
-          .generalOccurrencesForRange(
+      await provider.lifecycle.load();
+      final occurrence = provider.generalView
+          .occurrencesForRange(
             startInclusive: DateTime(2026, 5, 25),
             endExclusive: DateTime(2026, 5, 26),
           )
           .single;
 
-      await provider.deleteFutureGeneralOccurrences(occurrence);
+      await provider.generalCommands.deleteFutureOccurrences(occurrence);
 
       expect(storage.data!.generalMode.reminderAcknowledgements, hasLength(1));
       expect(
@@ -729,22 +743,23 @@ void main() {
         ),
       );
 
-      await provider.load();
-      final result = await provider.importSelectedGeneralSchedulesJson(
-        source,
-        scheduleIds: const ['import_a', 'import_b'],
-        mode: GeneralScheduleImportMode.addAsNew,
-      );
+      await provider.lifecycle.load();
+      final result = await provider.transfers
+          .importSelectedGeneralSchedulesJson(
+            source,
+            scheduleIds: const ['import_a', 'import_b'],
+            mode: GeneralScheduleImportMode.addAsNew,
+          );
 
       expect(result.importedCount, 2);
       expect(result.scheduleNames, ['Import A', 'Import B']);
       expect(result.hasWarnings, false);
       expect(
-        provider.generalSchedules.map((item) => item.name),
+        provider.generalView.schedules.map((item) => item.name),
         contains('Import A'),
       );
       expect(
-        provider.generalSchedules.map((item) => item.name),
+        provider.generalView.schedules.map((item) => item.name),
         contains('Import B'),
       );
     },
@@ -777,9 +792,9 @@ void main() {
       ),
     );
 
-    await provider.load();
-    final activeId = provider.activeGeneralSchedule.id;
-    final result = await provider.importSelectedGeneralSchedulesJson(
+    await provider.lifecycle.load();
+    final activeId = provider.generalView.activeSchedule.id;
+    final result = await provider.transfers.importSelectedGeneralSchedulesJson(
       source,
       scheduleIds: const ['replacement'],
       mode: GeneralScheduleImportMode.replaceActive,
@@ -787,10 +802,10 @@ void main() {
     );
 
     expect(result.importedCount, 1);
-    expect(provider.activeGeneralSchedule.id, activeId);
-    expect(provider.activeGeneralSchedule.name, 'Replacement');
+    expect(provider.generalView.activeSchedule.id, activeId);
+    expect(provider.generalView.activeSchedule.name, 'Replacement');
     expect(
-      provider.activeGeneralSchedule.events.single.title,
+      provider.generalView.activeSchedule.events.single.title,
       'Replacement Event',
     );
   });
@@ -823,13 +838,13 @@ END:VEVENT
 END:VCALENDAR
 ''';
 
-    await provider.load();
+    await provider.lifecycle.load();
     storage.saveCount = 0;
     final before = storage.data!.generalMode.toJson();
 
     for (final replacementId in <String?>[null, 'missing']) {
       await expectLater(
-        provider.importSelectedGeneralSchedulesJson(
+        provider.transfers.importSelectedGeneralSchedulesJson(
           source,
           scheduleIds: const ['replacement'],
           mode: GeneralScheduleImportMode.replaceActive,
@@ -838,7 +853,7 @@ END:VCALENDAR
         throwsFormatException,
       );
       await expectLater(
-        provider.importGeneralSchedulesIcs(
+        provider.transfers.importGeneralSchedulesIcs(
           icsSource,
           mode: GeneralScheduleImportMode.replaceActive,
           replacementScheduleId: replacementId,
@@ -849,8 +864,8 @@ END:VCALENDAR
 
     expect(storage.saveCount, 0);
     expect(storage.data!.generalMode.toJson(), before);
-    expect(provider.generalSchedules, hasLength(1));
-    expect(provider.activeGeneralSchedule.name, isNot('Replacement'));
+    expect(provider.generalView.schedules, hasLength(1));
+    expect(provider.generalView.activeSchedule.name, isNot('Replacement'));
   });
 
   test(
@@ -863,18 +878,18 @@ END:VCALENDAR
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
-      final before = provider.generalSchedules.length;
+      await provider.lifecycle.load();
+      final before = provider.generalView.schedules.length;
 
       await expectLater(
-        provider.importSelectedGeneralSchedulesJson(
+        provider.transfers.importSelectedGeneralSchedulesJson(
           '{not-json',
           scheduleIds: const ['missing'],
           mode: GeneralScheduleImportMode.addAsNew,
         ),
         throwsFormatException,
       );
-      expect(provider.generalSchedules, hasLength(before));
+      expect(provider.generalView.schedules, hasLength(before));
     },
   );
 
@@ -900,8 +915,8 @@ END:VEVENT
 END:VCALENDAR
 ''';
 
-      await provider.load();
-      final result = await provider.importGeneralSchedulesIcs(
+      await provider.lifecycle.load();
+      final result = await provider.transfers.importGeneralSchedulesIcs(
         source,
         mode: GeneralScheduleImportMode.addAsNew,
       );
@@ -926,10 +941,10 @@ END:VCALENDAR
         systemLocaleCodeResolver: () => 'zh',
       );
 
-      await provider.load();
+      await provider.lifecycle.load();
 
       expect(
-        () => provider.previewImportGeneralSchedulesIcs(
+        () => provider.transfers.previewImportGeneralSchedulesIcs(
           'BEGIN:VCALENDAR\nEND:VCALENDAR',
         ),
         throwsA(
@@ -952,15 +967,15 @@ END:VCALENDAR
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
-      final studentValue = provider.closeCoursePopupOnOutsideTap;
+      await provider.lifecycle.load();
+      final studentValue = provider.settingsView.closeCoursePopupOnOutsideTap;
 
-      await provider.updateGeneralDisplaySettings(
+      await provider.generalCommands.updateDisplaySettings(
         closeEventPopupOnOutsideTap: false,
       );
 
-      expect(provider.closeGeneralEventPopupOnOutsideTap, false);
-      expect(provider.closeCoursePopupOnOutsideTap, studentValue);
+      expect(provider.generalView.data.closeEventPopupOnOutsideTap, false);
+      expect(provider.settingsView.closeCoursePopupOnOutsideTap, studentValue);
     },
   );
 
@@ -973,14 +988,20 @@ END:VCALENDAR
     );
     addTearDown(provider.dispose);
 
-    await provider.load();
-    expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorCycle);
+    await provider.lifecycle.load();
+    expect(
+      provider.generalView.data.viewSwitchBehavior,
+      generalViewSwitchBehaviorCycle,
+    );
 
-    await provider.updateGeneralDisplaySettings(
+    await provider.generalCommands.updateDisplaySettings(
       viewSwitchBehavior: generalViewSwitchBehaviorMenu,
     );
 
-    expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorMenu);
+    expect(
+      provider.generalView.data.viewSwitchBehavior,
+      generalViewSwitchBehaviorMenu,
+    );
     expect(
       storage.data!.generalMode.viewSwitchBehavior,
       generalViewSwitchBehaviorMenu,
@@ -1002,9 +1023,9 @@ END:VCALENDAR
       );
       addTearDown(provider.dispose);
 
-      await provider.load();
+      await provider.lifecycle.load();
       expect(
-        provider.generalToolbarWidthPolicy,
+        provider.generalView.data.toolbarWidthPolicy,
         generalToolbarWidthPolicyContent,
       );
 
@@ -1015,9 +1036,11 @@ END:VCALENDAR
         generalToolbarWidthPolicyDatePriority,
       ];
       for (final policy in policies) {
-        await provider.updateGeneralDisplaySettings(toolbarWidthPolicy: policy);
+        await provider.generalCommands.updateDisplaySettings(
+          toolbarWidthPolicy: policy,
+        );
 
-        expect(provider.generalToolbarWidthPolicy, policy);
+        expect(provider.generalView.data.toolbarWidthPolicy, policy);
         expect(storage.data!.generalMode.toolbarWidthPolicy, policy);
       }
 
@@ -1038,8 +1061,11 @@ END:VCALENDAR
     );
     addTearDown(provider.dispose);
 
-    await provider.load();
-    expect(provider.generalDateLabelFormat, generalDateLabelFormatSlash);
+    await provider.lifecycle.load();
+    expect(
+      provider.generalView.data.dateLabelFormat,
+      generalDateLabelFormatSlash,
+    );
 
     const formats = [
       generalDateLabelFormatLocalized,
@@ -1047,9 +1073,11 @@ END:VCALENDAR
       generalDateLabelFormatSlash,
     ];
     for (final format in formats) {
-      await provider.updateGeneralDisplaySettings(dateLabelFormat: format);
+      await provider.generalCommands.updateDisplaySettings(
+        dateLabelFormat: format,
+      );
 
-      expect(provider.generalDateLabelFormat, format);
+      expect(provider.generalView.data.dateLabelFormat, format);
       expect(storage.data!.generalMode.dateLabelFormat, format);
     }
 
@@ -1071,25 +1099,28 @@ END:VCALENDAR
       );
       addTearDown(provider.dispose);
 
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       expect(
-        provider.generalTimeGridHourHeight,
+        provider.generalView.data.timeGridHourHeight,
         generalTimeGridHourHeightDefault,
       );
 
-      await provider.updateGeneralDisplaySettings(
+      await provider.generalCommands.updateDisplaySettings(
         timeGridHourHeight: generalTimeGridHourHeightMax,
       );
 
-      expect(provider.generalTimeGridHourHeight, generalTimeGridHourHeightMax);
+      expect(
+        provider.generalView.data.timeGridHourHeight,
+        generalTimeGridHourHeightMax,
+      );
       expect(
         storage.data!.generalMode.timeGridHourHeight,
         generalTimeGridHourHeightMax,
       );
       expect(storage.saveCount, 1);
       expect(
-        provider.generalTimeGridMinutes,
+        provider.generalView.data.timeGridMinutes,
         initial.generalMode.timeGridMinutes,
       );
       expect(storage.data!.studentMode.toJson(), initial.studentMode.toJson());
@@ -1105,18 +1136,18 @@ END:VCALENDAR
     );
     addTearDown(provider.dispose);
 
-    await provider.load();
+    await provider.lifecycle.load();
     storage.nextSaveError = StateError('save failed');
 
     await expectLater(
-      provider.updateGeneralDisplaySettings(
+      provider.generalCommands.updateDisplaySettings(
         timeGridHourHeight: generalTimeGridHourHeightMin,
       ),
       throwsStateError,
     );
 
     expect(
-      provider.generalTimeGridHourHeight,
+      provider.generalView.data.timeGridHourHeight,
       generalTimeGridHourHeightDefault,
     );
     expect(
@@ -1134,17 +1165,20 @@ END:VCALENDAR
     );
     addTearDown(provider.dispose);
 
-    await provider.load();
+    await provider.lifecycle.load();
     storage.nextSaveError = StateError('save failed');
 
     await expectLater(
-      provider.updateGeneralDisplaySettings(
+      provider.generalCommands.updateDisplaySettings(
         dateLabelFormat: generalDateLabelFormatLocalized,
       ),
       throwsStateError,
     );
 
-    expect(provider.generalDateLabelFormat, generalDateLabelFormatSlash);
+    expect(
+      provider.generalView.data.dateLabelFormat,
+      generalDateLabelFormatSlash,
+    );
     expect(
       storage.data!.generalMode.dateLabelFormat,
       generalDateLabelFormatSlash,
@@ -1159,19 +1193,21 @@ END:VCALENDAR
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
     addTearDown(provider.dispose);
-    await provider.load();
+    await provider.lifecycle.load();
 
-    await provider.updateGeneralDisplaySettings(showAddEventFab: false);
-    expect(provider.showAddEventFab, isFalse);
+    await provider.generalCommands.updateDisplaySettings(
+      showAddEventFab: false,
+    );
+    expect(provider.generalView.data.showAddEventFab, isFalse);
     expect(storage.data!.generalMode.showAddEventFab, isFalse);
 
     storage.nextSaveError = StateError('save failed');
     await expectLater(
-      provider.updateGeneralDisplaySettings(showAddEventFab: true),
+      provider.generalCommands.updateDisplaySettings(showAddEventFab: true),
       throwsStateError,
     );
 
-    expect(provider.showAddEventFab, isFalse);
+    expect(provider.generalView.data.showAddEventFab, isFalse);
     expect(storage.data!.generalMode.showAddEventFab, isFalse);
   });
 
@@ -1183,19 +1219,23 @@ END:VCALENDAR
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
     addTearDown(provider.dispose);
-    await provider.load();
+    await provider.lifecycle.load();
 
-    await provider.updateGeneralDisplaySettings(enableLongPressAddEvent: false);
-    expect(provider.enableLongPressAddEvent, isFalse);
+    await provider.generalCommands.updateDisplaySettings(
+      enableLongPressAddEvent: false,
+    );
+    expect(provider.generalView.data.enableLongPressAddEvent, isFalse);
     expect(storage.data!.generalMode.enableLongPressAddEvent, isFalse);
 
     storage.nextSaveError = StateError('save failed');
     await expectLater(
-      provider.updateGeneralDisplaySettings(enableLongPressAddEvent: true),
+      provider.generalCommands.updateDisplaySettings(
+        enableLongPressAddEvent: true,
+      ),
       throwsStateError,
     );
 
-    expect(provider.enableLongPressAddEvent, isFalse);
+    expect(provider.generalView.data.enableLongPressAddEvent, isFalse);
     expect(storage.data!.generalMode.enableLongPressAddEvent, isFalse);
   });
 
@@ -1209,23 +1249,25 @@ END:VCALENDAR
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
       addTearDown(provider.dispose);
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
 
-      await provider.updateGeneralDisplaySettings(
+      await provider.generalCommands.updateDisplaySettings(
         allDayTimelineCollapsed: true,
       );
-      expect(provider.allDayTimelineCollapsed, isTrue);
+      expect(provider.generalView.data.allDayTimelineCollapsed, isTrue);
       expect(storage.data!.generalMode.allDayTimelineCollapsed, isTrue);
       expect(storage.saveCount, 1);
 
       storage.nextSaveError = StateError('save failed');
       await expectLater(
-        provider.updateGeneralDisplaySettings(allDayTimelineCollapsed: false),
+        provider.generalCommands.updateDisplaySettings(
+          allDayTimelineCollapsed: false,
+        ),
         throwsStateError,
       );
 
-      expect(provider.allDayTimelineCollapsed, isTrue);
+      expect(provider.generalView.data.allDayTimelineCollapsed, isTrue);
       expect(storage.data!.generalMode.allDayTimelineCollapsed, isTrue);
       expect(storage.saveCount, 2);
     },

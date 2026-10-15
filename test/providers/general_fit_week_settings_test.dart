@@ -71,25 +71,27 @@ void main() {
     final storage = WorkspaceMemoryStorage(mobileLayoutData());
     final p = await workspaceProvider(storage: storage, locale: 'zh');
     addTearDown(p.dispose);
-    final student = p.appData.studentMode.toJson();
-    await p.updateGeneralDisplaySettings(fitWeekColumnsToWidth: false);
-    await p.setSelectedGeneralDate(DateTime(2026, 10, 1));
-    await p.updateGeneralDisplaySettings(showWeekends: false);
-    expect(p.generalFitWeekColumnsToWidth, isFalse);
-    expect(p.appData.studentMode.toJson(), student);
+    final student = p.workspaceView.data.studentMode.toJson();
+    await p.generalCommands.updateDisplaySettings(fitWeekColumnsToWidth: false);
+    await p.generalNavigation.setSelectedDate(DateTime(2026, 10, 1));
+    await p.generalCommands.updateDisplaySettings(showWeekends: false);
+    expect(p.generalView.data.fitWeekColumnsToWidth, isFalse);
+    expect(p.workspaceView.data.studentMode.toJson(), student);
     final saved = AppData.fromJson(storage.data.toJson());
     final reloaded = await workspaceProvider(
       storage: WorkspaceMemoryStorage(saved),
       locale: 'zh',
     );
     addTearDown(reloaded.dispose);
-    expect(reloaded.generalFitWeekColumnsToWidth, isFalse);
-    expect(reloaded.appData.studentMode.toJson(), student);
-    final backup = await reloaded.exportAppDataJson();
-    await reloaded.updateGeneralDisplaySettings(fitWeekColumnsToWidth: true);
-    await reloaded.importAppDataJson(backup, mode: AppImportMode.replaceAll);
-    expect(reloaded.generalFitWeekColumnsToWidth, isFalse);
-    expect(reloaded.appData.studentMode.toJson(), student);
-    expect(reloaded.selectedGeneralDate, DateTime(2026, 10, 1));
+    expect(reloaded.generalView.data.fitWeekColumnsToWidth, isFalse);
+    expect(reloaded.workspaceView.data.studentMode.toJson(), student);
+    final backup = await reloaded.backups.exportJson();
+    await reloaded.generalCommands.updateDisplaySettings(
+      fitWeekColumnsToWidth: true,
+    );
+    await reloaded.backups.importJson(backup, mode: AppImportMode.replaceAll);
+    expect(reloaded.generalView.data.fitWeekColumnsToWidth, isFalse);
+    expect(reloaded.workspaceView.data.studentMode.toJson(), student);
+    expect(reloaded.generalView.selectedDate, DateTime(2026, 10, 1));
   });
 }

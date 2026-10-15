@@ -26,15 +26,15 @@ void main() {
       );
       final provider = await workspaceProvider(storage: storage);
       addTearDown(provider.dispose);
-      await provider.setSelectedGeneralDate(DateTime(2030, 1, 2));
-      await provider.flushPendingUiStateSaves();
-      expect(provider.generalCustomDayMinWidth, 160);
-      await provider.setGeneralDateRange(
+      await provider.generalNavigation.setSelectedDate(DateTime(2030, 1, 2));
+      await provider.persistence.flushPendingUiStateSaves();
+      expect(provider.generalView.data.customDayMinWidth, 160);
+      await provider.generalNavigation.setDateRange(
         GeneralDateRange(DateTime(2030, 1, 5), DateTime(2030, 1, 6)),
         focusedDate: DateTime(2030, 1, 6),
       );
-      await provider.clearGeneralDateRange();
-      expect(provider.selectedGeneralDate, DateTime(2030, 1, 4));
+      await provider.generalNavigation.clearDateRange();
+      expect(provider.generalView.selectedDate, DateTime(2030, 1, 4));
       expect(storage.data.generalMode.customDayMinWidth, 160);
     },
   );
@@ -116,43 +116,43 @@ void main() {
         DateTime(2026, 9, 3),
         DateTime(2026, 9, 9),
       );
-      await p.setGeneralDateRange(range);
-      final date = p.selectedGeneralDate;
-      final revision = p.generalDateFocusRevision;
-      await p.updateGeneralCustomDayMinWidth(160);
-      expect(p.generalCustomDayMinWidth, 160);
+      await p.generalNavigation.setDateRange(range);
+      final date = p.generalView.selectedDate;
+      final revision = p.generalView.focusRevision;
+      await p.generalCommands.updateCustomDayMinWidth(160);
+      expect(p.generalView.data.customDayMinWidth, 160);
       expect(storage.data.generalMode.customDayMinWidth, 160);
-      expect(p.customGeneralDateRange, range);
-      expect(p.selectedGeneralDate, date);
-      expect(p.generalDateFocusRevision, revision);
-      await p.updateGeneralDisplaySettings(
+      expect(p.generalView.customDateRange, range);
+      expect(p.generalView.selectedDate, date);
+      expect(p.generalView.focusRevision, revision);
+      await p.generalCommands.updateDisplaySettings(
         showWeekends: false,
         dayStartHour: 5,
       );
-      expect(p.generalCustomDayMinWidth, 160);
+      expect(p.generalView.data.customDayMinWidth, 160);
       final restarted = await workspaceProvider(storage: storage);
       addTearDown(restarted.dispose);
-      expect(restarted.generalCustomDayMinWidth, 160);
-      final backup = await p.exportAppDataJson();
+      expect(restarted.generalView.data.customDayMinWidth, 160);
+      final backup = await p.backups.exportJson();
       expect(
         decodeAppBackup(backup).appData.generalMode.customDayMinWidth,
         160,
       );
-      final ids = p.generalSchedules.map((s) => s.id).toList();
-      await p.importSelectedGeneralSchedulesJson(
-        p.exportSelectedGeneralSchedulesJson(ids),
+      final ids = p.generalView.schedules.map((s) => s.id).toList();
+      await p.transfers.importSelectedGeneralSchedulesJson(
+        p.transfers.exportSelectedGeneralSchedulesJson(ids),
         scheduleIds: ids,
         mode: GeneralScheduleImportMode.addAsNew,
       );
-      await p.importGeneralSchedulesIcs(
+      await p.transfers.importGeneralSchedulesIcs(
         'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:width-import\r\nDTSTART:20260909T090000\r\nDTEND:20260909T100000\r\nSUMMARY:Imported\r\nEND:VEVENT\r\nEND:VCALENDAR',
         mode: GeneralScheduleImportMode.addAsNew,
       );
-      expect(p.generalCustomDayMinWidth, 160);
-      await p.updateGeneralCustomDayMinWidth(null);
+      expect(p.generalView.data.customDayMinWidth, 160);
+      await p.generalCommands.updateCustomDayMinWidth(null);
       expect(storage.data.generalMode.customDayMinWidth, isNull);
-      await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
-      expect(p.generalCustomDayMinWidth, 160);
+      await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
+      expect(p.generalView.data.customDayMinWidth, 160);
     },
   );
 
@@ -164,24 +164,24 @@ void main() {
       );
       final p = await workspaceProvider(storage: storage);
       addTearDown(p.dispose);
-      await p.updateGeneralCustomDayMinWidth(128);
+      await p.generalCommands.updateCustomDayMinWidth(128);
       storage.saveError = StateError('disk full');
       await expectLater(
-        p.updateGeneralCustomDayMinWidth(192),
+        p.generalCommands.updateCustomDayMinWidth(192),
         throwsStateError,
       );
-      expect(p.generalCustomDayMinWidth, 128);
+      expect(p.generalView.data.customDayMinWidth, 128);
       expect(storage.data.generalMode.customDayMinWidth, 128);
-      await p.updateGeneralCustomDayMinWidth(128);
-      await p.setWorkspaceEnabled(AppMode.general, false);
+      await p.generalCommands.updateCustomDayMinWidth(128);
+      await p.workspaces.setEnabled(AppMode.general, false);
       await expectLater(
-        p.updateGeneralCustomDayMinWidth(null),
+        p.generalCommands.updateCustomDayMinWidth(null),
         throwsStateError,
       );
-      expect(p.generalCustomDayMinWidth, 128);
-      await p.setWorkspaceEnabled(AppMode.general, true);
-      await p.updateGeneralCustomDayMinWidth(null);
-      expect(p.generalCustomDayMinWidth, isNull);
+      expect(p.generalView.data.customDayMinWidth, 128);
+      await p.workspaces.setEnabled(AppMode.general, true);
+      await p.generalCommands.updateCustomDayMinWidth(null);
+      expect(p.generalView.data.customDayMinWidth, isNull);
     },
   );
 }

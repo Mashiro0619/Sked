@@ -44,21 +44,21 @@ void main() {
         final storage = _Storage(original);
         final provider = await workspaceProvider(storage: storage);
         addTearDown(provider.dispose);
-        final states = [provider.isRestoringAppBackup];
+        final states = [provider.maintenance.isReserved];
         final boundarySnapshots = <AppData>[];
         provider.maintenance.addListener(() {
-          if (states.last != provider.isRestoringAppBackup) {
-            states.add(provider.isRestoringAppBackup);
-            boundarySnapshots.add(provider.appData);
+          if (states.last != provider.maintenance.isReserved) {
+            states.add(provider.maintenance.isReserved);
+            boundarySnapshots.add(provider.workspaceView.data);
           }
         });
         final commits = <AppDataCommit>[];
-        final subscription = provider.committedData.listen(commits.add);
+        final subscription = provider.session.commits.listen(commits.add);
         addTearDown(subscription.cancel);
         final gate = _SaveGate();
         storage.gates.add(gate);
         if (fails) storage.saveError = StateError('disk full');
-        final restoring = provider.importAppDataJson(
+        final restoring = provider.backups.importJson(
           encodeAppBackup(
             original.copyWith(hideHomeWorkspaceNavigation: true),
             [],
@@ -72,11 +72,11 @@ void main() {
 
         expect(states, [false, true]);
         expect(boundarySnapshots.single.toJson(), original.toJson());
-        expect(provider.isRestoringAppBackup, isTrue);
-        expect(provider.committedAppData, same(original));
+        expect(provider.maintenance.isReserved, isTrue);
+        expect(provider.session.committedData, same(original));
         expect(commits, isEmpty);
         await expectLater(
-          provider.updateLocaleCode('zh'),
+          provider.settingsCommands.updateLocaleCode('zh'),
           throwsA(isA<AppBackupRestoreInProgressException>()),
         );
 
@@ -84,13 +84,16 @@ void main() {
         await completion;
         await Future<void>.delayed(Duration.zero);
         expect(states, [false, true, false]);
-        expect(provider.isRestoringAppBackup, isFalse);
-        expect(provider.hideHomeWorkspaceNavigation, !fails);
+        expect(provider.maintenance.isReserved, isFalse);
+        expect(provider.settingsView.hideHomeWorkspaceNavigation, !fails);
         expect(boundarySnapshots.last.hideHomeWorkspaceNavigation, !fails);
-        expect(provider.committedAppData.hideHomeWorkspaceNavigation, !fails);
+        expect(
+          provider.session.committedData.hideHomeWorkspaceNavigation,
+          !fails,
+        );
         expect(commits, hasLength(fails ? 0 : 1));
-        await provider.updateLocaleCode('zh');
-        expect(provider.localeCode, 'zh');
+        await provider.settingsCommands.updateLocaleCode('zh');
+        expect(provider.settingsView.localeCode, 'zh');
       },
     );
   }
@@ -102,20 +105,20 @@ void main() {
       final storage = _Storage(original);
       final provider = await workspaceProvider(storage: storage);
       addTearDown(provider.dispose);
-      final states = [provider.isRestoringAppBackup];
+      final states = [provider.maintenance.isReserved];
       provider.maintenance.addListener(() {
-        if (states.last != provider.isRestoringAppBackup) {
-          states.add(provider.isRestoringAppBackup);
+        if (states.last != provider.maintenance.isReserved) {
+          states.add(provider.maintenance.isReserved);
         }
       });
       final firstGate = _SaveGate();
       final secondGate = _SaveGate();
       storage.gates.addAll([firstGate, secondGate]);
-      final first = provider.importAppDataJson(
+      final first = provider.backups.importJson(
         encodeAppBackup(original.copyWith(localeCode: 'zh'), []),
         mode: AppImportMode.replaceAll,
       );
-      final second = provider.importAppDataJson(
+      final second = provider.backups.importJson(
         encodeAppBackup(original.copyWith(localeCode: 'de'), []),
         mode: AppImportMode.replaceAll,
       );
@@ -124,13 +127,13 @@ void main() {
       firstGate.release.complete();
       await first;
       await secondGate.started.future;
-      expect(provider.isRestoringAppBackup, isTrue);
+      expect(provider.maintenance.isReserved, isTrue);
       expect(states, [false, true]);
-      expect(provider.committedAppData.localeCode, 'zh');
+      expect(provider.session.committedData.localeCode, 'zh');
 
       secondGate.release.complete();
       await second;
-      expect(provider.localeCode, 'de');
+      expect(provider.settingsView.localeCode, 'de');
       expect(states, [false, true, false]);
     },
   );
@@ -138,8 +141,8 @@ void main() {
   test('a declined draft guard does not start restore status', () async {
     final provider = await workspaceProvider();
     addTearDown(provider.dispose);
-    final source = await provider.exportAppDataJson();
-    final unregister = provider.registerWorkspaceExitGuard(
+    final source = await provider.backups.exportJson();
+    final unregister = provider.workspaces.registerExitGuard(
       AppMode.student,
       () async => false,
     );
@@ -147,10 +150,10 @@ void main() {
     var notifications = 0;
     provider.maintenance.addListener(() => notifications++);
     await expectLater(
-      provider.importAppDataJson(source, mode: AppImportMode.replaceAll),
+      provider.backups.importJson(source, mode: AppImportMode.replaceAll),
       throwsA(isA<WorkspaceChangeCancelledException>()),
     );
-    expect(provider.isRestoringAppBackup, isFalse);
+    expect(provider.maintenance.isReserved, isFalse);
     expect(notifications, 0);
   });
 
@@ -162,24 +165,26 @@ void main() {
       final provider = await workspaceProvider(storage: storage);
       addTearDown(provider.dispose);
       final commits = <AppDataCommit>[];
-      final subscription = provider.committedData.listen(commits.add);
+      final subscription = provider.session.commits.listen(commits.add);
       addTearDown(subscription.cancel);
       final earlierSave = _SaveGate();
       final firstRestore = _SaveGate();
       final secondRestore = _SaveGate();
       storage.gates.addAll([earlierSave, firstRestore, secondRestore]);
-      final saving = provider.updateGeneralDisplaySettings(showWeekends: false);
+      final saving = provider.generalCommands.updateDisplaySettings(
+        showWeekends: false,
+      );
       await earlierSave.started.future;
-      final backup = encodeAppBackup(provider.appData, []);
-      final first = provider.importAppDataJson(
+      final backup = encodeAppBackup(provider.workspaceView.data, []);
+      final first = provider.backups.importJson(
         backup,
         mode: AppImportMode.replaceAll,
       );
-      final second = provider.importAppDataJson(
+      final second = provider.backups.importJson(
         backup,
         mode: AppImportMode.replaceAll,
       );
-      expect(provider.isRestoringAppBackup, isTrue);
+      expect(provider.maintenance.isReserved, isTrue);
 
       earlierSave.release.complete();
       await saving;

@@ -143,7 +143,7 @@ Future<TimetableProvider> _provider({
     secretStore: secrets,
     systemLocaleCodeResolver: () => 'en',
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -156,10 +156,10 @@ void main() {
     final provider = await _provider(storage: storage, secrets: secrets);
     final savesAfterLoad = storage.saveCount;
 
-    await provider.updateCustomSchoolImportApiKey(' sk-new ');
+    await provider.schoolImportSecrets.update(' sk-new ');
 
     expect(secrets.value, 'sk-new');
-    expect(provider.customSchoolImportApiKey, 'sk-new');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-new');
     expect(storage.saveCount, savesAfterLoad);
   });
 
@@ -172,9 +172,9 @@ void main() {
       final secrets = _ControlledSecretStore('sk-old');
       final provider = await _provider(storage: storage, secrets: secrets);
 
-      final first = provider.updateCustomSchoolImportApiKey('sk-first');
+      final first = provider.schoolImportSecrets.update('sk-first');
       await Future<void>.delayed(Duration.zero);
-      final second = provider.updateCustomSchoolImportApiKey('sk-second');
+      final second = provider.schoolImportSecrets.update('sk-second');
       await Future<void>.delayed(Duration.zero);
 
       expect(secrets.writes, ['sk-first']);
@@ -187,7 +187,7 @@ void main() {
       await Future.wait([first, second]);
 
       expect(secrets.value, 'sk-second');
-      expect(provider.customSchoolImportApiKey, 'sk-second');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-second');
     },
   );
 
@@ -200,14 +200,14 @@ void main() {
       final secrets = _ControlledSecretStore('sk-old');
       final provider = await _provider(storage: storage, secrets: secrets);
 
-      final first = provider.updateCustomSchoolImportApiKey('sk-first');
+      final first = provider.schoolImportSecrets.update('sk-first');
       while (secrets.writes.isEmpty) {
         await Future<void>.delayed(Duration.zero);
       }
       final appended = first.then(
-        (_) => provider.updateCustomSchoolImportApiKey('sk-second'),
+        (_) => provider.schoolImportSecrets.update('sk-second'),
       );
-      final shutdown = provider.quiesceForShutdown();
+      final shutdown = provider.shutdown.quiesce();
       var shutdownCompleted = false;
       unawaited(shutdown.then((_) => shutdownCompleted = true));
 
@@ -232,19 +232,21 @@ void main() {
         ..saveFailure = Exception('synthetic AppData failure');
       final secrets = _MemorySecretStore('sk-old');
       final provider = await _provider(storage: storage, secrets: secrets);
-      final previousThemeMode = provider.themeMode;
+      final previousThemeMode = provider.settingsView.themeMode;
       final nextThemeMode = previousThemeMode == 'dark' ? 'light' : 'dark';
 
-      final appDataSave = provider.updateThemeMode(nextThemeMode);
+      final appDataSave = provider.settingsCommands.updateThemeMode(
+        nextThemeMode,
+      );
       while (storage.saveCount == 0) {
         await Future<void>.delayed(Duration.zero);
       }
-      await provider.updateCustomSchoolImportApiKey('sk-new');
+      await provider.schoolImportSecrets.update('sk-new');
       storage.saveGate!.complete();
 
       await expectLater(appDataSave, throwsException);
-      expect(provider.themeMode, previousThemeMode);
-      expect(provider.customSchoolImportApiKey, 'sk-new');
+      expect(provider.settingsView.themeMode, previousThemeMode);
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-new');
       expect(secrets.value, 'sk-new');
     },
   );
@@ -255,16 +257,18 @@ void main() {
     );
     final secrets = _ControlledSecretStore('sk-old');
     final provider = await _provider(storage: storage, secrets: secrets);
-    final nextThemeMode = provider.themeMode == 'dark' ? 'light' : 'dark';
+    final nextThemeMode = provider.settingsView.themeMode == 'dark'
+        ? 'light'
+        : 'dark';
 
-    final apiKeySave = provider.updateCustomSchoolImportApiKey('sk-new');
+    final apiKeySave = provider.schoolImportSecrets.update('sk-new');
     await Future<void>.delayed(Duration.zero);
-    await provider.updateThemeMode(nextThemeMode);
+    await provider.settingsCommands.updateThemeMode(nextThemeMode);
     secrets.failWrite(0, Exception('synthetic secret failure'));
 
     await expectLater(apiKeySave, throwsStateError);
-    expect(provider.themeMode, nextThemeMode);
-    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(provider.settingsView.themeMode, nextThemeMode);
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
     expect(secrets.value, 'sk-old');
   });
 
@@ -275,9 +279,9 @@ void main() {
     final secrets = _CommitThenThrowSecretStore('sk-old');
     final provider = await _provider(storage: storage, secrets: secrets);
 
-    await provider.updateCustomSchoolImportApiKey('sk-new');
+    await provider.schoolImportSecrets.update('sk-new');
 
-    expect(provider.customSchoolImportApiKey, 'sk-new');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-new');
     expect(secrets.value, 'sk-new');
   });
 
@@ -291,11 +295,11 @@ void main() {
       final provider = await _provider(storage: storage, secrets: secrets);
 
       await expectLater(
-        provider.updateCustomSchoolImportApiKey('sk-new'),
+        provider.schoolImportSecrets.update('sk-new'),
         throwsStateError,
       );
 
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
     },
   );
@@ -316,19 +320,19 @@ void main() {
       final provider = await _provider(storage: storage, secrets: secrets);
       final savesAfterLoad = storage.saveCount;
 
-      expect(provider.customSchoolImportApiKey, legacyKey);
-      expect(provider.canWrite, isFalse);
+      expect(provider.settingsView.customSchoolImportApiKey, legacyKey);
+      expect(provider.session.canWrite, isFalse);
       await expectLater(
-        provider.updateThemeMode('dark'),
+        provider.settingsCommands.updateThemeMode('dark'),
         throwsA(isA<RecoveryWriteBlockedException>()),
       );
       expect(storage.saveCount, savesAfterLoad);
 
       secrets.allowWrites = true;
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.customSchoolImportApiKey, legacyKey);
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.customSchoolImportApiKey, legacyKey);
       expect(secrets.value, legacyKey);
     },
   );
@@ -349,15 +353,15 @@ void main() {
         ..readFailures.add(Exception('temporary keychain read failure'));
       final provider = await _provider(storage: storage, secrets: secrets);
 
-      expect(provider.customSchoolImportApiKey, legacyKey);
-      expect(provider.canWrite, isFalse);
+      expect(provider.settingsView.customSchoolImportApiKey, legacyKey);
+      expect(provider.session.canWrite, isFalse);
       expect(secrets.value, 'sk-newer');
       expect(secrets.writeCount, 0);
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.customSchoolImportApiKey, 'sk-newer');
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-newer');
       expect(secrets.value, 'sk-newer');
       expect(secrets.writeCount, 0);
     },
@@ -384,20 +388,23 @@ void main() {
       final provider = await _provider(storage: storage, secrets: secrets);
 
       expect(secrets.value, 'sk-legacy');
-      await provider.updateCustomSchoolImportTextSettings(
+      await provider.settingsCommands.updateCustomSchoolImportTextSettings(
         baseUrl: 'https://new.example.com/v1',
         model: 'new-model',
         prompt: 'new prompt',
       );
-      await provider.updateCustomSchoolImportApiKey('sk-new');
-      await provider.updateThemeMode(
-        provider.themeMode == 'dark' ? 'light' : 'dark',
+      await provider.schoolImportSecrets.update('sk-new');
+      await provider.settingsCommands.updateThemeMode(
+        provider.settingsView.themeMode == 'dark' ? 'light' : 'dark',
       );
 
-      expect(provider.customSchoolImportBaseUrl, 'https://new.example.com/v1');
-      expect(provider.customSchoolImportModel, 'new-model');
-      expect(provider.customSchoolImportPrompt, 'new prompt');
-      expect(provider.customSchoolImportApiKey, 'sk-new');
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://new.example.com/v1',
+      );
+      expect(provider.settingsView.customSchoolImportModel, 'new-model');
+      expect(provider.settingsView.customSchoolImportPrompt, 'new prompt');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-new');
       expect(
         storage.data!.aiApiSettings.customBaseUrl,
         'https://new.example.com/v1',
@@ -415,9 +422,9 @@ void main() {
     final secrets = _ControlledSecretStore('sk-old');
     final provider = await _provider(storage: storage, secrets: secrets);
 
-    final first = provider.updateCustomSchoolImportApiKey('sk-first');
+    final first = provider.schoolImportSecrets.update('sk-first');
     await Future<void>.delayed(Duration.zero);
-    final second = provider.updateCustomSchoolImportApiKey('sk-second');
+    final second = provider.schoolImportSecrets.update('sk-second');
     await Future<void>.delayed(Duration.zero);
 
     secrets.failWrite(0, Exception('synthetic first failure'));
@@ -428,7 +435,7 @@ void main() {
     secrets.succeedWrite(1);
     await second;
 
-    expect(provider.customSchoolImportApiKey, 'sk-second');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-second');
     expect(secrets.value, 'sk-second');
   });
 }

@@ -47,13 +47,13 @@ void main() {
       );
       addTearDown(provider.dispose);
       final commits = <AppDataCommit>[];
-      final subscription = provider.committedData.listen(commits.add);
+      final subscription = provider.session.commits.listen(commits.add);
       addTearDown(subscription.cancel);
 
-      await provider.load();
+      await provider.lifecycle.load();
       expect(commits, isEmpty);
 
-      await provider.updateGeneralDisplaySettings(showWeekends: false);
+      await provider.generalCommands.updateDisplaySettings(showWeekends: false);
       await Future<void>.delayed(Duration.zero);
       expect(commits, hasLength(1));
       expect(commits.single.revision, 1);
@@ -64,20 +64,20 @@ void main() {
       expect(commits.single.versions.agenda, 0);
       expect(commits.single.affectsAgenda, isFalse);
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 8, 3));
-      await provider.flushPendingUiStateSaves();
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 8, 3));
+      await provider.persistence.flushPendingUiStateSaves();
       await Future<void>.delayed(Duration.zero);
       expect(commits, hasLength(1));
 
       storage.nextError = StateError('write failed');
       await expectLater(
-        provider.updateGeneralDisplaySettings(showWeekends: true),
+        provider.generalCommands.updateDisplaySettings(showWeekends: true),
         throwsStateError,
       );
       await Future<void>.delayed(Duration.zero);
       expect(commits, hasLength(1));
-      expect(provider.committedDataVersions.general, 1);
-      expect(provider.committedDataVersions.agenda, 0);
+      expect(provider.session.versions.general, 1);
+      expect(provider.session.versions.agenda, 0);
     },
   );
 
@@ -90,9 +90,9 @@ void main() {
       systemLocaleCodeResolver: () => 'en',
     );
     addTearDown(provider.dispose);
-    await provider.load();
+    await provider.lifecycle.load();
     final commits = <AppDataCommit>[];
-    final subscription = provider.committedData.listen(commits.add);
+    final subscription = provider.session.commits.listen(commits.add);
     addTearDown(subscription.cancel);
     final started = Completer<void>();
     final release = Completer<void>();
@@ -104,14 +104,15 @@ void main() {
       await release.future;
     };
 
-    final notificationSave = provider.updateNotificationsEnabled(true);
+    final notificationSave = provider.settingsCommands
+        .updateNotificationsEnabled(true);
     await started.future;
-    final themeSave = provider.updateThemeMode(
+    final themeSave = provider.settingsCommands.updateThemeMode(
       'dark',
       workspace: AppMode.student,
     );
     expect(commits, isEmpty);
-    expect(provider.committedDataVersions.agenda, 0);
+    expect(provider.session.versions.agenda, 0);
     release.complete();
     await Future.wait([notificationSave, themeSave]);
     await Future<void>.delayed(Duration.zero);
@@ -134,7 +135,7 @@ void main() {
       systemLocaleCodeResolver: () => 'en',
     );
     final done = Completer<void>();
-    provider.committedData.listen((_) {}, onDone: done.complete);
+    provider.session.commits.listen((_) {}, onDone: done.complete);
     provider.dispose();
     await expectLater(done.future, completes);
   });
@@ -148,9 +149,9 @@ void main() {
       systemLocaleCodeResolver: () => 'en',
     );
     addTearDown(provider.dispose);
-    await provider.load();
+    await provider.lifecycle.load();
     final commits = <AppDataCommit>[];
-    final subscription = provider.committedData.listen(commits.add);
+    final subscription = provider.session.commits.listen(commits.add);
     addTearDown(subscription.cancel);
     storage.nextError = StorageWriteStateUnknownException(
       writeError: StateError('write result unknown'),
@@ -158,17 +159,17 @@ void main() {
       recoveryArtifacts: const ['memory://recoverable-snapshot'],
     );
     await expectLater(
-      provider.updateNotificationsEnabled(true),
+      provider.settingsCommands.updateNotificationsEnabled(true),
       throwsA(isA<StorageWriteStateUnknownException>()),
     );
-    expect(provider.canWrite, isFalse);
-    expect(provider.isStorageWriteStateUnknown, isTrue);
-    expect(provider.committedDataVersions.agenda, 0);
+    expect(provider.session.canWrite, isFalse);
+    expect(provider.lifecycle.isStorageWriteStateUnknown, isTrue);
+    expect(provider.session.versions.agenda, 0);
     expect(commits, isEmpty);
 
-    await provider.retryStorageLoad();
-    await provider.updateIncludePrereleaseUpdates(
-      !provider.includePrereleaseUpdates,
+    await provider.lifecycle.retryStorageLoad();
+    await provider.settingsCommands.updateIncludePrereleaseUpdates(
+      !provider.settingsView.includePrereleaseUpdates,
     );
     await Future<void>.delayed(Duration.zero);
     expect(commits, hasLength(1));
@@ -203,20 +204,20 @@ void main() {
     );
     addTearDown(provider.dispose);
     final commits = <AppDataCommit>[];
-    final subscription = provider.committedData.listen(commits.add);
+    final subscription = provider.session.commits.listen(commits.add);
     addTearDown(subscription.cancel);
 
-    await provider.load();
+    await provider.lifecycle.load();
     await Future<void>.delayed(Duration.zero);
 
     expect(storage.saveCount, 1);
-    expect(provider.appData, same(storage.data));
+    expect(provider.workspaceView.data, same(storage.data));
     expect(
-      provider.appData.studentMode.periodTimeSets.single.id,
+      provider.workspaceView.data.studentMode.periodTimeSets.single.id,
       'padded-period-set',
     );
     expect(commits, hasLength(1));
     expect(commits.single.revision, 1);
-    expect(commits.single.snapshot, same(provider.appData));
+    expect(commits.single.snapshot, same(provider.workspaceView.data));
   });
 }

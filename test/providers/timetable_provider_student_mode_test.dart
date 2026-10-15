@@ -207,11 +207,16 @@ void main() {
       'daily period count uses the selected set or a safe fallback',
       () async {
         final provider = providerWith(appData());
-        await provider.load();
+        await provider.lifecycle.load();
 
-        expect(provider.dailyPeriodsForTimetable(provider.activeTimetable), 2);
         expect(
-          provider.dailyPeriodsForTimetable(
+          provider.studentView.dailyPeriodsForTimetable(
+            provider.studentView.activeTimetable,
+          ),
+          2,
+        );
+        expect(
+          provider.studentView.dailyPeriodsForTimetable(
             timetable(periodTimeSetId: 'missing-period-set'),
           ),
           1,
@@ -227,16 +232,19 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
       addTearDown(provider.dispose);
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.updateShowAddCourseFab(false);
-      expect(provider.showAddCourseFab, isFalse);
+      await provider.settingsCommands.updateShowAddCourseFab(false);
+      expect(provider.settingsView.showAddCourseFab, isFalse);
       expect(storage.data!.studentMode.showAddCourseFab, isFalse);
 
       storage.saveFailures.add(Exception('disk full'));
-      await expectLater(provider.updateShowAddCourseFab(true), throwsException);
+      await expectLater(
+        provider.settingsCommands.updateShowAddCourseFab(true),
+        throwsException,
+      );
 
-      expect(provider.showAddCourseFab, isFalse);
+      expect(provider.settingsView.showAddCourseFab, isFalse);
       expect(storage.data!.studentMode.showAddCourseFab, isFalse);
     });
 
@@ -248,19 +256,19 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
       addTearDown(provider.dispose);
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.updateEnableLongPressAddCourse(false);
-      expect(provider.enableLongPressAddCourse, isFalse);
+      await provider.settingsCommands.updateEnableLongPressAddCourse(false);
+      expect(provider.settingsView.enableLongPressAddCourse, isFalse);
       expect(storage.data!.studentMode.enableLongPressAddCourse, isFalse);
 
       storage.saveFailures.add(Exception('disk full'));
       await expectLater(
-        provider.updateEnableLongPressAddCourse(true),
+        provider.settingsCommands.updateEnableLongPressAddCourse(true),
         throwsException,
       );
 
-      expect(provider.enableLongPressAddCourse, isFalse);
+      expect(provider.settingsView.enableLongPressAddCourse, isFalse);
       expect(storage.data!.studentMode.enableLongPressAddCourse, isFalse);
     });
 
@@ -271,15 +279,15 @@ void main() {
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveFailures.add(Exception('disk full'));
 
       await expectLater(
-        provider.updateEnableWeekSwipeNavigation(false),
+        provider.settingsCommands.updateEnableWeekSwipeNavigation(false),
         throwsException,
       );
 
-      expect(provider.enableWeekSwipeNavigation, isTrue);
+      expect(provider.settingsView.enableWeekSwipeNavigation, isTrue);
       expect(storage.data!.studentMode.enableWeekSwipeNavigation, isTrue);
     });
 
@@ -293,11 +301,11 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
+      await provider.lifecycle.load();
 
-      expect(provider.isLoaded, isTrue);
+      expect(provider.session.isLoaded, isTrue);
       expect(
-        provider.lastRecoveryStatus,
+        provider.lifecycle.lastRecoveryStatus,
         equals(RecoveryStatus.failedBackupRestore),
       );
       expect(storage.saveCount, 0);
@@ -311,7 +319,7 @@ void main() {
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       storage.saveFailures.add(Exception('disk full'));
 
@@ -326,8 +334,8 @@ void main() {
         throwsException,
       );
 
-      expect(provider.timetables, hasLength(1));
-      expect(provider.activeTimetable.id, 'table1');
+      expect(provider.studentView.timetables, hasLength(1));
+      expect(provider.studentView.activeTimetable.id, 'table1');
       expect(storage.data!.studentMode.timetables, hasLength(1));
       expect(storage.data!.studentMode.activeTimetableId, 'table1');
       expect(storage.saveCount, 1);
@@ -362,7 +370,7 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
+      await provider.lifecycle.load();
 
       expect(storage.saveCount, 1);
       expect(
@@ -407,11 +415,14 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
 
-      await provider.load();
+      await provider.lifecycle.load();
 
-      expect(provider.isLoaded, isTrue);
-      expect(provider.timetables, hasLength(2));
-      expect(provider.timetables.map((item) => item.id).toSet(), hasLength(2));
+      expect(provider.session.isLoaded, isTrue);
+      expect(provider.studentView.timetables, hasLength(2));
+      expect(
+        provider.studentView.timetables.map((item) => item.id).toSet(),
+        hasLength(2),
+      );
       expect(storage.saveCount, 1);
       expect(storage.data, same(original));
     });
@@ -437,26 +448,39 @@ void main() {
         ),
       );
 
-      await provider.load();
-      await provider.saveCourse(course(id: 'course3', name: 'Chemistry'));
+      await provider.lifecycle.load();
+      await provider.studentCommands.saveCourse(
+        course(id: 'course3', name: 'Chemistry'),
+      );
 
-      expect(provider.activeTimetable.courses.map((item) => item.id), [
-        'course1',
-        'course2',
-        'course3',
-      ]);
-      expect(provider.courseNameColorValues['Algebra'], 0xFF123456);
-      expect(provider.courseNameColorValues['Chemistry'], isNotNull);
+      expect(
+        provider.studentView.activeTimetable.courses.map((item) => item.id),
+        ['course1', 'course2', 'course3'],
+      );
+      expect(
+        provider.settingsView.courseNameColorValues['Algebra'],
+        0xFF123456,
+      );
+      expect(
+        provider.settingsView.courseNameColorValues['Chemistry'],
+        isNotNull,
+      );
 
-      await provider.deleteCourse('course2');
+      await provider.studentCommands.deleteCourse('course2');
 
-      expect(provider.activeTimetable.courses.map((item) => item.id), [
-        'course1',
-        'course3',
-      ]);
-      expect(provider.displayedCourseIdForConflict('unused'), isNull);
-      expect(provider.studentMode.conflictDisplayCourseIds, isEmpty);
-      expect(provider.courseNameColorValues.containsKey('Physics'), isFalse);
+      expect(
+        provider.studentView.activeTimetable.courses.map((item) => item.id),
+        ['course1', 'course3'],
+      );
+      expect(
+        provider.studentView.displayedCourseIdForConflict('unused'),
+        isNull,
+      );
+      expect(provider.studentView.data.conflictDisplayCourseIds, isEmpty);
+      expect(
+        provider.settingsView.courseNameColorValues.containsKey('Physics'),
+        isFalse,
+      );
     });
 
     test('student command and view ports preserve the active timetable and workspace', () async {
@@ -478,10 +502,10 @@ void main() {
         ),
       );
       addTearDown(provider.dispose);
-      await provider.load();
-      await provider.switchTimetable('table2');
-      await provider.switchMode(AppMode.general);
-      final otherBefore = provider.activeTimetable.toJson();
+      await provider.lifecycle.load();
+      await provider.studentCommands.switchTimetable('table2');
+      await provider.workspaces.switchMode(AppMode.general);
+      final otherBefore = provider.studentView.activeTimetable.toJson();
 
       await provider.studentCommands.saveCourse(
         course(id: 'course1', name: 'Updated original'),
@@ -498,8 +522,8 @@ void main() {
             .map((c) => c.name),
         ['Updated original', 'New original'],
       );
-      expect(provider.activeTimetable.toJson(), otherBefore);
-      expect(provider.activeMode, AppMode.general);
+      expect(provider.studentView.activeTimetable.toJson(), otherBefore);
+      expect(provider.workspaceView.activeMode, AppMode.general);
 
       await provider.studentCommands.deleteCourse(
         'course1',
@@ -512,8 +536,8 @@ void main() {
             .map((c) => c.id),
         ['course3'],
       );
-      expect(provider.activeTimetable.toJson(), otherBefore);
-      expect(provider.activeMode, AppMode.general);
+      expect(provider.studentView.activeTimetable.toJson(), otherBefore);
+      expect(provider.workspaceView.activeMode, AppMode.general);
     });
 
     test('explicit course commands reject a removed timetable without fallback or writes', () async {
@@ -536,9 +560,9 @@ void main() {
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
       addTearDown(provider.dispose);
-      await provider.load();
-      await provider.deleteTimetable('table1');
-      final before = provider.appData.toJson();
+      await provider.lifecycle.load();
+      await provider.studentCommands.deleteTimetable('table1');
+      final before = provider.workspaceView.data.toJson();
       final writes = storage.saveCount;
       await expectLater(
         provider.studentCommands.saveCourse(course(), timetableId: 'table1'),
@@ -548,7 +572,7 @@ void main() {
         provider.studentCommands.deleteCourse('course2', timetableId: 'table1'),
         throwsStateError,
       );
-      expect(provider.appData.toJson(), before);
+      expect(provider.workspaceView.data.toJson(), before);
       expect(storage.saveCount, writes);
     });
 
@@ -574,27 +598,29 @@ void main() {
           systemLocaleCodeResolver: () => defaultLocaleCode,
         );
         addTearDown(provider.dispose);
-        await provider.load();
-        await provider.switchTimetable('table2');
-        final before = provider.appData.toJson();
+        await provider.lifecycle.load();
+        await provider.studentCommands.switchTimetable('table2');
+        final before = provider.workspaceView.data.toJson();
         storage.saveFailures.add(StateError('retryable save error'));
         final draft = course(id: 'course3', name: 'Retry target');
         await expectLater(
-          provider.saveCourse(draft, timetableId: 'table1'),
+          provider.studentCommands.saveCourse(draft, timetableId: 'table1'),
           throwsStateError,
         );
-        expect(provider.appData.toJson(), before);
-        await provider.saveCourse(draft, timetableId: 'table1');
+        expect(provider.workspaceView.data.toJson(), before);
+        await provider.studentCommands.saveCourse(draft, timetableId: 'table1');
         expect(
-          provider.timetables
+          provider.studentView.timetables
               .singleWhere((t) => t.id == 'table1')
               .courses
               .where((c) => c.id == draft.id),
           hasLength(1),
         );
-        expect(provider.activeTimetable.id, 'table2');
+        expect(provider.studentView.activeTimetable.id, 'table2');
         expect(
-          provider.activeTimetable.courses.any((c) => c.id == draft.id),
+          provider.studentView.activeTimetable.courses.any(
+            (c) => c.id == draft.id,
+          ),
           isFalse,
         );
         expect(
@@ -618,16 +644,16 @@ void main() {
         ),
       );
 
-      await provider.load();
-      await provider.switchTimetable('table2');
-      await provider.setSelectedWeek(99);
+      await provider.lifecycle.load();
+      await provider.studentCommands.switchTimetable('table2');
+      await provider.studentCommands.setSelectedWeek(99);
 
-      expect(provider.activeTimetable.id, 'table2');
-      expect(provider.selectedWeek, 4);
+      expect(provider.studentView.activeTimetable.id, 'table2');
+      expect(provider.studentView.selectedWeek, 4);
 
-      await provider.switchTimetable('missing');
+      await provider.studentCommands.switchTimetable('missing');
 
-      expect(provider.activeTimetable.id, 'table2');
+      expect(provider.studentView.activeTimetable.id, 'table2');
     });
 
     test('adds, assigns, updates, and protects period time sets', () async {
@@ -641,28 +667,37 @@ void main() {
         ),
       );
 
-      await provider.load();
-      final added = await provider.addPeriodTimeSet(
+      await provider.lifecycle.load();
+      final added = await provider.studentCommands.addPeriodTimeSet(
         name: ' Custom ',
         periodTimes: buildPeriodTimesForCount(3),
       );
-      await provider.assignPeriodTimeSetToTimetable('table2', added.id);
-      await provider.updatePeriodTimeSet(
+      await provider.studentCommands.assignPeriodTimeSetToTimetable(
+        'table2',
+        added.id,
+      );
+      await provider.studentCommands.updatePeriodTimeSet(
         added.copyWith(name: '', periodTimes: const []),
       );
 
-      expect(provider.periodTimeSets, hasLength(2));
-      expect(provider.periodTimeSetForId(added.id)!.name, isNotEmpty);
-      expect(provider.periodTimeSetForId(added.id)!.periodTimes, hasLength(1));
+      expect(provider.studentView.periodTimeSets, hasLength(2));
       expect(
-        provider.timetables
+        provider.studentView.periodTimeSetForId(added.id)!.name,
+        isNotEmpty,
+      );
+      expect(
+        provider.studentView.periodTimeSetForId(added.id)!.periodTimes,
+        hasLength(1),
+      );
+      expect(
+        provider.studentView.timetables
             .singleWhere((item) => item.id == 'table2')
             .config
             .periodTimeSetId,
         added.id,
       );
       expect(
-        () => provider.deletePeriodTimeSet(added.id),
+        () => provider.studentCommands.deletePeriodTimeSet(added.id),
         throwsFormatException,
       );
     });
@@ -688,11 +723,14 @@ void main() {
           secretStore: _MemorySecretStore(),
           schoolSiteService: SchoolSiteService(store: _MemorySchoolSiteStore()),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
-        await provider.updatePeriodTimeSet(periodSet(count: 1));
+        await provider.studentCommands.updatePeriodTimeSet(periodSet(count: 1));
 
-        expect(provider.activeTimetable.courses.single.periods, [1, 2]);
+        expect(provider.studentView.activeTimetable.courses.single.periods, [
+          1,
+          2,
+        ]);
         expect(
           AppData.decodeStorageSnapshot(storage.data!.encode())
               .studentMode
@@ -730,13 +768,17 @@ void main() {
           secretStore: _MemorySecretStore(),
           schoolSiteService: SchoolSiteService(store: _MemorySchoolSiteStore()),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
-        await provider.updateTimetableConfig(
-          provider.activeTimetable.config.copyWith(periodTimeSetId: 'set2'),
+        await provider.studentCommands.updateTimetableConfig(
+          provider.studentView.activeTimetable.config.copyWith(
+            periodTimeSetId: 'set2',
+          ),
         );
 
-        expect(provider.activeTimetable.courses.single.periods, [2]);
+        expect(provider.studentView.activeTimetable.courses.single.periods, [
+          2,
+        ]);
         final decoded = AppData.decodeStorageSnapshot(storage.data!.encode());
         expect(
           decoded.studentMode.timetables.single.config.periodTimeSetId,
@@ -776,14 +818,23 @@ void main() {
         ),
       );
 
-      await provider.load();
-      await provider.setDisplayedCourseForConflict(conflictKey, 'short');
+      await provider.lifecycle.load();
+      await provider.studentCommands.setDisplayedCourseForConflict(
+        conflictKey,
+        'short',
+      );
 
-      expect(provider.displayedCourseIdForConflict(conflictKey), 'short');
+      expect(
+        provider.studentView.displayedCourseIdForConflict(conflictKey),
+        'short',
+      );
 
-      await provider.deleteCourse('short');
+      await provider.studentCommands.deleteCourse('short');
 
-      expect(provider.displayedCourseIdForConflict(conflictKey), isNull);
+      expect(
+        provider.studentView.displayedCourseIdForConflict(conflictKey),
+        isNull,
+      );
     });
 
     test(
@@ -794,13 +845,13 @@ void main() {
           const TimetableExportData(timetables: [], periodTimeSets: []),
         );
 
-        await provider.load();
-        final beforeTimetableIds = provider.timetables
+        await provider.lifecycle.load();
+        final beforeTimetableIds = provider.studentView.timetables
             .map((item) => item.id)
             .toList();
 
         await expectLater(
-          provider.importTimetableJson(
+          provider.transfers.importTimetableJson(
             source,
             mode: TimetableImportMode.addAsNew,
           ),
@@ -813,8 +864,11 @@ void main() {
           ),
         );
 
-        expect(provider.timetables.map((item) => item.id), beforeTimetableIds);
-        expect(provider.activeTimetable.id, 'table1');
+        expect(
+          provider.studentView.timetables.map((item) => item.id),
+          beforeTimetableIds,
+        );
+        expect(provider.studentView.activeTimetable.id, 'table1');
       },
     );
 
@@ -842,18 +896,18 @@ void main() {
           ),
         );
 
-        await provider.load();
-        expect(provider.customSchoolImportApiKey, 'sk-old');
+        await provider.lifecycle.load();
+        expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
         expect(backup, isNot(contains('customApiKey')));
 
-        await provider.importAppDataJson(
+        await provider.backups.importJson(
           backup,
           mode: AppImportMode.replaceAll,
         );
 
         expect(secrets.value, isEmpty);
-        expect(provider.customSchoolImportApiKey, isEmpty);
-        expect(provider.activeTimetable.config.name, 'Restored');
+        expect(provider.settingsView.customSchoolImportApiKey, isEmpty);
+        expect(provider.studentView.activeTimetable.config.name, 'Restored');
       },
     );
 
@@ -880,42 +934,44 @@ void main() {
           ),
         );
 
-        await provider.load();
-        expect(provider.customSchoolImportApiKey, 'sk-old');
+        await provider.lifecycle.load();
+        expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
         storage.saveFailures.add(Exception('disk full'));
 
         await expectLater(
-          provider.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+          provider.backups.importJson(backup, mode: AppImportMode.replaceAll),
           throwsException,
         );
 
         expect(secrets.value, 'sk-old');
-        expect(provider.customSchoolImportApiKey, 'sk-old');
-        expect(provider.activeTimetable.id, 'table1');
+        expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
+        expect(provider.studentView.activeTimetable.id, 'table1');
       },
     );
 
     test('switching app modes preserves student data', () async {
       final provider = providerWith(appData(activeMode: AppMode.general));
 
-      await provider.load();
-      await provider.switchMode(AppMode.student);
-      await provider.saveCourse(course(id: 'course2', name: 'Physics'));
-      await provider.switchMode(AppMode.general);
+      await provider.lifecycle.load();
+      await provider.workspaces.switchMode(AppMode.student);
+      await provider.studentCommands.saveCourse(
+        course(id: 'course2', name: 'Physics'),
+      );
+      await provider.workspaces.switchMode(AppMode.general);
 
-      expect(provider.isGeneralMode, isTrue);
-      expect(provider.activeTimetable.courses.map((item) => item.id), [
-        'course1',
-        'course2',
-      ]);
+      expect(provider.workspaceView.isGeneralMode, isTrue);
+      expect(
+        provider.studentView.activeTimetable.courses.map((item) => item.id),
+        ['course1', 'course2'],
+      );
 
-      await provider.switchMode(AppMode.student);
+      await provider.workspaces.switchMode(AppMode.student);
 
-      expect(provider.isStudentMode, isTrue);
-      expect(provider.activeTimetable.courses.map((item) => item.name), [
-        'Algebra',
-        'Physics',
-      ]);
+      expect(provider.workspaceView.isStudentMode, isTrue);
+      expect(
+        provider.studentView.activeTimetable.courses.map((item) => item.name),
+        ['Algebra', 'Physics'],
+      );
     });
   });
 }

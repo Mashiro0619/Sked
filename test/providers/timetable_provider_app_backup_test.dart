@@ -217,7 +217,7 @@ Future<TimetableProvider> _provider({
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: uiStateSaveDelay,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -242,7 +242,7 @@ void main() {
         secrets: _MemorySecretStore('sk-secret'),
       );
 
-      final source = await provider.exportAppDataJson();
+      final source = await provider.backups.exportJson();
       final backup = decodeAppBackup(source);
 
       expect(ImportExportEnvelope.decode(source).schema, appBackupSchema);
@@ -260,7 +260,7 @@ void main() {
       secrets: _MemorySecretStore(''),
     );
     addTearDown(provider.dispose);
-    await provider.applySchoolImportRequest(
+    await provider.studentCommands.applySchoolImportRequest(
       SchoolImportApplyRequest(
         response: SchoolImportResponse.fromJson({
           'ok': true,
@@ -286,7 +286,7 @@ void main() {
         }),
         mode: TimetableImportMode.addAsNew,
         importBundledPeriodTimeSet: false,
-        targetPeriodTimeSetId: provider.periodTimeSets.first.id,
+        targetPeriodTimeSetId: provider.studentView.periodTimeSets.first.id,
       ),
     );
 
@@ -313,7 +313,7 @@ void main() {
       secrets: _MemorySecretStore(''),
     );
     addTearDown(restarted.dispose);
-    final backup = await restarted.exportAppDataJson();
+    final backup = await restarted.backups.exportJson();
     expectPreserved(decodeAppBackup(backup).appData);
 
     final restoredStorage = _MemoryTimetableStorage(_appData('en'));
@@ -323,10 +323,10 @@ void main() {
       secrets: _MemorySecretStore(''),
     );
     addTearDown(restored.dispose);
-    await restored.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+    await restored.backups.importJson(backup, mode: AppImportMode.replaceAll);
     expectPreserved(restoredStorage.data!);
     expectPreserved(
-      decodeAppBackup(await restored.exportAppDataJson()).appData,
+      decodeAppBackup(await restored.backups.exportJson()).appData,
     );
   });
 
@@ -371,14 +371,14 @@ void main() {
         final appSavesBefore = appStorage.saveCount;
 
         await expectLater(
-          provider.importAppDataJson(
+          provider.backups.importJson(
             encodeAppBackup(_appData('zh'), newSites),
             mode: AppImportMode.replaceAll,
           ),
           throwsA(isA<SchoolSiteRecoveryException>()),
         );
 
-        expect(provider.localeCode, 'en');
+        expect(provider.settingsView.localeCode, 'en');
         expect(appStorage.data!.localeCode, 'en');
         expect(appStorage.saveCount, appSavesBefore);
         expect(siteStore.saveCount, 0);
@@ -400,15 +400,15 @@ void main() {
       );
       final source = encodeAppBackup(_appData('zh'), newSites);
 
-      await provider.importAppDataJson(source, mode: AppImportMode.replaceAll);
+      await provider.backups.importJson(source, mode: AppImportMode.replaceAll);
 
-      expect(provider.localeCode, 'zh');
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.data!.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
         'New University',
       );
-      expect(provider.customSchoolImportApiKey, isEmpty);
+      expect(provider.settingsView.customSchoolImportApiKey, isEmpty);
       expect(secrets.value, isEmpty);
     },
   );
@@ -422,12 +422,12 @@ void main() {
       secrets: _MemorySecretStore(''),
     );
 
-    await provider.importAppDataJson(
+    await provider.backups.importJson(
       encodeAppDataEnvelope(_appData('zh')),
       mode: AppImportMode.replaceAll,
     );
 
-    expect(provider.localeCode, 'zh');
+    expect(provider.settingsView.localeCode, 'zh');
     expect(
       decodeSchoolSitesStrict(siteStore.source!).single.name,
       'Old University',
@@ -452,7 +452,7 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppDataEnvelope(_appData('zh')),
           mode: AppImportMode.replaceAll,
         ),
@@ -465,15 +465,15 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(appStorage.data!.localeCode, 'en');
       expect(secrets.value, 'sk-old');
       expect(journal.source, isNotNull);
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.localeCode, 'zh');
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.data!.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
@@ -506,7 +506,7 @@ void main() {
     final appSavesBefore = appStorage.saveCount;
 
     await expectLater(
-      provider.importAppDataJson(source, mode: AppImportMode.replaceAll),
+      provider.backups.importJson(source, mode: AppImportMode.replaceAll),
       throwsFormatException,
     );
 
@@ -531,7 +531,7 @@ void main() {
     final appSavesBefore = appStorage.saveCount;
 
     await expectLater(
-      provider.importAppDataJson(
+      provider.backups.importJson(
         encodeAppBackup(_appData('zh'), newSites),
         mode: AppImportMode.replaceAll,
       ),
@@ -540,7 +540,7 @@ void main() {
 
     expect(appStorage.saveCount, appSavesBefore);
     expect(siteStore.saveCount, 0);
-    expect(provider.localeCode, 'en');
+    expect(provider.settingsView.localeCode, 'en');
     expect(secrets.value, 'sk-old');
   });
 
@@ -563,18 +563,18 @@ void main() {
     );
     final observedWriteStates = <bool>[];
     provider.session.readiness.addListener(
-      () => observedWriteStates.add(provider.canWrite),
+      () => observedWriteStates.add(provider.session.canWrite),
     );
 
     await expectLater(
-      provider.importAppDataJson(
+      provider.backups.importJson(
         encodeAppBackup(_appData('zh'), newSites),
         mode: AppImportMode.replaceAll,
       ),
       throwsA(isA<AppBackupRestoreJournalStateUnknownException>()),
     );
 
-    expect(provider.canWrite, isFalse);
+    expect(provider.session.canWrite, isFalse);
     expect(observedWriteStates, contains(false));
   });
 
@@ -591,10 +591,10 @@ void main() {
       journal: journal,
       uiStateSaveDelay: const Duration(hours: 1),
     );
-    await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+    await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 2));
 
     await expectLater(
-      provider.importAppDataJson(
+      provider.backups.importJson(
         encodeAppBackup(_appData('zh'), newSites),
         mode: AppImportMode.replaceAll,
       ),
@@ -602,7 +602,7 @@ void main() {
     );
 
     expect(appStorage.data!.generalMode.selectedDateIso, '2026-06-02');
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 2));
     expect(secrets.value, 'sk-old');
   });
 
@@ -623,20 +623,20 @@ void main() {
     );
 
     await expectLater(
-      provider.importAppDataJson(
+      provider.backups.importJson(
         encodeAppBackup(_appData('zh'), newSites),
         mode: AppImportMode.replaceAll,
       ),
       throwsException,
     );
 
-    expect(provider.localeCode, 'en');
+    expect(provider.settingsView.localeCode, 'en');
     expect(appStorage.data!.localeCode, 'en');
     expect(
       decodeSchoolSitesStrict(siteStore.source!).single.name,
       'Old University',
     );
-    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
     expect(secrets.value, 'sk-old');
     expect(journal.source, isNull);
   });
@@ -660,7 +660,7 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
@@ -673,7 +673,7 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(appStorage.data!.localeCode, 'en');
       expect(secrets.value, 'sk-old');
       expect(
@@ -681,9 +681,9 @@ void main() {
         AppBackupRestoreJournalPhase.prepared,
       );
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(appStorage.data!.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
@@ -709,21 +709,21 @@ void main() {
       appStorage.saveFailures.add(Exception('app disk full'));
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
         throwsException,
       );
 
-      expect(provider.localeCode, 'en');
+      expect(provider.settingsView.localeCode, 'en');
       expect(appStorage.data!.localeCode, 'en');
       expect(siteStore.saveCount, 0);
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
         'Old University',
       );
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
     },
   );
@@ -744,7 +744,7 @@ void main() {
     secrets.writeFailures.add(Exception('secure store unavailable'));
 
     await expectLater(
-      provider.importAppDataJson(
+      provider.backups.importJson(
         encodeAppBackup(_appData('zh'), newSites),
         mode: AppImportMode.replaceAll,
       ),
@@ -757,8 +757,8 @@ void main() {
       ),
     );
 
-    expect(provider.canWrite, isFalse);
-    expect(provider.localeCode, 'zh');
+    expect(provider.session.canWrite, isFalse);
+    expect(provider.settingsView.localeCode, 'zh');
     expect(appStorage.data!.localeCode, 'zh');
     expect(appStorage.saveCount, appSavesBefore + 1);
     expect(siteStore.saveCount, 1);
@@ -766,7 +766,7 @@ void main() {
       decodeSchoolSitesStrict(siteStore.source!).single.name,
       'New University',
     );
-    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
     expect(secrets.value, 'sk-old');
     expect(secrets.writeCount, 1);
     expect(
@@ -774,9 +774,9 @@ void main() {
       AppBackupRestoreJournalPhase.dataCommitted,
     );
 
-    await provider.retryStorageLoad();
+    await provider.lifecycle.retryStorageLoad();
 
-    expect(provider.canWrite, isTrue);
+    expect(provider.session.canWrite, isTrue);
     expect(secrets.value, isEmpty);
     expect(journal.source, isNull);
   });
@@ -798,13 +798,13 @@ void main() {
       );
       final observedWriteStates = <bool>[];
       provider.session.readiness.addListener(
-        () => observedWriteStates.add(provider.canWrite),
+        () => observedWriteStates.add(provider.session.canWrite),
       );
       secrets.readFailures.add(Exception('delete readback unavailable'));
       final appSavesBefore = appStorage.saveCount;
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
@@ -817,9 +817,9 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(observedWriteStates, contains(false));
-      expect(provider.localeCode, 'zh');
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.saveCount, appSavesBefore + 1);
       expect(siteStore.saveCount, 1);
       expect(secrets.value, 'sk-old');
@@ -829,10 +829,10 @@ void main() {
         AppBackupRestoreJournalPhase.dataCommitted,
       );
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.localeCode, 'zh');
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.localeCode, 'zh');
       expect(secrets.value, isEmpty);
       expect(journal.source, isNull);
     },
@@ -857,7 +857,7 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
@@ -870,7 +870,7 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(appStorage.data!.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
@@ -883,9 +883,9 @@ void main() {
       );
       final siteSavesBeforeRetry = siteStore.saveCount;
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(siteStore.saveCount, siteSavesBeforeRetry + 1);
       expect(secrets.value, isEmpty);
       expect(journal.source, isNull);
@@ -914,8 +914,8 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.localeCode, 'zh');
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.saveCount, 0);
       expect(siteStore.saveCount, 0);
       expect(secrets.value, isEmpty);
@@ -943,7 +943,7 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
@@ -956,7 +956,7 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(secrets.value, 'sk-old');
       expect(
         (await journal.load()).phase,
@@ -964,9 +964,9 @@ void main() {
       );
       final siteSavesBeforeRetry = siteStore.saveCount;
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(siteStore.saveCount, siteSavesBeforeRetry);
       expect(secrets.value, isEmpty);
       expect(journal.source, isNull);
@@ -993,7 +993,7 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
@@ -1006,7 +1006,7 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(secrets.value, isEmpty);
       expect(
         (await journal.load()).phase,
@@ -1014,9 +1014,9 @@ void main() {
       );
       final siteSavesBeforeRetry = siteStore.saveCount;
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(siteStore.saveCount, siteSavesBeforeRetry);
       expect(appStorage.data!.localeCode, 'zh');
       expect(journal.source, isNull);
@@ -1043,7 +1043,7 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
@@ -1056,15 +1056,15 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(appStorage.data!.localeCode, 'zh');
       expect(secrets.value, isEmpty);
       expect(journal.source, isNull);
       final siteSavesBeforeRetry = siteStore.saveCount;
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(siteStore.saveCount, siteSavesBeforeRetry);
       expect(appStorage.data!.localeCode, 'zh');
     },
@@ -1086,7 +1086,7 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
@@ -1099,8 +1099,8 @@ void main() {
         ),
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.localeCode, 'zh');
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.settingsView.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
         'New University',
@@ -1115,7 +1115,7 @@ void main() {
       final appSavesBeforeRestart = appStorage.saveCount;
       final siteSavesBeforeRestart = siteStore.saveCount;
       await expectLater(
-        provider.updateLocaleCode('ja'),
+        provider.settingsCommands.updateLocaleCode('ja'),
         throwsA(isA<RecoveryWriteBlockedException>()),
       );
       final restarted = await _provider(
@@ -1125,8 +1125,8 @@ void main() {
         journal: journal,
       );
 
-      expect(restarted.canWrite, isTrue);
-      expect(restarted.localeCode, 'zh');
+      expect(restarted.session.canWrite, isTrue);
+      expect(restarted.settingsView.localeCode, 'zh');
       expect(appStorage.saveCount, appSavesBeforeRestart);
       expect(siteStore.saveCount, siteSavesBeforeRestart);
       expect(journal.source, isNull);
@@ -1154,18 +1154,18 @@ void main() {
       );
 
       await expectLater(
-        provider.importAppDataJson(
+        provider.backups.importJson(
           encodeAppBackup(_appData('zh'), newSites),
           mode: AppImportMode.replaceAll,
         ),
         throwsA(isA<AppBackupRestoreException>()),
       );
 
-      expect(provider.localeCode, 'zh');
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.data!.localeCode, 'zh');
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
     },
   );
 
@@ -1180,12 +1180,12 @@ void main() {
       secrets: secrets,
     );
 
-    await provider.importAppDataJson(
+    await provider.backups.importJson(
       encodeAppBackup(_appData('zh'), newSites),
       mode: AppImportMode.replaceAll,
     );
 
-    expect(provider.customSchoolImportApiKey, isEmpty);
+    expect(provider.settingsView.customSchoolImportApiKey, isEmpty);
     expect(secrets.value, isEmpty);
   });
 
@@ -1206,14 +1206,14 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.localeCode, 'zh');
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.localeCode, 'zh');
       expect(appStorage.data!.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
         'New University',
       );
-      expect(provider.customSchoolImportApiKey, isEmpty);
+      expect(provider.settingsView.customSchoolImportApiKey, isEmpty);
       expect(secrets.value, isEmpty);
       expect(journal.source, isNull);
     },
@@ -1241,15 +1241,15 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.localeCode, 'zh');
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.settingsView.localeCode, 'zh');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
       expect(journal.source, isNotNull);
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
         'New University',
@@ -1274,37 +1274,37 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.storageLoadStatus, StorageLoadStatus.corrupt);
-      expect(provider.canStartFreshAfterRecovery, isTrue);
-      expect(provider.localeCode, 'en');
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.lifecycle.storageLoadStatus, StorageLoadStatus.corrupt);
+      expect(provider.lifecycle.canStartFreshAfterRecovery, isTrue);
+      expect(provider.settingsView.localeCode, 'en');
       expect(appStorage.data!.localeCode, 'en');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
         'Old University',
       );
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
       expect(secrets.writeCount, 0);
       expect(journal.source, '{broken-journal');
       expect(journal.recoverySources.values, contains('{broken-journal'));
 
-      await provider.startFreshAfterRecovery();
+      await provider.lifecycle.startFreshAfterRecovery();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(journal.source, isNull);
       expect(
-        provider.recoveryArtifacts,
+        provider.lifecycle.recoveryArtifacts,
         unorderedEquals(journal.recoverySources.keys),
       );
       final artifact = journal.recoverySources.entries
           .singleWhere((entry) => entry.value == '{broken-journal')
           .key;
       expect(
-        utf8.decode((await provider.readRecoveryArtifact(artifact))!),
+        utf8.decode((await provider.lifecycle.readRecoveryArtifact(artifact))!),
         '{broken-journal',
       );
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
 
       final protectedCurrentBackup = journal.recoverySources.entries
@@ -1321,9 +1321,9 @@ void main() {
         secrets: secrets,
         journal: journal,
       );
-      expect(restarted.canWrite, isTrue);
+      expect(restarted.session.canWrite, isTrue);
       expect(
-        restarted.recoveryArtifacts,
+        restarted.lifecycle.recoveryArtifacts,
         unorderedEquals(journal.recoverySources.keys),
       );
     },
@@ -1345,14 +1345,17 @@ void main() {
           .singleWhere((entry) => entry.value == '{current-broken')
           .key;
 
-      await provider.startFreshAfterRecovery();
+      await provider.lifecycle.startFreshAfterRecovery();
 
       final reconciliation =
           jsonDecode(journal.writes.last) as Map<String, dynamic>;
       final data = reconciliation['data']! as Map<String, dynamic>;
       expect(data['recoveryArtifacts'], [currentArtifact]);
-      expect(provider.recoveryArtifacts, contains(historicalArtifact));
-      expect(provider.recoveryArtifacts, contains(currentArtifact));
+      expect(
+        provider.lifecycle.recoveryArtifacts,
+        contains(historicalArtifact),
+      );
+      expect(provider.lifecycle.recoveryArtifacts, contains(currentArtifact));
     },
   );
 
@@ -1378,21 +1381,25 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.recoveryArtifacts, const [recoveryArtifact]);
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.lifecycle.recoveryArtifacts, const [recoveryArtifact]);
       expect(
-        utf8.decode((await provider.readRecoveryArtifact(recoveryArtifact))!),
+        utf8.decode(
+          (await provider.lifecycle.readRecoveryArtifact(recoveryArtifact))!,
+        ),
         source,
       );
       expect(
-        await provider.readRecoveryArtifact(journal.pendingArtifactPath),
+        await provider.lifecycle.readRecoveryArtifact(
+          journal.pendingArtifactPath,
+        ),
         isNull,
       );
 
-      await provider.startFreshAfterRecovery();
+      await provider.lifecycle.startFreshAfterRecovery();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.recoveryArtifacts, contains(recoveryArtifact));
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.lifecycle.recoveryArtifacts, contains(recoveryArtifact));
       final protectedCurrentBackup = journal.recoverySources.entries
           .where((entry) => entry.key != recoveryArtifact)
           .single;
@@ -1419,11 +1426,11 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.storageLoadStatus, StorageLoadStatus.corrupt);
-      expect(provider.canStartFreshAfterRecovery, isFalse);
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.lifecycle.storageLoadStatus, StorageLoadStatus.corrupt);
+      expect(provider.lifecycle.canStartFreshAfterRecovery, isFalse);
       expect(
-        provider.recoveryArtifacts,
+        provider.lifecycle.recoveryArtifacts,
         unorderedEquals([
           journal.pendingArtifactPath,
           'memory://journal/recovery/history',
@@ -1431,22 +1438,24 @@ void main() {
       );
       expect(
         utf8.decode(
-          (await provider.readRecoveryArtifact(journal.pendingArtifactPath))!,
+          (await provider.lifecycle.readRecoveryArtifact(
+            journal.pendingArtifactPath,
+          ))!,
         ),
         '{broken-journal',
       );
       expect(journal.source, '{broken-journal');
 
-      await expectLater(provider.retryStorageLoad(), throwsException);
+      await expectLater(provider.lifecycle.retryStorageLoad(), throwsException);
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.canStartFreshAfterRecovery, isTrue);
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.lifecycle.canStartFreshAfterRecovery, isTrue);
       expect(journal.source, '{broken-journal');
       expect(journal.recoverySources.values, contains('{broken-journal'));
 
-      await provider.startFreshAfterRecovery();
+      await provider.lifecycle.startFreshAfterRecovery();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(journal.source, isNull);
     },
   );
@@ -1467,22 +1476,32 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.storageLoadStatus, StorageLoadStatus.unsupportedVersion);
-      expect(provider.lastRecoveryStatus, RecoveryStatus.unsupportedVersion);
-      expect(provider.canStartFreshAfterRecovery, isFalse);
-      expect(provider.recoveryArtifacts, [journal.pendingArtifactPath]);
+      expect(provider.session.canWrite, isFalse);
+      expect(
+        provider.lifecycle.storageLoadStatus,
+        StorageLoadStatus.unsupportedVersion,
+      );
+      expect(
+        provider.lifecycle.lastRecoveryStatus,
+        RecoveryStatus.unsupportedVersion,
+      );
+      expect(provider.lifecycle.canStartFreshAfterRecovery, isFalse);
+      expect(provider.lifecycle.recoveryArtifacts, [
+        journal.pendingArtifactPath,
+      ]);
       expect(
         utf8.decode(
-          (await provider.readRecoveryArtifact(journal.pendingArtifactPath))!,
+          (await provider.lifecycle.readRecoveryArtifact(
+            journal.pendingArtifactPath,
+          ))!,
         ),
         futureSource,
       );
       expect(journal.source, futureSource);
 
-      await expectLater(provider.retryStorageLoad(), throwsException);
+      await expectLater(provider.lifecycle.retryStorageLoad(), throwsException);
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(journal.source, futureSource);
     },
   );
@@ -1499,20 +1518,20 @@ void main() {
       journal: journal,
     );
 
-    expect(provider.canWrite, isFalse);
-    expect(provider.storageLoadStatus, StorageLoadStatus.ioFailure);
+    expect(provider.session.canWrite, isFalse);
+    expect(provider.lifecycle.storageLoadStatus, StorageLoadStatus.ioFailure);
     expect(
-      provider.recoveryArtifacts,
+      provider.lifecycle.recoveryArtifacts,
       unorderedEquals([
         journal.pendingArtifactPath,
         'memory://journal/recovery/history',
       ]),
     );
 
-    await provider.retryStorageLoad();
+    await provider.lifecycle.retryStorageLoad();
 
-    expect(provider.canWrite, isTrue);
-    expect(provider.storageLoadStatus, StorageLoadStatus.success);
+    expect(provider.session.canWrite, isTrue);
+    expect(provider.lifecycle.storageLoadStatus, StorageLoadStatus.success);
   });
 
   test(
@@ -1539,20 +1558,20 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.storageLoadStatus, StorageLoadStatus.ioFailure);
-      expect(provider.localeCode, 'en');
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.lifecycle.storageLoadStatus, StorageLoadStatus.ioFailure);
+      expect(provider.settingsView.localeCode, 'en');
       expect(appStorage.saveCount, appWritesBeforeLoad);
       expect(siteStore.saveCount, siteWritesBeforeLoad);
       expect(journal.writeAttemptCount, journalWritesBeforeLoad);
       expect(secrets.value, 'sk-old');
       expect(journal.source, isNull);
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.storageLoadStatus, StorageLoadStatus.success);
-      expect(provider.localeCode, 'en');
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.lifecycle.storageLoadStatus, StorageLoadStatus.success);
+      expect(provider.settingsView.localeCode, 'en');
       expect(appStorage.saveCount, appWritesBeforeLoad);
       expect(siteStore.saveCount, siteWritesBeforeLoad);
       expect(journal.writeAttemptCount, journalWritesBeforeLoad);
@@ -1580,30 +1599,30 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.storageLoadStatus, StorageLoadStatus.corrupt);
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.lifecycle.storageLoadStatus, StorageLoadStatus.corrupt);
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
       expect(journal.source, '{broken-journal');
 
       await expectLater(
-        provider.startFreshAfterRecovery(),
+        provider.lifecycle.startFreshAfterRecovery(),
         throwsA(isA<SchoolSiteStoreStateUnknownException>()),
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       final pending = await journal.load();
       expect(pending.status, AppBackupRestoreJournalLoadStatus.valid);
       expect(pending.apiKeyPolicy, AppBackupRestoreApiKeyPolicy.preserve);
       expect(
-        provider.recoveryArtifacts,
+        provider.lifecycle.recoveryArtifacts,
         containsAll(pending.recoveryArtifacts),
       );
 
-      await provider.retryStorageLoad();
+      await provider.lifecycle.retryStorageLoad();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.customSchoolImportApiKey, 'sk-old');
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
       expect(secrets.value, 'sk-old');
       expect(journal.source, isNull);
     },
@@ -1627,12 +1646,12 @@ void main() {
         journal: journal,
       );
 
-      expect(provider.canWrite, isFalse);
+      expect(provider.session.canWrite, isFalse);
       expect(journal.source, '{broken-journal');
 
-      await provider.startFreshAfterRecovery();
+      await provider.lifecycle.startFreshAfterRecovery();
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.session.canWrite, isTrue);
       expect(journal.source, isNull);
       expect(journal.recoverySources.values, contains('{broken-journal'));
     },
@@ -1658,12 +1677,12 @@ void main() {
         SchoolSite(name: 'Final University', loginUrl: 'https://final.test'),
       ];
 
-      final firstRestore = provider.importAppDataJson(
+      final firstRestore = provider.backups.importJson(
         encodeAppBackup(_appData('zh'), newSites),
         mode: AppImportMode.replaceAll,
       );
       await firstSiteSaveStarted;
-      final secondRestore = provider.importAppDataJson(
+      final secondRestore = provider.backups.importJson(
         encodeAppBackup(_appData('ja'), finalSites),
         mode: AppImportMode.replaceAll,
       );
@@ -1675,7 +1694,7 @@ void main() {
       firstSiteSaveGate.complete();
       await Future.wait([firstRestore, secondRestore]);
 
-      expect(provider.localeCode, 'ja');
+      expect(provider.settingsView.localeCode, 'ja');
       expect(appStorage.data!.localeCode, 'ja');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,

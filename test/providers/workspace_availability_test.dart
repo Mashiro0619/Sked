@@ -41,7 +41,7 @@ void main() {
       activeMode: AppMode.general,
     );
     await general.updateThemeColorMode(themeColorModeColorful);
-    final calendar = p.generalSchedules.first;
+    final calendar = p.generalView.schedules.first;
     await general.updateGeneralScheduleColor(calendar.id, 0xff123456);
     final student = WorkspaceThemeTarget(
       settings: p.settingsView,
@@ -50,9 +50,12 @@ void main() {
       generalCommands: p.generalCommands,
       activeMode: AppMode.student,
     );
-    final courseName = p.timetables.expand((table) => table.courses).first.name;
+    final courseName = p.studentView.timetables
+        .expand((table) => table.courses)
+        .first
+        .name;
     await student.updateCourseNameColorValue(courseName, 0xff654321);
-    expect(p.activeMode, AppMode.student);
+    expect(p.workspaceView.activeMode, AppMode.student);
     expect(general.themeColorMode, themeColorModeColorful);
     expect(general.generalSchedules.first.colorValue, 0xff123456);
     expect(
@@ -66,52 +69,55 @@ void main() {
     () async {
       final p = await workspaceProvider();
       addTearDown(p.dispose);
-      final before = p.appData;
+      final before = p.workspaceView.data;
       final backup = encodeAppBackup(before, []);
-      final unregister = p.registerWorkspaceExitGuard(
+      final unregister = p.workspaces.registerExitGuard(
         AppMode.student,
         () async => false,
       );
       await expectLater(
-        p.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+        p.backups.importJson(backup, mode: AppImportMode.replaceAll),
         throwsA(isA<WorkspaceChangeCancelledException>()),
       );
-      expect(p.appData, same(before));
+      expect(p.workspaceView.data, same(before));
       unregister();
     },
   );
   test('native close flushes state but respects draft veto', () async {
     final p = await workspaceProvider();
     addTearDown(p.dispose);
-    final unregister = p.registerWorkspaceExitGuard(
+    final unregister = p.workspaces.registerExitGuard(
       AppMode.general,
       () async => false,
     );
-    expect(await p.prepareForWindowClose(), isFalse);
+    expect(await p.shutdown.prepareForWindowClose(), isFalse);
     unregister();
-    expect(await p.prepareForWindowClose(), isTrue);
+    expect(await p.shutdown.prepareForWindowClose(), isTrue);
   });
 
   TestWidgetsFlutterBinding.ensureInitialized();
   test('full backup retains disabled data and restores its availability without secrets', () async {
     final p = await workspaceProvider(mode: AppMode.general);
     addTearDown(p.dispose);
-    await p.updateCustomSchoolImportApiKey('never-in-a-backup');
-    final student = p.studentMode.toJson();
-    await p.setWorkspaceEnabled(AppMode.student, false);
-    final backup = await p.exportAppDataJson();
+    await p.schoolImportSecrets.update('never-in-a-backup');
+    final student = p.studentView.data.toJson();
+    await p.workspaces.setEnabled(AppMode.student, false);
+    final backup = await p.backups.exportJson();
     expect(backup, isNot(contains('never-in-a-backup')));
     expect(decodeAppBackup(backup).appData.enabledWorkspaces, {
       AppMode.general,
     });
     expect(decodeAppBackup(backup).appData.studentMode.toJson(), student);
-    await p.setWorkspaceEnabled(AppMode.student, true);
-    await p.updateThemeSeedColorValue(0xff123456, workspace: AppMode.student);
-    await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
-    expect(p.enabledWorkspaces, {AppMode.general});
-    expect(p.activeMode, AppMode.general);
-    expect(p.studentMode.toJson(), student);
-    expect(p.customSchoolImportApiKey, isEmpty);
+    await p.workspaces.setEnabled(AppMode.student, true);
+    await p.settingsCommands.updateThemeSeedColorValue(
+      0xff123456,
+      workspace: AppMode.student,
+    );
+    await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
+    expect(p.workspaceView.enabledWorkspaces, {AppMode.general});
+    expect(p.workspaceView.activeMode, AppMode.general);
+    expect(p.studentView.data.toJson(), student);
+    expect(p.settingsView.customSchoolImportApiKey, isEmpty);
   });
 
   test(
@@ -120,23 +126,23 @@ void main() {
       final p = await workspaceProvider();
       addTearDown(p.dispose);
       final backup = encodeAppBackup(
-        p.appData.copyWith(
+        p.workspaceView.data.copyWith(
           enabledWorkspaces: {AppMode.general},
           activeMode: AppMode.general,
         ),
         [],
       );
-      final unregister = p.registerWorkspaceExitGuard(
+      final unregister = p.workspaces.registerExitGuard(
         AppMode.student,
         () async => false,
       );
       addTearDown(unregister);
       await expectLater(
-        p.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+        p.backups.importJson(backup, mode: AppImportMode.replaceAll),
         throwsA(isA<WorkspaceChangeCancelledException>()),
       );
-      expect(p.enabledWorkspaces, AppMode.values.toSet());
-      expect(p.activeMode, AppMode.student);
+      expect(p.workspaceView.enabledWorkspaces, AppMode.values.toSet());
+      expect(p.workspaceView.activeMode, AppMode.student);
     },
   );
 
@@ -146,7 +152,7 @@ void main() {
       storage: storage,
       systemLocaleCodeResolver: () => 'en',
     );
-    await provider.load();
+    await provider.lifecycle.load();
     addTearDown(provider.dispose);
     return (provider, storage);
   }
@@ -158,21 +164,24 @@ void main() {
       final student = storage.data.studentMode.toJson();
       final general = storage.data.generalMode.toJson();
       storage.gate = Completer<void>();
-      final operation = provider.setWorkspaceEnabled(AppMode.student, false);
+      final operation = provider.workspaces.setEnabled(AppMode.student, false);
       await Future<void>.delayed(Duration.zero);
-      expect(provider.activeMode, AppMode.student);
-      expect(provider.enabledWorkspaces, AppMode.values.toSet());
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(provider.workspaceView.enabledWorkspaces, AppMode.values.toSet());
       storage.gate!.complete();
       await operation;
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.enabledWorkspaces, {AppMode.general});
-      await expectLater(provider.switchMode(AppMode.student), throwsStateError);
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.workspaceView.enabledWorkspaces, {AppMode.general});
       await expectLater(
-        provider.setWorkspaceEnabled(AppMode.general, false),
+        provider.workspaces.switchMode(AppMode.student),
         throwsStateError,
       );
-      await provider.setWorkspaceEnabled(AppMode.student, true);
-      expect(provider.activeMode, AppMode.general);
+      await expectLater(
+        provider.workspaces.setEnabled(AppMode.general, false),
+        throwsStateError,
+      );
+      await provider.workspaces.setEnabled(AppMode.student, true);
+      expect(provider.workspaceView.activeMode, AppMode.general);
       expect(storage.data.studentMode.toJson(), student);
       expect(storage.data.generalMode.toJson(), general);
       expect(
@@ -186,25 +195,27 @@ void main() {
     () async {
       final (provider, storage) = await setup();
       storage.gate = Completer<void>();
-      final original = provider.committedAppData;
+      final original = provider.session.committedData;
       // An ordinary preference write is optimistic in AppRepository.current.
-      final write = provider.updateThemeMode('dark');
+      final write = provider.settingsCommands.updateThemeMode('dark');
       await Future<void>.delayed(Duration.zero);
-      expect(provider.committedAppData, same(original));
+      expect(provider.session.committedData, same(original));
       storage.gate!.complete();
       await write;
-      expect(provider.committedAppData, same(storage.data));
+      expect(provider.session.committedData, same(storage.data));
 
       storage.gate = Completer<void>();
-      final disable = provider.setWorkspaceEnabled(AppMode.student, false);
+      final disable = provider.workspaces.setEnabled(AppMode.student, false);
       await Future<void>.delayed(Duration.zero);
       expect(
-        provider.committedAppData.enabledWorkspaces,
+        provider.session.committedData.enabledWorkspaces,
         AppMode.values.toSet(),
       );
       storage.gate!.complete();
       await disable;
-      expect(provider.committedAppData.enabledWorkspaces, {AppMode.general});
+      expect(provider.session.committedData.enabledWorkspaces, {
+        AppMode.general,
+      });
     },
   );
 
@@ -212,22 +223,25 @@ void main() {
     final (provider, storage) = await setup();
     storage.error = StateError('disk full');
     await expectLater(
-      provider.setWorkspaceEnabled(AppMode.student, false),
+      provider.workspaces.setEnabled(AppMode.student, false),
       throwsStateError,
     );
-    expect(provider.activeMode, AppMode.student);
-    expect(provider.enabledWorkspaces, AppMode.values.toSet());
-    expect(provider.committedAppData.enabledWorkspaces, AppMode.values.toSet());
+    expect(provider.workspaceView.activeMode, AppMode.student);
+    expect(provider.workspaceView.enabledWorkspaces, AppMode.values.toSet());
+    expect(
+      provider.session.committedData.enabledWorkspaces,
+      AppMode.values.toSet(),
+    );
     expect(storage.data.enabledWorkspaces, AppMode.values.toSet());
-    await provider.setWorkspaceEnabled(AppMode.student, false);
-    expect(provider.enabledWorkspaces, {AppMode.general});
+    await provider.workspaces.setEnabled(AppMode.student, false);
+    expect(provider.workspaceView.enabledWorkspaces, {AppMode.general});
   });
   test('serial requests cannot disable the last workspace', () async {
     final (provider, _) = await setup();
-    final first = provider.setWorkspaceEnabled(AppMode.student, false);
-    final second = provider.setWorkspaceEnabled(AppMode.general, false);
+    final first = provider.workspaces.setEnabled(AppMode.student, false);
+    final second = provider.workspaces.setEnabled(AppMode.general, false);
     await first;
     await expectLater(second, throwsStateError);
-    expect(provider.enabledWorkspaces, {AppMode.general});
+    expect(provider.workspaceView.enabledWorkspaces, {AppMode.general});
   });
 }

@@ -33,7 +33,7 @@ Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -46,23 +46,23 @@ void main() {
       );
       final provider = await _providerFor(storage);
       addTearDown(provider.dispose);
-      expect(provider.remindHiddenGeneralCalendars, isFalse);
-      await provider.updateRemindHiddenGeneralCalendars(false);
+      expect(provider.settingsView.remindHiddenGeneralCalendars, isFalse);
+      await provider.settingsCommands.updateRemindHiddenGeneralCalendars(false);
       expect(storage.saveCount, 0);
-      await provider.updateRemindHiddenGeneralCalendars(true);
-      expect(provider.remindHiddenGeneralCalendars, isTrue);
+      await provider.settingsCommands.updateRemindHiddenGeneralCalendars(true);
+      expect(provider.settingsView.remindHiddenGeneralCalendars, isTrue);
       expect(
         storage.data!.notificationSettings.remindHiddenGeneralCalendars,
         isTrue,
       );
-      await provider.updateRemindHiddenGeneralCalendars(true);
+      await provider.settingsCommands.updateRemindHiddenGeneralCalendars(true);
       expect(storage.saveCount, 1);
       storage.nextSaveError = StateError('save failed');
       await expectLater(
-        provider.updateRemindHiddenGeneralCalendars(false),
+        provider.settingsCommands.updateRemindHiddenGeneralCalendars(false),
         throwsStateError,
       );
-      expect(provider.remindHiddenGeneralCalendars, isTrue);
+      expect(provider.settingsView.remindHiddenGeneralCalendars, isTrue);
       expect(
         storage.data!.notificationSettings.remindHiddenGeneralCalendars,
         isTrue,
@@ -79,10 +79,10 @@ void main() {
       final provider = await _providerFor(storage);
       addTearDown(provider.dispose);
       expect(
-        provider.workspacePanelDisplayMode,
+        provider.settingsView.workspacePanelDisplayMode,
         WorkspacePanelDisplayMode.overlay,
       );
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.overlay,
       );
       expect(storage.saveCount, 0);
@@ -90,30 +90,30 @@ void main() {
         WorkspacePanelDisplayMode.sideBySide,
         WorkspacePanelDisplayMode.automatic,
       ]) {
-        await provider.updateWorkspacePanelDisplayMode(mode);
-        expect(provider.workspacePanelDisplayMode, mode);
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(mode);
+        expect(provider.settingsView.workspacePanelDisplayMode, mode);
         expect(storage.data!.workspacePanelDisplayMode, mode);
         final reloaded = await _providerFor(storage);
-        expect(reloaded.workspacePanelDisplayMode, mode);
+        expect(reloaded.settingsView.workspacePanelDisplayMode, mode);
         reloaded.dispose();
       }
       expect(storage.saveCount, 2);
       storage.nextSaveError = StateError('save failed');
       await expectLater(
-        provider.updateWorkspacePanelDisplayMode(
+        provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.overlay,
         ),
         throwsStateError,
       );
       expect(
-        provider.workspacePanelDisplayMode,
+        provider.settingsView.workspacePanelDisplayMode,
         WorkspacePanelDisplayMode.automatic,
       );
       expect(
         storage.data!.workspacePanelDisplayMode,
         WorkspacePanelDisplayMode.automatic,
       );
-      expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+      expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
     },
   );
 
@@ -126,20 +126,20 @@ void main() {
       final provider = await _providerFor(storage);
       addTearDown(provider.dispose);
 
-      expect(provider.hideHomeWorkspaceNavigation, isFalse);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
 
-      await provider.updateHideHomeWorkspaceNavigation(true);
+      await provider.settingsCommands.updateHideHomeWorkspaceNavigation(true);
 
-      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
       expect(storage.data!.hideHomeWorkspaceNavigation, isTrue);
 
       storage.nextSaveError = StateError('save failed');
       await expectLater(
-        provider.updateHideHomeWorkspaceNavigation(false),
+        provider.settingsCommands.updateHideHomeWorkspaceNavigation(false),
         throwsStateError,
       );
 
-      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
       expect(storage.data!.hideHomeWorkspaceNavigation, isTrue);
     },
   );
@@ -153,22 +153,24 @@ void main() {
       final provider = await _providerFor(storage);
       addTearDown(provider.dispose);
 
-      expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+      expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
 
-      await provider.updateHomeWorkspaceNavigationCollapsed(true);
+      await provider.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+        true,
+      );
 
       expect(storage.saveCount, 1);
-      expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
       expect(storage.data!.homeWorkspaceNavigationCollapsed, isTrue);
 
       storage.nextSaveError = StateError('save failed');
       await expectLater(
-        provider.updateHomeWorkspaceNavigationCollapsed(false),
+        provider.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false),
         throwsStateError,
       );
 
       expect(storage.saveCount, 2);
-      expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
       expect(storage.data!.homeWorkspaceNavigationCollapsed, isTrue);
     },
   );
@@ -190,7 +192,8 @@ void main() {
           generalCommands: provider.generalCommands,
           activeMode: AppMode.student,
         );
-        final originalGeneral = provider.appData.generalMode.toJson();
+        final originalGeneral = provider.workspaceView.data.generalMode
+            .toJson();
 
         await target.updateColorfulCourseTextSettings(
           mode: colorfulCourseTextColorModeCustom,
@@ -198,7 +201,7 @@ void main() {
         );
 
         expect(storage.saveCount, 1);
-        expect(provider.activeMode, activeMode);
+        expect(provider.workspaceView.activeMode, activeMode);
         expect(
           target.colorfulCourseTextColorMode,
           colorfulCourseTextColorModeCustom,
@@ -207,7 +210,10 @@ void main() {
           target.colorfulUiColorValues[colorfulCourseTextColorKey],
           0xFF123456,
         );
-        expect(provider.appData.generalMode.toJson(), originalGeneral);
+        expect(
+          provider.workspaceView.data.generalMode.toJson(),
+          originalGeneral,
+        );
         expect(
           storage
               .data!
@@ -233,7 +239,7 @@ void main() {
         );
         final provider = await _providerFor(storage);
         addTearDown(provider.dispose);
-        final original = provider.appData.toJson();
+        final original = provider.workspaceView.data.toJson();
         storage.nextSaveError = StateError('save failed');
 
         await expectLater(
@@ -250,7 +256,7 @@ void main() {
           throwsStateError,
         );
 
-        expect(provider.appData.toJson(), original);
+        expect(provider.workspaceView.data.toJson(), original);
         expect(storage.data!.toJson(), original);
       },
     );
@@ -262,20 +268,23 @@ void main() {
     );
     final provider = await _providerFor(storage);
 
-    await provider.updateCustomSchoolImportTextSettings(
+    await provider.settingsCommands.updateCustomSchoolImportTextSettings(
       baseUrl: ' https://parser.example/v1 ',
       model: ' model-a ',
       prompt: ' prompt-a ',
     );
 
     expect(storage.saveCount, 1);
-    expect(provider.customSchoolImportBaseUrl, 'https://parser.example/v1');
-    expect(provider.customSchoolImportModel, 'model-a');
-    expect(provider.customSchoolImportPrompt, 'prompt-a');
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://parser.example/v1',
+    );
+    expect(provider.settingsView.customSchoolImportModel, 'model-a');
+    expect(provider.settingsView.customSchoolImportPrompt, 'prompt-a');
 
     storage.nextSaveError = StateError('save failed');
     await expectLater(
-      provider.updateCustomSchoolImportTextSettings(
+      provider.settingsCommands.updateCustomSchoolImportTextSettings(
         baseUrl: 'https://other.example/v1',
         model: 'model-b',
         prompt: 'prompt-b',
@@ -284,9 +293,12 @@ void main() {
     );
 
     expect(storage.saveCount, 2);
-    expect(provider.customSchoolImportBaseUrl, 'https://parser.example/v1');
-    expect(provider.customSchoolImportModel, 'model-a');
-    expect(provider.customSchoolImportPrompt, 'prompt-a');
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://parser.example/v1',
+    );
+    expect(provider.settingsView.customSchoolImportModel, 'model-a');
+    expect(provider.settingsView.customSchoolImportPrompt, 'prompt-a');
   });
 
   test(
@@ -298,10 +310,10 @@ void main() {
       final provider = await _providerFor(storage);
       addTearDown(provider.dispose);
       final commits = <AppDataCommit>[];
-      final subscription = provider.committedData.listen(commits.add);
+      final subscription = provider.session.commits.listen(commits.add);
       addTearDown(subscription.cancel);
 
-      await provider.updateNotificationSettings(
+      await provider.settingsCommands.updateNotificationSettings(
         enabled: true,
         courseDefaultMinutesBefore: 10,
         generalDefaultMinutesBefore: 30,
@@ -310,30 +322,33 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(storage.saveCount, 1);
-      expect(provider.notificationsEnabled, isTrue);
-      expect(provider.courseDefaultMinutesBefore, 10);
-      expect(provider.generalDefaultMinutesBefore, 30);
-      expect(provider.lockScreenShowTitles, isTrue);
-      expect(storage.data!.notificationSettings, provider.notificationSettings);
+      expect(provider.settingsView.notificationsEnabled, isTrue);
+      expect(provider.settingsView.courseDefaultMinutesBefore, 10);
+      expect(provider.settingsView.generalDefaultMinutesBefore, 30);
+      expect(provider.settingsView.lockScreenShowTitles, isTrue);
+      expect(
+        storage.data!.notificationSettings,
+        provider.settingsView.notificationSettings,
+      );
       expect(commits, hasLength(1));
       expect(commits.single.snapshot.notificationSettings.enabled, isTrue);
 
-      await provider.updateNotificationSettings();
+      await provider.settingsCommands.updateNotificationSettings();
       await Future<void>.delayed(Duration.zero);
       expect(storage.saveCount, 1);
       expect(commits, hasLength(1));
 
-      await provider.updateCourseDefaultReminder(null);
-      await provider.updateGeneralDefaultReminder(5);
-      await provider.updateLockScreenShowTitles(false);
-      await provider.updateNotificationsEnabled(false);
+      await provider.settingsCommands.updateCourseDefaultReminder(null);
+      await provider.settingsCommands.updateGeneralDefaultReminder(5);
+      await provider.settingsCommands.updateLockScreenShowTitles(false);
+      await provider.settingsCommands.updateNotificationsEnabled(false);
       await Future<void>.delayed(Duration.zero);
 
       expect(storage.saveCount, 5);
-      expect(provider.notificationsEnabled, isFalse);
-      expect(provider.courseDefaultMinutesBefore, isNull);
-      expect(provider.generalDefaultMinutesBefore, 5);
-      expect(provider.lockScreenShowTitles, isFalse);
+      expect(provider.settingsView.notificationsEnabled, isFalse);
+      expect(provider.settingsView.courseDefaultMinutesBefore, isNull);
+      expect(provider.settingsView.generalDefaultMinutesBefore, 5);
+      expect(provider.settingsView.lockScreenShowTitles, isFalse);
       expect(commits.map((item) => item.revision), [1, 2, 3, 4, 5]);
     },
   );
@@ -347,12 +362,12 @@ void main() {
       final provider = await _providerFor(storage);
       addTearDown(provider.dispose);
       final commits = <AppDataCommit>[];
-      final subscription = provider.committedData.listen(commits.add);
+      final subscription = provider.session.commits.listen(commits.add);
       addTearDown(subscription.cancel);
       storage.nextSaveError = StateError('save failed');
 
       await expectLater(
-        provider.updateNotificationSettings(
+        provider.settingsCommands.updateNotificationSettings(
           enabled: true,
           courseDefaultMinutesBefore: 10,
           generalDefaultMinutesBefore: 30,
@@ -363,7 +378,10 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(storage.saveCount, 1);
-      expect(provider.notificationSettings, const NotificationSettings());
+      expect(
+        provider.settingsView.notificationSettings,
+        const NotificationSettings(),
+      );
       expect(storage.data!.notificationSettings, const NotificationSettings());
       expect(commits, isEmpty);
     },

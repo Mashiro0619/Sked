@@ -40,20 +40,29 @@ void main() {
         final provider = await workspaceProvider(storage: storage);
         addTearDown(provider.dispose);
         final commits = <AppDataCommit>[];
-        final subscription = provider.committedData.listen(commits.add);
+        final subscription = provider.session.commits.listen(commits.add);
         addTearDown(subscription.cancel);
 
-        final disable = provider.setWorkspaceEnabled(AppMode.student, false);
+        final disable = provider.workspaces.setEnabled(AppMode.student, false);
         final completion = fails
             ? expectLater(disable, throwsStateError)
             : disable;
         await storage.started.future;
 
-        expect(provider.activeMode, AppMode.student);
-        expect(provider.enabledWorkspaces, AppMode.values.toSet());
-        expect(provider.appData.activeMode, provider.activeMode);
-        expect(provider.appData.enabledWorkspaces, provider.enabledWorkspaces);
-        expect(provider.appData.themeSeedColorValue, 0xff123456);
+        expect(provider.workspaceView.activeMode, AppMode.student);
+        expect(
+          provider.workspaceView.enabledWorkspaces,
+          AppMode.values.toSet(),
+        );
+        expect(
+          provider.workspaceView.data.activeMode,
+          provider.workspaceView.activeMode,
+        );
+        expect(
+          provider.workspaceView.data.enabledWorkspaces,
+          provider.workspaceView.enabledWorkspaces,
+        );
+        expect(provider.workspaceView.data.themeSeedColorValue, 0xff123456);
         expect(
           WorkspaceThemeTarget(
             settings: provider.settingsView,
@@ -74,11 +83,14 @@ void main() {
           ).themeSeedColorValue,
           0xffabcdef,
         );
-        expect(provider.committedAppData, same(original));
+        expect(provider.session.committedData, same(original));
         expect(commits, isEmpty);
         // A valid read snapshot must not permit edits to the pending disable.
         await expectLater(
-          provider.updateThemeMode('dark', workspace: AppMode.student),
+          provider.settingsCommands.updateThemeMode(
+            'dark',
+            workspace: AppMode.student,
+          ),
           throwsStateError,
         );
 
@@ -90,21 +102,27 @@ void main() {
         final expectedWorkspaces = fails
             ? AppMode.values.toSet()
             : {AppMode.general};
-        expect(provider.activeMode, expectedMode);
-        expect(provider.appData.activeMode, expectedMode);
-        expect(provider.enabledWorkspaces, expectedWorkspaces);
-        expect(provider.appData.enabledWorkspaces, expectedWorkspaces);
-        expect(storage.data.enabledWorkspaces, expectedWorkspaces);
-        expect(provider.committedAppData.enabledWorkspaces, expectedWorkspaces);
+        expect(provider.workspaceView.activeMode, expectedMode);
+        expect(provider.workspaceView.data.activeMode, expectedMode);
+        expect(provider.workspaceView.enabledWorkspaces, expectedWorkspaces);
         expect(
-          provider.themeDataFor(expectedMode).themeSeedColorValue,
+          provider.workspaceView.data.enabledWorkspaces,
+          expectedWorkspaces,
+        );
+        expect(storage.data.enabledWorkspaces, expectedWorkspaces);
+        expect(
+          provider.session.committedData.enabledWorkspaces,
+          expectedWorkspaces,
+        );
+        expect(
+          provider.settingsView.themeDataFor(expectedMode).themeSeedColorValue,
           fails ? 0xff123456 : 0xffabcdef,
         );
         expect(commits, hasLength(fails ? 0 : 1));
         if (!fails) {
           expect(commits.single.snapshot.enabledWorkspaces, expectedWorkspaces);
           expect(
-            () => provider.themeDataFor(AppMode.student),
+            () => provider.settingsView.themeDataFor(AppMode.student),
             throwsStateError,
           );
         }
@@ -117,16 +135,19 @@ void main() {
     final provider = await workspaceProvider(storage: storage);
     addTearDown(provider.dispose);
 
-    final switching = provider.switchMode(AppMode.general);
+    final switching = provider.workspaces.switchMode(AppMode.general);
     await storage.started.future;
-    expect(provider.activeMode, AppMode.student);
-    expect(provider.appData.activeMode, AppMode.student);
-    expect(provider.appData.themeSeedColorValue, provider.themeSeedColorValue);
+    expect(provider.workspaceView.activeMode, AppMode.student);
+    expect(provider.workspaceView.data.activeMode, AppMode.student);
+    expect(
+      provider.workspaceView.data.themeSeedColorValue,
+      provider.settingsView.themeSeedColorValue,
+    );
 
     storage.pending.complete();
     await switching;
-    expect(provider.activeMode, AppMode.general);
-    expect(provider.appData.activeMode, AppMode.general);
-    expect(provider.appData.themeSeedColorValue, 0xffabcdef);
+    expect(provider.workspaceView.activeMode, AppMode.general);
+    expect(provider.workspaceView.data.activeMode, AppMode.general);
+    expect(provider.workspaceView.data.themeSeedColorValue, 0xffabcdef);
   });
 }
