@@ -108,7 +108,24 @@ void main() {
   test(
     'pending mode save does not leak target theme through provider getters',
     () async {
-      final base = _initialApp().copyWith(activeMode: AppMode.student);
+      final seed = _initialApp();
+      final timetable = TimetableData(
+        id: 'pending-theme-table',
+        config: TimetableConfig(
+          name: 'Pending theme',
+          startDate: DateTime(2026, 1, 5),
+          totalWeeks: 18,
+          periodTimeSetId: defaultPeriodTimeSetId,
+        ),
+        courses: const [],
+      );
+      final base = seed.copyWith(
+        activeMode: AppMode.student,
+        studentMode: seed.studentMode.copyWith(
+          activeTimetableId: timetable.id,
+          timetables: [timetable],
+        ),
+      );
       final initial = base.copyWith(
         studentMode: base.studentMode.copyWith(
           themeMode: 'dark',
@@ -133,7 +150,9 @@ void main() {
       expect(provider.activeMode, AppMode.student);
       expect(provider.themeMode, 'dark');
       expect(provider.themeSeedColorValue, 0xFF112233);
-      provider.notifyListeners();
+      final nextWeek = provider.studentView.selectedWeek == 1 ? 2 : 1;
+      await provider.studentCommands.setSelectedWeek(nextWeek);
+      expect(provider.studentView.selectedWeek, nextWeek);
       expect(provider.activeMode, AppMode.student);
       expect(provider.themeMode, 'dark');
 
@@ -405,7 +424,7 @@ void main() {
         const StorageWriteException('storage unavailable'),
       );
       var notifications = 0;
-      provider.addListener(() => notifications += 1);
+      provider.session.readiness.addListener(() => notifications += 1);
 
       await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
       final notificationsAfterEdit = notifications;
@@ -431,7 +450,8 @@ void main() {
       storage.onSaveStarted = (_) => started.complete();
       storage.saveGates.add(gate);
       var notifications = 0;
-      provider.addListener(() => notifications += 1);
+      provider.generalView.addListener(() => notifications += 1);
+      provider.session.readiness.addListener(() => notifications += 1);
 
       await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
       final notificationsBeforeDispose = notifications;
@@ -496,7 +516,8 @@ void main() {
       storage.saveErrors.add(const StorageWriteException('disk unavailable'));
       storage.onSaveStarted = (_) => started.complete();
       var notifications = 0;
-      provider.addListener(() => notifications += 1);
+      provider.generalView.addListener(() => notifications += 1);
+      provider.session.readiness.addListener(() => notifications += 1);
 
       await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
       final notificationsBeforeDispose = notifications;

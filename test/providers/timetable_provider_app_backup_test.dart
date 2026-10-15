@@ -562,7 +562,9 @@ void main() {
       journal: journal,
     );
     final observedWriteStates = <bool>[];
-    provider.addListener(() => observedWriteStates.add(provider.canWrite));
+    provider.session.readiness.addListener(
+      () => observedWriteStates.add(provider.canWrite),
+    );
 
     await expectLater(
       provider.importAppDataJson(
@@ -795,7 +797,9 @@ void main() {
         journal: journal,
       );
       final observedWriteStates = <bool>[];
-      provider.addListener(() => observedWriteStates.add(provider.canWrite));
+      provider.session.readiness.addListener(
+        () => observedWriteStates.add(provider.canWrite),
+      );
       secrets.readFailures.add(Exception('delete readback unavailable'));
       final appSavesBefore = appStorage.saveCount;
 

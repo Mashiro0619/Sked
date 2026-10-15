@@ -339,7 +339,9 @@ void main() {
       isFalse,
     );
 
-    provider.notifyListeners();
+    await provider.settingsCommands.updateShowTimetableGridLines(
+      !provider.settingsView.showTimetableGridLines,
+    );
     await tester.pump();
     expect(timers.creationCount, 2);
     expect(timers.activeCount, 1);

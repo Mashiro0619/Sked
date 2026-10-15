@@ -128,38 +128,6 @@ class _QuietPrivacy extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
-class _ControlledShutdownProvider extends TimetableProvider {
-  _ControlledShutdownProvider({
-    required Completer<void> loadCompleter,
-    required Completer<void> quiesceCompleter,
-  }) : this._(
-         _ControlledRepository(
-           loadCompleter: loadCompleter,
-           quiesceCompleter: quiesceCompleter,
-         ),
-       );
-
-  _ControlledShutdownProvider._(this.controlledRepository)
-    : super(
-        repository: controlledRepository,
-        secretStore: _MemorySecrets(),
-        backupRestoreJournal: _EmptyJournal(),
-        privacyService: const _QuietPrivacy(),
-        systemLocaleCodeResolver: () => 'en',
-        dataTransferCodec: inlineDataTransferCodec,
-      );
-
-  final _ControlledRepository controlledRepository;
-  Completer<void> get quiesceStarted => controlledRepository.quiesceStarted;
-  var disposed = false;
-
-  @override
-  void dispose() {
-    disposed = true;
-    super.dispose();
-  }
-}
-
 void main() {
   testWidgets('application theme shell ignores timetable and schedule edits', (
     tester,
@@ -351,9 +319,17 @@ void main() {
     (tester) async {
       final loadCompleter = Completer<void>();
       final quiesceCompleter = Completer<void>();
-      final provider = _ControlledShutdownProvider(
+      final repository = _ControlledRepository(
         loadCompleter: loadCompleter,
         quiesceCompleter: quiesceCompleter,
+      );
+      final provider = TimetableProvider(
+        repository: repository,
+        secretStore: _MemorySecrets(),
+        backupRestoreJournal: _EmptyJournal(),
+        privacyService: const _QuietPrivacy(),
+        systemLocaleCodeResolver: () => 'en',
+        dataTransferCodec: inlineDataTransferCodec,
       );
       final lease = _FakeLease([true]);
 
@@ -366,17 +342,17 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       expect(lease.releaseCount, 0);
-      expect(provider.disposed, isFalse);
-      expect(provider.quiesceStarted.isCompleted, isFalse);
+      expect(provider.session.isClosed, isFalse);
+      expect(repository.quiesceStarted.isCompleted, isFalse);
 
       loadCompleter.complete();
-      await provider.quiesceStarted.future;
+      await repository.quiesceStarted.future;
       expect(lease.releaseCount, 0);
-      expect(provider.disposed, isFalse);
+      expect(provider.session.isClosed, isFalse);
 
       quiesceCompleter.complete();
       await tester.pump();
-      expect(provider.disposed, isTrue);
+      expect(provider.session.isClosed, isTrue);
       expect(lease.releaseCount, 1);
     },
   );

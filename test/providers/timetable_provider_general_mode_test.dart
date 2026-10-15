@@ -270,7 +270,7 @@ void main() {
       await provider.load();
       storage.saveCount = 0;
       var notifications = 0;
-      provider.addListener(() => notifications += 1);
+      provider.generalView.addListener(() => notifications += 1);
 
       await provider.setSelectedGeneralDate(DateTime(2026, 6, 1, 14));
 

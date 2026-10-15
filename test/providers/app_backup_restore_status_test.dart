@@ -46,7 +46,7 @@ void main() {
         addTearDown(provider.dispose);
         final states = [provider.isRestoringAppBackup];
         final boundarySnapshots = <AppData>[];
-        provider.addListener(() {
+        provider.maintenance.addListener(() {
           if (states.last != provider.isRestoringAppBackup) {
             states.add(provider.isRestoringAppBackup);
             boundarySnapshots.add(provider.appData);
@@ -103,7 +103,7 @@ void main() {
       final provider = await workspaceProvider(storage: storage);
       addTearDown(provider.dispose);
       final states = [provider.isRestoringAppBackup];
-      provider.addListener(() {
+      provider.maintenance.addListener(() {
         if (states.last != provider.isRestoringAppBackup) {
           states.add(provider.isRestoringAppBackup);
         }
@@ -145,7 +145,7 @@ void main() {
     );
     addTearDown(unregister);
     var notifications = 0;
-    provider.addListener(() => notifications++);
+    provider.maintenance.addListener(() => notifications++);
     await expectLater(
       provider.importAppDataJson(source, mode: AppImportMode.replaceAll),
       throwsA(isA<WorkspaceChangeCancelledException>()),
