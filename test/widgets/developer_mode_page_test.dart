@@ -1,3 +1,5 @@
+import '../support/agenda_coordinator_harness.dart';
+
 import 'dart:async';
 import 'dart:ui' show PointerDeviceKind;
 
@@ -177,7 +179,7 @@ AgendaCoordinator _developerNotificationCoordinator(
   MemoryAgendaNotificationGateway gateway, {
   MemoryAgendaNotificationRuntimeStore? runtimeStore,
 }) {
-  return AgendaCoordinator(
+  return buildTestAgendaCoordinator(
     provider: provider,
     notificationService: AgendaNotificationService(
       enabled: true,

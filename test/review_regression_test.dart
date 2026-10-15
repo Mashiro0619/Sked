@@ -1,3 +1,5 @@
+import 'support/agenda_coordinator_harness.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -208,7 +210,7 @@ AgendaCoordinator coordinatorFor(
   Duration timeout = const Duration(seconds: 15),
   void Function(Object, StackTrace)? onError,
 }) {
-  final coordinator = AgendaCoordinator(
+  final coordinator = buildTestAgendaCoordinator(
     provider: provider,
     notificationService: service,
     productivityBridge: bridge ?? AndroidProductivityBridge(enabled: false),
@@ -448,7 +450,7 @@ END:VCALENDAR''',
         serviceFor(gateway),
         timeout: const Duration(milliseconds: 20),
       );
-      await coordinator.start(providerReady: ready.future);
+      await coordinator.start(dataReady: ready.future);
       await coordinator.onResume();
       expect(coordinator.isStarted, isFalse);
       ready.complete();
@@ -1061,13 +1063,13 @@ END:VCALENDAR''',
         onError: (error, _) => errors.add(error),
       );
       await coordinator.start(
-        providerReady: Future<void>.error(StateError('explicit gate')),
+        dataReady: Future<void>.error(StateError('explicit gate')),
       );
       expect(coordinator.isStarted, isFalse);
       await coordinator.onResume();
       expect(coordinator.isStarted, isFalse);
       expect(errors, isNotEmpty);
-      await coordinator.start(providerReady: Future<void>.value());
+      await coordinator.start(dataReady: Future<void>.value());
       expect(coordinator.isStarted, isTrue);
     },
   );
@@ -1082,7 +1084,7 @@ END:VCALENDAR''',
         serviceFor(MemoryAgendaNotificationGateway()),
         timeout: const Duration(milliseconds: 10),
       );
-      await coordinator.start(providerReady: ready.future);
+      await coordinator.start(dataReady: ready.future);
       coordinator.dispose();
       ready.complete();
       await settle();

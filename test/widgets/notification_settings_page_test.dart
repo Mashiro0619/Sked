@@ -1,3 +1,5 @@
+import '../support/agenda_coordinator_harness.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -90,7 +92,7 @@ void main() {
       final fallbackGateway = MemoryAgendaNotificationGateway()
         ..permissionGranted = false
         ..exactAlarmGranted = false;
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -155,7 +157,7 @@ void main() {
         ..permissionGranted = true
         ..exactAlarmGranted = true
         ..batteryOptimizationGranted = true;
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -223,7 +225,7 @@ void main() {
       ..permissionGranted = true
       ..exactAlarmGranted = true
       ..batteryOptimizationGranted = true;
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: AgendaNotificationService(
         enabled: true,

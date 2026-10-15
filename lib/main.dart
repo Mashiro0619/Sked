@@ -26,6 +26,7 @@ import 'screens/app_home_screen.dart';
 import 'services/app_instance_lease.dart';
 import 'services/agenda_background_reconciler.dart';
 import 'services/agenda_coordinator.dart';
+import 'services/agenda_action_router.dart';
 import 'services/notification_occurrence_resolver.dart';
 import 'widgets/app_modal_sheet.dart';
 import 'widgets/course_details_sheet.dart';
@@ -403,12 +404,30 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _desktopLayout.addListener(_onDesktopLayoutChanged);
     unawaited(_desktopLayout.load());
     unawaited(_developerUi.load());
-    _agendaCoordinator = AgendaCoordinator(
-      provider: widget.provider,
-      onTarget: _openAgendaTarget,
-    );
+    _agendaCoordinator = _createAgendaCoordinator();
     _agendaCoordinator.setForegroundActive(true);
-    unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
+    unawaited(_agendaCoordinator.start(dataReady: widget.providerReady));
+  }
+
+  AgendaCoordinator _createAgendaCoordinator() {
+    final app = widget.provider;
+    return AgendaCoordinator(
+      session: app.session,
+      dataClear: app.dataClear,
+      general: app.generalView,
+      generalCommands: app.generalCommands,
+      settings: app.settingsView,
+      actionRouter: AgendaActionRouter(
+        workspace: app.workspaceView,
+        workspaces: app.workspaces,
+        student: app.studentView,
+        studentCommands: app.studentCommands,
+        general: app.generalView,
+        generalNavigation: app.generalNavigation,
+        settings: app.settingsView,
+        onTarget: _openAgendaTarget,
+      ),
+    );
   }
 
   void _onDesktopLayoutChanged() {
@@ -487,12 +506,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (oldWidget.provider != widget.provider) {
       _flushPendingUiStateSaves(oldWidget.provider);
       _agendaCoordinator.dispose();
-      _agendaCoordinator = AgendaCoordinator(
-        provider: widget.provider,
-        onTarget: _openAgendaTarget,
-      );
+      _agendaCoordinator = _createAgendaCoordinator();
       _agendaCoordinator.setForegroundActive(true);
-      unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
+      unawaited(_agendaCoordinator.start(dataReady: widget.providerReady));
     }
   }
 

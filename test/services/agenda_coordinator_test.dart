@@ -1,3 +1,5 @@
+import '../support/agenda_coordinator_harness.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -6,7 +8,6 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/agenda_action_router.dart';
-import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/agenda_projection_service.dart';
@@ -222,6 +223,43 @@ AppData _dataWithEvent({bool notificationsEnabled = true}) {
 
 void main() {
   test(
+    'backup reservations allow the durable notification plan to load',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final provider = await _providerWithData(_dataWithEvent());
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(clock: () => anchor),
+        now: () => anchor,
+      );
+      addTearDown(service.dispose);
+      final coordinator = buildTestAgendaCoordinator(
+        provider: provider,
+        notificationService: service,
+        productivityBridge: AndroidProductivityBridge(enabled: false),
+        clock: () => anchor,
+        startupTimeout: const Duration(milliseconds: 100),
+      );
+      addTearDown(coordinator.dispose);
+      final reservation = provider.maintenance.reserve();
+      addTearDown(() => provider.maintenance.release(reservation));
+
+      await coordinator.start();
+
+      expect(coordinator.isStarted, isTrue);
+      expect(
+        AgendaNotificationPayload.tryDecode(
+          gateway.scheduled.values.single.payload,
+        )?.target.eventId,
+        'event',
+      );
+    },
+  );
+
+  test(
     'starts, reconciles notifications, and schedules the next wakeup',
     () async {
       final anchor = DateTime(2026, 8, 3, 8);
@@ -229,7 +267,7 @@ void main() {
       addTearDown(provider.dispose);
       final gateway = MemoryAgendaNotificationGateway();
       final bridge = _RecordingBridge();
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -261,7 +299,7 @@ void main() {
         gateway: gateway,
         runtimeStore: runtime,
       );
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: service,
         productivityBridge: AndroidProductivityBridge(enabled: false),
@@ -289,7 +327,7 @@ void main() {
     addTearDown(provider.dispose);
     final gateway = _CountingGateway();
     final bridge = _RecordingBridge();
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: AgendaNotificationService(
         enabled: true,
@@ -339,7 +377,7 @@ void main() {
       addTearDown(provider.dispose);
       final gateway = _BlockingScheduleGateway();
       final bridge = _RecordingBridge();
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -385,7 +423,7 @@ void main() {
       final provider = await _provider();
       addTearDown(provider.dispose);
       final bridge = _RecordingBridge();
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -421,7 +459,7 @@ void main() {
       final provider = await _provider();
       addTearDown(provider.dispose);
       final gateway = MemoryAgendaNotificationGateway();
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -464,7 +502,7 @@ void main() {
     addTearDown(provider.dispose);
     final gateway = MemoryAgendaNotificationGateway();
     final bridge = _RecordingBridge();
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: AgendaNotificationService(
         enabled: true,
@@ -489,7 +527,7 @@ void main() {
       addTearDown(provider.dispose);
       final gateway = MemoryAgendaNotificationGateway();
       final bridge = _RecordingBridge();
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -538,7 +576,7 @@ void main() {
     final provider = await _providerWithData(_dataWithEvent());
     addTearDown(provider.dispose);
     final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: AgendaNotificationService(
         enabled: true,
@@ -579,7 +617,7 @@ void main() {
     final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
     await runtime.blockProjectionForDataClear();
     final gateway = MemoryAgendaNotificationGateway();
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: AgendaNotificationService(
         enabled: true,
@@ -603,7 +641,7 @@ void main() {
     final provider = await _providerWithData(_dataWithEvent());
     addTearDown(provider.dispose);
     final gateway = _BlockingScheduleGateway();
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: AgendaNotificationService(
         enabled: true,
@@ -655,7 +693,7 @@ void main() {
         gateway: gateway,
         now: () => anchor,
       );
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: service,
         productivityBridge: AndroidProductivityBridge(enabled: false),
@@ -687,7 +725,7 @@ void main() {
       addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
       final provider = await _provider();
       addTearDown(provider.dispose);
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -712,7 +750,7 @@ void main() {
     );
     addTearDown(provider.dispose);
     final errors = <Object>[];
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       productivityBridge: AndroidProductivityBridge(enabled: false),
       startupTimeout: const Duration(seconds: 1),
@@ -721,7 +759,7 @@ void main() {
     addTearDown(coordinator.dispose);
 
     await coordinator.start(
-      providerReady: Future<void>.error(StateError('provider failed')),
+      dataReady: Future<void>.error(StateError('provider failed')),
     );
 
     expect(coordinator.isStarted, isFalse);
@@ -736,12 +774,12 @@ void main() {
     );
     addTearDown(provider.dispose);
     final ready = Completer<void>();
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       productivityBridge: AndroidProductivityBridge(enabled: false),
       startupTimeout: const Duration(seconds: 1),
     );
-    final start = coordinator.start(providerReady: ready.future);
+    final start = coordinator.start(dataReady: ready.future);
     await Future<void>.delayed(Duration.zero);
     coordinator.dispose();
 
@@ -753,7 +791,7 @@ void main() {
     final provider = await _provider();
     addTearDown(provider.dispose);
     final bridge = _RecordingBridge();
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       productivityBridge: bridge,
     );
@@ -771,7 +809,7 @@ void main() {
     addTearDown(provider.dispose);
     final errors = <Object>[];
     final bridge = _RecordingBridge();
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: AgendaNotificationService(enabled: false),
       actionRouter: _ThrowingActionRouter(provider: provider),
@@ -797,7 +835,7 @@ void main() {
       final gateway = _ToggleFailingScheduleGateway();
       final bridge = _RecordingBridge();
       final errors = <Object>[];
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: AgendaNotificationService(
           enabled: true,
@@ -843,7 +881,7 @@ void main() {
       runtimeStore: runtime,
       now: () => anchor,
     );
-    final coordinator = AgendaCoordinator(
+    final coordinator = buildTestAgendaCoordinator(
       provider: provider,
       notificationService: service,
       productivityBridge: AndroidProductivityBridge(enabled: false),
@@ -877,7 +915,7 @@ void main() {
         );
         addTearDown(service.dispose);
         final errors = <Object>[];
-        final coordinator = AgendaCoordinator(
+        final coordinator = buildTestAgendaCoordinator(
           provider: provider,
           notificationService: service,
           productivityBridge: AndroidProductivityBridge(enabled: false),
@@ -925,7 +963,7 @@ void main() {
         now: () => anchor,
       );
       addTearDown(service.dispose);
-      final coordinator = AgendaCoordinator(
+      final coordinator = buildTestAgendaCoordinator(
         provider: provider,
         notificationService: service,
         productivityBridge: AndroidProductivityBridge(enabled: false),

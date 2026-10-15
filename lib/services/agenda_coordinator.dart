@@ -1,9 +1,14 @@
 import 'dart:async';
 
 import '../models/timetable_models.dart';
+import '../models/app_data_commit.dart';
 import '../models/workspace_availability.dart';
 import 'agenda_runtime_mutation_lock.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_session.dart';
+import '../controllers/general_commands.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_view_state.dart';
 import 'agenda_action_router.dart';
 import 'notification_occurrence_resolver.dart';
 import 'agenda_notification_service.dart';
@@ -13,8 +18,8 @@ import 'android_productivity_bridge.dart';
 
 /// Coordinates durable agenda projections with platform integrations.
 ///
-/// The coordinator deliberately listens to [TimetableProvider.committedData]
-/// for data changes. Provider listeners only observe readiness transitions;
+/// The coordinator listens to [AppSession.commits] for durable data changes.
+/// Readiness and clear listeners only observe projection availability;
 /// a UI rebuild or a failed save cannot project an optimistic snapshot.
 /// Platform-specific sources remain behind [AgendaProjectionService], while
 /// this class only handles lifecycle, coalescing and error isolation.
@@ -23,40 +28,33 @@ class AgendaCoordinator {
       AgendaProjectionService();
 
   AgendaCoordinator({
-    required TimetableProvider provider,
+    required this._session,
+    required this._dataClear,
+    required this._general,
+    required this._generalCommands,
+    required this._settings,
+    required this._actionRouter,
     AgendaNotificationService? notificationService,
     AgendaProjectionService? projection,
-    AgendaActionRouter? actionRouter,
-    AgendaTargetCallback? onTarget,
     AndroidProductivityBridge? productivityBridge,
     DateTime Function()? clock,
     this.startupTimeout = const Duration(seconds: 15),
     this.onError,
-  }) : _provider = provider,
-       _notificationService =
+  }) : _notificationService =
            notificationService ??
            AgendaNotificationService(
              projection: projection ?? _defaultProjection,
            ),
-       _actionRouter =
-           actionRouter ??
-           AgendaActionRouter(
-             workspace: provider.workspaceView,
-             workspaces: provider.workspaces,
-             student: provider.studentView,
-             studentCommands: provider.studentCommands,
-             general: provider.generalView,
-             generalNavigation: provider.generalNavigation,
-             settings: provider.settingsView,
-             onTarget: onTarget,
-             projection: projection ?? _defaultProjection,
-           ),
        _productivityBridge = productivityBridge ?? AndroidProductivityBridge(),
        _clock = clock ?? DateTime.now {
-    _notificationService.committedDataReader = () => _provider.committedAppData;
+    _notificationService.committedDataReader = () => _session.committedData;
   }
 
-  final TimetableProvider _provider;
+  final AppSession _session;
+  final AppDataClearController _dataClear;
+  final GeneralViewState _general;
+  final GeneralCommands _generalCommands;
+  final SettingsViewState _settings;
   final AgendaNotificationService _notificationService;
   final AgendaActionRouter _actionRouter;
   final AndroidProductivityBridge _productivityBridge;
@@ -72,8 +70,8 @@ class AgendaCoordinator {
   StreamSubscription<String>? _intentSubscription;
   Future<void>? _startOperation;
   Future<void>? _reconcileOperation;
-  Timer? _providerReadyTimeout;
-  void Function()? _removeProviderReadyListener;
+  Timer? _readinessTimeout;
+  void Function()? _removeReadinessListeners;
   final Completer<void> _disposeSignal = Completer<void>();
   AppDataCommit? _pendingCommit;
   bool _reconcileQueued = false;
@@ -103,16 +101,16 @@ class AgendaCoordinator {
   /// pending-plan ownership, and runtime diagnostics in one place.
   AgendaNotificationService get notificationService => _notificationService;
 
-  /// Starts listeners and performs one initial projection after the provider
+  /// Starts listeners and performs one initial projection after application data
   /// has loaded. Calling this method more than once is harmless.
-  Future<void> start({Future<void>? providerReady}) {
+  Future<void> start({Future<void>? dataReady}) {
     if (_disposed || _started) return Future<void>.value();
     _startRequested = true;
     _observeReadiness();
     final inFlight = _startOperation;
     if (inFlight != null) return inFlight;
-    if (providerReady != null && !identical(providerReady, _explicitReady)) {
-      _trackExplicitReadiness(providerReady);
+    if (dataReady != null && !identical(dataReady, _explicitReady)) {
+      _trackExplicitReadiness(dataReady);
     }
     final operation = _start();
     _startOperation = operation;
@@ -126,23 +124,23 @@ class AgendaCoordinator {
   }
 
   bool get _readyToStart =>
-      _canProjectProviderData &&
-      _explicitReadyCompleted &&
-      _explicitReadyError == null;
+      _canProjectData && _explicitReadyCompleted && _explicitReadyError == null;
 
   void _observeReadiness() {
-    if (_removeProviderReadyListener != null) return;
-    _wasProjectable = _canProjectProviderData;
-    _provider.addListener(_onProviderReadinessChanged);
-    _removeProviderReadyListener = () {
-      _provider.removeListener(_onProviderReadinessChanged);
-      _removeProviderReadyListener = null;
+    if (_removeReadinessListeners != null) return;
+    _wasProjectable = _canProjectData;
+    _session.readiness.addListener(_onReadinessChanged);
+    _dataClear.addListener(_onReadinessChanged);
+    _removeReadinessListeners = () {
+      _session.readiness.removeListener(_onReadinessChanged);
+      _dataClear.removeListener(_onReadinessChanged);
+      _removeReadinessListeners = null;
     };
   }
 
-  void _onProviderReadinessChanged() {
+  void _onReadinessChanged() {
     if (_disposed) return;
-    final projectable = _canProjectProviderData;
+    final projectable = _canProjectData;
     final becameProjectable = projectable && !_wasProjectable;
     _wasProjectable = projectable;
     _checkStartupReadiness?.call();
@@ -195,10 +193,10 @@ class AgendaCoordinator {
   Future<void> _start() async {
     if (_started || _disposed) return;
     try {
-      await _awaitProviderReady();
+      await _awaitReadiness();
       if (_disposed) return;
       _started = true;
-      _commitSubscription = _provider.committedData.listen(_onCommit);
+      _commitSubscription = _session.commits.listen(_onCommit);
       if (_productivityBridge.isSupported) {
         _intentSubscription = _productivityBridge.agendaIntents.listen(
           _onAgendaIntent,
@@ -220,7 +218,7 @@ class AgendaCoordinator {
     }
   }
 
-  Future<void> _awaitProviderReady() async {
+  Future<void> _awaitReadiness() async {
     if (_disposed) return;
     final ready = Completer<void>();
     void check() {
@@ -235,11 +233,11 @@ class AgendaCoordinator {
 
     _checkStartupReadiness = check;
     check();
-    _providerReadyTimeout = Timer(startupTimeout, () {
+    _readinessTimeout = Timer(startupTimeout, () {
       if (!ready.isCompleted) {
         ready.completeError(
           TimeoutException(
-            'Timed out waiting for the timetable provider to load.',
+            'Timed out waiting for application data to load.',
             startupTimeout,
           ),
         );
@@ -248,8 +246,8 @@ class AgendaCoordinator {
     try {
       await Future.any<void>([ready.future, _disposeSignal.future]);
     } finally {
-      _providerReadyTimeout?.cancel();
-      _providerReadyTimeout = null;
+      _readinessTimeout?.cancel();
+      _readinessTimeout = null;
       if (identical(_checkStartupReadiness, check)) {
         _checkStartupReadiness = null;
       }
@@ -258,7 +256,7 @@ class AgendaCoordinator {
     }
   }
 
-  /// Rebuilds the notification projection from the latest provider state. This is useful
+  /// Rebuilds the notification projection from the latest durable snapshot. This is useful
   /// on app resume, after a permission change, or when an external broadcast
   /// reports a time-zone/date change.
   Future<void> reconcileNow({
@@ -268,7 +266,7 @@ class AgendaCoordinator {
         AgendaNotificationReconcileMode.authoritative,
   }) => _reconcileWork(
     _AgendaProjectionWork(
-      data: data ?? _provider.committedAppData,
+      data: data ?? _session.committedData,
       revision: revision,
       mode: mode,
       epoch: _projectionEpoch,
@@ -284,9 +282,7 @@ class AgendaCoordinator {
       await _enqueueReconcile(
         () => withAgendaRuntimeMutationLock(() async {
           bool mayProject() =>
-              !_disposed &&
-              work.epoch == _projectionEpoch &&
-              _canProjectProviderData;
+              !_disposed && work.epoch == _projectionEpoch && _canProjectData;
           if (!mayProject()) return;
           if (work.activateFence) {
             await _notificationService.activateProjectionAfterDurableData();
@@ -294,7 +290,7 @@ class AgendaCoordinator {
           }
           final fence = await _notificationService.readProjectionFence();
           if (fence.blocked || !mayProject()) return;
-          final committed = _provider.committedAppData;
+          final committed = _session.committedData;
           final snapshot = work.data.sameWorkspaceAvailability(committed)
               ? work.data
               : committed;
@@ -357,7 +353,7 @@ class AgendaCoordinator {
   }
 
   Future<void> _pollForegroundActions() async {
-    if (_disposed || !_canProjectProviderData) return;
+    if (_disposed || !_canProjectData) return;
     try {
       if (await _notificationService.hasPendingActions()) {
         await _notificationService.reconcilePendingActions();
@@ -401,7 +397,7 @@ class AgendaCoordinator {
     AgendaNotificationTestChannel channel,
   ) => _notificationService.showImmediateNotificationTest(
     channel,
-    localeCode: _provider.appData.localeCode,
+    localeCode: _settings.localeCode,
   );
 
   /// Schedules one developer test thirty seconds in the future. Each test is
@@ -411,12 +407,12 @@ class AgendaCoordinator {
     AgendaNotificationTestChannel channel,
   ) => _notificationService.scheduleDeveloperNotificationTest(
     channel,
-    localeCode: _provider.appData.localeCode,
+    localeCode: _settings.localeCode,
     delay: const Duration(seconds: 30),
   );
 
   /// Clears platform-owned runtime state before the app data directory is
-  /// deleted. User data and backup files are owned by the provider/clear
+  /// deleted. User data and backup files are owned by the backup/clear
   /// coordinator and are intentionally not touched here.
   ///
   /// Use [beginDataClear] for a destructive app-data reset. This lower-level
@@ -427,7 +423,7 @@ class AgendaCoordinator {
     _projectionEpoch += 1;
     _clearNotificationRetry();
     // Drop unconsumed commits immediately. A commit already being drained is
-    // still harmless because reconcileNow checks the provider's clear gate.
+    // still harmless because reconcileNow checks the data-clear gate.
     _pendingCommit = null;
     await _enqueueReconcile(() async {
       if (_disposed) return;
@@ -531,7 +527,7 @@ class AgendaCoordinator {
 
   /// The notification runtime store is the authoritative device-level state
   /// for every source. General events also have a user-visible handled state,
-  /// so mirror that one source-specific action into its existing provider
+  /// so mirror that one source-specific action into the General domain
   /// model after the runtime operation succeeds. Courses intentionally remain
   /// runtime-only: marking one class handled must not change its schedule.
   Future<bool> _syncHandledGeneralReminder(String? payload) async {
@@ -557,20 +553,18 @@ class AgendaCoordinator {
       }
       if (tryParseStrictIsoDateTime(rawDate) == null) return true;
       final occurrence = resolveNotificationOccurrence(
-        _provider.generalView,
+        _general,
         target,
-        includeHiddenCalendars:
-            _provider.settingsView.remindHiddenGeneralCalendars,
+        includeHiddenCalendars: _settings.remindHiddenGeneralCalendars,
       );
-      if (occurrence == null ||
-          _provider.isGeneralReminderHandled(occurrence)) {
+      if (occurrence == null || _general.isReminderHandled(occurrence)) {
         return true;
       }
-      await _provider.dismissGeneralReminder(occurrence);
+      await _generalCommands.dismissReminder(occurrence);
       return true;
     } catch (error, stackTrace) {
       // Notification action callbacks are invoked by a plugin as `void`
-      // handlers. Contain provider failures here so they never become an
+      // handlers. Contain persistence failures here so they never become an
       // unhandled asynchronous error in the platform callback dispatcher.
       onError?.call(error, stackTrace);
       return false;
@@ -584,22 +578,22 @@ class AgendaCoordinator {
     return operation;
   }
 
-  bool get _canProjectProviderData =>
-      _provider.isLoaded && _provider.canWrite && !_provider.isDataClearActive;
+  bool get _canProjectData =>
+      _session.isLoaded && _session.canWrite && !_dataClear.isActive;
 
   void dispose() {
     if (_disposed) return;
     _disposed = true;
     _notificationService.committedDataReader = null;
-    _providerReadyTimeout?.cancel();
-    _providerReadyTimeout = null;
+    _readinessTimeout?.cancel();
+    _readinessTimeout = null;
     _notificationRetryTimer?.cancel();
     _notificationRetryTimer = null;
     _foregroundActionPollTimer?.cancel();
     _foregroundActionPollTimer = null;
     _notificationRetryWork = null;
     _projectionEpoch += 1;
-    _removeProviderReadyListener?.call();
+    _removeReadinessListeners?.call();
     if (!_disposeSignal.isCompleted) _disposeSignal.complete();
     final commitSubscription = _commitSubscription;
     final intentSubscription = _intentSubscription;
@@ -620,7 +614,7 @@ class AgendaCoordinator {
       if (retry == null ||
           _disposed ||
           retry.epoch != _projectionEpoch ||
-          !_canProjectProviderData) {
+          !_canProjectData) {
         return;
       }
       unawaited(_reconcileWork(retry, isRetry: true));
