@@ -147,12 +147,16 @@ Future<void> _openOutlineSettingsPage(WidgetTester tester) async {
   expect(outlineCard, findsOneWidget);
   await tester.scrollUntilVisible(outlineCard, 200);
   await tester.pumpAndSettle();
+  final l10n = AppLocalizations.of(tester.element(outlineCard));
   final tapTarget = find.descendant(
     of: outlineCard,
-    matching: find.byType(InkWell),
+    matching: find.text(l10n.liveCourseOutlineSettings),
   );
   expect(tapTarget, findsOneWidget);
-  tester.widget<InkWell>(tapTarget).onTap!();
+  await tester.ensureVisible(tapTarget);
+  await tester.pumpAndSettle();
+  expect(tapTarget.hitTestable(), findsOneWidget);
+  await tester.tap(tapTarget);
   await tester.pumpAndSettle();
 }
 
@@ -194,6 +198,78 @@ Future<void> _chooseAppearance(
 }
 
 void main() {
+  testWidgets(
+    'a completed outline save retires only its route below a newer task',
+    (tester) async {
+      _setTestViewport(tester, const Size(600, 900));
+      addTearDown(() => _resetTestViewport(tester));
+      final storage = _BlockingTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _createProvider(storage);
+      final draft = TextEditingController(text: 'Newer unsaved draft');
+      addTearDown(() async {
+        storage.completeSave();
+        await tester.pumpWidget(const SizedBox());
+        draft.dispose();
+        provider.dispose();
+      });
+      await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+      await tester.pumpAndSettle();
+      await _openOutlineSettingsPage(tester);
+      final outlineRoute = ModalRoute.of(
+        tester.element(
+          find.byKey(const ValueKey('theme-outline-settings-page')),
+        ),
+      )!;
+      final initialEnabled = provider.settingsView.liveCourseOutlineEnabled;
+      await tester.tap(
+        find.byKey(const ValueKey('live-course-outline-enabled-row')),
+      );
+      await tester.pumpAndSettle();
+      storage.blockNextSave();
+      await tester.tap(find.byKey(const ValueKey('theme-outline-page-apply')));
+      await tester.pump();
+      expect(storage.saveCount, 1);
+      unawaited(
+        outlineRoute.navigator!.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: TextField(
+                key: const ValueKey('newer-outline-task'),
+                controller: draft,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      final newer = find.byKey(const ValueKey('newer-outline-task'));
+      final originalNewerElement = tester.element(newer);
+
+      storage.completeSave();
+      await tester.pumpAndSettle();
+
+      expect(storage.saveCount, 1);
+      expect(provider.settingsView.liveCourseOutlineEnabled, !initialEnabled);
+      expect(outlineRoute.isActive, isFalse);
+      expect(tester.element(newer), same(originalNewerElement));
+      expect(draft.text, 'Newer unsaved draft');
+      expect(
+        find.byKey(
+          const ValueKey('theme-outline-settings-page'),
+          skipOffstage: false,
+        ),
+        findsNothing,
+      );
+      Navigator.of(tester.element(newer)).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(ThemeSettingsPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'desktop color task keeps its heading aligned while saving and retrying',
     (tester) async {

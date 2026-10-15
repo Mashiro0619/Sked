@@ -13,6 +13,7 @@ import '../controllers/settings_view_state.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/sked_task_route.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 
@@ -152,7 +153,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         _isSelectingLanguage = false;
         _languageSelectionPopped = closePage;
       });
-      if (closePage) Navigator.of(context).pop();
+      if (closePage) completeSkedTaskRoute(context);
     } finally {
       if (mounted && !_languageSelectionPopped) {
         setState(() => _isSelectingLanguage = false);

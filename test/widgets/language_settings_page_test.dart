@@ -132,6 +132,68 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'a completed language save retires only its route below a newer task',
+    (tester) async {
+      final storage = _BlockingTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en'),
+      );
+      final provider = await _createProvider(storage);
+      final draft = TextEditingController(text: 'Newer unsaved draft');
+      addTearDown(() async {
+        storage.completeFirstSave();
+        await tester.pumpWidget(const SizedBox());
+        draft.dispose();
+        provider.dispose();
+      });
+      await _pumpHostPage(tester, provider);
+      await tester.tap(find.text('Open language settings'));
+      await _pumpRouteTransition(tester);
+      final languageRoute = ModalRoute.of(
+        tester.element(find.byType(LanguageSettingsPage)),
+      )!;
+      await tester.enterText(
+        find.byKey(const ValueKey('language-search')),
+        'Deutsch',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('language-option-de')));
+      await storage.firstSaveStarted.future;
+      unawaited(
+        languageRoute.navigator!.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: TextField(
+                key: const ValueKey('newer-language-task'),
+                controller: draft,
+              ),
+            ),
+          ),
+        ),
+      );
+      await _pumpRouteTransition(tester);
+      final newer = find.byKey(const ValueKey('newer-language-task'));
+      final originalNewerElement = tester.element(newer);
+
+      storage.completeFirstSave();
+      await tester.pumpAndSettle();
+
+      expect(storage.saveCount, 1);
+      expect(provider.settingsView.localeCode, 'de');
+      expect(languageRoute.isActive, isFalse);
+      expect(tester.element(newer), same(originalNewerElement));
+      expect(draft.text, 'Newer unsaved draft');
+      expect(
+        find.byType(LanguageSettingsPage, skipOffstage: false),
+        findsNothing,
+      );
+      Navigator.of(tester.element(newer)).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Open language settings'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('caps the language list on Android tablets', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1024, 768);

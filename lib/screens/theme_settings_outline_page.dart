@@ -88,7 +88,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   void _popOnce() {
     if (_hasPopped) return;
     setState(() => _hasPopped = true);
-    Navigator.of(context).pop();
+    completeEditorRoute(context);
   }
 
   @override
