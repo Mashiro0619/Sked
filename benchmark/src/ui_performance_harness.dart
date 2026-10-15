@@ -20,6 +20,7 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
+import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/services/privacy_service.dart';
@@ -34,12 +35,15 @@ import 'package:sked/widgets/material_ui_compatibility.dart';
 /// Only external boundaries are replaced. Provider, shell, routes, widgets,
 /// motion, layout and occurrence queries are the production implementations.
 class UiPerformanceSession {
-  UiPerformanceSession(AppData data)
-    : storage = UiPerformanceMemoryStorage(data),
-      layout = DesktopLayoutPreferences.memory(),
-      developer = DeveloperUiPreferences.memory(visible: false) {
+  UiPerformanceSession(
+    AppData data, {
+    DataTransferCodec dataTransferCodec = const DataTransferCodec(),
+  }) : storage = UiPerformanceMemoryStorage(data),
+       layout = DesktopLayoutPreferences.memory(),
+       developer = DeveloperUiPreferences.memory(visible: false) {
     provider = TimetableProvider(
       storage: storage,
+      dataTransferCodec: dataTransferCodec,
       secretStore: _MemorySecrets(),
       schoolSiteService: SchoolSiteService(store: _MemorySites()),
       backupRestoreJournal: _MemoryJournal(),
@@ -58,12 +62,12 @@ class UiPerformanceSession {
   late final TimetableProvider provider;
 
   Future<void> load() async {
-    await provider.load();
-    await provider.setSelectedWeek(3);
+    await provider.lifecycle.load();
+    await provider.studentCommands.setSelectedWeek(3);
   }
 
   Future<void> close() async {
-    await provider.quiesceForShutdown();
+    await provider.shutdown.quiesce();
     await layout.flush();
     provider.dispose();
     layout.dispose();

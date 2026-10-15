@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../benchmark/src/ui_performance_fixtures.dart';
 import '../benchmark/src/ui_performance_metrics.dart';
 import '../benchmark/src/ui_performance_scenarios.dart';
+import 'support/data_transfer_codec.dart';
 
 void main() {
   test(
@@ -66,6 +67,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       final report = await runUiPerformanceBenchmarks(
         tester,
+        smokeTestCodec: inlineDataTransferCodec,
         config: const UiPerformanceConfig(
           datasets: ['sparse'],
           warmRuns: 0,

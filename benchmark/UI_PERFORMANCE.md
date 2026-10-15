@@ -53,9 +53,12 @@ Optional defines keep local diagnosis short:
 - `SKED_UI_PERF_LABEL` accepts 1–80 filename-safe letters, digits, dots, `_`, `-`.
 - `SKED_UI_PERF_REVISION` identifies the measured production revision.
 
-The harness is independent of production implementation changes: copy its
-`benchmark/src/ui_performance_*.dart`, integration target and driver onto an
-older checkout with the existing `PerformanceFixtures` API to capture a baseline.
+The frozen `77061b4` baseline uses the harness files from `5e7213c`: copy only
+`benchmark/src/ui_performance_*.dart`, the integration target and its driver
+from that commit into the old checkout. Current harness composition follows the
+domain interfaces and cannot be copied unchanged into the old application.
+Keep the shared fixtures, action sequence and metric calculations identical
+when adapting composition; never copy production changes into the baseline.
 
 ## Workload and report interpretation
 
@@ -107,3 +110,5 @@ flutter test --no-pub test/benchmark_ui_performance_test.dart
 This verifies percentile/missing-data handling, workload sizes, and the real UI
 journey through an in-memory boundary. It is explicitly labeled
 `widget-smoke-only` and is rejected by the profile report driver.
+Only that fake-clock smoke test injects the inline data codec. Profile runs
+reject codec overrides and retain production isolate computation.

@@ -11,6 +11,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 
 import 'ui_performance_fixtures.dart';
@@ -150,12 +151,16 @@ class _Recorder {
 Future<Map<String, Object?>> runUiPerformanceBenchmarks(
   WidgetTester tester, {
   UiPerformanceConfig config = const UiPerformanceConfig(),
+  DataTransferCodec? smokeTestCodec,
 }) async {
   if (config.warmRuns < 0 || config.warmRuns > 5) {
     throw ArgumentError.value(config.warmRuns, 'warmRuns', 'Use 0 through 5.');
   }
   if (config.requireFrameTimings && !kProfileMode) {
     throw StateError('UI performance evidence requires a profile build.');
+  }
+  if (config.requireFrameTimings && smokeTestCodec != null) {
+    throw ArgumentError('Profile measurements must use production codecs.');
   }
   final fixtures = buildUiPerformanceFixtures(names: config.datasets);
   final desktop = switch (defaultTargetPlatform) {
@@ -185,7 +190,10 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
   try {
     for (var datasetIndex = 0; datasetIndex < fixtures.length; datasetIndex++) {
       final fixture = fixtures[datasetIndex];
-      final session = UiPerformanceSession(fixture.data);
+      final session = UiPerformanceSession(
+        fixture.data,
+        dataTransferCodec: smokeTestCodec ?? const DataTransferCodec(),
+      );
       try {
         final mountStart = developer.Timeline.now;
         final rssBefore = ProcessInfo.currentRss;
@@ -355,7 +363,7 @@ class _Journey {
   }
 
   Future<void> swipeMonth(Map<String, Object?> details) async {
-    final original = session.provider.selectedGeneralDate;
+    final original = session.provider.generalView.selectedDate;
     final grid = _key('general-month-calendar-panel');
     final distance = math.min(480.0, tester.getSize(grid).width * .65);
     await tester.timedDrag(
@@ -364,7 +372,7 @@ class _Journey {
       const Duration(milliseconds: 400),
     );
     await _settle(tester);
-    final next = session.provider.selectedGeneralDate;
+    final next = session.provider.generalView.selectedDate;
     expect(
       next.year * 12 + next.month,
       original.year * 12 + original.month + 1,
@@ -375,7 +383,7 @@ class _Journey {
       const Duration(milliseconds: 400),
     );
     await _settle(tester);
-    expect(session.provider.selectedGeneralDate, original);
+    expect(session.provider.generalView.selectedDate, original);
     details['completedMonthChanges'] = 2;
   }
 
@@ -439,12 +447,12 @@ class _Journey {
             .last,
       );
     }
-    expect(session.provider.activeMode, mode);
+    expect(session.provider.workspaceView.activeMode, mode);
   }
 
   Future<void> switchTimetable(Map<String, Object?> details) async {
-    final original = session.provider.activeTimetable.id;
-    final target = session.provider.timetables
+    final original = session.provider.studentView.activeTimetable.id;
+    final target = session.provider.studentView.timetables
         .firstWhere((table) => table.id != original)
         .id;
     Future<void> choose(String id) async {
@@ -462,7 +470,7 @@ class _Journey {
           _visible(['timetable-picker-item-$id', 'resource-timetable-$id']),
         );
       }
-      expect(session.provider.activeTimetable.id, id);
+      expect(session.provider.studentView.activeTimetable.id, id);
     }
 
     await choose(target);
@@ -580,11 +588,11 @@ class _Journey {
     final setting = _key('general-show-weekends-setting');
     await tester.ensureVisible(setting);
     await _settle(tester);
-    final original = session.provider.generalShowWeekends;
+    final original = session.provider.generalView.data.showWeekends;
     await _tap(setting.hitTestable());
-    expect(session.provider.generalShowWeekends, !original);
+    expect(session.provider.generalView.data.showWeekends, !original);
     await _tap(setting.hitTestable());
-    expect(session.provider.generalShowWeekends, original);
+    expect(session.provider.generalView.data.showWeekends, original);
     details['completedSettingChanges'] = 2;
   }
 
