@@ -165,8 +165,15 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     return null;
   }
 
+  bool get _canSave => canSaveSchoolImport(
+    lifecycle: widget.provider?.lifecycle,
+    maintenance: widget.provider?.maintenance,
+    dataClear: widget.provider?.dataClear,
+    workspaceView: widget.provider?.workspaceView,
+  );
+
   bool get _canSubmitConfiguredImport =>
-      canSaveSchoolImport(widget.provider) &&
+      _canSave &&
       _response?.timetable.courses.isNotEmpty == true &&
       (_importBundledPeriodTimeSet || _selectedExistingPeriodTimeSet != null);
 
@@ -610,10 +617,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
 
   Future<void> _pickPeriodTimeSet() async {
     final provider = widget.provider;
-    if (provider == null ||
-        _isBusy ||
-        _hasPopped ||
-        !canSaveSchoolImport(provider)) {
+    if (provider == null || _isBusy || _hasPopped || !_canSave) {
       return;
     }
     final result = await _runPicker(
@@ -633,7 +637,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         !_isDone ||
         _response == null ||
         _response!.timetable.courses.isEmpty ||
-        !canSaveSchoolImport(widget.provider)) {
+        !_canSave) {
       return;
     }
     final dataSession = widget.provider?.dataSessionToken;
@@ -664,7 +668,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         _hasPopped ||
         !routeWorkspaceEnabled ||
         !confirmed ||
-        !canSaveSchoolImport(widget.provider) ||
+        !_canSave ||
         !identical(dataSession, widget.provider?.dataSessionToken) ||
         (mode == TimetableImportMode.replaceActive &&
             replacementId != widget.provider?.activeTimetableOrNull?.id)) {
@@ -1126,9 +1130,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                 selected.periodTimes.length,
               ),
         icon: Icons.schedule_outlined,
-        onTap: _periodTimeSets.isEmpty || !canSaveSchoolImport(widget.provider)
-            ? null
-            : _pickPeriodTimeSet,
+        onTap: _periodTimeSets.isEmpty || !_canSave ? null : _pickPeriodTimeSet,
       ),
     );
   }
@@ -1391,7 +1393,9 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SchoolImportSaveFeedback(
-                    provider: widget.provider,
+                    lifecycle: widget.provider?.lifecycle,
+                    maintenance: widget.provider?.maintenance,
+                    dataClear: widget.provider?.dataClear,
                     isSaving: _isApplying,
                     error: _applyError,
                     onRecoveryBusyChanged: (busy) =>

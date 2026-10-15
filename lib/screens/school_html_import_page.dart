@@ -369,7 +369,12 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           _isSubmitting ||
               _isApplying ||
               _isPreparingContent ||
-              !canSaveSchoolImport(provider)
+              !canSaveSchoolImport(
+                lifecycle: provider.lifecycle,
+                maintenance: provider.maintenance,
+                dataClear: provider.dataClear,
+                workspaceView: provider.workspaceView,
+              )
           ? null
           : _submit,
       icon: _isSubmitting
@@ -400,7 +405,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SchoolImportSaveFeedback(
-          provider: provider,
+          lifecycle: provider.lifecycle,
+          maintenance: provider.maintenance,
+          dataClear: provider.dataClear,
           onRecoveryBusyChanged: (busy) => setState(() => _isApplying = busy),
         ),
         actions,
@@ -545,7 +552,12 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
-    final blocked = schoolImportSaveBlockedMessage(provider, l10n);
+    final blocked = schoolImportSaveBlockedMessage(
+      l10n,
+      lifecycle: provider.lifecycle,
+      maintenance: provider.maintenance,
+      dataClear: provider.dataClear,
+    );
     if (blocked != null) return blocked;
     final html = _htmlController.text.trim();
     if (html.isEmpty) {
@@ -624,8 +636,13 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       if (!owner.isCurrent || !mounted) {
         throw StateError('The import page is no longer active.');
       }
-      if (!canSaveSchoolImport(provider)) {
-        if (provider.isRestoringAppBackup) {
+      if (!canSaveSchoolImport(
+        lifecycle: provider.lifecycle,
+        maintenance: provider.maintenance,
+        dataClear: provider.dataClear,
+        workspaceView: provider.workspaceView,
+      )) {
+        if (maintenance.isReserved) {
           throw const AppBackupRestoreInProgressException();
         }
         throw StateError(

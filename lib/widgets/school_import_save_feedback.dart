@@ -3,33 +3,43 @@ import 'package:material_ui/material_ui.dart';
 import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
 import '../models/app_mode.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_lifecycle.dart';
+import '../controllers/workspace_view_state.dart';
 
-bool canSaveSchoolImport(TimetableProvider? provider) =>
-    provider == null ||
-    (provider.canWrite &&
-        !provider.isRestoringAppBackup &&
-        !provider.isDataClearActive &&
-        provider.isWorkspaceEnabled(AppMode.student));
+bool canSaveSchoolImport({
+  AppLifecycle? lifecycle,
+  AppDataMaintenance? maintenance,
+  AppDataClearController? dataClear,
+  WorkspaceViewState? workspaceView,
+}) =>
+    lifecycle?.canWrite != false &&
+    maintenance?.isReserved != true &&
+    dataClear?.isActive != true &&
+    workspaceView?.isEnabled(AppMode.student) != false;
 
 String? schoolImportSaveBlockedMessage(
-  TimetableProvider? provider,
-  AppLocalizations l10n,
-) {
-  if (provider == null) return null;
-  if (provider.isRestoringAppBackup) return l10n.backupRestoreInProgressMessage;
-  if (provider.isStorageWriteStateUnknown) {
+  AppLocalizations l10n, {
+  AppLifecycle? lifecycle,
+  AppDataMaintenance? maintenance,
+  AppDataClearController? dataClear,
+}) {
+  if (maintenance?.isReserved == true) {
+    return l10n.backupRestoreInProgressMessage;
+  }
+  if (lifecycle?.isStorageWriteStateUnknown == true) {
     return l10n.dataRecoveryWriteStateUnknownMessage;
   }
-  if (!provider.canWrite) {
-    return switch (provider.storageLoadStatus) {
+  if (lifecycle != null && !lifecycle.canWrite) {
+    return switch (lifecycle.storageLoadStatus) {
       StorageLoadStatus.corrupt => l10n.dataRecoveryCorruptMessage,
       StorageLoadStatus.unsupportedVersion =>
         l10n.dataRecoveryUnsupportedVersionMessage,
       _ => l10n.dataRecoveryIoFailureMessage,
     };
   }
-  return provider.isDataClearActive ? l10n.saveFailedRetry : null;
+  return dataClear?.isActive == true ? l10n.saveFailedRetry : null;
 }
 
 String mapSchoolImportApplyError(Object error, AppLocalizations l10n) {
@@ -43,13 +53,17 @@ String mapSchoolImportApplyError(Object error, AppLocalizations l10n) {
 class SchoolImportSaveFeedback extends StatefulWidget {
   const SchoolImportSaveFeedback({
     super.key,
-    this.provider,
+    this.lifecycle,
+    this.maintenance,
+    this.dataClear,
     this.isSaving = false,
     this.error,
     this.onRecoveryBusyChanged,
   });
 
-  final TimetableProvider? provider;
+  final AppLifecycle? lifecycle;
+  final AppDataMaintenance? maintenance;
+  final AppDataClearController? dataClear;
   final bool isSaving;
   final Object? error;
   final ValueChanged<bool>? onRecoveryBusyChanged;
@@ -64,12 +78,12 @@ class _SchoolImportSaveFeedbackState extends State<SchoolImportSaveFeedback> {
   Object? _retryError;
 
   Future<void> _retryStorageLoad() async {
-    final provider = widget.provider;
-    if (provider == null ||
+    final lifecycle = widget.lifecycle;
+    if (lifecycle == null ||
         widget.isSaving ||
         _retrying ||
-        provider.isRestoringAppBackup ||
-        provider.isDataClearActive) {
+        widget.maintenance?.isReserved == true ||
+        widget.dataClear?.isActive == true) {
       return;
     }
     setState(() {
@@ -78,7 +92,7 @@ class _SchoolImportSaveFeedbackState extends State<SchoolImportSaveFeedback> {
     });
     widget.onRecoveryBusyChanged?.call(true);
     try {
-      await provider.retryStorageLoad();
+      await lifecycle.retryStorageLoad();
     } catch (error) {
       if (mounted) setState(() => _retryError = error);
     } finally {
@@ -90,20 +104,34 @@ class _SchoolImportSaveFeedbackState extends State<SchoolImportSaveFeedback> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([
+      widget.lifecycle,
+      widget.maintenance,
+      widget.dataClear,
+    ]),
+    builder: (context, _) => _buildFeedback(context),
+  );
+
+  Widget _buildFeedback(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final provider = widget.provider;
+    final lifecycle = widget.lifecycle;
     final error = _retryError ?? widget.error;
     final message = _retrying
         ? l10n.dataRecoveryRetryAction
         : widget.isSaving
         ? l10n.savingChanges
-        : schoolImportSaveBlockedMessage(provider, l10n) ??
+        : schoolImportSaveBlockedMessage(
+                l10n,
+                lifecycle: lifecycle,
+                maintenance: widget.maintenance,
+                dataClear: widget.dataClear,
+              ) ??
               (error == null ? null : mapSchoolImportApplyError(error, l10n));
     if (message == null) return const SizedBox.shrink();
     final colors = Theme.of(context).colorScheme;
     final busy =
-        _retrying || widget.isSaving || provider?.isRestoringAppBackup == true;
+        _retrying || widget.isSaving || widget.maintenance?.isReserved == true;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Semantics(
@@ -130,8 +158,8 @@ class _SchoolImportSaveFeedbackState extends State<SchoolImportSaveFeedback> {
                     ),
                   ),
                 ),
-                if (provider?.canWrite == false &&
-                    provider?.isRestoringAppBackup != true)
+                if (lifecycle?.canWrite == false &&
+                    widget.maintenance?.isReserved != true)
                   TextButton(
                     onPressed: busy ? null : _retryStorageLoad,
                     child: Text(l10n.dataRecoveryRetryAction),

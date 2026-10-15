@@ -65,30 +65,9 @@ class _NoPrivacyRequest extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
-class _Provider extends TimetableProvider {
-  _Provider({required super.storage})
-    : super(
-        dataTransferCodec: inlineDataTransferCodec,
-        systemLocaleCodeResolver: () => 'en',
-        privacyService: const _NoPrivacyRequest(),
-      );
-
-  bool writable = true;
-  bool restoring = false;
-  @override
-  bool get canWrite => writable && super.canWrite;
-  @override
-  bool get isRestoringAppBackup => restoring || super.isRestoringAppBackup;
-  void replaceDataSession() {
-    final reservation = maintenance.reserve();
-    maintenance.release(reservation);
-  }
-
-  void setWriteAvailability({required bool writable, required bool restoring}) {
-    this.writable = writable;
-    this.restoring = restoring;
-    notifyListeners();
-  }
+void _replaceDataSession(TimetableProvider provider) {
+  final reservation = provider.maintenance.reserve();
+  provider.maintenance.release(reservation);
 }
 
 final _rawResult = jsonEncode({
@@ -133,7 +112,7 @@ class _Api extends SchoolImportApi {
   }
 }
 
-Future<(_Provider, _Storage)> _provider() async {
+Future<(TimetableProvider, _Storage)> _provider() async {
   final initial = buildInitialAppData(
     buildDefaultPeriodTimes(),
     localeCode: 'en',
@@ -166,7 +145,12 @@ Future<(_Provider, _Storage)> _provider() async {
       ),
     ),
   );
-  final provider = _Provider(storage: storage);
+  final provider = TimetableProvider(
+    storage: storage,
+    dataTransferCodec: inlineDataTransferCodec,
+    systemLocaleCodeResolver: () => 'en',
+    privacyService: const _NoPrivacyRequest(),
+  );
   await provider.load();
   return (provider, storage);
 }
@@ -408,7 +392,7 @@ void main() {
       addTearDown(provider.dispose);
       await _openHtmlReview(tester, provider, _Api(), appHome: true);
       final writes = storage.attempts;
-      provider.replaceDataSession();
+      _replaceDataSession(provider);
       await tester.pumpAndSettle();
       expect(find.byType(SchoolImportParsePage), findsNothing);
       expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
@@ -597,7 +581,7 @@ void main() {
                 expect(reviewRoute.isActive, isFalse);
               }
             case 'session':
-              provider.replaceDataSession();
+              _replaceDataSession(provider);
               await tester.pumpAndSettle();
             case 'unknown':
               expect(provider.isStorageWriteStateUnknown, isTrue);
@@ -733,7 +717,7 @@ void main() {
       await _tapImport(tester);
       await tester.pumpAndSettle();
       expect(find.byType(SchoolImportParsePage), findsOneWidget);
-      provider.replaceDataSession();
+      _replaceDataSession(provider);
       await tester.pumpAndSettle();
       expect(
         find.byType(SchoolImportParsePage, skipOffstage: false),
@@ -856,7 +840,7 @@ void main() {
   }
 
   testWidgets(
-    'review retains local corrections while restore and storage gates block import',
+    'review retains local corrections while an actual storage reload blocks import',
     (tester) async {
       final (provider, storage) = await _provider();
       addTearDown(provider.dispose);
@@ -867,16 +851,19 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(SchoolImportParsePage)),
       );
-      provider.setWriteAvailability(writable: true, restoring: true);
-      await tester.pump();
-      expect(tester.widget<FilledButton>(_add).onPressed, isNull);
-      expect(find.text(l10n.backupRestoreInProgressMessage), findsOneWidget);
-      provider.setWriteAvailability(writable: false, restoring: false);
+      storage.loadResult = StorageLoadResult(
+        data: storage.data,
+        recoveryStatus: RecoveryStatus.ioFailure,
+      );
+      await provider.lifecycle.retryStorageLoad();
       await tester.pumpAndSettle();
       expect(tester.widget<FilledButton>(_add).onPressed, isNull);
       expect(find.text(l10n.dataRecoveryIoFailureMessage), findsOneWidget);
       expect(storage.attempts, baseline);
-      provider.setWriteAvailability(writable: true, restoring: false);
+      storage.loadResult = null;
+      await tester.tap(
+        find.widgetWithText(TextButton, l10n.dataRecoveryRetryAction),
+      );
       await tester.pumpAndSettle();
       expect(
         tester.widget<TextField>(_name).controller!.text,
@@ -888,6 +875,50 @@ void main() {
       expect(
         storage.data.studentMode.timetables.last.config.name,
         'Retained draft',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a real maintenance reservation retires the old review before a stale submit',
+    (tester) async {
+      final (provider, storage) = await _provider();
+      addTearDown(provider.dispose);
+      final api = _Api();
+      await _openHtmlReview(tester, provider, api);
+      await tester.enterText(_name, 'Retired draft');
+      final submit = tester.widget<FilledButton>(_add).onPressed!;
+      final baseline = storage.attempts;
+      final originalSession = provider.maintenance.dataSessionToken;
+      final reservation = provider.maintenance.reserve();
+      try {
+        expect(provider.maintenance.isReserved, isTrue);
+        expect(
+          provider.maintenance.dataSessionToken,
+          isNot(same(originalSession)),
+        );
+        submit();
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(
+          find.byType(SchoolImportParsePage, skipOffstage: false),
+          findsNothing,
+        );
+        expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
+        expect(storage.attempts, baseline);
+        expect(api.calls, 1);
+      } finally {
+        provider.maintenance.release(reservation);
+      }
+      await tester.pumpAndSettle();
+      expect(
+        find.byType(SchoolImportParsePage, skipOffstage: false),
+        findsNothing,
+      );
+      expect(
+        storage.data.studentMode.timetables.single.config.name,
+        'Existing timetable',
       );
       expect(tester.takeException(), isNull);
     },

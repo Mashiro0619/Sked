@@ -104,8 +104,15 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
 
   bool get _canDiscardBundledPeriodTimeSet => _periodTimeSets.isNotEmpty;
 
+  bool get _canSave => canSaveSchoolImport(
+    lifecycle: widget.provider.lifecycle,
+    maintenance: widget.provider.maintenance,
+    dataClear: widget.provider.dataClear,
+    workspaceView: widget.provider.workspaceView,
+  );
+
   bool get _canSubmitImport =>
-      canSaveSchoolImport(widget.provider) &&
+      _canSave &&
       widget.response.timetable.courses.isNotEmpty &&
       (_importBundledPeriodTimeSet || _selectedExistingPeriodTimeSet() != null);
 
@@ -187,17 +194,11 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
               selectedPeriodTimeSet.periodTimes.length,
             ),
       leadingIcon: Icons.schedule_outlined,
-      enabled:
-          _periodTimeSets.isNotEmpty &&
-          !_blocked &&
-          canSaveSchoolImport(widget.provider),
-      onTap:
-          _periodTimeSets.isEmpty ||
-              _blocked ||
-              !canSaveSchoolImport(widget.provider)
+      enabled: _periodTimeSets.isNotEmpty && !_blocked && _canSave,
+      onTap: _periodTimeSets.isEmpty || _blocked || !_canSave
           ? null
           : () async {
-              if (!canSaveSchoolImport(widget.provider)) return;
+              if (!_canSave) return;
               final result = await _runPicker(
                 () => showPeriodTimeSetPickerDialog(
                   context,
@@ -278,7 +279,9 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SchoolImportSaveFeedback(
-              provider: widget.provider,
+              lifecycle: widget.provider.lifecycle,
+              maintenance: widget.provider.maintenance,
+              dataClear: widget.provider.dataClear,
               isSaving: _isApplying,
               error: _applyError,
               onRecoveryBusyChanged: (busy) =>
@@ -449,7 +452,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
     if (_hasPopped ||
         _blocked ||
         widget.response.timetable.courses.isEmpty ||
-        !canSaveSchoolImport(widget.provider)) {
+        !_canSave) {
       return;
     }
     final dataSession = widget.provider.dataSessionToken;
@@ -468,7 +471,7 @@ class _SchoolWebImportResultSheetState extends State<SchoolWebImportResultSheet>
         _hasPopped ||
         !routeWorkspaceEnabled ||
         !confirmed ||
-        !canSaveSchoolImport(widget.provider) ||
+        !_canSave ||
         !identical(dataSession, widget.provider.dataSessionToken) ||
         (mode == TimetableImportMode.replaceActive &&
             replacementId != widget.provider.activeTimetableOrNull?.id)) {
