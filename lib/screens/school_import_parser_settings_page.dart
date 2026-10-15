@@ -20,6 +20,7 @@ import '../services/school_import_http_consent.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/sked_task_route.dart';
 import '../widgets/ui_command.dart';
 
 class SchoolImportParserSettingsPage extends StatefulWidget {
@@ -813,7 +814,7 @@ class _ModelListDialogState extends State<_ModelListDialog>
       });
     } on _StaleModelFetchException {
       if (mounted) {
-        Navigator.of(context).pop();
+        completeSkedTaskRoute(context);
       }
     } on FormatException catch (error) {
       if (!mounted) {

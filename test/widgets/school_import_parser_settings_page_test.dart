@@ -354,6 +354,69 @@ Finder _modelDialog() {
 
 void main() {
   testWidgets(
+    'a stale model response retires its picker beneath a newer task',
+    (tester) async {
+      final provider = await _createProvider();
+      final api = _CapturingBlockingSchoolImportApi();
+      final draft = TextEditingController(text: 'Newer unsaved draft');
+      addTearDown(() async {
+        if (!api.result.isCompleted) api.result.complete([]);
+        await tester.pumpWidget(const SizedBox());
+        draft.dispose();
+        provider.dispose();
+      });
+      await _pumpPage(tester, provider, api);
+      final fetch = _fetchModelsButton();
+      await tester.ensureVisible(fetch);
+      await tester.pumpAndSettle();
+      await tester.tap(fetch);
+      await tester.pump();
+      await api.started.future;
+      await tester.pump(const Duration(milliseconds: 500));
+      final pickerRoute = ModalRoute.of(tester.element(_modelDialog()))!;
+      unawaited(
+        pickerRoute.navigator!.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: TextField(
+                key: const ValueKey('newer-parser-task'),
+                controller: draft,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      final newer = find.byKey(const ValueKey('newer-parser-task'));
+      final originalNewerElement = tester.element(newer);
+      final settings = provider.settingsView;
+      final modelBeforeResponse = settings.customSchoolImportModel;
+      await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+        baseUrl: 'https://changed.example.com/v1',
+        model: modelBeforeResponse,
+        prompt: settings.customSchoolImportPrompt,
+      );
+      await tester.pump();
+
+      api.result.complete(['stale-model']);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(pickerRoute.isActive, isFalse);
+      expect(tester.element(newer), same(originalNewerElement));
+      expect(draft.text, 'Newer unsaved draft');
+      expect(settings.customSchoolImportModel, modelBeforeResponse);
+      expect(find.text('stale-model', skipOffstage: false), findsNothing);
+      Navigator.of(tester.element(newer)).pop();
+      await tester.pumpAndSettle();
+      expect(_modelDialog(), findsNothing);
+      expect(_fetchModelsButton(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'disabling timetable cancels model loading and ignores its late result',
     (tester) async {
       final p = await _createProvider();
