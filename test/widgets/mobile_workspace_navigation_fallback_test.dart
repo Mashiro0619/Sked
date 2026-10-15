@@ -133,15 +133,15 @@ void main() {
           'hidden phone navigation switches both ways at $size / $scale / $locale',
           (t) async {
             final p = await _mount(t, size: size, scale: scale, locale: locale);
-            final tables = p.studentMode.toJson();
+            final tables = p.studentView.data.toJson();
             expect(_bar, findsNothing);
             await _selectGeneral(t);
             await t.pumpAndSettle();
-            expect(p.activeMode, AppMode.general);
+            expect(p.workspaceView.activeMode, AppMode.general);
             expect(_key('general-home'), findsOneWidget);
             await _returnToStudent(t);
-            expect(p.activeMode, AppMode.student);
-            expect(p.studentMode.toJson(), tables);
+            expect(p.workspaceView.activeMode, AppMode.student);
+            expect(p.studentView.data.toJson(), tables);
             expect(t.takeException(), isNull);
           },
           variant: _phones,
@@ -157,7 +157,7 @@ void main() {
     await _selectGeneral(t);
     await t.pumpAndSettle();
     await _returnToStudent(t);
-    expect(p.timetables, isEmpty);
+    expect(p.studentView.timetables, isEmpty);
     expect(t.takeException(), isNull);
   }, variant: _phones);
 
@@ -165,24 +165,24 @@ void main() {
     'fallback is protected from hidden shortcuts, More and custom order',
     (t) async {
       final p = await _mount(t, size: const Size(320, 568), scale: 2);
-      await p.updateStudentToolbarNavigationOrder([
+      await p.settingsCommands.updateStudentToolbarNavigationOrder([
         'more',
         'settings',
         'view',
         'week',
         'timetable',
       ]);
-      await p.updateStudentToolbarNavigationHiddenIds([
+      await p.settingsCommands.updateStudentToolbarNavigationHiddenIds([
         'timetable',
         'week',
         'view',
         'more',
       ]);
-      await p.updateStudentToolbarHiddenItemsBehavior(
+      await p.settingsCommands.updateStudentToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehaviorRemove,
       );
-      await p.updateGeneralToolbarNavigationHiddenIds(['more']);
-      await p.updateGeneralToolbarHiddenItemsBehavior(
+      await p.generalCommands.updateToolbarNavigationHiddenIds(['more']);
+      await p.generalCommands.updateToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehaviorRemove,
       );
       await t.pumpAndSettle();
@@ -195,7 +195,7 @@ void main() {
       await _selectGeneral(t);
       await t.pumpAndSettle();
       await _returnToStudent(t);
-      expect(p.activeMode, AppMode.student);
+      expect(p.workspaceView.activeMode, AppMode.student);
       expect(t.takeException(), isNull);
     },
     variant: _phones,
@@ -205,21 +205,24 @@ void main() {
     'fallback disappears with visible navigation or a single enabled workspace',
     (t) async {
       final p = await _mount(t, hidden: false);
-      await p.updateStudentToolbarNavigationVisibility('workspace', true);
+      await p.settingsCommands.updateStudentToolbarNavigationVisibility(
+        'workspace',
+        true,
+      );
       await t.pumpAndSettle();
       expect(_bar, findsOneWidget);
       expect(_menu, findsNothing);
-      await p.updateHideHomeWorkspaceNavigation(true);
+      await p.settingsCommands.updateHideHomeWorkspaceNavigation(true);
       await t.pumpAndSettle();
       expect(_menu.hitTestable(), findsOneWidget);
-      await p.setWorkspaceEnabled(AppMode.general, false);
+      await p.workspaces.setEnabled(AppMode.general, false);
       await t.pumpAndSettle();
       expect(_menu, findsNothing);
       expect(_bar, findsNothing);
-      await p.setWorkspaceEnabled(AppMode.general, true);
+      await p.workspaces.setEnabled(AppMode.general, true);
       await t.pumpAndSettle();
       expect(_menu.hitTestable(), findsOneWidget);
-      await p.updateHideHomeWorkspaceNavigation(false);
+      await p.settingsCommands.updateHideHomeWorkspaceNavigation(false);
       await t.pumpAndSettle();
       expect(_bar, findsOneWidget);
       expect(_menu, findsNothing);
@@ -250,12 +253,12 @@ void main() {
       gate.complete();
       storage.gate = null;
       await t.pumpAndSettle();
-      expect(p.activeMode, AppMode.student);
+      expect(p.workspaceView.activeMode, AppMode.student);
       expect(_key('student-home'), findsOneWidget);
       expect(t.widget<SkedPopupMenuButton<String>>(button).enabled, isTrue);
       await _selectGeneral(t);
       await t.pumpAndSettle();
-      expect(p.activeMode, AppMode.general);
+      expect(p.workspaceView.activeMode, AppMode.general);
       await _returnToStudent(t);
       expect(t.takeException(), isNull);
     },
@@ -284,7 +287,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(hide);
       await t.pumpAndSettle();
-      expect(p.hideHomeWorkspaceNavigation, isTrue);
+      expect(p.settingsView.hideHomeWorkspaceNavigation, isTrue);
       await t.binding.handlePopRoute();
       await t.pumpAndSettle();
       expect(find.byType(WorkspaceFeaturesPage), findsNothing);
@@ -301,10 +304,10 @@ void main() {
       addTearDown(reloaded.dispose);
       await t.pumpWidget(WorkspaceHarness(provider: reloaded));
       await t.pumpAndSettle();
-      expect(reloaded.hideHomeWorkspaceNavigation, isTrue);
+      expect(reloaded.settingsView.hideHomeWorkspaceNavigation, isTrue);
       await _selectGeneral(t);
       await t.pumpAndSettle();
-      expect(reloaded.activeMode, AppMode.general);
+      expect(reloaded.workspaceView.activeMode, AppMode.general);
       expect(t.takeException(), isNull);
     },
     variant: _phones,

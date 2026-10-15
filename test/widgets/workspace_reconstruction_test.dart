@@ -120,7 +120,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
       final p = await workspaceProvider(mode: AppMode.general);
-      await p.updateGeneralDisplaySettings(
+      await p.generalCommands.updateDisplaySettings(
         viewSwitchBehavior: generalViewSwitchBehaviorMenu,
       );
       await tester.pumpWidget(
@@ -135,13 +135,13 @@ void main() {
         find.byKey(const ValueKey('general-reminders-list')),
         findsNothing,
       );
-      final date = p.selectedGeneralDate;
+      final date = p.generalView.selectedDate;
       await tester.tap(find.byKey(const ValueKey('general-next-period')));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, addCalendarDays(date, 7));
+      expect(p.generalView.selectedDate, addCalendarDays(date, 7));
       await tester.tap(find.byKey(const ValueKey('general-previous-period')));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, date);
+      expect(p.generalView.selectedDate, date);
       await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
       await tester.pumpAndSettle();
       final monthItem = find
@@ -154,16 +154,16 @@ void main() {
       expect(monthItem, findsOneWidget);
       await tester.tap(monthItem);
       await tester.pumpAndSettle();
-      await p.setSelectedGeneralDate(DateTime(2026, 1, 31));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 1, 31));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('general-next-period')));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 2, 28));
+      expect(p.generalView.selectedDate, DateTime(2026, 2, 28));
       await tester.tap(
         find.byKey(const ValueKey('general-resource-previous-month')),
       );
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 2, 28));
+      expect(p.generalView.selectedDate, DateTime(2026, 2, 28));
       final navigator = find.byKey(
         const ValueKey('general-resource-date-picker'),
       );
@@ -175,7 +175,7 @@ void main() {
         find.byKey(const ValueKey('general-resource-next-month')),
       );
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 2, 28));
+      expect(p.generalView.selectedDate, DateTime(2026, 2, 28));
       expect(
         find.descendant(of: navigator, matching: find.text('February 2026')),
         findsOneWidget,
@@ -240,7 +240,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
       final p = await workspaceProvider(mode: AppMode.general);
-      final backup = await p.exportAppDataJson();
+      final backup = await p.backups.exportJson();
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Add event'));
@@ -252,7 +252,7 @@ void main() {
       final l = AppLocalizations.of(
         tester.element(find.byType(GeneralEventEditorSheet)),
       );
-      final restore = p.importAppDataJson(
+      final restore = p.backups.importJson(
         backup,
         mode: AppImportMode.replaceAll,
       );
@@ -260,10 +260,10 @@ void main() {
       await tester.tap(find.text(l.discardChangesAndExit));
       await restore;
       await tester.pumpAndSettle();
-      expect(p.enabledWorkspaces, AppMode.values.toSet());
+      expect(p.workspaceView.enabledWorkspaces, AppMode.values.toSet());
       expect(find.byType(GeneralEventEditorSheet), findsNothing);
       expect(
-        p.generalSchedules
+        p.generalView.schedules
             .expand((s) => s.events)
             .where((e) => e.title == 'Must not survive replacement'),
         isEmpty,
@@ -281,7 +281,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final p = await workspaceProvider(mode: AppMode.general);
-      final selectedDate = p.selectedGeneralDate;
+      final selectedDate = p.generalView.selectedDate;
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Add event'));
@@ -302,7 +302,7 @@ void main() {
         find.byKey(const ValueKey('workspace-resource-mode-student')),
       );
       await tester.pumpAndSettle();
-      expect(p.activeMode, AppMode.student);
+      expect(p.workspaceView.activeMode, AppMode.student);
       expect(find.byType(GeneralEventEditorSheet), findsNothing);
       expect(
         tester.state(find.byType(GeneralEventEditorSheet, skipOffstage: false)),
@@ -326,9 +326,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.state(editor), same(state));
       expect(find.text('Retained event draft'), findsOneWidget);
-      expect(p.selectedGeneralDate, selectedDate);
+      expect(p.generalView.selectedDate, selectedDate);
       expect(
-        p.generalSchedules
+        p.generalView.schedules
             .expand((calendar) => calendar.events)
             .any((event) => event.title == 'Retained event draft'),
         isFalse,
@@ -347,7 +347,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final p = await workspaceProvider(mode: AppMode.general);
-      await p.setSelectedGeneralDate(DateTime(2028, 1, 31));
+      await p.generalNavigation.setSelectedDate(DateTime(2028, 1, 31));
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       final canvas = tester.element(
@@ -357,11 +357,11 @@ void main() {
         find.byKey(const ValueKey('general-resource-next-month')),
       );
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2028, 1, 31));
+      expect(p.generalView.selectedDate, DateTime(2028, 1, 31));
       await tester.tap(find.byKey(const ValueKey('sked-date-2028-02-29')));
       await tester.pumpAndSettle();
-      expect(p.customGeneralDateRange, isNull);
-      expect(p.selectedGeneralDate, DateTime(2028, 2, 29));
+      expect(p.generalView.customDateRange, isNull);
+      expect(p.generalView.selectedDate, DateTime(2028, 2, 29));
       expect(
         tester.element(find.byKey(const ValueKey('workspace-canvas'))),
         same(canvas),
@@ -485,7 +485,7 @@ void main() {
     'single workspace removes disabled pages and settings targets without a search',
     (tester) async {
       final p = await workspaceProvider();
-      await p.setWorkspaceEnabled(AppMode.student, false);
+      await p.workspaces.setEnabled(AppMode.student, false);
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       expect(find.byType(HomeScreen, skipOffstage: false), findsNothing);
@@ -524,7 +524,7 @@ void main() {
         find.byKey(const ValueKey('workspace-enabled-student')),
         findsOneWidget,
       );
-      expect(p.isWorkspaceEnabled(AppMode.student), isFalse);
+      expect(p.workspaceView.isEnabled(AppMode.student), isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
       p.dispose();
     },
@@ -551,9 +551,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(dark.first);
       await tester.pumpAndSettle();
-      expect(p.activeMode, AppMode.student);
-      expect(p.generalMode.themeMode, 'dark');
-      expect(p.studentMode.themeMode, 'light');
+      expect(p.workspaceView.activeMode, AppMode.student);
+      expect(p.generalView.visibleData.themeMode, 'dark');
+      expect(p.studentView.data.themeMode, 'light');
       await tester.pumpWidget(const SizedBox.shrink());
       p.dispose();
     },

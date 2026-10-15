@@ -112,8 +112,10 @@ Future<TimetableProvider> _providerFor(
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
-  if (provider.activeMode != mode) await provider.switchMode(mode);
+  await provider.lifecycle.load();
+  if (provider.workspaceView.activeMode != mode) {
+    await provider.workspaces.switchMode(mode);
+  }
   return provider;
 }
 
@@ -307,7 +309,7 @@ void main() {
           width >= 840 ? findsOneWidget : findsNothing,
         );
         expect(_globalSettingsAction(), findsOneWidget);
-        expect(p.activeMode, AppMode.student);
+        expect(p.workspaceView.activeMode, AppMode.student);
         expect(tester.takeException(), isNull);
       }
     },
@@ -340,13 +342,13 @@ void main() {
     expect(tester.getSize(_resourcePanel()).width, 224);
     await tester.tap(_resourceToggle());
     await tester.pumpAndSettle();
-    expect(p.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(p.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
     expect(storage.saveCount, 1);
     expect(tester.getSize(_resourcePanel()).width, 80);
     expect(tester.element(find.byType(HomeScreen)), same(home));
     await tester.tap(_resourceToggle());
     await tester.pumpAndSettle();
-    expect(p.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(p.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
     expect(storage.saveCount, 2);
     expect(tester.getSize(_resourcePanel()).width, 224);
     expect(tester.takeException(), isNull);
@@ -382,7 +384,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1200, 800));
     await tester.pumpAndSettle();
     expect(_tooltipWithMessage('Expand workspace navigation'), findsOneWidget);
-    expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
     expect(storage.saveCount, 0);
     expect(tester.takeException(), isNull);
   });
@@ -423,7 +425,7 @@ void main() {
       await tester.tap(_resourceToggle());
       await tester.pump();
       await tester.pump();
-      expect(p.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(p.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
       expect(tester.getSize(_resourcePanel()).width, 80);
       expect(tester.takeException(), isNull);
     },
@@ -436,7 +438,7 @@ void main() {
     await tester.tap(_resourceToggle());
     await tester.pump();
     await tester.pump();
-    expect(p.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(p.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
     expect(tester.getSize(_resourcePanel()).width, 224);
     expect(tester.takeException(), isNull);
   });
@@ -560,7 +562,7 @@ void main() {
           findsNothing,
         );
       }
-      expect(p.hasMultipleWorkspaces, isTrue);
+      expect((p.workspaceView.enabledWorkspaces.length > 1), isTrue);
       expect(tester.takeException(), isNull);
     },
   );
@@ -569,7 +571,7 @@ void main() {
     'hidden general navigation keeps settings in the resource region when possible',
     (tester) async {
       final p = await _resourceShell(tester, hidden: true);
-      await p.switchMode(AppMode.general);
+      await p.workspaces.switchMode(AppMode.general);
       await tester.pumpAndSettle();
       expect(_globalSettingsAction(), findsOneWidget);
       expect(
@@ -591,7 +593,7 @@ void main() {
     final node = _globalSettingsNode(tester);
     node.requestFocus();
     await tester.pump();
-    await p.updateHideHomeWorkspaceNavigation(true);
+    await p.settingsCommands.updateHideHomeWorkspaceNavigation(true);
     await tester.pumpAndSettle();
     expect(_globalSettingsNode(tester), same(node));
     expect(node.hasFocus, isTrue);
@@ -599,7 +601,7 @@ void main() {
       find.byKey(const ValueKey('workspace-resource-mode-student')),
       findsNothing,
     );
-    await p.updateHideHomeWorkspaceNavigation(false);
+    await p.settingsCommands.updateHideHomeWorkspaceNavigation(false);
     await tester.pumpAndSettle();
     expect(node.hasFocus, isTrue);
     expect(tester.takeException(), isNull);
@@ -609,12 +611,12 @@ void main() {
     'hiding mode navigation preserves the resource collapse preference',
     (tester) async {
       final p = await _resourceShell(tester, collapsed: true);
-      await p.updateHideHomeWorkspaceNavigation(true);
+      await p.settingsCommands.updateHideHomeWorkspaceNavigation(true);
       await tester.pumpAndSettle();
       expect(tester.getSize(_resourcePanel()).width, 80);
-      await p.updateHideHomeWorkspaceNavigation(false);
+      await p.settingsCommands.updateHideHomeWorkspaceNavigation(false);
       await tester.pumpAndSettle();
-      expect(p.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(p.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
       expect(tester.getSize(_resourcePanel()).width, 80);
     },
   );
@@ -633,12 +635,12 @@ void main() {
       expect(storage.saveCount, 1);
       storage.completeSave();
       await tester.pumpAndSettle();
-      expect(p.homeWorkspaceNavigationCollapsed, isFalse);
+      expect(p.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
       expect(tester.getSize(_resourcePanel()).width, 224);
       expect(find.text('Save failed. Please try again later.'), findsOneWidget);
       await tester.tap(_resourceToggle());
       await tester.pumpAndSettle();
-      expect(p.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(p.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
       expect(storage.saveCount, 2);
     },
   );
@@ -737,12 +739,12 @@ void main() {
     await tester.pump();
     expect(settingsFocusNode.hasFocus, isTrue);
 
-    await provider.addTimetable(
+    await provider.studentCommands.addTimetable(
       TimetableConfig(
         name: 'Added timetable',
         startDate: DateTime(2026, 8, 13),
         totalWeeks: 18,
-        periodTimeSetId: provider.activePeriodTimeSet.id,
+        periodTimeSetId: provider.studentView.activePeriodTimeSet.id,
       ),
     );
     await tester.pumpAndSettle();
@@ -829,7 +831,7 @@ void main() {
 
       await tester.tap(find.text('General schedule'));
       await tester.pumpAndSettle();
-      expect(provider.isGeneralMode, isTrue);
+      expect(provider.workspaceView.isGeneralMode, isTrue);
       expect(
         tester
             .widget<NavigationBar>(
@@ -1051,7 +1053,7 @@ void main() {
       find.byKey(const ValueKey('student-week-pager')),
     );
     final timetableGridFinder = find.byKey(
-      ValueKey('student-timetable-grid-${provider.selectedWeek}'),
+      ValueKey('student-timetable-grid-${provider.studentView.selectedWeek}'),
     );
     expect(timetableGridFinder, findsOneWidget);
     final timetableGridRect = tester.getRect(timetableGridFinder);
@@ -1098,7 +1100,7 @@ void main() {
       await tester.pump();
       expect(transitionScale(), closeTo(beforeReverse, 0.0001));
       await tester.pumpAndSettle();
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.workspaceView.activeMode, AppMode.student);
     }
   });
 
@@ -1222,7 +1224,7 @@ void main() {
       );
       addTearDown(provider.dispose);
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await provider.setSelectedWeek(2);
+      await provider.studentCommands.setSelectedWeek(2);
       await tester.binding.setSurfaceSize(const Size(430, 776));
 
       await tester.pumpWidget(_appFor(provider));
@@ -1237,7 +1239,7 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
-      expect(provider.selectedWeek, 3);
+      expect(provider.studentView.selectedWeek, 3);
 
       await tester.tap(find.text('General schedule'));
       await tester.pumpAndSettle();
@@ -1245,11 +1247,11 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
-      expect(provider.selectedWeek, 3);
+      expect(provider.studentView.selectedWeek, 3);
 
       await tester.tap(find.text('Student timetable'));
       await tester.pumpAndSettle();
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.workspaceView.activeMode, AppMode.student);
       expect(
         tester
             .widget<NavigationBar>(
@@ -1279,7 +1281,7 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
-      expect(provider.selectedWeek, 2);
+      expect(provider.studentView.selectedWeek, 2);
       expect(tester.takeException(), isNull);
     },
   );
@@ -1406,7 +1408,7 @@ void main() {
 
     // The provider keeps the previously committed mode visible until the
     // pending snapshot has been accepted by storage.
-    expect(provider.activeMode, AppMode.student);
+    expect(provider.workspaceView.activeMode, AppMode.student);
     expect(
       tester
           .widget<NavigationBar>(
@@ -1535,7 +1537,7 @@ void main() {
     final pagerFinder = find.byKey(
       const ValueKey<String>('general-week-pager'),
     );
-    final initialDate = provider.selectedGeneralDate;
+    final initialDate = provider.generalView.selectedDate;
 
     await tester.tap(find.text('Student timetable'));
     await storage.firstSaveStarted.future;
@@ -1568,11 +1570,11 @@ void main() {
 
     expect(tester.widget<PageView>(pagerFinder).onPageChanged, isNull);
     await tester.pump();
-    expect(provider.selectedGeneralDate, initialDate);
+    expect(provider.generalView.selectedDate, initialDate);
 
     storage.completeSave();
     await tester.pumpAndSettle();
-    expect(provider.activeMode, AppMode.student);
+    expect(provider.workspaceView.activeMode, AppMode.student);
   });
 
   testWidgets('MyApp keeps the committed theme during a pending mode save', (
@@ -1598,7 +1600,7 @@ void main() {
         tester.widget<MaterialApp>(find.byType(MaterialApp));
 
     expect(materialApp().themeMode, ThemeMode.dark);
-    final modeSave = provider.switchMode(AppMode.general);
+    final modeSave = provider.workspaces.switchMode(AppMode.general);
     await storage.firstSaveStarted.future;
     await tester.pump();
     expect(materialApp().themeMode, ThemeMode.dark);
@@ -1628,7 +1630,7 @@ void main() {
       },
     );
     for (final mode in AppMode.values) {
-      await p.switchMode(mode);
+      await p.workspaces.switchMode(mode);
       await tester.pumpAndSettle();
       expect(_globalSettingsAction(), findsOneWidget);
       await tester.tap(_globalSettingsAction());
@@ -1677,7 +1679,7 @@ void main() {
     storage.completeSave();
     await tester.pumpAndSettle();
 
-    expect(provider.activeMode, AppMode.student);
+    expect(provider.workspaceView.activeMode, AppMode.student);
     expect(
       tester
           .widget<NavigationBar>(

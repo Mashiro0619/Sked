@@ -133,7 +133,7 @@ void main() {
         await t.pumpAndSettle();
         await t.tap(_key('adaptive-shell-general-destination'));
         await t.pumpAndSettle();
-        expect(p.activeMode, AppMode.general);
+        expect(p.workspaceView.activeMode, AppMode.general);
         // The no-ink policy is local: calendar buttons retain Material feedback.
         final canvas = find.byType(GeneralScheduleHomeScreen);
         expect(
@@ -179,7 +179,7 @@ void main() {
       expect(t.getSemantics(general).label, contains('General schedule'));
       await t.sendKeyEvent(LogicalKeyboardKey.enter);
       await t.pumpAndSettle();
-      expect(p.activeMode, AppMode.general);
+      expect(p.workspaceView.activeMode, AppMode.general);
       semantics.dispose();
       expect(t.takeException(), isNull);
     },
@@ -199,7 +199,9 @@ void main() {
           );
           final p = await workspaceProvider(mode: AppMode.general);
           addTearDown(p.dispose);
-          await p.updateGeneralDisplaySettings(defaultView: generalViewWeek);
+          await p.generalCommands.updateDisplaySettings(
+            defaultView: generalViewWeek,
+          );
           await t.pumpWidget(
             WorkspaceHarness(
               provider: p,
@@ -277,7 +279,7 @@ void main() {
           await t.pumpAndSettle();
           expect(_key('general-selected-day-agenda'), findsNothing);
           expect(nativeCalls, isNot(contains('close')));
-          expect(p.activeMode, AppMode.general);
+          expect(p.workspaceView.activeMode, AppMode.general);
         },
         variant: TargetPlatformVariant.only(TargetPlatform.windows),
       );
@@ -301,7 +303,9 @@ void main() {
       await t.tap(_key('workspace-resource-open'));
       await t.pumpAndSettle();
       expect(
-        _key('calendar-manager-tile-${p.generalMode.activeScheduleId}'),
+        _key(
+          'calendar-manager-tile-${p.generalView.visibleData.activeScheduleId}',
+        ),
         findsOneWidget,
       );
       final manager = _key('category-manager-panel');

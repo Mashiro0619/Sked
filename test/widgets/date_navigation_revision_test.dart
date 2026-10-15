@@ -36,8 +36,8 @@ void main() {
       _size(tester, const Size(1440, 900));
       final p = await workspaceProvider(mode: AppMode.general, locale: 'zh');
       addTearDown(p.dispose);
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 10));
-      await p.updateGeneralDisplaySettings(
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 10));
+      await p.generalCommands.updateDisplaySettings(
         dateLabelFormat: generalDateLabelFormatLocalized,
       );
       await tester.pumpWidget(
@@ -59,8 +59,8 @@ void main() {
       await tester.tap(_in(_popup, 'sked-date-2026-09-09'));
       await tester.pumpAndSettle();
       expect(_popup, findsNothing);
-      expect(p.customGeneralDateRange, isNull);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
+      expect(p.generalView.customDateRange, isNull);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 9));
       final l = AppLocalizations.of(
         tester.element(_key('general-date-picker')),
       );
@@ -89,7 +89,7 @@ void main() {
       );
       await tester.tap(_in(_popup, 'sked-date-month-2026-10'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 10, 9));
+      expect(p.generalView.selectedDate, DateTime(2026, 10, 9));
       expect(
         find.descendant(
           of: _key('general-date-picker'),
@@ -108,28 +108,28 @@ void main() {
       _size(tester, const Size(1440, 900));
       final p = await workspaceProvider(mode: AppMode.general);
       addTearDown(p.dispose);
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 10));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 10));
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       final canvas = tester.element(_key('workspace-canvas'));
       await tester.tap(_key('general-resource-next-month'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
       expect(
         find.descendant(of: _sidebar, matching: find.text('October 2026')),
         findsOneWidget,
       );
       await tester.tap(
-        _key('resource-calendar-${p.generalSchedules.first.id}'),
+        _key('resource-calendar-${p.generalView.schedules.first.id}'),
       );
       await tester.pumpAndSettle();
       expect(
         find.descendant(of: _sidebar, matching: find.text('October 2026')),
         findsOneWidget,
       );
-      await p.updateHomeWorkspaceNavigationCollapsed(true);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(true);
       await tester.pumpAndSettle();
-      await p.updateHomeWorkspaceNavigationCollapsed(false);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false);
       await tester.pumpAndSettle();
       expect(
         find.descendant(of: _sidebar, matching: find.text('October 2026')),
@@ -146,8 +146,8 @@ void main() {
       expect(tester.element(_key('workspace-canvas')), same(canvas));
       await tester.tap(_in(_sidebar, 'sked-date-2026-10-13'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 10, 13));
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.selectedDate, DateTime(2026, 10, 13));
+      expect(p.generalView.customDateRange, isNull);
       for (final day in ['12', '13', '14', '15', '16', '17', '18']) {
         expect(
           tester
@@ -159,7 +159,7 @@ void main() {
       }
       await tester.tap(_key('general-previous-period'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 10, 6));
+      expect(p.generalView.selectedDate, DateTime(2026, 10, 6));
       await tester.tap(_key('general-resource-previous-month'));
       await tester.pumpAndSettle();
       expect(
@@ -185,8 +185,8 @@ void main() {
       _size(tester, const Size(1440, 900));
       final p = await workspaceProvider(mode: AppMode.general);
       addTearDown(p.dispose);
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 11));
-      await p.updateGeneralDisplaySettings(showWeekends: false);
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 11));
+      await p.generalCommands.updateDisplaySettings(showWeekends: false);
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       final workspaceL10n = AppLocalizations.of(
@@ -198,23 +198,23 @@ void main() {
       expect(saturday.flagsCollection.isEnabled, Tristate.isTrue);
       await tester.tap(_in(_popup, 'sked-date-2026-09-12'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 11));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 11));
       await tester.tap(_in(_popup, 'sked-date-2026-09-13'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 12));
-      expect(p.customGeneralDateRange!.dayCount, 2);
-      expect(p.generalShowWeekends, isFalse);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 12));
+      expect(p.generalView.customDateRange!.dayCount, 2);
+      expect(p.generalView.data.showWeekends, isFalse);
       final l = AppLocalizations.of(
         tester.element(_key('general-date-picker')),
       );
       await _view(tester, l.viewMonth);
-      await p.setSelectedGeneralDate(DateTime(2026, 7, 31));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 7, 31));
       await tester.pumpAndSettle();
       await tester.tap(_key('general-date-picker'));
       await tester.pumpAndSettle();
       await tester.tap(_in(_popup, 'sked-date-month-2026-5'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 5, 29));
+      expect(p.generalView.selectedDate, DateTime(2026, 5, 29));
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -226,7 +226,7 @@ void main() {
       _size(tester, const Size(1440, 900));
       final p = await workspaceProvider(mode: AppMode.general, locale: 'zh');
       addTearDown(p.dispose);
-      await p.setSelectedGeneralDate(DateTime(2027, 1, 1));
+      await p.generalNavigation.setSelectedDate(DateTime(2027, 1, 1));
       await tester.pumpWidget(
         WorkspaceHarness(provider: p, locale: const Locale('zh')),
       );
@@ -236,7 +236,7 @@ void main() {
         (generalDateLabelFormatSlash, '2026/12/28–2027/1/3'),
         (generalDateLabelFormatIso, '2026-12-28–2027-01-03'),
       ]) {
-        await p.updateGeneralDisplaySettings(dateLabelFormat: format);
+        await p.generalCommands.updateDisplaySettings(dateLabelFormat: format);
         await tester.pumpAndSettle();
         expect(
           find.descendant(
@@ -245,7 +245,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(p.generalDateLabelFormat, format);
+        expect(p.generalView.data.dateLabelFormat, format);
       }
       expect(tester.takeException(), isNull);
     },
@@ -258,7 +258,7 @@ void main() {
       _size(tester, const Size(1280, 900));
       final p = await workspaceProvider(mode: AppMode.general);
       addTearDown(p.dispose);
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 10));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 10));
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       final l = AppLocalizations.of(
@@ -298,7 +298,7 @@ void main() {
       expect(tester.state(editor), same(state));
       expect(find.textContaining('2026-09-14'), findsWidgets);
       expect(
-        p.generalSchedules
+        p.generalView.schedules
             .expand((c) => c.events)
             .where((e) => e.title == 'Date draft'),
         isEmpty,

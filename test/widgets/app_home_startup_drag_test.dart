@@ -144,7 +144,7 @@ void main() {
         expect(calls.where((value) => value == 'startDrag'), hasLength(1));
       }
       expect(storage.writes, writes);
-      expect(p.acceptedPrivacyPolicyVersion, isNull);
+      expect(p.lifecycle.acceptedPrivacyPolicyVersion, isNull);
       expect(t.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   }
@@ -213,7 +213,7 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(launches, hasLength(1));
-      expect(p.acceptedPrivacyPolicyVersion, isNull);
+      expect(p.lifecycle.acceptedPrivacyPolicyVersion, isNull);
       expect(storage.writes, writes);
       expect(calls, isNot(contains('startDrag')));
       expect(t.takeException(), isNull);
@@ -233,9 +233,9 @@ void main() {
         calls.clear();
         await t.tap(k('first-launch-$card-card'));
         await t.pumpAndSettle();
-        expect(p.acceptedPrivacyPolicyVersion, isNotNull);
-        expect(p.activeMode, mode);
-        expect(p.enabledWorkspaces.toSet(), enabled);
+        expect(p.lifecycle.acceptedPrivacyPolicyVersion, isNotNull);
+        expect(p.workspaceView.activeMode, mode);
+        expect(p.workspaceView.enabledWorkspaces.toSet(), enabled);
         expect(k('first-launch-onboarding'), findsNothing);
         expect(k('startup-window-toolbar'), findsNothing);
         expect(calls, isNot(contains('startDrag')));

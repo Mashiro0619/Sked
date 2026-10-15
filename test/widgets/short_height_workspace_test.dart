@@ -58,9 +58,9 @@ void main() {
             await frame.controller.close();
             await tester.pumpAndSettle();
           }
-          final initialData = provider.appData.toJson();
-          final table = provider.activeTimetable;
-          final calendar = provider.generalSchedules.firstWhere(
+          final initialData = provider.workspaceView.data.toJson();
+          final table = provider.studentView.activeTimetable;
+          final calendar = provider.generalView.schedules.firstWhere(
             (calendar) => calendar.events.isNotEmpty,
           );
           String? savedTitle;
@@ -73,7 +73,9 @@ void main() {
             maxWidth: appSheetWidthMedium,
             builder: (_) => mode == AppMode.student
                 ? CourseEditorSheet(
-                    periodTimes: provider.periodTimesForTimetable(table),
+                    periodTimes: provider.studentView.periodTimesForTimetable(
+                      table,
+                    ),
                     totalWeeks: table.config.totalWeeks,
                     dayOfWeek: table.courses.first.dayOfWeek,
                     initialCourse: table.courses.first,
@@ -81,9 +83,9 @@ void main() {
                     onDelete: () async {},
                   )
                 : GeneralEventEditorSheet(
-                    calendars: provider.generalSchedules,
+                    calendars: provider.generalView.schedules,
                     activeCalendarId: calendar.id,
-                    initialDate: provider.selectedGeneralDate,
+                    initialDate: provider.generalView.selectedDate,
                     initialEvent: calendar.events.first,
                     onSave: (event) async => savedTitle = event.title,
                     onDelete: () async {},
@@ -146,7 +148,7 @@ void main() {
           await result;
           expect(editor, findsNothing);
           expect(savedTitle, save ? '横屏输入草稿' : isNull);
-          expect(provider.appData.toJson(), initialData);
+          expect(provider.workspaceView.data.toJson(), initialData);
           expect(tester.takeException(), isNull);
         },
         variant: TargetPlatformVariant.only(TargetPlatform.android),
@@ -159,7 +161,7 @@ void main() {
     (tester) async {
       final provider = await workspaceProvider(locale: 'zh');
       addTearDown(provider.dispose);
-      final table = provider.activeTimetable;
+      final table = provider.studentView.activeTimetable;
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: provider,
@@ -173,7 +175,9 @@ void main() {
                 height: 4,
                 child: TimetableGrid(
                   timetable: table,
-                  periodTimes: provider.periodTimesForTimetable(table),
+                  periodTimes: provider.studentView.periodTimesForTimetable(
+                    table,
+                  ),
                   weekDateStart: DateTime(2026, 10, 5),
                   selectedWeek: 1,
                   realCurrentWeek: 1,

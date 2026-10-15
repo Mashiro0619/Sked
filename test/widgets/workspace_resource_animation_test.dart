@@ -177,13 +177,13 @@ void main() {
       pane.currentState!.settingsFocus.requestFocus();
       await t.pump();
       expect(pane.currentState!.settingsFocus.hasFocus, isTrue);
-      await p.updateHomeWorkspaceNavigationCollapsed(true);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(true);
       await t.pumpAndSettle();
       expect(pane.currentState!.settingsFocus.hasFocus, isTrue);
       await t.sendKeyEvent(LogicalKeyboardKey.enter);
       await t.pumpAndSettle();
       expect(pane.currentState!.settingsOpened, 1);
-      await p.updateHomeWorkspaceNavigationCollapsed(false);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false);
       await t.pumpAndSettle();
       expect(scroll.position.pixels, closeTo(offset, .01));
       expect(pane.currentState!.settingsFocus.hasFocus, isTrue);
@@ -206,11 +206,11 @@ void main() {
       );
       await t.pumpAndSettle();
       final before = _iconRects(t);
-      await p.updateHomeWorkspaceNavigationCollapsed(true);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(true);
       await t.pump();
       expect(t.getSize(_key('workspace-resource-width')).width, 56);
       _expectAnchors(t, before);
-      await p.updateHomeWorkspaceNavigationCollapsed(false);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false);
       await t.pump();
       expect(t.getSize(_key('workspace-resource-width')).width, 224);
       _expectAnchors(t, before);
@@ -227,7 +227,7 @@ void main() {
       addTearDown(p.dispose);
       await t.pumpWidget(WorkspaceHarness(provider: p, home: const _Pane()));
       await t.pumpAndSettle();
-      await p.updateHomeWorkspaceNavigationCollapsed(true);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(true);
       await t.pump();
       await t.pump(const Duration(milliseconds: 40));
       t.view.physicalSize = const Size(700, 900);

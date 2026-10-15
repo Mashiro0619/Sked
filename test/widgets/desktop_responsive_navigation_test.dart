@@ -196,7 +196,7 @@ void main() {
                 .evaluate()
                 .isNotEmpty;
             await switchTo(t, AppMode.student, AppMode.general);
-            expect(p.activeMode, AppMode.general);
+            expect(p.workspaceView.activeMode, AppMode.general);
             expect(find.byType(FloatingActionButton), findsNothing);
             expect(key('general-add-event').hitTestable(), findsOneWidget);
             expect(layout(t).resourcePresentation, before.resourcePresentation);
@@ -206,7 +206,7 @@ void main() {
               compactBar,
             );
             await switchTo(t, AppMode.general, AppMode.student);
-            expect(p.activeMode, AppMode.student);
+            expect(p.workspaceView.activeMode, AppMode.student);
             expect(t.takeException(), isNull);
           }
         },
@@ -238,7 +238,7 @@ void main() {
       expect(t.getRect(key('workspace-canvas')), before);
       expect(t.getRect(key('workspace-resource-surface')).top, 48);
       expect(t.getSize(key('workspace-resource-surface')).width, 224);
-      expect(p.homeWorkspaceNavigationCollapsed, isFalse);
+      expect(p.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
       expect(storage.writes, writes);
       await t.sendKeyEvent(LogicalKeyboardKey.tab);
       await t.pump();
@@ -278,7 +278,7 @@ void main() {
     final (p, storage) = await mount(t, width: 1440);
     await t.tap(toggle);
     await t.pumpAndSettle();
-    expect(p.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(p.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
     final writes = storage.writes;
     t.view.physicalSize = const Size(1000, 900);
     await t.pumpAndSettle();
@@ -299,7 +299,7 @@ void main() {
     addTearDown(restored.dispose);
     await t.pumpWidget(WorkspaceHarness(provider: restored));
     await t.pumpAndSettle();
-    expect(restored.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(restored.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
     expect(
       layout(t).resourcePresentation,
       WorkspaceResourcePresentation.compact,
@@ -323,11 +323,11 @@ void main() {
       gate.complete();
       storage.gate = null;
       await t.pumpAndSettle();
-      expect(p.activeMode, AppMode.student);
+      expect(p.workspaceView.activeMode, AppMode.student);
       expect(scrim, findsOneWidget);
       await t.tap(key('workspace-resource-mode-general'));
       await t.pumpAndSettle();
-      expect(p.activeMode, AppMode.general);
+      expect(p.workspaceView.activeMode, AppMode.general);
       expect(scrim, findsNothing);
       expect(t.takeException(), isNull);
     },
@@ -374,7 +374,7 @@ void main() {
         expect(editor, findsOneWidget);
         expect(t.widget<TextField>(field).controller, same(controller));
         expect(controller.text, 'Preserved draft');
-        expect(p.activeMode, mode);
+        expect(p.workspaceView.activeMode, mode);
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -387,7 +387,7 @@ void main() {
       final (p, _) = await mount(t, empty: true, width: 330);
       await switchTo(t, AppMode.student, AppMode.general);
       await switchTo(t, AppMode.general, AppMode.student);
-      expect(p.timetables, isEmpty);
+      expect(p.studentView.timetables, isEmpty);
       for (final width in [1000.0, 1440.0]) {
         t.view.physicalSize = Size(width, 900);
         await t.pumpAndSettle();
@@ -427,7 +427,7 @@ void main() {
         layout(t).resourcePresentation,
         WorkspaceResourcePresentation.compact,
       );
-      expect(p.homeWorkspaceNavigationCollapsed, isFalse);
+      expect(p.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
       expect(scrim, findsNothing);
       expect(t.takeException(), isNull);
     },
@@ -438,14 +438,14 @@ void main() {
     'hidden-navigation empty workspace keeps mode switching in its drawer',
     (t) async {
       final (p, _) = await mount(t, empty: true, width: 330);
-      await p.updateHideHomeWorkspaceNavigation(true);
+      await p.settingsCommands.updateHideHomeWorkspaceNavigation(true);
       await t.pumpAndSettle();
       await t.tap(key('student-empty-resources'));
       await t.pumpAndSettle();
       expect(scrim, findsOneWidget);
       await t.tap(key('workspace-resource-mode-general'));
       await t.pumpAndSettle();
-      expect(p.activeMode, AppMode.general);
+      expect(p.workspaceView.activeMode, AppMode.general);
       expect(scrim, findsNothing);
       expect(t.takeException(), isNull);
     },

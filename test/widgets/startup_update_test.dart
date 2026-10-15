@@ -71,7 +71,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.pumpWidget(harness());
       await tester.pumpAndSettle();
-      await p.switchMode(AppMode.general);
+      await p.workspaces.switchMode(AppMode.general);
       await tester.pumpAndSettle();
       expect(updates.calls, 1);
     },
@@ -89,7 +89,7 @@ void main() {
           storage: reminderSummaryStorage(),
         );
         addTearDown(p.dispose);
-        await p.acceptPrivacyPolicyCurrentVersion();
+        await p.lifecycle.acceptPrivacyPolicyCurrentVersion();
         final prompts = UpdatePromptController(isForeground: () => foreground);
         addTearDown(prompts.dispose);
         final updates = _Updates();
@@ -115,7 +115,7 @@ void main() {
         updates.complete();
         await tester.pumpAndSettle();
         expect(find.byType(AppUpdateDialog), findsNothing);
-        expect(p.availableUpdateVersion, '2.0.0');
+        expect(p.settingsView.availableUpdateVersion, '2.0.0');
         await tester.pump(const Duration(seconds: 20));
         await tester.pumpAndSettle();
         expect(find.byType(AppUpdateDialog), findsNothing);
@@ -195,7 +195,7 @@ void main() {
                 : null,
           );
           addTearDown(p.dispose);
-          await p.updateWorkspacePanelDisplayMode(layout);
+          await p.settingsCommands.updateWorkspacePanelDisplayMode(layout);
           final prompts = UpdatePromptController(isForeground: () => true);
           addTearDown(prompts.dispose);
           await tester.pumpWidget(
@@ -234,7 +234,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(AppUpdateDialog), findsNothing);
           expect(tester.element(editor), same(element));
-          expect(p.availableUpdateVersion, '2.0.0');
+          expect(p.settingsView.availableUpdateVersion, '2.0.0');
         },
         variant: TargetPlatformVariant.only(TargetPlatform.windows),
       );

@@ -63,7 +63,7 @@ Future<(TimetableProvider, _Storage)> _setup({
 }) async {
   final seed = await workspaceProvider(mode: AppMode.general);
   final storage = _Storage(
-    seed.appData.copyWith(
+    seed.workspaceView.data.copyWith(
       generalMode: GeneralScheduleData(
         activeScheduleId: 'range-calendar',
         selectedDateIso: '2026-09-10',
@@ -171,18 +171,18 @@ void main() {
       expect(frame.contextSnapshot!.endDate, _five.end);
       final pager = t.element(_key('general-week-pager'));
       await _tap(t, _header(DateTime(2026, 9, 12)));
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 12));
-      expect(p.customGeneralDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 12));
+      expect(p.generalView.customDateRange, _five);
       await _view(t, generalViewWeek);
-      expect(p.customGeneralDateRange, isNull);
-      expect(p.generalShowWeekends, isFalse);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 11));
+      expect(p.generalView.customDateRange, isNull);
+      expect(p.generalView.data.showWeekends, isFalse);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 11));
       expect(_header(DateTime(2026, 9, 7)), findsOneWidget);
       expect(_header(DateTime(2026, 9, 12)), findsNothing);
       expect(t.element(_key('general-week-pager')), same(pager));
       await _view(t, 'custom');
-      expect(p.customGeneralDateRange, _five);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 11));
+      expect(p.generalView.customDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 11));
       expect(t.element(_key('general-week-pager')), same(pager));
       expect(t.takeException(), isNull);
     },
@@ -196,12 +196,12 @@ void main() {
       final (p, _) = await _setup(range: _five);
       await _pump(t, p);
       await _tap(t, _key('general-next-period'));
-      expect(p.customGeneralDateRange, _five.shifted(5));
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 15));
+      expect(p.generalView.customDateRange, _five.shifted(5));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 15));
       await _tap(t, _key('general-previous-period'));
-      expect(p.customGeneralDateRange, _five);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
-      await p.setGeneralDateRange(
+      expect(p.generalView.customDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
+      await p.generalNavigation.setDateRange(
         GeneralDateRange(DateTime(1970), DateTime(1970, 1, 14)),
       );
       await t.pumpAndSettle();
@@ -209,10 +209,10 @@ void main() {
         t.widget<IconButton>(_key('general-previous-period')).onPressed,
         isNull,
       );
-      await p.setSelectedGeneralDate(DateTime(2100));
+      await p.generalNavigation.setSelectedDate(DateTime(2100));
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange!.dayCount, 14);
-      expect(p.customGeneralDateRange!.end, DateTime(2100));
+      expect(p.generalView.customDateRange!.dayCount, 14);
+      expect(p.generalView.customDateRange!.end, DateTime(2100));
       expect(
         t.widget<IconButton>(_key('general-next-period')).onPressed,
         isNull,
@@ -231,28 +231,28 @@ void main() {
       await _view(t, generalViewDay);
       await t.drag(_key('general-day-pager'), const Offset(-850, 0));
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 11));
-      expect(p.customGeneralDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 11));
+      expect(p.generalView.customDateRange, _five);
       await _view(t, generalViewMonth);
       await _tap(t, _key('general-next-period'));
-      expect(p.selectedGeneralDate, DateTime(2026, 10, 11));
-      expect(p.customGeneralDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 10, 11));
+      expect(p.generalView.customDateRange, _five);
       await _view(t, 'custom');
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 10, 11), DateTime(2026, 10, 15)),
       );
-      await p.setSelectedGeneralDate(DateTime(2027, 1, 1));
+      await p.generalNavigation.setSelectedDate(DateTime(2027, 1, 1));
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange!.start, DateTime(2027, 1, 1));
-      expect(p.customGeneralDateRange!.dayCount, 5);
+      expect(p.generalView.customDateRange!.start, DateTime(2027, 1, 1));
+      expect(p.generalView.customDateRange!.dayCount, 5);
       final today = DateUtils.dateOnly(DateTime.now());
       await _tap(t, _key('general-today'));
-      expect(p.customGeneralDateRange!.start, today);
-      expect(p.selectedGeneralDate, today);
-      final nowRange = p.customGeneralDateRange;
+      expect(p.generalView.customDateRange!.start, today);
+      expect(p.generalView.selectedDate, today);
+      final nowRange = p.generalView.customDateRange;
       await _tap(t, _key('general-today'));
-      expect(p.customGeneralDateRange, nowRange);
+      expect(p.generalView.customDateRange, nowRange);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -267,15 +267,15 @@ void main() {
       await _tap(t, _in(_sidebar, 'sked-date-2026-09-09'));
       final controller = t.widget<SkedDatePicker>(_sidebar).rangeController!;
       expect(controller.start, isNull);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 9));
+      expect(p.generalView.customDateRange, isNull);
       await _tap(t, _key('resource-calendar-range-calendar'));
-      await p.updateHomeWorkspaceNavigationCollapsed(true);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(true);
       await t.pumpAndSettle();
       t.view.physicalSize = const Size(800, 1100);
       await t.pumpAndSettle();
       t.view.physicalSize = const Size(1440, 900);
-      await p.updateHomeWorkspaceNavigationCollapsed(false);
+      await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false);
       await t.pumpAndSettle();
       expect(
         t.widget<SkedDatePicker>(_sidebar).rangeController,
@@ -288,8 +288,8 @@ void main() {
       );
       await _tap(t, _in(_popup, 'sked-date-2026-09-09'));
       await _tap(t, _in(_popup, 'sked-date-2026-09-13'));
-      expect(p.customGeneralDateRange, _five);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
+      expect(p.generalView.customDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 9));
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -308,17 +308,17 @@ void main() {
     storage.saveError = StateError('disk busy');
     await t.tap(_in(_popup, 'sked-date-2026-09-13'));
     await t.pump();
-    expect(p.customGeneralDateRange, isNull);
-    expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+    expect(p.generalView.customDateRange, isNull);
+    expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
     await t.tap(_in(_popup, 'sked-date-2026-09-14'));
     await t.pump();
     expect(storage.writes, before + 1);
     storage.gate!.complete();
     await t.pumpAndSettle();
     expect(_in(_popup, 'sked-date-range-retry'), findsOneWidget);
-    expect(p.customGeneralDateRange, isNull);
+    expect(p.generalView.customDateRange, isNull);
     await _tap(t, _in(_popup, 'sked-date-range-retry'));
-    expect(p.customGeneralDateRange, _five);
+    expect(p.generalView.customDateRange, _five);
     expect(storage.writes, before + 2);
     expect(t.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
@@ -328,31 +328,31 @@ void main() {
     (t) async {
       _size(t, const Size(1440, 900));
       final (p, _) = await _setup(range: _five);
-      final backup = await p.exportAppDataJson();
+      final backup = await p.backups.exportJson();
       await _pump(t, p);
       await _tap(t, _in(_sidebar, 'sked-date-2026-09-16'));
       final old = t.widget<SkedDatePicker>(_sidebar).rangeController!;
       await _tap(t, _key('general-date-picker'));
-      await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+      await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
       await t.pumpAndSettle();
       expect(_popup, findsNothing);
       expect(old.isCurrent, isFalse);
-      expect(p.customGeneralDateRange, _five);
+      expect(p.generalView.customDateRange, _five);
       expect(t.widget<SkedDatePicker>(_sidebar).rangeController!.start, isNull);
       await _tap(t, _key('general-date-picker'));
       await _tap(t, _in(_popup, 'sked-date-2026-09-16'));
-      expect(p.customGeneralDateRange, _five);
+      expect(p.generalView.customDateRange, _five);
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.pumpAndSettle();
       await _tap(t, _key('general-date-picker'));
-      await p.setWorkspaceEnabled(AppMode.general, false);
+      await p.workspaces.setEnabled(AppMode.general, false);
       await t.pumpAndSettle();
       expect(_popup, findsNothing);
-      expect(p.customGeneralDateRange, _five);
-      await p.setWorkspaceEnabled(AppMode.general, true);
-      await p.switchMode(AppMode.general);
+      expect(p.generalView.customDateRange, _five);
+      await p.workspaces.setEnabled(AppMode.general, true);
+      await p.workspaces.switchMode(AppMode.general);
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, _five);
+      expect(p.generalView.customDateRange, _five);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -367,16 +367,16 @@ void main() {
       final pager = _key('general-week-pager');
       await t.drag(pager, const Offset(-850, 0));
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, _five.shifted(5));
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 15));
+      expect(p.generalView.customDateRange, _five.shifted(5));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 15));
       storage.saveError = StateError('paging failed');
       await t.drag(pager, const Offset(-850, 0));
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, _five.shifted(5));
+      expect(p.generalView.customDateRange, _five.shifted(5));
       expect(_header(DateTime(2026, 9, 14)), findsOneWidget);
       await t.drag(pager, const Offset(-850, 0));
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, _five.shifted(10));
+      expect(p.generalView.customDateRange, _five.shifted(10));
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -412,9 +412,9 @@ void main() {
           expect(t.getTopLeft(find.text('07:00')), rulerPosition);
           expect(t.getTopLeft(_key('general-all-day-toggle')), allDayPosition);
           await _tap(t, _key('general-all-day-toggle'));
-          expect(p.allDayTimelineCollapsed, isTrue);
-          expect(p.customGeneralDateRange, range);
-          expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+          expect(p.generalView.data.allDayTimelineCollapsed, isTrue);
+          expect(p.generalView.customDateRange, range);
+          expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
         }
         for (var d = 9; d <= 22; d++) {
           expect(_header(DateTime(2026, 9, d)), findsOneWidget);
@@ -439,7 +439,7 @@ void main() {
           currentScroll.controller!.offset,
           lessThanOrEqualTo(currentScroll.controller!.position.maxScrollExtent),
         );
-        expect(p.customGeneralDateRange, range);
+        expect(p.generalView.customDateRange, range);
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.android),
@@ -475,7 +475,7 @@ void main() {
       expect(t.state(editor), same(state));
       expect(find.text('Range draft'), findsOneWidget);
       expect(
-        p.generalSchedules
+        p.generalView.schedules
             .expand((s) => s.events)
             .where((e) => e.title == 'Range draft'),
         isEmpty,
@@ -520,8 +520,8 @@ void main() {
       expect(t.getTopLeft(find.text('07:00')), time);
       expect(t.getTopLeft(_key('general-all-day-toggle')), allDay);
       await _tap(t, _key('general-all-day-toggle'));
-      expect(p.allDayTimelineCollapsed, isTrue);
-      expect(p.customGeneralDateRange, range);
+      expect(p.generalView.data.allDayTimelineCollapsed, isTrue);
+      expect(p.generalView.customDateRange, range);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -536,11 +536,11 @@ void main() {
         DateTime(today.year, today.month, today.day + 13),
       );
       final (p, _) = await _setup(range: range);
-      await p.setSelectedGeneralDate(today);
+      await p.generalNavigation.setSelectedDate(today);
       await _pump(t, p);
       Finder horizontal() => find
           .ancestor(
-            of: _header(p.customGeneralDateRange!.start),
+            of: _header(p.generalView.customDateRange!.start),
             matching: find.byType(SingleChildScrollView),
           )
           .first;
@@ -555,20 +555,20 @@ void main() {
         t.widget<SingleChildScrollView>(horizontal()).controller!.offset,
         closeTo(0, .01),
       );
-      expect(p.customGeneralDateRange, range);
-      expect(p.selectedGeneralDate, today);
-      await p.setSelectedGeneralDate(range.end);
+      expect(p.generalView.customDateRange, range);
+      expect(p.generalView.selectedDate, today);
+      await p.generalNavigation.setSelectedDate(range.end);
       await t.pumpAndSettle();
       final viewport = t.getRect(horizontal());
       final end = t.getRect(_header(range.end));
       expect(end.left, greaterThan(viewport.left + 60));
       expect(end.right, lessThanOrEqualTo(viewport.right + .01));
-      expect(p.customGeneralDateRange, range);
+      expect(p.generalView.customDateRange, range);
       final outside = DateTime(today.year, today.month, today.day + 21);
-      await p.setSelectedGeneralDate(outside);
+      await p.generalNavigation.setSelectedDate(outside);
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange!.start, outside);
-      expect(p.customGeneralDateRange!.dayCount, 14);
+      expect(p.generalView.customDateRange!.start, outside);
+      expect(p.generalView.customDateRange!.dayCount, 14);
       expect(
         t.widget<SingleChildScrollView>(horizontal()).controller!.offset,
         closeTo(0, .01),
@@ -590,7 +590,7 @@ void main() {
       await _pump(t, p);
       Finder horizontal() => find
           .ancestor(
-            of: _header(p.customGeneralDateRange!.start),
+            of: _header(p.generalView.customDateRange!.start),
             matching: find.byType(SingleChildScrollView),
           )
           .first;
@@ -607,7 +607,7 @@ void main() {
       expect(x, greaterThan(0));
       expect(y, greaterThan(0));
       await _tap(t, _key('general-next-period'));
-      expect(p.customGeneralDateRange, range.shifted(14));
+      expect(p.generalView.customDateRange, range.shifted(14));
       expect(
         t.widget<SingleChildScrollView>(horizontal()).controller!.offset,
         closeTo(x, .01),
@@ -631,7 +631,7 @@ void main() {
         t.widget<SingleChildScrollView>(vertical()).controller!.offset,
         greaterThan(y),
       );
-      expect(p.customGeneralDateRange, range.shifted(14));
+      expect(p.generalView.customDateRange, range.shifted(14));
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -644,7 +644,7 @@ void main() {
       final (p, storage) = await _setup();
       final labels = <String>{};
       for (final days in [1, 7, 14]) {
-        await p.setGeneralDateRange(
+        await p.generalNavigation.setDateRange(
           GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 8 + days)),
         );
         final before = storage.writes;
@@ -674,9 +674,9 @@ void main() {
         final row = t.getRect(_key('general-compact-toolbar-single-row'));
         expect(row.height, lessThanOrEqualTo(52));
         expect(t.getRect(title).center.dy, closeTo(row.center.dy, .1));
-        expect(p.customGeneralDateRange!.dayCount, days);
+        expect(p.generalView.customDateRange!.dayCount, days);
         // Showing a custom range must not rewrite the saved default view.
-        expect(p.generalDefaultView, generalViewWeek);
+        expect(p.generalView.data.defaultView, generalViewWeek);
         expect(storage.writes, before);
         expect(t.takeException(), isNull);
       }
@@ -691,11 +691,11 @@ void main() {
       final (p, _) = await _setup(
         range: GeneralDateRange(DateTime(2027, 2, 1), DateTime(2027, 2, 5)),
       );
-      final focus = p.selectedGeneralDate;
+      final focus = p.generalView.selectedDate;
       await _pump(t, p);
-      expect(p.selectedGeneralDate, focus);
-      expect(p.customGeneralDateRange!.start, focus);
-      expect(p.customGeneralDateRange!.dayCount, 5);
+      expect(p.generalView.selectedDate, focus);
+      expect(p.generalView.customDateRange!.start, focus);
+      expect(p.generalView.customDateRange!.dayCount, 5);
       expect(_header(focus), findsOneWidget);
       expect(t.takeException(), isNull);
     },
@@ -727,8 +727,8 @@ void main() {
       final controller = t.widget<SkedDatePicker>(_sidebar).rangeController!;
       expect(controller.previewRange, _five);
       expect(storage.writes, before);
-      expect(p.customGeneralDateRange, isNull);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+      expect(p.generalView.customDateRange, isNull);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
       expect(
         t.widget(_key('general-week-pager')),
         same(pager),
@@ -736,8 +736,8 @@ void main() {
       );
       await mouse.up();
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, _five);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+      expect(p.generalView.customDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
       expect(storage.writes, before + 1);
       expect(t.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
@@ -750,14 +750,14 @@ void main() {
       final (p, _) = await _setup(range: _five);
       await _pump(t, p);
       await _tap(t, _in(_sidebar, 'sked-date-2026-09-12'));
-      expect(p.customGeneralDateRange, _five);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 12));
+      expect(p.generalView.customDateRange, _five);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 12));
       await _tap(t, _in(_sidebar, 'sked-date-2026-09-22'));
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 26)),
       );
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 22));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 22));
       expect(t.widget<SkedDatePicker>(_sidebar).rangeController!.start, isNull);
       expect(t.takeException(), isNull);
     },
@@ -780,11 +780,11 @@ void main() {
       await gesture.up();
       await t.pumpAndSettle();
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 9, 12), DateTime(2026, 9, 13)),
       );
       expect(_key('general-week-pager'), findsOneWidget);
-      expect(p.generalShowWeekends, isFalse);
+      expect(p.generalView.data.showWeekends, isFalse);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -827,12 +827,12 @@ void main() {
       await t.pump();
       await drag.up();
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(_in(_sidebar, 'sked-date-range-retry'), findsOneWidget);
       expect(_key('sked-date-drag-status'), findsNothing);
       expect(t.getRect(_sidebar), before);
       await _tap(t, _in(_sidebar, 'sked-date-range-retry'));
-      expect(p.customGeneralDateRange, _five);
+      expect(p.generalView.customDateRange, _five);
       expect(_in(_sidebar, 'sked-date-range-retry'), findsNothing);
       expect(t.takeException(), isNull);
     },

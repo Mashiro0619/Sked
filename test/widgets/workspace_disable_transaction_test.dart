@@ -28,7 +28,7 @@ class _PendingStorage extends WorkspaceMemoryStorage {
 
 Future<(TimetableProvider, _PendingStorage)> _fixture() async {
   final seed = await workspaceProvider();
-  final storage = _PendingStorage(seed.appData);
+  final storage = _PendingStorage(seed.workspaceView.data);
   seed.dispose();
   return (await workspaceProvider(storage: storage), storage);
 }
@@ -81,7 +81,7 @@ void main() {
         await tester.tap(find.text(l.confirm));
         await _finishTransitions(tester);
         expect(storage.writes, writesBefore + 1);
-        expect(provider.isWorkspaceEnabled(AppMode.student), isTrue);
+        expect(provider.workspaceView.isEnabled(AppMode.student), isTrue);
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
         await tester.pageBack();
@@ -96,12 +96,15 @@ void main() {
         await _finishTransitions(tester);
         expect(tester.takeException(), isNull);
         expect(find.byType(ErrorWidget), findsNothing);
-        expect(provider.appData.enabledWorkspaces, provider.enabledWorkspaces);
+        expect(
+          provider.workspaceView.data.enabledWorkspaces,
+          provider.workspaceView.enabledWorkspaces,
+        );
 
         storage.pending!.complete();
         await tester.pumpAndSettle();
         storage.pending = null;
-        expect(provider.isWorkspaceEnabled(AppMode.student), fails);
+        expect(provider.workspaceView.isEnabled(AppMode.student), fails);
         expect(find.byType(LinearProgressIndicator), findsNothing);
         if (fails) {
           expect(find.text(l.saveFailedRetry), findsOneWidget);
@@ -112,7 +115,10 @@ void main() {
         expect(find.byType(WorkspaceFeaturesPage), findsNothing);
         expect(find.byType(ErrorWidget), findsNothing);
         expect(tester.takeException(), isNull);
-        expect(provider.activeMode, fails ? AppMode.student : AppMode.general);
+        expect(
+          provider.workspaceView.activeMode,
+          fails ? AppMode.student : AppMode.general,
+        );
       },
       variant: TargetPlatformVariant({
         TargetPlatform.android,
@@ -135,12 +141,12 @@ void main() {
         await tester.pumpAndSettle();
         storage.pending = Completer<void>();
         if (fails) storage.saveError = StateError('disk full');
-        final disable = provider.setWorkspaceEnabled(AppMode.student, false);
+        final disable = provider.workspaces.setEnabled(AppMode.student, false);
         final completion = fails
             ? expectLater(disable, throwsStateError)
             : disable;
         await _finishTransitions(tester);
-        expect(provider.isWorkspaceEnabled(AppMode.student), isTrue);
+        expect(provider.workspaceView.isEnabled(AppMode.student), isTrue);
 
         tester.view.physicalSize = const Size(900, 1000);
         await _finishTransitions(tester);
@@ -151,7 +157,7 @@ void main() {
         storage.pending!.complete();
         await tester.pumpAndSettle();
         await completion;
-        expect(provider.isWorkspaceEnabled(AppMode.student), fails);
+        expect(provider.workspaceView.isEnabled(AppMode.student), fails);
         expect(tester.takeException(), isNull);
         expect(find.byType(ErrorWidget), findsNothing);
       },
@@ -198,12 +204,12 @@ void main() {
     await tester.pageBack();
     await _finishTransitions(tester);
     expect(find.byType(WorkspaceFeaturesPage), findsOneWidget);
-    expect(provider.isWorkspaceEnabled(AppMode.student), isTrue);
+    expect(provider.workspaceView.isEnabled(AppMode.student), isTrue);
     expect(tester.takeException(), isNull);
 
     storage.pending!.complete();
     await tester.pumpAndSettle();
-    expect(provider.isWorkspaceEnabled(AppMode.student), isFalse);
+    expect(provider.workspaceView.isEnabled(AppMode.student), isFalse);
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.byType(WorkspaceFeaturesPage), findsNothing);
