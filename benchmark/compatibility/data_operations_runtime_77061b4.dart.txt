@@ -1,0 +1,56 @@
+import 'package:sked/models/timetable_models.dart';
+import 'package:sked/providers/timetable_provider.dart';
+
+import 'data_operations_runtime.dart';
+
+DataOperationsRuntime createDataOperationsRuntime(
+  DataOperationsDependencies dependencies,
+) => _OriginalRuntime(dependencies);
+
+/// Install this adapter only in the original 77061b4 benchmark checkout.
+/// The shared workload and every production source file remain unchanged.
+class _OriginalRuntime implements DataOperationsRuntime {
+  _OriginalRuntime(DataOperationsDependencies dependencies)
+    : _app = TimetableProvider(
+        storage: dependencies.storage,
+        secretStore: dependencies.secrets,
+        schoolSiteService: dependencies.schoolSites,
+        backupRestoreJournal: dependencies.journal,
+        privacyService: dependencies.privacy,
+        systemLocaleCodeResolver: () => dependencies.localeCode,
+        // Keep original production codecs and the 450 ms save debounce.
+        // ignore: invalid_use_of_visible_for_testing_member
+        workspaceMutationLock: (action) => action(),
+      );
+
+  final TimetableProvider _app;
+
+  @override
+  AppData get data => _app.appData;
+  @override
+  bool get isReady => _app.isLoaded && _app.canWrite;
+  @override
+  Future<void> load() => _app.load();
+  @override
+  Future<void> saveCourse(CourseItem course, {required String timetableId}) =>
+      _app.saveCourse(course, timetableId: timetableId);
+  @override
+  Future<void> saveEvent(GeneralEvent event) => _app.saveGeneralEvent(event);
+  @override
+  Future<void> setUpdatePreference(bool enabled) =>
+      _app.updateIncludePrereleaseUpdates(enabled);
+  @override
+  Future<String> exportBackup() => _app.exportAppDataJson();
+  @override
+  Future<int> importTimetables(String backup) =>
+      _app.importAppDataJson(backup, mode: AppImportMode.addAll);
+  @override
+  Future<int> restoreBackup(String backup) =>
+      _app.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+  @override
+  Future<void> selectDate(DateTime date) => _app.setSelectedGeneralDate(date);
+  @override
+  Future<void> quiesce() => _app.quiesceForShutdown();
+  @override
+  void dispose() => _app.dispose();
+}
