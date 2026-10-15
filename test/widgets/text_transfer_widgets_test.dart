@@ -37,6 +37,57 @@ Future<void> _openTextImport(
 }
 
 void main() {
+  testWidgets(
+    'completed text import preserves a newer task and its draft',
+    (tester) async {
+      final pending = Completer<bool>();
+      final draft = TextEditingController(text: 'Newer unsaved draft');
+      addTearDown(() async {
+        if (!pending.isCompleted) pending.complete(false);
+        await tester.pumpWidget(const SizedBox());
+        draft.dispose();
+      });
+      await _openTextImport(tester, (_, _) => pending.future);
+      final importRoute = ModalRoute.of(
+        tester.element(find.byType(TextImportPage)),
+      )!;
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await tester.pump();
+      unawaited(
+        importRoute.navigator!.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: TextField(
+                key: const ValueKey('newer-text-import-task'),
+                controller: draft,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      final newer = find.byKey(const ValueKey('newer-text-import-task'));
+      final originalNewerElement = tester.element(newer);
+      pending.complete(true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(importRoute.isActive, isFalse);
+      expect(tester.element(newer), same(originalNewerElement));
+      expect(draft.text, 'Newer unsaved draft');
+      expect(find.byType(TextImportPage, skipOffstage: false), findsNothing);
+      Navigator.of(tester.element(newer)).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Open import'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
+  );
+
   for (final succeeds in [false, true]) {
     testWidgets(
       'text import blocks both Back actions until submission settles: $succeeds',

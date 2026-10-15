@@ -1,4 +1,5 @@
 import 'sked_confirmation_dialog.dart';
+import 'sked_task_route.dart';
 import 'adaptive_navigation_scope.dart';
 
 import 'desktop_window_host.dart';
@@ -121,7 +122,7 @@ class _TextImportPageState extends State<TextImportPage> {
       final imported = await widget.onSubmit(context, content);
       if (imported && mounted) {
         shouldResetSubmitting = false;
-        Navigator.of(context).pop();
+        completeSkedTaskRoute(context);
       }
     } finally {
       if (shouldResetSubmitting && mounted) {
