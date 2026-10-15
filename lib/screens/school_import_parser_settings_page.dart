@@ -15,7 +15,6 @@ import '../controllers/school_import_secret_controller.dart';
 import '../controllers/settings_commands.dart';
 import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_http_consent.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
@@ -144,11 +143,10 @@ class _SchoolImportParserSettingsPageState
   @override
   Widget build(BuildContext context) {
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        final settings = provider.settingsView;
-        final commands = provider.settingsCommands;
-        final secrets = provider.schoolImportSecrets;
+    return Consumer<SettingsViewState>(
+      builder: (context, settings, child) {
+        final commands = context.read<SettingsCommands>();
+        final secrets = context.read<SchoolImportSecretController>();
         _syncControllers(settings, secrets);
         final l10n = AppLocalizations.of(context);
         final baseUrl = _baseUrlController.text.trim();
@@ -641,7 +639,7 @@ class _SchoolImportParserSettingsPageState
           settings != _currentModelFetchSettings()) {
         return;
       }
-      final commands = context.read<TimetableProvider>().settingsCommands;
+      final commands = context.read<SettingsCommands>();
       _modelController.value = TextEditingValue(
         text: selectedModel,
         selection: TextSelection.collapsed(offset: selectedModel.length),

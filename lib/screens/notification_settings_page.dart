@@ -10,7 +10,9 @@ import 'package:provider/provider.dart';
 
 import '../controllers/settings_commands.dart';
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/workspace_view_state.dart';
+import '../providers/app_scope.dart';
 import '../models/app_mode.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/agenda_notification_runtime_store.dart';
@@ -315,11 +317,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        final settings = provider.settingsView;
-        final commands = provider.settingsCommands;
-        final workspace = provider.workspaceView;
+    return Consumer2<SettingsViewState, WorkspaceViewState>(
+      builder: (context, settings, workspace, child) {
+        final commands = context.read<SettingsCommands>();
         final permissionActionLabel = _notificationsPermissionGranted == true
             ? l10n.notificationPermissionOpenSettings
             : l10n.notificationPermissionRequest;
@@ -549,14 +549,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   onTap: uiCommandBusy
                       ? null
                       : widget.onOpenTroubleshooting ??
-                            () => Navigator.of(context).push<void>(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ChangeNotifierProvider<
-                                      TimetableProvider
-                                    >.value(
-                                      value: provider,
-                                      child: NotificationSettingsPage(
+                            () {
+                              final scope = AppScope.capture(context)!;
+                              unawaited(
+                                Navigator.of(context).push<void>(
+                                  MaterialPageRoute(
+                                    builder: (_) => scope.wrap(
+                                      NotificationSettingsPage(
                                         troubleshooting: true,
                                         notificationService:
                                             _notificationService,
@@ -564,8 +563,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                                         productivityBridge: _productivityBridge,
                                       ),
                                     ),
-                              ),
-                            ),
+                                  ),
+                                ),
+                              );
+                            },
                 ),
               ];
         if (widget.embedded) {
