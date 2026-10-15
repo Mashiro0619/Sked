@@ -161,6 +161,42 @@ class _ControlledShutdownProvider extends TimetableProvider {
 }
 
 void main() {
+  testWidgets('application theme shell ignores timetable and schedule edits', (
+    tester,
+  ) async {
+    final app = _provider();
+    addTearDown(app.dispose);
+    await app.lifecycle.load();
+    await tester.pumpWidget(MyApp(provider: app));
+    await tester.pumpAndSettle();
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+
+    await app.generalCommands.addSchedule(name: 'Another calendar');
+    await tester.pump();
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)),
+      same(materialApp),
+    );
+    await app.studentCommands.addPeriodTimeSet();
+    await tester.pump();
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)),
+      same(materialApp),
+    );
+
+    await app.settingsCommands.updateThemeMode(
+      'dark',
+      workspace: app.workspaceView.activeMode,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.dark,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('bootstrap gate uses the deterministic default locale', (
     tester,
   ) async {

@@ -1,3 +1,6 @@
+import 'controllers/app_persistence.dart';
+import 'controllers/general_view_state.dart';
+import 'controllers/settings_view_state.dart';
 import 'controllers/course_task_controller.dart';
 import 'widgets/course_task_editor.dart';
 import 'controllers/general_event_task_controller.dart';
@@ -504,7 +507,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didUpdateWidget(MyApp oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.provider != widget.provider) {
-      _flushPendingUiStateSaves(oldWidget.provider);
+      _flushPendingUiStateSaves(oldWidget.provider.persistence);
       _agendaCoordinator.dispose();
       _agendaCoordinator = _createAgendaCoordinator();
       _agendaCoordinator.setForegroundActive(true);
@@ -519,7 +522,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       _agendaCoordinator.setForegroundActive(false);
-      _flushPendingUiStateSaves(widget.provider);
+      _flushPendingUiStateSaves(widget.provider.persistence);
       _flushDesktopLayoutPreferences(_desktopLayout);
     }
     if (state == AppLifecycleState.resumed) {
@@ -547,7 +550,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
     _windowModals.dispose();
     _updatePrompts.dispose();
-    _flushPendingUiStateSaves(widget.provider);
+    _flushPendingUiStateSaves(widget.provider.persistence);
     super.dispose();
   }
 
@@ -560,7 +563,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       reduceMotion: features.reduceMotion,
       child: AppScope(
         app: widget.provider,
-        child: Selector<TimetableProvider, _AppShellSnapshot>(
+        child: Selector<SettingsViewState, _AppShellSnapshot>(
           selector: (_, provider) => _AppShellSnapshot.from(provider),
           builder: (context, snapshot, child) {
             return MultiProvider(
@@ -642,7 +645,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     AgendaTarget target,
   ) async {
     final courseId = target.courseId;
-    final timetable = widget.provider.timetables
+    final timetable = widget.provider.studentView.timetables
         .where((item) => item.id == target.timetableId)
         .firstOrNull;
     if (courseId == null || timetable == null) return;
@@ -658,7 +661,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     await showAppModalSheet<void>(
       context: context,
       useRootNavigator: true,
-      isDismissible: widget.provider.closeCoursePopupOnOutsideTap,
+      isDismissible: widget.provider.settingsView.closeCoursePopupOnOutsideTap,
       enableDrag: true,
       maxWidth: 860,
       builder: (sheetContext) => CourseDetailsSheet(
@@ -739,27 +742,26 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     await _openGeneralOccurrenceDetails(context, occurrence);
   }
 
-  GeneralEventOccurrence? _currentGeneralOccurrence(
-    GeneralEventOccurrence source,
-  ) => resolveCurrentGeneralOccurrence(widget.provider.generalView, source);
-
   Future<void> _openGeneralOccurrenceDetails(
     BuildContext context,
     GeneralEventOccurrence occurrence,
   ) async {
+    final general = widget.provider.generalView;
+    final commands = widget.provider.generalCommands;
+    GeneralEventOccurrence? currentOccurrence() =>
+        resolveCurrentGeneralOccurrence(general, occurrence);
     var mutating = false;
     await showAppModalSheet<void>(
       context: context,
       useRootNavigator: true,
       workspace: AppMode.general,
-      isSessionCurrent: () =>
-          mutating || _currentGeneralOccurrence(occurrence) != null,
-      isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
+      isSessionCurrent: () => mutating || currentOccurrence() != null,
+      isDismissible: general.data.closeEventPopupOnOutsideTap,
       enableDrag: true,
       maxWidth: appSheetWidthCompact,
-      builder: (sheetContext) => Consumer<TimetableProvider>(
-        builder: (_, provider, _) {
-          final current = _currentGeneralOccurrence(occurrence) ?? occurrence;
+      builder: (sheetContext) => Consumer2<GeneralViewState, SettingsViewState>(
+        builder: (_, view, settings, _) {
+          final current = currentOccurrence() ?? occurrence;
           void close() {
             final route = ModalRoute.of(sheetContext);
             if (route?.isCurrent == true) completeSkedTaskRoute(sheetContext);
@@ -768,7 +770,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           Future<void> command(
             Future<void> Function(GeneralEventOccurrence) action,
           ) async {
-            final latest = _currentGeneralOccurrence(occurrence);
+            final latest = currentOccurrence();
             if (latest == null) {
               close();
               return;
@@ -785,15 +787,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
           return GeneralEventDetailsSheet(
             occurrence: current,
-            notificationSettings: provider.notificationSettings,
-            isReminderHandled: provider.isGeneralReminderHandled(current),
-            onBeforeAction: () => _currentGeneralOccurrence(occurrence) != null,
-            onShowCalendar: () => provider.updateGeneralScheduleVisibility(
-              current.calendar.id,
-              true,
-            ),
+            notificationSettings: settings.notificationSettings,
+            isReminderHandled: view.isReminderHandled(current),
+            onBeforeAction: () => currentOccurrence() != null,
+            onShowCalendar: () =>
+                commands.updateScheduleVisibility(current.calendar.id, true),
             onEditScoped: (scope) async {
-              final latest = _currentGeneralOccurrence(occurrence);
+              final latest = currentOccurrence();
               if (latest == null) {
                 close();
                 return;
@@ -803,17 +803,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 await _openAgendaGeneralEditor(context, latest, scope);
               }
             },
-            onDismissReminder: () => command(provider.dismissGeneralReminder),
-            onRestoreReminder: () => command(provider.restoreGeneralReminder),
+            onDismissReminder: () => command(commands.dismissReminder),
+            onRestoreReminder: () => command(commands.restoreReminder),
             onDuplicate: () => command((value) async {
-              await provider.duplicateGeneralOccurrence(value);
+              await commands.duplicateOccurrence(value);
             }),
-            onDeleteThis: () => command(provider.deleteGeneralOccurrence),
+            onDeleteThis: () => command(commands.deleteOccurrence),
             onDeleteFuture: current.event.recurrenceRule.isRepeating
-                ? () => command(provider.deleteFutureGeneralOccurrences)
+                ? () => command(commands.deleteFutureOccurrences)
                 : null,
             onDeleteAll: () =>
-                command((value) => provider.deleteGeneralEvent(value.event.id)),
+                command((value) => commands.deleteEvent(value.event.id)),
           );
         },
       ),
@@ -832,7 +832,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       view: general,
       workspaceView: widget.provider.workspaceView,
       maintenance: widget.provider.maintenance,
-      updates: widget.provider,
+      updates: Listenable.merge([
+        general,
+        widget.provider.workspaceView,
+        widget.provider.maintenance,
+      ]),
       occurrence: occurrence,
       scope: scope,
     );
@@ -884,9 +888,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 }
 
-void _flushPendingUiStateSaves(TimetableProvider provider) {
+void _flushPendingUiStateSaves(AppPersistence persistence) {
   unawaited(
-    provider.flushPendingUiStateSaves().onError((error, stackTrace) {
+    persistence.flushPendingUiStateSaves().onError((error, stackTrace) {
       debugPrint('Lifecycle UI state flush failed: $error\n$stackTrace');
     }),
   );
@@ -917,13 +921,13 @@ class _AppShellSnapshot {
     required this.colorfulUiColorValues,
   });
 
-  factory _AppShellSnapshot.from(TimetableProvider provider) {
+  factory _AppShellSnapshot.from(SettingsViewState settings) {
     return _AppShellSnapshot(
-      localeCode: provider.localeCode,
-      themeMode: provider.themeMode,
-      themeColorMode: provider.themeColorMode,
-      themeSeedColorValue: provider.themeSeedColorValue,
-      colorfulUiColorValues: Map.unmodifiable(provider.colorfulUiColorValues),
+      localeCode: settings.localeCode,
+      themeMode: settings.themeMode,
+      themeColorMode: settings.themeColorMode,
+      themeSeedColorValue: settings.themeSeedColorValue,
+      colorfulUiColorValues: Map.unmodifiable(settings.colorfulUiColorValues),
     );
   }
 
