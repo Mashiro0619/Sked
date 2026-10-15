@@ -84,7 +84,12 @@ void main() {
     (t) async {
       final p = await workspaceProvider(mode: AppMode.general);
       addTearDown(p.dispose);
-      final session = SkedTaskSession(provider: p, workspace: AppMode.general);
+      final session = SkedTaskSession(
+        maintenance: p.maintenance,
+        workspaceView: p.workspaceView,
+        workspaces: p.workspaces,
+        workspace: AppMode.general,
+      );
       addTearDown(session.dispose);
       final submit = SkedTaskSubmissionController(session: session);
       late BuildContext context;
