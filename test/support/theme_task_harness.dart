@@ -44,14 +44,14 @@ Future<(TimetableProvider, ThemeTaskStorage)> mountThemeTask(
     storage: storage,
   );
   if (kind == 'category') {
-    await p.switchMode(AppMode.general);
-    await p.updateThemeColorMode(
+    await p.workspaces.switchMode(AppMode.general);
+    await p.settingsCommands.updateThemeColorMode(
       themeColorModeColorful,
       workspace: AppMode.general,
     );
   }
   if (kind == 'course') {
-    await p.updateColorfulCourseTextSettings(
+    await p.settingsCommands.updateColorfulCourseTextSettings(
       mode: colorfulCourseTextColorModeCustom,
       customColorValue: 0xff654321,
     );
@@ -76,7 +76,7 @@ Future<(TimetableProvider, ThemeTaskStorage)> mountThemeTask(
       ? find.text('Custom color').last
       : themeTaskKey(
           kind == 'category'
-              ? 'theme-general-calendar-color-${p.generalSchedules.first.id}'
+              ? 'theme-general-calendar-color-${p.generalView.schedules.first.id}'
               : kind == 'value'
               ? 'theme-ui-color-primary'
               : 'theme-ui-color-$colorfulCourseTextColorKey',

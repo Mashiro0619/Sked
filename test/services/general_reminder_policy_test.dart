@@ -466,7 +466,7 @@ END:VCALENDAR
         systemLocaleCodeResolver: () => 'en',
         uiStateSaveDelay: Duration.zero,
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(provider.dispose);
       final gateway = MemoryAgendaNotificationGateway();
       final service = AgendaNotificationService(
@@ -476,7 +476,7 @@ END:VCALENDAR
       );
       addTearDown(service.dispose);
       await service.reconcile(
-        provider.appData,
+        provider.workspaceView.data,
         anchor: DateTime(2026, 8, 3, 9),
       );
       final request = gateway.scheduled.values.first;
@@ -494,13 +494,13 @@ END:VCALENDAR
       expect(
         agendaNotificationPayloadMatchesProjection(
           payload: payload,
-          data: provider.appData,
+          data: provider.workspaceView.data,
           projection: const AgendaProjectionService(),
         ),
         isTrue,
       );
       expect(await router.routePayload(request.payload), isTrue);
-      expect(provider.generalSchedules.single.isVisible, isFalse);
+      expect(provider.generalView.schedules.single.isVisible, isFalse);
       expect(
         resolveNotificationOccurrence(
           provider.generalView,
@@ -510,7 +510,7 @@ END:VCALENDAR
         ),
         isNotNull,
       );
-      await provider.updateRemindHiddenGeneralCalendars(false);
+      await provider.settingsCommands.updateRemindHiddenGeneralCalendars(false);
       expect(
         resolveNotificationOccurrence(
           provider.generalView,
@@ -523,7 +523,7 @@ END:VCALENDAR
       expect(
         agendaNotificationPayloadMatchesProjection(
           payload: payload,
-          data: provider.appData,
+          data: provider.workspaceView.data,
           projection: const AgendaProjectionService(),
         ),
         isFalse,

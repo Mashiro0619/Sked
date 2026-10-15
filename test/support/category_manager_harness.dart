@@ -56,6 +56,6 @@ Widget categoryManagerHarness(
   textScale: scale,
   textDirection: direction,
   brightness: brightness,
-  seedColor: Color(p.generalMode.themeSeedColorValue),
+  seedColor: Color(p.generalView.visibleData.themeSeedColorValue),
   home: GeneralScheduleHomeScreen(active: active, interactive: interactive),
 );

@@ -115,7 +115,7 @@ Future<TimetableProvider> workspaceProvider({
     systemLocaleCodeResolver: () => locale,
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 

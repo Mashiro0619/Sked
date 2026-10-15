@@ -197,7 +197,7 @@ Future<TimetableProvider> _providerWithData(AppData data) async {
       coordinator: SchoolSiteStorageCoordinator(),
     ),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -308,7 +308,7 @@ void main() {
       addTearDown(service.dispose);
 
       await coordinator.start();
-      await provider.updateNotificationSettings(enabled: true);
+      await provider.settingsCommands.updateNotificationSettings(enabled: true);
       await runtime.authoritativeWritten.future.timeout(
         const Duration(seconds: 5),
       );
@@ -341,32 +341,37 @@ void main() {
     addTearDown(coordinator.dispose);
     await coordinator.start();
     final initialReads = gateway.planReads;
-    final initialVersion = provider.committedDataVersions.agenda;
+    final initialVersion = provider.session.versions.agenda;
 
-    await provider.updateThemeMode('dark', workspace: AppMode.student);
-    await provider.updateGeneralDisplaySettings(showWeekends: false);
-    await provider.updateWorkspacePanelDisplayMode(
+    await provider.settingsCommands.updateThemeMode(
+      'dark',
+      workspace: AppMode.student,
+    );
+    await provider.generalCommands.updateDisplaySettings(showWeekends: false);
+    await provider.settingsCommands.updateWorkspacePanelDisplayMode(
       WorkspacePanelDisplayMode.sideBySide,
     );
-    await provider.updateIncludePrereleaseUpdates(
-      !provider.includePrereleaseUpdates,
+    await provider.settingsCommands.updateIncludePrereleaseUpdates(
+      !provider.settingsView.includePrereleaseUpdates,
     );
-    await provider.setSelectedGeneralDate(DateTime(2026, 8, 4));
-    await provider.flushPendingUiStateSaves();
-    final event = provider.generalSchedules.single.events.single;
-    await provider.saveGeneralEvent(event.copyWith(colorValue: 0xff123456));
+    await provider.generalNavigation.setSelectedDate(DateTime(2026, 8, 4));
+    await provider.persistence.flushPendingUiStateSaves();
+    final event = provider.generalView.schedules.single.events.single;
+    await provider.generalCommands.saveEvent(
+      event.copyWith(colorValue: 0xff123456),
+    );
     await Future<void>.delayed(Duration.zero);
 
     expect(gateway.planReads, initialReads);
     expect(bridge.scheduleCount, 1);
-    expect(provider.committedDataVersions.agenda, initialVersion);
+    expect(provider.session.versions.agenda, initialVersion);
     final refreshed = Completer<void>();
     bridge.onSchedule = () => refreshed.complete();
-    await provider.updateLocaleCode('zh');
+    await provider.settingsCommands.updateLocaleCode('zh');
     await refreshed.future.timeout(const Duration(seconds: 5));
     expect(gateway.planReads, greaterThan(initialReads));
     expect(bridge.scheduleCount, 2);
-    expect(provider.committedDataVersions.agenda, initialVersion + 1);
+    expect(provider.session.versions.agenda, initialVersion + 1);
   });
 
   test(
@@ -400,13 +405,16 @@ void main() {
       final refreshed = Completer<void>();
       bridge.onSchedule = () => refreshed.complete();
       gateway.blockNextSchedule = true;
-      final committed = provider.committedData.firstWhere(
+      final committed = provider.session.commits.firstWhere(
         (commit) => commit.affectsAgenda,
       );
-      await provider.updateLockScreenShowTitles(true);
+      await provider.settingsCommands.updateLockScreenShowTitles(true);
       final notificationCommit = await committed;
       await gateway.scheduleStarted.future;
-      await provider.updateThemeMode('dark', workspace: AppMode.student);
+      await provider.settingsCommands.updateThemeMode(
+        'dark',
+        workspace: AppMode.student,
+      );
       await Future<void>.delayed(Duration.zero);
       gateway.allowSchedule.complete();
       await refreshed.future.timeout(const Duration(seconds: 5));
@@ -446,7 +454,7 @@ void main() {
       await coordinator.start();
       final refreshed = Completer<void>();
       bridge.onSchedule = () => refreshed.complete();
-      await provider.updateGeneralDisplaySettings(showWeekends: false);
+      await provider.generalCommands.updateDisplaySettings(showWeekends: false);
       await refreshed.future.timeout(const Duration(seconds: 5));
       expect(bridge.scheduleCount, 2);
     },
@@ -540,10 +548,10 @@ void main() {
       addTearDown(coordinator.dispose);
 
       await coordinator.start();
-      final staleSnapshot = provider.appData;
+      final staleSnapshot = provider.workspaceView.data;
       final clearReady = Completer<void>();
       final finishClear = Completer<void>();
-      final clearOperation = provider.runExclusiveDataClear(
+      final clearOperation = provider.dataClear.run(
         clear: () async {
           await coordinator.clearRuntime();
           clearReady.complete();
@@ -553,7 +561,7 @@ void main() {
       );
 
       await clearReady.future;
-      expect(provider.isDataClearActive, isTrue);
+      expect(provider.dataClear.isActive, isTrue);
       expect(gateway.scheduled, isEmpty);
       final scheduledWakeups = bridge.scheduleCount;
 
@@ -563,7 +571,7 @@ void main() {
 
       finishClear.complete();
       await clearOperation;
-      expect(provider.isDataClearCommitted, isTrue);
+      expect(provider.dataClear.isCommitted, isTrue);
 
       await coordinator.reconcileNow(data: staleSnapshot);
       expect(gateway.scheduled, isEmpty);
@@ -591,7 +599,7 @@ void main() {
     await coordinator.start();
 
     await expectLater(
-      provider.runExclusiveDataClear(
+      provider.dataClear.run(
         clear: () async {
           await coordinator.beginDataClear();
           throw StateError('synthetic clear failure');
@@ -602,7 +610,9 @@ void main() {
     );
     expect((await runtime.readProjectionFence()).blocked, isTrue);
 
-    await provider.updateHomeWorkspaceNavigationCollapsed(true);
+    await provider.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+      true,
+    );
     await Future<void>.delayed(Duration.zero);
     // The complete commit now runs inside the serialized runtime queue.
     await coordinator.reconcileRecovery();
@@ -657,12 +667,14 @@ void main() {
     await coordinator.start();
     await coordinator.clearRuntime();
     gateway.blockNextSchedule = true;
-    final stalePass = coordinator.reconcileNow(data: provider.appData);
+    final stalePass = coordinator.reconcileNow(
+      data: provider.workspaceView.data,
+    );
     await gateway.scheduleStarted.future;
 
     final clearReady = Completer<void>();
     final finishClear = Completer<void>();
-    final clearOperation = provider.runExclusiveDataClear(
+    final clearOperation = provider.dataClear.run(
       clear: () async {
         await coordinator.clearRuntime();
         clearReady.complete();
@@ -670,7 +682,7 @@ void main() {
       },
       exit: () async {},
     );
-    expect(provider.isDataClearActive, isTrue);
+    expect(provider.dataClear.isActive, isTrue);
 
     gateway.allowSchedule.complete();
     await stalePass;
@@ -706,14 +718,14 @@ void main() {
       await service.handleAction(request.payload, 'handled');
       await Future<void>.delayed(Duration.zero);
 
-      final occurrence = provider
-          .generalOccurrencesForRange(
+      final occurrence = provider.generalView
+          .occurrencesForRange(
             startInclusive: DateTime(2026, 8, 3),
             endExclusive: DateTime(2026, 8, 4),
             onlyVisibleCalendars: true,
           )
           .single;
-      expect(provider.isGeneralReminderHandled(occurrence), isTrue);
+      expect(provider.generalView.isReminderHandled(occurrence), isTrue);
     },
   );
 
@@ -870,7 +882,7 @@ void main() {
       systemLocaleCodeResolver: () => 'en',
       uiStateSaveDelay: Duration.zero,
     );
-    await provider.load();
+    await provider.lifecycle.load();
     addTearDown(provider.dispose);
     final errors = <Object>[];
     final gateway = MemoryAgendaNotificationGateway();
@@ -934,7 +946,7 @@ void main() {
         await entered.future;
         final Future<void> competing = fromPoll
             ? service.reconcilePendingActions()
-            : service.reconcile(provider.committedAppData).then((_) {});
+            : service.reconcile(provider.session.committedData).then((_) {});
         // Drain the competing entry's microtasks while recovery still owns the
         // runtime lock. It must not reserve a service queue slot ahead of the owner.
         await Future<void>.delayed(Duration.zero);
@@ -977,14 +989,20 @@ void main() {
         entered.complete();
         await release.future;
       };
-      await provider.updateNotificationSettings(lockScreenShowTitles: true);
+      await provider.settingsCommands.updateNotificationSettings(
+        lockScreenShowTitles: true,
+      );
       await entered.future;
       final poll = service.reconcilePendingActions();
       await Future<void>.delayed(Duration.zero);
       release.complete();
       await poll.timeout(const Duration(seconds: 5));
       expect(
-        provider.committedAppData.notificationSettings.lockScreenShowTitles,
+        provider
+            .session
+            .committedData
+            .notificationSettings
+            .lockScreenShowTitles,
         isTrue,
       );
       expect(gateway.scheduled.values.single.title, contains('Appointment'));

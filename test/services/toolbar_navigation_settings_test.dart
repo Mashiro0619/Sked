@@ -256,7 +256,7 @@ void main() {
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
-      await provider.load();
+      await provider.lifecycle.load();
       return provider;
     }
 
@@ -268,51 +268,53 @@ void main() {
       addTearDown(provider.dispose);
       storage.saveCount = 0;
 
-      final defaultOrder = provider.studentToolbarNavigationOrder;
-      await provider.updateStudentToolbarNavigationOrder(defaultOrder);
+      final defaultOrder = provider.settingsView.studentToolbarNavigationOrder;
+      await provider.settingsCommands.updateStudentToolbarNavigationOrder(
+        defaultOrder,
+      );
       expect(storage.saveCount, 0);
 
-      await provider.updateStudentToolbarNavigationOrder(const [
-        'week',
-        'timetable',
-        'view',
-        'workspace',
-        'settings',
-        'more',
-      ]);
+      await provider.settingsCommands.updateStudentToolbarNavigationOrder(
+        const ['week', 'timetable', 'view', 'workspace', 'settings', 'more'],
+      );
       expect(storage.saveCount, 1);
 
-      await provider.updateStudentToolbarNavigationVisibility('week', false);
+      await provider.settingsCommands.updateStudentToolbarNavigationVisibility(
+        'week',
+        false,
+      );
       expect(storage.saveCount, 2);
-      await provider.updateStudentToolbarNavigationVisibility('week', true);
+      await provider.settingsCommands.updateStudentToolbarNavigationVisibility(
+        'week',
+        true,
+      );
       expect(storage.saveCount, 3);
-      await provider.updateStudentToolbarHiddenItemsBehavior(
+      await provider.settingsCommands.updateStudentToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehaviorMore,
       );
       expect(storage.saveCount, 4);
-      await provider.updateStudentToolbarHiddenItemsBehavior(
+      await provider.settingsCommands.updateStudentToolbarHiddenItemsBehavior(
         toolbarHiddenItemsBehaviorMore,
       );
       expect(storage.saveCount, 4);
 
-      await provider.updateStudentToolbarNavigationVisibility(
+      await provider.settingsCommands.updateStudentToolbarNavigationVisibility(
         'settings',
         false,
       );
       expect(storage.saveCount, 4);
-      await provider.updateStudentToolbarNavigationHiddenIds(const [
-        'week',
-        'settings',
-        'week',
-        'unknown',
-      ]);
+      await provider.settingsCommands.updateStudentToolbarNavigationHiddenIds(
+        const ['week', 'settings', 'week', 'unknown'],
+      );
       expect(storage.saveCount, 5);
-      expect(provider.studentHiddenToolbarNavigationIds, ['week', 'settings']);
-
-      await provider.updateStudentToolbarNavigationHiddenIds(const [
+      expect(provider.settingsView.studentHiddenToolbarNavigationIds, [
         'week',
         'settings',
       ]);
+
+      await provider.settingsCommands.updateStudentToolbarNavigationHiddenIds(
+        const ['week', 'settings'],
+      );
       expect(storage.saveCount, 5);
     });
 
@@ -326,10 +328,12 @@ void main() {
         addTearDown(provider.dispose);
         storage.saveCount = 0;
 
-        final defaultOrder = provider.generalToolbarNavigationOrder;
-        await provider.updateGeneralToolbarNavigationOrder(defaultOrder);
+        final defaultOrder = provider.generalView.data.toolbarNavigationOrder;
+        await provider.generalCommands.updateToolbarNavigationOrder(
+          defaultOrder,
+        );
         expect(storage.saveCount, 0);
-        await provider.updateGeneralToolbarNavigationOrder(const [
+        await provider.generalCommands.updateToolbarNavigationOrder(const [
           'date',
           'category',
           'view',
@@ -338,39 +342,41 @@ void main() {
         ]);
         expect(storage.saveCount, 1);
 
-        await provider.updateGeneralToolbarNavigationHiddenIds(const [
+        await provider.generalCommands.updateToolbarNavigationHiddenIds(const [
           'category',
           'settings',
           'category',
         ]);
         expect(storage.saveCount, 2);
-        expect(provider.generalHiddenToolbarNavigationIds, [
+        expect(provider.generalView.data.hiddenToolbarNavigationIds, [
           'category',
           'settings',
         ]);
 
-        await provider.updateGeneralToolbarNavigationHiddenIds(const [
+        await provider.generalCommands.updateToolbarNavigationHiddenIds(const [
           'category',
           'settings',
         ]);
         expect(storage.saveCount, 2);
 
-        await provider.updateGeneralToolbarNavigationVisibility(
+        await provider.generalCommands.updateToolbarNavigationVisibility(
           'settings',
           false,
         );
         expect(storage.saveCount, 2);
-        await provider.updateGeneralToolbarNavigationVisibility(
+        await provider.generalCommands.updateToolbarNavigationVisibility(
           'category',
           true,
         );
         expect(storage.saveCount, 3);
-        expect(provider.generalHiddenToolbarNavigationIds, ['settings']);
-        await provider.updateGeneralToolbarHiddenItemsBehavior(
+        expect(provider.generalView.data.hiddenToolbarNavigationIds, [
+          'settings',
+        ]);
+        await provider.generalCommands.updateToolbarHiddenItemsBehavior(
           toolbarHiddenItemsBehaviorMore,
         );
         expect(storage.saveCount, 4);
-        await provider.updateGeneralToolbarHiddenItemsBehavior(
+        await provider.generalCommands.updateToolbarHiddenItemsBehavior(
           toolbarHiddenItemsBehaviorMore,
         );
         expect(storage.saveCount, 4);

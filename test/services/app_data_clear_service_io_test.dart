@@ -179,7 +179,7 @@ void main() {
           coordinator: SchoolSiteStorageCoordinator(),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(provider.dispose);
       final clearService = _FakeClearService();
       final exitController = _FakeExitController();
@@ -225,7 +225,7 @@ void main() {
           coordinator: SchoolSiteStorageCoordinator(),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(provider.dispose);
       final fenceStore = MemoryAgendaNotificationRuntimeStore();
 
@@ -252,7 +252,7 @@ void main() {
           coordinator: SchoolSiteStorageCoordinator(),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(provider.dispose);
       final gateway = MemoryAgendaNotificationGateway();
       final service = AgendaNotificationService(
@@ -312,7 +312,7 @@ void main() {
           coordinator: schoolSiteCoordinator,
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       storage.saveCount = 0;
       addTearDown(provider.dispose);
       final clearService = _FakeClearService()
@@ -334,12 +334,12 @@ void main() {
 
       expect(storage.data, isNull);
       await expectLater(
-        provider.updateLocaleCode('zh'),
+        provider.settingsCommands.updateLocaleCode('zh'),
         throwsA(isA<AppBackupRestoreInProgressException>()),
       );
       expect(storage.data, isNull);
       expect(storage.saveCount, 0);
-      await expectLater(provider.quiesceForShutdown(), completes);
+      await expectLater(provider.shutdown.quiesce(), completes);
     });
   }
 
@@ -362,7 +362,7 @@ void main() {
       secretStore: secrets,
       schoolSiteService: providerSchoolSites,
     );
-    await provider.load();
+    await provider.lifecycle.load();
     storage.saveCount = 0;
     addTearDown(provider.dispose);
     final observed = <(bool, bool)>[];
@@ -386,7 +386,7 @@ void main() {
     expect(provider.maintenance.isReserved, isFalse);
     expect(observed, [(true, false), (false, false)]);
 
-    await provider.updateLocaleCode('zh');
+    await provider.settingsCommands.updateLocaleCode('zh');
     expect(storage.data?.localeCode, 'zh');
     await externalSchoolSites.saveSites(const [
       SchoolSite(name: 'After failure', loginUrl: 'https://retry.test'),
@@ -404,7 +404,7 @@ void main() {
     ]);
     expect(storage.data, isNull);
     await expectLater(
-      provider.updateLocaleCode('en'),
+      provider.settingsCommands.updateLocaleCode('en'),
       throwsA(isA<AppBackupRestoreInProgressException>()),
     );
   });
@@ -430,7 +430,7 @@ void main() {
         secretStore: secrets,
         schoolSiteService: providerSchoolSites,
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(provider.dispose);
       schoolSiteStore.saveStarted = Completer<void>();
       schoolSiteStore.allowSave = Completer<void>();
@@ -483,7 +483,7 @@ void main() {
           coordinator: SchoolSiteStorageCoordinator(),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(provider.dispose);
       final clearService = _BlockingClearService()
         ..onClear = () async => storage.data = null;
@@ -494,7 +494,7 @@ void main() {
       await clearService.started.future;
 
       var shutdownCompleted = false;
-      final shutdown = provider.quiesceForShutdown().then((_) {
+      final shutdown = provider.shutdown.quiesce().then((_) {
         shutdownCompleted = true;
       });
       await Future<void>.delayed(Duration.zero);
@@ -506,7 +506,7 @@ void main() {
         shutdown.timeout(const Duration(seconds: 1)),
         completes,
       );
-      expect(provider.isDataClearCommitted, isTrue);
+      expect(provider.dataClear.isCommitted, isTrue);
       expect(storage.data, isNull);
     },
   );

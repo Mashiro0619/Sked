@@ -178,10 +178,10 @@ void main() {
       );
       addTearDown(provider.dispose);
 
-      await provider.load();
+      await provider.lifecycle.load();
 
-      expect(provider.canWrite, isTrue);
-      expect(provider.customSchoolImportApiKey, sentinel);
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.customSchoolImportApiKey, sentinel);
       expect(secrets.value, sentinel);
       await _expectFileExcludes(await layout.appDataFile, sentinel);
       await _expectFileExcludes(await layout.appDataBackupFile, sentinel);
@@ -220,8 +220,8 @@ void main() {
       );
       addTearDown(provider.dispose);
 
-      await provider.load();
-      expect(provider.canWrite, isFalse);
+      await provider.lifecycle.load();
+      expect(provider.session.canWrite, isFalse);
       expect(secrets.value, sentinel);
       await _expectFileExcludes(await layout.appDataFile, sentinel);
       expect(
@@ -229,9 +229,9 @@ void main() {
         contains(sentinel),
       );
 
-      await provider.retryStorageLoad();
-      expect(provider.canWrite, isTrue);
-      expect(provider.customSchoolImportApiKey, sentinel);
+      await provider.lifecycle.retryStorageLoad();
+      expect(provider.session.canWrite, isTrue);
+      expect(provider.settingsView.customSchoolImportApiKey, sentinel);
       await _expectFileExcludes(await layout.appDataFile, sentinel);
       await _expectFileExcludes(await layout.appDataBackupFile, sentinel);
     },
@@ -512,12 +512,12 @@ void main() {
     );
     addTearDown(provider.dispose);
 
-    await provider.load();
+    await provider.lifecycle.load();
 
-    expect(provider.canWrite, isFalse);
+    expect(provider.session.canWrite, isFalse);
     expect(await recoveryArtifact.readAsString(), contains(sentinel));
     await expectLater(
-      provider.updateThemeMode('dark'),
+      provider.settingsCommands.updateThemeMode('dark'),
       throwsA(isA<RecoveryWriteBlockedException>()),
     );
   });

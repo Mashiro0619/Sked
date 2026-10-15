@@ -31,7 +31,7 @@ Future<TimetableProvider> _loadProvider(AppData data) async {
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -353,9 +353,9 @@ void main() {
       );
 
       expect(await router.route(const AgendaAction(target: target)), isTrue);
-      expect(provider.activeMode, AppMode.student);
-      expect(provider.activeTimetableOrNull?.id, 'table');
-      expect(provider.selectedWeek, 1);
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(provider.studentView.activeTimetableOrNull?.id, 'table');
+      expect(provider.studentView.selectedWeek, 1);
       expect(opened, [target]);
 
       expect(
@@ -409,8 +409,8 @@ void main() {
         ).route(const AgendaAction(target: target)),
         isTrue,
       );
-      expect(provider.activeTimetableOrNull?.id, 'table');
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.studentView.activeTimetableOrNull?.id, 'table');
+      expect(provider.workspaceView.activeMode, AppMode.student);
     },
   );
 
@@ -443,8 +443,8 @@ void main() {
       );
 
       expect(await router.route(AgendaAction(target: target)), isTrue);
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.selectedGeneralDate, DateTime(2026, 8, 3));
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.generalView.selectedDate, DateTime(2026, 8, 3));
       expect(opened, target);
 
       final hiddenProvider = await _loadProvider(
@@ -461,7 +461,7 @@ void main() {
         settings: hiddenProvider.settingsView,
       );
       expect(await hiddenRouter.route(AgendaAction(target: target)), isFalse);
-      expect(hiddenProvider.activeMode, AppMode.student);
+      expect(hiddenProvider.workspaceView.activeMode, AppMode.student);
     },
   );
 
@@ -514,7 +514,7 @@ void main() {
       isTrue,
     );
     expect(
-      provider.selectedGeneralDate,
+      provider.generalView.selectedDate,
       normalizeDateOnly(eventStart.toLocal()),
     );
   });
@@ -654,7 +654,7 @@ void main() {
       addTearDown(provider.dispose);
       final occurrence = const AgendaProjectionService()
           .occurrencesForRange(
-            provider.appData,
+            provider.workspaceView.data,
             startInclusive: DateTime(2026, 8, 3),
             endExclusive: DateTime(2026, 8, 4),
           )
@@ -687,7 +687,7 @@ void main() {
       expect(
         agendaNotificationFingerprint(
           occurrence: occurrence,
-          data: provider.appData,
+          data: provider.workspaceView.data,
           descriptor: const AgendaProjectionService().registry.descriptorFor(
             occurrence.sourceType,
           ),
@@ -723,7 +723,7 @@ void main() {
         await router.routePayload(jsonEncode({'target': target.toJson()})),
         isFalse,
       );
-      expect(provider.activeMode, AppMode.general);
+      expect(provider.workspaceView.activeMode, AppMode.general);
     },
   );
 }

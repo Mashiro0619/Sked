@@ -215,13 +215,13 @@ void main() {
         runtimeStore: runtime,
         enabled: true,
         now: () => now,
-      )..committedDataReader = () => provider.committedAppData;
+      )..committedDataReader = () => provider.session.committedData;
       addTearDown(service.dispose);
       await service.reconcile(data);
       final request = gateway.scheduled.values.firstWhere(
         (item) => item.occurrence.sourceType == AgendaSourceType.course,
       );
-      await provider.setWorkspaceEnabled(AppMode.student, false);
+      await provider.workspaces.setEnabled(AppMode.student, false);
       await service.handleAction(request.payload, 'snooze_10m');
       expect(runtime.snoozes, isEmpty);
       final router = AgendaActionRouter(
@@ -237,7 +237,7 @@ void main() {
         await router.route(AgendaAction(target: request.occurrence.target)),
         isFalse,
       );
-      expect(provider.activeMode, AppMode.general);
+      expect(provider.workspaceView.activeMode, AppMode.general);
       await service.reconcile(
         data,
       ); // Even an explicitly queued old snapshot is fenced.

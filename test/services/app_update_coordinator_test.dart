@@ -103,7 +103,7 @@ Future<TimetableProvider> _createProvider({
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryStorage(data),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -157,7 +157,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AppUpdateDialog), findsNothing);
       expect(find.byType(SnackBar), findsNothing);
-      expect(provider.availableUpdateVersion, '1.1.0');
+      expect(provider.settingsView.availableUpdateVersion, '1.1.0');
     },
   );
 
@@ -175,8 +175,8 @@ void main() {
         distribution: const UpdateDistribution(UpdateChannel.github),
       );
       final old = run();
-      await provider.updateIncludePrereleaseUpdates(true);
-      await provider.updateIncludePrereleaseUpdates(false);
+      await provider.settingsCommands.updateIncludePrereleaseUpdates(true);
+      await provider.settingsCommands.updateIncludePrereleaseUpdates(false);
       final current = run();
       expect(service.pending, hasLength(2));
       service.pending.last.complete(_updateResult(hasUpdate: false));
@@ -184,7 +184,7 @@ void main() {
       service.pending.first.complete(_updateResult(hasUpdate: true));
       await old;
       await tester.pumpAndSettle();
-      expect(provider.availableUpdateVersion, isNull);
+      expect(provider.settingsView.availableUpdateVersion, isNull);
       expect(find.byType(AppUpdateDialog), findsNothing);
     },
   );
@@ -243,7 +243,7 @@ void main() {
       service.pending.complete(_updateResult(hasUpdate: true));
       await task;
       await tester.pumpAndSettle();
-      expect(provider.availableUpdateVersion, '1.1.0');
+      expect(provider.settingsView.availableUpdateVersion, '1.1.0');
       expect(find.byType(AppUpdateDialog), findsNothing);
       busy = false;
       await tester.pump(const Duration(seconds: 30));
@@ -262,14 +262,14 @@ void main() {
       updateService: service,
       distribution: const UpdateDistribution(UpdateChannel.github),
     );
-    await provider.importAppDataJson(
-      await provider.exportAppDataJson(),
+    await provider.backups.importJson(
+      await provider.backups.exportJson(),
       mode: AppImportMode.replaceAll,
     );
     service.pending.complete(_updateResult(hasUpdate: true));
     await task;
     await tester.pumpAndSettle();
-    expect(provider.availableUpdateVersion, isNull);
+    expect(provider.settingsView.availableUpdateVersion, isNull);
     expect(find.byType(AppUpdateDialog), findsNothing);
   });
 
@@ -287,7 +287,7 @@ void main() {
         source: source,
         updateService: service,
       );
-      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(provider.settingsView.includePrereleaseUpdates, isTrue);
       await tester.pump();
       expect(service.requestedPrereleases, isTrue);
       service.pending.complete(_updateResult(hasUpdate: false));
@@ -316,7 +316,7 @@ void main() {
           service.pending.complete(_updateResult(hasUpdate: false));
           await check;
           await tester.pumpAndSettle();
-          expect(provider.availableUpdateVersion, isNull);
+          expect(provider.settingsView.availableUpdateVersion, isNull);
         },
       );
     }
@@ -336,7 +336,7 @@ void main() {
           source: UpdateCheckSource.manual,
           updateService: service,
         );
-        await provider.updateIncludePrereleaseUpdates(false);
+        await provider.settingsCommands.updateIncludePrereleaseUpdates(false);
         if (fail) {
           service.pending.completeError(
             StateError('old channel request failed'),
@@ -354,7 +354,7 @@ void main() {
         }
         await check;
         await tester.pumpAndSettle();
-        expect(provider.availableUpdateVersion, isNull);
+        expect(provider.settingsView.availableUpdateVersion, isNull);
         expect(find.byType(AppUpdateDialog), findsNothing);
         expect(find.byType(SnackBar), findsNothing);
       },
@@ -383,11 +383,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(AppUpdateDialog), findsOneWidget);
-    expect(provider.availableUpdateVersion, '2.0.0');
+    expect(provider.settingsView.availableUpdateVersion, '2.0.0');
     await tester.tap(find.text('Later'));
     await tester.pumpAndSettle();
     await check;
-    expect(provider.ignoredUpdateVersion, '2.0.0-rc.1');
+    expect(provider.settingsView.ignoredUpdateVersion, '2.0.0-rc.1');
   });
 
   for (final source in UpdateCheckSource.values) {
@@ -427,7 +427,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(opened, isEmpty);
         expect(find.text('Microsoft Store'), findsOneWidget);
-        expect(provider.availableUpdateVersion, '1.1.0');
+        expect(provider.settingsView.availableUpdateVersion, '1.1.0');
         await tester.tap(find.text('Microsoft Store'));
         await tester.pumpAndSettle();
         await check;
@@ -451,7 +451,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(provider.availableUpdateVersion, isNull);
+    expect(provider.settingsView.availableUpdateVersion, isNull);
     expect(
       find.text('No newer version found (current: 1.0.0)'),
       findsOneWidget,
@@ -473,7 +473,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.availableUpdateVersion, '1.1.0');
+    expect(provider.settingsView.availableUpdateVersion, '1.1.0');
     expect(find.byType(AppUpdateDialog), findsNothing);
   });
 
@@ -495,7 +495,7 @@ void main() {
     await tester.pumpAndSettle();
     await check;
 
-    expect(provider.ignoredUpdateVersion, '1.1.0');
+    expect(provider.settingsView.ignoredUpdateVersion, '1.1.0');
   });
 
   testWidgets('failed external launch reports the update-link error', (

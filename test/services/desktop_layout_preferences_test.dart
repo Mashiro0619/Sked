@@ -463,7 +463,7 @@ void main() {
             coordinator: SchoolSiteStorageCoordinator(),
           ),
         );
-        await provider.load();
+        await provider.lifecycle.load();
         addTearDown(provider.dispose);
         final notifications = AgendaNotificationService(
           enabled: false,
@@ -488,7 +488,7 @@ void main() {
         p.setPreferredSize(_resources, const PreferredRegionSize(width: 360));
         expect(await p.flush(), isTrue);
         expect(p.preferenceFor(_resources)?.width, clearFails ? 360 : null);
-        expect(provider.isDataClearCommitted, !clearFails);
+        expect(provider.dataClear.isCommitted, !clearFails);
       },
     );
   }
