@@ -106,10 +106,10 @@ void main() {
       final valid = await drag(t, 22, 26);
       await t.pumpAndSettle();
       expect(t.getRect(day(22)), before);
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       await valid.up();
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange!.dayCount, 5);
+      expect(p.generalView.customDateRange!.dayCount, 5);
       expect(t.takeException(), isNull);
     },
   );
@@ -157,7 +157,7 @@ void main() {
         expect(storage.writes, before);
         await g.up();
         await t.pumpAndSettle();
-        expect(p.customGeneralDateRange!.dayCount, 8);
+        expect(p.generalView.customDateRange!.dayCount, 8);
         expect(storage.writes, before + 1);
         expect(t.takeException(), isNull);
       },
@@ -177,7 +177,7 @@ void main() {
       expect(picker.rangeInteraction, DateRangeInteraction.dragOnly);
       final before = storage.writes;
       final g = await drag(t, 22, 26);
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(storage.writes, before);
       expect(
         picker.rangeController!.previewRange,
@@ -186,7 +186,7 @@ void main() {
       await g.up();
       await t.pumpAndSettle();
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 26)),
       );
       expect(storage.writes, before + 1);
@@ -208,8 +208,8 @@ void main() {
       await openWeek(t);
       await t.tap(day(9));
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, isNull);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
+      expect(p.generalView.customDateRange, isNull);
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 9));
       expect(find.byType(SkedDatePicker), findsNothing);
     },
   );
@@ -236,13 +236,13 @@ void main() {
       await g.up();
       await second.up();
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(storage.writes, before);
       // An outside second finger may cancel the modal, never the selection.
       if (find.byType(SkedDatePicker).evaluate().isEmpty) await openWeek(t);
       await t.tap(day(9));
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
+      expect(p.generalView.selectedDate, DateTime(2026, 9, 9));
     },
   );
 
@@ -265,14 +265,14 @@ void main() {
       g = await drag(t, 26, 22);
       await g.up();
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(key('sked-date-range-retry'), findsOneWidget);
       expect(storage.writes, before + 1);
       storage.fail = false;
       await t.tap(key('sked-date-range-retry'));
       await t.pumpAndSettle();
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 26)),
       );
       expect(storage.writes, before + 2);
@@ -295,7 +295,7 @@ void main() {
       await g.up();
       await t.pump();
       expect(storage.writes, before + 1);
-      expect(p.customGeneralDateRange, isNull);
+      expect(p.generalView.customDateRange, isNull);
       expect(
         t.widget<IconButton>(key('sked-date-picker-close')).onPressed,
         isNull,
@@ -306,7 +306,7 @@ void main() {
       expect(storage.writes, before + 1);
       storage.pending!.complete();
       await t.pumpAndSettle();
-      expect(p.customGeneralDateRange!.dayCount, 5);
+      expect(p.generalView.customDateRange!.dayCount, 5);
       expect(find.byType(SkedDatePicker), findsNothing);
     },
   );
@@ -319,21 +319,21 @@ void main() {
         final storage = CalendarStorage(sample());
         final p = await workspaceProvider(storage: storage, locale: 'zh');
         addTearDown(p.dispose);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         await home(t, p);
         await openWeek(t);
         final g = await drag(t, 22, 26);
         if (replaceData) {
-          await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+          await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         } else {
-          await p.setWorkspaceEnabled(AppMode.general, false);
+          await p.workspaces.setEnabled(AppMode.general, false);
         }
         await t.pumpAndSettle();
         final beforeRelease = storage.writes;
         await g.up();
         await t.pumpAndSettle();
         expect(storage.writes, beforeRelease);
-        expect(p.customGeneralDateRange, isNull);
+        expect(p.generalView.customDateRange, isNull);
         expect(key('sked-date-picker-surface'), findsNothing);
         expect(t.takeException(), isNull);
       },
@@ -419,7 +419,7 @@ void main() {
         locale: 'zh',
       );
       addTearDown(p.dispose);
-      await p.setGeneralDateRange(
+      await p.generalNavigation.setDateRange(
         GeneralDateRange(DateTime(2026, 9, 21), DateTime(2026, 9, 27)),
       );
       await home(t, p);
@@ -461,7 +461,7 @@ void main() {
       await t.sendKeyEvent(LogicalKeyboardKey.enter);
       await t.pumpAndSettle();
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 23)),
       );
     },
@@ -552,7 +552,7 @@ void main() {
           );
           await t.tap(key('sked-date-picker-close'));
           await t.pumpAndSettle();
-          await p.switchMode(AppMode.student);
+          await p.workspaces.switchMode(AppMode.student);
           await t.pumpAndSettle();
           final student = find.byType(SkedWorkspaceToolbar).hitTestable().first;
           final studentSurface = t.widget<Material>(

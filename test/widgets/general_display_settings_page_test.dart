@@ -79,7 +79,7 @@ Future<TimetableProvider> _createProvider({
     ),
     systemLocaleCodeResolver: () => localeCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -140,12 +140,16 @@ void main() {
       final provider = await workspaceProvider(storage: storage);
       addTearDown(provider.dispose);
       await _pumpPage(tester, provider);
-      expect(provider.generalFitWeekColumnsToWidth, isTrue);
-      final studentFit = provider.appData.studentMode.fitWeekColumnsToWidth;
+      expect(provider.generalView.data.fitWeekColumnsToWidth, isTrue);
+      final studentFit =
+          provider.workspaceView.data.studentMode.fitWeekColumnsToWidth;
       await _toggleSwitch(tester, 'Fit week view to screen');
-      expect(provider.generalFitWeekColumnsToWidth, isFalse);
+      expect(provider.generalView.data.fitWeekColumnsToWidth, isFalse);
       expect(storage.data.generalMode.fitWeekColumnsToWidth, isFalse);
-      expect(provider.appData.studentMode.fitWeekColumnsToWidth, studentFit);
+      expect(
+        provider.workspaceView.data.studentMode.fitWeekColumnsToWidth,
+        studentFit,
+      );
       storage.saveError = StateError('phone setting save failed');
       await _toggleSwitch(tester, 'Fit week view to screen');
       expect(find.byType(SnackBar), findsOneWidget);
@@ -209,7 +213,7 @@ void main() {
     await tester.tap(find.text('Month').last);
     await tester.pumpAndSettle();
 
-    expect(provider.generalDefaultView, generalViewMonth);
+    expect(provider.generalView.data.defaultView, generalViewMonth);
 
     await tester.scrollUntilVisible(
       find.text('Popup behavior'),
@@ -284,13 +288,13 @@ void main() {
 
     slider.onChanged!(75);
     await tester.pump();
-    expect(provider.generalTimeGridHourHeight, 72);
+    expect(provider.generalView.data.timeGridHourHeight, 72);
     expect(find.text('76 dp'), findsOneWidget);
 
     slider = tester.widget<Slider>(sliderFinder);
     slider.onChangeEnd!(75);
     await tester.pumpAndSettle();
-    expect(provider.generalTimeGridHourHeight, 76);
+    expect(provider.generalView.data.timeGridHourHeight, 76);
     expect(tester.takeException(), isNull);
   });
 
@@ -305,7 +309,10 @@ void main() {
     await tester.tap(find.text('Open view menu').last);
     await tester.pumpAndSettle();
 
-    expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorMenu);
+    expect(
+      provider.generalView.data.viewSwitchBehavior,
+      generalViewSwitchBehaviorMenu,
+    );
   });
 
   testWidgets('persists the general toolbar hidden-items behavior', (
@@ -328,7 +335,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      provider.generalToolbarHiddenItemsBehavior,
+      provider.generalView.data.toolbarHiddenItemsBehavior,
       toolbarHiddenItemsBehaviorMore,
     );
   });
@@ -346,7 +353,7 @@ void main() {
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(() {
         storage.completePendingSave();
         provider.dispose();
@@ -367,7 +374,7 @@ void main() {
       await tester.pump();
 
       expect(storage.saveCount, 1);
-      expect(provider.generalShowWeekends, isFalse);
+      expect(provider.generalView.data.showWeekends, isFalse);
       expect(
         tester
             .widget<SettingsInteractionBlocker>(
@@ -381,7 +388,7 @@ void main() {
       await tester.tap(toggle, warnIfMissed: false);
       await tester.pump();
       expect(storage.saveCount, 1);
-      expect(provider.generalShowWeekends, isFalse);
+      expect(provider.generalView.data.showWeekends, isFalse);
 
       storage.completePendingSave();
       await tester.pumpAndSettle();
@@ -406,7 +413,7 @@ void main() {
 
     final dropdown = find.byKey(const ValueKey('general-toolbar-width-policy'));
     expect(
-      provider.generalToolbarWidthPolicy,
+      provider.generalView.data.toolbarWidthPolicy,
       generalToolbarWidthPolicyContent,
     );
 
@@ -423,7 +430,7 @@ void main() {
       await tester.tap(find.text(option.$2).last);
       await tester.pumpAndSettle();
 
-      expect(provider.generalToolbarWidthPolicy, option.$1);
+      expect(provider.generalView.data.toolbarWidthPolicy, option.$1);
     }
   });
 
@@ -465,12 +472,12 @@ void main() {
     await _pumpPage(tester, provider);
 
     await _toggleSwitch(tester, 'Show weekends');
-    expect(provider.generalShowWeekends, isFalse);
+    expect(provider.generalView.data.showWeekends, isFalse);
 
     final startSlider = tester.widget<Slider>(find.byType(Slider).first);
     startSlider.onChangeEnd!(7);
     await tester.pumpAndSettle();
-    expect(provider.generalDayStartHour, 7);
+    expect(provider.generalView.data.dayStartHour, 7);
 
     final endHourTile = find.ancestor(
       of: find.text('End hour'),
@@ -481,7 +488,7 @@ void main() {
     );
     endSlider.onChangeEnd!(22);
     await tester.pumpAndSettle();
-    expect(provider.generalDayEndHour, 22);
+    expect(provider.generalView.data.dayEndHour, 22);
 
     final gridMenu = find.byKey(const ValueKey('general-time-grid'));
     await tester.scrollUntilVisible(
@@ -495,13 +502,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('30 min').last);
     await tester.pumpAndSettle();
-    expect(provider.generalTimeGridMinutes, 30);
+    expect(provider.generalView.data.timeGridMinutes, 30);
 
     await _toggleSwitch(tester, 'Close popup on tap outside');
-    expect(provider.closeGeneralEventPopupOnOutsideTap, isFalse);
+    expect(provider.generalView.data.closeEventPopupOnOutsideTap, isFalse);
 
     await _toggleSwitch(tester, 'Show floating add event button');
-    expect(provider.showAddEventFab, isFalse);
+    expect(provider.generalView.data.showAddEventFab, isFalse);
     final longPressSetting = find.byKey(
       const ValueKey('enable-long-press-add-event-setting'),
     );
@@ -519,7 +526,7 @@ void main() {
       findsOneWidget,
     );
     await _toggleSwitch(tester, 'Long-press blank grid to add events');
-    expect(provider.enableLongPressAddEvent, isFalse);
+    expect(provider.generalView.data.enableLongPressAddEvent, isFalse);
     expect(find.text('Quick actions'), findsOneWidget);
   });
 
@@ -534,6 +541,6 @@ void main() {
     expect(find.text('在日视图或周视图中，长按空白时间网格即可添加日程。'), findsOneWidget);
     await _toggleSwitch(tester, '显示农历');
 
-    expect(provider.generalShowLunarCalendar, isFalse);
+    expect(provider.generalView.data.showLunarCalendar, isFalse);
   });
 }

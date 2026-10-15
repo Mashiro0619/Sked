@@ -53,7 +53,7 @@ Future<TimetableProvider> mount(
                 workspaces: p.workspaces,
                 settings: p.settingsView,
                 settingsCommands: p.settingsCommands,
-                activeMode: p.activeMode,
+                activeMode: p.workspaceView.activeMode,
                 onOpenSettings: () async {},
               ),
             )
@@ -189,8 +189,8 @@ void main() {
       await t.tap(row('Study group'));
       await t.pumpAndSettle();
       final element = t.element(details);
-      final original = p
-          .generalReminderItems(now: ReminderSummaryClock().now())
+      final original = p.generalView
+          .reminderItems(now: ReminderSummaryClock().now())
           .length;
       await t.tap(
         find
@@ -201,7 +201,7 @@ void main() {
       expect(t.element(details), same(element));
       expect(list, findsOneWidget);
       expect(
-        p.generalReminderItems(now: ReminderSummaryClock().now()).length,
+        p.generalView.reminderItems(now: ReminderSummaryClock().now()).length,
         original - 1,
       );
       // Focus the reminder list, not the independent window. Escape belongs here.
@@ -421,13 +421,13 @@ void main() {
       'data replacement / workspace disable retires overlay: $replace',
       (t) async {
         final p = await mount(t, shell: !replace);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         await t.tap(row('Study group'));
         await t.pumpAndSettle();
         if (replace) {
-          await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+          await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         } else {
-          await p.setWorkspaceEnabled(AppMode.general, false);
+          await p.workspaces.setEnabled(AppMode.general, false);
         }
         await t.pumpAndSettle();
         expect(details, findsNothing);
@@ -681,7 +681,7 @@ void main() {
     expect(k('ui-command-failure-notice'), findsOneWidget);
     expect(list, findsNothing);
     expect(
-      p.generalReminderItems(now: ReminderSummaryClock().now()),
+      p.generalView.reminderItems(now: ReminderSummaryClock().now()),
       hasLength(5),
     );
     await t.tap(k('ui-command-failure-dismiss'));
@@ -691,7 +691,7 @@ void main() {
     expect(details, findsNothing);
     expect(list, findsNothing);
     expect(
-      p.generalReminderItems(now: ReminderSummaryClock().now()),
+      p.generalView.reminderItems(now: ReminderSummaryClock().now()),
       hasLength(4),
     );
     expect(t.takeException(), isNull);

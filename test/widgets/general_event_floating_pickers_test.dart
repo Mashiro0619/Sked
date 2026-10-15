@@ -181,7 +181,7 @@ void main() {
         (t) async {
           final saved = <GeneralEvent>[];
           final p = await mount(t, onSave: (value) async => saved.add(value));
-          final backup = await p.exportAppDataJson();
+          final backup = await p.backups.exportJson();
           await open(t, which);
           await tap(
             t,
@@ -193,15 +193,15 @@ void main() {
           );
           if (replaceData) {
             await expectLater(
-              p.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+              p.backups.importJson(backup, mode: AppImportMode.replaceAll),
               throwsA(isA<WorkspaceChangeCancelledException>()),
             );
           } else {
-            await p.setWorkspaceEnabled(AppMode.general, false);
+            await p.workspaces.setEnabled(AppMode.general, false);
           }
           await t.pumpAndSettle();
           expect(k('general-$which-panel'), findsOneWidget);
-          expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+          expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
           expect(saved, isEmpty);
           await tap(t, k('general-$which-cancel'));
           await save(t);

@@ -189,10 +189,10 @@ void main() {
       final p = await mount(t);
       final m = await mouse(t);
       await hover(t, m, row(0));
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 29));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 29));
       await t.pumpAndSettle();
       expect(detail, findsNothing);
-      await p.setSelectedGeneralDate(desktopPanelNow);
+      await p.generalNavigation.setSelectedDate(desktopPanelNow);
       await t.pumpAndSettle();
       await m.moveTo(const Offset(2, 2));
       await hover(t, m, row(0));
@@ -205,7 +205,7 @@ void main() {
       await t.tap(row(0));
       await t.pumpAndSettle();
       final element = t.element(detail);
-      await p.setSelectedGeneralDate(DateTime(2026, 9, 29));
+      await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 29));
       await t.pumpAndSettle();
       expect(t.element(detail), same(element));
       await m.removePointer();
@@ -338,8 +338,8 @@ void main() {
       await pen.removePointer();
       await t.tap(row(0));
       await t.pumpAndSettle();
-      final backup = await p.exportAppDataJson();
-      await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+      final backup = await p.backups.exportJson();
+      await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
       await t.pumpAndSettle();
       expect(detail, findsNothing);
       await t.tap(row(0));
@@ -413,8 +413,10 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(agendaClose);
       await t.pumpAndSettle();
-      final event = p.generalSchedules.single.events.first;
-      await p.saveGeneralEvent(event.copyWith(notes: 'Latest agenda note'));
+      final event = p.generalView.schedules.single.events.first;
+      await p.generalCommands.saveEvent(
+        event.copyWith(notes: 'Latest agenda note'),
+      );
       await t.tap(inside('general-event-edit-action'));
       await t.pumpAndSettle();
       expect(
@@ -459,7 +461,7 @@ void main() {
       gate.complete();
       await t.pumpAndSettle();
       expect(k('ui-command-failure-notice'), findsOneWidget);
-      expect(p.generalSchedules.single.events, hasLength(3));
+      expect(p.generalView.schedules.single.events, hasLength(3));
       await t.tap(k('ui-command-failure-dismiss'));
       await t.pumpAndSettle();
       await t.tap(inside('general-event-delete-action'));
@@ -468,7 +470,7 @@ void main() {
       await t.tap(k('general-event-confirm-delete'));
       await t.pumpAndSettle();
       expect(detail, findsNothing);
-      expect(p.generalSchedules.single.events, hasLength(2));
+      expect(p.generalView.schedules.single.events, hasLength(2));
       await t.pumpWidget(const SizedBox());
     },
     variant: desktop,
@@ -725,7 +727,7 @@ void main() {
           }
           final element = phase == 'independent' ? t.element(detail) : null;
           final position = phase == 'independent' ? t.getRect(surface) : null;
-          await p.setSelectedGeneralDate(DateTime(2026, 9, 29));
+          await p.generalNavigation.setSelectedDate(DateTime(2026, 9, 29));
           await t.pumpAndSettle();
           await t.pump(const Duration(milliseconds: 500));
           await t.pumpAndSettle();

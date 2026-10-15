@@ -94,8 +94,8 @@ void main() {
       );
       await _tapVisible(tester, find.widgetWithText(FilledButton, 'Save'));
       await tester.pumpAndSettle();
-      final titles = provider
-          .generalOccurrencesForRange(
+      final titles = provider.generalView
+          .occurrencesForRange(
             startInclusive: DateTime(2026, 9, 28),
             endExclusive: DateTime(2026, 10, 1),
           )
@@ -182,14 +182,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GeneralEventEditorSheet), findsNothing);
       expect(find.byType(GeneralEventDetailsSheet), findsOneWidget);
-      expect(provider.generalSchedules.single.events, hasLength(1));
+      expect(provider.generalView.schedules.single.events, hasLength(1));
       expect(
-        provider.generalSchedules.single.events.single.title,
+        provider.generalView.schedules.single.events.single.title,
         'Review session',
       );
       expect(
         provider
-            .generalSchedules
+            .generalView
+            .schedules
             .single
             .events
             .single
@@ -235,9 +236,9 @@ void main() {
     await tester.enterText(title, 'Hidden but saved');
     await _tapVisible(tester, find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
-    expect(provider.generalSchedules.single.isVisible, isFalse);
+    expect(provider.generalView.schedules.single.isVisible, isFalse);
     expect(
-      provider.generalSchedules.single.events.single.title,
+      provider.generalView.schedules.single.events.single.title,
       'Hidden but saved',
     );
     expect(find.textContaining('Saved to hidden calendar'), findsOneWidget);
@@ -250,7 +251,7 @@ void main() {
       find.byKey(const ValueKey('general-event-show-calendar')),
     );
     await tester.pumpAndSettle();
-    expect(provider.generalSchedules.single.isVisible, isTrue);
+    expect(provider.generalView.schedules.single.isVisible, isTrue);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   }, variant: TargetPlatformVariant({TargetPlatform.windows}));
@@ -309,7 +310,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        provider.generalSchedules.single.colorValue,
+        provider.generalView.schedules.single.colorValue,
         generalCalendarColorSlot2Value,
       );
       expect(
@@ -345,14 +346,14 @@ void main() {
       mode: AppMode.general,
     );
     addTearDown(provider.dispose);
-    final occurrence = provider
-        .generalOccurrencesForRange(
+    final occurrence = provider.generalView
+        .occurrencesForRange(
           startInclusive: DateTime(2026, 10, 5),
           endExclusive: DateTime(2026, 10, 6),
         )
         .single;
-    final draft = provider
-        .prepareGeneralOccurrenceEdit(
+    final draft = provider.generalCommands
+        .prepareOccurrenceEdit(
           occurrence,
           GeneralEventEditScope.thisAndFollowing,
         )
@@ -361,7 +362,7 @@ void main() {
     final writes = storage.writes;
     storage.saveError = StateError('disk write failed');
     await expectLater(
-      provider.editGeneralOccurrence(
+      provider.generalCommands.editOccurrence(
         occurrence,
         draft,
         GeneralEventEditScope.thisAndFollowing,
@@ -370,15 +371,15 @@ void main() {
     );
     expect(storage.writes, writes + 1);
     expect(storage.data.generalMode.toJson(), before);
-    expect(provider.generalSchedules.single.events, hasLength(1));
-    final saved = await provider.editGeneralOccurrence(
+    expect(provider.generalView.schedules.single.events, hasLength(1));
+    final saved = await provider.generalCommands.editOccurrence(
       occurrence,
       draft,
       GeneralEventEditScope.thisAndFollowing,
     );
     expect(storage.writes, writes + 2);
     expect(saved.id, isNot(event.id));
-    expect(provider.generalSchedules.single.events, hasLength(2));
+    expect(provider.generalView.schedules.single.events, hasLength(2));
     expect(storage.data.generalMode.schedules.single.events, hasLength(2));
   });
 
@@ -389,17 +390,17 @@ void main() {
       mode: AppMode.general,
     );
     addTearDown(provider.dispose);
-    final occurrence = provider
-        .generalOccurrencesForRange(
+    final occurrence = provider.generalView
+        .occurrencesForRange(
           startInclusive: DateTime(2026, 9, 28),
           endExclusive: DateTime(2026, 9, 29),
         )
         .single;
-    await provider.saveGeneralEvent(
+    await provider.generalCommands.saveEvent(
       occurrence.event.copyWith(location: 'Latest room'),
     );
     await expectLater(
-      provider.editGeneralOccurrence(
+      provider.generalCommands.editOccurrence(
         occurrence,
         occurrence.event.copyWith(title: 'Stale draft'),
         GeneralEventEditScope.entireSeries,
@@ -407,11 +408,11 @@ void main() {
       throwsA(isA<GeneralEventEditConflictException>()),
     );
     expect(
-      provider.generalSchedules.single.events.single.location,
+      provider.generalView.schedules.single.events.single.location,
       'Latest room',
     );
     expect(
-      provider.generalSchedules.single.events.single.title,
+      provider.generalView.schedules.single.events.single.title,
       occurrence.event.title,
     );
   });

@@ -42,7 +42,7 @@ void main() {
       await t.pump(const Duration(seconds: 2));
       await t.pumpAndSettle();
       expect(k('general-reminders-list'), findsNothing);
-      expect(p.generalReminderItems(now: clock.now()), hasLength(5));
+      expect(p.generalView.reminderItems(now: clock.now()), hasLength(5));
       expect(storage.data.generalMode.reminderAcknowledgements, isEmpty);
       await t.tap(k('general-reminders-action'));
       await t.pumpAndSettle();
@@ -113,13 +113,13 @@ void main() {
       final mark = find.byTooltip('Mark handled').first;
       await t.tap(mark);
       await t.pumpAndSettle();
-      expect(p.generalReminderItems(now: clock.now()), hasLength(5));
+      expect(p.generalView.reminderItems(now: clock.now()), hasLength(5));
       expect(storage.data.generalMode.reminderAcknowledgements, isEmpty);
       await t.pump(const Duration(seconds: 15));
       expect(k('general-reminders-list'), findsOneWidget);
       await t.tap(mark);
       await t.pumpAndSettle();
-      expect(p.generalReminderItems(now: clock.now()), hasLength(4));
+      expect(p.generalView.reminderItems(now: clock.now()), hasLength(4));
       expect(storage.data.generalMode.reminderAcknowledgements, hasLength(1));
       await t.pumpWidget(const SizedBox());
     },
@@ -375,7 +375,7 @@ void main() {
         );
         addTearDown(p.dispose);
         if (!initiallyEnabled) {
-          await p.setWorkspaceEnabled(AppMode.general, false);
+          await p.workspaces.setEnabled(AppMode.general, false);
         }
         final mode = ValueNotifier(AppMode.student);
         addTearDown(mode.dispose);
@@ -399,7 +399,7 @@ void main() {
         await t.pumpAndSettle();
         expect(k('general-reminders-list'), findsNothing);
         if (!initiallyEnabled) {
-          await p.setWorkspaceEnabled(AppMode.general, true);
+          await p.workspaces.setEnabled(AppMode.general, true);
         }
         mode.value = AppMode.general;
         await t.pumpAndSettle();

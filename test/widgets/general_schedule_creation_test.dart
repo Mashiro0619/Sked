@@ -153,7 +153,7 @@ void main() {
             DateTime.parse(saved.endDateTimeIso),
             expected.add(const Duration(hours: 1)),
           );
-          expect(f.provider.selectedGeneralDate, f.date);
+          expect(f.provider.generalView.selectedDate, f.date);
           _expectCalendarTitle('Created with default time');
           await _switchView(tester, generalViewWeek);
           _expectCalendarTitle('Created with default time');
@@ -209,7 +209,7 @@ void main() {
           final saved =
               f.storage.data.generalMode.schedules.single.events.single;
           expect(DateTime.parse(saved.startDateTimeIso), expected);
-          expect(f.provider.selectedGeneralDate, f.date);
+          expect(f.provider.generalView.selectedDate, f.date);
           if (source == 'month') {
             await _switchView(tester, generalViewDay);
           } else {

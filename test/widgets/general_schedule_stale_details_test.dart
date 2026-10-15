@@ -121,7 +121,7 @@ void main() {
         final storage = WorkspaceMemoryStorage(_sample());
         final provider = await _mount(tester, storage);
         final committedTitles = <String>[];
-        final subscription = provider.committedData.listen((commit) {
+        final subscription = provider.session.commits.listen((commit) {
           committedTitles.add(
             commit.snapshot.generalMode.schedules.single.events.single.title,
           );
@@ -175,7 +175,7 @@ void main() {
     final provider = await _mount(tester, storage);
     final opened = tester.widget<GeneralEventDetailsSheet>(_detail);
     final edited = opened.occurrence.event.copyWith(title: 'Updated elsewhere');
-    await provider.saveGeneralEvent(edited);
+    await provider.generalCommands.saveEvent(edited);
 
     unawaited(
       Future<void>.sync(
@@ -201,7 +201,7 @@ void main() {
       final edited = opened.occurrence.event.copyWith(
         recurrenceExceptionDateIso: const ['2026-10-08'],
       );
-      await provider.saveGeneralEvent(edited);
+      await provider.generalCommands.saveEvent(edited);
       await tester.pumpAndSettle();
 
       expect(_detail, findsNothing);

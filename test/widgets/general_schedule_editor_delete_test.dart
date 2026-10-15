@@ -156,7 +156,7 @@ void main() {
           final provider = await _mount(tester, storage, phone: phone);
           final baselineWrites = storage.saveCalls;
           final committed = <AppData>[];
-          final subscription = provider.committedData.listen(
+          final subscription = provider.session.commits.listen(
             (commit) => committed.add(commit.snapshot),
           );
           addTearDown(subscription.cancel);

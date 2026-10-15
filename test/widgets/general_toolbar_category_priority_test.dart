@@ -98,7 +98,7 @@ void main() {
       expect(semantics.label, contains('2026'));
       expect(semantics.label, contains('自定义'));
       expect(semantics.onLongPress, isNotNull);
-      expect(p.generalDateLabelFormat, generalDateLabelFormatSlash);
+      expect(p.generalView.data.dateLabelFormat, generalDateLabelFormatSlash);
       expect(storage.writes, before);
       await t.tap(key('general-date-title-button'));
       await t.pumpAndSettle();

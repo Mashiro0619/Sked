@@ -165,7 +165,9 @@ void main() {
             t.view.padding = FakeViewPadding(top: inset, bottom: 24);
             t.view.viewPadding = FakeViewPadding(top: inset, bottom: 24);
             for (final mode in [AppMode.general, AppMode.student]) {
-              if (p.activeMode != mode) await p.switchMode(mode);
+              if (p.workspaceView.activeMode != mode) {
+                await p.workspaces.switchMode(mode);
+              }
               await t.pumpAndSettle();
               final before = storage.writes;
               final toolbar = key(
@@ -240,8 +242,8 @@ void main() {
         (t) async {
           chrome.size(t, Size(width, 900));
           final (p, storage) = await chrome.home(t, scale: scale);
-          final year = p.selectedGeneralDate.year,
-              month = p.selectedGeneralDate.month;
+          final year = p.generalView.selectedDate.year,
+              month = p.generalView.selectedDate.month;
           final before = storage.writes;
           await tap(t, 'general-date-title-button');
           await tap(t, 'sked-date-month-year');
@@ -290,7 +292,7 @@ void main() {
     (t) async {
       chrome.size(t, const Size(360, 850));
       final (p, storage) = await chrome.home(t);
-      await p.updateGeneralDisplaySettings(
+      await p.generalCommands.updateDisplaySettings(
         viewSwitchBehavior: generalViewSwitchBehaviorMenu,
       );
       await t.pumpAndSettle();
@@ -307,7 +309,7 @@ void main() {
         t.widget<SkedDatePicker>(find.byType(SkedDatePicker)).selectionUnit,
         DateSelectionUnit.month,
       );
-      expect(columns(t, monthIds(p.selectedGeneralDate.year)), 4);
+      expect(columns(t, monthIds(p.generalView.selectedDate.year)), 4);
       expect(key('sked-date-selection-label'), findsNothing);
       await tap(t, 'sked-date-month-year');
       await tap(t, 'sked-date-picker-close');
@@ -513,18 +515,20 @@ void main() {
       (t) async {
         chrome.size(t, const Size(360, 850));
         final (p, storage) = await chrome.home(t);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         await tap(t, 'general-date-title-button');
         await tap(t, 'sked-date-month-year');
         final press = await t.startGesture(
-          t.getCenter(key('sked-date-month-${p.selectedGeneralDate.year}-2')),
+          t.getCenter(
+            key('sked-date-month-${p.generalView.selectedDate.year}-2'),
+          ),
           kind: PointerDeviceKind.touch,
         );
         await t.pump(const Duration(milliseconds: 150));
         if (replace) {
-          await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+          await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         } else {
-          await p.setWorkspaceEnabled(AppMode.general, false);
+          await p.workspaces.setEnabled(AppMode.general, false);
         }
         await t.pumpAndSettle();
         final beforeRelease = storage.writes;

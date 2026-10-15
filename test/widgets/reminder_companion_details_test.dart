@@ -318,7 +318,7 @@ void main() {
         await t.pumpAndSettle();
         expect(details, findsNothing);
         expect(t.element(list), same(element));
-        expect(p.generalReminderItems(now: clock.now()), hasLength(5));
+        expect(p.generalView.reminderItems(now: clock.now()), hasLength(5));
         expect(t.takeException(), isNull);
         await t.pumpWidget(const SizedBox());
       },
@@ -364,7 +364,7 @@ void main() {
       await t.pumpAndSettle();
       expect(details, findsOneWidget);
       expect(t.element(list), same(element));
-      expect(p.generalReminderItems(now: clock.now()), hasLength(5));
+      expect(p.generalView.reminderItems(now: clock.now()), hasLength(5));
       await t.tap(
         find.descendant(
           of: k('ui-command-failure-notice'),
@@ -377,7 +377,7 @@ void main() {
       expect(details, findsNothing);
       expect(t.element(list), same(element));
       expect(inList(find.text('Study group')), findsNothing);
-      expect(p.generalReminderItems(now: clock.now()), hasLength(4));
+      expect(p.generalView.reminderItems(now: clock.now()), hasLength(4));
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
     },
@@ -525,7 +525,7 @@ void main() {
       final element = t.element(list);
       await t.tap(inList(find.text('Study group')));
       await t.pumpAndSettle();
-      await p.deleteGeneralEvent('study');
+      await p.generalCommands.deleteEvent('study');
       await t.pumpAndSettle();
       expect(details, findsNothing);
       expect(t.element(list), same(element));

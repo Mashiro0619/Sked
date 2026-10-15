@@ -148,7 +148,7 @@ void main() {
       expect(k('add-calendar-field'), findsOneWidget);
       await t.tap(textIn(k('calendar-name-dialog'), 'Save'));
       await t.pumpAndSettle();
-      expect(p.generalSchedules.last.name, 'New category');
+      expect(p.generalView.schedules.last.name, 'New category');
       expect(panel, findsNothing);
       await finish(t);
     },
@@ -192,26 +192,26 @@ void main() {
     'color slot stays raw on unchanged confirmation and cancellation',
     (t) async {
       final p = await mount(t);
-      final initial = p.generalSchedules[1].colorValue;
+      final initial = p.generalView.schedules[1].colorValue;
       await t.tap(k('calendar-color-category-1'));
       await t.pumpAndSettle();
       expect(color, findsOneWidget);
       await t.tap(k('category-color-save'));
       await t.pumpAndSettle();
-      expect(p.generalSchedules[1].colorValue, initial);
+      expect(p.generalView.schedules[1].colorValue, initial);
       await t.tap(k('calendar-color-category-1'));
       await t.pumpAndSettle();
       await t.tap(k('category-color-slot-4'));
       await t.tap(textIn(color, 'Cancel'));
       await t.pumpAndSettle();
-      expect(p.generalSchedules[1].colorValue, initial);
+      expect(p.generalView.schedules[1].colorValue, initial);
       await t.tap(k('calendar-color-category-1'));
       await t.pumpAndSettle();
       await t.tap(k('category-color-slot-4'));
       await t.tap(k('category-color-save'));
       await t.pumpAndSettle();
       expect(
-        p.generalSchedules[1].colorValue,
+        p.generalView.schedules[1].colorValue,
         generalCalendarSlotColorValues[4],
       );
       await finish(t);
@@ -242,8 +242,8 @@ void main() {
         t.widget<FilledButton>(k('category-color-save')).onPressed,
         isNotNull,
       );
-      final old = p.generalSchedules[1];
-      await p.updateGeneralSchedule(
+      final old = p.generalView.schedules[1];
+      await p.generalCommands.updateSchedule(
         old.copyWith(
           name: 'Renamed elsewhere',
           isVisible: false,
@@ -256,7 +256,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(k('category-color-save'));
       await t.pumpAndSettle();
-      final result = p.generalSchedules[1];
+      final result = p.generalView.schedules[1];
       expect(result.colorValue, 0xff123456);
       expect(result.name, 'Renamed elsewhere');
       expect(result.isVisible, isFalse);
@@ -278,7 +278,7 @@ void main() {
         '#987654',
       );
       await t.pump();
-      final original = p.generalSchedules[1].colorValue;
+      final original = p.generalView.schedules[1].colorValue;
       final element = t.element(color);
       final before = t.getRect(color);
       final gate = Completer<void>();
@@ -297,14 +297,14 @@ void main() {
       await t.pumpAndSettle();
       expect(t.element(color), same(element));
       expect(t.getRect(color), before);
-      expect(p.generalSchedules[1].colorValue, original);
+      expect(p.generalView.schedules[1].colorValue, original);
       await t.tap(k('ui-command-failure-dismiss'));
       await t.pumpAndSettle();
       storage.gate = null;
       await t.tap(k('category-color-save'));
       await t.pumpAndSettle();
       expect(color, findsNothing);
-      expect(p.generalSchedules[1].colorValue, 0xff987654);
+      expect(p.generalView.schedules[1].colorValue, 0xff987654);
       expect(panel, findsOneWidget);
       await finish(t);
     },
@@ -319,13 +319,13 @@ void main() {
     storage.saveError = StateError('Expected visibility failure');
     await t.tap(k('calendar-visibility-category-1'));
     await t.pumpAndSettle();
-    expect(p.generalSchedules[1].isVisible, isTrue);
+    expect(p.generalView.schedules[1].isVisible, isTrue);
     expect(panel, findsOneWidget);
     await t.tap(k('ui-command-failure-dismiss'));
     await t.pumpAndSettle();
     await t.tap(k('calendar-visibility-category-1'));
     await t.pumpAndSettle();
-    expect(p.generalSchedules[1].isVisible, isFalse);
+    expect(p.generalView.schedules[1].isVisible, isFalse);
     expect(
       find.descendant(
         of: k('calendar-manager-tile-category-1'),
@@ -343,7 +343,7 @@ void main() {
       final p = await mount(t);
       await t.tap(k('calendar-$child-category-1'));
       await t.pumpAndSettle();
-      await p.deleteGeneralSchedule('category-1');
+      await p.generalCommands.deleteSchedule('category-1');
       await t.pumpAndSettle();
       expect(color, findsNothing);
       expect(k('calendar-name-dialog'), findsNothing);
@@ -356,7 +356,7 @@ void main() {
     'data replacement retires manager and child, cannot write into replacement',
     (t) async {
       final p = await mount(t);
-      final backup = await p.exportAppDataJson();
+      final backup = await p.backups.exportJson();
       await t.tap(k('calendar-color-category-1'));
       await t.pumpAndSettle();
       await t.enterText(
@@ -364,12 +364,12 @@ void main() {
         '#123456',
       );
       await t.pump();
-      await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+      await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
       await t.pumpAndSettle();
       expect(color, findsNothing);
       expect(panel, findsNothing);
       expect(
-        p.generalSchedules[1].colorValue,
+        p.generalView.schedules[1].colorValue,
         generalCalendarSlotColorValues[1],
       );
       await finish(t);
@@ -394,7 +394,7 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      expect(p.generalSchedules, hasLength(1));
+      expect(p.generalView.schedules, hasLength(1));
       expect(panel, findsOneWidget);
       await t.tap(k('calendar-actions-category-0'));
       await t.pumpAndSettle();
@@ -408,8 +408,8 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      expect(p.generalSchedules, hasLength(1));
-      expect(p.generalSchedules.single.id, isNot('category-0'));
+      expect(p.generalView.schedules, hasLength(1));
+      expect(p.generalView.schedules.single.id, isNot('category-0'));
       expect(panel, findsOneWidget);
       await finish(t);
     },
@@ -502,7 +502,7 @@ void main() {
       storage.gate = null;
       await t.tap(textIn(k('calendar-name-dialog'), 'Save'));
       await t.pumpAndSettle();
-      expect(p.generalSchedules[1].name, 'New saved name');
+      expect(p.generalView.schedules[1].name, 'New saved name');
       expect(panel, findsOneWidget);
       await finish(t);
     },
@@ -535,7 +535,7 @@ void main() {
     'outside closes only color child; slot click repairs invalid hex draft',
     (t) async {
       final p = await mount(t);
-      final before = p.generalSchedules[1].colorValue;
+      final before = p.generalView.schedules[1].colorValue;
       await t.tap(k('calendar-color-category-1'));
       await t.pumpAndSettle();
       await t.enterText(
@@ -557,7 +557,7 @@ void main() {
       await t.pumpAndSettle();
       expect(color, findsNothing);
       expect(panel, findsOneWidget);
-      expect(p.generalSchedules[1].colorValue, before);
+      expect(p.generalView.schedules[1].colorValue, before);
       await finish(t);
     },
     variant: desktop,
@@ -581,7 +581,7 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      expect(p.generalSchedules, hasLength(4));
+      expect(p.generalView.schedules, hasLength(4));
       expect(panel, findsOneWidget);
       expect(find.byType(AlertDialog), findsOneWidget);
       await t.tap(k('ui-command-failure-dismiss'));
@@ -593,7 +593,7 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      expect(p.generalSchedules, hasLength(3));
+      expect(p.generalView.schedules, hasLength(3));
       expect(panel, findsOneWidget);
       await finish(t);
     },
@@ -604,7 +604,7 @@ void main() {
     final p = await mount(t, fullShell: true);
     await t.tap(k('calendar-color-category-1'));
     await t.pumpAndSettle();
-    await p.setWorkspaceEnabled(AppMode.general, false);
+    await p.workspaces.setEnabled(AppMode.general, false);
     await t.pumpAndSettle();
     expect(color, findsNothing);
     expect(panel, findsNothing);
@@ -621,7 +621,7 @@ void main() {
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
-      await p.deleteGeneralSchedule('category-1');
+      await p.generalCommands.deleteSchedule('category-1');
       await t.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
       expect(k('calendar-name-dialog'), findsNothing);
@@ -773,7 +773,7 @@ void main() {
             ])
               for (final element in finder.evaluate()) ModalRoute.of(element)!,
           };
-          final data = p.appData;
+          final data = p.workspaceView.data;
           await t.pumpWidget(
             invalidation == 'disposed'
                 ? WorkspaceHarness(provider: p, home: const SizedBox())
@@ -788,7 +788,7 @@ void main() {
           expect(color, findsNothing);
           expect(k('calendar-name-dialog'), findsNothing);
           expect(find.byType(AlertDialog), findsNothing);
-          expect(p.appData, same(data));
+          expect(p.workspaceView.data, same(data));
           expect(ownedRoutes.every((route) => !route.isActive), isTrue);
           // The Navigator also owns a non-dismissible barrier for its base page.
           expect(
@@ -867,7 +867,7 @@ void main() {
       gate.complete();
       await t.pumpAndSettle();
       expect(t.element(panel), same(reopened));
-      expect(p.generalSchedules[1].name, 'Saved original operation');
+      expect(p.generalView.schedules[1].name, 'Saved original operation');
       await finish(t);
     },
     variant: desktop,
@@ -945,7 +945,7 @@ void main() {
         await t.pump();
         await t.sendKeyEvent(LogicalKeyboardKey.space);
         await t.pumpAndSettle();
-        expect(p.generalSchedules[1].isVisible, isFalse);
+        expect(p.generalView.schedules[1].isVisible, isFalse);
         expect(
           find.descendant(
             of: k('calendar-manager-tile-category-1'),
@@ -962,7 +962,7 @@ void main() {
         );
         await t.tap(hidden);
         await t.pumpAndSettle();
-        expect(p.generalSchedules[2].isVisible, isTrue);
+        expect(p.generalView.schedules[2].isVisible, isTrue);
         expect(
           find.descendant(
             of: k('calendar-manager-tile-category-2'),
@@ -1015,13 +1015,13 @@ void main() {
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.tapAt(const Offset(1200, 850));
       await t.pump();
-      await p.setWorkspaceEnabled(AppMode.general, false);
-      expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+      await p.workspaces.setEnabled(AppMode.general, false);
+      expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
       expect(panel, findsOneWidget);
       expect(storage.writes, writesBefore + 1);
       gate.complete();
       await t.pumpAndSettle();
-      expect(p.generalSchedules[1].isVisible, isFalse);
+      expect(p.generalView.schedules[1].isVisible, isFalse);
       expect(t.widget<IconButton>(button).onPressed, isNotNull);
       expect(
         find.descendant(

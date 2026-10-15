@@ -88,9 +88,9 @@ void main() {
             expect(horizontal(t).maxScrollExtent, greaterThan(0));
             expect(actual, closeTo(160 * scale, .01));
           }
-          await p.updateGeneralDisplaySettings(showWeekends: false);
+          await p.generalCommands.updateDisplaySettings(showWeekends: false);
           await t.pumpAndSettle();
-          expect(p.customGeneralDateRange!.dayCount, count);
+          expect(p.generalView.customDateRange!.dayCount, count);
           expect(t.getSize(header(start).first).width, closeTo(actual, .01));
           expect(t.takeException(), isNull);
         },
@@ -128,23 +128,23 @@ void main() {
       horizontal(t).jumpTo(200);
       vertical(t).jumpTo(144);
       await t.pumpAndSettle();
-      final date = p.selectedGeneralDate;
-      final revision = p.generalDateFocusRevision;
-      await p.updateGeneralCustomDayMinWidth(256);
+      final date = p.generalView.selectedDate;
+      final revision = p.generalView.focusRevision;
+      await p.generalCommands.updateCustomDayMinWidth(256);
       await t.pumpAndSettle();
       expect(horizontal(t).pixels, closeTo(320, .1));
       expect(vertical(t).pixels, closeTo(144, .1));
-      expect(p.selectedGeneralDate, date);
-      expect(p.generalDateFocusRevision, revision);
+      expect(p.generalView.selectedDate, date);
+      expect(p.generalView.focusRevision, revision);
       t.view.physicalSize = const Size(520, 900);
       await t.pumpAndSettle();
       expect(horizontal(t).pixels, closeTo(320, .1));
-      await p.updateGeneralCustomDayMinWidth(null);
+      await p.generalCommands.updateCustomDayMinWidth(null);
       await t.pumpAndSettle();
       expect(horizontal(t).maxScrollExtent, 0);
       expect(vertical(t).pixels, closeTo(144, .1));
-      await p.updateGeneralCustomDayMinWidth(320);
-      await p.clearGeneralDateRange();
+      await p.generalCommands.updateCustomDayMinWidth(320);
+      await p.generalNavigation.clearDateRange();
       await t.pumpAndSettle();
       expect(horizontal(t).maxScrollExtent, 0);
       expect(t.getSize(header(start).first).width, lessThan(320));
@@ -182,7 +182,7 @@ void main() {
       expect(t.getSize(header(start).first).width, greaterThan(96));
       expect(horizontal(t).maxScrollExtent, 0);
       t.view.physicalSize = const Size(393, 900);
-      await p.updateGeneralCustomDayMinWidth(160);
+      await p.generalCommands.updateCustomDayMinWidth(160);
       await t.pumpAndSettle();
       horizontal(t).jumpTo(160);
       await t.pumpAndSettle();

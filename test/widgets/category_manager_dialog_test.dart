@@ -272,10 +272,10 @@ void main() {
       final moved = t.getRect(dialogSurface);
       expect(moved.top, greaterThan(original.top));
       expect(moved.left, closeTo(original.left + dx, 1));
-      final visible = p.generalSchedules.single.isVisible;
+      final visible = p.generalView.schedules.single.isVisible;
       await t.tap(k('calendar-visibility-category-0'), warnIfMissed: false);
       await t.pumpAndSettle();
-      expect(p.generalSchedules.single.isVisible, visible);
+      expect(p.generalView.schedules.single.isVisible, visible);
       expect(
         find.widgetWithText(FilledButton, 'Discard and exit'),
         findsOneWidget,
@@ -297,7 +297,7 @@ void main() {
       expect(t.getRect(dialogSurface).topLeft, moved.topLeft);
       await t.tap(saveButton);
       await t.pumpAndSettle();
-      expect(p.generalSchedules.single.name, 'Dragged draft');
+      expect(p.generalView.schedules.single.name, 'Dragged draft');
       expect(storage.saves, savedBefore + 2);
       await rename(t, 'category-0');
       expect(t.getRect(dialogSurface).topLeft, original.topLeft);
@@ -372,7 +372,7 @@ void main() {
       await t.pumpAndSettle();
       final before = t.state<ScrollableState>(scrollable).position.pixels;
       final savedBefore = storage.saves;
-      final original = p.generalSchedules[20];
+      final original = p.generalView.schedules[20];
       await rename(t, original.id);
       expect(
         find.byType(SkedTaskDialog),
@@ -406,9 +406,9 @@ void main() {
         find.byType(BackButton),
         desktopManager ? findsNothing : findsOneWidget,
       );
-      expect(p.generalSchedules[20].name, 'Updated category');
-      expect(p.generalSchedules[20].id, original.id);
-      expect(p.generalSchedules[20].isVisible, original.isVisible);
+      expect(p.generalView.schedules[20].name, 'Updated category');
+      expect(p.generalView.schedules[20].id, original.id);
+      expect(p.generalView.schedules[20].isVisible, original.isVisible);
       expect(storage.saves, savedBefore + 1);
       expect(
         t.state<ScrollableState>(scrollable).position.pixels,
@@ -434,11 +434,11 @@ void main() {
       viewport(t, const Size(1100, 800));
       final (p, storage) = await start(t);
       final savedBefore = storage.saves;
-      final original = p.generalSchedules.single.id;
+      final original = p.generalView.schedules.single.id;
       await t.tap(addButton);
       await t.pumpAndSettle();
       expect(t.widget<FilledButton>(saveButton).onPressed, isNull);
-      expect(p.generalSchedules, hasLength(1));
+      expect(p.generalView.schedules, hasLength(1));
       await t.tap(cancelButton);
       await t.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
@@ -451,7 +451,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.widgetWithText(FilledButton, 'Discard and exit'));
       await t.pumpAndSettle();
-      expect(p.generalSchedules.single.id, original);
+      expect(p.generalView.schedules.single.id, original);
       expect(storage.saves, savedBefore);
       await t.tap(addButton);
       await t.pumpAndSettle();
@@ -463,12 +463,12 @@ void main() {
       await t.tap(saveButton);
       await t.pumpAndSettle();
       expect(k('calendar-name-dialog'), findsNothing);
-      expect(p.generalSchedules, hasLength(2));
-      expect(p.generalSchedules.last.name, 'Confirmed category');
+      expect(p.generalView.schedules, hasLength(2));
+      expect(p.generalView.schedules.last.name, 'Confirmed category');
       expect(storage.saves, savedBefore + 1);
       expect(
         find.descendant(
-          of: k('calendar-manager-tile-${p.generalSchedules.last.id}'),
+          of: k('calendar-manager-tile-${p.generalView.schedules.last.id}'),
           matching: find.text('Confirmed category'),
         ),
         findsOneWidget,
@@ -491,7 +491,7 @@ void main() {
       storage.saveError = StateError('test save failure');
       await t.tap(saveButton);
       await t.pumpAndSettle();
-      expect(p.generalSchedules, hasLength(1));
+      expect(p.generalView.schedules, hasLength(1));
       expect(
         t.widget<TextField>(k('add-calendar-field')).controller!.text,
         'Retry category',
@@ -500,8 +500,8 @@ void main() {
       await t.tap(saveButton);
       await t.pumpAndSettle();
       expect(k('calendar-name-dialog'), findsNothing);
-      expect(p.generalSchedules, hasLength(2));
-      expect(p.generalSchedules.last.name, 'Retry category');
+      expect(p.generalView.schedules, hasLength(2));
+      expect(p.generalView.schedules.last.name, 'Retry category');
       expect(storage.saves, savedBefore + 2);
       expect(t.takeException(), isNull);
     },
@@ -531,9 +531,9 @@ void main() {
       await t.pump();
       await t.tapAt(const Offset(10, 200));
       await t.pump();
-      await p.setWorkspaceEnabled(AppMode.general, false);
+      await p.workspaces.setEnabled(AppMode.general, false);
       await t.pump();
-      expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+      expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
       expect(k('rename-calendar-field'), findsOneWidget);
       expect(t.widget<FilledButton>(saveButton).onPressed, isNull);
       expect(t.widget<TextButton>(cancelButton).onPressed, isNull);
@@ -546,7 +546,7 @@ void main() {
       storage.pending!.complete();
       await t.pumpAndSettle();
       expect(k('calendar-name-dialog'), findsNothing);
-      expect(p.generalSchedules.single.name, 'Saved once');
+      expect(p.generalView.schedules.single.name, 'Saved once');
       expect(storage.saves, savedBefore + 1);
       expect(t.takeException(), isNull);
     },
@@ -580,8 +580,8 @@ void main() {
         'Unsaved rename',
       );
       var finished = false;
-      final disabling = p
-          .setWorkspaceEnabled(AppMode.general, false)
+      final disabling = p.workspaces
+          .setEnabled(AppMode.general, false)
           .then((_) => finished = true);
       await t.pumpAndSettle();
       expect(finished, isFalse);
@@ -597,13 +597,13 @@ void main() {
       await t.tap(find.widgetWithText(FilledButton, 'Discard and exit'));
       await t.pumpAndSettle();
       await disabling;
-      expect(p.isWorkspaceEnabled(AppMode.general), isFalse);
+      expect(p.workspaceView.isEnabled(AppMode.general), isFalse);
       expect(k('calendar-name-dialog'), findsNothing);
       expect(
         find.byKey(const PageStorageKey('calendar-manager-list')),
         findsNothing,
       );
-      expect(p.generalSchedules.single.name, 'Category 0');
+      expect(p.generalView.schedules.single.name, 'Category 0');
       expect(storage.saves, savedBefore + 1);
       expect(t.takeException(), isNull);
     },
@@ -627,7 +627,7 @@ void main() {
         find.byType(SkedTaskDialog),
         desktopManager ? findsNWidgets(2) : findsOneWidget,
       );
-      expect(p.generalSchedules, hasLength(1));
+      expect(p.generalView.schedules, hasLength(1));
       expect(storage.saves, savedBefore);
       await t.tap(cancelButton);
       await t.pumpAndSettle();
@@ -636,7 +636,7 @@ void main() {
         find.byKey(const PageStorageKey('calendar-manager-list')),
         findsNothing,
       );
-      expect(p.generalSchedules, hasLength(1));
+      expect(p.generalView.schedules, hasLength(1));
       expect(storage.saves, savedBefore);
       expect(t.takeException(), isNull);
     },
@@ -676,7 +676,7 @@ void main() {
         await t.pumpAndSettle();
         expect(k('calendar-name-dialog'), findsNothing);
         expect(
-          p.generalSchedules.single.name,
+          p.generalView.schedules.single.name,
           'A long but editable category name',
         );
         expect(t.takeException(), isNull);
@@ -690,8 +690,8 @@ void main() {
       (t) async {
         viewport(t, const Size(1280, 800));
         final (p, storage) = await start(t, count: 2);
-        final backup = await p.exportAppDataJson();
-        final originalSession = p.dataSessionToken;
+        final backup = await p.backups.exportJson();
+        final originalSession = p.maintenance.dataSessionToken;
         final savesBefore = storage.saves;
         await t.tap(k('calendar-actions-category-0'));
         await t.pumpAndSettle();
@@ -713,14 +713,14 @@ void main() {
         await t.tap(submit);
         await t.sendKeyEvent(LogicalKeyboardKey.escape);
         await t.pump();
-        await p.setWorkspaceEnabled(AppMode.general, false);
+        await p.workspaces.setEnabled(AppMode.general, false);
         await expectLater(
-          p.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+          p.backups.importJson(backup, mode: AppImportMode.replaceAll),
           throwsA(isA<WorkspaceChangeCancelledException>()),
         );
         expect(storage.saves, savesBefore + 1);
-        expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
-        expect(p.dataSessionToken, same(originalSession));
+        expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
+        expect(p.maintenance.dataSessionToken, same(originalSession));
         expect(find.byType(AlertDialog), findsOneWidget);
         gate.complete();
         await t.pumpAndSettle();
@@ -728,8 +728,8 @@ void main() {
           storage.data.generalMode.schedules.any((s) => s.id == 'category-0'),
           fail,
         );
-        expect(p.generalSchedules.any((s) => s.id == 'category-0'), fail);
-        expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+        expect(p.generalView.schedules.any((s) => s.id == 'category-0'), fail);
+        expect(p.workspaceView.isEnabled(AppMode.general), isTrue);
         if (fail) {
           expect(find.byType(AlertDialog), findsOneWidget);
           await t.tap(k('ui-command-failure-dismiss'));
@@ -737,7 +737,10 @@ void main() {
           storage.pending = null;
           await t.tap(submit);
           await t.pumpAndSettle();
-          expect(p.generalSchedules.any((s) => s.id == 'category-0'), isFalse);
+          expect(
+            p.generalView.schedules.any((s) => s.id == 'category-0'),
+            isFalse,
+          );
         }
         expect(find.byType(AlertDialog), findsNothing);
         expect(t.takeException(), isNull);

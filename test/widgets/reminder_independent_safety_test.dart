@@ -109,7 +109,7 @@ Future<void> closeList(WidgetTester t) async {
 }
 
 GeneralEvent study(TimetableProvider p) =>
-    p.generalSchedules.single.events.firstWhere((e) => e.id == 'study');
+    p.generalView.schedules.single.events.firstWhere((e) => e.id == 'study');
 
 Future<void> confirmDelete(WidgetTester t, {bool repeating = false}) async {
   await t.tap(inside('general-event-delete-action'));
@@ -134,7 +134,7 @@ void main() {
         final element = t.element(details);
         final latest = study(p)
             .copyWith(notes: 'Latest saved note', title: 'Updated study');
-        await p.saveGeneralEvent(latest);
+        await p.generalCommands.saveEvent(latest);
         if (rebuild) {
           await t.pumpAndSettle();
           expect(t.element(details), same(element));
@@ -175,7 +175,7 @@ void main() {
       await t.tap(inside('general-event-delete-action'));
       await t.pump();
       await t.pump(const Duration(seconds: 1));
-      await p.saveGeneralEvent(
+      await p.generalCommands.saveEvent(
         study(p).copyWith(
           notes: 'Updated during confirmation',
           recurrenceExceptionDateIso: ['2026-10-03'],
@@ -201,7 +201,7 @@ void main() {
         final p = await mount(t, storage: fixture(repeating: true));
         await closeList(t);
         final e = study(p);
-        await p.saveGeneralEvent(switch (removedBy) {
+        await p.generalCommands.saveEvent(switch (removedBy) {
           'start' => e.copyWith(startDateTimeIso: '2026-10-01T19:00:00.000'),
           'exception' => e.copyWith(recurrenceExceptionDateIso: ['2026-10-01']),
           _ => e.copyWith(
@@ -227,8 +227,8 @@ void main() {
     'data replacement retires the old detail and permits new activation',
     (t) async {
       final p = await mount(t);
-      final backup = await p.exportAppDataJson();
-      await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+      final backup = await p.backups.exportJson();
+      await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
       await t.pumpAndSettle();
       expect(details, findsNothing);
       if (list.evaluate().isEmpty) {
@@ -249,12 +249,12 @@ void main() {
     (t) async {
       final p = await mount(t);
       await closeList(t);
-      await p.saveGeneralEvent(
+      await p.generalCommands.saveEvent(
         study(p).copyWith(notes: 'Current duplicate notes'),
       );
       await t.tap(inside('general-event-duplicate-action'));
       await t.pumpAndSettle();
-      final duplicates = p.generalSchedules.single.events.where(
+      final duplicates = p.generalView.schedules.single.events.where(
         (e) => e.id != 'study' && e.title == 'Study group',
       );
       expect(duplicates, hasLength(1));
@@ -354,7 +354,7 @@ void main() {
           expect(study(p).recurrenceExceptionDateIso, ['2026-10-01']);
         } else {
           expect(
-            p.generalSchedules.single.events.any((e) => e.id == 'study'),
+            p.generalView.schedules.single.events.any((e) => e.id == 'study'),
             isFalse,
           );
         }

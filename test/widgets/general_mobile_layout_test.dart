@@ -93,7 +93,7 @@ void main() {
         DateTime(2026, 9, 21),
         DateTime(2026, 9, 27),
       );
-      await p.setGeneralDateRange(original);
+      await p.generalNavigation.setDateRange(original);
       await _home(t, p);
       await t.tap(_key('general-date-title-button'));
       await t.pumpAndSettle();
@@ -105,12 +105,12 @@ void main() {
       await gesture.moveBy(const Offset(25, 0));
       await gesture.moveTo(t.getCenter(_key('sked-date-2026-09-26')));
       await t.pump();
-      expect(p.customGeneralDateRange, original);
+      expect(p.generalView.customDateRange, original);
       expect(storage.writes, before);
       await gesture.up();
       await t.pumpAndSettle();
       expect(
-        p.customGeneralDateRange,
+        p.generalView.customDateRange,
         GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 26)),
       );
       expect(storage.writes, before + 1);
@@ -132,7 +132,7 @@ void main() {
             addTearDown(p.dispose);
             final before = storage.writes;
             await _home(t, p, scale: scale, brightness: brightness);
-            expect(p.generalFitWeekColumnsToWidth, isTrue);
+            expect(p.generalView.data.fitWeekColumnsToWidth, isTrue);
             final viewport = t.getRect(_key('general-week-pager'));
             for (var day = 21; day <= 27; day++) {
               expect(_header(day).hitTestable(), findsOneWidget);
@@ -187,9 +187,11 @@ void main() {
       await t.drag(_key('general-timeline-scroll-view'), const Offset(0, -210));
       await t.pumpAndSettle();
       final top = _vertical(t).pixels;
-      final date = p.selectedGeneralDate;
+      final date = p.generalView.selectedDate;
       expect(top, greaterThan(0));
-      await p.updateGeneralDisplaySettings(fitWeekColumnsToWidth: false);
+      await p.generalCommands.updateDisplaySettings(
+        fitWeekColumnsToWidth: false,
+      );
       await t.pumpAndSettle();
       expect(_horizontal(t).maxScrollExtent, greaterThan(300));
       expect(
@@ -203,23 +205,25 @@ void main() {
       await t.pumpAndSettle();
       expect(_horizontal(t).pixels, greaterThan(0));
       expect(
-        p.selectedGeneralDate,
+        p.generalView.selectedDate,
         date,
         reason: 'Browsing columns cannot also turn the week',
       );
       expect(_vertical(t).pixels, closeTo(top, .1));
-      await p.updateGeneralDisplaySettings(fitWeekColumnsToWidth: true);
+      await p.generalCommands.updateDisplaySettings(
+        fitWeekColumnsToWidth: true,
+      );
       await t.pumpAndSettle();
       expect(_horizontal(t).pixels, 0);
       expect(_horizontal(t).maxScrollExtent, 0);
       expect(_vertical(t).pixels, closeTo(top, .1));
-      expect(p.selectedGeneralDate, date);
+      expect(p.generalView.selectedDate, date);
       await t.drag(
         _key('general-timeline-horizontal-scroll').hitTestable(),
         const Offset(-260, 0),
       );
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, addCalendarDays(date, 7));
+      expect(p.generalView.selectedDate, addCalendarDays(date, 7));
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
@@ -234,12 +238,12 @@ void main() {
         locale: 'zh',
       );
       addTearDown(p.dispose);
-      await p.updateGeneralDisplaySettings(showWeekends: false);
+      await p.generalCommands.updateDisplaySettings(showWeekends: false);
       await _home(t, p);
       expect(_header(25).hitTestable(), findsOneWidget);
       expect(_header(26), findsNothing);
       expect(_horizontal(t).maxScrollExtent, 0);
-      await p.setGeneralDateRange(
+      await p.generalNavigation.setDateRange(
         GeneralDateRange(DateTime(2026, 9, 23), DateTime(2026, 9, 29)),
       );
       await t.pumpAndSettle();
@@ -250,7 +254,7 @@ void main() {
         reason: 'A custom seven days is not a natural week',
       );
       expect(_horizontal(t).maxScrollExtent, 0);
-      await p.setGeneralDateRange(
+      await p.generalNavigation.setDateRange(
         GeneralDateRange(DateTime(2026, 9, 23), DateTime(2026, 10, 6)),
       );
       await t.pumpAndSettle();
@@ -302,7 +306,7 @@ void main() {
       expect(_horizontal(t).maxScrollExtent, 0);
       expect(t.takeException(), isNull);
       for (final days in [1, 7, 14]) {
-        await p.setGeneralDateRange(
+        await p.generalNavigation.setDateRange(
           GeneralDateRange(
             DateTime(2026, 9, 23),
             addCalendarDays(DateTime(2026, 9, 23), days - 1),
@@ -340,7 +344,7 @@ void main() {
         await t.dragFrom(visibleTime.center, const Offset(0, -40));
         await t.pumpAndSettle();
         expect(timePosition.pixels, greaterThan(before));
-        expect(p.customGeneralDateRange!.dayCount, days);
+        expect(p.generalView.customDateRange!.dayCount, days);
         expect(t.takeException(), isNull);
       }
     },
@@ -360,7 +364,7 @@ void main() {
     final extent = _horizontal(t).maxScrollExtent;
     expect(extent, greaterThan(0));
     expect(_key('general-compact-toolbar-rows'), findsNothing);
-    await p.updateGeneralDisplaySettings(fitWeekColumnsToWidth: false);
+    await p.generalCommands.updateDisplaySettings(fitWeekColumnsToWidth: false);
     await t.pumpAndSettle();
     expect(_horizontal(t).maxScrollExtent, extent);
     expect(t.takeException(), isNull);
@@ -385,7 +389,7 @@ void main() {
       expect(title.maxLines, lessThanOrEqualTo(3));
       expect(
         t.getSize(card).height,
-        closeTo(70 * p.generalTimeGridHourHeight / 60 - 3, .01),
+        closeTo(70 * p.generalView.data.timeGridHourHeight / 60 - 3, .01),
       );
       await t.tap(card);
       await t.pumpAndSettle();
@@ -420,7 +424,7 @@ void main() {
       final storage = _Storage(mobileLayoutData());
       final p = await workspaceProvider(storage: storage, locale: 'zh');
       addTearDown(p.dispose);
-      await p.updateHideHomeWorkspaceNavigation(true);
+      await p.settingsCommands.updateHideHomeWorkspaceNavigation(true);
       final selected = <AppMode>[];
       await _home(
         t,
@@ -469,10 +473,10 @@ void main() {
         locale: 'zh',
       );
       addTearDown(p.dispose);
-      await p.saveGeneralEvent(
+      await p.generalCommands.saveEvent(
         GeneralEvent(
           id: 'phone-reminder',
-          calendarId: p.activeGeneralSchedule.id,
+          calendarId: p.generalView.activeSchedule.id,
           title: '手机提醒详情',
           startDateTimeIso: '2026-09-23T10:00:00',
           endDateTimeIso: '2026-09-23T11:00:00',
@@ -551,7 +555,7 @@ void main() {
       );
       await t.tap(today);
       await t.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateUtils.dateOnly(DateTime.now()));
+      expect(p.generalView.selectedDate, DateUtils.dateOnly(DateTime.now()));
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
@@ -568,7 +572,7 @@ void main() {
         final storage = _Storage(mobileLayoutData());
         final p = await workspaceProvider(storage: storage, locale: 'zh');
         addTearDown(p.dispose);
-        await p.updateGeneralDisplaySettings(
+        await p.generalCommands.updateDisplaySettings(
           toolbarNavigationOrder: [
             'view',
             'settings',
@@ -579,7 +583,7 @@ void main() {
           hiddenToolbarNavigationIds: ['date', 'view'],
           toolbarHiddenItemsBehavior: hiddenBehavior,
         );
-        final order = p.generalToolbarNavigationOrder;
+        final order = p.generalView.data.toolbarNavigationOrder;
         final before = storage.writes;
         await _home(t, p, scale: 2);
         expect(_key('general-date-title-button'), findsNothing);
@@ -600,7 +604,7 @@ void main() {
           items.any((i) => i.value == 'view'),
           hiddenBehavior == toolbarHiddenItemsBehaviorMore,
         );
-        expect(p.generalToolbarNavigationOrder, order);
+        expect(p.generalView.data.toolbarNavigationOrder, order);
         expect(storage.writes, before);
         expect(t.takeException(), isNull);
       },
@@ -617,7 +621,7 @@ void main() {
       locale: 'zh',
     );
     addTearDown(p.dispose);
-    await p.updateGeneralDisplaySettings(
+    await p.generalCommands.updateDisplaySettings(
       hiddenToolbarNavigationIds: ['date'],
       toolbarHiddenItemsBehavior: toolbarHiddenItemsBehaviorMore,
     );

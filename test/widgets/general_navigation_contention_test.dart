@@ -114,7 +114,7 @@ void main() {
     (t) async {
       final (provider, storage) = await _setup();
       await _phone(t, provider);
-      expect(provider.customGeneralDateRange, _customRange);
+      expect(provider.generalView.customDateRange, _customRange);
       final before = storage.writes;
       late Completer<void> release;
       Future<void>? notificationProjection;
@@ -138,7 +138,7 @@ void main() {
           reason: 'The real notification lock must be acquired before testing the UI.',
         );
         await _chooseWeek(t);
-        expect(provider.customGeneralDateRange, isNull);
+        expect(provider.generalView.customDateRange, isNull);
         expect(storage.data.generalMode.customDateRange, isNull);
         expect(storage.writes, before + 1);
         _expectNavigationEnabled(t);
@@ -151,12 +151,12 @@ void main() {
         await t.pumpAndSettle();
         await t.tap(_key('adaptive-shell-student-destination'));
         await t.pumpAndSettle();
-        expect(provider.activeMode, AppMode.student);
+        expect(provider.workspaceView.activeMode, AppMode.student);
         expect(_key('workspace-switch-busy'), findsNothing);
         await t.tap(_key('adaptive-shell-general-destination'));
         await t.pumpAndSettle();
-        expect(provider.activeMode, AppMode.general);
-        expect(provider.customGeneralDateRange, isNull);
+        expect(provider.workspaceView.activeMode, AppMode.general);
+        expect(provider.generalView.customDateRange, isNull);
         _expectNavigationEnabled(t);
         expect(projectionFinished, isFalse);
         expect(t.takeException(), isNull);
@@ -182,7 +182,7 @@ void main() {
       try {
         await _chooseWeek(t);
         expect(storage.saveEntered!.isCompleted, isTrue);
-        expect(provider.customGeneralDateRange, _customRange);
+        expect(provider.generalView.customDateRange, _customRange);
         expect(storage.data.generalMode.customDateRange, _customRange);
         expect(t.widget<OutlinedButton>(_dateButton).onPressed, isNull);
         expect(
@@ -194,7 +194,7 @@ void main() {
         gate.complete();
         await t.pumpAndSettle();
       }
-      expect(provider.customGeneralDateRange, _customRange);
+      expect(provider.generalView.customDateRange, _customRange);
       expect(storage.data.generalMode.customDateRange, _customRange);
       _expectNavigationEnabled(t);
       final l10n = AppLocalizations.of(t.element(_dateButton));
@@ -202,13 +202,13 @@ void main() {
       expect(storage.writes, before + 1);
 
       await _chooseWeek(t);
-      expect(provider.customGeneralDateRange, isNull);
+      expect(provider.generalView.customDateRange, isNull);
       expect(storage.data.generalMode.customDateRange, isNull);
       expect(storage.writes, before + 2);
       _expectNavigationEnabled(t);
       await t.tap(_key('adaptive-shell-student-destination'));
       await t.pumpAndSettle();
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.workspaceView.activeMode, AppMode.student);
       expect(_key('workspace-switch-busy'), findsNothing);
       expect(t.takeException(), isNull);
     },

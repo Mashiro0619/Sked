@@ -157,7 +157,7 @@ Future<TimetableProvider> _createProvider() async {
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -168,7 +168,7 @@ Future<TimetableProvider> _createGeneralProvider(AppData data) async {
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -181,7 +181,7 @@ Future<TimetableProvider> _createProviderWithStorage(
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -223,7 +223,7 @@ Future<void> _pumpGeneralScheduleHomeScreen(
     AppScope(
       app: provider,
       child: MaterialApp(
-        locale: appLocaleFromCode(provider.localeCode),
+        locale: appLocaleFromCode(provider.settingsView.localeCode),
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: theme,
@@ -431,7 +431,7 @@ void main() {
         AppScope(
           app: provider,
           child: MaterialApp(
-            locale: appLocaleFromCode(provider.localeCode),
+            locale: appLocaleFromCode(provider.settingsView.localeCode),
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const Material(
@@ -446,13 +446,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final selectedBeforeTap = provider.selectedGeneralDate;
+      final selectedBeforeTap = provider.generalView.selectedDate;
       await tester.tap(find.byKey(const ValueKey('general-date-title-button')));
       await tester.pump();
 
       expect(find.byType(Scaffold), findsNothing);
       expect(find.byType(SkedPrimaryFab), findsNothing);
-      expect(provider.selectedGeneralDate, selectedBeforeTap);
+      expect(provider.generalView.selectedDate, selectedBeforeTap);
       expect(tester.takeException(), isNull);
     },
   );
@@ -473,7 +473,7 @@ void main() {
       AppScope(
         app: provider,
         child: MaterialApp(
-          locale: appLocaleFromCode(provider.localeCode),
+          locale: appLocaleFromCode(provider.settingsView.localeCode),
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Material(
@@ -488,7 +488,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.showAddEventFab, isTrue);
+    expect(provider.generalView.data.showAddEventFab, isTrue);
     expect(find.byType(SkedPrimaryFab), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -553,7 +553,7 @@ void main() {
       expect(find.text('Primary event'), findsOneWidget);
       expect(find.text('Secondary event'), findsOneWidget);
 
-      await provider.switchGeneralSchedule('cal2');
+      await provider.generalCommands.switchSchedule('cal2');
       await tester.pump();
 
       expect(
@@ -586,14 +586,14 @@ void main() {
     );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    final initialDate = provider.selectedGeneralDate;
+    final initialDate = provider.generalView.selectedDate;
     await tester.fling(
       find.byKey(_generalWeekPagerKey),
       Offset(-tester.getSize(find.byKey(_generalWeekPagerKey)).width * 0.75, 0),
       1000,
     );
     await tester.pumpAndSettle();
-    expect(provider.selectedGeneralDate, isNot(initialDate));
+    expect(provider.generalView.selectedDate, isNot(initialDate));
 
     await tester.fling(
       find.byKey(_generalWeekPagerKey),
@@ -601,11 +601,11 @@ void main() {
       1000,
     );
     await tester.pumpAndSettle();
-    expect(provider.selectedGeneralDate, initialDate);
+    expect(provider.generalView.selectedDate, initialDate);
 
     await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
-    await provider.setSelectedGeneralDate(DateTime(2026, 6, 19));
+    await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 19));
     await tester.pumpAndSettle();
     await tester.fling(
       find.byKey(_generalDayPagerKey),
@@ -613,26 +613,27 @@ void main() {
       1000,
     );
     await tester.pumpAndSettle();
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 22));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 22));
     await tester.fling(
       find.byKey(_generalDayPagerKey),
       Offset(tester.getSize(find.byKey(_generalDayPagerKey)).width * 0.75, 0),
       1000,
     );
     await tester.pumpAndSettle();
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 19));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 19));
 
     await tester.longPress(
       find.byKey(const ValueKey('general-date-title-button')),
     );
     await tester.pumpAndSettle();
     var today = normalizeDateOnly(DateTime.now());
-    if (!provider.generalShowWeekends && today.weekday > DateTime.friday) {
+    if (!provider.generalView.data.showWeekends &&
+        today.weekday > DateTime.friday) {
       today = addCalendarDays(today, 8 - today.weekday);
     }
-    expect(provider.selectedGeneralDate.year, today.year);
-    expect(provider.selectedGeneralDate.month, today.month);
-    expect(provider.selectedGeneralDate.day, today.day);
+    expect(provider.generalView.selectedDate.year, today.year);
+    expect(provider.generalView.selectedDate.month, today.month);
+    expect(provider.generalView.selectedDate.day, today.day);
 
     await tester.tap(find.byKey(const ValueKey('general-date-title-button')));
     await tester.pumpAndSettle();
@@ -720,7 +721,7 @@ void main() {
     );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    final initialDate = provider.selectedGeneralDate;
+    final initialDate = provider.generalView.selectedDate;
     final dateButton = find.byKey(const ValueKey('general-date-title-button'));
     expect(
       _visibleDateNavigationLabel(tester),
@@ -748,7 +749,7 @@ void main() {
       find.descendant(of: dateButton, matching: find.text('2026/6')),
       findsOneWidget,
     );
-    expect(provider.selectedGeneralDate, initialDate);
+    expect(provider.generalView.selectedDate, initialDate);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('general-workspace-toolbar')),
@@ -766,7 +767,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
     await _pumpGeneralScheduleHomeScreen(tester, provider);
-    final initialDate = provider.selectedGeneralDate;
+    final initialDate = provider.generalView.selectedDate;
 
     Future<void> tapNext() async {
       await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
@@ -793,7 +794,7 @@ void main() {
     expect(switchTooltip(), 'Switch view: Month -> Week');
     await tapNext();
     expect(switchTooltip(), 'Switch view: Week -> Day');
-    expect(provider.selectedGeneralDate, initialDate);
+    expect(provider.generalView.selectedDate, initialDate);
   });
 
   testWidgets('menu view switcher opens, cancels, and selects once', (
@@ -830,7 +831,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Choose view: Month'), findsOneWidget);
     expect(find.byType(PopupMenuItem<String>), findsNothing);
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 16));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 16));
   });
 
   testWidgets(
@@ -957,7 +958,7 @@ void main() {
         (DateTime(2026, 9, 2), '2026/8/31–9/6'),
         (DateTime(2027, 1, 1), '2026/12/28–2027/1/3'),
       ]) {
-        await provider.setSelectedGeneralDate(date);
+        await provider.generalNavigation.setSelectedDate(date);
         await tester.pumpAndSettle();
         expect(_visibleDateNavigationLabel(tester), label);
       }
@@ -984,10 +985,12 @@ void main() {
       showSettingsAction: false,
     );
 
-    await provider.updateHomeWorkspaceNavigationCollapsed(true);
+    await provider.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+      true,
+    );
     await tester.pumpAndSettle();
-    final initialDate = provider.selectedGeneralDate;
-    final initialView = provider.generalDefaultView;
+    final initialDate = provider.generalView.selectedDate;
+    final initialView = provider.generalView.data.defaultView;
     final calendar = find.byKey(const ValueKey('general-calendar-selector'));
     final dateButton = find.byKey(const ValueKey('general-date-navigation'));
 
@@ -1000,25 +1003,25 @@ void main() {
     expect(content.$1, lessThanOrEqualTo(280));
     expect(content.$2, greaterThan(content.$1));
 
-    await provider.updateGeneralDisplaySettings(
+    await provider.generalCommands.updateDisplaySettings(
       toolbarWidthPolicy: generalToolbarWidthPolicyBalanced,
     );
     final balanced = await measure();
     expect(balanced.$1, closeTo(balanced.$2, 1));
 
-    await provider.updateGeneralDisplaySettings(
+    await provider.generalCommands.updateDisplaySettings(
       toolbarWidthPolicy: generalToolbarWidthPolicyCalendarPriority,
     );
     final calendarPriority = await measure();
     expect(calendarPriority.$1 / calendarPriority.$2, closeTo(1.5, 0.03));
 
-    await provider.updateGeneralDisplaySettings(
+    await provider.generalCommands.updateDisplaySettings(
       toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
     );
     final datePriority = await measure();
     expect(datePriority.$2 / datePriority.$1, closeTo(1.5, 0.03));
-    expect(provider.selectedGeneralDate, initialDate);
-    expect(provider.generalDefaultView, initialView);
+    expect(provider.generalView.selectedDate, initialDate);
+    expect(provider.generalView.data.defaultView, initialView);
     expect(tester.takeException(), isNull);
   });
 
@@ -1048,7 +1051,7 @@ void main() {
 
     expect(_visibleDateNavigationLabel(tester), '2026/7/13\u201319');
 
-    await provider.updateGeneralDisplaySettings(
+    await provider.generalCommands.updateDisplaySettings(
       dateLabelFormat: generalDateLabelFormatIso,
     );
     await tester.pumpAndSettle();
@@ -1067,7 +1070,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(_visibleDateNavigationLabel(tester), '2026-07');
 
-    await provider.updateGeneralDisplaySettings(
+    await provider.generalCommands.updateDisplaySettings(
       dateLabelFormat: generalDateLabelFormatLocalized,
     );
     await tester.pumpAndSettle();
@@ -1246,7 +1249,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       await _pumpGeneralScheduleHomeScreen(tester, provider);
       expect(find.text('Domain event'), findsOneWidget);
       await tester.runAsync(
@@ -1287,7 +1290,7 @@ void main() {
         ),
       ),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpGeneralScheduleHomeScreen(tester, provider);
     final agenda = find.byKey(const ValueKey('general-month-stacked-agenda'));
     expect(agenda, findsOneWidget);
@@ -1337,7 +1340,7 @@ void main() {
           ),
         ),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       await _pumpGeneralScheduleHomeScreen(tester, provider);
       const before = ValueKey(
         'general-timed-occurrence-timeline-domain-2026-06-16T09:00:00.000',
@@ -1419,7 +1422,7 @@ void main() {
     await openAndCloseDetails(
       find.descendant(of: monthAgenda, matching: find.text('View event')),
     );
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 16));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 16));
 
     expect(tester.takeException(), isNull);
   });
@@ -1521,19 +1524,21 @@ void main() {
     );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    expect(provider.showAddEventFab, isFalse);
+    expect(provider.generalView.data.showAddEventFab, isFalse);
     expect(find.byType(SkedPrimaryFab), findsNothing);
 
-    await provider.updateGeneralDisplaySettings(showAddEventFab: true);
+    await provider.generalCommands.updateDisplaySettings(showAddEventFab: true);
     await tester.pumpAndSettle();
 
-    expect(provider.showAddEventFab, isTrue);
+    expect(provider.generalView.data.showAddEventFab, isTrue);
     expect(find.byType(SkedPrimaryFab), findsOneWidget);
 
-    await provider.updateGeneralDisplaySettings(showAddEventFab: false);
+    await provider.generalCommands.updateDisplaySettings(
+      showAddEventFab: false,
+    );
     await tester.pumpAndSettle();
 
-    expect(provider.showAddEventFab, isFalse);
+    expect(provider.generalView.data.showAddEventFab, isFalse);
     expect(find.byType(SkedPrimaryFab), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -1570,7 +1575,7 @@ void main() {
     );
     final storage = _BlockingTimetableStorage(initialData);
     final provider = await _createProviderWithStorage(storage);
-    final initialScheduleId = provider.generalSchedules.single.id;
+    final initialScheduleId = provider.generalView.schedules.single.id;
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     final l10n = AppLocalizations.of(
@@ -1598,7 +1603,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(storage.saveCount, 0);
-    expect(provider.generalSchedules, hasLength(1));
+    expect(provider.generalView.schedules, hasLength(1));
     await tester.enterText(
       find.byKey(const ValueKey('add-calendar-field')),
       'New planning category',
@@ -1611,7 +1616,7 @@ void main() {
     await tester.pump();
 
     expect(storage.saveCount, 1);
-    expect(provider.generalSchedules, hasLength(2));
+    expect(provider.generalView.schedules, hasLength(2));
     expect(find.byType(BottomSheet), findsNothing);
     expect(
       tester
@@ -1634,7 +1639,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.generalSchedules, hasLength(2));
+    expect(provider.generalView.schedules, hasLength(2));
   });
 
   testWidgets('calendar manager fits narrow phone width', (tester) async {
@@ -1781,22 +1786,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rename-calendar-field')), findsOneWidget);
     expect(storage.saveCount, baselineSaveCount);
-    expect(provider.generalSchedules.last.isVisible, isTrue);
-    expect(provider.activeGeneralSchedule.id, primary.id);
+    expect(provider.generalView.schedules.last.isVisible, isTrue);
+    expect(provider.generalView.activeSchedule.id, primary.id);
     await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal2')));
     await tester.pumpAndSettle();
     expect(storage.saveCount, baselineSaveCount + 1);
-    expect(provider.generalSchedules.last.isVisible, isFalse);
+    expect(provider.generalView.schedules.last.isVisible, isFalse);
     expect(find.byKey(const ValueKey('rename-calendar-field')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal2')));
     await tester.pumpAndSettle();
     expect(storage.saveCount, baselineSaveCount + 2);
-    expect(provider.generalSchedules.last.isVisible, isTrue);
-    expect(provider.activeGeneralSchedule.id, primary.id);
+    expect(provider.generalView.schedules.last.isVisible, isTrue);
+    expect(provider.generalView.activeSchedule.id, primary.id);
     expect(tester.takeException(), isNull);
   });
 
@@ -1837,8 +1842,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal2')));
     await tester.pumpAndSettle();
-    expect(provider.generalSchedules.last.isVisible, isTrue);
-    expect(provider.activeGeneralSchedule.id, primary.id);
+    expect(provider.generalView.schedules.last.isVisible, isTrue);
+    expect(provider.generalView.activeSchedule.id, primary.id);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(
@@ -1853,7 +1858,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal1')));
     await tester.pumpAndSettle();
-    expect(provider.generalSchedules.first.isVisible, isFalse);
+    expect(provider.generalView.schedules.first.isVisible, isFalse);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(
@@ -1905,7 +1910,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.generalSchedules, hasLength(1));
+    expect(provider.generalView.schedules, hasLength(1));
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(nameField, findsOneWidget);
     expect(
@@ -1952,7 +1957,7 @@ void main() {
 
     expect(nameField, findsOneWidget);
     expect(find.text('Retry draft'), findsOneWidget);
-    expect(provider.generalSchedules.single.name, 'Original calendar');
+    expect(provider.generalView.schedules.single.name, 'Original calendar');
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -1960,7 +1965,7 @@ void main() {
     await _pumpRouteTransition(tester);
 
     expect(nameField, findsNothing);
-    expect(provider.generalSchedules.single.name, 'Retry draft');
+    expect(provider.generalView.schedules.single.name, 'Retry draft');
     expect(storage.saveCount, baselineSaveCount + 2);
   });
 
@@ -2002,7 +2007,7 @@ void main() {
     await _pumpRouteTransition(tester);
 
     expect(find.text(l10n.deleteCalendar), findsOneWidget);
-    expect(provider.generalSchedules, hasLength(2));
+    expect(provider.generalView.schedules, hasLength(2));
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -2010,7 +2015,7 @@ void main() {
     await _pumpRouteTransition(tester);
 
     expect(find.text(l10n.deleteCalendar), findsNothing);
-    expect(provider.generalSchedules.map((item) => item.id), [primary.id]);
+    expect(provider.generalView.schedules.map((item) => item.id), [primary.id]);
     expect(storage.saveCount, baselineSaveCount + 2);
   });
 
@@ -2047,9 +2052,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 23);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 23);
     expect(find.byType(GeneralEventEditorSheet), findsNothing);
   });
 
@@ -2076,7 +2081,7 @@ void main() {
     );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    final initialDate = provider.selectedGeneralDate;
+    final initialDate = provider.generalView.selectedDate;
     final pageController = tester
         .widget<PageView>(find.byKey(_generalWeekPagerKey))
         .controller!;
@@ -2092,12 +2097,12 @@ void main() {
     final draggingPage = pageController.page!;
     expect(draggingPage, greaterThan(initialPage + 0.5));
     expect(draggingPage, lessThan(initialPage + 1));
-    expect(provider.selectedGeneralDate, initialDate);
+    expect(provider.generalView.selectedDate, initialDate);
 
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 23));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 23));
     expect(tester.takeException(), isNull);
   });
 
@@ -2141,14 +2146,14 @@ void main() {
       await tester.pump();
       expect(controller.page, greaterThan(initialPage + 0.5));
 
-      await provider.setSelectedGeneralDate(DateTime(2026, 6, 23));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 6, 23));
       await tester.pump();
 
       await gesture.moveBy(const Offset(650, 0));
       await gesture.up();
       await tester.pumpAndSettle();
 
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 23));
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 23));
       expect(controller.page, closeTo(initialPage + 1, 0.01));
       expect(tester.takeException(), isNull);
     },
@@ -2190,7 +2195,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 16));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 16));
     expect(controller.page, closeTo(initialPage, 0.01));
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
 
@@ -2201,7 +2206,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 23));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 23));
     expect(tester.takeException(), isNull);
   });
 
@@ -2234,9 +2239,9 @@ void main() {
 
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 22);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 22);
     expect(find.text('22'), findsWidgets);
     expect(find.text('20'), findsNothing);
     expect(find.text('21'), findsNothing);
@@ -2248,9 +2253,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 29);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 29);
     expect(find.text('29'), findsWidgets);
     expect(find.text('27'), findsNothing);
     expect(find.text('28'), findsNothing);
@@ -2285,9 +2290,9 @@ void main() {
 
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 22);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 22);
     expect(find.text('22'), findsWidgets);
     expect(find.text('20'), findsNothing);
     expect(find.text('21'), findsNothing);
@@ -2439,9 +2444,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 5);
-    expect(provider.selectedGeneralDate.day, 20);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 5);
+    expect(provider.generalView.selectedDate.day, 20);
     expect(find.byKey(_generalWeekPagerKey), findsOneWidget);
     expect(find.byKey(_generalDayPagerKey), findsNothing);
   });
@@ -2578,13 +2583,13 @@ void main() {
     expect(firstCard.bottom, lessThanOrEqualTo(secondCard.top));
     expect(find.bySemanticsLabel('Short A'), findsOneWidget);
 
-    await provider.updateGeneralDisplaySettings(
+    await provider.generalCommands.updateDisplaySettings(
       timeGridHourHeight: generalTimeGridHourHeightMax,
     );
     await tester.pumpAndSettle();
     expect(tester.getSize(grid).height, closeTo(2 * 120 + 24, 0.1));
     expect(find.text('Short A'), findsOneWidget);
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 17));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 17));
     expect(tester.takeException(), isNull);
   });
 
@@ -2625,7 +2630,9 @@ void main() {
     final oldOffset = tester.state<ScrollableState>(scrollable).position.pixels;
     final visibleMinutes = (oldOffset - 12) * 60 / 72;
 
-    await provider.updateGeneralDisplaySettings(timeGridHourHeight: 120);
+    await provider.generalCommands.updateDisplaySettings(
+      timeGridHourHeight: 120,
+    );
     await tester.pumpAndSettle();
 
     final newOffset = tester.state<ScrollableState>(scrollable).position.pixels;
@@ -2949,7 +2956,7 @@ void main() {
       );
       expect(find.text('First all-day event'), findsNothing);
       expect(find.text('Second all-day event'), findsNothing);
-      expect(provider.allDayTimelineCollapsed, isTrue);
+      expect(provider.generalView.data.allDayTimelineCollapsed, isTrue);
       expect(storage.data!.generalMode.allDayTimelineCollapsed, isTrue);
       expect(storage.saveCount, baselineSaveCount + 1);
 
@@ -2959,7 +2966,7 @@ void main() {
       expect(collapsed, findsNothing);
       expect(find.text('First all-day event'), findsOneWidget);
       expect(find.text('Second all-day event'), findsOneWidget);
-      expect(provider.allDayTimelineCollapsed, isFalse);
+      expect(provider.generalView.data.allDayTimelineCollapsed, isFalse);
       expect(storage.data!.generalMode.allDayTimelineCollapsed, isFalse);
       expect(storage.saveCount, baselineSaveCount + 2);
       expect(tester.takeException(), isNull);
@@ -3015,7 +3022,7 @@ void main() {
 
     await tester.tap(find.text('All-day'));
     await tester.pump(const Duration(milliseconds: 80));
-    expect(provider.allDayTimelineCollapsed, isTrue);
+    expect(provider.generalView.data.allDayTimelineCollapsed, isTrue);
     await tester.pump(const Duration(milliseconds: 120));
     final midTransitionHeight = tester.getSize(expandedTransition).height;
     expect(midTransitionHeight, lessThan(expandedHeight));
@@ -3033,7 +3040,7 @@ void main() {
 
     await tester.tap(find.text('All-day'));
     await tester.pump(const Duration(milliseconds: 80));
-    expect(provider.allDayTimelineCollapsed, isFalse);
+    expect(provider.generalView.data.allDayTimelineCollapsed, isFalse);
     await tester.pump(const Duration(milliseconds: 120));
     final midExpandHeight = tester.getSize(expandedTransition).height;
     expect(midExpandHeight, greaterThan(48));
@@ -3557,7 +3564,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(GeneralEventEditorSheet), findsNothing);
 
-        await provider.updateGeneralDisplaySettings(
+        await provider.generalCommands.updateDisplaySettings(
           enableLongPressAddEvent: true,
         );
         await tester.pumpAndSettle();
@@ -3680,9 +3687,9 @@ void main() {
     await tester.tap(find.text('18').first);
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 18);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 18);
   });
 
   testWidgets('day view empty slots open editor only on long press', (
@@ -3766,9 +3773,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 23);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 23);
   });
 
   testWidgets('day view swipes horizontally to change day', (tester) async {
@@ -3804,9 +3811,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 17);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 17);
   });
 
   testWidgets('day pager keeps Provider date stable during a partial drag', (
@@ -3832,7 +3839,7 @@ void main() {
     );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    final initialDate = provider.selectedGeneralDate;
+    final initialDate = provider.generalView.selectedDate;
     final pageController = tester
         .widget<PageView>(find.byKey(_generalDayPagerKey))
         .controller!;
@@ -3848,12 +3855,12 @@ void main() {
     final draggingPage = pageController.page!;
     expect(draggingPage, greaterThan(initialPage + 0.5));
     expect(draggingPage, lessThan(initialPage + 1));
-    expect(provider.selectedGeneralDate, initialDate);
+    expect(provider.generalView.selectedDate, initialDate);
 
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 17));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 17));
     expect(tester.takeException(), isNull);
   });
 
@@ -3948,9 +3955,9 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 22);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 22);
   });
 
   testWidgets('day view skips weekends when weekends are hidden', (
@@ -3989,9 +3996,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 22);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 22);
     expect(find.text('22'), findsWidgets);
     expect(find.text('20'), findsNothing);
     expect(find.text('21'), findsNothing);
@@ -4110,9 +4117,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SkedDatePicker), findsOneWidget);
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 16);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 16);
   });
 
   testWidgets('month view omits weekend cells when weekends are hidden', (
@@ -4179,9 +4186,9 @@ void main() {
 
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    expect(provider.selectedGeneralDate.year, 2026);
-    expect(provider.selectedGeneralDate.month, 6);
-    expect(provider.selectedGeneralDate.day, 22);
+    expect(provider.generalView.selectedDate.year, 2026);
+    expect(provider.generalView.selectedDate.month, 6);
+    expect(provider.generalView.selectedDate.day, 22);
     expect(find.text('22'), findsWidgets);
     expect(find.text('21'), findsNothing);
   });
@@ -4226,7 +4233,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate, DateTime(2026, 5, 29));
+    expect(provider.generalView.selectedDate, DateTime(2026, 5, 29));
   });
 
   testWidgets('month view keeps selected day agenda', (tester) async {
@@ -4374,7 +4381,7 @@ void main() {
 
     await tester.tap(includedDay);
     await tester.pumpAndSettle();
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 15));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 15));
     expect(
       find.descendant(of: agenda, matching: find.text('Conference')),
       findsOneWidget,
@@ -4382,7 +4389,7 @@ void main() {
 
     await tester.tap(excludedDay);
     await tester.pumpAndSettle();
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 16));
+    expect(provider.generalView.selectedDate, DateTime(2026, 6, 16));
     expect(
       find.descendant(of: agenda, matching: find.text('Conference')),
       findsNothing,
@@ -4589,9 +4596,9 @@ void main() {
       await tester.tap(day);
       await tester.pumpAndSettle();
 
-      expect(provider.selectedGeneralDate, DateTime(2026, 6, 29));
+      expect(provider.generalView.selectedDate, DateTime(2026, 6, 29));
       expect(controller.offset, closeTo(offset, .01));
-      await provider.setSelectedGeneralDate(DateTime(2026, 7, 1));
+      await provider.generalNavigation.setSelectedDate(DateTime(2026, 7, 1));
       await tester.pumpAndSettle();
       expect(controller.offset, 0);
       expect(tester.takeException(), isNull);
@@ -4822,10 +4829,10 @@ void main() {
       ),
     );
     final theme = buildAppTheme(
-      seedColor: Color(provider.themeSeedColorValue),
+      seedColor: Color(provider.settingsView.themeSeedColorValue),
       brightness: Brightness.light,
-      themeColorMode: provider.themeColorMode,
-      colorfulUiColorValues: provider.colorfulUiColorValues,
+      themeColorMode: provider.settingsView.themeColorMode,
+      colorfulUiColorValues: provider.settingsView.colorfulUiColorValues,
     );
 
     await _pumpGeneralScheduleHomeScreen(tester, provider, theme: theme);
@@ -4952,7 +4959,7 @@ void main() {
       expect(tester.widget<CalendarResourceRow>(category).visible, isTrue);
       await tester.tap(category);
       await tester.pumpAndSettle();
-      expect(provider.generalSchedules.single.isVisible, isFalse);
+      expect(provider.generalView.schedules.single.isVisible, isFalse);
       expect(tester.takeException(), isNull);
     },
   );
@@ -4987,7 +4994,7 @@ void main() {
       findsOneWidget,
     );
 
-    await provider.updateGeneralToolbarHiddenItemsBehavior(
+    await provider.generalCommands.updateToolbarHiddenItemsBehavior(
       toolbarHiddenItemsBehaviorMore,
     );
     await tester.pumpAndSettle();
@@ -5026,7 +5033,10 @@ void main() {
 
     expect(find.byType(SkedDatePicker), findsNothing);
 
-    await provider.updateGeneralToolbarNavigationVisibility('more', false);
+    await provider.generalCommands.updateToolbarNavigationVisibility(
+      'more',
+      false,
+    );
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('general-toolbar-more-button')),
