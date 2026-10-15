@@ -8,7 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_mode.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/workspace_view_state.dart';
 import 'workbench_chrome_metrics.dart';
 
 import '../theme/sked_expressive_theme.dart';
@@ -62,7 +63,9 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   final _menu = MenuController();
   final _triggerFocus = FocusNode(debugLabel: 'Dropdown trigger');
   final _selectedItem = GlobalKey();
-  TimetableProvider? _provider;
+  AppDataMaintenance? _maintenance;
+  WorkspaceViewState? _workspaceView;
+  Listenable? _sessionChanges;
   Object? _dataSession;
   String? _workspaces;
   bool _compact = false, _desktop = false;
@@ -75,11 +78,13 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   bool get _sessionCurrent =>
       _ownerCurrent &&
       widget.enabled &&
-      identical(_dataSession, _provider?.dataSessionToken) &&
+      identical(_dataSession, _maintenance?.dataSessionToken) &&
       _workspaces ==
-          _provider?.enabledWorkspaces.map((mode) => mode.value).join(',') &&
+          _workspaceView?.enabledWorkspaces
+              .map((mode) => mode.value)
+              .join(',') &&
       (widget.workspace == null ||
-          _provider?.isWorkspaceEnabled(widget.workspace!) != false);
+          _workspaceView?.isEnabled(widget.workspace!) != false);
 
   @override
   void didChangeDependencies() {
@@ -87,11 +92,15 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
     _compact = WorkbenchChromeMetrics.compactTouch(context);
     _desktop = WorkbenchChromeMetrics.of(context).desktop;
     _ownerCurrent = ModalRoute.isCurrentOf(context) ?? true;
-    final provider = Provider.of<TimetableProvider?>(context, listen: false);
-    if (!identical(provider, _provider)) {
-      _provider?.removeListener(_checkSession);
-      _provider = provider;
-      provider?.addListener(_checkSession);
+    final maintenance = context.read<AppDataMaintenance?>();
+    final workspaceView = context.read<WorkspaceViewState?>();
+    if (!identical(maintenance, _maintenance) ||
+        !identical(workspaceView, _workspaceView)) {
+      _sessionChanges?.removeListener(_checkSession);
+      _maintenance = maintenance;
+      _workspaceView = workspaceView;
+      _sessionChanges = Listenable.merge([maintenance, workspaceView])
+        ..addListener(_checkSession);
     }
     _checkSession();
   }
@@ -111,8 +120,8 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
 
   void _opened() {
     if (!_managedMenu) return;
-    _dataSession = _provider?.dataSessionToken;
-    _workspaces = _provider?.enabledWorkspaces
+    _dataSession = _maintenance?.dataSessionToken;
+    _workspaces = _workspaceView?.enabledWorkspaces
         .map((mode) => mode.value)
         .join(',');
     _acceptSelection = true;
@@ -186,7 +195,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   @override
   void dispose() {
     _generation++;
-    _provider?.removeListener(_checkSession);
+    _sessionChanges?.removeListener(_checkSession);
     _triggerFocus.dispose();
     super.dispose();
   }

@@ -1,6 +1,11 @@
 import 'package:provider/provider.dart';
 
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import 'sked_task_session.dart';
 import 'sked_floating_surface.dart';
 
@@ -28,11 +33,24 @@ Future<T?> showSkedAdaptivePickerDialog<T>({
   bool waitForTransitionComplete = false,
 }) async {
   if (!WorkbenchChromeMetrics.of(context).desktop) {
-    final provider = Provider.of<TimetableProvider?>(context, listen: false);
+    final targetChanges = isSessionCurrent == null
+        ? null
+        : switch (workspace) {
+            AppMode.student => context.read<StudentViewState?>(),
+            AppMode.general => context.read<GeneralViewState?>(),
+            null => Listenable.merge([
+              context.read<StudentViewState?>(),
+              context.read<GeneralViewState?>(),
+              context.read<SettingsViewState?>(),
+            ]),
+          };
     final parentSession =
         session ?? SkedTaskSessionScope.maybeOf(context)?.session;
     final task = SkedTaskSession(
-      provider: provider,
+      maintenance: context.read<AppDataMaintenance?>(),
+      workspaceView: context.read<WorkspaceViewState?>(),
+      workspaces: context.read<WorkspaceCommands?>(),
+      targetChanges: targetChanges,
       workspace: workspace,
       parent: parentSession,
       ownerRoute: ModalRoute.of(context),

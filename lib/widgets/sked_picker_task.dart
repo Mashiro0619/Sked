@@ -11,7 +11,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_mode.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
+import '../providers/app_scope.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_floating_anchor.dart';
 import 'sked_floating_surface.dart';
@@ -55,12 +61,23 @@ Future<T?> showSkedPickerTask<T>({
   final focus =
       skedFloatingAnchorFocus(anchorContext) ??
       FocusManager.instance.primaryFocus;
-  final provider = Provider.of<TimetableProvider?>(context, listen: false);
-  if (workspace != null && provider?.isWorkspaceEnabled(workspace) == false) {
-    return null;
-  }
+  final scope = AppScope.capture(context);
+  final targetChanges = isSessionCurrent == null
+      ? null
+      : switch (workspace) {
+          AppMode.student => context.read<StudentViewState?>(),
+          AppMode.general => context.read<GeneralViewState?>(),
+          null => Listenable.merge([
+            context.read<StudentViewState?>(),
+            context.read<GeneralViewState?>(),
+            context.read<SettingsViewState?>(),
+          ]),
+        };
   final taskSession = SkedTaskSession(
-    provider: provider,
+    maintenance: context.read<AppDataMaintenance?>(),
+    workspaceView: context.read<WorkspaceViewState?>(),
+    workspaces: context.read<WorkspaceCommands?>(),
+    targetChanges: targetChanges,
     workspace: workspace,
     parent: session ?? SkedTaskSessionScope.maybeOf(context)?.session,
     ownerRoute: parent,
@@ -82,8 +99,8 @@ Future<T?> showSkedPickerTask<T>({
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     transitionDuration: const Duration(milliseconds: 120),
     traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
-    pageBuilder: (routeContext, animation, secondaryAnimation) => themes.wrap(
-      SkedTaskRouteGuard(
+    pageBuilder: (routeContext, animation, secondaryAnimation) {
+      final task = SkedTaskRouteGuard(
         parent: taskSession,
         child: Builder(
           builder: (guardContext) => _PickerTaskHost<T>(
@@ -99,8 +116,9 @@ Future<T?> showSkedPickerTask<T>({
             placement: placement,
           ),
         ),
-      ),
-    ),
+      );
+      return themes.wrap(scope?.wrap(task) ?? task);
+    },
   );
   T? result;
   try {

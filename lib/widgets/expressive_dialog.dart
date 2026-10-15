@@ -3,6 +3,7 @@ import 'sked_task_session.dart';
 import 'dart:async';
 
 import '../theme/sked_surface.dart';
+import '../providers/app_scope.dart';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -31,6 +32,7 @@ Future<T?> showExpressiveDialog<T>({
   SkedTaskSession? session,
 }) async {
   if (session?.isCurrent == false) return null;
+  final scope = AppScope.capture(context);
   final animationStyle = SkedMotionPolicy.of(context)
       .routeStyle(AppMotion.dialogAnimationStyle);
   final transitionAnchor = waitForTransitionComplete
@@ -84,9 +86,10 @@ Future<T?> showExpressiveDialog<T>({
             ? body
             : SkedTaskRouteGuard(parent: session, child: body),
       );
+      final scoped = scope?.wrap(dialog) ?? dialog;
       return transitionAnchor == null
-          ? dialog
-          : KeyedSubtree(key: transitionAnchor, child: dialog);
+          ? scoped
+          : KeyedSubtree(key: transitionAnchor, child: scoped);
     },
   );
   // showDialog completes when pop begins, before its route leaves the overlay.

@@ -1,3 +1,9 @@
+import 'package:provider/provider.dart';
+import 'package:sked/controllers/app_session.dart';
+import 'package:sked/controllers/settings_commands.dart';
+import 'package:sked/controllers/settings_view_state.dart';
+import 'package:sked/providers/app_scope.dart';
+
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/sked_task_route.dart';
@@ -12,6 +18,85 @@ import 'package:sked/widgets/sked_task_session.dart';
 import '../support/workspace_harness.dart';
 
 void main() {
+  testWidgets(
+    'an adaptive picker uses its source scope across the root Navigator',
+    (tester) async {
+      final outer = await workspaceProvider(locale: 'en');
+      final inner = await workspaceProvider(locale: 'ja');
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        inner.dispose();
+        outer.dispose();
+      });
+      await tester.pumpWidget(
+        WorkspaceHarness(
+          provider: outer,
+          home: AppScope(
+            app: inner,
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => showSkedAdaptivePickerDialog<void>(
+                    context: context,
+                    workspace: AppMode.student,
+                    routeName: 'scoped-adaptive-picker',
+                    builder: (_) => Consumer<SettingsViewState>(
+                      builder: (taskContext, settings, _) {
+                        expect(
+                          taskContext.read<AppSession>(),
+                          same(inner.session),
+                        );
+                        return SkedTaskDialog(
+                          title: const Text('Scoped picker'),
+                          content: TextButton(
+                            onPressed: () => taskContext
+                                .read<SettingsCommands>()
+                                .updateLocaleCode('zh'),
+                            child: Text(settings.localeCode),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  completeSkedTaskRoute(taskContext),
+                              child: const Text('Close picker'),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  child: const Text('Open scoped picker'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open scoped picker'));
+      await tester.pumpAndSettle();
+      expect(find.text('ja').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('ja'));
+      await tester.pumpAndSettle();
+      expect(find.text('zh'), findsOneWidget);
+      expect(inner.settingsView.localeCode, 'zh');
+      expect(outer.settingsView.localeCode, 'en');
+
+      expect(find.text('Close picker').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('Close picker'));
+      await tester.pumpAndSettle();
+      await inner.settingsCommands.updateLocaleCode('en');
+      expect(inner.settingsView.localeCode, 'en');
+      expect(find.text('Scoped picker'), findsNothing);
+      expect(find.text('Open scoped picker'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
+  );
+
   for (final waitForTransition in [false, true]) {
     testWidgets(
       'adaptive picker retires with owner and preserves newer route; wait=$waitForTransition',
