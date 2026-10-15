@@ -67,6 +67,7 @@ class AppLifecycle extends ObservableViewState {
   );
 
   String? get storagePath => _storagePath;
+  bool get isLoaded => _session.isLoaded;
   RecoveryStatus get lastRecoveryStatus {
     return switch (_backups.journalLoadStatus) {
       StorageLoadStatus.corrupt => RecoveryStatus.failedBackupRestore,

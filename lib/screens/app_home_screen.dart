@@ -19,7 +19,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_lifecycle.dart';
+import '../controllers/app_session.dart';
+import '../controllers/general_view_state.dart';
+import '../controllers/settings_commands.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
+import '../providers/app_scope.dart';
 import '../services/desktop_window_bridge.dart';
 import '../services/export_service.dart';
 import '../widgets/desktop_window_host.dart';
@@ -53,42 +62,51 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   bool _hasShownRecoveryBanner = false;
   bool _settingsPageOpen = false;
   Set<AppMode>? _firstLaunchPendingMode;
-  TimetableProvider? _lastProvider;
+  AppLifecycle? _lastLifecycle;
+  Listenable? _readinessChanges;
   bool? _lastObservedCanWrite;
   Route<dynamic>? _retainedRecoveryDraftRoute;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final provider = context.read<TimetableProvider>();
-    if (_lastProvider != provider) {
-      _lastProvider?.removeListener(_onProviderReady);
-      _lastProvider = provider;
-      _lastObservedCanWrite = provider.canWrite;
-      provider.addListener(_onProviderReady);
+    // Watch only composition identity here; settled domain snapshots rebuild
+    // through the selector below, and readiness drives lifecycle side effects.
+    final session = context.watch<AppSession>();
+    final lifecycle = context.read<AppLifecycle>();
+    if (_lastLifecycle != lifecycle) {
+      _readinessChanges?.removeListener(_onLifecycleReady);
+      _lastLifecycle = lifecycle;
+      _lastObservedCanWrite = lifecycle.canWrite;
+      _readinessChanges = Listenable.merge([
+        lifecycle,
+        session.readiness,
+        context.read<AppDataMaintenance>(),
+      ])..addListener(_onLifecycleReady);
       _hasShownRecoveryBanner = false;
     }
-    _onProviderReady();
+    _onLifecycleReady();
   }
 
   @override
   void dispose() {
-    _lastProvider?.removeListener(_onProviderReady);
+    _readinessChanges?.removeListener(_onLifecycleReady);
     super.dispose();
   }
 
   bool _updateCheckScheduled = false;
-  void _scheduleStartupUpdate(TimetableProvider provider) {
+  void _scheduleStartupUpdate(AppLifecycle lifecycle) {
+    final workspace = context.read<WorkspaceViewState>();
     final prompts = UpdatePromptScope.maybeOf(context);
     if (prompts == null || _updateCheckScheduled) return;
     _updateCheckScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateCheckScheduled = false;
       if (!mounted ||
-          !provider.canWrite ||
-          !provider.isLoaded ||
-          !provider.hasAcceptedCurrentPrivacyPolicy ||
-          _shouldShowFirstLaunchOnboarding(provider) ||
+          !lifecycle.canWrite ||
+          !lifecycle.isLoaded ||
+          !lifecycle.hasAcceptedCurrentPrivacyPolicy ||
+          _shouldShowFirstLaunchOnboarding(lifecycle, workspace.data) ||
           _firstLaunchPendingMode != null ||
           _isShowingPrivacyConsentDialog ||
           _isHandlingRecovery ||
@@ -114,29 +132,30 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     });
   }
 
-  void _onProviderReady() {
+  void _onLifecycleReady() {
     if (!mounted) return;
-    final provider = _lastProvider;
-    if (provider == null) return;
+    final lifecycle = _lastLifecycle;
+    if (lifecycle == null) return;
     final wasWritable = _lastObservedCanWrite;
-    _lastObservedCanWrite = provider.canWrite;
-    if (provider.isLoaded && !provider.canWrite) {
+    _lastObservedCanWrite = lifecycle.canWrite;
+    if (lifecycle.isLoaded && !lifecycle.canWrite) {
       if (wasWritable == true || _retainedRecoveryDraftRoute != null) {
-        _clearRoutesForRecovery(provider);
+        _clearRoutesForRecovery(lifecycle);
       }
       return;
     }
-    if (!provider.isLoaded || !provider.canWrite) return;
-    _showRecoveryBannerIfNeeded(provider);
-    _ensurePrivacyConsentDialog(provider);
+    if (!lifecycle.isLoaded || !lifecycle.canWrite) return;
+    _showRecoveryBannerIfNeeded(lifecycle);
+    _ensurePrivacyConsentDialog(lifecycle);
   }
 
-  void _clearRoutesForRecovery(TimetableProvider provider) {
+  void _clearRoutesForRecovery(AppLifecycle lifecycle) {
+    final maintenance = context.read<AppDataMaintenance>();
     if (_isClearingRoutesForRecovery) return;
     _isClearingRoutesForRecovery = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        if (!mounted || _lastProvider != provider || provider.canWrite) {
+        if (!mounted || _lastLifecycle != lifecycle || lifecycle.canWrite) {
           return;
         }
         retireSkedTaskRoutesUntil(Navigator.of(context, rootNavigator: true), (
@@ -145,10 +164,10 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           if (route.isFirst) return true;
           final draft = route.settings.arguments;
           if (draft is! SchoolImportRecoveryDraft ||
-              !draft.canRetainFor(provider.maintenance)) {
+              !draft.canRetainFor(maintenance)) {
             return false;
           }
-          _observeRetainedRecoveryDraft(route, provider);
+          _observeRetainedRecoveryDraft(route, lifecycle);
           return true;
         });
       } finally {
@@ -159,7 +178,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
 
   void _observeRetainedRecoveryDraft(
     Route<dynamic> route,
-    TimetableProvider provider,
+    AppLifecycle lifecycle,
   ) {
     if (identical(_retainedRecoveryDraftRoute, route)) return;
     _retainedRecoveryDraftRoute = route;
@@ -169,19 +188,20 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         _retainedRecoveryDraftRoute = null;
         // Leaving the protected draft while writes remain blocked must reveal
         // the global recovery screen, not stale settings/source routes below it.
-        if (identical(_lastProvider, provider) && !provider.canWrite) {
-          _clearRoutesForRecovery(provider);
+        if (identical(_lastLifecycle, lifecycle) && !lifecycle.canWrite) {
+          _clearRoutesForRecovery(lifecycle);
         }
       }),
     );
   }
 
-  void _ensurePrivacyConsentDialog(TimetableProvider provider) {
+  void _ensurePrivacyConsentDialog(AppLifecycle lifecycle) {
+    final workspace = context.read<WorkspaceViewState>();
     if (!mounted ||
-        !provider.isLoaded ||
-        !provider.canWrite ||
-        provider.hasAcceptedCurrentPrivacyPolicy ||
-        _shouldShowFirstLaunchOnboarding(provider) ||
+        !lifecycle.isLoaded ||
+        !lifecycle.canWrite ||
+        lifecycle.hasAcceptedCurrentPrivacyPolicy ||
+        _shouldShowFirstLaunchOnboarding(lifecycle, workspace.data) ||
         _isShowingPrivacyConsentDialog) {
       return;
     }
@@ -189,21 +209,21 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (!mounted ||
-            !provider.isLoaded ||
-            !provider.canWrite ||
-            provider.hasAcceptedCurrentPrivacyPolicy ||
-            _shouldShowFirstLaunchOnboarding(provider)) {
+            !lifecycle.isLoaded ||
+            !lifecycle.canWrite ||
+            lifecycle.hasAcceptedCurrentPrivacyPolicy ||
+            _shouldShowFirstLaunchOnboarding(lifecycle, workspace.data)) {
           return;
         }
-        await _showPrivacyConsentDialog(provider);
+        await _showPrivacyConsentDialog(lifecycle);
       } finally {
         _isShowingPrivacyConsentDialog = false;
-        if (mounted) _scheduleStartupUpdate(provider);
+        if (mounted) _scheduleStartupUpdate(lifecycle);
       }
     });
   }
 
-  Future<bool> _showPrivacyConsentDialog(TimetableProvider provider) async {
+  Future<bool> _showPrivacyConsentDialog(AppLifecycle lifecycle) async {
     final agreed = await showExpressiveDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -218,11 +238,11 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           }
           setDialogState(() => isAccepting = true);
           try {
-            await provider.acceptPrivacyPolicyCurrentVersion();
+            await lifecycle.acceptPrivacyPolicyCurrentVersion();
             if (!dialogContext.mounted || popped) {
               return;
             }
-            if (!provider.canWrite) {
+            if (!lifecycle.canWrite) {
               popped = true;
               Navigator.of(dialogContext).pop(false);
               return;
@@ -232,7 +252,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           } catch (error, stackTrace) {
             debugPrint('Privacy consent save failed: $error\n$stackTrace');
             if (!dialogContext.mounted || popped) return;
-            if (!provider.canWrite) {
+            if (!lifecycle.canWrite) {
               popped = true;
               Navigator.of(dialogContext).pop(false);
               return;
@@ -312,25 +332,25 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   }
 
   Future<void> _completeFirstLaunch(
-    TimetableProvider provider,
+    AppLifecycle lifecycle,
     AppMode? selection,
   ) async {
     final mode = selection ?? AppMode.student;
     final enabled = selection == null ? AppMode.values.toSet() : {selection};
-    if (_firstLaunchPendingMode != null || !provider.canWrite) {
+    if (_firstLaunchPendingMode != null || !lifecycle.canWrite) {
       return;
     }
     const hideWorkspaceNavigation = false;
     setState(() => _firstLaunchPendingMode = enabled);
     try {
-      await provider.completeFirstLaunch(
+      await lifecycle.completeFirstLaunch(
         mode,
         hideWorkspaceNavigation: hideWorkspaceNavigation,
         enabledWorkspaces: enabled,
       );
     } catch (error, stackTrace) {
       debugPrint('First launch completion failed: $error\n$stackTrace');
-      if (mounted && provider.canWrite) {
+      if (mounted && lifecycle.canWrite) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context).saveFailedRetry)),
         );
@@ -342,16 +362,14 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     }
   }
 
-  Future<void> _openSettingsPage(TimetableProvider provider) async {
+  Future<void> _openSettingsPage() async {
     if (_settingsPageOpen || !mounted) return;
+    final scope = AppScope.capture(context)!;
     setState(() => _settingsPageOpen = true);
     try {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const SettingsPage(),
-          ),
+          builder: (_) => scope.wrap(const SettingsPage()),
         ),
       );
     } finally {
@@ -359,14 +377,16 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     }
   }
 
-  void _showRecoveryBannerIfNeeded(TimetableProvider provider) {
+  void _showRecoveryBannerIfNeeded(AppLifecycle lifecycle) {
     if (_hasShownRecoveryBanner ||
-        provider.lastRecoveryStatus != RecoveryStatus.restoredFromBackup) {
+        lifecycle.lastRecoveryStatus != RecoveryStatus.restoredFromBackup) {
       return;
     }
     _hasShownRecoveryBanner = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _lastProvider != provider || !provider.canWrite) return;
+      if (!mounted || _lastLifecycle != lifecycle || !lifecycle.canWrite) {
+        return;
+      }
       final messenger = ScaffoldMessenger.of(context);
       messenger.showMaterialBanner(
         MaterialBanner(
@@ -385,12 +405,12 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     });
   }
 
-  Future<void> _retryRecovery(TimetableProvider provider) async {
+  Future<void> _retryRecovery(AppLifecycle lifecycle) async {
     if (_isHandlingRecovery) return;
     setState(() => _isHandlingRecovery = true);
     try {
-      await provider.retryStorageLoad();
-      _onProviderReady();
+      await lifecycle.retryStorageLoad();
+      _onLifecycleReady();
     } catch (error, stackTrace) {
       debugPrint('Storage recovery retry failed: $error\n$stackTrace');
       if (mounted) {
@@ -403,7 +423,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     }
   }
 
-  Future<void> _confirmStartFresh(TimetableProvider provider) async {
+  Future<void> _confirmStartFresh(AppLifecycle lifecycle) async {
     if (_isHandlingRecovery) return;
     final confirmed = await showExpressiveDialog<bool>(
       context: context,
@@ -430,8 +450,8 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     if (confirmed != true || !mounted) return;
     setState(() => _isHandlingRecovery = true);
     try {
-      await provider.startFreshAfterRecovery();
-      _onProviderReady();
+      await lifecycle.startFreshAfterRecovery();
+      _onLifecycleReady();
     } catch (error, stackTrace) {
       debugPrint('Starting fresh after recovery failed: $error\n$stackTrace');
       if (mounted) {
@@ -445,14 +465,14 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   }
 
   Future<void> _showRecoveryArtifacts(
-    TimetableProvider provider,
+    AppLifecycle lifecycle,
     List<String> artifacts,
   ) async {
     if (artifacts.isEmpty) return;
     final exportableArtifacts = <String>{};
     for (final artifact in artifacts) {
       try {
-        if (await provider.readRecoveryArtifact(artifact) != null) {
+        if (await lifecycle.readRecoveryArtifact(artifact) != null) {
           exportableArtifacts.add(artifact);
         }
       } catch (error, stackTrace) {
@@ -519,18 +539,18 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     }
     final artifactPath = action.artifactPath;
     if (artifactPath != null) {
-      await _exportRecoveryArtifact(provider, artifactPath);
+      await _exportRecoveryArtifact(lifecycle, artifactPath);
     }
   }
 
   Future<void> _exportRecoveryArtifact(
-    TimetableProvider provider,
+    AppLifecycle lifecycle,
     String artifactPath,
   ) async {
     if (_isHandlingRecovery) return;
     setState(() => _isHandlingRecovery = true);
     try {
-      final bytes = await provider.readRecoveryArtifact(artifactPath);
+      final bytes = await lifecycle.readRecoveryArtifact(artifactPath);
       if (bytes == null) {
         throw StateError('Recovery artifact is no longer available.');
       }
@@ -605,8 +625,16 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<TimetableProvider, _AppHomeSnapshot>(
-      selector: (_, provider) => _AppHomeSnapshot.from(provider),
+    return Selector5<
+      AppLifecycle,
+      WorkspaceViewState,
+      StudentViewState,
+      GeneralViewState,
+      SettingsViewState,
+      _AppHomeSnapshot
+    >(
+      selector: (_, lifecycle, workspace, _, _, _) =>
+          _AppHomeSnapshot.from(lifecycle, workspace),
       builder: (context, snapshot, child) {
         if (!snapshot.isLoaded) {
           return Scaffold(
@@ -615,30 +643,34 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           );
         }
 
-        final provider = context.read<TimetableProvider>();
+        final lifecycle = context.read<AppLifecycle>();
         if (!snapshot.canWrite) {
           return _DataRecoveryScreen(
             status: snapshot.storageLoadStatus,
             writeStateUnknown: snapshot.writeStateUnknown,
             artifacts: snapshot.recoveryArtifacts,
             isBusy: _isHandlingRecovery,
-            onRetry: () => _retryRecovery(provider),
+            onRetry: () => _retryRecovery(lifecycle),
             onShowArtifacts: snapshot.recoveryArtifacts.isEmpty
                 ? null
                 : () => _showRecoveryArtifacts(
-                    provider,
+                    lifecycle,
                     snapshot.recoveryArtifacts,
                   ),
-            onStartFresh: provider.canStartFreshAfterRecovery
-                ? () => _confirmStartFresh(provider)
+            onStartFresh: lifecycle.canStartFreshAfterRecovery
+                ? () => _confirmStartFresh(lifecycle)
                 : null,
           );
         }
         final showOnboarding =
             _firstLaunchPendingMode != null ||
             snapshot.showFirstLaunchOnboarding;
-        if (!showOnboarding && snapshot.hasAcceptedCurrentPrivacyPolicy) {
-          _scheduleStartupUpdate(provider);
+        if (!showOnboarding) {
+          if (snapshot.hasAcceptedCurrentPrivacyPolicy) {
+            _scheduleStartupUpdate(lifecycle);
+          } else {
+            _ensurePrivacyConsentDialog(lifecycle);
+          }
         }
         return ExpressiveSwitcher(
           child: showOnboarding
@@ -646,20 +678,20 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                   key: const ValueKey('first-launch-onboarding'),
                   pendingMode: _firstLaunchPendingMode,
                   onStartWithMode: (mode) =>
-                      _completeFirstLaunch(provider, mode),
+                      _completeFirstLaunch(lifecycle, mode),
                   onViewPrivacyPolicy: _openPrivacyPolicyPage,
                 )
               : AdaptiveSkedShell(
                   key: const ValueKey('adaptive-shell'),
-                  workspace: provider.workspaceView,
-                  workspaces: provider.workspaces,
-                  settings: provider.settingsView,
-                  settingsCommands: provider.settingsCommands,
+                  workspace: context.read<WorkspaceViewState>(),
+                  workspaces: context.read<WorkspaceCommands>(),
+                  settings: context.read<SettingsViewState>(),
+                  settingsCommands: context.read<SettingsCommands>(),
                   activeMode: snapshot.isStudentMode
                       ? AppMode.student
                       : AppMode.general,
                   enabled: snapshot.hasAcceptedCurrentPrivacyPolicy,
-                  onOpenSettings: () => _openSettingsPage(provider),
+                  onOpenSettings: () => _openSettingsPage(),
                 ),
         );
       },
@@ -877,22 +909,29 @@ class _AppHomeSnapshot {
     required this.recoveryArtifacts,
   });
 
-  factory _AppHomeSnapshot.from(TimetableProvider provider) {
+  factory _AppHomeSnapshot.from(
+    AppLifecycle lifecycle,
+    WorkspaceViewState workspace,
+  ) {
     return _AppHomeSnapshot(
-      isLoaded: provider.isLoaded,
-      workspaceKey: provider.enabledWorkspaces
+      isLoaded: lifecycle.isLoaded,
+      workspaceKey: workspace.enabledWorkspaces
           .map((mode) => mode.value)
           .join(','),
-      isStudentMode: provider.isStudentMode,
-      hasAcceptedCurrentPrivacyPolicy: provider.hasAcceptedCurrentPrivacyPolicy,
-      showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(provider),
-      hideHomeWorkspaceNavigation: provider.hideHomeWorkspaceNavigation,
+      isStudentMode: workspace.isStudentMode,
+      hasAcceptedCurrentPrivacyPolicy:
+          lifecycle.hasAcceptedCurrentPrivacyPolicy,
+      showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(
+        lifecycle,
+        workspace.data,
+      ),
+      hideHomeWorkspaceNavigation: workspace.data.hideHomeWorkspaceNavigation,
       homeWorkspaceNavigationCollapsed:
-          provider.homeWorkspaceNavigationCollapsed,
-      canWrite: provider.canWrite,
-      storageLoadStatus: provider.storageLoadStatus,
-      writeStateUnknown: provider.isStorageWriteStateUnknown,
-      recoveryArtifacts: provider.recoveryArtifacts,
+          workspace.data.homeWorkspaceNavigationCollapsed,
+      canWrite: lifecycle.canWrite,
+      storageLoadStatus: lifecycle.storageLoadStatus,
+      writeStateUnknown: lifecycle.isStorageWriteStateUnknown,
+      recoveryArtifacts: lifecycle.recoveryArtifacts,
     );
   }
 
@@ -942,23 +981,23 @@ class _AppHomeSnapshot {
   );
 }
 
-bool _shouldShowFirstLaunchOnboarding(TimetableProvider provider) {
-  return provider.canWrite &&
-      provider.acceptedPrivacyPolicyVersion == null &&
-      _hasDefaultFirstLaunchData(provider);
+bool _shouldShowFirstLaunchOnboarding(AppLifecycle lifecycle, AppData data) {
+  return lifecycle.canWrite &&
+      lifecycle.acceptedPrivacyPolicyVersion == null &&
+      _hasDefaultFirstLaunchData(data);
 }
 
-bool _hasDefaultFirstLaunchData(TimetableProvider provider) {
-  if (provider.activeMode != AppMode.student) return false;
-  if (provider.ignoredUpdateVersion != null ||
-      provider.availableUpdateVersion != null) {
+bool _hasDefaultFirstLaunchData(AppData data) {
+  if (data.activeMode != AppMode.student) return false;
+  if (data.ignoredUpdateVersion != null ||
+      data.availableUpdateVersion != null) {
     return false;
   }
-  return _hasDefaultStudentData(provider.studentMode) &&
-      _hasDefaultGeneralData(provider.generalMode) &&
-      _hasDefaultAiApiSettings(provider.aiApiSettings) &&
-      !provider.hideHomeWorkspaceNavigation &&
-      !provider.homeWorkspaceNavigationCollapsed;
+  return _hasDefaultStudentData(data.studentMode) &&
+      _hasDefaultGeneralData(data.generalMode) &&
+      _hasDefaultAiApiSettings(data.aiApiSettings) &&
+      !data.hideHomeWorkspaceNavigation &&
+      !data.homeWorkspaceNavigationCollapsed;
 }
 
 bool _hasDefaultStudentData(StudentModeData data) {
