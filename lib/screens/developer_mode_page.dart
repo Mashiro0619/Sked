@@ -9,7 +9,9 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/developer_commands.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/workspace_view_state.dart';
 import '../models/app_mode.dart';
 import '../models/workspace_availability.dart';
 import '../services/notification_planner.dart';
@@ -88,7 +90,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     super.didChangeDependencies();
     if (!_initialized) {
       final code = app_locale.normalizeLocaleCode(
-        context.read<TimetableProvider>().localeCode,
+        context.read<SettingsViewState>().localeCode,
       );
       _language = code == 'zh' || code.startsWith('zh-')
           ? DeveloperSampleLanguage.simplifiedChinese
@@ -129,10 +131,10 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   }
 
   Future<void> _addSamples() async {
-    final provider = context.read<TimetableProvider>();
+    final commands = context.read<DeveloperCommands>();
     final completed = await runUiCommand(
       debugLabel: 'Add developer sample data',
-      command: () => provider.addDeveloperSampleData(_language),
+      command: () => commands.addSampleData(_language),
     );
     if (!completed || !mounted) return;
     ScaffoldMessenger.of(context)
@@ -434,7 +436,9 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final available = context.watch<TimetableProvider>().enabledWorkspaces;
+    final available = context.select<WorkspaceViewState, Set<AppMode>>(
+      (workspace) => workspace.enabledWorkspaces,
+    );
     if (!available.contains(
       _testChannel == AgendaNotificationTestChannel.course
           ? AppMode.student
@@ -444,9 +448,9 @@ class _DeveloperModePageState extends State<DeveloperModePage>
           ? AgendaNotificationTestChannel.course
           : AgendaNotificationTestChannel.schedule;
     }
-    final appNotificationsEnabled = context
-        .watch<TimetableProvider>()
-        .notificationsEnabled;
+    final appNotificationsEnabled = context.select<SettingsViewState, bool>(
+      (settings) => settings.notificationsEnabled,
+    );
     return PopScope<void>(
       canPop: !uiCommandBusy,
       child: Scaffold(
@@ -972,14 +976,14 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         ),
       );
     }
-    final provider = context.read<TimetableProvider>();
+    final workspace = context.read<WorkspaceViewState>();
     return channels
         .where(
           (channel) =>
               (channel.id != _courseReminderChannelId ||
-                  provider.isWorkspaceEnabled(AppMode.student)) &&
+                  workspace.isEnabled(AppMode.student)) &&
               (channel.id != _scheduleReminderChannelId ||
-                  provider.isWorkspaceEnabled(AppMode.general)),
+                  workspace.isEnabled(AppMode.general)),
         )
         .toList();
   }
@@ -989,15 +993,12 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   ) {
     if (diagnostics == null) return null;
     final now = DateTime.now();
+    final workspace = context.read<WorkspaceViewState>();
     AgendaNotificationDiagnosticPlanItem? next;
     for (final item in diagnostics.plan) {
       final source = parseNotificationPlanKey(item.key)?.sourceType;
-      if (source != null &&
-          !context.read<TimetableProvider>().appData.allowsAgendaSource(
-            source,
-          )) {
-        continue;
-      }
+      final mode = source == null ? null : workspaceForAgendaSource(source);
+      if (mode != null && !workspace.isEnabled(mode)) continue;
       if (item.fireAt.isBefore(now)) continue;
       if (next == null || item.fireAt.isBefore(next.fireAt)) next = item;
     }
@@ -1131,16 +1132,18 @@ class _NotificationDiagnosticActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TimetableProvider>();
+    final hasMultipleWorkspaces = context.select<WorkspaceViewState, bool>(
+      (workspace) => workspace.enabledWorkspaces.length > 1,
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (provider.hasMultipleWorkspaces)
+          if (hasMultipleWorkspaces)
             Text(l10n.developerNotificationTestChannel),
           const SizedBox(height: 8),
-          if (provider.hasMultipleWorkspaces)
+          if (hasMultipleWorkspaces)
             SegmentedButton<AgendaNotificationTestChannel>(
               key: const ValueKey('developer-notification-test-channel'),
               expandedInsets: EdgeInsets.zero,
