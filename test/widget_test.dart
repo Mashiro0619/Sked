@@ -3481,7 +3481,6 @@ void main() {
 
       final future = AppUpdateCoordinator.checkForUpdates(
         context,
-        provider: provider,
         source: UpdateCheckSource.manual,
         distribution: const UpdateDistribution(UpdateChannel.github),
         updateService: const FakeSuccessUpdateService(
@@ -3519,7 +3518,6 @@ void main() {
 
       final future = AppUpdateCoordinator.checkForUpdates(
         context,
-        provider: provider,
         source: UpdateCheckSource.manual,
         distribution: const UpdateDistribution(UpdateChannel.github),
         updateService: FakeThrowingUpdateService(Exception('boom')),
@@ -3550,7 +3548,6 @@ void main() {
 
       final future = AppUpdateCoordinator.checkForUpdates(
         context,
-        provider: provider,
         source: UpdateCheckSource.startup,
         distribution: const UpdateDistribution(UpdateChannel.github),
         updateService: FakeThrowingUpdateService(Exception('boom')),
