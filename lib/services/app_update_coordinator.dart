@@ -3,7 +3,15 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
+
+import 'package:provider/provider.dart';
+
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/app_session.dart';
+import '../controllers/app_lifecycle.dart';
+import '../controllers/settings_view_state.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../widgets/app_update_dialog.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_task_session.dart';
@@ -15,11 +23,10 @@ enum UpdateCheckSource { manual, startup }
 
 class AppUpdateCoordinator {
   static const _updateService = UpdateService();
-  static final _flights = <TimetableProvider, _UpdateFlight>{};
+  static final _flights = <AppSession, _UpdateFlight>{};
 
   static Future<void> checkForUpdates(
     BuildContext context, {
-    required TimetableProvider provider,
     required UpdateCheckSource source,
     UpdateService updateService = _updateService,
     UpdateDistribution? distribution,
@@ -27,27 +34,50 @@ class AppUpdateCoordinator {
     MicrosoftStoreUpdateService storeUpdateService =
         const MicrosoftStoreUpdateService(),
   }) async {
-    if (!provider.canWrite) return;
-    final includePrereleases = provider.includePrereleaseUpdates;
-    var flight = _flights[provider];
+    final appSession = context.read<AppSession>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final settings = context.read<SettingsViewState>();
+    final lifecycle = context.read<AppLifecycle>();
+    final workspace = context.read<WorkspaceViewState>();
+    final workspaces = context.read<WorkspaceCommands>();
+    final targetChanges = Listenable.merge([settings, appSession.readiness]);
+    if (!appSession.canWrite) return;
+    final includePrereleases = settings.includePrereleaseUpdates;
+    var flight = _flights[appSession];
     if (flight == null ||
         !flight.lifetime.isCurrent ||
-        !identical(flight.dataSession, provider.dataSessionToken) ||
+        !identical(flight.dataSession, maintenance.dataSessionToken) ||
         flight.prereleases != includePrereleases ||
         !identical(flight.service, updateService)) {
-      flight = _UpdateFlight(provider, includePrereleases, updateService);
-      _flights[provider] = flight;
+      flight = _UpdateFlight(
+        dataSession: maintenance.dataSessionToken,
+        lifetime: SkedTaskSession(
+          maintenance: maintenance,
+          workspaceView: workspace,
+          workspaces: workspaces,
+          targetChanges: targetChanges,
+          isOwnerActive: () => appSession.canWrite,
+          isTargetCurrent: () =>
+              settings.includePrereleaseUpdates == includePrereleases,
+        ),
+        prereleases: includePrereleases,
+        service: updateService,
+      );
+      _flights[appSession] = flight;
     }
     final request = flight;
     request.users++;
     if (source == UpdateCheckSource.manual) request.manualRequested = true;
     var ownsPresentation = false;
     final session = SkedTaskSession(
-      provider: provider,
+      maintenance: maintenance,
+      workspaceView: workspace,
+      workspaces: workspaces,
+      targetChanges: targetChanges,
       ownerRoute: ModalRoute.of(context),
-      isOwnerActive: () => context.mounted && provider.canWrite,
+      isOwnerActive: () => context.mounted && appSession.canWrite,
       isTargetCurrent: () =>
-          provider.includePrereleaseUpdates == includePrereleases,
+          settings.includePrereleaseUpdates == includePrereleases,
     );
     try {
       final resolved =
@@ -58,7 +88,7 @@ class AppUpdateCoordinator {
           updateService.checkForUpdates(includePrereleases: includePrereleases);
       Future<void> record(UpdateCheckResult result) async {
         if (!context.mounted || !session.isCurrent) return;
-        await provider.updateAvailableUpdateVersion(
+        await lifecycle.updateAvailableUpdateVersion(
           result.hasUpdate ? result.remoteVersion : null,
         );
       }
@@ -104,7 +134,7 @@ class AppUpdateCoordinator {
           return;
         }
         if (source == UpdateCheckSource.startup &&
-            provider.ignoredUpdateVersion == result.remoteVersion) {
+            settings.ignoredUpdateVersion == result.remoteVersion) {
           return;
         }
       }
@@ -128,7 +158,7 @@ class AppUpdateCoordinator {
           retry: check,
           recordResult: record,
           ignoreVersion: (version) async {
-            if (session.isCurrent) await provider.ignoreUpdateVersion(version);
+            if (session.isCurrent) await lifecycle.ignoreUpdateVersion(version);
           },
           startup: source == UpdateCheckSource.startup,
           fallbackUrl: includePrereleases
@@ -150,20 +180,21 @@ class AppUpdateCoordinator {
         if (!request.presentationDone.isCompleted) {
           request.presentationDone.complete();
         }
-        if (identical(_flights[provider], request)) _flights.remove(provider);
+        if (identical(_flights[appSession], request)) {
+          _flights.remove(appSession);
+        }
       }
     }
   }
 }
 
 class _UpdateFlight {
-  _UpdateFlight(TimetableProvider provider, this.prereleases, this.service)
-    : dataSession = provider.dataSessionToken,
-      lifetime = SkedTaskSession(
-        provider: provider,
-        isOwnerActive: () => provider.canWrite,
-        isTargetCurrent: () => provider.includePrereleaseUpdates == prereleases,
-      ) {
+  _UpdateFlight({
+    required this.dataSession,
+    required this.lifetime,
+    required this.prereleases,
+    required this.service,
+  }) {
     response = _fetch();
   }
   final Object dataSession;

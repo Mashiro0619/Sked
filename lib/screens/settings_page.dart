@@ -855,7 +855,6 @@ class _SettingsPageState extends State<SettingsPage>
     await _guardFlow(_SettingsFlow.updateCheck, () async {
       await AppUpdateCoordinator.checkForUpdates(
         context,
-        provider: context.read<TimetableProvider>(),
         source: UpdateCheckSource.manual,
         storeUpdateService: widget.storeUpdateService,
         distribution: _updateDistribution,

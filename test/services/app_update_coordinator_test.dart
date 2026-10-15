@@ -150,7 +150,6 @@ void main() {
       final context = await _pumpHarness(tester, provider);
       await AppUpdateCoordinator.checkForUpdates(
         context,
-        provider: provider,
         source: UpdateCheckSource.startup,
         distribution: const UpdateDistribution(UpdateChannel.github),
         updateService: _FailingUpdateService(),
@@ -171,7 +170,6 @@ void main() {
       final service = _QueuedUpdateService();
       Future<void> run() => AppUpdateCoordinator.checkForUpdates(
         context,
-        provider: provider,
         source: UpdateCheckSource.manual,
         updateService: service,
         distribution: const UpdateDistribution(UpdateChannel.github),
@@ -202,7 +200,6 @@ void main() {
         Future<void> run(UpdateCheckSource source) =>
             AppUpdateCoordinator.checkForUpdates(
               context,
-              provider: provider,
               source: source,
               updateService: service,
               distribution: const UpdateDistribution(UpdateChannel.github),
@@ -238,7 +235,6 @@ void main() {
       var busy = true;
       final task = AppUpdateCoordinator.checkForUpdates(
         context,
-        provider: provider,
         source: UpdateCheckSource.startup,
         updateService: service,
         distribution: const UpdateDistribution(UpdateChannel.github),
@@ -262,7 +258,6 @@ void main() {
     final service = _PendingUpdateService();
     final task = AppUpdateCoordinator.checkForUpdates(
       context,
-      provider: provider,
       source: UpdateCheckSource.manual,
       updateService: service,
       distribution: const UpdateDistribution(UpdateChannel.github),
@@ -289,7 +284,6 @@ void main() {
       final check = AppUpdateCoordinator.checkForUpdates(
         distribution: const UpdateDistribution(UpdateChannel.github),
         context,
-        provider: provider,
         source: source,
         updateService: service,
       );
@@ -314,7 +308,6 @@ void main() {
           final check = AppUpdateCoordinator.checkForUpdates(
             distribution: const UpdateDistribution(UpdateChannel.github),
             context,
-            provider: provider,
             source: source,
             updateService: service,
           );
@@ -340,7 +333,6 @@ void main() {
         final check = AppUpdateCoordinator.checkForUpdates(
           distribution: const UpdateDistribution(UpdateChannel.github),
           context,
-          provider: provider,
           source: UpdateCheckSource.manual,
           updateService: service,
         );
@@ -378,7 +370,6 @@ void main() {
     final check = AppUpdateCoordinator.checkForUpdates(
       distribution: const UpdateDistribution(UpdateChannel.github),
       context,
-      provider: provider,
       source: UpdateCheckSource.startup,
       updateService: const _FixedUpdateService(
         UpdateCheckResult(
@@ -420,7 +411,6 @@ void main() {
             ),
           ),
           context,
-          provider: provider,
           source: source,
           updateService: github,
           storeUpdateService: MicrosoftStoreUpdateService(
@@ -456,7 +446,6 @@ void main() {
     await AppUpdateCoordinator.checkForUpdates(
       distribution: const UpdateDistribution(UpdateChannel.github),
       context,
-      provider: provider,
       source: UpdateCheckSource.manual,
       updateService: _FixedUpdateService(_updateResult(hasUpdate: false)),
     );
@@ -479,7 +468,6 @@ void main() {
     await AppUpdateCoordinator.checkForUpdates(
       distribution: const UpdateDistribution(UpdateChannel.github),
       context,
-      provider: provider,
       source: UpdateCheckSource.startup,
       updateService: _FixedUpdateService(_updateResult(hasUpdate: true)),
     );
@@ -499,7 +487,6 @@ void main() {
     final check = AppUpdateCoordinator.checkForUpdates(
       distribution: const UpdateDistribution(UpdateChannel.github),
       context,
-      provider: provider,
       source: UpdateCheckSource.startup,
       updateService: _FixedUpdateService(_updateResult(hasUpdate: true)),
     );
@@ -523,7 +510,6 @@ void main() {
     final check = AppUpdateCoordinator.checkForUpdates(
       distribution: const UpdateDistribution(UpdateChannel.github),
       context,
-      provider: provider,
       source: UpdateCheckSource.manual,
       updateService: _FixedUpdateService(_updateResult(hasUpdate: true)),
     );

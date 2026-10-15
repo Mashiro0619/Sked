@@ -100,7 +100,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         prompts.startOnce(
           () => AppUpdateCoordinator.checkForUpdates(
             context,
-            provider: provider,
             source: UpdateCheckSource.startup,
             updateService: widget.updateService,
             distribution: widget.updateDistribution,
