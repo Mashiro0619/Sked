@@ -17,6 +17,8 @@ abstract interface class DataOperationsRuntime {
   Future<String> exportBackup();
   Future<int> importTimetables(String backup);
   Future<int> restoreBackup(String backup);
+  Future<int> importGeneralJson(String source, List<String> scheduleIds);
+  Future<int> importGeneralIcs(String source);
   Future<void> selectDate(DateTime date);
   Future<void> quiesce();
   void dispose();

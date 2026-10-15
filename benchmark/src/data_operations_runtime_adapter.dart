@@ -49,6 +49,35 @@ class _CurrentRuntime implements DataOperationsRuntime {
   Future<int> restoreBackup(String backup) =>
       _app.backups.importJson(backup, mode: AppImportMode.replaceAll);
   @override
+  Future<int> importGeneralJson(String source, List<String> scheduleIds) async {
+    final prepared = await _app.transfers.prepareSchedules(source);
+    final result = await _app.transfers.applySchedules(
+      prepared,
+      scheduleIds: scheduleIds,
+      mode: GeneralScheduleImportMode.addAsNew,
+    );
+    return result.importedCount;
+  }
+
+  @override
+  Future<int> importGeneralIcs(String source) async {
+    final prepared = await _app.transfers.prepareSchedules(source, ics: true);
+    final result = await _app.transfers.applySchedules(
+      prepared,
+      scheduleIds: prepared.value.schedules
+          .map((calendar) => calendar.id)
+          .toList(),
+      mode: GeneralScheduleImportMode.addAsNew,
+    );
+    if (result.icsWarnings.isNotEmpty) {
+      throw StateError(
+        'The exported ICS fixture must import without warnings.',
+      );
+    }
+    return result.importedCount;
+  }
+
+  @override
   Future<void> selectDate(DateTime date) =>
       _app.generalNavigation.setSelectedDate(date);
   @override

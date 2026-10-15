@@ -49,12 +49,48 @@ Future<Map<String, Object?>> runDataOperationsBenchmarks({
       fixture.data,
       localeCode: fixture.data.localeCode,
     );
+    // Distinct fixed titles prevent intentional content deduplication from
+    // turning an additive import into a no-op against the seeded target.
+    final importGeneral = seed.generalMode.copyWith(
+      schedules: [
+        for (final calendar in seed.generalMode.schedules)
+          calendar.copyWith(
+            events: [
+              for (final event in calendar.events)
+                event.copyWith(title: 'Imported ${event.title}'),
+            ],
+          ),
+      ],
+    );
+    final calendarIds = importGeneral.schedules
+        .map((calendar) => calendar.id)
+        .toList();
+    const transfers = ImportExportService();
+    final generalJson = transfers.exportSelectedGeneralSchedulesJson(
+      importGeneral,
+      calendarIds,
+      localeCode: seed.localeCode,
+    );
+    // Export currently stamps each VEVENT with wall time. Normalize this one
+    // transport field before measuring so both revisions receive identical ICS.
+    final generalIcs = transfers
+        .exportSelectedGeneralSchedulesIcs(
+          importGeneral,
+          calendarIds,
+          localeCode: seed.localeCode,
+        )
+        .replaceAll(
+          RegExp(r'^DTSTAMP:[^\r\n]*', multiLine: true),
+          'DTSTAMP:20260101T000000Z',
+        );
     datasets.add({
       ...fixture.manifest,
       'diskDatasetVersion': 1,
       'normalizedInputSha256': _fingerprint(seed.toJson()),
       'inputUtf8Bytes': utf8.encode(seed.encode()).length,
       'schoolSites': schoolSites.length,
+      'generalJsonSha256': sha256.convert(utf8.encode(generalJson)).toString(),
+      'generalIcsSha256': sha256.convert(utf8.encode(generalIcs)).toString(),
     });
     final directory = await Directory.systemTemp.createTemp(_directoryPrefix);
     final sessions = <_DiskSession>[];
@@ -254,6 +290,97 @@ Future<Map<String, Object?>> runDataOperationsBenchmarks({
       await importer.verifySites(schoolSites.take(1).toList());
       samples.last['importedTimetables'] = count;
 
+      for (final ics in [false, true]) {
+        final target = await create(
+          ics ? 'general-ics-target' : 'general-json-target',
+          schoolSites.take(1).toList(),
+        );
+        await target.runtime.load();
+        _require(
+          target.runtime.isReady,
+          'General import target must be writable.',
+        );
+        final before = target.runtime.data;
+        final oldIds = before.generalMode.schedules
+            .map((calendar) => calendar.id)
+            .toSet();
+        final importedCount = await measure(
+          target,
+          ics
+              ? 'general.ics_import_end_to_end'
+              : 'general.json_import_end_to_end',
+          () => ics
+              ? target.runtime.importGeneralIcs(generalIcs)
+              : target.runtime.importGeneralJson(generalJson, calendarIds),
+        );
+        final added = target.runtime.data.generalMode.schedules
+            .where((calendar) => !oldIds.contains(calendar.id))
+            .toList();
+        _require(
+          importedCount == (ics ? 1 : calendarIds.length) &&
+              added.length == importedCount,
+          'General import must add every selected calendar exactly once.',
+        );
+        for (final original in before.generalMode.schedules) {
+          _same(
+            target.runtime.data.generalMode.schedules
+                .singleWhere((calendar) => calendar.id == original.id)
+                .toJson(),
+            original.toJson(),
+            'General import must preserve existing calendars',
+          );
+        }
+        if (ics) {
+          final expected = <String>[];
+          for (final calendar in importGeneral.schedules) {
+            for (final event in calendar.events) {
+              expected.add(
+                _icsEventShape(
+                  event,
+                  exportedExceptionsOnly: true,
+                  notes: [
+                    if (event.notes.trim().isNotEmpty) event.notes.trim(),
+                    'Calendar: ${calendar.name}',
+                  ].join('\n'),
+                ),
+              );
+            }
+          }
+          final actual = [
+            for (final calendar in added)
+              for (final event in calendar.events) _icsEventShape(event),
+          ];
+          _same(
+            actual..sort(),
+            expected..sort(),
+            'ICS event semantics and recurrence',
+          );
+        } else {
+          _same(
+            _calendarShapes(added),
+            _calendarShapes(importGeneral.schedules),
+            'JSON event content and calendar grouping',
+          );
+        }
+        _same(
+          target.runtime.data.studentMode.toJson(),
+          before.studentMode.toJson(),
+          'General import must preserve Student data',
+        );
+        _require(
+          target.runtime.data.includePrereleaseUpdates ==
+              before.includePrereleaseUpdates,
+          'General import must preserve global settings.',
+        );
+        await target.verifyPersisted(target.runtime.data);
+        await target.verifySites(schoolSites.take(1).toList());
+        samples.last['importedCalendars'] = importedCount;
+        samples.last['importedEvents'] = added.fold<int>(
+          0,
+          (count, calendar) => count + calendar.events.length,
+        );
+      }
+
       final restored = await create(
         'restore-target',
         schoolSites.take(1).toList(),
@@ -332,7 +459,7 @@ Future<Map<String, Object?>> runDataOperationsBenchmarks({
 
   return {
     'schemaVersion': 1,
-    'harnessVersion': 1,
+    'harnessVersion': 2,
     'label': label,
     'revision': revision,
     'measurement': kProfileMode ? 'native-disk-profile' : 'native-disk-smoke',
@@ -348,7 +475,7 @@ Future<Map<String, Object?>> runDataOperationsBenchmarks({
       'processMaxRssBytes': ProcessInfo.maxRss,
     },
     'protocol': {
-      'actionsPerDataset': 8,
+      'actionsPerDataset': 10,
       'disk': 'Real IoTimetableStorage, school-site store and restore journal in checked temporary directories.',
       'load': 'Disk-backed lifecycle load after seed creation; OS page cache may be warm. Not process-cold startup.',
       'ui': 'Direct production commands; editor opening, text input, rendering and frame latency are not measured.',
@@ -491,6 +618,69 @@ List<String> _timetableShapes(
       ]..sort(),
     }),
 ]..sort();
+
+List<String> _calendarShapes(List<GeneralSchedule> calendars) => [
+  for (final calendar in calendars)
+    _fingerprint({
+      'name': calendar.name,
+      'colorValue': calendar.colorValue,
+      'isVisible': calendar.isVisible,
+      'events': [
+        for (final event in calendar.events)
+          _fingerprint(
+            event.toJson()
+              ..remove('id')
+              ..remove('calendarId'),
+          ),
+      ]..sort(),
+    }),
+];
+
+String _icsEventShape(
+  GeneralEvent event, {
+  String? notes,
+  bool exportedExceptionsOnly = false,
+}) {
+  final start = DateTime.parse(event.startDateTimeIso);
+  final end = DateTime.parse(event.endDateTimeIso);
+  final rule = event.recurrenceRule;
+  final unit = effectiveGeneralRecurrenceUnit(rule);
+  return _fingerprint({
+    'title': event.title,
+    'location': event.location,
+    'notes': notes ?? event.notes,
+    'allDay': event.isAllDay,
+    'start': event.isAllDay
+        ? event.startDateTimeIso.split('T').first
+        : start.toUtc().toIso8601String(),
+    'end': event.isAllDay
+        ? event.endDateTimeIso.split('T').first
+        : end.toUtc().toIso8601String(),
+    'repeating': rule.isRepeating,
+    if (rule.isRepeating) ...{
+      'unit': unit.name,
+      'interval': rule.interval,
+      'count': rule.count,
+      'until': rule.untilDateIso,
+      if (unit == GeneralEventRecurrenceUnit.week) 'weekday': start.weekday,
+      if (unit == GeneralEventRecurrenceUnit.month)
+        'anchor': rule.monthlyAnchorDay ?? start.day,
+      // ICS carries only dates that remove a real recurrence. Filter the
+      // source expectation; compare imported exception records as returned.
+      'exceptions': [
+        for (final date in event.recurrenceExceptionDateIso)
+          if (!exportedExceptionsOnly ||
+              generalRecurrenceSequenceForDate(
+                    start,
+                    rule,
+                    DateTime.parse(date),
+                  ) !=
+                  null)
+            date,
+      ]..sort(),
+    },
+  });
+}
 
 Object? _canonical(Object? value) {
   if (value is Map) {

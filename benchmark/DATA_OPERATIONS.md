@@ -4,9 +4,9 @@ This separate target measures production lifecycle, business commands and real
 filesystem persistence with the fixed sparse/1,000/5,000-event UI fixtures. It
 does not change the existing 66-scenario [UI suite](UI_PERFORMANCE.md).
 
-Each dataset records eight raw action samples: disk-backed lifecycle load,
+Each dataset records ten raw action samples: disk-backed lifecycle load,
 one course save, one event save, an update-preference save, backup export,
-end-to-end additive timetable import, complete backup restore and shutdown
+end-to-end additive timetable and General JSON/ICS imports, complete backup restore and shutdown
 flush. Input creation, post-action disk readback, checksums and cleanup happen
 outside measured windows. The seeded data is normalized once before saving;
 its checksum must match across revisions. The actual runtime still uses its
@@ -76,6 +76,11 @@ the same three-process protocol under `before` labels.
 The old adapter uses original synchronous codecs where that was the original
 behavior; the new adapter retains the default native asynchronous codecs.
 Both call the same user-level operations and await their durable completion.
+The General JSON/ICS actions include parsing and durable application; the new
+adapter uses the production asynchronous prepare/apply APIs. ICS DTSTAMP is fixed
+before timing. Its comparison covers supported event fields, repeat boundaries
+and exception dates; the exported ICS does not carry Sked reminder/color metadata.
+
 Generated IDs and collision-avoiding names in additive imports are not timing
 checksums; validation compares original records and imported course/config/
 period content, including its per-timetable grouping.

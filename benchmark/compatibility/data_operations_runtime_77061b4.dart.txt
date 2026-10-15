@@ -48,6 +48,30 @@ class _OriginalRuntime implements DataOperationsRuntime {
   Future<int> restoreBackup(String backup) =>
       _app.importAppDataJson(backup, mode: AppImportMode.replaceAll);
   @override
+  Future<int> importGeneralJson(String source, List<String> scheduleIds) async {
+    final result = await _app.importSelectedGeneralSchedulesJson(
+      source,
+      scheduleIds: scheduleIds,
+      mode: GeneralScheduleImportMode.addAsNew,
+    );
+    return result.importedCount;
+  }
+
+  @override
+  Future<int> importGeneralIcs(String source) async {
+    final result = await _app.importGeneralSchedulesIcs(
+      source,
+      mode: GeneralScheduleImportMode.addAsNew,
+    );
+    if (result.icsWarnings.isNotEmpty) {
+      throw StateError(
+        'The exported ICS fixture must import without warnings.',
+      );
+    }
+    return result.importedCount;
+  }
+
+  @override
   Future<void> selectDate(DateTime date) => _app.setSelectedGeneralDate(date);
   @override
   Future<void> quiesce() => _app.quiesceForShutdown();
