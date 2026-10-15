@@ -11,6 +11,7 @@ import '../controllers/app_persistence.dart';
 import '../controllers/app_session.dart';
 import '../controllers/app_shutdown_controller.dart';
 import '../controllers/data_transfer_controller.dart';
+import '../controllers/developer_commands.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_navigation_controller.dart';
 import '../controllers/general_view_state.dart';
@@ -67,6 +68,7 @@ class AppScope extends StatelessWidget {
       value: app.schoolImportSecrets,
     ),
     Provider<DataTransferController>.value(value: app.transfers),
+    Provider<DeveloperCommands>.value(value: app.developer),
     Provider<AppBackupController>.value(value: app.backups),
   ];
 

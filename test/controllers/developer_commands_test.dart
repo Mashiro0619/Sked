@@ -47,28 +47,32 @@ void main() {
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
-      await provider.load();
+      await provider.lifecycle.load();
+      addTearDown(provider.dispose);
       storage.saveCount = 0;
 
-      await provider.addDeveloperSampleData(
+      await provider.developer.addSampleData(
         DeveloperSampleLanguage.english,
         now: DateTime(2026, 8, 14, 13, 37),
       );
 
       expect(storage.saveCount, 1);
-      expect(provider.activeMode, AppMode.general);
-      expect(provider.localeCode, 'de');
-      expect(provider.studentMode.timetables, hasLength(1));
-      expect(provider.studentMode.timetables.single.courses, hasLength(10));
-      expect(provider.generalMode.schedules, hasLength(4));
-      expect(provider.selectedWeek, 1);
+      expect(provider.workspaceView.activeMode, AppMode.general);
+      expect(provider.settingsView.localeCode, 'de');
+      expect(provider.studentView.data.timetables, hasLength(1));
+      expect(
+        provider.studentView.data.timetables.single.courses,
+        hasLength(10),
+      );
+      expect(provider.generalView.visibleData.schedules, hasLength(4));
+      expect(provider.studentView.selectedWeek, 1);
       expect(
         storage.data!.studentMode.activeTimetableId,
-        provider.studentMode.activeTimetableId,
+        provider.studentView.data.activeTimetableId,
       );
       expect(
         storage.data!.generalMode.activeScheduleId,
-        provider.generalMode.activeScheduleId,
+        provider.generalView.visibleData.activeScheduleId,
       );
     },
   );
@@ -91,15 +95,16 @@ void main() {
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
-    await provider.load();
-    await provider.addTimetable(timetable.config);
+    await provider.lifecycle.load();
+    addTearDown(provider.dispose);
+    await provider.studentCommands.addTimetable(timetable.config);
     storage.saveCount = 0;
-    await provider.setSelectedWeek(7);
+    await provider.studentCommands.setSelectedWeek(7);
     storage.saveCount = 0;
     storage.nextSaveError = const StorageWriteException('test failure');
 
     await expectLater(
-      provider.addDeveloperSampleData(
+      provider.developer.addSampleData(
         DeveloperSampleLanguage.simplifiedChinese,
         now: DateTime(2026, 8, 14, 13, 37),
       ),
@@ -107,9 +112,9 @@ void main() {
     );
 
     expect(storage.saveCount, 1);
-    expect(provider.studentMode.timetables, hasLength(1));
-    expect(provider.generalMode.schedules, hasLength(1));
-    expect(provider.selectedWeek, 7);
+    expect(provider.studentView.data.timetables, hasLength(1));
+    expect(provider.generalView.visibleData.schedules, hasLength(1));
+    expect(provider.studentView.selectedWeek, 7);
     expect(storage.data!.studentMode.timetables, hasLength(1));
     expect(storage.data!.generalMode.schedules, hasLength(1));
   });
@@ -126,10 +131,11 @@ void main() {
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
       );
-      await provider.load();
+      await provider.lifecycle.load();
+      addTearDown(provider.dispose);
 
       await expectLater(
-        provider.addDeveloperSampleData(
+        provider.developer.addSampleData(
           DeveloperSampleLanguage.english,
           now: DateTime(2026, 8, 14),
         ),
@@ -137,8 +143,8 @@ void main() {
       );
 
       expect(storage.saveCount, 0);
-      expect(provider.studentMode.timetables, isEmpty);
-      expect(provider.generalMode.schedules, hasLength(1));
+      expect(provider.studentView.data.timetables, isEmpty);
+      expect(provider.generalView.visibleData.schedules, hasLength(1));
     },
   );
 }

@@ -14,6 +14,7 @@ import '../controllers/observable_view_state.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_persistence.dart';
 import '../controllers/data_transfer_controller.dart';
+import '../controllers/developer_commands.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_view_state.dart';
 import '../controllers/general_navigation_controller.dart';
@@ -53,8 +54,6 @@ export '../controllers/app_backup_controller.dart'
 export '../controllers/app_data_maintenance.dart'
     show AppBackupRestoreInProgressException;
 
-part 'timetable_provider_developer.dart';
-
 String resolveFirstLaunchLocaleCode(Locale? locale) {
   return app_locale.resolveFirstLaunchLocaleCode(locale);
 }
@@ -66,33 +65,17 @@ String _defaultSystemLocaleCodeResolver() {
   );
 }
 
-abstract class _TimetableProviderBase extends ChangeNotifier {
-  AppSession get _session;
-  AppDataMaintenance get _maintenance;
-  WorkspaceCommands get _workspaces;
+class TimetableProvider extends ChangeNotifier {
   AppSession get session => _session;
   Stream<AppDataCommit> get committedData => _session.commits;
   AppDataVersions get committedDataVersions => _session.versions;
 
   var _isDisposed = false;
 
-  GeneralViewState get _generalView;
-  WorkspaceViewState get _workspaceView;
-
-  /// UI-only intent: explicit date jumps reveal their column; range paging
-  /// leaves the user's horizontal/time viewport where it was.
   int get generalDateFocusRevision => _generalView.focusRevision;
-
-  /// Invalidates UI selection sessions when a complete data replacement is
-  /// reserved, including a restore that keeps the same workspace enabled.
   Object get dataSessionToken => _maintenance.dataSessionToken;
-
-  /// A complete backup restore has reserved the write lease, including while
-  /// it is queued behind an earlier operation. Reading app data remains safe.
   bool get isRestoringAppBackup => _maintenance.isReserved;
-
   AppData get _visibleAppData => _workspaceView.data;
-
   GeneralScheduleData get _visibleGeneralMode => _generalView.visibleData;
 
   VoidCallback registerWorkspaceExitGuard(
@@ -106,27 +89,6 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
     }
   }
 
-  AppData get _appData;
-  set _appData(AppData value);
-
-  int get _selectedWeek;
-  set _selectedWeek(int value);
-
-  AppRepository get _repository;
-
-  GeneralSchedule? get activeGeneralScheduleOrNull;
-  TimetableData? get activeTimetableOrNull;
-  PeriodTimeSet? get activePeriodTimeSetOrNull;
-  PeriodTimeSet get activePeriodTimeSet;
-
-  Future<void> _saveAndNotify();
-
-  void _ensureAppBackupRestoreMutationAllowed() =>
-      _maintenance.ensureMutationAllowed();
-}
-
-class TimetableProvider extends _TimetableProviderBase
-    with _TimetableProviderDeveloper {
   TimetableProvider({
     TimetableStorage? storage,
     AppRepository? repository,
@@ -159,7 +121,7 @@ class TimetableProvider extends _TimetableProviderBase
     _session = AppSession(
       repository: appRepository,
       initialData: buildInitialAppData(buildDefaultPeriodTimes()),
-      requireMutationAllowed: _ensureAppBackupRestoreMutationAllowed,
+      requireMutationAllowed: _maintenance.ensureMutationAllowed,
       restoreRuntimeFields: (persisted, current) =>
           withRuntimeSchoolImportApiKey(
             persisted,
@@ -290,6 +252,14 @@ class TimetableProvider extends _TimetableProviderBase
       dataClear: _dataClear,
       quiescence: _quiescence,
     );
+    _developer = DeveloperCommands(
+      session: _session,
+      student: _studentView,
+      persistence: _persistence,
+      notifyViewChanged: () {
+        if (!_isDisposed) notifyListeners();
+      },
+    );
     _viewUpdates = AppViewUpdates([
       _studentView,
       _generalView,
@@ -299,7 +269,6 @@ class TimetableProvider extends _TimetableProviderBase
     ]);
   }
 
-  @override
   late final AppSession _session;
   late final AppBackupController _backups;
   late final AppDataDefaults _defaults;
@@ -307,25 +276,20 @@ class TimetableProvider extends _TimetableProviderBase
   late final AppQuiescence _quiescence;
   late final AppDataClearController _dataClear;
   late final AppShutdownController _shutdown;
-  @override
   late final AppDataMaintenance _maintenance;
   late final AppPersistence _persistence;
   late final DataTransferController _transfers;
-  @override
+  late final DeveloperCommands _developer;
   late final WorkspaceCommands _workspaces;
   late final GeneralNavigationController _generalNavigation;
   late final StudentViewState _studentView;
   late final StudentCommands _studentCommands;
-  @override
   late final GeneralViewState _generalView;
   late final GeneralCommands _generalCommands;
-  @override
   late final WorkspaceViewState _workspaceView;
   late final SettingsViewState _settingsView;
   late final SettingsCommands _settingsCommands;
   late final AppViewUpdates _viewUpdates;
-  @override
-  AppRepository get _repository => _session.repository;
   final String Function() _systemLocaleCodeResolver;
   final PrivacyService _privacy;
   late final SchoolImportSecretController _schoolImportSecrets;
@@ -336,33 +300,18 @@ class TimetableProvider extends _TimetableProviderBase
 
   final _workspaceTransactions = WorkspaceTransactions();
 
-  @override
   AppData get _appData => _session.data;
-
-  @override
-  set _appData(AppData value) {
-    _session.replaceData(value);
-  }
 
   StudentCommands get studentCommands => _studentCommands;
   StudentViewState get studentView => _studentView;
 
-  @override
   int get _selectedWeek => _studentView.selectedWeek;
 
-  @override
-  set _selectedWeek(int value) {
-    _studentView.selectedWeek = value;
-  }
-
-  @override
   TimetableData? get activeTimetableOrNull =>
       _studentView.activeTimetableOrNull;
   TimetableData get activeTimetable => _studentView.activeTimetable;
-  @override
   PeriodTimeSet? get activePeriodTimeSetOrNull =>
       _studentView.activePeriodTimeSetOrNull;
-  @override
   PeriodTimeSet get activePeriodTimeSet => _studentView.activePeriodTimeSet;
   PeriodTimeSet? periodTimeSetForId(String id) =>
       _studentView.periodTimeSetForId(id);
@@ -416,7 +365,6 @@ class TimetableProvider extends _TimetableProviderBase
   List<GeneralSchedule> get generalSchedules => _generalView.schedules;
   List<GeneralSchedule> get visibleGeneralSchedules =>
       _generalView.visibleSchedules;
-  @override
   GeneralSchedule? get activeGeneralScheduleOrNull =>
       _generalView.activeScheduleOrNull;
   GeneralSchedule get activeGeneralSchedule => _generalView.activeSchedule;
@@ -666,6 +614,12 @@ class TimetableProvider extends _TimetableProviderBase
 
   AppBackupController get backups => _backups;
   DataTransferController get transfers => _transfers;
+  DeveloperCommands get developer => _developer;
+
+  Future<void> addDeveloperSampleData(
+    DeveloperSampleLanguage language, {
+    DateTime? now,
+  }) => _developer.addSampleData(language, now: now);
 
   Future<String> exportAppDataJson() => _backups.exportJson();
   Future<int> importAppDataJson(String source, {required AppImportMode mode}) =>
@@ -1013,7 +967,6 @@ class TimetableProvider extends _TimetableProviderBase
 
   Future<void> switchMode(AppMode mode) => _workspaces.switchMode(mode);
 
-  @override
   Future<void> _saveAndNotify({int? rollbackSelectedWeek}) =>
       _persistence.saveAndNotify(rollbackSelectedWeek: rollbackSelectedWeek);
 
