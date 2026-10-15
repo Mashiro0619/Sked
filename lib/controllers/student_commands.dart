@@ -1,4 +1,6 @@
+import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
+import '../services/import_export_service.dart';
 import '../services/student_timetable_service.dart';
 import 'app_session.dart';
 import 'student_view_state.dart';
@@ -14,6 +16,7 @@ class StudentCommands {
     required this._loadDefaultPeriodTimes,
     required this._notifyViewChanged,
     this._service = const StudentTimetableService(),
+    this._importService = const ImportExportService(),
   });
 
   final AppSession _session;
@@ -22,6 +25,7 @@ class StudentCommands {
   final Future<List<CoursePeriodTime>> Function() _loadDefaultPeriodTimes;
   final void Function() _notifyViewChanged;
   final StudentTimetableService _service;
+  final ImportExportService _importService;
 
   StudentModeData get _data => _session.data.studentMode;
 
@@ -203,6 +207,23 @@ class StudentCommands {
     );
     if (identical(next, _data)) return;
     _replace(next);
+    await _persist();
+  }
+
+  Future<void> applySchoolImportRequest(
+    SchoolImportApplyRequest request,
+  ) async {
+    _requireEnabled();
+    final mutation = _importService.applySchoolImportRequest(
+      _data,
+      request,
+      localeCode: _view.localeCode,
+    );
+    _replace(mutation.data);
+    final selectedTimetable = mutation.selectedTimetable;
+    if (selectedTimetable != null) {
+      _view.selectedWeek = currentWeekFor(selectedTimetable.config);
+    }
     await _persist();
   }
 

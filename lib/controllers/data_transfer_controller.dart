@@ -363,23 +363,6 @@ class DataTransferController {
     return selected.config.name;
   }
 
-  Future<void> applySchoolImportRequest(
-    SchoolImportApplyRequest request,
-  ) async {
-    _requireEnabled(AppMode.student);
-    final mutation = _service.applySchoolImportRequest(
-      _data.studentMode,
-      request,
-      localeCode: _data.localeCode,
-    );
-    _data = _data.copyWith(studentMode: mutation.data);
-    final selectedTimetable = mutation.selectedTimetable;
-    if (selectedTimetable != null) {
-      _student.selectedWeek = currentWeekFor(selectedTimetable.config);
-    }
-    await _persistence.saveAndNotify();
-  }
-
   List<CoursePeriodTime> importPeriodTimesJson(String source) {
     return _service.importPeriodTimesJson(source, localeCode: _data.localeCode);
   }

@@ -16,6 +16,7 @@ import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../providers/timetable_provider.dart';
 import '../providers/app_scope.dart';
+import '../controllers/student_commands.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_content_sanitizer.dart';
 import '../services/school_import_http_consent.dart';
@@ -556,6 +557,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     final submissionGeneration = ++_submissionGeneration;
     final l10n = AppLocalizations.of(context);
     final provider = context.read<TimetableProvider>();
+    final studentCommands = context.read<StudentCommands>();
     final validationMessage = _validateBeforeSubmit(provider, l10n);
     if (validationMessage != null) {
       _showMessage(validationMessage);
@@ -619,7 +621,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       setState(() => _isApplying = true);
       applyAttempted = true;
       try {
-        await _workflow.apply(provider, request);
+        await studentCommands.applySchoolImportRequest(request);
         importApplied = true;
       } finally {
         if (mounted) setState(() => _isApplying = false);

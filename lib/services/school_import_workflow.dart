@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show compute;
 
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
-import '../providers/timetable_provider.dart';
 import 'school_import_api.dart';
 import 'school_import_content_sanitizer.dart';
 
@@ -60,13 +59,6 @@ class SchoolImportWorkflow {
         _activeParseSession = null;
       }
     }
-  }
-
-  Future<void> apply(
-    TimetableProvider provider,
-    SchoolImportApplyRequest request,
-  ) {
-    return provider.applySchoolImportRequest(request);
   }
 
   void cancelActiveParse() {

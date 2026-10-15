@@ -707,7 +707,7 @@ class TimetableProvider extends ChangeNotifier {
   );
 
   Future<void> applySchoolImportRequest(SchoolImportApplyRequest request) =>
-      _transfers.applySchoolImportRequest(request);
+      _studentCommands.applySchoolImportRequest(request);
 
   List<CoursePeriodTime> importPeriodTimesJson(String source) =>
       _transfers.importPeriodTimesJson(source);

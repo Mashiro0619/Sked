@@ -316,7 +316,7 @@ void main() {
       storage.saveFailures.add(Exception('disk full'));
 
       await expectLater(
-        provider.applySchoolImportRequest(
+        provider.studentCommands.applySchoolImportRequest(
           SchoolImportApplyRequest(
             response: schoolResponse(),
             mode: TimetableImportMode.addAsNew,
