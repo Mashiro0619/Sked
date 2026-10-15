@@ -17,7 +17,8 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
-import '../providers/timetable_provider.dart';
+import '../controllers/settings_view_state.dart';
+import '../providers/app_scope.dart';
 import '../screens/school_html_import_page.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
@@ -206,8 +207,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   Widget build(BuildContext context) {
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
-    final provider = context.watch<TimetableProvider?>();
-    final isConfigured = isSchoolImportParserConfigured(provider);
+    final settings = context.watch<SettingsViewState?>()?.aiApiSettings;
+    final isConfigured = isSchoolImportParserConfigured(settings);
     final pane = _activePane;
     return PopScope<void>(
       canPop: _allowRouteExit,
@@ -308,7 +309,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
         ),
         body: !isConfigured
             ? SchoolImportConfigRequiredView(
-                message: schoolImportConfigMessage(provider, l10n),
+                message: schoolImportConfigMessage(settings, l10n),
               )
             : !_supportsWebView
             ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
@@ -1315,6 +1316,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
         selectedSite == null) {
       return;
     }
+    final scope = AppScope.capture(context);
     final extractionGeneration = pane.loadGeneration;
     final extractionDocumentRevision = pane.documentRevision;
     setState(() => _isParsing = true);
@@ -1342,13 +1344,16 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
       }
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => SchoolHtmlImportPage(
-            initialContent: source.content,
-            initialUrl: source.url,
-            initialTitle: source.title,
-            initialContentTruncated: source.wasTruncated,
-            showReturnToWebPageButton: true,
-          ),
+          builder: (_) {
+            final page = SchoolHtmlImportPage(
+              initialContent: source.content,
+              initialUrl: source.url,
+              initialTitle: source.title,
+              initialContentTruncated: source.wasTruncated,
+              showReturnToWebPageButton: true,
+            );
+            return scope?.wrap(page) ?? page;
+          },
         ),
       );
     } on FormatException catch (error) {

@@ -17,11 +17,10 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
-import '../providers/timetable_provider.dart';
+import '../providers/app_scope.dart';
 import '../services/export_service.dart';
 import '../services/school_site_service.dart';
 import '../services/school_site_store.dart';
@@ -830,10 +829,15 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
       return;
     }
     _setHtmlImportOpen(true);
+    final scope = AppScope.capture(context);
     try {
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const SchoolHtmlImportPage()));
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              scope?.wrap(const SchoolHtmlImportPage()) ??
+              const SchoolHtmlImportPage(),
+        ),
+      );
     } finally {
       _setHtmlImportOpen(false);
     }
@@ -844,14 +848,13 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
       return;
     }
     _setWebImportOpen(true);
-    final provider = context.read<TimetableProvider>();
+    final scope = AppScope.capture(context);
     try {
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: SchoolWebImportPage(site: site),
-          ),
+          builder: (_) =>
+              scope?.wrap(SchoolWebImportPage(site: site)) ??
+              SchoolWebImportPage(site: site),
         ),
       );
     } finally {

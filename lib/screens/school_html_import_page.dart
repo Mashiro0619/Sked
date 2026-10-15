@@ -141,7 +141,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<TimetableProvider>();
-    final isConfigured = isSchoolImportParserConfigured(provider);
+    final isConfigured = isSchoolImportParserConfigured(provider.aiApiSettings);
     return PopScope(
       canPop: !_isApplying,
       child: Scaffold(
@@ -162,7 +162,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
           top: false,
           child: !isConfigured
               ? SchoolImportConfigRequiredView(
-                  message: schoolImportConfigMessage(provider, l10n),
+                  message: schoolImportConfigMessage(
+                    provider.aiApiSettings,
+                    l10n,
+                  ),
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
@@ -544,8 +547,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     if (html.isEmpty) {
       return l10n.schoolHtmlImportEmpty;
     }
-    if (!isSchoolImportParserConfigured(provider)) {
-      return schoolImportConfigMessage(provider, l10n);
+    if (!isSchoolImportParserConfigured(provider.aiApiSettings)) {
+      return schoolImportConfigMessage(provider.aiApiSettings, l10n);
     }
     return null;
   }

@@ -5,7 +5,8 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
-import '../providers/timetable_provider.dart';
+import '../models/timetable_models.dart';
+import '../providers/app_scope.dart';
 import '../screens/school_import_parser_settings_page.dart';
 import '../services/school_import_api.dart';
 
@@ -67,9 +68,13 @@ class SchoolImportConfigRequiredView extends StatelessWidget {
                       constraints: const BoxConstraints(minHeight: 48),
                       child: FilledButton.icon(
                         onPressed: () {
+                          final scope = AppScope.capture(context);
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) =>
+                                  scope?.wrap(
+                                    const SchoolImportParserSettingsPage(),
+                                  ) ??
                                   const SchoolImportParserSettingsPage(),
                             ),
                           );
@@ -90,23 +95,19 @@ class SchoolImportConfigRequiredView extends StatelessWidget {
 }
 
 /// Whether the custom parser has everything it needs to run.
-bool isSchoolImportParserConfigured(TimetableProvider? provider) {
-  if (provider == null) {
-    return false;
-  }
-  return isValidCustomOpenAiBaseUrl(
-        provider.customSchoolImportBaseUrl.trim(),
-      ) &&
-      provider.customSchoolImportApiKey.trim().isNotEmpty &&
-      provider.customSchoolImportModel.trim().isNotEmpty;
+bool isSchoolImportParserConfigured(AiApiSettings? settings) {
+  if (settings == null) return false;
+  return isValidCustomOpenAiBaseUrl(settings.customBaseUrl.trim()) &&
+      settings.customApiKey.trim().isNotEmpty &&
+      settings.customModel.trim().isNotEmpty;
 }
 
 /// Picks the reason to show when [isSchoolImportParserConfigured] is false.
 String schoolImportConfigMessage(
-  TimetableProvider? provider,
+  AiApiSettings? settings,
   AppLocalizations l10n,
 ) {
-  final baseUrl = provider?.customSchoolImportBaseUrl.trim() ?? '';
+  final baseUrl = settings?.customBaseUrl.trim() ?? '';
   if (baseUrl.isNotEmpty && !isValidCustomOpenAiBaseUrl(baseUrl)) {
     return l10n.schoolImportParserBaseUrlInvalid;
   }
