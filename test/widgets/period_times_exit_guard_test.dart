@@ -38,7 +38,7 @@ Future<void> _openEditor(
   addTearDown(t.view.resetDevicePixelRatio);
   addTearDown(t.view.resetPhysicalSize);
   Widget editor() =>
-      PeriodTimesPage(periodTimeSetId: p.periodTimeSets.first.id);
+      PeriodTimesPage(periodTimeSetId: p.studentView.periodTimeSets.first.id);
   await t.pumpWidget(
     WorkspaceHarness(
       provider: p,
@@ -102,15 +102,18 @@ void main() {
       await _openEditor(t, p);
       await t.enterText(_key('period-times-name'), 'Pending old name');
       expect(storage.writes, 0);
-      final restore = p.importAppDataJson(
+      final restore = p.backups.importJson(
         backup,
         mode: AppImportMode.replaceAll,
       );
       await t.pumpAndSettle();
       await restore;
       expect(find.byType(PeriodTimesPage), findsNothing);
-      expect(p.periodTimeSets.first.name, 'Restored times');
-      expect(p.periodTimeSets.first.periodTimes.first.startMinutes, 510);
+      expect(p.studentView.periodTimeSets.first.name, 'Restored times');
+      expect(
+        p.studentView.periodTimeSets.first.periodTimes.first.startMinutes,
+        510,
+      );
       final writesAfterRestore = storage.writes;
       await t.pump(const Duration(seconds: 1));
       expect(storage.writes, writesAfterRestore);
@@ -133,7 +136,7 @@ void main() {
       await t.enterText(_key('period-times-name'), 'Discarded old name');
       await t.pump(const Duration(milliseconds: 500));
       await t.pumpAndSettle();
-      final close = p.prepareForWindowClose();
+      final close = p.shutdown.prepareForWindowClose();
       await t.pumpAndSettle();
       final writesBeforeDiscard = storage.writes;
       await t.tap(find.text('Discard and exit'));
@@ -159,18 +162,21 @@ void main() {
     await _openEditor(t, p);
     await _makeInvalidDraft(t);
 
-    final close = p.prepareForWindowClose();
+    final close = p.shutdown.prepareForWindowClose();
     await t.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
-    expect(await p.prepareForWindowClose(), isFalse);
+    expect(await p.shutdown.prepareForWindowClose(), isFalse);
     expect(find.byType(AlertDialog), findsOneWidget);
     await t.tap(find.widgetWithText(TextButton, 'Cancel'));
     await t.pumpAndSettle();
     expect(await close, isFalse);
     expect(_key('period-error-1'), findsOneWidget);
-    expect(p.periodTimeSets.first.periodTimes.first.startMinutes, 480);
+    expect(
+      p.studentView.periodTimeSets.first.periodTimes.first.startMinutes,
+      480,
+    );
 
-    final discard = p.prepareForWindowClose();
+    final discard = p.shutdown.prepareForWindowClose();
     await t.pumpAndSettle();
     await t.tap(find.text('Discard and exit'));
     await t.pumpAndSettle();
@@ -189,21 +195,21 @@ void main() {
       await _openEditor(t, p);
       await _makeInvalidDraft(t);
 
-      final cancel = p.setWorkspaceEnabled(AppMode.student, false);
+      final cancel = p.workspaces.setEnabled(AppMode.student, false);
       await t.pumpAndSettle();
-      expect(p.isWorkspaceEnabled(AppMode.student), isTrue);
+      expect(p.workspaceView.isEnabled(AppMode.student), isTrue);
       await t.tap(find.widgetWithText(TextButton, 'Cancel'));
       await t.pumpAndSettle();
       await cancel;
-      expect(p.isWorkspaceEnabled(AppMode.student), isTrue);
+      expect(p.workspaceView.isEnabled(AppMode.student), isTrue);
       expect(_key('period-error-1'), findsOneWidget);
 
-      final discard = p.setWorkspaceEnabled(AppMode.student, false);
+      final discard = p.workspaces.setEnabled(AppMode.student, false);
       await t.pumpAndSettle();
       await t.tap(find.text('Discard and exit'));
       await t.pumpAndSettle();
       await discard;
-      expect(p.isWorkspaceEnabled(AppMode.student), isFalse);
+      expect(p.workspaceView.isEnabled(AppMode.student), isFalse);
       expect(find.byType(PeriodTimesPage, skipOffstage: false), findsNothing);
       expect(
         storage
@@ -233,7 +239,9 @@ void main() {
       await _openEditor(t, p);
       await t.enterText(_key('period-times-name'), 'Pending period name');
       bool? result;
-      final close = p.prepareForWindowClose().then((value) => result = value);
+      final close = p.shutdown.prepareForWindowClose().then(
+        (value) => result = value,
+      );
       await t.pump();
       await t.pump(const Duration(milliseconds: 500));
       expect(result, isNull);
@@ -264,7 +272,7 @@ void main() {
     await t.enterText(_key('period-times-name'), 'Retryable period name');
     await t.pump(const Duration(milliseconds: 500));
     await t.pumpAndSettle();
-    final close = p.prepareForWindowClose();
+    final close = p.shutdown.prepareForWindowClose();
     await t.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(storage.writes, 2);
@@ -290,7 +298,7 @@ void main() {
     await _openEditor(t, p);
     await t.tap(_key('period-start-time-action').first);
     await t.pumpAndSettle();
-    expect(await p.prepareForWindowClose(), isFalse);
+    expect(await p.shutdown.prepareForWindowClose(), isFalse);
     expect(find.byType(SkedTimePicker), findsOneWidget);
     await t.tap(_key('sked-time-cancel'));
     await t.pumpAndSettle();
@@ -319,7 +327,7 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      final restore = p.importAppDataJson(
+      final restore = p.backups.importJson(
         backup,
         mode: AppImportMode.replaceAll,
       );
@@ -330,8 +338,11 @@ void main() {
       staleNameChanged('Obsolete callback');
       await t.pump(const Duration(milliseconds: 500));
       await t.pumpAndSettle();
-      expect(p.periodTimeSets.first.name, 'Restored times');
-      expect(p.periodTimeSets.first.periodTimes.first.startMinutes, 510);
+      expect(p.studentView.periodTimeSets.first.name, 'Restored times');
+      expect(
+        p.studentView.periodTimeSets.first.periodTimes.first.startMinutes,
+        510,
+      );
       expect(
         storage
             .data
@@ -366,7 +377,7 @@ void main() {
       addTearDown(p.dispose);
       await _openEditor(t, p);
       await _makeInvalidDraft(t);
-      final restore = p.importAppDataJson(
+      final restore = p.backups.importJson(
         backup,
         mode: AppImportMode.replaceAll,
       );
@@ -379,7 +390,10 @@ void main() {
       await t.pumpAndSettle();
       await cancelled;
       expect(_key('period-error-1'), findsOneWidget);
-      expect(p.periodTimeSets.first.periodTimes.first.startMinutes, 480);
+      expect(
+        p.studentView.periodTimeSets.first.periodTimes.first.startMinutes,
+        480,
+      );
       expect(storage.writes, 0);
       expect(t.takeException(), isNull);
     },
@@ -397,13 +411,19 @@ void main() {
     final staleNameChanged = t
         .widget<TextField>(_key('period-times-name'))
         .onChanged!;
-    final restore = p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+    final restore = p.backups.importJson(
+      backup,
+      mode: AppImportMode.replaceAll,
+    );
     await t.pumpAndSettle();
     await restore;
     expect(_key('period-times-name'), findsNothing);
     staleNameChanged('Obsolete callback');
     await t.pump(const Duration(milliseconds: 500));
-    expect(p.periodTimeSets.first.periodTimes.first.startMinutes, 510);
+    expect(
+      p.studentView.periodTimeSets.first.periodTimes.first.startMinutes,
+      510,
+    );
     expect(t.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
 }

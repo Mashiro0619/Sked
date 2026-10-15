@@ -59,7 +59,7 @@ Future<TimetableProvider> _createProvider({
         _MemoryTimetableStorage(buildInitialAppData(buildDefaultPeriodTimes())),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -106,7 +106,8 @@ void main() {
                   unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                      selectedPeriodTimeSetId:
+                          provider.studentView.periodTimeSets.first.id,
                     ),
                   );
                 },
@@ -143,7 +144,7 @@ void main() {
     expect(
       find.text(
         l10n.schoolWebImportPeriodCount(
-          provider.periodTimeSets.first.periodTimes.length,
+          provider.studentView.periodTimeSets.first.periodTimes.length,
         ),
       ),
       findsOneWidget,
@@ -189,7 +190,8 @@ void main() {
                 onPressed: () => unawaited(
                   showPeriodTimeSetPickerDialog(
                     context,
-                    selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    selectedPeriodTimeSetId:
+                        provider.studentView.periodTimeSets.first.id,
                   ),
                 ),
                 child: const Text('Open'),
@@ -253,7 +255,8 @@ void main() {
                 onPressed: () => unawaited(
                   showPeriodTimeSetPickerDialog(
                     context,
-                    selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    selectedPeriodTimeSetId:
+                        provider.studentView.periodTimeSets.first.id,
                   ),
                 ),
                 child: const Text('Open'),
@@ -425,7 +428,8 @@ void main() {
                   onPressed: () => unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                      selectedPeriodTimeSetId:
+                          provider.studentView.periodTimeSets.first.id,
                     ),
                   ),
                   child: const Text('Open'),
@@ -479,7 +483,8 @@ void main() {
                   results.add(
                     await showPeriodTimeSetPickerDialog(
                       context,
-                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                      selectedPeriodTimeSetId:
+                          provider.studentView.periodTimeSets.first.id,
                     ),
                   );
                 },
@@ -559,7 +564,7 @@ void main() {
     tester,
   ) async {
     final provider = await _createProvider();
-    final initialId = provider.periodTimeSets.first.id;
+    final initialId = provider.studentView.periodTimeSets.first.id;
     final results = <String?>[];
 
     await tester.pumpWidget(
@@ -618,7 +623,8 @@ void main() {
                   unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                      selectedPeriodTimeSetId:
+                          provider.studentView.periodTimeSets.first.id,
                     ),
                   );
                 },
@@ -694,11 +700,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PeriodTimesPage), findsOneWidget);
 
-      await provider.deletePeriodTimeSet(deletedSet.id);
+      await provider.studentCommands.deletePeriodTimeSet(deletedSet.id);
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      expect(provider.periodTimeSetForId(deletedSet.id), isNull);
+      expect(provider.studentView.periodTimeSetForId(deletedSet.id), isNull);
       final remainingOption = find.byType(ExpressiveDialogOption);
       expect(remainingOption, findsOneWidget);
       expect(
@@ -798,7 +804,8 @@ void main() {
                   unawaited(
                     showPeriodTimeSetPickerDialog(
                       context,
-                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                      selectedPeriodTimeSetId:
+                          provider.studentView.periodTimeSets.first.id,
                     ),
                   );
                 },
@@ -827,7 +834,7 @@ void main() {
     }
 
     expect(storage.saveCount, 1);
-    expect(provider.periodTimeSets, hasLength(1));
+    expect(provider.studentView.periodTimeSets, hasLength(1));
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.widget<IconButton>(newButton).onPressed, isNotNull);
@@ -838,7 +845,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.periodTimeSets, hasLength(2));
+    expect(provider.studentView.periodTimeSets, hasLength(2));
     expect(find.byType(PeriodTimesPage), findsOneWidget);
   });
 }

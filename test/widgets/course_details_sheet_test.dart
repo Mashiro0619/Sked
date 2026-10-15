@@ -89,7 +89,7 @@ Future<TimetableProvider> _createProvider({
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -101,7 +101,7 @@ void main() {
         (tester) async {
           final provider = await _createProvider();
           addTearDown(provider.dispose);
-          await provider.saveCourse(
+          await provider.studentCommands.saveCourse(
             _course(id: 'course-a', name: 'Course A').copyWith(
               semesterWeeks: wholeSemester ? const [] : const [4, 2, 1],
             ),
@@ -115,7 +115,7 @@ void main() {
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: Scaffold(
                   body: CourseDetailsSheet(
-                    timetableId: provider.activeTimetable.id,
+                    timetableId: provider.studentView.activeTimetable.id,
                     courseId: 'course-a',
                     weekday: 1,
                     conflictKey: null,
@@ -154,16 +154,18 @@ void main() {
     (tester) async {
       final provider = await _createProvider();
       addTearDown(provider.dispose);
-      await provider.saveCourse(_course(id: 'course-c', name: 'Course C'));
-      final original = provider.activeTimetable;
-      await provider.setDisplayedCourseForConflict(
+      await provider.studentCommands.saveCourse(
+        _course(id: 'course-c', name: 'Course C'),
+      );
+      final original = provider.studentView.activeTimetable;
+      await provider.studentCommands.setDisplayedCourseForConflict(
         buildConflictKeyForCourses(original.id, 1, original.courses),
         'course-c',
       );
-      await provider.addTimetable(
+      await provider.studentCommands.addTimetable(
         original.config.copyWith(name: 'Other table'),
       );
-      await provider.saveCourse(
+      await provider.studentCommands.saveCourse(
         _course(id: 'course-a', name: 'Unrelated duplicate ID'),
       );
       var missingCount = 0;
@@ -195,14 +197,14 @@ void main() {
         tester.getTopLeft(find.text('Course C')).dy,
         lessThan(tester.getTopLeft(find.text('Course B')).dy),
       );
-      await provider.saveCourse(
+      await provider.studentCommands.saveCourse(
         _course(id: 'course-a', name: 'Updated original'),
         timetableId: original.id,
       );
       await tester.pumpAndSettle();
       expect(find.text('Updated original'), findsOneWidget);
       expect(missingCount, 0);
-      await provider.deleteTimetable(original.id);
+      await provider.studentCommands.deleteTimetable(original.id);
       await tester.pumpAndSettle();
       expect(missingCount, 1);
       expect(find.text('Unrelated duplicate ID'), findsNothing);
@@ -228,7 +230,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CourseDetailsSheet(
-              timetableId: provider.activeTimetable.id,
+              timetableId: provider.studentView.activeTimetable.id,
               courseId: 'course-a',
               weekday: 1,
               conflictKey: null,
@@ -263,7 +265,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CourseDetailsSheet(
-              timetableId: provider.activeTimetable.id,
+              timetableId: provider.studentView.activeTimetable.id,
               courseId: 'course-a',
               weekday: 1,
               conflictKey: null,
@@ -328,7 +330,7 @@ void main() {
                         context: context,
                         enableDrag: false,
                         builder: (sheetContext) => CourseDetailsSheet(
-                          timetableId: provider.activeTimetable.id,
+                          timetableId: provider.studentView.activeTimetable.id,
                           courseId: 'course-a',
                           weekday: 1,
                           conflictKey: null,
@@ -417,7 +419,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CourseDetailsSheet(
-              timetableId: provider.activeTimetable.id,
+              timetableId: provider.studentView.activeTimetable.id,
               courseId: 'course-a',
               weekday: 1,
               conflictKey: null,
@@ -481,7 +483,7 @@ void main() {
               refreshHost = setState;
               return Scaffold(
                 body: CourseDetailsSheet(
-                  timetableId: provider.activeTimetable.id,
+                  timetableId: provider.studentView.activeTimetable.id,
                   courseId: 'missing-course',
                   weekday: 1,
                   conflictKey: null,

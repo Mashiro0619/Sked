@@ -70,11 +70,13 @@ Future<TimetableProvider> _createProvider({
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
 class _PendingTimetableCodec extends DataTransferCodec {
+  _PendingTimetableCodec() : super(run: runDataTransferInline);
+
   final started = Completer<void>();
   final release = Completer<void>();
 
@@ -132,9 +134,9 @@ void main() {
       encodeTimetableDataEnvelope(
         TimetableExportData(
           timetables: [
-            provider.activeTimetable.copyWith(
+            provider.studentView.activeTimetable.copyWith(
               id: 'incoming',
-              config: provider.activeTimetable.config.copyWith(
+              config: provider.studentView.activeTimetable.config.copyWith(
                 name: 'Imported',
               ),
             ),
@@ -173,8 +175,8 @@ void main() {
     (tester) async {
       final provider = await _createProvider();
       addTearDown(provider.dispose);
-      final before = provider.appData.toJson();
-      final existingSet = provider.periodTimeSets.single.id;
+      final before = provider.workspaceView.data.toJson();
+      final existingSet = provider.studentView.periodTimeSets.single.id;
       await _pumpImportButton(
         tester,
         provider,
@@ -193,14 +195,14 @@ void main() {
       }
 
       await openChoice();
-      expect(provider.appData.toJson(), before);
+      expect(provider.workspaceView.data.toJson(), before);
       tester
           .widget<PeriodTimeSetPickerDialogView>(
             find.byType(PeriodTimeSetPickerDialogView),
           )
           .onCancel();
       await tester.pumpAndSettle();
-      expect(provider.appData.toJson(), before);
+      expect(provider.workspaceView.data.toJson(), before);
       await openChoice();
       tester
           .widget<PeriodTimeSetPickerDialogView>(
@@ -208,10 +210,13 @@ void main() {
           )
           .onSelect(existingSet);
       await tester.pumpAndSettle();
-      expect(provider.timetables, hasLength(2));
-      expect(provider.periodTimeSets, hasLength(1));
-      expect(provider.activeTimetable.config.periodTimeSetId, existingSet);
-      expect(provider.activeTimetable.config.name, 'Imported');
+      expect(provider.studentView.timetables, hasLength(2));
+      expect(provider.studentView.periodTimeSets, hasLength(1));
+      expect(
+        provider.studentView.activeTimetable.config.periodTimeSetId,
+        existingSet,
+      );
+      expect(provider.studentView.activeTimetable.config.name, 'Imported');
     },
   );
 
@@ -220,12 +225,12 @@ void main() {
   ) async {
     final provider = await _createProvider();
     addTearDown(provider.dispose);
-    final original = provider.activeTimetable;
-    await provider.addTimetable(
+    final original = provider.studentView.activeTimetable;
+    await provider.studentCommands.addTimetable(
       original.config.copyWith(name: 'Other timetable'),
     );
-    final other = provider.activeTimetable;
-    await provider.switchTimetable(original.id);
+    final other = provider.studentView.activeTimetable;
+    await provider.studentCommands.switchTimetable(original.id);
     await _pumpImportButton(
       tester,
       provider,
@@ -238,7 +243,7 @@ void main() {
       find.text(l10n.chooseTimetableImportMethod(original.config.name)),
       findsOneWidget,
     );
-    await provider.switchTimetable(other.id);
+    await provider.studentCommands.switchTimetable(other.id);
     await tester.pumpAndSettle();
     await tester.tap(
       find.widgetWithText(FilledButton, l10n.replaceCurrentTimetable),
@@ -250,19 +255,21 @@ void main() {
         )
         .onSelect(original.config.periodTimeSetId);
     await tester.pumpAndSettle();
-    expect(provider.timetables, hasLength(2));
+    expect(provider.studentView.timetables, hasLength(2));
     expect(
-      provider.timetables
+      provider.studentView.timetables
           .singleWhere((table) => table.id == original.id)
           .config
           .name,
       'Imported',
     );
     expect(
-      provider.timetables.singleWhere((table) => table.id == other.id).toJson(),
+      provider.studentView.timetables
+          .singleWhere((table) => table.id == other.id)
+          .toJson(),
       other.toJson(),
     );
-    expect(provider.periodTimeSets, hasLength(1));
+    expect(provider.studentView.periodTimeSets, hasLength(1));
   });
 
   testWidgets(
@@ -270,12 +277,12 @@ void main() {
     (tester) async {
       final provider = await _createProvider();
       addTearDown(provider.dispose);
-      final original = provider.activeTimetable;
-      await provider.addTimetable(
+      final original = provider.studentView.activeTimetable;
+      await provider.studentCommands.addTimetable(
         original.config.copyWith(name: 'Keep this table'),
       );
-      final other = provider.activeTimetable;
-      await provider.switchTimetable(original.id);
+      final other = provider.studentView.activeTimetable;
+      await provider.studentCommands.switchTimetable(original.id);
       await _pumpImportButton(
         tester,
         provider,
@@ -288,7 +295,7 @@ void main() {
         find.widgetWithText(FilledButton, l10n.replaceCurrentTimetable),
       );
       await tester.pumpAndSettle();
-      await provider.deleteTimetable(original.id);
+      await provider.studentCommands.deleteTimetable(original.id);
       await tester.pumpAndSettle();
       tester
           .widget<PeriodTimeSetPickerDialogView>(
@@ -296,8 +303,8 @@ void main() {
           )
           .onSelect(other.config.periodTimeSetId);
       await tester.pumpAndSettle();
-      expect(provider.timetables.single.toJson(), other.toJson());
-      expect(provider.periodTimeSets, hasLength(1));
+      expect(provider.studentView.timetables.single.toJson(), other.toJson());
+      expect(provider.studentView.periodTimeSets, hasLength(1));
       expect(find.text(l10n.noActiveTimetableToReplaceMessage), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -310,14 +317,14 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final provider = await _createProvider();
       addTearDown(provider.dispose);
-      final before = provider.appData.toJson();
+      final before = provider.workspaceView.data.toJson();
       await _pumpImportButton(
         tester,
         provider,
         source: encodeTimetableDataEnvelope(
           TimetableExportData(
-            timetables: provider.timetables,
-            periodTimeSets: provider.periodTimeSets,
+            timetables: provider.studentView.timetables,
+            periodTimeSets: provider.studentView.periodTimeSets,
           ),
         ),
       );
@@ -355,7 +362,7 @@ void main() {
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(provider.appData.toJson(), before);
+      expect(provider.workspaceView.data.toJson(), before);
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),

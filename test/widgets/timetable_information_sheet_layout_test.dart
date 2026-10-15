@@ -68,7 +68,9 @@ Future<TimetableProvider> _open(
   );
   addTearDown(provider.dispose);
   if (panelDisplayMode != null) {
-    await provider.updateWorkspacePanelDisplayMode(panelDisplayMode);
+    await provider.settingsCommands.updateWorkspacePanelDisplayMode(
+      panelDisplayMode,
+    );
   }
   await t.pumpWidget(
     WorkspaceHarness(
@@ -81,7 +83,7 @@ Future<TimetableProvider> _open(
   await t.pumpAndSettle();
   final l = AppLocalizations.of(t.element(find.byType(HomeScreen)));
   if (editing) {
-    final id = provider.activeTimetable.id;
+    final id = provider.studentView.activeTimetable.id;
     final resourceRow = _key('resource-timetable-$id');
     final resourceEdit = _key('resource-timetable-edit-$id');
     if (resourceRow.hitTestable().evaluate().isEmpty) {
@@ -123,7 +125,7 @@ void main() {
         (t) async {
           _viewport(t, const Size(393, 852));
           final provider = await _open(t, editing: editing, locale: locale);
-          final before = provider.timetables.length;
+          final before = provider.studentView.timetables.length;
           expect(
             ModalRoute.of(t.element(_form)),
             isA<ModalBottomSheetRoute<dynamic>>(),
@@ -158,7 +160,7 @@ void main() {
           await t.tap(cancel);
           await t.pumpAndSettle();
           expect(_form, findsNothing);
-          expect(provider.timetables.length, before);
+          expect(provider.studentView.timetables.length, before);
           expect(t.takeException(), isNull);
         },
         variant: TargetPlatformVariant({
@@ -244,7 +246,10 @@ void main() {
           await t.tap(save);
           await t.pumpAndSettle();
           expect(_form, findsNothing);
-          expect(provider.activeTimetable.config.name, '键盘与旋转后保留的课表');
+          expect(
+            provider.studentView.activeTimetable.config.name,
+            '键盘与旋转后保留的课表',
+          );
           expect(t.takeException(), isNull);
         },
         variant: TargetPlatformVariant({
@@ -265,7 +270,7 @@ void main() {
           editing: editing,
           panelDisplayMode: WorkspacePanelDisplayMode.overlay,
         );
-        final originalNames = provider.timetables
+        final originalNames = provider.studentView.timetables
             .map((timetable) => timetable.config.name)
             .toList();
         final element = t.element(_fields);
@@ -339,7 +344,9 @@ void main() {
         await t.pumpAndSettle();
         expect(_fields, findsNothing);
         expect(
-          provider.timetables.map((timetable) => timetable.config.name),
+          provider.studentView.timetables.map(
+            (timetable) => timetable.config.name,
+          ),
           orderedEquals(originalNames),
         );
         expect(t.takeException(), isNull);
@@ -425,7 +432,7 @@ void main() {
       await t.pumpAndSettle();
       expect(periodPicker, findsNothing);
       expect(t.element(_fields), same(element));
-      expect(provider.timetables, isEmpty);
+      expect(provider.studentView.timetables, isEmpty);
 
       t.view.physicalSize = const Size(660, 420);
       await t.pumpAndSettle();
@@ -447,8 +454,8 @@ void main() {
       await t.tap(save);
       await t.pumpAndSettle();
       expect(_fields, findsNothing);
-      expect(provider.timetables, hasLength(1));
-      final saved = provider.activeTimetable.config;
+      expect(provider.studentView.timetables, hasLength(1));
+      final saved = provider.studentView.activeTimetable.config;
       expect(saved.name, '窄窗口里的课表草稿');
       expect(saved.totalWeeks, 20);
       expect(saved.startDate, selectedDate);
@@ -467,7 +474,7 @@ void main() {
     (t) async {
       _viewport(t, const Size(760, 620));
       final provider = await _open(t, editing: true, scale: 1.5);
-      final original = provider.activeTimetable.config;
+      final original = provider.studentView.activeTimetable.config;
       final element = t.element(_fields);
       final l = AppLocalizations.of(element);
       expect(WorkspaceEditorScope.maybeOf(element)?.floating, isTrue);
@@ -496,11 +503,11 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
-      expect(provider.activeTimetable.config, same(original));
+      expect(provider.studentView.activeTimetable.config, same(original));
       await t.tap(find.widgetWithText(FilledButton, l.discardChangesAndExit));
       await t.pumpAndSettle();
       expect(_fields, findsNothing);
-      expect(provider.activeTimetable.config, same(original));
+      expect(provider.studentView.activeTimetable.config, same(original));
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -522,7 +529,7 @@ void main() {
       final docked = t.getRect(_key('workspace-detail-surface'));
       await t.enterText(_field(0), 'Panel mode draft');
       final input = t.widget<TextField>(_field(0)).controller!;
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.overlay,
       );
       await t.pumpAndSettle();
@@ -534,7 +541,7 @@ void main() {
       );
       expect(t.element(_fields), same(element));
       expect(t.widget<TextField>(_field(0)).controller, same(input));
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
       await t.pumpAndSettle();

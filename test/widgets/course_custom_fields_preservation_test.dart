@@ -80,7 +80,7 @@ _openEditor(
     await tester.pumpWidget(const SizedBox.shrink());
     provider.dispose();
   });
-  await provider.setSelectedWeek(1);
+  await provider.studentCommands.setSelectedWeek(1);
   await tester.pumpWidget(
     WorkspaceHarness(provider: provider, locale: locale, textScale: textScale),
   );
@@ -105,7 +105,10 @@ void _expectStoredFields(
   ({TimetableProvider provider, WorkspaceMemoryStorage storage}) state,
   Map<String, dynamic> fields,
 ) {
-  expect(state.provider.activeTimetable.courses.single.customFields, fields);
+  expect(
+    state.provider.studentView.activeTimetable.courses.single.customFields,
+    fields,
+  );
   expect(
     state
         .storage
@@ -121,7 +124,8 @@ void _expectStoredFields(
   expect(
     state
         .provider
-        .committedAppData
+        .session
+        .committedData
         .studentMode
         .timetables
         .single
@@ -207,7 +211,7 @@ void main() {
       await _save(tester);
       expect(find.byType(CourseEditorSheet), findsNothing);
       expect(
-        state.provider.activeTimetable.courses.single.name,
+        state.provider.studentView.activeTimetable.courses.single.name,
         'Renamed course',
       );
       _expectStoredFields(state, _fields);

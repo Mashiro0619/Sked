@@ -55,7 +55,8 @@ void main() {
                 builder: (context) => TextButton(
                   onPressed: () => showPeriodTimeSetPickerDialog(
                     context,
-                    selectedPeriodTimeSetId: p.periodTimeSets.first.id,
+                    selectedPeriodTimeSetId:
+                        p.studentView.periodTimeSets.first.id,
                   ),
                   child: const Text('Open'),
                 ),
@@ -66,8 +67,8 @@ void main() {
         await t.pumpAndSettle();
         await t.tap(find.text('Open'));
         await t.pumpAndSettle();
-        final before = p.periodTimeSets.length;
-        final backup = await p.exportAppDataJson();
+        final before = p.studentView.periodTimeSets.length;
+        final backup = await p.backups.exportJson();
         final gate = Completer<void>();
         storage.pending = gate;
         if (fail) storage.saveError = StateError('Expected create failure');
@@ -82,16 +83,16 @@ void main() {
           await t.pump();
         }
         expect(storage.writes, 1);
-        await p.setWorkspaceEnabled(AppMode.student, false);
+        await p.workspaces.setEnabled(AppMode.student, false);
         await expectLater(
-          p.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+          p.backups.importJson(backup, mode: AppImportMode.replaceAll),
           throwsA(isA<WorkspaceChangeCancelledException>()),
         );
-        expect(p.isWorkspaceEnabled(AppMode.student), isTrue);
+        expect(p.workspaceView.isEnabled(AppMode.student), isTrue);
         expect(storage.writes, 1);
         gate.complete();
         await t.pumpAndSettle();
-        expect(p.periodTimeSets.length, before + (fail ? 0 : 1));
+        expect(p.studentView.periodTimeSets.length, before + (fail ? 0 : 1));
         if (fail) {
           expect(find.byType(PeriodTimesPage), findsNothing);
           expect(t.widget<IconButton>(add).onPressed, isNotNull);

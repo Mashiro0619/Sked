@@ -227,7 +227,7 @@ void main() {
       expect(find.text('Blocked by the system'), findsOneWidget);
       expect(find.text('Required for precise reminder times'), findsOneWidget);
       expect(gateway.scheduled, isEmpty);
-      await p.updateNotificationSettings(
+      await p.settingsCommands.updateNotificationSettings(
         enabled: true,
         courseDefaultMinutesBefore: 10,
       );

@@ -42,7 +42,7 @@ Future<(TimetableProvider, _Storage)> _fixture({
 }) async {
   final seed = await workspaceProvider();
   final base = hasTimetables
-      ? seed.appData
+      ? seed.workspaceView.data
       : buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en');
   seed.dispose();
   final first = base.studentMode.periodTimeSets.first;
@@ -106,7 +106,7 @@ String _draftName(WidgetTester t) =>
     t.widget<TextField>(_name).controller!.text;
 
 Map<String, String> _bindings(TimetableProvider p) => {
-  for (final timetable in p.timetables)
+  for (final timetable in p.studentView.timetables)
     timetable.id: timetable.config.periodTimeSetId,
 };
 
@@ -120,7 +120,7 @@ Completer<void> _blockWrites(_Storage storage) {
 }
 
 Future<void> _invalidDraft(WidgetTester t, TimetableProvider p) async {
-  final end = p.periodTimeSets.first.periodTimes.first.endMinutes;
+  final end = p.studentView.periodTimeSets.first.periodTimes.first.endMinutes;
   await t.tap(_key('period-start-time-action').first);
   await t.pumpAndSettle();
   t
@@ -146,7 +146,7 @@ void main() {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
       await _openManager(t, p);
-      await _select(t, p.periodTimeSets.first.id);
+      await _select(t, p.studentView.periodTimeSets.first.id);
 
       expect(find.byType(WorkbenchAppBar), findsOneWidget);
       expect(
@@ -180,7 +180,7 @@ void main() {
     (t) async {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
-      final id = p.periodTimeSets.first.id;
+      final id = p.studentView.periodTimeSets.first.id;
       final bindings = _bindings(p);
       await _openManager(t, p);
       await _select(t, id);
@@ -217,7 +217,7 @@ void main() {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
       await _openManager(t, p, size: const Size(393, 900), textScale: 1.6);
-      await _select(t, p.periodTimeSets.first.id);
+      await _select(t, p.studentView.periodTimeSets.first.id);
       expect(find.byType(WorkbenchAppBar), findsOneWidget);
       await t.enterText(_name, 'Narrow saved name');
       await t.pump();
@@ -227,7 +227,8 @@ void main() {
       expect(find.byType(PeriodTimeSetManagerPage), findsOneWidget);
       expect(find.byType(PeriodTimesPage), findsNothing);
       expect(
-        _key('period-time-set-${p.periodTimeSets.first.id}').hitTestable(),
+        _key('period-time-set-${p.studentView.periodTimeSets.first.id}')
+            .hitTestable(),
         findsOneWidget,
       );
       expect(
@@ -250,8 +251,8 @@ void main() {
     (t) async {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
-      final first = p.periodTimeSets.first;
-      final target = p.periodTimeSets.last;
+      final first = p.studentView.periodTimeSets.first;
+      final target = p.studentView.periodTimeSets.last;
       final bindings = _bindings(p);
       await _openManager(t, p);
       await _select(t, first.id);
@@ -287,8 +288,8 @@ void main() {
     (t) async {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
-      final first = p.periodTimeSets.first;
-      final target = p.periodTimeSets.last;
+      final first = p.studentView.periodTimeSets.first;
+      final target = p.studentView.periodTimeSets.last;
       await _openManager(t, p);
       await _select(t, first.id);
       storage.fail = true;
@@ -326,8 +327,8 @@ void main() {
     (t) async {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
-      final first = p.periodTimeSets.first;
-      final target = p.periodTimeSets.last;
+      final first = p.studentView.periodTimeSets.first;
+      final target = p.studentView.periodTimeSets.last;
       await _openManager(t, p);
       await _select(t, first.id);
       storage.fail = true;
@@ -354,7 +355,7 @@ void main() {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
       await _openManager(t, p, size: const Size(1280, 650));
-      await _select(t, p.periodTimeSets.first.id);
+      await _select(t, p.studentView.periodTimeSets.first.id);
       await _invalidDraft(t, p);
       await t.enterText(_name, 'Unpersisted draft across resize');
       final state = t.state(find.byType(PeriodTimesPage));
@@ -364,7 +365,7 @@ void main() {
       final controller = t.widget<ListView>(_scroll).controller!;
       controller.jumpTo(controller.position.maxScrollExtent);
       await t.pumpAndSettle();
-      final count = p.periodTimeSets.first.periodTimes.length;
+      final count = p.studentView.periodTimeSets.first.periodTimes.length;
       final anchor = _firstVisiblePeriod(t, count);
       expect(anchor, greaterThan(1));
 
@@ -390,7 +391,7 @@ void main() {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
       await _openManager(t, p);
-      await _select(t, p.periodTimeSets.first.id);
+      await _select(t, p.studentView.periodTimeSets.first.id);
       await _invalidDraft(t, p);
       await t.tap(_back);
       await t.pumpAndSettle();
@@ -421,7 +422,7 @@ void main() {
       );
       addTearDown(p.dispose);
       await _openManager(t, p);
-      await _select(t, p.periodTimeSets.single.id);
+      await _select(t, p.studentView.periodTimeSets.single.id);
       await t.tap(_menu);
       await t.pumpAndSettle();
       await t.tap(find.text('Delete period time set'));
@@ -431,7 +432,7 @@ void main() {
       await t.tap(find.widgetWithText(FilledButton, 'Delete'));
       await t.pumpAndSettle();
 
-      expect(p.periodTimeSets, isEmpty);
+      expect(p.studentView.periodTimeSets, isEmpty);
       expect(storage.data.studentMode.periodTimeSets, isEmpty);
       expect(find.byType(PeriodTimeSetManagerPage), findsOneWidget);
       expect(find.byType(PeriodTimesPage), findsNothing);
@@ -452,7 +453,7 @@ void main() {
     (t) async {
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
-      final resource = p.periodTimeSets.first;
+      final resource = p.studentView.periodTimeSets.first;
       final bindings = _bindings(p);
       await _openManager(t, p);
       await _select(t, resource.id);
@@ -486,10 +487,10 @@ void main() {
     (t) async {
       final (p, storage) = await _fixture(hasTimetables: false);
       addTearDown(p.dispose);
-      final target = p.periodTimeSets.last;
+      final target = p.studentView.periodTimeSets.last;
       await _openManager(t, p);
       await _select(t, target.id);
-      await p.deletePeriodTimeSet(target.id);
+      await p.studentCommands.deletePeriodTimeSet(target.id);
       await t.pumpAndSettle();
 
       expect(find.byType(PeriodTimeSetManagerPage), findsOneWidget);
@@ -499,8 +500,8 @@ void main() {
         storage.data.studentMode.periodTimeSets.map((set) => set.id),
         isNot(contains(target.id)),
       );
-      await _select(t, p.periodTimeSets.single.id);
-      expect(_draftName(t), p.periodTimeSets.single.name);
+      await _select(t, p.studentView.periodTimeSets.single.id);
+      expect(_draftName(t), p.studentView.periodTimeSets.single.name);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -527,7 +528,8 @@ void main() {
                 onPressed: () async {
                   selected = await showPeriodTimeSetPickerDialog(
                     context,
-                    selectedPeriodTimeSetId: p.periodTimeSets.first.id,
+                    selectedPeriodTimeSetId:
+                        p.studentView.periodTimeSets.first.id,
                   );
                   completed = true;
                 },
@@ -542,7 +544,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(_key('period-time-set-manage'));
       await t.pumpAndSettle();
-      await _select(t, p.periodTimeSets.last.id);
+      await _select(t, p.studentView.periodTimeSets.last.id);
       expect(find.byType(WorkbenchAppBar), findsOneWidget);
       await t.tap(_back);
       await t.pumpAndSettle();
@@ -550,7 +552,10 @@ void main() {
       final picker = t.widget<PeriodTimeSetPickerDialogView>(
         find.byType(PeriodTimeSetPickerDialogView),
       );
-      expect(picker.selectedPeriodTimeSetId, p.periodTimeSets.first.id);
+      expect(
+        picker.selectedPeriodTimeSetId,
+        p.studentView.periodTimeSets.first.id,
+      );
       expect(picker.blocked, isFalse);
       await t.tap(find.widgetWithText(TextButton, 'Cancel'));
       await t.pumpAndSettle();
@@ -568,7 +573,7 @@ void main() {
   ) async {
     final (p, storage) = await _fixture();
     addTearDown(p.dispose);
-    final first = p.periodTimeSets.first;
+    final first = p.studentView.periodTimeSets.first;
     await _openManager(t, p);
     await _select(t, first.id);
     await t.enterText(_name, 'Saved by system back');
@@ -601,8 +606,8 @@ void main() {
     (t) async {
       final (p, storage) = await _fixture(hasTimetables: false);
       addTearDown(p.dispose);
-      final target = p.periodTimeSets.last;
-      final retained = p.periodTimeSets.first;
+      final target = p.studentView.periodTimeSets.last;
+      final retained = p.studentView.periodTimeSets.first;
       await _openManager(t, p);
       await _select(t, target.id);
       await t.tap(_menu);
@@ -610,13 +615,13 @@ void main() {
       await t.tap(find.text('Import period template from text'));
       await t.pumpAndSettle();
       await t.enterText(find.byType(TextField), 'Unsubmitted import');
-      await p.deletePeriodTimeSet(target.id);
+      await p.studentCommands.deletePeriodTimeSet(target.id);
       await t.pumpAndSettle();
       expect(find.byType(TextImportPage), findsNothing);
       expect(find.byType(PeriodTimeSetManagerPage), findsOneWidget);
       expect(find.byType(PeriodTimesPage), findsNothing);
-      expect(p.periodTimeSets.single.id, retained.id);
-      expect(p.periodTimeSets.single.name, retained.name);
+      expect(p.studentView.periodTimeSets.single.id, retained.id);
+      expect(p.studentView.periodTimeSets.single.name, retained.name);
       expect(storage.writes, 1);
       expect(t.takeException(), isNull);
     },
@@ -644,7 +649,7 @@ void main() {
       expect(_key('period-start-time-action'), findsNothing);
       expect(find.text('No available period time set'), findsOneWidget);
       expect(storage.writes, 0);
-      expect(p.periodTimeSetForId('missing-resource'), isNull);
+      expect(p.studentView.periodTimeSetForId('missing-resource'), isNull);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),

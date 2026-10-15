@@ -29,7 +29,7 @@ Future<void> _pumpEmptyHome(
     WorkspaceHarness(provider: provider, textScale: textScale),
   );
   await tester.pumpAndSettle();
-  expect(provider.timetables, isEmpty);
+  expect(provider.studentView.timetables, isEmpty);
   expect(find.text('No timetable yet'), findsOneWidget);
 }
 

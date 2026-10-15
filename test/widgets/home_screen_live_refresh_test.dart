@@ -108,7 +108,7 @@ Future<TimetableProvider> _createProvider() async {
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 

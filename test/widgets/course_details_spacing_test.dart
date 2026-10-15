@@ -62,7 +62,7 @@ Future<_Fixture> _pump(
   tester.view.physicalSize = const Size(1000, 900);
   addTearDown(tester.view.reset);
   final provider = await workspaceProvider(locale: locale);
-  final course = provider.activeTimetable.courses.first.copyWith(
+  final course = provider.studentView.activeTimetable.courses.first.copyWith(
     name: locale == 'zh' ? '计算方法' : 'Numerical Methods',
     teacher: locale == 'zh' ? '肖莎莎' : 'Prof. Chen',
     location: locale == 'zh' ? '辽河路校区 玉衡B308(公共机房)' : 'West campus · Room B308',
@@ -76,7 +76,7 @@ Future<_Fixture> _pump(
     remarks: remarks,
     customFields: const {},
   );
-  await provider.saveCourse(course);
+  await provider.studentCommands.saveCourse(course);
   final fixture = _Fixture(provider, course);
   addTearDown(() async {
     await tester.pumpWidget(const SizedBox.shrink());
@@ -106,7 +106,7 @@ Future<_Fixture> _pump(
                 compact: floating,
                 onDragUpdate: (delta) => fixture.drag += delta,
                 child: CourseDetailsSheet(
-                  timetableId: provider.activeTimetable.id,
+                  timetableId: provider.studentView.activeTimetable.id,
                   courseId: course.id,
                   weekday: course.dayOfWeek,
                   conflictKey: null,
@@ -354,7 +354,7 @@ void main() {
       final originalTeacher = tester.getRect(find.text(fixture.course.teacher));
       const customLabel = 'Imported classroom provisioning classification name';
       const customValue = 'Imported value kept visible';
-      await fixture.provider.saveCourse(
+      await fixture.provider.studentCommands.saveCourse(
         fixture.course.copyWith(customFields: const {customLabel: customValue}),
       );
       await tester.pumpAndSettle();

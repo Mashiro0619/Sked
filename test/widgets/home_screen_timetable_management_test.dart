@@ -429,7 +429,7 @@ Future<TimetableProvider> _createProvider() async {
     privacyService: const _NoopPrivacyService(),
     secretStore: const _NoopSecretStore(),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -448,7 +448,7 @@ Future<TimetableProvider> _createEmptyProvider(
     privacyService: const _NoopPrivacyService(),
     secretStore: const _NoopSecretStore(),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -656,7 +656,7 @@ Future<void> _saveTimetableDialog(WidgetTester tester) async {
 }
 
 String _selectedWeekTitle(TimetableProvider provider) {
-  return 'Week ${provider.selectedWeek}';
+  return 'Week ${provider.studentView.selectedWeek}';
 }
 
 Rect _emptyTimetableImportMenuRect(WidgetTester tester) {
@@ -685,8 +685,8 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
-      await provider.setSelectedWeek(5);
+      await provider.lifecycle.load();
+      await provider.studentCommands.setSelectedWeek(5);
       await _pumpHomeScreenWithProvider(tester, provider);
       final writes = storage.saveCount;
       final trigger = find.byKey(const ValueKey('student-week-picker-button'));
@@ -698,11 +698,11 @@ void main() {
           .page;
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
-      expect(provider.selectedWeek, 5);
+      expect(provider.studentView.selectedWeek, 5);
       expect(storage.saveCount, writes);
       await tester.tap(find.byKey(const ValueKey('student-week-option-5')));
       await tester.pumpAndSettle();
-      expect(provider.selectedWeek, 5);
+      expect(provider.studentView.selectedWeek, 5);
       expect(
         tester
             .widget<PageView>(find.byKey(const ValueKey('student-week-pager')))
@@ -721,7 +721,7 @@ void main() {
       choose();
       choose();
       await tester.pumpAndSettle();
-      expect(provider.selectedWeek, 9);
+      expect(provider.studentView.selectedWeek, 9);
       expect(storage.saveCount, writes);
       expect(find.byType(SkedWeekPicker), findsNothing);
       final button = tester.element(trigger);
@@ -765,8 +765,8 @@ void main() {
           final provider = await workspaceProvider(
             storage: WorkspaceMemoryStorage(_buildMultiTimetableStudentData()),
           );
-          await provider.setSelectedWeek(5);
-          final backup = await provider.exportAppDataJson();
+          await provider.studentCommands.setSelectedWeek(5);
+          final backup = await provider.backups.exportJson();
           await tester.pumpWidget(WorkspaceHarness(provider: provider));
           await tester.pumpAndSettle();
           await tester.tap(
@@ -783,44 +783,48 @@ void main() {
             staleChoose();
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 30));
-            expect(provider.selectedWeek, 5);
+            expect(provider.studentView.selectedWeek, 5);
           }
           switch (change) {
             case 'switch':
-              await provider.switchTimetable('table-2');
+              await provider.studentCommands.switchTimetable('table-2');
             case 'start':
-              await provider.updateTimetableConfig(
-                provider.activeTimetable.config.copyWith(
+              await provider.studentCommands.updateTimetableConfig(
+                provider.studentView.activeTimetable.config.copyWith(
                   startDate: DateTime(2026, 6, 8),
                 ),
               );
             case 'weeks':
-              await provider.updateTimetableConfig(
-                provider.activeTimetable.config.copyWith(totalWeeks: 8),
+              await provider.studentCommands.updateTimetableConfig(
+                provider.studentView.activeTimetable.config.copyWith(
+                  totalWeeks: 8,
+                ),
               );
             case 'navigate':
-              await provider.setSelectedWeek(7);
+              await provider.studentCommands.setSelectedWeek(7);
             case 'replace':
-              await provider.importAppDataJson(
+              await provider.backups.importJson(
                 backup,
                 mode: AppImportMode.replaceAll,
               );
             case 'disable':
-              await provider.setWorkspaceEnabled(AppMode.general, true);
-              await provider.setWorkspaceEnabled(AppMode.student, false);
+              await provider.workspaces.setEnabled(AppMode.general, true);
+              await provider.workspaces.setEnabled(AppMode.student, false);
             case 'mode':
-              await provider.setWorkspaceEnabled(AppMode.general, true);
-              await provider.switchMode(AppMode.general);
+              await provider.workspaces.setEnabled(AppMode.general, true);
+              await provider.workspaces.switchMode(AppMode.general);
           }
-          final externalWeek = provider.selectedWeek;
+          final externalWeek = provider.studentView.selectedWeek;
           if (!inAnimation) staleChoose();
           await tester.pumpAndSettle();
           expect(find.byType(SkedWeekPicker), findsNothing);
-          expect(provider.selectedWeek, externalWeek);
+          expect(provider.studentView.selectedWeek, externalWeek);
           if (change == 'switch') {
-            expect(provider.activeTimetable.id, 'table-2');
+            expect(provider.studentView.activeTimetable.id, 'table-2');
           }
-          if (change == 'navigate') expect(provider.selectedWeek, 7);
+          if (change == 'navigate') {
+            expect(provider.studentView.selectedWeek, 7);
+          }
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
           provider.dispose();
@@ -838,7 +842,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('student-week-picker-button')));
     await tester.pumpAndSettle();
     final state = tester.state(find.byType(SkedWeekPicker));
-    await provider.updateShowPastEndedCourses(!provider.showPastEndedCourses);
+    await provider.settingsCommands.updateShowPastEndedCourses(
+      !provider.settingsView.showPastEndedCourses,
+    );
     await tester.pumpAndSettle();
     expect(tester.state(find.byType(SkedWeekPicker)), same(state));
     await tester.tap(find.byKey(const ValueKey('sked-week-picker-close')));
@@ -852,7 +858,7 @@ void main() {
     'closing the owner page cancels the week picker without stale navigation',
     (tester) async {
       final provider = await _createProvider();
-      await provider.setSelectedWeek(5);
+      await provider.studentCommands.setSelectedWeek(5);
       await _pumpHomeScreenHostPage(tester, provider);
       await tester.tap(find.text('Open home host'));
       await tester.pumpAndSettle();
@@ -875,7 +881,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(HomeScreen), findsNothing);
       expect(find.byType(SkedWeekPicker), findsNothing);
-      expect(provider.selectedWeek, 5);
+      expect(provider.studentView.selectedWeek, 5);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       provider.dispose();
@@ -1063,7 +1069,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.loadCount, 2);
-    expect(provider.canWrite, isTrue);
+    expect(provider.session.canWrite, isTrue);
     expect(find.byKey(const ValueKey('data-recovery-screen')), findsNothing);
     expect(find.text('Choose your starting mode'), findsOneWidget);
     expect(storage.saveCount, 0);
@@ -1084,7 +1090,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
     await tester.tap(find.byTooltip('Settings'));
@@ -1112,7 +1118,7 @@ void main() {
     expect(find.text('Nested settings route'), findsOneWidget);
 
     await expectLater(
-      provider.switchMode(AppMode.general),
+      provider.workspaces.switchMode(AppMode.general),
       throwsA(isA<StorageWriteException>()),
     );
     await tester.pumpAndSettle();
@@ -1162,16 +1168,16 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(provider.isStudentMode, isTrue);
-    expect(provider.studentMode.themeMode, newUserDefaultThemeMode);
-    expect(provider.generalMode.themeMode, newUserDefaultThemeMode);
+    expect(provider.workspaceView.isStudentMode, isTrue);
+    expect(provider.studentView.data.themeMode, newUserDefaultThemeMode);
+    expect(provider.generalView.visibleData.themeMode, newUserDefaultThemeMode);
     expect(storage.data?.activeMode, AppMode.student);
-    expect(provider.acceptedPrivacyPolicyVersion, isNull);
+    expect(provider.lifecycle.acceptedPrivacyPolicyVersion, isNull);
     expect(find.byType(HomeScreen), findsNothing);
     expect(find.text('Choose your starting mode'), findsOneWidget);
     expect(find.text('Timetable only'), findsOneWidget);
@@ -1212,12 +1218,12 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
-    expect(provider.studentMode.themeMode, defaultThemeMode);
-    expect(provider.generalMode.themeMode, defaultThemeMode);
+    expect(provider.studentView.data.themeMode, defaultThemeMode);
+    expect(provider.generalView.visibleData.themeMode, defaultThemeMode);
     expect(
       find.byKey(const ValueKey('first-launch-onboarding')),
       findsOneWidget,
@@ -1241,7 +1247,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
@@ -1274,7 +1280,7 @@ void main() {
           privacyService: const _NoopPrivacyService(),
           secretStore: const _NoopSecretStore(),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
         await _pumpAppHomeScreenWithProvider(tester, provider);
 
@@ -1302,11 +1308,11 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
-    expect(provider.allDayTimelineCollapsed, isTrue);
+    expect(provider.generalView.data.allDayTimelineCollapsed, isTrue);
     expect(find.byKey(const ValueKey('first-launch-onboarding')), findsNothing);
     expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
   });
@@ -1324,11 +1330,11 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
-    expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isTrue);
     expect(find.byKey(const ValueKey('first-launch-onboarding')), findsNothing);
     expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
   });
@@ -1360,7 +1366,7 @@ void main() {
           privacyService: privacyService,
           secretStore: const _NoopSecretStore(),
         );
-        await provider.load();
+        await provider.lifecycle.load();
 
         await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
         await tester.pump();
@@ -1384,14 +1390,14 @@ void main() {
           DateTime.tryParse(storage.data?.privacyPolicyAcceptedAtIso ?? ''),
           isNotNull,
         );
-        expect(provider.activeMode, scenario.mode);
-        expect(provider.hideHomeWorkspaceNavigation, isFalse);
-        expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+        expect(provider.workspaceView.activeMode, scenario.mode);
+        expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
+        expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
         expect(
-          provider.acceptedPrivacyPolicyVersion,
+          provider.lifecycle.acceptedPrivacyPolicyVersion,
           bundledPrivacyPolicyVersion,
         );
-        expect(provider.privacyPolicyAcceptedAt, isNotNull);
+        expect(provider.lifecycle.privacyPolicyAcceptedAt, isNotNull);
         expect(privacyService.fetchCount, 0);
         expect(find.byType(AlertDialog), findsNothing);
         expect(
@@ -1428,7 +1434,7 @@ void main() {
           secretStore: const _NoopSecretStore(),
         );
         addTearDown(provider.dispose);
-        await provider.load();
+        await provider.lifecycle.load();
         storage.saveCount = 0;
 
         await _pumpAppHomeScreenWithProvider(tester, provider);
@@ -1449,14 +1455,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(storage.saveCount, 1, reason: 'width=${scenario.width}');
-        expect(provider.enabledWorkspaces, {AppMode.student});
+        expect(provider.workspaceView.enabledWorkspaces, {AppMode.student});
         expect(
-          provider.hideHomeWorkspaceNavigation,
+          provider.settingsView.hideHomeWorkspaceNavigation,
           scenario.hidden,
           reason: 'width=${scenario.width}',
         );
         expect(
-          provider.homeWorkspaceNavigationCollapsed,
+          provider.settingsView.homeWorkspaceNavigationCollapsed,
           isFalse,
           reason: 'width=${scenario.width}',
         );
@@ -1492,8 +1498,8 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
-    provider.injectRemotePrivacyPolicyVersion('2026-06-02');
+    await provider.lifecycle.load();
+    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-06-02');
 
     await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
@@ -1515,7 +1521,7 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       await _pumpAppHomeScreenWithProvider(tester, provider);
 
       final studentCard = find.byKey(
@@ -1628,24 +1634,24 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
     await tester.tap(find.byKey(const ValueKey('first-launch-general-card')));
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.activeMode, AppMode.student);
-    expect(provider.acceptedPrivacyPolicyVersion, isNull);
-    expect(provider.privacyPolicyAcceptedAt, isNull);
-    expect(provider.hideHomeWorkspaceNavigation, isFalse);
-    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(provider.workspaceView.activeMode, AppMode.student);
+    expect(provider.lifecycle.acceptedPrivacyPolicyVersion, isNull);
+    expect(provider.lifecycle.privacyPolicyAcceptedAt, isNull);
+    expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
+    expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
     expect(storage.data.activeMode, AppMode.student);
     expect(storage.data.privacyPolicyAcceptedVersion, isNull);
     expect(storage.data.privacyPolicyAcceptedAtIso, isNull);
     expect(storage.data.hideHomeWorkspaceNavigation, isFalse);
     expect(storage.data.homeWorkspaceNavigationCollapsed, isFalse);
-    expect(provider.canWrite, isFalse);
+    expect(provider.session.canWrite, isFalse);
     expect(find.byKey(const ValueKey('data-recovery-screen')), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
     expect(tester.takeException(), isNull);
@@ -1669,7 +1675,7 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       await _pumpAppHomeScreenWithProvider(tester, provider);
 
       final privacyConsent = find.byKey(
@@ -1737,8 +1743,8 @@ void main() {
         hasLength(1),
       );
       expect(storage.saveCount, 0);
-      expect(provider.acceptedPrivacyPolicyVersion, isNull);
-      expect(provider.privacyPolicyAcceptedAt, isNull);
+      expect(provider.lifecycle.acceptedPrivacyPolicyVersion, isNull);
+      expect(provider.lifecycle.privacyPolicyAcceptedAt, isNull);
       expect(
         find.byKey(const ValueKey('first-launch-onboarding')),
         findsOneWidget,
@@ -1754,7 +1760,7 @@ void main() {
         findsOneWidget,
       );
       expect(storage.saveCount, 0);
-      expect(provider.acceptedPrivacyPolicyVersion, isNull);
+      expect(provider.lifecycle.acceptedPrivacyPolicyVersion, isNull);
       semanticsHandle.dispose();
     },
   );
@@ -1769,7 +1775,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpAppHomeScreenWithProvider(
       tester,
       provider,
@@ -1804,7 +1810,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
@@ -1832,7 +1838,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(
       tester,
@@ -1877,7 +1883,7 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       await _pumpAppHomeScreenWithProvider(tester, provider);
 
       _expectFirstLaunchCardsStacked(tester);
@@ -1913,7 +1919,7 @@ void main() {
       storage.completeSave();
       await tester.pumpAndSettle();
       expect(storage.saveCount, 1);
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.workspaceView.activeMode, AppMode.student);
       expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
     },
   );
@@ -1930,7 +1936,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
@@ -1976,7 +1982,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(
       tester,
@@ -2003,7 +2009,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(
       tester,
@@ -2034,7 +2040,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(
       tester,
@@ -2089,8 +2095,8 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
-    provider.injectRemotePrivacyPolicyVersion('2026-05-25');
+    await provider.lifecycle.load();
+    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-05-25');
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
@@ -2124,7 +2130,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.hasAcceptedCurrentPrivacyPolicy, isTrue);
+    expect(provider.lifecycle.hasAcceptedCurrentPrivacyPolicy, isTrue);
     expect(find.byType(AlertDialog), findsNothing);
   });
 
@@ -2144,8 +2150,8 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
-    provider.injectRemotePrivacyPolicyVersion('2026-05-25');
+    await provider.lifecycle.load();
+    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-05-25');
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
     final agreeButton = find.descendant(
@@ -2156,7 +2162,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.canWrite, isFalse);
+    expect(provider.session.canWrite, isFalse);
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.byKey(const ValueKey('data-recovery-screen')), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -2178,7 +2184,7 @@ void main() {
       privacyService: privacyService,
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
@@ -2204,13 +2210,16 @@ void main() {
         privacyService: privacyService,
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
       await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(provider.activePrivacyPolicyVersion, bundledPrivacyPolicyVersion);
-      expect(provider.hasAcceptedCurrentPrivacyPolicy, isTrue);
+      expect(
+        provider.lifecycle.activePrivacyPolicyVersion,
+        bundledPrivacyPolicyVersion,
+      );
+      expect(provider.lifecycle.hasAcceptedCurrentPrivacyPolicy, isTrue);
       expect(privacyService.fetchCount, 0);
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
@@ -2235,12 +2244,15 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
 
-      await provider.acceptPrivacyPolicyCurrentVersion();
+      await provider.lifecycle.acceptPrivacyPolicyCurrentVersion();
 
-      expect(provider.acceptedPrivacyPolicyVersion, acceptedVersion);
-      expect(provider.privacyPolicyAcceptedAt?.toIso8601String(), acceptedAt);
+      expect(provider.lifecycle.acceptedPrivacyPolicyVersion, acceptedVersion);
+      expect(
+        provider.lifecycle.privacyPolicyAcceptedAt?.toIso8601String(),
+        acceptedAt,
+      );
       expect(storage.data?.privacyPolicyAcceptedVersion, acceptedVersion);
       expect(storage.data?.privacyPolicyAcceptedAtIso, acceptedAt);
       expect(storage.saveCount, 0);
@@ -2263,19 +2275,19 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       return provider;
     }
 
     final invalid = await providerWithAcceptedVersion('2026-02-30');
-    expect(invalid.hasAcceptedCurrentPrivacyPolicy, isFalse);
+    expect(invalid.lifecycle.hasAcceptedCurrentPrivacyPolicy, isFalse);
 
     final older = await providerWithAcceptedVersion('2026-05-01');
-    expect(older.hasAcceptedCurrentPrivacyPolicy, isFalse);
+    expect(older.lifecycle.hasAcceptedCurrentPrivacyPolicy, isFalse);
 
     final accepted = await providerWithAcceptedVersion('2026-08-07');
-    accepted.injectRemotePrivacyPolicyVersion('2026-09-01');
-    expect(accepted.hasAcceptedCurrentPrivacyPolicy, isFalse);
+    accepted.lifecycle.injectRemotePrivacyPolicyVersion('2026-09-01');
+    expect(accepted.lifecycle.hasAcceptedCurrentPrivacyPolicy, isFalse);
   });
 
   test('active privacy policy version only moves forward', () async {
@@ -2287,20 +2299,23 @@ void main() {
       privacyService: privacyService,
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     privacyService.version = '2026-05-01';
-    await provider.fetchRemotePrivacyPolicyVersion();
-    expect(provider.activePrivacyPolicyVersion, bundledPrivacyPolicyVersion);
+    await provider.lifecycle.fetchRemotePrivacyPolicyVersion();
+    expect(
+      provider.lifecycle.activePrivacyPolicyVersion,
+      bundledPrivacyPolicyVersion,
+    );
 
     privacyService.version = '2026-09-01';
-    await provider.fetchRemotePrivacyPolicyVersion();
-    expect(provider.activePrivacyPolicyVersion, '2026-09-01');
+    await provider.lifecycle.fetchRemotePrivacyPolicyVersion();
+    expect(provider.lifecycle.activePrivacyPolicyVersion, '2026-09-01');
 
     privacyService.version = '2026-08-20';
-    await provider.fetchRemotePrivacyPolicyVersion();
-    provider.injectRemotePrivacyPolicyVersion('2026-08-15');
-    expect(provider.activePrivacyPolicyVersion, '2026-09-01');
+    await provider.lifecycle.fetchRemotePrivacyPolicyVersion();
+    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-08-15');
+    expect(provider.lifecycle.activePrivacyPolicyVersion, '2026-09-01');
   });
 
   test('invalid active privacy policy version cannot be accepted', () async {
@@ -2312,12 +2327,12 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
-    provider.injectRemotePrivacyPolicyVersion('invalid');
+    await provider.lifecycle.load();
+    provider.lifecycle.injectRemotePrivacyPolicyVersion('invalid');
 
-    expect(provider.hasAcceptedCurrentPrivacyPolicy, isFalse);
+    expect(provider.lifecycle.hasAcceptedCurrentPrivacyPolicy, isFalse);
     await expectLater(
-      provider.acceptPrivacyPolicyCurrentVersion(),
+      provider.lifecycle.acceptPrivacyPolicyCurrentVersion(),
       throwsA(isA<StateError>()),
     );
     expect(storage.saveCount, 0);
@@ -2371,7 +2386,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await _openTimetablePicker(tester);
@@ -2391,7 +2406,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.activeTimetable.config.name, 'Test timetable');
+    expect(provider.studentView.activeTimetable.config.name, 'Test timetable');
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(
       tester.widget<TextField>(nameField).controller?.text,
@@ -2406,8 +2421,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.activeTimetable.config.name, 'Draft timetable');
-    expect(provider.activeTimetable.config.totalWeeks, 20);
+    expect(provider.studentView.activeTimetable.config.name, 'Draft timetable');
+    expect(provider.studentView.activeTimetable.config.totalWeeks, 20);
     expect(find.widgetWithText(FilledButton, 'Save'), findsNothing);
     expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -2426,7 +2441,7 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       await _pumpHomeScreenWithProvider(tester, provider);
 
       await _openTimetablePicker(tester);
@@ -2440,7 +2455,10 @@ void main() {
       expect(find.text('Switch timetables'), findsNothing);
       await _openTimetablePicker(tester);
       expect(find.text('Renamed timetable'), findsOneWidget);
-      expect(provider.timetables.last.config.name, 'Renamed timetable');
+      expect(
+        provider.studentView.timetables.last.config.name,
+        'Renamed timetable',
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -2457,7 +2475,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await _openTimetablePicker(tester);
@@ -2475,7 +2493,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(2));
+    expect(provider.studentView.timetables, hasLength(2));
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.widget<FilledButton>(confirmDelete).onPressed, isNotNull);
@@ -2486,8 +2504,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.timetables, hasLength(1));
-    expect(provider.timetables.single.config.name, 'First timetable');
+    expect(provider.studentView.timetables, hasLength(1));
+    expect(
+      provider.studentView.timetables.single.config.name,
+      'First timetable',
+    );
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -2504,7 +2525,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     try {
       await _pumpHomeScreenWithProvider(tester, provider);
       await _openTimetablePicker(tester);
@@ -2535,7 +2556,7 @@ void main() {
       storage.completeSave();
       await tester.pumpAndSettle();
 
-      expect(provider.timetables, hasLength(1));
+      expect(provider.studentView.timetables, hasLength(1));
       expect(storage.data!.studentMode.timetables, hasLength(1));
       expect(newer.isActive, isTrue);
       expect(owner.isActive, isFalse);
@@ -2563,7 +2584,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await _openTimetablePicker(tester);
@@ -2579,7 +2600,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, isEmpty);
+    expect(provider.studentView.timetables, isEmpty);
     expect(find.text('Switch timetables'), findsNothing);
     expect(find.text('No timetable yet'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -2683,7 +2704,11 @@ void main() {
       findsNothing,
     );
     expect(
-      find.byKey(ValueKey('resource-timetable-${provider.activeTimetable.id}')),
+      find.byKey(
+        ValueKey(
+          'resource-timetable-${provider.studentView.activeTimetable.id}',
+        ),
+      ),
       findsOneWidget,
     );
     expect(
@@ -2712,7 +2737,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     addTearDown(provider.dispose);
     await _pumpHomeScreenWithProvider(tester, provider);
 
@@ -2879,7 +2904,9 @@ void main() {
             selector
           else
             find.byKey(
-              ValueKey('resource-timetable-${provider.activeTimetable.id}'),
+              ValueKey(
+                'resource-timetable-${provider.studentView.activeTimetable.id}',
+              ),
             ),
         ];
         for (final action in actions) {
@@ -2972,7 +2999,7 @@ void main() {
       everyElement(80),
     );
 
-    await provider.updateShowAddCourseFab(false);
+    await provider.settingsCommands.updateShowAddCourseFab(false);
     await tester.pumpAndSettle();
 
     expect(find.byType(SkedPrimaryFab), findsNothing);
@@ -2983,7 +3010,7 @@ void main() {
       everyElement(0),
     );
 
-    await provider.updateShowAddCourseFab(true);
+    await provider.settingsCommands.updateShowAddCourseFab(true);
     await tester.pumpAndSettle();
 
     expect(find.byType(SkedPrimaryFab), findsOneWidget);
@@ -3002,7 +3029,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1120, 680));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -3010,7 +3037,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, 6);
+    expect(provider.studentView.selectedWeek, 6);
     expect(find.text('Week 6'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -3021,7 +3048,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1120, 680));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(
       tester,
       provider,
@@ -3030,11 +3057,11 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
-    expect(provider.selectedWeek, 6);
+    expect(provider.studentView.selectedWeek, 6);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     expect(tester.takeException(), isNull);
   });
 
@@ -3044,16 +3071,18 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(1);
+    await provider.studentCommands.setSelectedWeek(1);
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    final expectedWeek = currentWeekFor(provider.activeTimetable.config);
+    final expectedWeek = currentWeekFor(
+      provider.studentView.activeTimetable.config,
+    );
     await tester.longPress(
       find.byKey(const ValueKey('student-week-picker-button')),
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, expectedWeek);
+    expect(provider.studentView.selectedWeek, expectedWeek);
     expect(tester.takeException(), isNull);
   });
 
@@ -3064,7 +3093,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
     addTearDown(provider.dispose);
-    await provider.updateEnableLongPressAddCourse(false);
+    await provider.settingsCommands.updateEnableLongPressAddCourse(false);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     final dayGesture = find
@@ -3073,7 +3102,7 @@ void main() {
     expect(dayGesture, findsOneWidget);
     expect(tester.widget<GestureDetector>(dayGesture).onLongPressStart, isNull);
 
-    await provider.updateEnableLongPressAddCourse(true);
+    await provider.settingsCommands.updateEnableLongPressAddCourse(true);
     await tester.pumpAndSettle();
 
     expect(
@@ -3087,7 +3116,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
     await switchStudentToDayView(tester);
 
@@ -3102,20 +3131,20 @@ void main() {
 
     expect(pager.controller!.page, greaterThan(4));
     expect(pager.controller!.page, lessThan(5));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     expect(find.byKey(const ValueKey('student-week-page-6')), findsOneWidget);
 
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, 6);
+    expect(provider.studentView.selectedWeek, 6);
 
     await tester.drag(
       find.byKey(const ValueKey('student-day-strip')),
       const Offset(-180, 0),
     );
     await tester.pumpAndSettle();
-    expect(provider.selectedWeek, 7);
+    expect(provider.studentView.selectedWeek, 7);
     expect(tester.takeException(), isNull);
   });
 
@@ -3125,8 +3154,8 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(320, 568));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final provider = await _createProvider();
-      await provider.setSelectedWeek(5);
-      await provider.updateFitDaySelectorToWidth(false);
+      await provider.studentCommands.setSelectedWeek(5);
+      await provider.settingsCommands.updateFitDaySelectorToWidth(false);
       await _pumpHomeScreenWithProvider(tester, provider);
       await switchStudentToDayView(tester);
 
@@ -3140,7 +3169,7 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
 
-      expect(provider.selectedWeek, 6);
+      expect(provider.studentView.selectedWeek, 6);
       expect(tester.takeException(), isNull);
     },
   );
@@ -3151,8 +3180,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
-    await provider.updateEnableWeekSwipeNavigation(false);
+    await provider.studentCommands.setSelectedWeek(5);
+    await provider.settingsCommands.updateEnableWeekSwipeNavigation(false);
     await _pumpHomeScreenWithProvider(tester, provider);
     await switchStudentToDayView(tester);
 
@@ -3162,7 +3191,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     expect(tester.takeException(), isNull);
   });
 
@@ -3172,7 +3201,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
     await switchStudentToDayView(tester);
 
@@ -3187,12 +3216,12 @@ void main() {
 
     expect(pager.controller!.page, greaterThan(4));
     expect(pager.controller!.page, lessThan(4.5));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     await gesture.up();
     await tester.pumpAndSettle();
 
     expect(pager.controller!.page, closeTo(4, 0.01));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     expect(tester.takeException(), isNull);
   });
 
@@ -3200,7 +3229,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(900, 680));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     final pager = tester.widget<PageView>(
@@ -3221,17 +3250,17 @@ void main() {
       expect(pageSamples[index], greaterThanOrEqualTo(pageSamples[index - 1]));
     }
     expect(pageSamples.last, greaterThan(4));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
 
     final heldPage = pager.controller!.page!;
     await tester.pump(const Duration(milliseconds: 300));
     expect(pager.controller!.page, closeTo(heldPage, 0.001));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
 
     await gesture.up();
     await tester.pumpAndSettle();
     expect(pager.controller!.page, closeTo(4, 0.01));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     expect(tester.takeException(), isNull);
   });
 
@@ -3241,7 +3270,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(
       tester,
       provider,
@@ -3255,7 +3284,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, 4);
+    expect(provider.studentView.selectedWeek, 4);
     expect(tester.takeException(), isNull);
   });
 
@@ -3265,7 +3294,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await tester.drag(
@@ -3274,7 +3303,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, 6);
+    expect(provider.studentView.selectedWeek, 6);
     expect(tester.takeException(), isNull);
   });
 
@@ -3282,8 +3311,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
-    await provider.updateFitWeekColumnsToWidth(false);
+    await provider.studentCommands.setSelectedWeek(5);
+    await provider.settingsCommands.updateFitWeekColumnsToWidth(false);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     final gesture = await tester.startGesture(
@@ -3293,7 +3322,7 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, 6);
+    expect(provider.studentView.selectedWeek, 6);
     expect(tester.takeException(), isNull);
   });
 
@@ -3303,8 +3332,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
-    await provider.updateFitWeekColumnsToWidth(false);
+    await provider.studentCommands.setSelectedWeek(5);
+    await provider.settingsCommands.updateFitWeekColumnsToWidth(false);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     final horizontal = find.byKey(
@@ -3317,7 +3346,7 @@ void main() {
         .position;
     await tester.drag(horizontal, const Offset(-120, 0));
     await tester.pumpAndSettle();
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     expect(position.pixels, greaterThan(0));
 
     final currentPosition = tester
@@ -3329,7 +3358,7 @@ void main() {
     await tester.pump();
     await tester.drag(horizontal, const Offset(-180, 0));
     await tester.pumpAndSettle();
-    expect(provider.selectedWeek, 6);
+    expect(provider.studentView.selectedWeek, 6);
     expect(tester.takeException(), isNull);
   });
 
@@ -3339,8 +3368,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
-    await provider.updateFitWeekColumnsToWidth(false);
+    await provider.studentCommands.setSelectedWeek(5);
+    await provider.settingsCommands.updateFitWeekColumnsToWidth(false);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     final pager = tester.widget<PageView>(
@@ -3367,16 +3396,16 @@ void main() {
     }
 
     expect(pager.controller!.page, greaterThan(4));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     final heldPage = pager.controller!.page!;
     await tester.pump(const Duration(milliseconds: 300));
     expect(pager.controller!.page, closeTo(heldPage, 0.001));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
 
     await gesture.up();
     await tester.pumpAndSettle();
     expect(pager.controller!.page, closeTo(4, 0.01));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
     expect(tester.takeException(), isNull);
   });
 
@@ -3391,7 +3420,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(430, 776));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final provider = await _createProvider();
-      await provider.setSelectedWeek(5);
+      await provider.studentCommands.setSelectedWeek(5);
       await _pumpHomeScreenWithProvider(tester, provider);
       await switchStudentToDayView(tester);
 
@@ -3404,11 +3433,11 @@ void main() {
         find.byKey(const ValueKey('student-week-pager')),
       );
       expect(pager.controller!.page, closeTo(4, 0.01));
-      expect(provider.selectedWeek, 5);
+      expect(provider.studentView.selectedWeek, 5);
 
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(provider.selectedWeek, 6);
+      expect(provider.studentView.selectedWeek, 6);
       expect(tester.takeException(), isNull);
     },
   );
@@ -3417,7 +3446,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(900, 680));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     final pager = tester.widget<PageView>(
@@ -3435,12 +3464,12 @@ void main() {
 
     expect(pager.controller!.page, greaterThan(4));
     expect(pager.controller!.page, lessThan(5));
-    expect(provider.selectedWeek, 5);
+    expect(provider.studentView.selectedWeek, 5);
 
     await tester.sendEventToBinding(pointer.panZoomEnd());
     await tester.pumpAndSettle();
 
-    expect(provider.selectedWeek, 6);
+    expect(provider.studentView.selectedWeek, 6);
     expect(tester.takeException(), isNull);
   });
 
@@ -3455,7 +3484,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    await provider.updateFitDaySelectorToWidth(false);
+    await provider.settingsCommands.updateFitDaySelectorToWidth(false);
 
     await _pumpHomeScreenWithProvider(tester, provider, settle: false);
     await switchStudentToDayView(tester);
@@ -3487,7 +3516,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpHomeScreenWithProvider(tester, provider);
     await switchStudentToDayView(tester);
@@ -3533,7 +3562,7 @@ void main() {
   ) async {
     final semantics = tester.ensureSemantics();
     final provider = await _createProvider();
-    await provider.setSelectedWeek(5);
+    await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await tester.tap(find.byKey(const ValueKey('student-week-picker-button')));
@@ -3574,7 +3603,7 @@ void main() {
 
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    expect(provider.timetables, isEmpty);
+    expect(provider.studentView.timetables, isEmpty);
     expect(find.text('No timetable yet'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'New timetable'), findsOneWidget);
     expect(
@@ -3591,7 +3620,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 0);
-    expect(provider.timetables, isEmpty);
+    expect(provider.studentView.timetables, isEmpty);
     expect(find.text('Semester start date'), findsOneWidget);
     expect(find.text('Period time set'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Save'), findsOneWidget);
@@ -3603,15 +3632,18 @@ void main() {
     await storage.firstSaveStarted;
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(1));
-    expect(provider.activeTimetable.config.name, 'Created timetable');
-    expect(provider.activeTimetable.config.totalWeeks, 20);
+    expect(provider.studentView.timetables, hasLength(1));
+    expect(
+      provider.studentView.activeTimetable.config.name,
+      'Created timetable',
+    );
+    expect(provider.studentView.activeTimetable.config.totalWeeks, 20);
 
     storage.completeSave();
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(1));
+    expect(provider.studentView.timetables, hasLength(1));
     expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
   });
 
@@ -3626,7 +3658,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await tester.tap(find.widgetWithText(FilledButton, 'New timetable'));
@@ -3636,7 +3668,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 0);
-    expect(provider.timetables, isEmpty);
+    expect(provider.studentView.timetables, isEmpty);
     expect(find.text('No timetable yet'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -3657,7 +3689,7 @@ void main() {
 
     expect(find.text('Timetable name is required'), findsOneWidget);
     expect(storage.saveCount, 0);
-    expect(provider.timetables, isEmpty);
+    expect(provider.studentView.timetables, isEmpty);
     expect(find.text('New timetable'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
@@ -3670,7 +3702,7 @@ void main() {
 
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    expect(provider.timetables, isEmpty);
+    expect(provider.studentView.timetables, isEmpty);
     expect(find.text('No timetable yet'), findsOneWidget);
     final settingsButton = find.byTooltip('Settings');
     expect(settingsButton, findsOneWidget);
@@ -3843,7 +3875,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
     final createButton = find.widgetWithText(FilledButton, 'New timetable');
@@ -3858,7 +3890,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, isEmpty);
+    expect(provider.studentView.timetables, isEmpty);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(
       tester.widget<TextField>(nameField).controller?.text,
@@ -3872,9 +3904,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.timetables, hasLength(1));
-    expect(provider.activeTimetable.config.name, 'Draft timetable');
-    expect(provider.activeTimetable.config.totalWeeks, 20);
+    expect(provider.studentView.timetables, hasLength(1));
+    expect(provider.studentView.activeTimetable.config.name, 'Draft timetable');
+    expect(provider.studentView.activeTimetable.config.totalWeeks, 20);
     expect(find.widgetWithText(FilledButton, 'Save'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -3890,11 +3922,11 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    expect(provider.timetables, hasLength(1));
+    expect(provider.studentView.timetables, hasLength(1));
 
     await _openTimetablePicker(tester);
 
@@ -3906,7 +3938,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 0);
-    expect(provider.timetables, hasLength(1));
+    expect(provider.studentView.timetables, hasLength(1));
     expect(find.text('Semester start date'), findsOneWidget);
     expect(createButton, findsNothing);
 
@@ -3916,7 +3948,7 @@ void main() {
     await tester.pump();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(2));
+    expect(provider.studentView.timetables, hasLength(2));
     expect(
       tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
@@ -3928,9 +3960,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(2));
+    expect(provider.studentView.timetables, hasLength(2));
     expect(find.text('Switch timetables'), findsNothing);
-    expect(provider.activeTimetable.config.name, 'Second draft');
+    expect(provider.studentView.activeTimetable.config.name, 'Second draft');
   });
 
   testWidgets('new timetable saves the selected period time set', (
@@ -3946,7 +3978,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
     await _openTimetablePicker(tester);
 
@@ -3962,7 +3994,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.activeTimetable.config.periodTimeSetId, 'period-set-2');
+    expect(
+      provider.studentView.activeTimetable.config.periodTimeSetId,
+      'period-set-2',
+    );
     expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -3979,7 +4014,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
     await _openTimetablePicker(tester);
 
@@ -3991,7 +4026,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(1));
+    expect(provider.studentView.timetables, hasLength(1));
     expect(find.text('Switch timetables'), findsNothing);
     expect(
       find.byKey(const ValueKey('ui-command-failure-notice')),
@@ -4003,15 +4038,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.timetables, hasLength(2));
+    expect(provider.studentView.timetables, hasLength(2));
     // Creating a timetable keeps the picker open so the new selection is
     // visible and the user can continue managing timetables.
     expect(find.text('Switch timetables'), findsNothing);
-    expect(provider.activeTimetable.config.name, 'Picker draft');
+    expect(provider.studentView.activeTimetable.config.name, 'Picker draft');
     await _openTimetablePicker(tester);
     await tester.pumpAndSettle();
     final newTimetableKey = ValueKey(
-      'timetable-picker-item-${provider.activeTimetable.id}',
+      'timetable-picker-item-${provider.studentView.activeTimetable.id}',
     );
     expect(find.byKey(newTimetableKey), findsOneWidget);
     expect(
@@ -4029,7 +4064,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 3);
-    expect(provider.activeTimetable.id, 'table-1');
+    expect(provider.studentView.activeTimetable.id, 'table-1');
     expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -4047,11 +4082,11 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
 
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    expect(provider.activeTimetable.config.name, 'First timetable');
+    expect(provider.studentView.activeTimetable.config.name, 'First timetable');
 
     await _openTimetablePicker(tester);
 
@@ -4063,13 +4098,19 @@ void main() {
     await tester.tap(secondTimetable, warnIfMissed: false);
 
     expect(storage.saveCount, 1);
-    expect(provider.activeTimetable.config.name, 'Second timetable');
+    expect(
+      provider.studentView.activeTimetable.config.name,
+      'Second timetable',
+    );
 
     storage.completeSave();
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.activeTimetable.config.name, 'Second timetable');
+    expect(
+      provider.studentView.activeTimetable.config.name,
+      'Second timetable',
+    );
     expect(find.text('Second timetable'), findsOneWidget);
   });
 
@@ -4088,7 +4129,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
     await _openTimetablePicker(tester);
 
@@ -4109,7 +4150,10 @@ void main() {
     storage.completeSave();
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
-    expect(provider.activeTimetable.config.name, 'Second timetable');
+    expect(
+      provider.studentView.activeTimetable.config.name,
+      'Second timetable',
+    );
   });
 
   testWidgets('timetable picker exposes its selected item to semantics', (
@@ -4124,7 +4168,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
     await _openTimetablePicker(tester);
 
@@ -4151,7 +4195,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
     await _openTimetablePicker(tester);
@@ -4160,7 +4204,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.activeTimetable.config.name, 'First timetable');
+    expect(provider.studentView.activeTimetable.config.name, 'First timetable');
     expect(find.text('Switch timetables'), findsOneWidget);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -4170,7 +4214,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.activeTimetable.config.name, 'Second timetable');
+    expect(
+      provider.studentView.activeTimetable.config.name,
+      'Second timetable',
+    );
     expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -4291,7 +4338,7 @@ void main() {
         privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
-      await provider.load();
+      await provider.lifecycle.load();
       addTearDown(provider.dispose);
       await _pumpHomeScreenWithProvider(tester, provider);
 
@@ -4332,7 +4379,9 @@ void main() {
       await _pumpHomeScreenWithProvider(tester, provider);
       final resource = tester.getRect(
         find.byKey(
-          ValueKey('resource-timetable-${provider.activeTimetable.id}'),
+          ValueKey(
+            'resource-timetable-${provider.studentView.activeTimetable.id}',
+          ),
         ),
       );
       final week = tester.getRect(
@@ -4374,7 +4423,7 @@ void main() {
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
-    await provider.load();
+    await provider.lifecycle.load();
     addTearDown(provider.dispose);
     await _pumpHomeScreenWithProvider(tester, provider);
 
@@ -4391,14 +4440,14 @@ void main() {
       findsOneWidget,
     );
 
-    await provider.updateStudentToolbarHiddenItemsBehavior(
+    await provider.settingsCommands.updateStudentToolbarHiddenItemsBehavior(
       toolbarHiddenItemsBehaviorMore,
     );
     expect(
-      provider.studentToolbarHiddenItemsBehavior,
+      provider.settingsView.studentToolbarHiddenItemsBehavior,
       toolbarHiddenItemsBehaviorMore,
     );
-    expect(provider.studentHiddenToolbarNavigationIds, [
+    expect(provider.settingsView.studentHiddenToolbarNavigationIds, [
       'week',
       'view',
       'timetable',
@@ -4413,7 +4462,10 @@ void main() {
 
     await tester.tap(more);
     await tester.pumpAndSettle();
-    expect(find.text('Week ${provider.selectedWeek}').last, findsOneWidget);
+    expect(
+      find.text('Week ${provider.studentView.selectedWeek}').last,
+      findsOneWidget,
+    );
     expect(find.text('View switcher').last, findsOneWidget);
     expect(find.text('Timetable').last, findsOneWidget);
 
@@ -4423,7 +4475,9 @@ void main() {
 
     await tester.tap(more);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Week ${provider.selectedWeek}').last);
+    await tester.tap(
+      find.text('Week ${provider.studentView.selectedWeek}').last,
+    );
     await tester.pumpAndSettle();
     expect(find.text('Jump to week'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('sked-week-picker-close')));
@@ -4439,9 +4493,15 @@ void main() {
 
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
-    expect(find.text('Week ${provider.selectedWeek}'), findsNothing);
+    expect(
+      find.text('Week ${provider.studentView.selectedWeek}'),
+      findsNothing,
+    );
 
-    await provider.updateStudentToolbarNavigationVisibility('more', false);
+    await provider.settingsCommands.updateStudentToolbarNavigationVisibility(
+      'more',
+      false,
+    );
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('student-toolbar-more-button')),

@@ -134,7 +134,7 @@ Future<TimetableProvider> _createProvider({TimetableStorage? storage}) async {
     storage: storage ?? _MemoryTimetableStorage(_initialData()),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -433,7 +433,7 @@ void main() {
         textScaler: const TextScaler.linear(2),
       );
       final add = find.byKey(const ValueKey('period-times-add'));
-      final before = provider
+      final before = provider.studentView
           .periodTimeSetForId(defaultPeriodTimeSetId)!
           .periodTimes
           .length;
@@ -443,7 +443,9 @@ void main() {
       await tester.tap(add);
       await tester.pumpAndSettle();
       expect(
-        provider.periodTimeSetForId(defaultPeriodTimeSetId)!.periodTimes,
+        provider.studentView
+            .periodTimeSetForId(defaultPeriodTimeSetId)!
+            .periodTimes,
         hasLength(before + 1),
       );
       final last = find.byKey(ValueKey('period-row-${before + 1}'));
@@ -620,7 +622,7 @@ void main() {
 
     expect(storage.saveCount, 1);
     expect(
-      provider.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
+      provider.studentView.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
       'Auto saved period set',
     );
     expect(
@@ -965,7 +967,7 @@ void main() {
     expect(find.byTooltip('Save'), findsNothing);
     expect(storage.saveCount, 1);
     expect(
-      provider.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
+      provider.studentView.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
       isNot('Retryable period set'),
     );
 
@@ -976,7 +978,7 @@ void main() {
 
     expect(storage.saveCount, 2);
     expect(
-      provider.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
+      provider.studentView.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
       'Retryable period set updated',
     );
     expect(find.text('Retryable period set updated'), findsOneWidget);
@@ -1351,7 +1353,7 @@ void main() {
       await Scrollable.ensureVisible(tester.element(row), alignment: .3);
       await tester.pumpAndSettle();
       final before = tester.getRect(row).top;
-      final time = provider
+      final time = provider.studentView
           .periodTimeSetForId(defaultPeriodTimeSetId)!
           .periodTimes[7]
           .startMinutes;
@@ -1362,7 +1364,7 @@ void main() {
       final after = find.byKey(const ValueKey('period-row-7'));
       expect(tester.getRect(after).top, closeTo(before, 1));
       expect(
-        provider
+        provider.studentView
             .periodTimeSetForId(defaultPeriodTimeSetId)!
             .periodTimes[6]
             .startMinutes,
