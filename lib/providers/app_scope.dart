@@ -9,6 +9,7 @@ import '../controllers/app_data_clear_controller.dart';
 import '../controllers/app_lifecycle.dart';
 import '../controllers/app_persistence.dart';
 import '../controllers/app_session.dart';
+import '../controllers/app_shutdown_controller.dart';
 import '../controllers/data_transfer_controller.dart';
 import '../controllers/general_commands.dart';
 import '../controllers/general_navigation_controller.dart';
@@ -61,6 +62,7 @@ class AppScope extends StatelessWidget {
     ChangeNotifierProvider<AppDataMaintenance>.value(value: app.maintenance),
     ChangeNotifierProvider<AppDataClearController>.value(value: app.dataClear),
     Provider<AppPersistence>.value(value: app.persistence),
+    Provider<AppShutdownController>.value(value: app.shutdown),
     Provider<SchoolImportSecretController>.value(
       value: app.schoolImportSecrets,
     ),

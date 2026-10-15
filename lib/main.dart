@@ -129,7 +129,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
         _provider = provider;
         _desktopLayout = DesktopLayoutPreferences();
         unawaited(_desktopLayout!.load());
-        final load = provider.load();
+        final load = provider.lifecycle.load();
         _providerLoad = load;
         unawaited(
           load.then<void>(
@@ -199,7 +199,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
       }
       if (provider != null) {
         try {
-          await provider.quiesceForShutdown();
+          await provider.shutdown.quiesce();
         } finally {
           provider.dispose();
         }
@@ -460,7 +460,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (!await _developerUi.waitForPendingSave()) {
         throw StateError('Developer UI preference save failed');
       }
-      return await widget.provider.prepareForWindowClose();
+      return await widget.provider.shutdown.prepareForWindowClose();
     } catch (_) {
       final context = _navigatorKey.currentContext;
       if (context != null && context.mounted) {

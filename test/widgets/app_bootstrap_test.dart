@@ -1,14 +1,19 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
+import 'package:sked/data/app_repository.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/main.dart' hide main;
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_instance_lease.dart';
+import 'package:sked/services/app_backup_restore_journal.dart';
+import 'package:sked/services/privacy_service.dart';
+import 'package:sked/services/secret_store.dart';
 
 import '../support/data_transfer_codec.dart';
 
@@ -56,29 +61,97 @@ TimetableProvider _provider() => TimetableProvider(
   systemLocaleCodeResolver: () => 'en',
 );
 
-class _ControlledShutdownProvider extends TimetableProvider {
-  _ControlledShutdownProvider({
+class _ControlledRepository extends AppRepository {
+  _ControlledRepository({
     required this.loadCompleter,
     required this.quiesceCompleter,
-  }) : super(
-         storage: _MemoryStorage(),
-         systemLocaleCodeResolver: () => 'en',
-         dataTransferCodec: inlineDataTransferCodec,
-       );
+  }) : super(storage: _MemoryStorage());
 
   final Completer<void> loadCompleter;
   final Completer<void> quiesceCompleter;
-  final Completer<void> quiesceStarted = Completer<void>();
-  var disposed = false;
+  final quiesceStarted = Completer<void>();
 
   @override
-  Future<void> load() => loadCompleter.future;
+  Future<AppData?> load() async {
+    await loadCompleter.future;
+    return super.load();
+  }
 
   @override
-  Future<void> quiesceForShutdown() async {
+  Future<void> waitForPendingWrites({bool propagateErrors = false}) async {
     if (!quiesceStarted.isCompleted) quiesceStarted.complete();
     await quiesceCompleter.future;
+    await super.waitForPendingWrites(propagateErrors: propagateErrors);
   }
+}
+
+class _EmptyJournal extends AppBackupRestoreJournal {
+  _EmptyJournal() : super.base();
+
+  @override
+  String get pendingArtifactPath => 'memory://bootstrap-journal';
+
+  @override
+  Future<String?> read() async => null;
+
+  @override
+  Future<void> write(String source) async =>
+      throw StateError('Bootstrap has no pending restore journal.');
+
+  @override
+  Future<void> clear() async {}
+
+  @override
+  Future<String> preserveForRecovery(String source) async =>
+      throw StateError('Bootstrap has no journal artifact to preserve.');
+
+  @override
+  Future<Uint8List?> readRecoveryArtifact(String path) async => null;
+}
+
+class _MemorySecrets implements SecretStore {
+  String value = '';
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => value;
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    this.value = value;
+  }
+}
+
+class _QuietPrivacy extends PrivacyService {
+  const _QuietPrivacy();
+
+  @override
+  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
+}
+
+class _ControlledShutdownProvider extends TimetableProvider {
+  _ControlledShutdownProvider({
+    required Completer<void> loadCompleter,
+    required Completer<void> quiesceCompleter,
+  }) : this._(
+         _ControlledRepository(
+           loadCompleter: loadCompleter,
+           quiesceCompleter: quiesceCompleter,
+         ),
+       );
+
+  _ControlledShutdownProvider._(this.controlledRepository)
+    : super(
+        repository: controlledRepository,
+        secretStore: _MemorySecrets(),
+        backupRestoreJournal: _EmptyJournal(),
+        privacyService: const _QuietPrivacy(),
+        systemLocaleCodeResolver: () => 'en',
+        dataTransferCodec: inlineDataTransferCodec,
+      );
+
+  final _ControlledRepository controlledRepository;
+  Completer<void> get quiesceStarted => controlledRepository.quiesceStarted;
+  var disposed = false;
 
   @override
   void dispose() {

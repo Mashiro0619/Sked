@@ -8,6 +8,7 @@ import '../controllers/app_backup_controller.dart';
 import '../controllers/app_data_defaults.dart';
 import '../controllers/app_data_clear_controller.dart';
 import '../controllers/app_quiescence.dart';
+import '../controllers/app_shutdown_controller.dart';
 import '../controllers/app_lifecycle.dart';
 import '../controllers/observable_view_state.dart';
 import '../controllers/app_data_maintenance.dart';
@@ -278,6 +279,17 @@ class TimetableProvider extends _TimetableProviderBase
         if (!_isDisposed) notifyListeners();
       },
     );
+    _shutdown = AppShutdownController(
+      session: _session,
+      persistence: _persistence,
+      maintenance: _maintenance,
+      secrets: _schoolImportSecrets,
+      schoolSites: _schoolSites,
+      workspace: _workspaceView,
+      workspaces: _workspaces,
+      dataClear: _dataClear,
+      quiescence: _quiescence,
+    );
     _viewUpdates = AppViewUpdates([
       _studentView,
       _generalView,
@@ -294,6 +306,7 @@ class TimetableProvider extends _TimetableProviderBase
   late final AppLifecycle _lifecycle;
   late final AppQuiescence _quiescence;
   late final AppDataClearController _dataClear;
+  late final AppShutdownController _shutdown;
   @override
   late final AppDataMaintenance _maintenance;
   late final AppPersistence _persistence;
@@ -612,6 +625,7 @@ class TimetableProvider extends _TimetableProviderBase
 
   bool get isDataClearCommitted => _dataClear.isCommitted;
   AppDataClearController get dataClear => _dataClear;
+  AppShutdownController get shutdown => _shutdown;
   List<String> get recoveryArtifacts => _lifecycle.recoveryArtifacts;
   bool get canStartFreshAfterRecovery => _lifecycle.canStartFreshAfterRecovery;
 
@@ -1006,48 +1020,9 @@ class TimetableProvider extends _TimetableProviderBase
   Future<void> flushPendingUiStateSaves() =>
       _persistence.flushPendingUiStateSaves();
 
-  /// User-requested close may fail or be cancelled. Unlike teardown, errors
-  /// must reach the UI before the native window is destroyed.
-  Future<bool> prepareForWindowClose() async {
-    if (isDataClearCommitted) {
-      await quiesceForShutdown();
-      return true;
-    }
-    if (_maintenance.isReserved || isDataClearActive) {
-      return false;
-    }
-    for (final mode in [...enabledWorkspaces]) {
-      if (!await _workspaces.prepareExit(mode)) return false;
-    }
-    await flushPendingUiStateSaves();
-    await _repository.waitForPendingWrites(propagateErrors: true);
-    await _schoolImportSecrets.ensurePersistenceKnown();
-    await _schoolSites.waitForPendingOperations();
-    return true;
-  }
+  Future<bool> prepareForWindowClose() => _shutdown.prepareForWindowClose();
 
-  Future<void> quiesceForShutdown() async {
-    final dataClear = _dataClear.inFlight;
-    if (dataClear != null) {
-      try {
-        await dataClear;
-      } catch (error, stackTrace) {
-        // The clear caller owns user-facing failure reporting. Shutdown only
-        // needs the operation to settle before deciding which queues can be
-        // awaited without racing a newly permanent maintenance lease.
-        debugPrint(
-          'Data clear settled with an error during shutdown: '
-          '$error\n$stackTrace',
-        );
-      }
-    }
-    await _quiescence.drain(
-      // A committed clear intentionally keeps a permanent school-site lease.
-      // Waiting for that queue again would deadlock application teardown after
-      // SystemNavigator.pop returns.
-      waitForSchoolSites: !isDataClearCommitted,
-    );
-  }
+  Future<void> quiesceForShutdown() => _shutdown.quiesce();
 
   /// Prevents new writes while local data is removed and the process exits.
   ///
