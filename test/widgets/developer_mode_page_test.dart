@@ -64,7 +64,7 @@ Future<(TimetableProvider, _DeveloperPageStorage)> _createProvider({
     storage: storage,
     systemLocaleCodeResolver: () => localeCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   storage.saveCount = 0;
   return (provider, storage);
 }
@@ -290,8 +290,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(1));
-    expect(provider.generalSchedules, hasLength(4));
+    expect(provider.studentView.timetables, hasLength(1));
+    expect(provider.generalView.schedules, hasLength(4));
     expect(find.byType(DeveloperModePage), findsOneWidget);
     expect(
       find.text('Sample timetable and schedule data added.'),
@@ -312,7 +312,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(storage.saveCount, 1);
-      expect(provider.timetables, isEmpty);
+      expect(provider.studentView.timetables, isEmpty);
       expect(find.text('Save failed. Please try again later.'), findsOneWidget);
       expect(tester.widget<FilledButton>(addTile).onPressed, isNotNull);
       expect(_selectedLanguage(tester), {DeveloperSampleLanguage.english});
@@ -320,7 +320,7 @@ void main() {
       await tester.tap(addTile);
       await tester.pumpAndSettle();
       expect(storage.saveCount, 2);
-      expect(provider.timetables, hasLength(1));
+      expect(provider.studentView.timetables, hasLength(1));
       expect(
         find.text('Sample timetable and schedule data added.'),
         findsOneWidget,
@@ -358,7 +358,7 @@ void main() {
     saveBarrier.complete();
     await tester.pumpAndSettle();
     expect(storage.saveCount, 1);
-    expect(provider.timetables, hasLength(1));
+    expect(provider.studentView.timetables, hasLength(1));
   });
 
   testWidgets('notification diagnostics safely degrade outside Android', (

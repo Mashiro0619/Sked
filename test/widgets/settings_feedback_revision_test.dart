@@ -72,7 +72,7 @@ void main() {
         viewport(t, const Size(1280, 1000));
         final p = await workspaceProvider();
         addTearDown(p.dispose);
-        if (disabled != null) await p.setWorkspaceEnabled(disabled, false);
+        if (disabled != null) await p.workspaces.setEnabled(disabled, false);
         await t.pumpWidget(
           WorkspaceHarness(provider: p, home: const SettingsPage()),
         );
@@ -130,7 +130,7 @@ void main() {
         t.widget<ListTile>(k('settings-category-student')).selected,
         isTrue,
       );
-      await p.setWorkspaceEnabled(AppMode.student, false);
+      await p.workspaces.setEnabled(AppMode.student, false);
       await t.pumpAndSettle();
       expect(k('settings-category-student'), findsNothing);
       expect(
@@ -409,7 +409,7 @@ void main() {
       addTearDown(revision.dispose);
       final selected = <int?>[];
       final navigator = GlobalKey<NavigatorState>();
-      final backup = await p.exportAppDataJson();
+      final backup = await p.backups.exportJson();
       await t.pumpWidget(
         WorkspaceHarness(
           provider: p,
@@ -439,9 +439,9 @@ void main() {
       await open(t, k('mode'));
       final stale = t.widget<MenuItemButton>(menuItem('Dark')).onPressed!;
       if (change == 'replace') {
-        await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+        await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
       } else if (change == 'workspace') {
-        await p.setWorkspaceEnabled(AppMode.general, false);
+        await p.workspaces.setEnabled(AppMode.general, false);
       } else if (change == 'route') {
         navigator.currentState!.push<void>(
           MaterialPageRoute(

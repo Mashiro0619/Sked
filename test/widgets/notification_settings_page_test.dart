@@ -42,7 +42,7 @@ Future<TimetableProvider> _provider() async {
     ),
     systemLocaleCodeResolver: () => 'en',
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -69,15 +69,15 @@ void main() {
         const ValueKey('notification-remind-hidden-general-calendars'),
       );
       await tester.ensureVisible(toggle);
-      expect(provider.remindHiddenGeneralCalendars, isFalse);
+      expect(provider.settingsView.remindHiddenGeneralCalendars, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(provider.remindHiddenGeneralCalendars, isTrue);
-      expect(provider.generalDefaultMinutesBefore, isNull);
-      expect(provider.notificationsEnabled, isFalse);
+      expect(provider.settingsView.remindHiddenGeneralCalendars, isTrue);
+      expect(provider.settingsView.generalDefaultMinutesBefore, isNull);
+      expect(provider.settingsView.notificationsEnabled, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(provider.remindHiddenGeneralCalendars, isFalse);
+      expect(provider.settingsView.remindHiddenGeneralCalendars, isFalse);
     },
   );
 

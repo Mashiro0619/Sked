@@ -252,7 +252,7 @@ Future<TimetableProvider> _createProvider(
     privacyService: const _NoopPrivacyService(),
     schoolSiteService: schoolSiteService,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -357,7 +357,8 @@ Future<void> _pumpSettingsHostPage(
                           builder: (_) => AppScope(
                             app: provider,
                             child: SettingsPage(
-                              initialDestination: provider.isStudentMode
+                              initialDestination:
+                                  provider.workspaceView.isStudentMode
                                   ? SettingsDestination.student
                                   : SettingsDestination.general,
                             ),
@@ -533,7 +534,7 @@ void main() {
     await tester.tap(find.text('Clear data and exit'));
     await tester.pump(const Duration(seconds: 1));
 
-    expect(provider.isDataClearCommitted, isTrue);
+    expect(provider.dataClear.isCommitted, isTrue);
     expect(find.textContaining('Your local data was cleared'), findsOneWidget);
     expect(find.byType(AbsorbPointer), findsWidgets);
 
@@ -648,7 +649,7 @@ void main() {
       final storage = _MemoryTimetableStorage(null);
       final provider = await _createProvider(null, storage: storage);
       addTearDown(provider.dispose);
-      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(provider.settingsView.includePrereleaseUpdates, isTrue);
       expect(storage.data!.includePrereleaseUpdates, isTrue);
       await _pumpSettingsPage(
         tester,
@@ -668,7 +669,7 @@ void main() {
         AppData.decodeStorageSnapshot(storage.data!.encode()),
       );
       addTearDown(reloaded.dispose);
-      expect(reloaded.includePrereleaseUpdates, isFalse);
+      expect(reloaded.settingsView.includePrereleaseUpdates, isFalse);
     },
   );
 
@@ -693,20 +694,20 @@ void main() {
       expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(provider.settingsView.includePrereleaseUpdates, isTrue);
       expect(storage.data!.includePrereleaseUpdates, isTrue);
       final reloaded = await _createProvider(storage.data!, storage: storage);
       addTearDown(reloaded.dispose);
-      expect(reloaded.includePrereleaseUpdates, isTrue);
+      expect(reloaded.settingsView.includePrereleaseUpdates, isTrue);
 
-      await provider.updateAvailableUpdateVersion('2.0.0-rc.1');
+      await provider.lifecycle.updateAvailableUpdateVersion('2.0.0-rc.1');
       await tester.pumpAndSettle();
       expect(find.textContaining('Update available'), findsOneWidget);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(provider.includePrereleaseUpdates, isFalse);
+      expect(provider.settingsView.includePrereleaseUpdates, isFalse);
       expect(storage.data!.includePrereleaseUpdates, isFalse);
-      expect(provider.availableUpdateVersion, isNull);
+      expect(provider.settingsView.availableUpdateVersion, isNull);
       expect(find.textContaining('Update available'), findsNothing);
     },
   );
@@ -730,7 +731,7 @@ void main() {
       await tester.ensureVisible(toggle);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(provider.settingsView.includePrereleaseUpdates, isTrue);
       expect(storage.data!.includePrereleaseUpdates, isTrue);
       expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
       final l10n = AppLocalizations.of(tester.element(toggle));
@@ -787,7 +788,7 @@ void main() {
         buildNumber: '1',
       ),
     );
-    expect(provider.availableUpdateVersion, '2.0.0');
+    expect(provider.settingsView.availableUpdateVersion, '2.0.0');
     expect(find.textContaining('2.0.0-rc.1'), findsOneWidget);
     expect(find.textContaining('Update available'), findsOneWidget);
   });
@@ -807,7 +808,7 @@ void main() {
       provider,
       destination: SettingsDestination.about,
     );
-    expect(provider.availableUpdateVersion, isNull);
+    expect(provider.settingsView.availableUpdateVersion, isNull);
     expect(find.textContaining('Update available'), findsNothing);
   });
 
@@ -833,7 +834,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(toggle);
           await tester.pumpAndSettle();
-          expect(provider.includePrereleaseUpdates, isFalse);
+          expect(provider.settingsView.includePrereleaseUpdates, isFalse);
           expect(tester.takeException(), isNull);
         },
       );
@@ -863,8 +864,8 @@ void main() {
       );
       expect(find.textContaining('does not enroll'), findsOneWidget);
       expect(find.textContaining('Update available'), findsOneWidget);
-      expect(provider.includePrereleaseUpdates, isTrue);
-      expect(provider.availableUpdateVersion, '9.0.0-rc.1');
+      expect(provider.settingsView.includePrereleaseUpdates, isTrue);
+      expect(provider.settingsView.availableUpdateVersion, '9.0.0-rc.1');
     },
   );
 
@@ -919,7 +920,7 @@ void main() {
     );
 
     expect(storage.saveCount, 1);
-    expect(provider.availableUpdateVersion, '0.9.0');
+    expect(provider.settingsView.availableUpdateVersion, '0.9.0');
     expect(find.byType(SettingsPage), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -981,12 +982,18 @@ void main() {
       await tester.tap(select);
       await tester.pumpAndSettle();
       expect(storage.saveCount, 1);
-      expect(p.activeTimetable.config.periodTimeSetId, defaultPeriodTimeSetId);
+      expect(
+        p.studentView.activeTimetable.config.periodTimeSetId,
+        defaultPeriodTimeSetId,
+      );
       storage.failSaves = false;
       await tester.tap(select);
       await tester.pumpAndSettle();
-      expect(p.activeTimetable.config.periodTimeSetId, defaultPeriodTimeSetId);
-      expect(p.periodTimeSets, hasLength(3));
+      expect(
+        p.studentView.activeTimetable.config.periodTimeSetId,
+        defaultPeriodTimeSetId,
+      );
+      expect(p.studentView.periodTimeSets, hasLength(3));
       expect(tester.takeException(), isNull);
     },
   );
@@ -1007,7 +1014,7 @@ void main() {
     ]) {
       expect(find.byKey(ValueKey('settings-overview-$key')), findsOneWidget);
     }
-    await p.switchMode(AppMode.student);
+    await p.workspaces.switchMode(AppMode.student);
     await tester.pumpAndSettle();
     for (final key in [
       'appearance',
@@ -1034,7 +1041,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('settings-appearance-details')));
     await tester.pumpAndSettle();
     expect(find.byType(ThemeSettingsPage), findsOneWidget);
-    expect(p.activeMode, AppMode.general);
+    expect(p.workspaceView.activeMode, AppMode.general);
   });
 
   testWidgets(
@@ -1074,7 +1081,7 @@ void main() {
         find.byWidgetPredicate((w) => w is ThemeSettingsPage && !w.embedded),
       );
       expect(find.byKey(const ValueKey('settings-search')), findsNothing);
-      await p.switchMode(AppMode.general);
+      await p.workspaces.switchMode(AppMode.general);
       await tester.pumpAndSettle();
       expect(
         tester.state(
@@ -1101,13 +1108,13 @@ void main() {
 
     await tester.tap(find.text('Hide workspace navigation'));
     await tester.pumpAndSettle();
-    expect(provider.hideHomeWorkspaceNavigation, isFalse);
+    expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
 
     storage.failSaves = false;
     await tester.tap(find.text('Hide workspace navigation'));
     await tester.pumpAndSettle();
-    expect(provider.hideHomeWorkspaceNavigation, isTrue);
+    expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
     expect(storage.data?.hideHomeWorkspaceNavigation, isTrue);
     expect(tester.takeException(), isNull);
   });
@@ -1140,7 +1147,7 @@ void main() {
       await tester.pump();
 
       expect(storage.saveCount, 1);
-      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
       expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
       expect(tester.widget<Text>(title).style?.color, initialTitleColor);
       expect(
@@ -1161,7 +1168,7 @@ void main() {
 
       storage.completePendingSave();
       await tester.pumpAndSettle();
-      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
       expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
       expect(tester.takeException(), isNull);
     },
@@ -1364,7 +1371,7 @@ void main() {
       _buildGeneralData(),
       recoverySources: const {artifact: '{broken-journal'},
     );
-    expect(provider.recoveryArtifacts, [artifact]);
+    expect(provider.lifecycle.recoveryArtifacts, [artifact]);
     await _pumpSettingsPage(tester, provider);
 
     final backupEntry = find.byKey(const ValueKey('settings-app-backup'));
@@ -1426,7 +1433,7 @@ void main() {
       p,
       content: const PeriodTimeSetManagerPage(),
     );
-    expect(find.text(p.periodTimeSets.first.name), findsWidgets);
+    expect(find.text(p.studentView.periodTimeSets.first.name), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -1635,12 +1642,14 @@ void main() {
 
     expect(find.byType(TextImportPage), findsOneWidget);
     expect(storage.saveCount, 0);
-    expect(provider.generalSchedules.map((schedule) => schedule.name), [
+    expect(provider.generalView.schedules.map((schedule) => schedule.name), [
       'Existing Alpha',
       'Existing Beta',
     ]);
     expect(
-      provider.generalSchedules.every((schedule) => schedule.events.isEmpty),
+      provider.generalView.schedules.every(
+        (schedule) => schedule.events.isEmpty,
+      ),
       isTrue,
     );
   });
@@ -1674,10 +1683,10 @@ void main() {
 
     expect(find.byType(TextImportPage), findsNothing);
     expect(storage.saveCount, 1);
-    final alpha = provider.generalSchedules.singleWhere(
+    final alpha = provider.generalView.schedules.singleWhere(
       (schedule) => schedule.id == 'existing-a',
     );
-    final beta = provider.generalSchedules.singleWhere(
+    final beta = provider.generalView.schedules.singleWhere(
       (schedule) => schedule.id == 'existing-b',
     );
     expect(alpha.name, 'Existing Alpha');

@@ -76,7 +76,7 @@ Future<TimetableProvider> _createProvider(TimetableStorage storage) async {
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -265,7 +265,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
-    expect(provider.localeCode, 'de');
+    expect(provider.settingsView.localeCode, 'de');
     expect(find.text('Open language settings'), findsOneWidget);
     expect(find.byType(LanguageSettingsPage), findsNothing);
   });
@@ -295,7 +295,7 @@ void main() {
     await tester.tap(germanAction);
     await tester.pumpAndSettle();
 
-    expect(provider.localeCode, defaultLocaleCode);
+    expect(provider.settingsView.localeCode, defaultLocaleCode);
     expect(find.byType(LanguageSettingsPage), findsOneWidget);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
 
@@ -306,7 +306,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.localeCode, 'de');
+    expect(provider.settingsView.localeCode, 'de');
     expect(find.byType(LanguageSettingsPage), findsNothing);
   });
 
@@ -332,7 +332,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('language-option-de')));
     await tester.pumpAndSettle();
 
-    expect(provider.localeCode, 'de');
+    expect(provider.settingsView.localeCode, 'de');
     expect(storage.saveCount, 1);
     expect(find.byType(LanguageSettingsPage), findsNothing);
     expect(find.text('Open language settings'), findsOneWidget);

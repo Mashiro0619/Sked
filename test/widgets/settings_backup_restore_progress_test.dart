@@ -73,7 +73,7 @@ Future<(TimetableProvider, _Storage)> _fixture({
   DataTransferCodec codec = inlineDataTransferCodec,
 }) async {
   final seed = await workspaceProvider();
-  final storage = _Storage(seed.appData);
+  final storage = _Storage(seed.workspaceView.data);
   seed.dispose();
   return (await workspaceProvider(storage: storage, codec: codec), storage);
 }
@@ -238,7 +238,9 @@ void main() {
         addTearDown(provider.dispose);
         _pickBackup(
           encodeAppBackup(
-            provider.appData.copyWith(hideHomeWorkspaceNavigation: true),
+            provider.workspaceView.data.copyWith(
+              hideHomeWorkspaceNavigation: true,
+            ),
             [],
           ),
         );
@@ -251,7 +253,7 @@ void main() {
         );
         final writesBefore = storage.writes;
         await _startFileRestore(tester, storage, fails: fails);
-        expect(provider.isRestoringAppBackup, isTrue);
+        expect(provider.maintenance.isReserved, isTrue);
         expect(_status, findsOneWidget);
         expect(find.text(l10n.backupRestoreInProgressTitle), findsOneWidget);
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
@@ -298,9 +300,9 @@ void main() {
         storage.pending!.complete();
         await tester.pumpAndSettle();
         storage.pending = null;
-        expect(provider.isRestoringAppBackup, isFalse);
+        expect(provider.maintenance.isReserved, isFalse);
         expect(_status, findsNothing);
-        expect(provider.hideHomeWorkspaceNavigation, !fails);
+        expect(provider.settingsView.hideHomeWorkspaceNavigation, !fails);
         expect(
           find.text(
             fails
@@ -316,7 +318,7 @@ void main() {
         );
         await tester.tap(find.text(l10n.hideHomeWorkspaceNavigation));
         await tester.pumpAndSettle();
-        expect(provider.hideHomeWorkspaceNavigation, fails);
+        expect(provider.settingsView.hideHomeWorkspaceNavigation, fails);
         expect(storage.writes, writesBefore + 2);
         expect(tester.takeException(), isNull);
       },
@@ -337,7 +339,7 @@ void main() {
       _viewport(tester, const Size(1100, 1000));
       final (provider, storage) = await _fixture();
       addTearDown(provider.dispose);
-      final source = await provider.exportAppDataJson();
+      final source = await provider.backups.exportJson();
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: provider,
@@ -346,7 +348,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       storage.pending = Completer<void>();
-      final restoring = provider.importAppDataJson(
+      final restoring = provider.backups.importJson(
         source,
         mode: AppImportMode.replaceAll,
       );
@@ -381,7 +383,7 @@ void main() {
       _viewport(tester, const Size(1100, 1000));
       final (provider, storage) = await _fixture();
       addTearDown(provider.dispose);
-      final source = await provider.exportAppDataJson();
+      final source = await provider.backups.exportJson();
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: provider,
@@ -390,7 +392,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       storage.pending = Completer<void>();
-      final restoring = provider.importAppDataJson(
+      final restoring = provider.backups.importJson(
         source,
         mode: AppImportMode.replaceAll,
       );
@@ -410,7 +412,7 @@ void main() {
       await _open(tester, _key('theme-workspace-mode-choice-list'));
       await tester.tap(find.text(l10n.themeWorkspaceSchedule).last);
       await _pump(tester);
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.workspaceView.activeMode, AppMode.student);
       expect(
         menuIn('theme-workspace-mode-choice-list').initialSelection,
         AppMode.general.value,
@@ -431,7 +433,7 @@ void main() {
     addTearDown(provider.dispose);
     _pickBackup(
       encodeAppBackup(
-        provider.appData.copyWith(hideHomeWorkspaceNavigation: true),
+        provider.workspaceView.data.copyWith(hideHomeWorkspaceNavigation: true),
         [],
       ),
     );
@@ -453,14 +455,14 @@ void main() {
     await tester.pumpAndSettle();
     await _open(tester, find.text('Open settings'));
     await _startFileRestore(tester, storage);
-    expect(provider.isRestoringAppBackup, isTrue);
+    expect(provider.maintenance.isReserved, isTrue);
     await tester.pageBack();
     await _pump(tester);
     expect(find.byType(SettingsPage), findsNothing);
-    expect(provider.isRestoringAppBackup, isTrue);
+    expect(provider.maintenance.isReserved, isTrue);
     storage.pending!.complete();
     await tester.pumpAndSettle();
-    expect(provider.isRestoringAppBackup, isFalse);
+    expect(provider.maintenance.isReserved, isFalse);
     expect(storage.data.hideHomeWorkspaceNavigation, isTrue);
     expect(tester.takeException(), isNull);
   });

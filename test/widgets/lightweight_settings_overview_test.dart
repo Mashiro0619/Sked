@@ -194,7 +194,7 @@ void main() {
       await t.tap(k('notification-settings-enabled'));
       await t.pump();
       await t.pump(const Duration(milliseconds: 200));
-      expect(p.notificationsEnabled, isTrue);
+      expect(p.settingsView.notificationsEnabled, isTrue);
       expect(t.getRect(toolbar), toolbarBeforeSaving);
       expect(
         find.descendant(
@@ -298,12 +298,12 @@ void main() {
         await t.pumpAndSettle();
         expect(find.byType(TimetableDisplaySettingsPage), findsOneWidget);
         final grid = k('student-grid-lines-setting');
-        final previous = p.showTimetableGridLines;
+        final previous = p.settingsView.showTimetableGridLines;
         await t.ensureVisible(grid);
         await t.pumpAndSettle();
         await t.tap(grid);
         await t.pumpAndSettle();
-        expect(p.showTimetableGridLines, !previous);
+        expect(p.settingsView.showTimetableGridLines, !previous);
         await t.tap(find.byType(BackButton).hitTestable().first);
         await t.pumpAndSettle();
         expect(k('settings-overview-general'), findsOneWidget);
@@ -334,7 +334,7 @@ void main() {
       await t.tap(k('settings-general-display'));
       await t.pumpAndSettle();
       await choose(t, 'general-custom-column-width-mode', 'Minimum width');
-      expect(p.generalCustomDayMinWidth, 96);
+      expect(p.generalView.data.customDayMinWidth, 96);
       final slider = find.descendant(
         of: k('general-custom-column-width-slider'),
         matching: find.byType(Slider),
@@ -346,17 +346,17 @@ void main() {
       await t.pump();
       expect(find.text('160 dp'), findsOneWidget);
       expect(storage.writes, writes);
-      expect(p.generalCustomDayMinWidth, 96);
+      expect(p.generalView.data.customDayMinWidth, 96);
       t.widget<Slider>(slider).onChangeEnd!(160);
       await t.pumpAndSettle();
       expect(storage.writes, writes + 1);
-      expect(p.generalCustomDayMinWidth, 160);
+      expect(p.generalView.data.customDayMinWidth, 160);
       await choose(t, 'general-custom-column-width-mode', 'Automatic');
-      expect(p.generalCustomDayMinWidth, isNull);
+      expect(p.generalView.data.customDayMinWidth, isNull);
       expect(k('general-custom-column-width-slider'), findsNothing);
       storage.saveError = StateError('disk full');
       await choose(t, 'general-custom-column-width-mode', 'Minimum width');
-      expect(p.generalCustomDayMinWidth, isNull);
+      expect(p.generalView.data.customDayMinWidth, isNull);
       expect(k('general-custom-column-width-slider'), findsNothing);
       expect(t.takeException(), isNull);
     },
@@ -369,16 +369,16 @@ void main() {
       viewport(t, const Size(393, 900));
       final p = await workspaceProvider();
       addTearDown(p.dispose);
-      final studentTheme = p.appData.studentMode.themeMode;
+      final studentTheme = p.workspaceView.data.studentMode.themeMode;
       await t.pumpWidget(
         WorkspaceHarness(provider: p, home: const SettingsPage()),
       );
       await t.pumpAndSettle();
       await choose(t, 'theme-workspace-target', 'Schedule');
       await choose(t, 'theme-brightness-choice', 'Dark');
-      expect(p.activeMode, AppMode.student);
-      expect(p.appData.generalMode.themeMode, 'dark');
-      expect(p.appData.studentMode.themeMode, studentTheme);
+      expect(p.workspaceView.activeMode, AppMode.student);
+      expect(p.workspaceView.data.generalMode.themeMode, 'dark');
+      expect(p.workspaceView.data.studentMode.themeMode, studentTheme);
       await t.tap(k('settings-theme-seed'));
       await t.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
@@ -393,7 +393,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(k('language-option-de'));
       await t.pumpAndSettle();
-      expect(p.localeCode, 'de');
+      expect(p.settingsView.localeCode, 'de');
       expect(find.byType(LanguageSettingsPage), findsNothing);
       final display = k('settings-general-display');
       await t.ensureVisible(display);
@@ -446,7 +446,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(k('notification-settings-enabled'));
       await t.pumpAndSettle();
-      expect(p.notificationsEnabled, isTrue);
+      expect(p.settingsView.notificationsEnabled, isTrue);
       expect(gateway.requests, 1);
       expect(k('notification-course-default-reminder'), findsNothing);
       await t.ensureVisible(k('settings-notifications'));
@@ -455,8 +455,8 @@ void main() {
       await t.pumpAndSettle();
       await choose(t, 'notification-course-default-reminder', '10 min before');
       await choose(t, 'notification-general-default-reminder', '5 min before');
-      expect(p.courseDefaultMinutesBefore, 10);
-      expect(p.generalDefaultMinutesBefore, 5);
+      expect(p.settingsView.courseDefaultMinutesBefore, 10);
+      expect(p.settingsView.generalDefaultMinutesBefore, 5);
       await t.ensureVisible(k('notification-troubleshooting'));
       await t.pumpAndSettle();
       await t.tap(k('notification-troubleshooting'));

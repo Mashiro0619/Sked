@@ -131,7 +131,9 @@ Future<(TimetableProvider, _Storage, _RestoreGate)> _fixture({
   String colorMode = themeColorModeColorful,
 }) async {
   final seed = await workspaceProvider(mode: mode);
-  final storage = _Storage(_colorData(seed.appData, 0xff112233, colorMode));
+  final storage = _Storage(
+    _colorData(seed.workspaceView.data, 0xff112233, colorMode),
+  );
   seed.dispose();
   final gate = _RestoreGate();
   final provider = await workspaceProvider(
@@ -154,10 +156,10 @@ List<String> _colorRowKeys(TimetableProvider provider, AppMode mode) => [
   ])
     'theme-ui-color-$key',
   if (mode == AppMode.student)
-    for (final name in provider.courseNameColorValues.keys)
+    for (final name in provider.settingsView.courseNameColorValues.keys)
       'theme-course-color-$name',
   if (mode == AppMode.general) ...[
-    for (final schedule in provider.generalSchedules)
+    for (final schedule in provider.generalView.schedules)
       'theme-general-calendar-color-${schedule.id}',
     for (final key in colorfulGeneralMonthTextColorKeys)
       'theme-general-month-text-color-$key',
@@ -185,7 +187,7 @@ void main() {
           _viewport(tester);
           final (provider, storage, gate) = await _fixture(mode: mode);
           final backup = _colorData(
-            provider.appData,
+            provider.workspaceView.data,
             0xffabcdef,
             themeColorModeColorful,
           );
@@ -218,7 +220,7 @@ void main() {
             tester,
             find.widgetWithText(FilledButton, l10n.restoreBackupConfirmAction),
           );
-          expect(provider.isRestoringAppBackup, isTrue);
+          expect(provider.maintenance.isReserved, isTrue);
           expect(_status, findsOneWidget);
 
           staleSeedTap();
@@ -250,13 +252,13 @@ void main() {
           }
           expect(storage.writes, writesBeforeRestore);
           expect(
-            provider.colorfulUiColorValues[colorfulUiPrimaryKey],
+            provider.settingsView.colorfulUiColorValues[colorfulUiPrimaryKey],
             0xff112233,
           );
 
           gate.release();
           await tester.pumpAndSettle();
-          expect(provider.isRestoringAppBackup, isFalse);
+          expect(provider.maintenance.isReserved, isFalse);
           expect(_status, findsNothing);
           expect(_hex, findsNothing);
           expect(
@@ -269,19 +271,24 @@ void main() {
           );
           final expected = fails ? 0xff112233 : 0xffabcdef;
           expect(
-            provider.studentMode.colorfulUiColorValues.values,
+            provider.studentView.data.colorfulUiColorValues.values,
             everyElement(expected),
           );
           expect(
-            provider.generalMode.colorfulUiColorValues.values,
+            provider.generalView.visibleData.colorfulUiColorValues.values,
             everyElement(expected),
           );
-          expect(provider.courseNameColorValues.values, everyElement(expected));
           expect(
-            provider.generalSchedules.map((schedule) => schedule.colorValue),
+            provider.settingsView.courseNameColorValues.values,
             everyElement(expected),
           );
-          expect(provider.liveCourseOutlineColorValue, expected);
+          expect(
+            provider.generalView.schedules.map(
+              (schedule) => schedule.colorValue,
+            ),
+            everyElement(expected),
+          );
+          expect(provider.settingsView.liveCourseOutlineColorValue, expected);
           for (final rowKey in rowKeys) {
             expect(
               _tapIn(tester, _key(rowKey)).onTap,
@@ -305,7 +312,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(_hex, findsNothing);
           expect(
-            provider.colorfulUiColorValues[colorfulUiPrimaryKey],
+            provider.settingsView.colorfulUiColorValues[colorfulUiPrimaryKey],
             0xff345678,
           );
           expect(storage.writes, writesAfterRestore + 1);
@@ -342,15 +349,19 @@ void main() {
       final outline = _key('theme-outline-settings-card');
       final staleOutlineTap = _tapIn(tester, outline).onTap!;
       gate.blocked = true;
-      final restoring = provider.importAppDataJson(
+      final restoring = provider.backups.importJson(
         encodeAppBackup(
-          _colorData(provider.appData, 0xffabcdef, themeColorModeSingle),
+          _colorData(
+            provider.workspaceView.data,
+            0xffabcdef,
+            themeColorModeSingle,
+          ),
           [],
         ),
         mode: AppImportMode.replaceAll,
       );
       await _pump(tester);
-      expect(provider.isRestoringAppBackup, isTrue);
+      expect(provider.maintenance.isReserved, isTrue);
       expect(_tapIn(tester, custom).onTap, isNull);
       expect(_tapIn(tester, outline).onTap, isNull);
       staleSeedTap();
@@ -368,7 +379,7 @@ void main() {
       gate.release();
       await tester.pumpAndSettle();
       await restoring;
-      expect(provider.studentMode.themeSeedColorValue, 0xffabcdef);
+      expect(provider.studentView.data.themeSeedColorValue, 0xffabcdef);
       await _open(tester, custom);
       expect(tester.widget<TextField>(_hex).controller!.text, '#ABCDEF');
       await _open(tester, find.widgetWithText(TextButton, l10n.cancel));
@@ -377,7 +388,7 @@ void main() {
       await _open(tester, _key('theme-outline-page-apply'));
       await tester.pumpAndSettle();
       expect(_key('theme-outline-settings-page'), findsNothing);
-      expect(provider.liveCourseOutlineColorValue, 0xffabcdef);
+      expect(provider.settingsView.liveCourseOutlineColorValue, 0xffabcdef);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },

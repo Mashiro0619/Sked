@@ -189,7 +189,7 @@ void main() {
       'theme $kind busy rejects workspace disable and replacement',
       (t) async {
         final (p, storage) = await mountThemeTask(t, kind: kind);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         await t.enterText(
           themeTaskKey('compact-color-picker-hex-field'),
           '#234567',
@@ -201,12 +201,12 @@ void main() {
         await t.pump();
         await t.pump(const Duration(milliseconds: 100));
         final writes = storage.writes;
-        await p.setWorkspaceEnabled(AppMode.student, false);
+        await p.workspaces.setEnabled(AppMode.student, false);
         await expectLater(
-          p.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+          p.backups.importJson(backup, mode: AppImportMode.replaceAll),
           throwsA(isA<WorkspaceChangeCancelledException>()),
         );
-        expect(p.isWorkspaceEnabled(AppMode.student), isTrue);
+        expect(p.workspaceView.isEnabled(AppMode.student), isTrue);
         expect(storage.writes, writes);
         gate.complete();
         await t.pumpAndSettle();
@@ -223,14 +223,14 @@ void main() {
       'theme $kind retires on replacement before submit',
       (t) async {
         final (p, storage) = await mountThemeTask(t, kind: kind);
-        final backup = await p.exportAppDataJson();
+        final backup = await p.backups.exportJson();
         await t.enterText(
           themeTaskKey('compact-color-picker-hex-field'),
           '#234567',
         );
         await t.pump();
         final staleSubmit = t.widget<FilledButton>(themeApply(kind)).onPressed!;
-        await p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
+        await p.backups.importJson(backup, mode: AppImportMode.replaceAll);
         await t.pumpAndSettle();
         expect(themeTask, findsNothing);
         final writes = storage.writes;
@@ -250,14 +250,14 @@ void main() {
     'category color opened from theme retires after external deletion',
     (t) async {
       final (p, storage) = await mountThemeTask(t, kind: 'category');
-      final id = p.generalSchedules.first.id;
+      final id = p.generalView.schedules.first.id;
       await t.enterText(
         themeTaskKey('compact-color-picker-hex-field'),
         '#234567',
       );
       await t.pump();
       final stale = t.widget<FilledButton>(themeApply('value')).onPressed!;
-      await p.deleteGeneralSchedule(id);
+      await p.generalCommands.deleteSchedule(id);
       await t.pumpAndSettle();
       expect(themeTask, findsNothing);
       final writes = storage.writes;
@@ -276,19 +276,19 @@ void main() {
     'theme save stays bound to opening workspace after global mode switch',
     (t) async {
       final (p, _) = await mountThemeTask(t);
-      final generalBefore = p.generalMode.themeSeedColorValue;
+      final generalBefore = p.generalView.visibleData.themeSeedColorValue;
       await t.enterText(
         themeTaskKey('compact-color-picker-hex-field'),
         '#234567',
       );
       await t.pump();
-      await p.switchMode(AppMode.general);
+      await p.workspaces.switchMode(AppMode.general);
       await t.pumpAndSettle();
       expect(themeTask, findsOneWidget);
       await t.tap(themeApply('seed'));
       await t.pumpAndSettle();
-      expect(p.studentMode.themeSeedColorValue, 0xff234567);
-      expect(p.generalMode.themeSeedColorValue, generalBefore);
+      expect(p.studentView.data.themeSeedColorValue, 0xff234567);
+      expect(p.generalView.visibleData.themeSeedColorValue, generalBefore);
       await t.pumpWidget(const SizedBox());
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),

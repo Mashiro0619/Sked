@@ -267,7 +267,7 @@ Future<TimetableProvider> _createProvider({
     secretStore: secretStore ?? _MemorySecretStore('sk-test'),
     workspaceMutationLock: (action) => action(),
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -429,16 +429,16 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(api.callCount, 1);
-      final before = p.customSchoolImportModel;
-      final disabled = p.setWorkspaceEnabled(AppMode.student, false);
+      final before = p.settingsView.customSchoolImportModel;
+      final disabled = p.workspaces.setEnabled(AppMode.student, false);
       await tester.pump();
       await disabled;
       await tester.pump();
       expect(api.wasAborted, isTrue);
-      expect(p.isWorkspaceEnabled(AppMode.student), isFalse);
+      expect(p.workspaceView.isEnabled(AppMode.student), isFalse);
       api.completer.complete(['late-result']);
       await tester.pumpAndSettle();
-      expect(p.customSchoolImportModel, before);
+      expect(p.settingsView.customSchoolImportModel, before);
       expect(find.text('late-result'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
       p.dispose();
@@ -735,14 +735,20 @@ void main() {
     await tester.pump(const Duration(milliseconds: 499));
 
     expect(storage.saveCount, savesBeforeEdit);
-    expect(provider.customSchoolImportBaseUrl, 'https://api.example.com/v1');
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://api.example.com/v1',
+    );
 
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump();
 
     expect(storage.saveCount, savesBeforeEdit + 1);
-    expect(provider.customSchoolImportBaseUrl, 'https://latest.example.com/v1');
-    expect(provider.customSchoolImportPrompt, isEmpty);
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://latest.example.com/v1',
+    );
+    expect(provider.settingsView.customSchoolImportPrompt, isEmpty);
   });
 
   testWidgets('newest ordinary settings drain after an in-flight save', (
@@ -768,7 +774,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
-    expect(provider.customSchoolImportBaseUrl, 'https://latest.example.com/v1');
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://latest.example.com/v1',
+    );
   });
 
   testWidgets('back navigation waits for ordinary settings to save', (
@@ -794,7 +803,7 @@ void main() {
 
     expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
     expect(
-      provider.customSchoolImportBaseUrl,
+      provider.settingsView.customSchoolImportBaseUrl,
       'https://saved-before-pop.example.com/v1',
     );
   });
@@ -812,7 +821,7 @@ void main() {
     await tester.pump();
 
     expect(storage.saveCount, savesBeforeEdit + 1);
-    expect(provider.customSchoolImportModel, 'focus-model');
+    expect(provider.settingsView.customSchoolImportModel, 'focus-model');
   });
 
   testWidgets('ordinary parser settings flush when the app enters background', (
@@ -828,7 +837,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, savesBeforeEdit + 1);
-    expect(provider.customSchoolImportModel, 'background-model');
+    expect(provider.settingsView.customSchoolImportModel, 'background-model');
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
 
@@ -836,9 +845,9 @@ void main() {
     tester,
   ) async {
     final provider = await _createProvider();
-    await provider.updateCustomSchoolImportTextSettings(
-      baseUrl: provider.customSchoolImportBaseUrl,
-      model: provider.customSchoolImportModel,
+    await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+      baseUrl: provider.settingsView.customSchoolImportBaseUrl,
+      model: provider.settingsView.customSchoolImportModel,
       prompt: 'Custom stored prompt',
     );
     await _pumpPage(tester, provider, const SchoolImportApi());
@@ -851,7 +860,7 @@ void main() {
     await tester.tap(resetPrompt);
     await tester.pumpAndSettle();
 
-    expect(provider.customSchoolImportPrompt, isEmpty);
+    expect(provider.settingsView.customSchoolImportPrompt, isEmpty);
     final promptField = tester.widget<TextField>(find.byType(TextField).last);
     expect(
       promptField.controller?.text,
@@ -876,7 +885,10 @@ void main() {
       tester.widget<TextField>(_baseUrlTextField()).controller?.text,
       draft,
     );
-    expect(provider.customSchoolImportBaseUrl, 'https://api.example.com/v1');
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://api.example.com/v1',
+    );
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -907,17 +919,17 @@ void main() {
     await tester.enterText(apiKeyField, 'sk-new');
     await tester.pump();
 
-    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
     expect(secrets.writes, isEmpty);
 
     await tester.pump(const Duration(milliseconds: 499));
-    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
     expect(secrets.writes, isEmpty);
 
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump();
 
-    expect(provider.customSchoolImportApiKey, 'sk-new');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-new');
     expect(secrets.writes, ['sk-new']);
     await tester.tap(_fetchModelsButton());
     await tester.pump();
@@ -938,7 +950,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
-    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
   });
 
@@ -957,7 +969,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(secrets.writes, ['sk-background']);
-    expect(provider.customSchoolImportApiKey, 'sk-background');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-background');
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
 
@@ -986,7 +998,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(secrets.value, 'sk-second');
-    expect(provider.customSchoolImportApiKey, 'sk-second');
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-second');
     expect(find.text('Save failed. Please try again later.'), findsNothing);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });

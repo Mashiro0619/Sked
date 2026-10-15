@@ -46,7 +46,7 @@ Future<TimetableProvider> _createProvider() async {
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -199,31 +199,31 @@ void main() {
     expect(find.text('Timetable display and interaction'), findsOneWidget);
 
     await _toggleSetting(tester, 'Allow outside tap to close course popup');
-    expect(provider.closeCoursePopupOnOutsideTap, isFalse);
+    expect(provider.settingsView.closeCoursePopupOnOutsideTap, isFalse);
 
     await _toggleSetting(tester, 'Preserve timetable gaps');
-    expect(provider.preserveTimetableGaps, isTrue);
+    expect(provider.settingsView.preserveTimetableGaps, isTrue);
 
     await _toggleSetting(tester, 'Show past-ended courses');
-    expect(provider.showPastEndedCourses, isTrue);
+    expect(provider.settingsView.showPastEndedCourses, isTrue);
 
     await _toggleSetting(tester, 'Show future courses');
-    expect(provider.showFutureCourses, isFalse);
+    expect(provider.settingsView.showFutureCourses, isFalse);
 
     await _toggleSetting(tester, 'Fit day selector to screen');
-    expect(provider.fitDaySelectorToWidth, isFalse);
+    expect(provider.settingsView.fitDaySelectorToWidth, isFalse);
 
     await _toggleSetting(tester, 'Fit week columns to screen');
-    expect(provider.fitWeekColumnsToWidth, isFalse);
+    expect(provider.settingsView.fitWeekColumnsToWidth, isFalse);
 
     await _toggleSetting(tester, 'Swipe to change weeks');
-    expect(provider.enableWeekSwipeNavigation, isFalse);
+    expect(provider.settingsView.enableWeekSwipeNavigation, isFalse);
 
     await _toggleSetting(tester, 'Show timetable grid lines');
-    expect(provider.showTimetableGridLines, isFalse);
+    expect(provider.settingsView.showTimetableGridLines, isFalse);
 
     await _toggleSetting(tester, 'Show floating add course button');
-    expect(provider.showAddCourseFab, isFalse);
+    expect(provider.settingsView.showAddCourseFab, isFalse);
     final longPressSetting = find.byKey(
       const ValueKey('enable-long-press-add-course-setting'),
     );
@@ -241,7 +241,7 @@ void main() {
       findsOneWidget,
     );
     await _toggleSetting(tester, 'Long-press blank grid to add courses');
-    expect(provider.enableLongPressAddCourse, isFalse);
+    expect(provider.settingsView.enableLongPressAddCourse, isFalse);
     expect(find.text('Quick actions'), findsOneWidget);
   });
 
@@ -265,7 +265,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      provider.studentToolbarHiddenItemsBehavior,
+      provider.settingsView.studentToolbarHiddenItemsBehavior,
       toolbarHiddenItemsBehaviorMore,
     );
   });
@@ -304,7 +304,7 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(provider.studentToolbarNavigationOrder.first, 'week');
+    expect(provider.settingsView.studentToolbarNavigationOrder.first, 'week');
     expect(tester.takeException(), isNull);
   });
 }

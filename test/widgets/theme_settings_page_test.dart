@@ -75,7 +75,7 @@ Future<TimetableProvider> _createProvider(
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
-  await provider.load();
+  await provider.lifecycle.load();
   return provider;
 }
 
@@ -336,7 +336,7 @@ void main() {
       await tester.tap(apply);
       await tester.pumpAndSettle();
       expect(storage.saveCount, 2);
-      expect(provider.themeSeedColorValue, 0xFF234567);
+      expect(provider.settingsView.themeSeedColorValue, 0xFF234567);
       expect(find.byType(SkedTaskDialog), findsNothing);
       expect(tester.takeException(), isNull);
     },
@@ -628,9 +628,9 @@ void main() {
       'theme-workspace-mode-choice-list',
       'Schedule',
     );
-    expect(provider.activeMode, AppMode.student);
-    expect(provider.themeMode, 'system');
-    expect(provider.themeSeedColorValue, 0xFF6750A4);
+    expect(provider.workspaceView.activeMode, AppMode.student);
+    expect(provider.settingsView.themeMode, 'system');
+    expect(provider.settingsView.themeSeedColorValue, 0xFF6750A4);
     expect(storage.saveCount, 0);
     expect(
       find.byKey(const ValueKey('theme-outline-settings-card')),
@@ -650,9 +650,9 @@ void main() {
       'theme-brightness-mode-choice-list',
       'Light',
     );
-    expect(provider.generalMode.themeMode, 'light');
-    expect(provider.studentMode.themeMode, 'system');
-    expect(provider.activeMode, AppMode.student);
+    expect(provider.generalView.visibleData.themeMode, 'light');
+    expect(provider.studentView.data.themeMode, 'system');
+    expect(provider.workspaceView.activeMode, AppMode.student);
     expect(storage.saveCount, 1);
   });
 
@@ -671,7 +671,7 @@ void main() {
         'Schedule',
       );
       expect(storage.saveCount, 0);
-      final original = provider.generalMode.themeMode;
+      final original = provider.generalView.visibleData.themeMode;
       final field = find.byKey(
         const ValueKey('theme-brightness-mode-choice-list'),
       );
@@ -691,10 +691,10 @@ void main() {
       select('dark');
       await tester.pump();
       expect(storage.saveCount, 1);
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.workspaceView.activeMode, AppMode.student);
       storage.completeSave();
       await tester.pumpAndSettle();
-      expect(provider.generalMode.themeMode, original);
+      expect(provider.generalView.visibleData.themeMode, original);
       expect(storage.data?.activeMode, AppMode.student);
       expect(find.text('Save failed. Please try again later.'), findsOneWidget);
       await _chooseAppearance(
@@ -702,8 +702,8 @@ void main() {
         'theme-brightness-mode-choice-list',
         'Dark',
       );
-      expect(provider.generalMode.themeMode, 'dark');
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.generalView.visibleData.themeMode, 'dark');
+      expect(provider.workspaceView.activeMode, AppMode.student);
       expect(storage.saveCount, 2);
     },
   );
@@ -765,7 +765,7 @@ void main() {
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
     final provider = await _createProvider(storage);
-    final initialEnabled = provider.liveCourseOutlineEnabled;
+    final initialEnabled = provider.settingsView.liveCourseOutlineEnabled;
 
     await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
     await tester.pumpAndSettle();
@@ -794,7 +794,7 @@ void main() {
       find.byKey(const ValueKey('theme-outline-settings-page')),
       findsNothing,
     );
-    expect(provider.liveCourseOutlineEnabled, initialEnabled);
+    expect(provider.settingsView.liveCourseOutlineEnabled, initialEnabled);
     expect(storage.saveCount, 0);
   });
 
@@ -833,7 +833,7 @@ void main() {
     );
     final provider = await _createProvider(storage);
     final derivedColor = deriveLiveCourseOutlineColorFromSeed(
-      Color(provider.themeSeedColorValue),
+      Color(provider.settingsView.themeSeedColorValue),
     ).toARGB32();
 
     await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
@@ -888,9 +888,12 @@ void main() {
       find.byKey(const ValueKey('theme-outline-settings-page')),
       findsNothing,
     );
-    expect(provider.liveCourseOutlineFollowTheme, isFalse);
-    expect(provider.liveCourseOutlineColorValue, derivedColor);
-    expect(provider.liveCourseOutlineCustomColorInitialized, isTrue);
+    expect(provider.settingsView.liveCourseOutlineFollowTheme, isFalse);
+    expect(provider.settingsView.liveCourseOutlineColorValue, derivedColor);
+    expect(
+      provider.settingsView.liveCourseOutlineCustomColorInitialized,
+      isTrue,
+    );
     expect(storage.data?.studentMode.liveCourseOutlineFollowTheme, isFalse);
     expect(storage.saveCount, 1);
   });
@@ -902,7 +905,7 @@ void main() {
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
     final provider = await _createProvider(storage);
-    final initialEnabled = provider.liveCourseOutlineEnabled;
+    final initialEnabled = provider.settingsView.liveCourseOutlineEnabled;
 
     await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
     await tester.pumpAndSettle();
@@ -921,7 +924,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
-    expect(provider.liveCourseOutlineEnabled, initialEnabled);
+    expect(provider.settingsView.liveCourseOutlineEnabled, initialEnabled);
     expect(
       tester
           .widget<Switch>(
@@ -937,7 +940,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('theme-outline-page-apply')));
     await tester.pumpAndSettle();
 
-    expect(provider.liveCourseOutlineEnabled, !initialEnabled);
+    expect(provider.settingsView.liveCourseOutlineEnabled, !initialEnabled);
     expect(storage.saveCount, 2);
     expect(
       find.byKey(const ValueKey('theme-outline-settings-page')),
@@ -1051,7 +1054,7 @@ void main() {
     await tester.pumpAndSettle();
 
     materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(provider.themeSeedColorValue, 0xFFD32F2F);
+    expect(provider.settingsView.themeSeedColorValue, 0xFFD32F2F);
     expect(materialApp.theme!.colorScheme.primary, const Color(0xFFD32F2F));
     expect(
       materialApp.theme!.navigationBarTheme.indicatorColor,
@@ -1077,7 +1080,7 @@ void main() {
       'Dark',
     );
 
-    expect(provider.themeMode, newUserDefaultThemeMode);
+    expect(provider.settingsView.themeMode, newUserDefaultThemeMode);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
 
     await _chooseAppearance(
@@ -1086,7 +1089,7 @@ void main() {
       'Dark',
     );
 
-    expect(provider.themeMode, 'dark');
+    expect(provider.settingsView.themeMode, 'dark');
     expect(storage.saveCount, 2);
   });
 
@@ -1325,7 +1328,7 @@ void main() {
 
     expect(applyButton, findsNothing);
     expect(storage.saveCount, 1);
-    expect(provider.themeSeedColorValue, 0xFF123456);
+    expect(provider.settingsView.themeSeedColorValue, 0xFF123456);
     expect(storage.data?.themeSeedColorValue, 0xFF123456);
   });
 
@@ -1382,7 +1385,7 @@ void main() {
 
     expect(find.byType(AlertDialog), findsNothing);
     expect(storage.saveCount, 2);
-    expect(provider.themeSeedColorValue, 0xFF345678);
+    expect(provider.settingsView.themeSeedColorValue, 0xFF345678);
   });
 
   testWidgets('all theme persistence dialogs share the busy guard', (

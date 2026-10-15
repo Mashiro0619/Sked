@@ -43,7 +43,7 @@ class _Storage extends WorkspaceMemoryStorage {
 
 Future<(TimetableProvider, _Storage)> _fixture() async {
   final seed = await workspaceProvider();
-  final storage = _Storage(seed.appData);
+  final storage = _Storage(seed.workspaceView.data);
   seed.dispose();
   return (await workspaceProvider(storage: storage), storage);
 }
@@ -55,7 +55,7 @@ void main() {
       _viewport(t, const Size(600, 900));
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
-      final bindings = p.timetables
+      final bindings = p.studentView.timetables
           .map((item) => item.config.periodTimeSetId)
           .toList();
       final writes = storage.writes;
@@ -71,7 +71,8 @@ void main() {
                 onPressed: () async {
                   selected = await showPeriodTimeSetPickerDialog(
                     context,
-                    selectedPeriodTimeSetId: p.periodTimeSets.first.id,
+                    selectedPeriodTimeSetId:
+                        p.studentView.periodTimeSets.first.id,
                   );
                   completed = true;
                 },
@@ -93,7 +94,9 @@ void main() {
       expect(completed, isTrue);
       expect(selected, isNull);
       expect(
-        p.timetables.map((item) => item.config.periodTimeSetId).toList(),
+        p.studentView.timetables
+            .map((item) => item.config.periodTimeSetId)
+            .toList(),
         bindings,
       );
       expect(storage.writes, writes);
@@ -113,7 +116,7 @@ void main() {
         _viewport(t, Size(width, 900));
         final (p, storage) = await _fixture();
         addTearDown(p.dispose);
-        final before = p.activeTimetable.config.periodTimeSetId;
+        final before = p.studentView.activeTimetable.config.periodTimeSetId;
         final writes = storage.writes;
         await t.pumpWidget(
           WorkspaceHarness(provider: p, home: const SettingsPage()),
@@ -121,7 +124,7 @@ void main() {
         await t.pumpAndSettle();
         expect(_key('settings-period-times'), findsNothing);
         expect(find.byType(PeriodTimeSetPickerDialogView), findsNothing);
-        expect(p.activeTimetable.config.periodTimeSetId, before);
+        expect(p.studentView.activeTimetable.config.periodTimeSetId, before);
         expect(storage.writes, writes);
       },
       variant: TargetPlatformVariant({
@@ -137,11 +140,11 @@ void main() {
       _viewport(t, const Size(1440, 900));
       final p = await workspaceProvider();
       addTearDown(p.dispose);
-      final other = await p.addPeriodTimeSet(
+      final other = await p.studentCommands.addPeriodTimeSet(
         name: 'Evening',
         periodTimes: buildDefaultPeriodTimes(),
       );
-      final original = p.activeTimetable.config.periodTimeSetId;
+      final original = p.studentView.activeTimetable.config.periodTimeSetId;
       await t.pumpWidget(WorkspaceHarness(provider: p));
       await t.pumpAndSettle();
       await _open(t, 'student-resource-menu');
@@ -160,8 +163,11 @@ void main() {
       await t.enterText(_key('period-times-name'), 'Renamed evening');
       await t.pump(const Duration(milliseconds: 500));
       await t.pumpAndSettle();
-      expect(p.periodTimeSetForId(other.id)!.name, 'Renamed evening');
-      expect(p.activeTimetable.config.periodTimeSetId, original);
+      expect(
+        p.studentView.periodTimeSetForId(other.id)!.name,
+        'Renamed evening',
+      );
+      expect(p.studentView.activeTimetable.config.periodTimeSetId, original);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -176,14 +182,15 @@ void main() {
         final p = await workspaceProvider();
         addTearDown(p.dispose);
         if (empty) {
-          for (final timetable in p.timetables.toList()) {
-            await p.deleteTimetable(timetable.id);
+          for (final timetable in p.studentView.timetables.toList()) {
+            await p.studentCommands.deleteTimetable(timetable.id);
           }
-          for (final set in p.periodTimeSets.toList()) {
-            await p.deletePeriodTimeSet(set.id);
+          for (final set in p.studentView.periodTimeSets.toList()) {
+            await p.studentCommands.deletePeriodTimeSet(set.id);
           }
         }
-        final before = p.activeTimetableOrNull?.config.periodTimeSetId;
+        final before =
+            p.studentView.activeTimetableOrNull?.config.periodTimeSetId;
         await t.pumpWidget(WorkspaceHarness(provider: p));
         await t.pumpAndSettle();
         await _open(t, 'student-toolbar-more-button');
@@ -193,11 +200,11 @@ void main() {
         if (empty) {
           expect(find.text('No available period time set'), findsOneWidget);
           await _open(t, 'period-time-set-create');
-          expect(p.periodTimeSets, hasLength(1));
+          expect(p.studentView.periodTimeSets, hasLength(1));
           expect(find.byType(PeriodTimesPage), findsOneWidget);
-          expect(p.activeTimetableOrNull, isNull);
+          expect(p.studentView.activeTimetableOrNull, isNull);
         } else {
-          expect(p.activeTimetable.config.periodTimeSetId, before);
+          expect(p.studentView.activeTimetable.config.periodTimeSetId, before);
         }
         expect(t.takeException(), isNull);
       },
@@ -211,11 +218,11 @@ void main() {
       _viewport(t, const Size(393, 900));
       final (p, storage) = await _fixture();
       addTearDown(p.dispose);
-      final other = await p.addPeriodTimeSet(
+      final other = await p.studentCommands.addPeriodTimeSet(
         name: 'Evening',
         periodTimes: buildDefaultPeriodTimes(),
       );
-      final original = p.activeTimetable.config.periodTimeSetId;
+      final original = p.studentView.activeTimetable.config.periodTimeSetId;
       final writes = storage.writes;
       String? result;
       await t.pumpWidget(
@@ -245,7 +252,7 @@ void main() {
           .onSelect(other.id);
       await t.pumpAndSettle();
       expect(result, other.id);
-      expect(p.activeTimetable.config.periodTimeSetId, original);
+      expect(p.studentView.activeTimetable.config.periodTimeSetId, original);
       expect(storage.writes, writes);
       await t.tap(find.text('Choose'));
       await t.pumpAndSettle();
@@ -256,7 +263,7 @@ void main() {
           .onCancel();
       await t.pumpAndSettle();
       expect(result, isNull);
-      expect(p.activeTimetable.config.periodTimeSetId, original);
+      expect(p.studentView.activeTimetable.config.periodTimeSetId, original);
       expect(storage.writes, writes);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
@@ -268,11 +275,11 @@ void main() {
     _viewport(t, const Size(393, 900));
     final (p, storage) = await _fixture();
     addTearDown(p.dispose);
-    for (final table in p.timetables.toList()) {
-      await p.deleteTimetable(table.id);
+    for (final table in p.studentView.timetables.toList()) {
+      await p.studentCommands.deleteTimetable(table.id);
     }
-    for (final set in p.periodTimeSets.toList()) {
-      await p.deletePeriodTimeSet(set.id);
+    for (final set in p.studentView.periodTimeSets.toList()) {
+      await p.studentCommands.deletePeriodTimeSet(set.id);
     }
     final writes = storage.writes;
     await t.pumpWidget(WorkspaceHarness(provider: p));
@@ -284,12 +291,12 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.widgetWithText(FilledButton, 'Save'));
     await t.pumpAndSettle();
-    expect(p.timetables, isEmpty);
-    expect(p.periodTimeSets, isEmpty);
+    expect(p.studentView.timetables, isEmpty);
+    expect(p.studentView.periodTimeSets, isEmpty);
     expect(storage.writes, writes);
     await t.tap(find.widgetWithText(TextButton, 'Cancel').last);
     await t.pumpAndSettle();
-    expect(p.timetables, isEmpty);
+    expect(p.studentView.timetables, isEmpty);
     expect(storage.writes, writes);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
@@ -323,7 +330,7 @@ void main() {
       );
       await t.tap(_key('language-option-de'));
       await t.pumpAndSettle();
-      expect(p.localeCode, 'de');
+      expect(p.settingsView.localeCode, 'de');
       expect(find.byType(LanguageSettingsPage), findsOneWidget);
       t.view.physicalSize = const Size(393, 900);
       await t.pumpAndSettle();
@@ -358,11 +365,11 @@ void main() {
       storage.pending!.complete();
       await t.pumpAndSettle();
       storage.pending = null;
-      expect(p.localeCode, 'en');
+      expect(p.settingsView.localeCode, 'en');
       expect(find.byType(LanguageSettingsPage), findsOneWidget);
       await t.tap(_key('language-option-de'));
       await t.pumpAndSettle();
-      expect(p.localeCode, 'de');
+      expect(p.settingsView.localeCode, 'de');
       expect(find.byType(LanguageSettingsPage), findsNothing);
       expect(t.takeException(), isNull);
     },

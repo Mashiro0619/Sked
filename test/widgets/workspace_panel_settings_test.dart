@@ -136,7 +136,8 @@ void main() {
           addTearDown(t.view.resetViewInsets);
           final provider = await workspaceProvider(mode: workspace);
           addTearDown(provider.dispose);
-          await provider.updateHomeWorkspaceNavigationCollapsed(collapsed);
+          await provider.settingsCommands
+              .updateHomeWorkspaceNavigationCollapsed(collapsed);
           final preferences = DeveloperUiPreferences.memory(visible: true);
           addTearDown(preferences.dispose);
           await t.pumpWidget(
@@ -165,7 +166,10 @@ void main() {
           expect(keyboardCanvas.left, canvas.left);
           expect(keyboardCanvas.width, canvas.width);
           expect(keyboardCanvas.height, lessThan(canvas.height));
-          expect(provider.homeWorkspaceNavigationCollapsed, collapsed);
+          expect(
+            provider.settingsView.homeWorkspaceNavigationCollapsed,
+            collapsed,
+          );
           expect(
             t.widget<TextField>(_key('assistant-draft')).controller!.text,
             'Keep the layout while typing',
@@ -178,7 +182,10 @@ void main() {
           t.view.physicalSize = const Size(1200, 400);
           await t.pumpAndSettle();
           expect(t.getSize(_key('workspace-resource-width')).width, 80);
-          expect(provider.homeWorkspaceNavigationCollapsed, collapsed);
+          expect(
+            provider.settingsView.homeWorkspaceNavigationCollapsed,
+            collapsed,
+          );
           expect(t.takeException(), isNull);
           await t.pumpWidget(const SizedBox.shrink());
         },
@@ -193,15 +200,15 @@ void main() {
       _viewport(t);
       final provider = await workspaceProvider();
       addTearDown(provider.dispose);
-      await provider.updateWorkspacePanelDisplayMode(
+      await provider.settingsCommands.updateWorkspacePanelDisplayMode(
         WorkspacePanelDisplayMode.sideBySide,
       );
-      final original = provider.activeTimetable;
-      await provider.addTimetable(
+      final original = provider.studentView.activeTimetable;
+      await provider.studentCommands.addTimetable(
         original.config.copyWith(name: 'Another timetable'),
       );
-      final other = provider.activeTimetable;
-      await provider.switchTimetable(original.id);
+      final other = provider.studentView.activeTimetable;
+      await provider.studentCommands.switchTimetable(original.id);
       await t.pumpWidget(WorkspaceHarness(provider: provider));
       await t.pumpAndSettle();
       final l = AppLocalizations.of(t.element(find.byType(WorkspaceFrame)));
@@ -215,7 +222,7 @@ void main() {
       await t.enterText(field, 'Original timetable draft');
       await t.tap(_key('resource-timetable-${other.id}'));
       await t.pumpAndSettle();
-      expect(provider.activeTimetable.id, other.id);
+      expect(provider.studentView.activeTimetable.id, other.id);
       expect(t.state(editor), same(state));
       expect(
         t.widget<TextField>(field).controller!.text,
@@ -227,14 +234,14 @@ void main() {
       await t.pumpAndSettle();
       expect(editor, findsNothing);
       expect(
-        provider.timetables
+        provider.studentView.timetables
             .singleWhere((table) => table.id == original.id)
             .courses
             .where((course) => course.name == 'Original timetable draft'),
         hasLength(1),
       );
-      expect(provider.activeTimetable.id, other.id);
-      expect(provider.activeTimetable.courses, other.courses);
+      expect(provider.studentView.activeTimetable.id, other.id);
+      expect(provider.studentView.activeTimetable.courses, other.courses);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox.shrink());
     },
@@ -285,7 +292,7 @@ void main() {
         l.settingsPanelDisplaySideBySide,
       );
       expect(
-        provider.workspacePanelDisplayMode,
+        provider.settingsView.workspacePanelDisplayMode,
         WorkspacePanelDisplayMode.sideBySide,
       );
       expect(
@@ -298,14 +305,14 @@ void main() {
         overview ? l.themeWorkspaceSchedule : l.timetable,
       );
       expect(tile().value, WorkspacePanelDisplayMode.sideBySide);
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.workspaceView.activeMode, AppMode.student);
       await _choose(
         t,
         'settings-panel-display-mode',
         l.settingsPanelDisplayAutomatic,
       );
       expect(
-        provider.workspacePanelDisplayMode,
+        provider.settingsView.workspacePanelDisplayMode,
         WorkspacePanelDisplayMode.automatic,
       );
       storage.saveError = StateError('save failed');
@@ -315,7 +322,7 @@ void main() {
         l.settingsPanelDisplayOverlay,
       );
       expect(
-        provider.workspacePanelDisplayMode,
+        provider.settingsView.workspacePanelDisplayMode,
         WorkspacePanelDisplayMode.automatic,
       );
       expect(tile().value, WorkspacePanelDisplayMode.automatic);
@@ -332,8 +339,11 @@ void main() {
           _viewport(t);
           final provider = await workspaceProvider(mode: AppMode.general);
           addTearDown(provider.dispose);
-          await provider.updateHomeWorkspaceNavigationCollapsed(collapsed);
-          await provider.updateGeneralDisplaySettings(defaultView: view);
+          await provider.settingsCommands
+              .updateHomeWorkspaceNavigationCollapsed(collapsed);
+          await provider.generalCommands.updateDisplaySettings(
+            defaultView: view,
+          );
           final preferences = DeveloperUiPreferences.memory(visible: true);
           addTearDown(preferences.dispose);
           await t.pumpWidget(
@@ -350,7 +360,10 @@ void main() {
           void expectStable() {
             expect(t.getRect(_key('workspace-resource-width')), sidebar);
             expect(t.getRect(_key('workspace-canvas-viewport')), calendar);
-            expect(provider.homeWorkspaceNavigationCollapsed, collapsed);
+            expect(
+              provider.settingsView.homeWorkspaceNavigationCollapsed,
+              collapsed,
+            );
             expect(
               _key('assistant-toggle').hitTestable(),
               frame.controller.floatingEditor ? findsNothing : findsOneWidget,
@@ -427,7 +440,7 @@ void main() {
           toolbar.bottom + (frame.controller.floatingEditor ? 8 : 0),
         );
         expect(t.getRect(_key('timetable-day-header').first), dayHeader);
-        await provider.updateWorkspacePanelDisplayMode(
+        await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
         await t.pumpAndSettle();
