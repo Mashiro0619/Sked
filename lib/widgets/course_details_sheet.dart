@@ -23,7 +23,7 @@ import '../models/timetable_models.dart'
         isFullConflictGroup,
         pickDisplayedCourseForConflict,
         resolveCourseTimeRange;
-import '../providers/timetable_provider.dart';
+import '../controllers/student_view_state.dart';
 import 'ui_command.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_panel_header.dart';
@@ -91,9 +91,9 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    final content = Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        final timetable = provider.timetables
+    final content = Consumer<StudentViewState>(
+      builder: (context, student, child) {
+        final timetable = student.timetables
             .where((item) => item.id == widget.timetableId)
             .firstOrNull;
         if (timetable == null) {
@@ -109,11 +109,11 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
           _notifyMissing();
           return const SizedBox.shrink();
         }
-        final periodTimes = provider.periodTimesForTimetable(timetable);
+        final periodTimes = student.periodTimesForTimetable(timetable);
         final timeLabel = _effectiveTimeLabel(course, periodTimes);
 
         final resolvedConflictCourses = _resolveConflictCourses(
-          provider: provider,
+          student: student,
           timetable: timetable,
           course: course,
         );
@@ -312,7 +312,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
   }
 
   List<CourseItem> _resolveConflictCourses({
-    required TimetableProvider provider,
+    required StudentViewState student,
     required TimetableData timetable,
     required CourseItem course,
   }) {
@@ -320,7 +320,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
       return [course];
     }
 
-    final periodTimes = provider.periodTimesForTimetable(timetable);
+    final periodTimes = student.periodTimesForTimetable(timetable);
     CourseItem effectiveCourse(CourseItem item) {
       final range = resolveCourseTimeRange(item, periodTimes);
       return range == null
@@ -346,7 +346,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
         .toList();
     if (exactRangeCourses.length > 1 &&
         isFullConflictGroup(exactRangeCourses)) {
-      return _sortConflictCourses(provider, exactRangeCourses);
+      return _sortConflictCourses(student, exactRangeCourses);
     }
 
     final containingCourses = sameWeekdayCourses
@@ -358,14 +358,14 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
         .toList();
     if (containingCourses.length > 1 &&
         isFullConflictGroup(containingCourses)) {
-      return _sortConflictCourses(provider, containingCourses);
+      return _sortConflictCourses(student, containingCourses);
     }
 
     return [course];
   }
 
   List<CourseItem> _sortConflictCourses(
-    TimetableProvider provider,
+    StudentViewState student,
     List<CourseItem> courses,
   ) {
     if (courses.length < 2) {
@@ -374,7 +374,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
     final key =
         widget.conflictKey ??
         buildConflictKeyForCourses(widget.timetableId, widget.weekday, courses);
-    final displayedCourseId = provider.displayedCourseIdForConflict(key);
+    final displayedCourseId = student.displayedCourseIdForConflict(key);
     final displayedCourse = pickDisplayedCourseForConflict(
       courses,
       displayedCourseId,

@@ -131,6 +131,37 @@ Future<_Fixture> _pump(
 
 void main() {
   testWidgets(
+    'details ignore unrelated domains and render owner-course changes',
+    (tester) async {
+      final fixture = await _pump(tester);
+      final app = fixture.provider;
+      final panels = find.byType(WorkspaceViewPanel);
+      final original = tester.widget<WorkspaceViewPanel>(panels);
+
+      await app.generalCommands.addSchedule(name: 'Unrelated calendar');
+      await tester.pumpAndSettle();
+      expect(tester.widget<WorkspaceViewPanel>(panels), same(original));
+      await app.settingsCommands.updateIncludePrereleaseUpdates(
+        !app.settingsView.includePrereleaseUpdates,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.widget<WorkspaceViewPanel>(panels), same(original));
+
+      final updated = fixture.course.copyWith(teacher: 'Updated teacher');
+      await app.studentCommands.saveCourse(updated);
+      await tester.pumpAndSettle();
+      expect(find.text(updated.teacher), findsOneWidget);
+      expect(tester.widget<WorkspaceViewPanel>(panels), isNot(same(original)));
+
+      await app.studentCommands.deleteCourse(updated.id);
+      await tester.pumpAndSettle();
+      expect(panels, findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: _desktop,
+  );
+
+  testWidgets(
     'desktop details remove nested card padding and use deliberate group gaps',
     (tester) async {
       final fixture = await _pump(tester);
