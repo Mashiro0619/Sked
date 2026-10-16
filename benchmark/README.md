@@ -5,6 +5,12 @@ not a CI timing gate. Correctness is enforced by fixed workload checksums and
 unit tests; timings are evidence for engineering decisions and must only be
 compared between runs from the same environment.
 
+Fresh Windows process startup, visible readiness, input response, and four
+whole-process RSS observations use the separate [startup protocol](STARTUP.md).
+Its memory samples include precise observation times, read costs, entry-to-ready
+and entry-to-end changes, and the process lifetime peak through measurement end.
+These are separate from this suite's warmed host JIT and UI frame workloads.
+
 ## Protocol
 
 - Fixtures are built before timing and contain 1,000/5,000 calendar events,

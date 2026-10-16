@@ -10,6 +10,7 @@ import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 
 import 'startup_clock.dart';
+import 'startup_memory.dart';
 import 'startup_native_clock.dart';
 import 'startup_native_window.dart';
 import 'startup_protocol.dart';
@@ -63,8 +64,9 @@ class StartupFrame {
 }
 
 class StartupProbe {
-  StartupProbe(this.clock);
+  StartupProbe(this.clock, {required this.memory});
   final StartupClock clock;
+  final StartupMemoryRecorder memory;
   StartupRuntime? runtime;
   bool Function() preferencesReady = () => false;
   final events = <Map<String, Object?>>[];
@@ -350,6 +352,14 @@ class StartupProbe {
   void _resolveFrames() {
     for (final frame in frames) {
       if (frame.number == readyNumber && !ready.isCompleted) {
+        memory.capture(
+          'readyRasterReportObserved',
+          frameNumber: frame.number,
+          rasterFinishWallTimeUs: frame.phase(
+            ui.FramePhase.rasterFinishWallTime,
+          ),
+          reportStamp: frame.receipt,
+        );
         nativeWindowMilestones['readyFrameReport'] = _observeNativeWindow(
           'readyFrameReport',
           frameNumber: frame.number,
@@ -357,6 +367,14 @@ class StartupProbe {
         ready.complete(frame);
       }
       if (frame.number == responseNumber && !response.isCompleted) {
+        memory.capture(
+          'responseRasterReportObserved',
+          frameNumber: frame.number,
+          rasterFinishWallTimeUs: frame.phase(
+            ui.FramePhase.rasterFinishWallTime,
+          ),
+          reportStamp: frame.receipt,
+        );
         nativeWindowMilestones['responseFrameReport'] = _observeNativeWindow(
           'responseFrameReport',
           frameNumber: frame.number,
@@ -431,6 +449,8 @@ class StartupProbe {
   }
 
   Map<String, Object?> stop() {
+    // Sample before clock validation, source checks, or report encoding grows memory.
+    memory.capture('measurementEnd');
     stopped = true;
     _visibilityRetry?.cancel();
     _visibilityRetry = null;
@@ -471,6 +491,12 @@ class StartupProbe {
     final first = ordered.isEmpty ? null : ordered.first;
     final readyFrame = numbered(readyNumber);
     final responseFrame = numbered(responseNumber);
+    final memoryReport = memory.report(
+      readyRaster: readyFrame?.toJson(),
+      responseRaster: responseFrame?.toJson(),
+      measurementEnd: end,
+    );
+    errors.addAll((memoryReport['issues']! as List).cast<String>());
     if (readyFrame == null || responseFrame == null) {
       errors.add('A required raster frame is missing.');
     }
@@ -515,6 +541,7 @@ class StartupProbe {
       'entry': clock.entry,
       'measurementEnd': end,
       'clock': clockReport,
+      'memory': memoryReport,
       'firstRaster': first?.toJson(),
       'readyRaster': readyFrame?.toJson(),
       'responseRaster': responseFrame?.toJson(),

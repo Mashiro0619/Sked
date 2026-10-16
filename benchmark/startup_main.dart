@@ -22,6 +22,7 @@ import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_distribution.dart';
 import 'package:sked/services/update_service.dart';
 
+import 'src/startup_memory.dart';
 import 'src/startup_probe.dart';
 import 'src/startup_protocol.dart';
 import 'src/startup_runtime_adapter.dart';
@@ -31,6 +32,8 @@ const _compiledEngine = String.fromEnvironment('SKED_STARTUP_ENGINE');
 
 Future<void> main(List<String> arguments) async {
   final clock = StartupClock();
+  // Before run-spec I/O, fixtures/models, binding or production app startup.
+  final memory = StartupMemoryRecorder(clock)..capture('entry');
   if (!Platform.isWindows || !kProfileMode) {
     stderr.writeln('This entry point requires a Windows Profile build.');
     exit(64);
@@ -51,7 +54,7 @@ Future<void> main(List<String> arguments) async {
     lockFilePath: spec.notificationLock,
   );
   await withAgendaRuntimeMutationLockScope(scope, () async {
-    final probe = StartupProbe(clock);
+    final probe = StartupProbe(clock, memory: memory);
     final network = _NoNetwork();
     HttpOverrides.global = network;
     final secrets = _SyntheticSecrets();

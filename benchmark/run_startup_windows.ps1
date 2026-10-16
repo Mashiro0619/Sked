@@ -9,6 +9,72 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $startupClockProtocolId = 'win32-qpc-precise-filetime-v2'
+$startupMemoryProtocolId = 'process-rss-v1'
+
+function Is-ReportInteger([object]$Value) {
+  return ($Value -is [int] -or $Value -is [long])
+}
+function Get-MemoryContractIssues([object]$Child) {
+  $problems = [System.Collections.Generic.List[string]]::new()
+  $memory = $Child.measurement.memory
+  $points = @('entry', 'readyRasterReportObserved', 'responseRasterReportObserved', 'measurementEnd')
+  $samples = @($memory.samples)
+  if ($memory.protocolId -ne $startupMemoryProtocolId -or $memory.validated -ne $true -or
+      $memory.source -ne 'dart:io ProcessInfo' -or $memory.unit -ne 'bytes' -or $samples.Count -ne 4) {
+    $problems.Add('Memory protocol requires four validated process-rss-v1 observations.')
+    return $problems.ToArray()
+  }
+  $nativeSamples = @($Child.measurement.clock.nativeSamples)
+  $previousPeak = [long]0
+  $previousEnd = [long]-1
+  for ($index = 0; $index -lt 4; $index++) {
+    $sample = $samples[$index]
+    if ($sample.point -ne $points[$index]) { $problems.Add('Unexpected memory observation order.') }
+    if (-not (Is-ReportInteger $sample.currentRssBytes) -or $sample.currentRssBytes -le 0 -or
+        -not (Is-ReportInteger $sample.maxRssBytes) -or $sample.maxRssBytes -lt $sample.currentRssBytes -or
+        $sample.maxRssBytes -lt $previousPeak -or $sample.readFailure) {
+      $problems.Add('Invalid process RSS or non-monotonic peak at ' + $points[$index])
+    } else { $previousPeak = [long]$sample.maxRssBytes }
+    if (-not (Is-ReportInteger $sample.readCostUs) -or $sample.readCostUs -lt 0 -or
+        -not (Is-ReportInteger $sample.observerCostUs) -or $sample.observerCostUs -lt $sample.readCostUs) {
+      $problems.Add('Invalid memory observation cost at ' + $points[$index])
+    }
+    foreach ($stamp in @($sample.observationStart, $sample.observationEnd)) {
+      if ($stamp.utcSourceIsPrecise -ne 1 -or -not (Is-ReportInteger $stamp.nativeSampleIndex) -or
+          $stamp.nativeSampleIndex -lt 0 -or $stamp.nativeSampleIndex -ge $nativeSamples.Count) {
+        $problems.Add('Memory observation has no precise native clock source.')
+        continue
+      }
+      $native = $nativeSamples[$stamp.nativeSampleIndex]
+      $remainder = [long]0
+      $nativeUtc = [Math]::DivRem(([long]$native.preciseFileTimeTicks - [long]116444736000000000), [long]10, [ref]$remainder)
+      if ($native.index -ne $stamp.nativeSampleIndex -or $nativeUtc -ne $stamp.utcUs -or
+          $native.elapsedBeforeUs -ne $stamp.elapsedBeforeUs -or $native.elapsedAfterUs -ne $stamp.elapsedAfterUs) {
+        $problems.Add('Memory timestamp does not match its native clock sample.')
+      }
+    }
+    if ($sample.observationStart.nativeSampleIndex -le $previousEnd -or
+        $sample.observationEnd.nativeSampleIndex -le $sample.observationStart.nativeSampleIndex) {
+      $problems.Add('Memory observation timestamps are not ordered.')
+    }
+    $previousEnd = [long]$sample.observationEnd.nativeSampleIndex
+    if ($index -eq 1 -or $index -eq 2) {
+      $raster = if ($index -eq 1) { $Child.measurement.readyRaster } else { $Child.measurement.responseRaster }
+      if ($sample.frameNumber -ne $raster.frameNumber -or
+          $sample.rasterFinishWallTimeUs -ne $raster.rasterFinishWallTimeUs -or
+          $sample.reportStamp.nativeSampleIndex -ne $raster.callbackReceipt.nativeSampleIndex -or
+          $sample.reportStamp.utcUs -ne $raster.callbackReceipt.utcUs -or
+          $sample.observationStart.nativeSampleIndex -lt $sample.reportStamp.nativeSampleIndex) {
+        $problems.Add('Memory observation is not tied to its ready/response raster report.')
+      }
+    }
+  }
+  if ($samples[0].observationStart.nativeSampleIndex -le $Child.measurement.entry.nativeSampleIndex -or
+      $previousEnd -gt $Child.measurement.measurementEnd.nativeSampleIndex) {
+    $problems.Add('Memory observations fall outside the entry/measurement-end boundary.')
+  }
+  return $problems.ToArray()
+}
 
 function Write-JsonAtomic([string]$File, [object]$Value) {
   $temporary = $File + '.tmp'
@@ -126,6 +192,7 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
       Write-JsonAtomic (Join-Path $runRoot 'run.json') @{
         protocolVersion = 1; dataset = $dataset; repetition = $repeat;
         clockProtocolId = $startupClockProtocolId;
+        memoryProtocolId = $startupMemoryProtocolId;
         side = $build.value.side; revision = $build.value.revision;
         fixture = $fixture; build = $build.value
       }
@@ -230,12 +297,21 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
       if ($null -ne $child -and $child.measurement.clock.protocolId -ne $startupClockProtocolId) {
         $launcherFailures.Add('Unsupported startup clock protocol; rebuild both artifacts for ' + $startupClockProtocolId + '.')
       }
+      if ($null -ne $child) {
+        try {
+          foreach ($memoryIssue in @(Get-MemoryContractIssues $child)) { $launcherFailures.Add($memoryIssue) }
+        } catch {
+          $launcherFailures.Add('Memory contract validation failed: ' + $_.ToString())
+        }
+      }
       $valid = -not $timedOut -and $launcherFailures.Count -eq 0 -and $process.ExitCode -eq 0 -and
         $child.status -eq 'ok' -and $child.pid -eq $process.Id -and
         $child.compiledRevision -eq $build.value.revision -and
         $child.compiledEngine -eq $build.value.engineRevision -and
         $child.measurement.clock.protocolId -eq $startupClockProtocolId -and
         $child.measurement.clock.utcCorrelationValid -eq $true -and
+        $child.measurement.memory.protocolId -eq $startupMemoryProtocolId -and
+        $child.measurement.memory.validated -eq $true -and
         $child.measurement.nativeWindowVisibility.validated -eq $true -and $lockProbeHandled
       $firstUs = $null; $readyUs = $null; $responseUs = $null; $inputUs = $null
       if ($valid) {
@@ -259,6 +335,16 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
         processStartTimeUtc = $processStartUtc.ToString('o');
         launcherClockDriftUs = $launcherClockDriftUs;
         clockProtocolId = $child.measurement.clock.protocolId;
+        memoryProtocolId = $child.measurement.memory.protocolId;
+        memory = $child.measurement.memory;
+        entryRssBytes = $(if ($valid) { [long]$child.measurement.memory.samples[0].currentRssBytes } else { $null });
+        readyRssBytes = $(if ($valid) { [long]$child.measurement.memory.samples[1].currentRssBytes } else { $null });
+        responseRssBytes = $(if ($valid) { [long]$child.measurement.memory.samples[2].currentRssBytes } else { $null });
+        endRssBytes = $(if ($valid) { [long]$child.measurement.memory.samples[3].currentRssBytes } else { $null });
+        entryToReadyRssDeltaBytes = $(if ($valid) { [long]$child.measurement.memory.samples[1].currentRssBytes - [long]$child.measurement.memory.samples[0].currentRssBytes } else { $null });
+        entryToEndRssDeltaBytes = $(if ($valid) { [long]$child.measurement.memory.samples[3].currentRssBytes - [long]$child.measurement.memory.samples[0].currentRssBytes } else { $null });
+        peakRssBytes = $(if ($valid) { [long]$child.measurement.memory.samples[3].maxRssBytes } else { $null });
+        peakRssGrowthFromEntryBytes = $(if ($valid) { [long]$child.measurement.memory.samples[3].maxRssBytes - [long]$child.measurement.memory.samples[0].maxRssBytes } else { $null });
         processToFirstRasterUs = $(if ($valid) { $firstUs } else { $null });
         processToReadyRasterUs = $(if ($valid) { $readyUs } else { $null });
         inputToResponseRasterUs = $(if ($valid) { $inputUs } else { $null });
@@ -285,7 +371,9 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
 $groups = foreach ($group in ($rows | Group-Object side, dataset)) {
   $valid = @($group.Group | Where-Object status -eq 'ok')
   $stats = [ordered]@{}
-  foreach ($metric in @('processToFirstRasterUs', 'processToReadyRasterUs', 'inputToResponseRasterUs')) {
+  foreach ($metric in @('processToFirstRasterUs', 'processToReadyRasterUs', 'inputToResponseRasterUs',
+      'entryRssBytes', 'readyRssBytes', 'responseRssBytes', 'endRssBytes',
+      'entryToReadyRssDeltaBytes', 'entryToEndRssDeltaBytes', 'peakRssBytes', 'peakRssGrowthFromEntryBytes')) {
     $values = @($valid | ForEach-Object { $_.$metric } | Sort-Object)
     $stats[$metric] = if ($values.Count -eq 0) { $null } else {
       $middle = [int][Math]::Floor($values.Count / 2)
@@ -321,6 +409,7 @@ $allNativeWindowsVisible = ($rows.Count -gt 0 -and
 Write-JsonAtomic (Join-Path $output 'summary.json') @{
   protocolVersion = 1; rows = @($rows); groups = @($groups);
   clockProtocolId = $startupClockProtocolId;
+  memoryProtocolId = $startupMemoryProtocolId;
   matrixComplete = (@($builds).Count -eq 2 -and $Datasets.Count -eq 3 -and
     $Repetitions -eq 3 -and @($rows | Where-Object status -ne 'ok').Count -eq 0);
   comparableViewAndSemanticsState = ($viewSignatures.Count -eq 1);
@@ -331,7 +420,7 @@ Write-JsonAtomic (Join-Path $output 'summary.json') @{
   } else {
     'Win32 visibility acceptance failed or is incomplete; no normal-window startup comparison.'
   });
-  warning = 'Review Win32 visibility, native/framework semantics, view metrics and all failures before comparing groups.'
+  warning = 'Review process RSS observation times/costs, Win32 visibility, native/framework semantics, view metrics and all failures before comparing groups.'
 }
 if (@($rows | Where-Object status -ne 'ok').Count -ne 0) {
   throw 'Startup samples failed; all reports are preserved in the output directory.'

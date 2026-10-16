@@ -2,7 +2,8 @@
 
 This harness measures a fresh Windows process running the production
 `runSkedApp → AppBootstrap → MyApp` startup path. It reports the first raster,
-verified ready raster, and response to a selected-day input. Use it separately
+verified ready raster, response to a selected-day input, and whole-process RSS.
+Use it separately
 from host JIT microbenchmarks and in-process UI workloads.
 
 Every sample starts a new executable with isolated writable files. OS page,
@@ -21,6 +22,7 @@ not disk-cold measurements. The input is injected through Flutter's
 | `src/startup_probe.dart` | Framework state, engine frame association, input, clocks, and observer costs |
 | `src/startup_clock.dart` | Pure QPC/FILETIME conversion, begin association, and clock validation |
 | `src/startup_native_clock.dart` | Independent native QPC/frequency and precise FILETIME sampling |
+| `src/startup_memory.dart` | Four timestamped whole-process RSS observations and memory contract validation |
 | `src/startup_native_window.dart` | Read-only Win32 ownership and visibility evidence |
 | `run_startup_windows.ps1` | Artifact checks, process creation, independent lock probes, and report aggregation |
 | `../test/benchmark_startup_clock_test.dart` | Pure clock, uncertainty, overflow, and association regressions in the standard test suite |
@@ -153,6 +155,9 @@ Accept the smoke only when both processes satisfy all of these conditions:
 5. Exit code is zero; complete reports and logs are present; native/framework
    semantics, view geometry, focus, and accessibility conditions are compatible
    across sides.
+6. Memory protocol `process-rss-v1` has exactly four ordered observations with
+   positive RSS/peak byte counts, nondecreasing process peaks, valid precise
+   clock sources, and matching ready/response report identities.
 
 Then run three processes per revision and dataset: 18 processes in total.
 
@@ -217,6 +222,31 @@ startup time. Win32 snapshots do not establish that all pixels were unobscured
 or presented at a historical raster timestamp.
 
 ## Clocks and isolation
+
+Memory protocol `process-rss-v1` is independently required in each run manifest
+and accepted report. It records `ProcessInfo.currentRss` and `ProcessInfo.maxRss`
+at exactly four points: `entry` immediately after clock creation and before run
+specification/model preparation; `readyRasterReportObserved` and
+`responseRasterReportObserved` when those reports are matched; and
+`measurementEnd` before full validation or report encoding. Memory is not read
+on every frame.
+
+Each sample stores byte counts, precise `observationStart`/`observationEnd`
+clock stamps with native sample indices, RSS getter `readCostUs`, and total
+`observerCostUs`. Ready/response samples also retain their frame ID, raster
+timestamp, and original report receipt stamp. Their RSS values are observations
+after report delivery, not measurements exactly at raster completion. The
+source is the whole process, including native/runtime allocations; it is not a
+Dart heap measurement. `maxRssBytes` is the OS-reported process lifetime peak
+through that observation, not an independent peak within each phase.
+
+Per-process metrics retain the four current RSS values,
+`entryToReadyRssDeltaBytes`, `entryToEndRssDeltaBytes`, `peakRssBytes` at the end,
+and `peakRssGrowthFromEntryBytes` (end peak minus entry peak). Current-RSS deltas
+may be negative. Groups retain all three process values, median, minimum, and
+maximum in bytes. Read/observer costs remain with each raw sample. Reports from
+the earlier time-only protocol remain valid for their recorded timing scope;
+missing RSS is unavailable and is never backfilled with zero or inferred data.
 
 Clock protocol `win32-qpc-precise-filetime-v2` requires new before/after builds;
 the launcher rejects old/missing clock protocol IDs. Official child UTC stamps
@@ -289,10 +319,10 @@ The harness does not overwrite or clean up earlier output directories.
 Failed samples or incompatible visibility/view/semantics conditions make the
 launcher return an error after preserving the reports.
 
-`summary.json` retains every row and per-group samples, median, min/max, and
+`summary.json` retains every row and per-group timing/RSS samples, median, min/max, and
 `completeThreeProcesses`. Review `matrixComplete`,
 `allMeasuredNativeWindowsVisible`, and `comparableViewAndSemanticsState`
-together with raw evidence. A failed clock or visibility gate suppresses that
+together with raw evidence and `memoryProtocolId`. A failed clock, memory, or visibility gate suppresses that
 row's comparable durations. Failed/incomplete visibility explicitly prevents a
 normal-window comparison claim. Report failed/missing samples and do not
 present a partial group as a complete comparison. Three processes do not

@@ -15,9 +15,11 @@ import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/secret_store.dart';
 
 import 'startup_clock.dart' show startupClockProtocolId;
+import 'startup_memory.dart' show startupMemoryProtocolId;
 
 export 'startup_clock.dart'
     show startupClockProtocolId, startupClockToleranceUs;
+export 'startup_memory.dart' show startupMemoryProtocolId;
 
 const startupProtocolVersion = 1;
 const startupDatasets = ['sparse', '1000', '5000'];
@@ -146,6 +148,7 @@ class StartupRunSpec {
         .cast<String, dynamic>();
     if (value['protocolVersion'] != startupProtocolVersion ||
         value['clockProtocolId'] != startupClockProtocolId ||
+        value['memoryProtocolId'] != startupMemoryProtocolId ||
         !startupDatasets.contains(value['dataset']) ||
         value['revision'] is! String ||
         !RegExp(r'^[0-9a-f]{40}$').hasMatch(value['revision'] as String)) {
