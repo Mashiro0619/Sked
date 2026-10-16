@@ -110,7 +110,12 @@ bool _isValidDateTimeParts({
       second > 59) {
     return false;
   }
-  return day >= 1 && day <= DateTime(year, month + 1, 0).day;
+  final daysInMonth = switch (month) {
+    2 => year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) ? 29 : 28,
+    4 || 6 || 9 || 11 => 30,
+    _ => 31,
+  };
+  return day >= 1 && day <= daysInMonth;
 }
 
 DateTime startOfWeekMonday(DateTime date) {
