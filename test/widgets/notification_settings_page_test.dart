@@ -280,7 +280,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final list = find.byType(ListView);
+    final list = find
+        .descendant(
+          of: find.byType(NotificationSettingsPage),
+          matching: find.byType(Scrollable),
+        )
+        .first;
     await tester.drag(list, const Offset(0, -500));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('notification-autostart')));

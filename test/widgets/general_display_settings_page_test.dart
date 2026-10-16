@@ -160,7 +160,7 @@ void main() {
       viewPadding: const EdgeInsets.only(bottom: 48),
     );
 
-    final list = find.byType(ListView);
+    final list = find.byKey(const ValueKey('general-display-settings-list'));
     expect(tester.getSize(list).width, 1024);
     expect(
       tester
@@ -168,8 +168,18 @@ void main() {
           .width,
       lessThanOrEqualTo(1120),
     );
-    expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
-    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    expect(tester.getRect(list).bottom, closeTo(720, 0.01));
+    final scrollable = find
+        .descendant(of: list, matching: find.byType(Scrollable))
+        .first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    final content = find.byKey(const ValueKey('responsive-settings-content'));
+    expect(
+      tester.getRect(list).bottom - tester.getRect(content).bottom,
+      closeTo(24, 0.01),
+    );
     expect(tester.takeException(), isNull);
   });
 

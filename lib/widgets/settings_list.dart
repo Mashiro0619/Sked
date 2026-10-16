@@ -184,13 +184,15 @@ class ResponsiveSettingsBody extends StatelessWidget {
                     ),
                   ],
                 )
-              : ListView(
+              // Content is one eagerly built form. Keep its offscreen
+              // semantics attached so overlay anchors outlive scrolling.
+              : SingleChildScrollView(
                   key: scrollViewKey,
                   controller: controller,
                   padding: contentPadding,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  children: [measuredContent],
+                  child: measuredContent,
                 ),
         );
       },
@@ -1797,38 +1799,31 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                 // Each value indicator needs its own traversal anchor.
                 container: true,
                 label: widget.title,
-                child: Overlay.wrap(
-                  // Keep the indicator in this control's scroll subtree.
-                  alwaysSizeToContent: true,
-                  clipBehavior: Clip.none,
-                  child: Slider(
-                    value: safeValue.toDouble(),
-                    min: widget.min.toDouble(),
-                    max: widget.max.toDouble(),
-                    divisions: ((widget.max - widget.min) ~/ widget.step).clamp(
-                      1,
-                      100,
-                    ),
-                    label: label,
-                    semanticFormatterCallback: (_) => label,
-                    onChangeStart: enabled
-                        ? (_) => _isInteracting = true
-                        : null,
-                    onChanged: enabled
-                        ? (value) => setState(() {
-                            _previewValue = _snapToStep(value.round());
-                          })
-                        : null,
-                    onChangeEnd: enabled
-                        ? (value) {
-                            _isInteracting = false;
-                            final committedValue = _snapToStep(value.round());
-                            if (committedValue != widget.value) {
-                              widget.onChangeEnd(committedValue);
-                            }
-                          }
-                        : null,
+                child: Slider(
+                  value: safeValue.toDouble(),
+                  min: widget.min.toDouble(),
+                  max: widget.max.toDouble(),
+                  divisions: ((widget.max - widget.min) ~/ widget.step).clamp(
+                    1,
+                    100,
                   ),
+                  label: label,
+                  semanticFormatterCallback: (_) => label,
+                  onChangeStart: enabled ? (_) => _isInteracting = true : null,
+                  onChanged: enabled
+                      ? (value) => setState(() {
+                          _previewValue = _snapToStep(value.round());
+                        })
+                      : null,
+                  onChangeEnd: enabled
+                      ? (value) {
+                          _isInteracting = false;
+                          final committedValue = _snapToStep(value.round());
+                          if (committedValue != widget.value) {
+                            widget.onChangeEnd(committedValue);
+                          }
+                        }
+                      : null,
                 ),
               ),
             ],

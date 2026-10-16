@@ -89,9 +89,10 @@ smoke alone does not establish those geometry and action-isolation properties,
 or the broader UI benchmark's native safety.
 
 The companion `test/widgets/settings_slider_semantics_test.dart` checks
-independent slider actions, disabled controls and indicator retirement after
-scrolling and closing a route. Each settings slider owns a local overlay so
-its indicator leaves the accessibility tree with the scrolled control.
+independent slider actions, disabled controls, hidden offscreen anchors and
+route closure. The prebuilt settings form retains its offscreen semantic
+nodes while marking them hidden; value indicators keep their normal global
+overlay and are not clipped to an individual control or the scroll viewport.
 
 ## Interpreting a failure
 
