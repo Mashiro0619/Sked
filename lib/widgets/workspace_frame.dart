@@ -1696,6 +1696,17 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             }
           }
 
+          final VoidCallback? onCanvasTap =
+              active && policy.detailVisible && controller.dismissOnCanvasTap
+              ? () {
+                  // Activation can change without a frame rebuild.
+                  if (!policy.assistantVisible || !_assistantLast) {
+                    if (controller.dismissPriorityTask()) return;
+                    unawaited(controller.close());
+                  }
+                }
+              : null;
+
           return AssistantPaneScope(
             controller: _assistant,
             enabled: previewEnabled,
@@ -1793,32 +1804,21 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                             'workspace-canvas',
                                           ),
                                           selectedId: controller.selectedId,
-                                          child: GestureDetector(
-                                            behavior:
-                                                HitTestBehavior.translucent,
-                                            onTap:
-                                                active &&
-                                                    policy.detailVisible &&
-                                                    controller
-                                                        .dismissOnCanvasTap
-                                                ? () {
-                                                    // Activation can change without a frame rebuild.
-                                                    if (!policy
-                                                            .assistantVisible ||
-                                                        !_assistantLast) {
-                                                      if (controller
-                                                          .dismissPriorityTask()) {
-                                                        return;
-                                                      }
-                                                      unawaited(
-                                                        controller.close(),
-                                                      );
-                                                    }
-                                                  }
-                                                : null,
-                                            child: ExcludeSemantics(
-                                              excluding: floatingEditor,
-                                              child: widget.canvas,
+                                          child: Semantics(
+                                            // Keep the dismiss action on a stable parent,
+                                            // separate from the canvas controls.
+                                            container: true,
+                                            explicitChildNodes: true,
+                                            onTap: onCanvasTap,
+                                            child: GestureDetector(
+                                              behavior:
+                                                  HitTestBehavior.translucent,
+                                              excludeFromSemantics: true,
+                                              onTap: onCanvasTap,
+                                              child: ExcludeSemantics(
+                                                excluding: floatingEditor,
+                                                child: widget.canvas,
+                                              ),
                                             ),
                                           ),
                                         ),
