@@ -88,6 +88,11 @@ toolbar controls retain distinct semantics and their own bounds. Passing this
 smoke alone does not establish those geometry and action-isolation properties,
 or the broader UI benchmark's native safety.
 
+The companion `test/widgets/settings_slider_semantics_test.dart` checks
+independent slider actions, disabled controls and indicator retirement after
+scrolling and closing a route. Each settings slider owns a local overlay so
+its indicator leaves the accessibility tree with the scrolled control.
+
 ## Interpreting a failure
 
 An invalid Dart traversal update implicates the source/framework graph sent to

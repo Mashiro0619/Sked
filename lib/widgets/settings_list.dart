@@ -1794,32 +1794,41 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                   ),
                 ),
               Semantics(
+                // Each value indicator needs its own traversal anchor.
+                container: true,
                 label: widget.title,
-                child: Slider(
-                  value: safeValue.toDouble(),
-                  min: widget.min.toDouble(),
-                  max: widget.max.toDouble(),
-                  divisions: ((widget.max - widget.min) ~/ widget.step).clamp(
-                    1,
-                    100,
-                  ),
-                  label: label,
-                  semanticFormatterCallback: (_) => label,
-                  onChangeStart: enabled ? (_) => _isInteracting = true : null,
-                  onChanged: enabled
-                      ? (value) => setState(() {
-                          _previewValue = _snapToStep(value.round());
-                        })
-                      : null,
-                  onChangeEnd: enabled
-                      ? (value) {
-                          _isInteracting = false;
-                          final committedValue = _snapToStep(value.round());
-                          if (committedValue != widget.value) {
-                            widget.onChangeEnd(committedValue);
+                child: Overlay.wrap(
+                  // Keep the indicator in this control's scroll subtree.
+                  alwaysSizeToContent: true,
+                  clipBehavior: Clip.none,
+                  child: Slider(
+                    value: safeValue.toDouble(),
+                    min: widget.min.toDouble(),
+                    max: widget.max.toDouble(),
+                    divisions: ((widget.max - widget.min) ~/ widget.step).clamp(
+                      1,
+                      100,
+                    ),
+                    label: label,
+                    semanticFormatterCallback: (_) => label,
+                    onChangeStart: enabled
+                        ? (_) => _isInteracting = true
+                        : null,
+                    onChanged: enabled
+                        ? (value) => setState(() {
+                            _previewValue = _snapToStep(value.round());
+                          })
+                        : null,
+                    onChangeEnd: enabled
+                        ? (value) {
+                            _isInteracting = false;
+                            final committedValue = _snapToStep(value.round());
+                            if (committedValue != widget.value) {
+                              widget.onChangeEnd(committedValue);
+                            }
                           }
-                        }
-                      : null,
+                        : null,
+                  ),
                 ),
               ),
             ],
