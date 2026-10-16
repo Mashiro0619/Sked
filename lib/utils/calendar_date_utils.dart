@@ -19,11 +19,15 @@ DateTime addCalendarDays(DateTime value, int days) {
   );
 }
 
-DateTime nextCalendarDate(DateTime value) =>
-    addCalendarDays(normalizeDateOnly(value), 1);
+/// Returns the next civil date's start, preserving UTC/local representation.
+DateTime nextCalendarDate(DateTime value) => value.isUtc
+    ? DateTime.utc(value.year, value.month, value.day + 1)
+    : DateTime(value.year, value.month, value.day + 1);
 
-DateTime previousCalendarDate(DateTime value) =>
-    addCalendarDays(normalizeDateOnly(value), -1);
+/// Returns the previous civil date's start, preserving UTC/local representation.
+DateTime previousCalendarDate(DateTime value) => value.isUtc
+    ? DateTime.utc(value.year, value.month, value.day - 1)
+    : DateTime(value.year, value.month, value.day - 1);
 
 DateTime calendarDateEndExclusive(DateTime value) => nextCalendarDate(value);
 

@@ -186,9 +186,8 @@ class _MonthCalendarDate {
   final DateTime date;
   late final String key = date.toIso8601String().split('T').first;
 
-  // This is nextCalendarDate's civil addition after normalization. A local
-  // midnight can normalize to 01:00; preserve that time when advancing.
-  late final DateTime next = addCalendarDays(date, 1);
+  // Share the date-boundary contract with uncached calendar navigation.
+  late final DateTime next = nextCalendarDate(date);
 }
 
 Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(

@@ -7,6 +7,7 @@ import 'package:sked/services/general_calendar_ics_service.dart';
 import 'package:sked/services/import_export_service.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/utils/date_selection.dart';
+import 'package:sked/widgets/general_month_projection.dart';
 
 void main() {
   final zone = Platform.environment['SKED_DST_TEST_ZONE'];
@@ -16,6 +17,11 @@ void main() {
       () {},
       skip: 'Set SKED_DST_TEST_ZONE and TZ before starting flutter test.',
     );
+    return;
+  }
+
+  if (zone == 'america-sao-paulo') {
+    group('calendar behavior in $zone', _testMidnightGap);
     return;
   }
 
@@ -706,6 +712,81 @@ GeneralEvent _recurringEvent({
   );
 }
 
+void _testMidnightGap() {
+  final before = DateTime(2018, 11, 3);
+  final gap = DateTime(2018, 11, 4);
+  final after = DateTime(2018, 11, 5);
+  setUp(() {
+    expect(before.timeZoneOffset, const Duration(hours: -3));
+    expect(gap.timeZoneOffset, const Duration(hours: -2));
+    expect(gap.hour, 1, reason: 'The requested midnight gap must be active.');
+  });
+
+  test(
+    'date navigation resolves each target day start across midnight gap',
+    () {
+      expect(nextCalendarDate(before), gap);
+      expect(nextCalendarDate(gap), after);
+      expect(previousCalendarDate(after), gap);
+      expect(previousCalendarDate(gap), before);
+      expect(calendarDateEndExclusive(gap), after);
+      expect(addCalendarDays(gap, 1), DateTime(2018, 11, 5, 1));
+      expect(
+        nextCalendarDate(DateTime.utc(2018, 11, 4, 18)),
+        DateTime.utc(2018, 11, 5),
+      );
+      expect(
+        previousCalendarDate(DateTime.utc(2018, 11, 4, 18)),
+        DateTime.utc(2018, 11, 3),
+      );
+    },
+  );
+
+  test('month span retains its last civil date and excludes midnight end', () {
+    final start = DateTime(2018, 11, 3, 23).toUtc();
+    final end = DateTime(2018, 11, 6).toUtc();
+    final event = GeneralEvent(
+      id: 'midnight-span',
+      calendarId: 'calendar',
+      title: 'Midnight span',
+      startDateTimeIso: start.toIso8601String(),
+      endDateTimeIso: end.toIso8601String(),
+    );
+    final calendar = GeneralSchedule(
+      id: 'calendar',
+      name: 'Calendar',
+      events: [event],
+    );
+    final occurrence = GeneralEventOccurrence(
+      event: event,
+      calendar: calendar,
+      start: start,
+      end: end,
+      sequence: 0,
+    );
+    final page = GeneralMonthProjectionCache()
+        .project(
+          data: GeneralScheduleData(
+            activeScheduleId: calendar.id,
+            schedules: [calendar],
+          ),
+          selectedDate: before,
+          queryOccurrences: (_) => [occurrence],
+        )
+        .current;
+
+    const expectedDates = ['2018-11-03', '2018-11-04', '2018-11-05'];
+    expect([
+      for (final entry in page.occurrencesByDay.entries)
+        if (entry.value.isNotEmpty) entry.key,
+    ], expectedDates);
+    for (final date in expectedDates) {
+      expect(page.occurrencesByDay[date], [same(occurrence)]);
+    }
+    expect(page.occurrencesByDay['2018-11-06'], isEmpty);
+  });
+}
+
 String _dateAndHour(DateTime value) =>
     '${value.year}-${value.month}-${value.day} ${value.hour}:${value.minute}';
 
@@ -770,7 +851,7 @@ _DstScenario _scenarioFor(String name) {
     _ => throw ArgumentError.value(
       name,
       'SKED_DST_TEST_ZONE',
-      'Expected america-new-york, europe-berlin, or asia-shanghai.',
+      'Expected america-new-york, europe-berlin, asia-shanghai, or america-sao-paulo.',
     ),
   };
 }

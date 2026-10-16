@@ -62,11 +62,12 @@ void main() {
     },
   );
 
-  test('named timezone checks include a non-DST Shanghai control', () {
+  test('named timezone checks include a control and a missing midnight', () {
     const zones = {
       'America/New_York': 'america-new-york',
       'Europe/Berlin': 'europe-berlin',
       'Asia/Shanghai': 'asia-shanghai',
+      'America/Sao_Paulo': 'america-sao-paulo',
     };
     final timezoneSteps = stepsFor('test').where(
       (step) =>

@@ -75,6 +75,12 @@ jobs:
           SKED_DST_TEST_ZONE: asia-shanghai
         run: flutter test test/date_dst_regression_test.dart
 
+      - name: Test missing midnight in America/Sao_Paulo
+        env:
+          TZ: America/Sao_Paulo
+          SKED_DST_TEST_ZONE: america-sao-paulo
+        run: flutter test test/date_dst_regression_test.dart
+
       - name: Build web release
         run: flutter build web --release
 
