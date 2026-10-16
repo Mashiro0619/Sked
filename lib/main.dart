@@ -42,8 +42,14 @@ import 'widgets/desktop_window_host.dart';
 import 'services/desktop_window_bridge.dart';
 import 'services/desktop_layout_preferences.dart';
 import 'services/developer_ui_preferences.dart';
+import 'services/agenda_notification_service.dart';
+import 'services/update_distribution.dart';
+import 'services/update_service.dart';
 
-Future<void> main() async {
+Future<void> main() => runSkedApp();
+
+/// Runs the shared platform setup before constructing the application root.
+Future<void> runSkedApp({AppBootstrap Function()? bootstrapFactory}) async {
   // Keep the Android WorkManager entry point in the AOT snapshot. The worker
   // invokes it by library URI after the foreground application is gone.
   assert(_backgroundEntrypoints.isNotEmpty);
@@ -51,7 +57,7 @@ Future<void> main() async {
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   await DesktopWindowBridge.instance.initialize();
   _registerLicenses();
-  runApp(AppBootstrap());
+  runApp((bootstrapFactory ?? AppBootstrap.new)());
 }
 
 final _backgroundEntrypoints = <void Function()>[agendaBackgroundReconcile];
@@ -65,6 +71,27 @@ void _registerLicenses() {
 
 typedef AppRuntimeFactory = AppRuntime Function();
 
+/// External services bound to one application root's lifetime.
+///
+/// Factories stay lazy: the bootstrap creates layout preferences after taking
+/// its lease, and MyApp creates its own UI preferences and agenda service.
+@immutable
+class AppStartupDependencies {
+  const AppStartupDependencies({
+    this.desktopLayoutFactory = DesktopLayoutPreferences.new,
+    this.developerUiFactory = DeveloperUiPreferences.new,
+    this.notificationServiceFactory = AgendaNotificationService.new,
+    this.updateService = const UpdateService(),
+    this.updateDistribution,
+  });
+
+  final DesktopLayoutPreferences Function() desktopLayoutFactory;
+  final DeveloperUiPreferences Function() developerUiFactory;
+  final AgendaNotificationService Function() notificationServiceFactory;
+  final UpdateService updateService;
+  final UpdateDistribution? updateDistribution;
+}
+
 enum _AppBootstrapStatus { acquiring, ready, blocked, failed }
 
 class AppBootstrap extends StatefulWidget {
@@ -72,11 +99,13 @@ class AppBootstrap extends StatefulWidget {
     super.key,
     AppInstanceLease? lease,
     AppRuntimeFactory? runtimeFactory,
+    this.startupDependencies = const AppStartupDependencies(),
   }) : lease = lease ?? AppInstanceLease(),
        runtimeFactory = runtimeFactory ?? AppRuntime.new;
 
   final AppInstanceLease lease;
   final AppRuntimeFactory runtimeFactory;
+  final AppStartupDependencies startupDependencies;
 
   @override
   State<AppBootstrap> createState() => _AppBootstrapState();
@@ -85,6 +114,7 @@ class AppBootstrap extends StatefulWidget {
 class _AppBootstrapState extends State<AppBootstrap> {
   late final AppInstanceLease _lease;
   late final AppRuntimeFactory _runtimeFactory;
+  late final AppStartupDependencies _startupDependencies;
   var _status = _AppBootstrapStatus.acquiring;
   AppRuntime? _app;
   DesktopLayoutPreferences? _desktopLayout;
@@ -98,6 +128,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
     super.initState();
     _lease = widget.lease;
     _runtimeFactory = widget.runtimeFactory;
+    _startupDependencies = widget.startupDependencies;
     _startLeaseAcquisition();
   }
 
@@ -131,7 +162,15 @@ class _AppBootstrapState extends State<AppBootstrap> {
       try {
         final app = _runtimeFactory();
         _app = app;
-        _desktopLayout = DesktopLayoutPreferences();
+        try {
+          _desktopLayout = _startupDependencies.desktopLayoutFactory();
+        } catch (_) {
+          // This runtime has not started loading yet. Do not retain it after
+          // a factory failure, which would also prevent the next lease retry.
+          _app = null;
+          app.dispose();
+          rethrow;
+        }
         unawaited(_desktopLayout!.load());
         final load = app.lifecycle.load();
         _appLoad = load;
@@ -246,6 +285,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
         app: app,
         dataReady: _appLoad,
         desktopLayoutPreferences: _desktopLayout,
+        startupDependencies: _startupDependencies,
       );
     }
     return _AppBootstrapGate(
@@ -374,19 +414,26 @@ class MyApp extends StatefulWidget {
     required this.app,
     this.dataReady,
     this.desktopLayoutPreferences,
+    this.startupDependencies = const AppStartupDependencies(),
   });
 
   final AppRuntime app;
   final Future<void>? dataReady;
   final DesktopLayoutPreferences? desktopLayoutPreferences;
+  final AppStartupDependencies startupDependencies;
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  late final AppStartupDependencies _startupDependencies;
+  late final AppHomeScreen _home = AppHomeScreen(
+    updateService: _startupDependencies.updateService,
+    updateDistribution: _startupDependencies.updateDistribution,
+  );
   late AgendaCoordinator _agendaCoordinator;
-  final _developerUi = DeveloperUiPreferences();
+  late final DeveloperUiPreferences _developerUi;
   late final DesktopLayoutPreferences _desktopLayout;
   late final bool _ownsDesktopLayout;
   final _windowModals = DesktopWindowModalObserver();
@@ -399,11 +446,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _startupDependencies = widget.startupDependencies;
+    _developerUi = _startupDependencies.developerUiFactory();
     WidgetsBinding.instance.addObserver(this);
     DesktopWindowBridge.instance.prepareClose = _prepareWindowClose;
     _ownsDesktopLayout = widget.desktopLayoutPreferences == null;
     _desktopLayout =
-        widget.desktopLayoutPreferences ?? DesktopLayoutPreferences();
+        widget.desktopLayoutPreferences ??
+        _startupDependencies.desktopLayoutFactory();
     _desktopLayout.addListener(_onDesktopLayoutChanged);
     unawaited(_desktopLayout.load());
     unawaited(_developerUi.load());
@@ -430,6 +480,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         settings: app.settingsView,
         onTarget: _openAgendaTarget,
       ),
+      notificationService: _startupDependencies.notificationServiceFactory(),
     );
   }
 
@@ -613,7 +664,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 home: Selector<DesktopLayoutPreferences, bool>(
                   selector: (_, preferences) => preferences.ready,
                   builder: (_, ready, _) => ready
-                      ? const AppHomeScreen()
+                      ? _home
                       : const Scaffold(
                           body: Center(child: CircularProgressIndicator()),
                         ),
