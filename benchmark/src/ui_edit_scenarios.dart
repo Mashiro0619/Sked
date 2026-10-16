@@ -29,8 +29,10 @@ import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 
 import 'data_operations_runtime.dart';
+import 'native_semantics_probe.dart';
 import 'ui_edit_session.dart';
 import 'ui_performance_fixtures.dart';
+import 'ui_performance_host_setup.dart';
 import 'ui_performance_metrics.dart';
 
 const _tempPrefix = 'sked_ui_edit_performance_';
@@ -53,6 +55,7 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
   if (requireProfile && !kProfileMode) {
     throw StateError('UI editing measurements require Profile mode.');
   }
+  prepareUiPerformanceHost();
   final fixtures = buildUiPerformanceFixtures(names: datasets);
   final started = DateTime.now().toUtc();
   final nativeSize = tester.view.physicalSize / tester.view.devicePixelRatio;
@@ -84,10 +87,15 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
     }
   }
 
-  await tester.binding.setSurfaceSize(size);
-  SchedulerBinding.instance.addTimingsCallback(onFrames);
   final registerTextInput = !tester.testTextInput.isRegistered;
+  final semanticsProbe = NativeSemanticsProbe(
+    requireStableNative: kProfileMode,
+  );
+  var timingsAttached = false;
   try {
+    await tester.binding.setSurfaceSize(size);
+    SchedulerBinding.instance.addTimingsCallback(onFrames);
+    timingsAttached = true;
     if (registerTextInput) {
       // Profile rejects client ID -1; retain the actual setClient ID.
       // This transport injects text without changing editor controllers.
@@ -96,7 +104,7 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
     for (final fixture in fixtures) {
       debugPrint('UI editor dataset: ${fixture.name}');
       final seed = const ImportExportService().normalizeAppData(
-        fixture.data,
+        prepareUiPerformanceData(fixture.data),
         localeCode: fixture.data.localeCode,
       );
       inputs.add({
@@ -281,9 +289,15 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
     // Engine batches can arrive after an action ends; delivery is unmeasured.
     await Future<void>.delayed(const Duration(milliseconds: 1200));
   } finally {
-    if (registerTextInput) tester.testTextInput.unregister();
-    SchedulerBinding.instance.removeTimingsCallback(onFrames);
-    await tester.binding.setSurfaceSize(null);
+    try {
+      if (registerTextInput) tester.testTextInput.unregister();
+      if (timingsAttached) {
+        SchedulerBinding.instance.removeTimingsCallback(onFrames);
+      }
+      await tester.binding.setSurfaceSize(null);
+    } finally {
+      semanticsProbe.close();
+    }
   }
 
   final results = <Map<String, Object?>>[];
@@ -311,7 +325,7 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
   }
   return {
     'schemaVersion': 1,
-    'harnessVersion': 1,
+    'harnessVersion': 2,
     'label': label,
     'revision': revision,
     'measurement': kProfileMode
@@ -326,6 +340,7 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
       'dart': Platform.version,
       'processors': Platform.numberOfProcessors,
       'profile': kProfileMode,
+      'semantics': semanticsProbe.toJson(),
       'dpr': tester.view.devicePixelRatio,
       'refreshRateHz': refresh,
       'refreshRateFallback': refresh != nativeRefresh,
@@ -337,6 +352,8 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
       'processMaxRssBytes': ProcessInfo.maxRss,
     },
     'protocol': {
+      'host': uiPerformanceHostProtocol,
+      'semantics': 'Version 2 native entrypoints bootstrap only an empty tree through endOfFrame and use testWidgets semanticsEnabled:false. Runtime semantics records actual native/framework endpoints and framework-listener changes; Profile requires agreement and no observed changes. Widget-only smoke may differ.',
       'actionsPerDataset': 4,
       'input': 'Injected native Flutter pointer/text input through production cards, details, edit controls and save buttons; not OS IME latency.',
       'persistence': 'Real isolated disk writes; readback validation is outside action windows. Native default codecs and save debounce retained.',

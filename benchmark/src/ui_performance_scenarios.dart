@@ -14,11 +14,13 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 
+import 'native_semantics_probe.dart';
 import 'ui_performance_fixtures.dart';
 import 'ui_performance_harness.dart';
+import 'ui_performance_host_setup.dart';
 import 'ui_performance_metrics.dart';
 
-const uiPerformanceHarnessVersion = 1;
+const uiPerformanceHarnessVersion = 2;
 
 class UiPerformanceConfig {
   const UiPerformanceConfig({
@@ -162,6 +164,7 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
   if (config.requireFrameTimings && smokeTestCodec != null) {
     throw ArgumentError('Profile measurements must use production codecs.');
   }
+  prepareUiPerformanceHost();
   final fixtures = buildUiPerformanceFixtures(names: config.datasets);
   final desktop = switch (defaultTargetPlatform) {
     TargetPlatform.windows ||
@@ -178,20 +181,26 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
           math.min(config.desktopSize.height, nativeSize.height),
         )
       : nativeSize;
-  await tester.binding.setSurfaceSize(baseSize);
   final reportedRefreshRate = tester.view.display.refreshRate;
   final refreshRate = reportedRefreshRate.isFinite && reportedRefreshRate > 0
       ? reportedRefreshRate
       : 60.0;
   final recorder = _Recorder(tester, config);
-  SchedulerBinding.instance.addTimingsCallback(recorder.onFrames);
   final mounts = <Map<String, Object?>>[];
   final started = DateTime.now().toUtc();
+  final semanticsProbe = NativeSemanticsProbe(
+    requireStableNative: kProfileMode,
+  );
+  var timingsAttached = false;
+  late final Map<String, Object?> report;
   try {
+    await tester.binding.setSurfaceSize(baseSize);
+    SchedulerBinding.instance.addTimingsCallback(recorder.onFrames);
+    timingsAttached = true;
     for (var datasetIndex = 0; datasetIndex < fixtures.length; datasetIndex++) {
       final fixture = fixtures[datasetIndex];
       final session = UiPerformanceSession(
-        fixture.data,
+        prepareUiPerformanceData(fixture.data),
         dataTransferCodec: smokeTestCodec ?? const DataTransferCodec(),
       );
       try {
@@ -282,7 +291,7 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
         'frames': selected.map((frame) => frame.toJson()).toList(),
       });
     }
-    return {
+    report = {
       'schemaVersion': 1,
       'harnessVersion': uiPerformanceHarnessVersion,
       'label': config.label,
@@ -309,6 +318,8 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
         'processMaxRssBytes': ProcessInfo.maxRss,
       },
       'protocol': {
+        'host': uiPerformanceHostProtocol,
+        'semantics': 'Version 2 native entrypoints bootstrap only an empty tree through endOfFrame and use testWidgets semanticsEnabled:false. Runtime semantics records actual native/framework endpoints and framework-listener changes; Profile requires agreement and no observed changes. Widget-only smoke may differ.',
         'warmRuns': config.warmRuns,
         'cold': 'First journey with a fresh Provider. Global font/lunar/engine caches may be shared by later datasets.',
         'warm': 'Repeat the same journey in the same mounted production shell.',
@@ -324,9 +335,18 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
       'results': recorder.report(budget),
     };
   } finally {
-    SchedulerBinding.instance.removeTimingsCallback(recorder.onFrames);
-    await tester.binding.setSurfaceSize(null);
+    try {
+      if (timingsAttached) {
+        SchedulerBinding.instance.removeTimingsCallback(recorder.onFrames);
+      }
+      await tester.binding.setSurfaceSize(null);
+    } finally {
+      semanticsProbe.close();
+    }
   }
+  final runtime = report['runtime']! as Map<String, Object?>;
+  runtime['semantics'] = semanticsProbe.toJson();
+  return report;
 }
 
 Finder _key(String value) => find.byKey(ValueKey(value));

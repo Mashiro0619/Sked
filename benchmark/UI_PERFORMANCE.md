@@ -1,12 +1,47 @@
 # Workspace interaction performance
 
-`integration_test/ui_performance_benchmark_test.dart` runs production Provider,
-adaptive workspace shell, calendar/timetable views and settings widgets. Only
+`integration_test/ui_performance_benchmark_test.dart` runs the production
+`AppHomeScreen`, adaptive workspace shell, calendar/timetable views and settings widgets. Only
 storage, secrets, school sites, recovery journals and notifications use isolated
 in-memory implementations. The target never opens the user's data directory.
 It retains the production 450 ms UI-state save debounce. Native notification,
 startup update, filesystem and serialization performance are outside this UI
 suite; keep the existing pure-data benchmark alongside it.
+
+Both revisions mount their actual home screen and its production subscriptions.
+The host keeps a fixed theme/locale and isolated package metadata. Before timing,
+UI-only seeds receive the same bundled privacy-policy acceptance version and
+fixed timestamp so the ready workspace is shown. `protocol.host` records this
+setup; shared course/event fixtures and the disk benchmark remain unchanged.
+
+## Native semantics protocol, harness version 2
+
+Both native entrypoints use `fullyLive`. Their `setUpAll` mounts only
+`SizedBox.shrink` and awaits `binding.endOfFrame` before the benchmark test.
+This empty-tree preparation is unmeasured; it mounts no Material application,
+text or fixture/user data. `testWidgets(..., semanticsEnabled: false)` avoids
+adding a test-owned semantics handle. The native engine's semantics setting is
+read as it is; this protocol does not enable UIA or disable native semantics.
+
+`runtime.semantics` records `nativeStart`, `frameworkStart`, `nativeEnd`,
+`frameworkEnd` and `observedChanges` from the framework's semantics-enabled
+listener. The probe spans viewport setup, fixture mounting/interaction/unmount,
+the final frame-delivery wait and cleanup. Profile runs reject differing
+native/framework endpoints, changed endpoint flags, or any listener-observed
+change. Fake-clock `widget-smoke-only` runs retain their widget-only semantics
+behavior and may report differing flags.
+
+These endpoints and framework notifications are finite observations, not proof
+of continuous native state or native accessibility acceptance. Historical
+AXTree rejections remain unattributed; this protocol change does not by itself
+prove their cause or an engine fix.
+
+All new comparisons require **three new before and three new after processes
+with harnessVersion 2**. The empty-tree preparation and semantics ownership
+differ from version 1, so retain existing version-1 before reports only as
+historical diagnostics. Never combine them with version-2 after measurements.
+Keep raw source hashes and explicit reviewed old-API/current-domain adaptation
+diffs alongside the matched runtime, input and action metadata.
 
 ## Run
 
@@ -53,12 +88,15 @@ Optional defines keep local diagnosis short:
 - `SKED_UI_PERF_LABEL` accepts 1–80 filename-safe letters, digits, dots, `_`, `-`.
 - `SKED_UI_PERF_REVISION` identifies the measured production revision.
 
-The frozen `77061b4` baseline uses the harness files from `5e7213c`: copy only
-`benchmark/src/ui_performance_*.dart`, the integration target and its driver
-from that commit into the old checkout. Current harness composition follows the
-domain interfaces and cannot be copied unchanged into the old application.
-Keep the shared fixtures, action sequence and metric calculations identical
-when adapting composition; never copy production changes into the baseline.
+The production baseline remains `77061b4`. Start from the UI harness at
+`5e7213c`, then apply the same version-2 empty-tree bootstrap, test semantics
+setting, runtime capture, actual `AppHomeScreen` host and the shared
+`native_semantics_probe.dart` / `ui_performance_host_setup.dart` helpers to its old-API
+caller. Both measured sides must emit `harnessVersion: 2`. Current composition
+uses domain interfaces and cannot be copied unchanged into the old app.
+Preserve fixtures, actions and metric methods, and record exact reviewed
+adapter diffs; do not copy production changes into the baseline. Existing
+version-1 before reports stay historical and require fresh before sampling.
 
 ## Workload and report interpretation
 

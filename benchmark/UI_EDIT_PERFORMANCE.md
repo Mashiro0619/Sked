@@ -3,10 +3,44 @@
 `integration_test/ui_edit_benchmark_test.dart` is separate from the frozen
 66-scenario scrolling suite. It reuses its fixed sparse/1,000/5,000-event
 fixtures and frame statistics, with `UiPerformanceApp` hosting the production
-workspace widgets. A test-only
+`AppHomeScreen` and workspace widgets. A test-only
 session adapter supplies real `IoTimetableStorage` within a checked temporary
 directory instead of the scrolling suite's in-memory data store. Production
 codec defaults and the save debounce are retained.
+
+Both revisions use their actual home-screen subscriptions. UI-only seed setup
+supplies the same bundled privacy-policy acceptance version/timestamp and
+isolated package metadata before measured work. `protocol.host` records it;
+`inputSha256` covers the prepared, normalized snapshot actually written to disk.
+Shared course/event fixture files and the separate disk workload are unchanged.
+
+## Native semantics protocol, harness version 2
+
+The native entrypoint retains `fullyLive` and runs an unmeasured
+`runApp(const SizedBox.shrink())` / `binding.endOfFrame` bootstrap in `setUpAll`.
+It mounts no Material application, text or fixture/user data. The benchmark's
+`testWidgets` uses `semanticsEnabled: false` rather than adding a test-owned
+handle; actual native semantics is neither disabled nor activated by a UIA
+probe.
+
+`runtime.semantics` contains actual native/framework start/end flags and
+`observedChanges` from the framework semantics-enabled listener. Capture spans
+viewport setup, all mounting/edit/save/unmount work, the frame-delivery wait and
+cleanup. Profile requires agreement at both endpoints, unchanged endpoint
+flags and no listener-observed changes. Debug/widget-only smoke may record
+differing states; it remains separate from Profile evidence.
+
+This does not prove continuous native state or native accessibility acceptance,
+and does not attribute historical AXTree errors to a cause. Registered text
+input still uses the actual editor client and retains the caller's registration.
+The four actions, fixed fixtures, target selection, timing windows and frame
+statistics are unchanged.
+
+Use **three newly captured version-2 before and three version-2 after processes**.
+Older editor pilots validate correctness only, and version-1 UI before reports
+remain historical diagnostics; neither substitutes for the new before set.
+Apply this protocol to both source adapters before sampling and preserve the
+exact source hashes/diffs for reviewed old-API/current-domain adaptations.
 
 There are four action windows per dataset:
 
@@ -70,7 +104,11 @@ harness files from `5e7213c` in that checkout, as described in
 [UI_PERFORMANCE.md](UI_PERFORMANCE.md). Copy the shared editor-session interface,
 scenario, integration target and driver onto it, together with
 `data_operations_runtime.dart`. Replace only `ui_edit_runtime_adapter.dart`
-with `compatibility/ui_edit_runtime_77061b4.dart.txt`.
+with `compatibility/ui_edit_runtime_77061b4.dart.txt`. Apply the same native
+semantics version-2 entrypoint/scenario changes and copy
+`native_semantics_probe.dart` and `ui_performance_host_setup.dart` onto both
+checkouts before recording new runs. Both hosts mount their production
+`AppHomeScreen` rather than duplicating its subscription logic.
 
 The current adapter uses AppRuntime domains; the original adapter calls the
 original provider. Neither rewrites editing, persistence or validation logic.

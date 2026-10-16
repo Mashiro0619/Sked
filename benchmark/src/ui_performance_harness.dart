@@ -1,22 +1,15 @@
-import 'package:sked/controllers/workspace_view_state.dart';
-import 'package:sked/controllers/workspace_commands.dart';
-import 'package:sked/controllers/settings_view_state.dart';
-import 'package:sked/controllers/settings_commands.dart';
-
 import 'package:sked/providers/app_scope.dart';
 
 import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
-import 'package:sked/screens/adaptive_sked_shell.dart';
-import 'package:sked/screens/settings_page.dart';
+import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
@@ -205,30 +198,7 @@ class _UiPerformanceAppState extends State<UiPerformanceApp> {
             context,
             DesktopWindowHost(modalObserver: _modals, child: child!),
           ),
-          home: Builder(
-            builder: (context) =>
-                Consumer2<WorkspaceViewState, SettingsViewState>(
-                  builder: (_, workspace, settingsView, _) => AdaptiveSkedShell(
-                    workspace: workspace,
-                    workspaces: context.read<WorkspaceCommands>(),
-                    settings: settingsView,
-                    settingsCommands: context.read<SettingsCommands>(),
-                    activeMode: workspace.activeMode,
-                    onOpenSettings: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => SettingsPage(
-                          packageInfoLoader: () async => PackageInfo(
-                            appName: 'Sked',
-                            packageName: 'com.mashiro.sked.ui_performance',
-                            version: '2.3.0',
-                            buildNumber: '0',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-          ),
+          home: const AppHomeScreen(),
         ),
       ),
     );
