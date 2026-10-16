@@ -427,9 +427,22 @@ void main() {
           }
         },
       );
+      final heading = find
+          .descendant(
+            of: _key('sked-date-picker-heading'),
+            matching: find.byType(Text),
+          )
+          .first;
+      final l = AppLocalizations.of(t.element(heading));
+      expect(t.getSemantics(heading).hint, l.dateRangeChooseStart);
       await _tap(t, 'sked-date-2026-09-09');
+      expect(t.getSemantics(heading).hint, l.dateRangeChooseEnd);
       await t.tap(_key('sked-date-2026-09-13'));
       await t.pump();
+      final savingHeading = t.getSemantics(heading);
+      expect(savingHeading.flagsCollection.isHeader, isTrue);
+      expect(savingHeading.flagsCollection.isLiveRegion, isTrue);
+      expect(savingHeading.label, l.savingChanges);
       await t.tap(_key('sked-date-2026-09-14'));
       await t.sendKeyEvent(LogicalKeyboardKey.enter);
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -453,6 +466,10 @@ void main() {
       );
       gate.complete();
       await t.pumpAndSettle();
+      final failedHeading = t.getSemantics(heading);
+      expect(failedHeading.flagsCollection.isHeader, isTrue);
+      expect(failedHeading.flagsCollection.isLiveRegion, isTrue);
+      expect(failedHeading.label, l.saveFailedRetry);
       expect(_key('sked-date-range-retry'), findsOneWidget);
       expect(results, isEmpty);
       await _tap(t, 'sked-date-range-retry');

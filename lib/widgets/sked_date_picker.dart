@@ -926,21 +926,18 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        child: Semantics(
-                                          header: true,
-                                          hint: _rangeMode
+                                        child: _headerLabel(
+                                          context,
+                                          title,
+                                          feedback: true,
+                                          panelTitle: true,
+                                          semanticHint: _rangeMode
                                               ? (widget
                                                         .rangeController!
                                                         .selectingEnd
                                                     ? l.dateRangeChooseEnd
                                                     : l.dateRangeChooseStart)
                                               : null,
-                                          child: _headerLabel(
-                                            context,
-                                            title,
-                                            feedback: true,
-                                            panelTitle: true,
-                                          ),
                                         ),
                                       ),
                                       if (_rangeGestures &&
@@ -1188,6 +1185,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     bool feedback = false,
     bool compact = false,
     bool panelTitle = false,
+    String? semanticHint,
   }) {
     final desktopHeading =
         WorkbenchChromeMetrics.of(context).desktop && !widget.embedded;
@@ -1224,11 +1222,15 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                 color: failed ? Theme.of(context).colorScheme.error : null,
               ),
     );
-    return Semantics(
-      liveRegion: message != null,
-      child: SkedTooltip(
-        message: message ?? label,
-        excludeFromSemantics: true,
+    return SkedTooltip(
+      message: message ?? label,
+      excludeFromSemantics: true,
+      child: Semantics(
+        // Keep these properties on the labelled node inside the tooltip's
+        // isolated traversal anchor, so assistive clients can read them.
+        header: panelTitle,
+        hint: semanticHint,
+        liveRegion: message != null,
         child: compact
             // Reserve a stable two-line slot at large text sizes. Retrying a
             // range must not move the grid when an error gives way to the month.
