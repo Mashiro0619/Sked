@@ -2,6 +2,7 @@ import 'dart:ui' show Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
+import 'package:material_ui/material_ui.dart' as ui;
 
 import '../benchmark/src/ui_performance_fixtures.dart';
 import '../benchmark/src/ui_performance_metrics.dart';
@@ -9,6 +10,105 @@ import '../benchmark/src/ui_performance_scenarios.dart';
 import 'support/data_transfer_codec.dart';
 
 void main() {
+  for (final canvasOverflows in [true, false]) {
+    testWidgets(
+      canvasOverflows
+          ? 'canvas scrolling ignores longer reminders, resources and all-day lists'
+          : 'a fitting primary canvas never scrolls another pane',
+      (tester) async {
+        final primary = ui.ScrollController();
+        final resources = ui.ScrollController();
+        final reminders = ui.ScrollController();
+        final allDay = ui.ScrollController();
+        final otherControllers = [resources, reminders, allDay];
+        var anotherSurfaceMoved = false;
+        for (final controller in otherControllers) {
+          controller.addListener(() {
+            if (controller.offset != 0) anotherSurfaceMoved = true;
+          });
+        }
+        addTearDown(() {
+          for (final controller in [primary, ...otherControllers]) {
+            controller.dispose();
+          }
+        });
+        await tester.pumpWidget(
+          ui.MaterialApp(
+            home: ui.Scaffold(
+              body: ui.Row(
+                key: const ValueKey('general-home'),
+                children: [
+                  ui.SizedBox(
+                    key: const ValueKey('workspace-resources'),
+                    width: 100,
+                    child: ui.SingleChildScrollView(
+                      controller: resources,
+                      child: const ui.SizedBox(height: 9000),
+                    ),
+                  ),
+                  ui.Expanded(
+                    child: ui.Column(
+                      key: const ValueKey('workspace-canvas'),
+                      crossAxisAlignment: ui.CrossAxisAlignment.stretch,
+                      children: [
+                        ui.SizedBox(
+                          height: 60,
+                          child: ui.SingleChildScrollView(
+                            key: const ValueKey(
+                              'general-all-day-expanded-scroll',
+                            ),
+                            controller: allDay,
+                            child: const ui.SizedBox(height: 4000),
+                          ),
+                        ),
+                        ui.Expanded(
+                          child: ui.SingleChildScrollView(
+                            key: const ValueKey('general-timeline-scroll-view'),
+                            controller: primary,
+                            child: ui.SizedBox(
+                              height: canvasOverflows ? 1600 : 100,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ui.SizedBox(
+                    key: const ValueKey('general-reminders-list'),
+                    width: 180,
+                    child: ui.SingleChildScrollView(
+                      key: const ValueKey('workspace-view-body'),
+                      controller: reminders,
+                      child: const ui.SizedBox(height: 12000),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final primaryExtent = primary.position.maxScrollExtent;
+        final details = <String, Object?>{};
+        await scrollUiPerformanceCanvas(tester, 'general-home', details);
+        expect(details['scrollScope'], 'workspace-canvas');
+        expect(details['scrollTarget'], 'general-timeline-scroll-view');
+        expect(details['maxScrollExtent'], primaryExtent);
+        expect(details['finalMaxScrollExtent'], primaryExtent);
+        expect(anotherSurfaceMoved, isFalse);
+        if (canvasOverflows) {
+          expect(details['scrollStatus'], 'scrolled');
+          expect(details['furthestOffset'], greaterThan(0));
+        } else {
+          expect(primaryExtent, 0);
+          expect(details['scrollStatus'], 'content-fits-viewport');
+          expect(details.containsKey('furthestOffset'), isFalse);
+        }
+        await tester.pumpWidget(const ui.SizedBox.shrink());
+      },
+    );
+  }
+
   test(
     'frame percentiles preserve long tails and empty samples stay unavailable',
     () {
@@ -102,6 +202,10 @@ void main() {
             uiWorkspacePerformanceProtocol,
           );
         }
+        expect(
+          (report['protocol']! as Map)['scrollTargeting'],
+          uiPerformanceScrollTargetingProtocol,
+        );
         expect(
           results.every((result) => (result as Map)['elapsedUs'] is int),
           isTrue,

@@ -39,6 +39,30 @@ hashes. Reports use `measurement: profile-workspace-engine-frames`, native
 semantics harness version 2, and `protocol.scope.id: workspace60-v1`.
 The driver requires the complete matrix and passed action validation.
 
+## Primary canvas scrolling
+
+New reports declare `protocol.scrollTargeting.version: 1` and
+`id: workspace-canvas-scroll-v1`. Native semantics remain harness version 2;
+the ten actions remain `workspace60-v1`. The targeting version is a separate
+protocol dimension and must match on both sides of a comparison.
+
+Vertical workspace actions only search inside that workspace's
+`workspace-canvas`. Existing timeline/timetable primary keys take precedence;
+other views use the largest visible vertical surface within the canvas. A
+primary surface that fits its viewport performs no gesture. Resource,
+reminder and detail panes cannot become substitute scrolling targets.
+Reports retain the scope, target and final extent as well as the original
+initial extent and offsets. The two 400 ms gestures and settling behavior
+are unchanged.
+
+The former largest-surface search across the entire workspace could choose
+a long reminder list while a shorter calendar was visible. The new protocol
+requires newly captured processes and identical reviewed sources on both
+sides. Preserve older reports without adding fields or recategorizing their
+measurements. Reports without `scrollTargeting` belong to the legacy
+targeting protocol and cannot be mixed with version 1. Geometry, viewport,
+native semantics and zero-AX checks still apply.
+
 The `77061b4` baseline uses its own production home and original business
 APIs, with the same benchmark scope/entrypoint/driver changes applied to the
 reviewed UI harness described in [UI_PERFORMANCE.md](UI_PERFORMANCE.md).

@@ -22,6 +22,26 @@ import 'ui_performance_metrics.dart';
 
 const uiPerformanceHarnessVersion = 2;
 
+const _uiPerformancePrimaryScrollKeys = <String>[
+  'general-timeline-scroll-view',
+  'timetable-grid-vertical-scroll',
+];
+
+const uiPerformanceScrollTargetingProtocol = <String, Object>{
+  'version': 1,
+  'id': 'workspace-canvas-scroll-v1',
+  'scope': 'workspace-canvas',
+  'namedPrimaryKeys': _uiPerformancePrimaryScrollKeys,
+  'fallback': 'largest hit-testable vertical scrollable inside the canvas only',
+  'fits': 'zero extent means no gesture; never fall back to another pane',
+  'observations': [
+    'scrollScope',
+    'scrollTarget',
+    'maxScrollExtent',
+    'finalMaxScrollExtent',
+  ],
+};
+
 enum UiPerformanceScope { full, workspace }
 
 const uiWorkspacePerformanceProtocol = <String, Object>{
@@ -340,6 +360,7 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
         'processMaxRssBytes': ProcessInfo.maxRss,
       },
       'protocol': {
+        'scrollTargeting': uiPerformanceScrollTargetingProtocol,
         if (config.scope == UiPerformanceScope.workspace)
           'scope': uiWorkspacePerformanceProtocol,
         'host': uiPerformanceHostProtocol,
@@ -381,6 +402,113 @@ Future<void> _settle(WidgetTester tester) async {
     EnginePhase.sendSemanticsUpdate,
     const Duration(seconds: 15),
   );
+}
+
+/// Scroll the actual workspace canvas, never a resource or detail pane.
+/// Shared with the benchmark's behavior tests; this is not a production API.
+Future<void> scrollUiPerformanceCanvas(
+  WidgetTester tester,
+  String root,
+  Map<String, Object?> details,
+) async {
+  final canvas = find.descendant(
+    of: _key(root),
+    matching: _key('workspace-canvas'),
+  );
+  expect(
+    canvas,
+    findsOneWidget,
+    reason: 'Expected the workspace canvas in $root.',
+  );
+  var targetScope = canvas;
+  var targetName = 'canvas-largest-visible-vertical';
+  for (final key in _uiPerformancePrimaryScrollKeys) {
+    final named = find.descendant(of: canvas, matching: _key(key));
+    if (named.evaluate().isNotEmpty) {
+      targetScope = named;
+      targetName = key;
+      break;
+    }
+  }
+  final scrollables = find
+      .descendant(of: targetScope, matching: find.byType(Scrollable))
+      .hitTestable();
+  final candidates = scrollables.evaluate().where((element) {
+    final state = (element as StatefulElement).state as ScrollableState;
+    return axisDirectionToAxis(state.axisDirection) == Axis.vertical &&
+        state.position.hasContentDimensions;
+  }).toList();
+  if (candidates.isEmpty) {
+    throw StateError('No visible vertical scroll surface in the $root canvas.');
+  }
+  candidates.sort(
+    (a, b) => ((b as StatefulElement).state as ScrollableState)
+        .position
+        .maxScrollExtent
+        .compareTo(
+          ((a as StatefulElement).state as ScrollableState)
+              .position
+              .maxScrollExtent,
+        ),
+  );
+  details['scrollScope'] = 'workspace-canvas';
+  details['scrollTarget'] = targetName;
+  await _scrollUiPerformanceSurface(
+    tester,
+    find.byElementPredicate((element) => element == candidates.first),
+    details,
+  );
+}
+
+Future<void> _scrollUiPerformanceSurface(
+  WidgetTester tester,
+  Finder surface,
+  Map<String, Object?> details, {
+  bool requireOverflow = false,
+}) async {
+  details.putIfAbsent('scrollScope', () => 'workspace-canvas');
+  details.putIfAbsent('scrollTarget', () {
+    final key = tester.widget(surface).key;
+    return key is ValueKey<String> ? key.value : 'explicit-scroll-surface';
+  });
+  final scrollable = tester.widget(surface) is Scrollable
+      ? surface
+      : find.descendant(of: surface, matching: find.byType(Scrollable)).first;
+  final position = tester.state<ScrollableState>(scrollable).position;
+  details['maxScrollExtent'] = position.maxScrollExtent;
+  if (requireOverflow) expect(position.maxScrollExtent, greaterThan(0));
+  if (position.maxScrollExtent <= 0) {
+    details['scrollStatus'] = 'content-fits-viewport';
+    details['finalMaxScrollExtent'] = position.maxScrollExtent;
+    return;
+  }
+  final before = position.pixels;
+  final distance = math.min(280.0, tester.getSize(scrollable).height * .65);
+  await tester.timedDrag(
+    scrollable,
+    Offset(0, -distance),
+    const Duration(milliseconds: 400),
+  );
+  await _settle(tester);
+  final after = position.pixels;
+  expect(
+    after,
+    greaterThan(before),
+    reason: 'The gesture must actually move the production scroll position.',
+  );
+  await tester.timedDrag(
+    scrollable,
+    Offset(0, distance),
+    const Duration(milliseconds: 400),
+  );
+  await _settle(tester);
+  details.addAll({
+    'scrollStatus': 'scrolled',
+    'startOffset': before,
+    'furthestOffset': after,
+    'endOffset': position.pixels,
+    'finalMaxScrollExtent': position.maxScrollExtent,
+  });
 }
 
 class _Journey {
@@ -522,76 +650,19 @@ class _Journey {
     details['completedTimetableChanges'] = 2;
   }
 
-  Future<void> scrollActive(String root, Map<String, Object?> details) async {
-    final scrollables = find
-        .descendant(of: _key(root), matching: find.byType(Scrollable))
-        .hitTestable();
-    final candidates = scrollables.evaluate().where((element) {
-      final state = (element as StatefulElement).state as ScrollableState;
-      return axisDirectionToAxis(state.axisDirection) == Axis.vertical &&
-          state.position.hasContentDimensions;
-    }).toList();
-    if (candidates.isEmpty) {
-      throw StateError('No visible vertical scroll surface in $root.');
-    }
-    candidates.sort(
-      (a, b) => ((b as StatefulElement).state as ScrollableState)
-          .position
-          .maxScrollExtent
-          .compareTo(
-            ((a as StatefulElement).state as ScrollableState)
-                .position
-                .maxScrollExtent,
-          ),
-    );
-    await _scroll(
-      find.byElementPredicate((element) => element == candidates.first),
-      details,
-    );
-  }
+  Future<void> scrollActive(String root, Map<String, Object?> details) =>
+      scrollUiPerformanceCanvas(tester, root, details);
 
   Future<void> _scroll(
     Finder surface,
     Map<String, Object?> details, {
     bool requireOverflow = false,
-  }) async {
-    final scrollable = tester.widget(surface) is Scrollable
-        ? surface
-        : find.descendant(of: surface, matching: find.byType(Scrollable)).first;
-    final position = tester.state<ScrollableState>(scrollable).position;
-    details['maxScrollExtent'] = position.maxScrollExtent;
-    if (requireOverflow) expect(position.maxScrollExtent, greaterThan(0));
-    if (position.maxScrollExtent <= 0) {
-      details['scrollStatus'] = 'content-fits-viewport';
-      return;
-    }
-    final before = position.pixels;
-    final distance = math.min(280.0, tester.getSize(scrollable).height * .65);
-    await tester.timedDrag(
-      scrollable,
-      Offset(0, -distance),
-      const Duration(milliseconds: 400),
-    );
-    await _settle(tester);
-    final after = position.pixels;
-    expect(
-      after,
-      greaterThan(before),
-      reason: 'The gesture must actually move the production scroll position.',
-    );
-    await tester.timedDrag(
-      scrollable,
-      Offset(0, distance),
-      const Duration(milliseconds: 400),
-    );
-    await _settle(tester);
-    details.addAll({
-      'scrollStatus': 'scrolled',
-      'startOffset': before,
-      'furthestOffset': after,
-      'endOffset': position.pixels,
-    });
-  }
+  }) => _scrollUiPerformanceSurface(
+    tester,
+    surface,
+    details,
+    requireOverflow: requireOverflow,
+  );
 
   Future<void> studentDay(Map<String, Object?> details) async {
     Future<void> choose(String mode) async {
