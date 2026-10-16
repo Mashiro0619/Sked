@@ -228,6 +228,114 @@ void main() {
     },
   );
 
+  test('range clipping retains the input occurrence at both grid edges', () {
+    final date = DateTime(2026, 9, 8);
+    final model = GeneralMonthGridModel.build(
+      monthDate: date,
+      showWeekends: true,
+    );
+    final calendar = GeneralSchedule(
+      id: 'calendar',
+      name: 'Calendar',
+      events: const [],
+    );
+    GeneralEventOccurrence occurrence(
+      String id,
+      DateTime start,
+      DateTime end,
+    ) => GeneralEventOccurrence(
+      event: _event(id, start, end: end),
+      calendar: calendar,
+      start: start,
+      end: end,
+      sequence: 0,
+    );
+    final spanning = occurrence(
+      'spanning',
+      DateTime(2020, 1, 1),
+      DateTime(2030, 1, 1),
+    );
+    final before = occurrence('before', DateTime(2026, 8, 1), model.queryStart);
+    final after = occurrence(
+      'after',
+      model.queryEndExclusive,
+      DateTime(2026, 11, 1),
+    );
+    final empty = occurrence('empty', date, date);
+    final page = GeneralMonthProjectionCache()
+        .project(
+          data: GeneralScheduleData(
+            activeScheduleId: calendar.id,
+            schedules: [calendar],
+          ),
+          selectedDate: date,
+          queryOccurrences: (_) => [before, spanning, after, empty],
+        )
+        .current;
+
+    expect(page.occurrencesByDay, hasLength(model.days.length));
+    for (final bucket in page.occurrencesByDay.values) {
+      expect(bucket, hasLength(1));
+      expect(bucket.single, same(spanning));
+    }
+  });
+
+  test('many long-lived events keep every visible weekday and identity', () {
+    final fixture = _Fixture([
+      for (var index = 0; index < 160; index += 1)
+        _event(
+          'long-lived $index',
+          DateTime(2020, 1, index + 1),
+          end: DateTime(2030, 1, index + 1),
+        ),
+    ]);
+    fixture.data = fixture.data.copyWith(showWeekends: false);
+    final page = fixture.project(DateTime(2026, 9, 8)).current;
+    final firstBucket = page.occurrencesByDay.values.first;
+
+    expect(firstBucket, hasLength(160));
+    expect(page.occurrencesByDay, hasLength(25));
+    expect(page.occurrencesByDay, isNot(contains('2026-09-12')));
+    expect(page.occurrencesByDay, isNot(contains('2026-09-13')));
+    for (final bucket in page.occurrencesByDay.values) {
+      expect(bucket, hasLength(firstBucket.length));
+      for (var index = 0; index < bucket.length; index += 1) {
+        expect(bucket[index], same(firstBucket[index]));
+      }
+    }
+  });
+
+  for (final (start, expectedDates) in [
+    (DateTime(2026, 3, 7), ['2026-03-07', '2026-03-08']),
+    (DateTime(2026, 3, 28), ['2026-03-28', '2026-03-29']),
+    (DateTime(2026, 10, 24), ['2026-10-24', '2026-10-25']),
+    (DateTime(2026, 10, 31), ['2026-10-31', '2026-11-01']),
+    (
+      DateTime(2018, 11, 3),
+      ['2018-11-03', '2018-11-04', '2018-11-05', '2018-11-06'],
+    ),
+  ]) {
+    test('UTC timed spans keep local dates around $start', () {
+      final fixture = _Fixture([
+        _event(
+          'overnight',
+          DateTime(start.year, start.month, start.day, 23).toUtc(),
+          end: DateTime(
+            start.year,
+            start.month,
+            start.day + expectedDates.length,
+          ).toUtc(),
+        ),
+      ]);
+      final page = fixture.project(start).current;
+
+      expect([
+        for (final entry in page.occurrencesByDay.entries)
+          if (entry.value.isNotEmpty) entry.key,
+      ], expectedDates);
+    });
+  }
+
   test('month ends, year boundaries and hidden weekends retain page dates', () {
     final fixture = _Fixture();
     final march = fixture.project(DateTime(2024, 3, 31));

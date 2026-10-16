@@ -180,20 +180,41 @@ DateTime _adjacentMonthDate(DateTime selectedDate, int offset, bool weekends) {
       : addCalendarDays(date, 8 - date.weekday);
 }
 
-String _dateKey(DateTime date) =>
-    normalizeDateOnly(date).toIso8601String().split('T').first;
+class _MonthCalendarDate {
+  _MonthCalendarDate(DateTime value) : date = normalizeDateOnly(value);
+
+  final DateTime date;
+  late final String key = date.toIso8601String().split('T').first;
+
+  // This is nextCalendarDate's civil addition after normalization. A local
+  // midnight can normalize to 01:00; preserve that time when advancing.
+  late final DateTime next = addCalendarDays(date, 1);
+}
 
 Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
   List<GeneralEventOccurrence> occurrences,
   List<DateTime> days,
 ) {
-  final result = <String, List<GeneralEventOccurrence>>{
-    for (final day in days) _dateKey(day): [],
-  };
   if (days.isEmpty) return const {};
-  final firstDay = normalizeDateOnly(days.first);
-  final lastDay = normalizeDateOnly(days.last);
-  final rangeEndExclusive = calendarDateEndExclusive(lastDay);
+  // One grid has at most 42 days. Allow both local/UTC representations and
+  // some out-of-grid endpoints, without retaining dates beyond this query.
+  const maxCachedDates = 128;
+  final dates = <(bool, int, int, int), _MonthCalendarDate>{};
+  _MonthCalendarDate calendarDate(DateTime value) {
+    final parts = (value.isUtc, value.year, value.month, value.day);
+    final cached = dates[parts];
+    if (cached != null) return cached;
+    final resolved = _MonthCalendarDate(value);
+    if (dates.length < maxCachedDates) dates[parts] = resolved;
+    return resolved;
+  }
+
+  final result = <String, List<GeneralEventOccurrence>>{
+    for (final day in days) calendarDate(day).key: [],
+  };
+  final firstDay = calendarDate(days.first).date;
+  final lastDay = calendarDate(days.last).date;
+  final rangeEndExclusive = calendarDate(lastDay).next;
 
   for (final occurrence in occurrences) {
     final displayStart = occurrence.calendarDisplayStart;
@@ -204,19 +225,18 @@ Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
       continue;
     }
 
-    var bucketDay = normalizeDateOnly(displayStart);
+    var bucketDay = calendarDate(displayStart).date;
     if (bucketDay.isBefore(firstDay)) bucketDay = firstDay;
-    var lastBucketDay = normalizeDateOnly(
+    var lastBucketDay = calendarDate(
       displayEnd.subtract(const Duration(microseconds: 1)),
-    );
+    ).date;
     if (lastBucketDay.isAfter(lastDay)) lastBucketDay = lastDay;
 
-    for (
-      var day = bucketDay;
-      !day.isAfter(lastBucketDay);
-      day = nextCalendarDate(day)
-    ) {
-      result[_dateKey(day)]?.add(occurrence);
+    var day = bucketDay;
+    while (!day.isAfter(lastBucketDay)) {
+      final projectedDate = calendarDate(day);
+      result[projectedDate.key]?.add(occurrence);
+      day = projectedDate.next;
     }
   }
   result.updateAll((_, occurrences) {
