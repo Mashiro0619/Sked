@@ -4,8 +4,18 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
 
-const _agendaRuntimeMutationBrokerName =
+const agendaRuntimeMutationDefaultBrokerNamespace =
     'com.mashiro.sked.agenda-runtime-mutation-lock.v1';
+String? get platformAgendaRuntimeMutationDefaultLockFilePath {
+  try {
+    return '${Directory.systemTemp.path}${Platform.pathSeparator}'
+        'sked_notification_runtime.lock';
+  } catch (_) {
+    // Keep the existing process-local fallback if no temp path is available.
+    return null;
+  }
+}
+
 const _brokerHandshakeTimeout = Duration(seconds: 2);
 const _brokerLeaseHeartbeat = Duration(seconds: 1);
 const _brokerLeaseTimeout = Duration(seconds: 4);
@@ -13,9 +23,16 @@ const _brokerLeaseTimeout = Duration(seconds: 4);
 var _nextRequestId = 0;
 
 Future<T> withPlatformAgendaRuntimeMutationLock<T>(
-  Future<T> Function() action,
-) async {
-  final processLease = await _acquireProcessLease();
+  Future<T> Function() action, {
+  String? lockFilePath,
+  String? brokerNamespace,
+}) async {
+  final processLease = await _acquireProcessLease(
+    lockFilePath:
+        lockFilePath ?? platformAgendaRuntimeMutationDefaultLockFilePath,
+    brokerNamespace:
+        brokerNamespace ?? agendaRuntimeMutationDefaultBrokerNamespace,
+  );
   try {
     return await action();
   } finally {
@@ -30,9 +47,15 @@ Future<T> withPlatformAgendaRuntimeMutationLock<T>(
 /// exclusive [RandomAccessFile] lock. The name server is shared by the Dart VM
 /// and gives every isolate in this process one small broker before the file
 /// lock is used to coordinate with other processes.
-Future<_AgendaRuntimeMutationProcessLease> _acquireProcessLease() async {
+Future<_AgendaRuntimeMutationProcessLease> _acquireProcessLease({
+  required String? lockFilePath,
+  required String brokerNamespace,
+}) async {
   while (true) {
-    final broker = await _lookupOrCreateBroker();
+    final broker = await _lookupOrCreateBroker(
+      lockFilePath: lockFilePath,
+      brokerNamespace: brokerNamespace,
+    );
     final reply = ReceivePort();
     final requestId =
         '${pid}_${DateTime.now().microsecondsSinceEpoch}_'
@@ -67,13 +90,9 @@ Future<_AgendaRuntimeMutationProcessLease> _acquireProcessLease() async {
       broker.send(<Object?>[_AgendaRuntimeMutationBroker.cancel, requestId]);
       await subscription.cancel();
       reply.close();
-      final registered = IsolateNameServer.lookupPortByName(
-        _agendaRuntimeMutationBrokerName,
-      );
+      final registered = IsolateNameServer.lookupPortByName(brokerNamespace);
       if (registered == broker) {
-        IsolateNameServer.removePortNameMapping(
-          _agendaRuntimeMutationBrokerName,
-        );
+        IsolateNameServer.removePortNameMapping(brokerNamespace);
       }
       continue;
     }
@@ -87,20 +106,21 @@ Future<_AgendaRuntimeMutationProcessLease> _acquireProcessLease() async {
   }
 }
 
-Future<SendPort> _lookupOrCreateBroker() async {
+Future<SendPort> _lookupOrCreateBroker({
+  required String? lockFilePath,
+  required String brokerNamespace,
+}) async {
   while (true) {
-    final registered = IsolateNameServer.lookupPortByName(
-      _agendaRuntimeMutationBrokerName,
-    );
+    final registered = IsolateNameServer.lookupPortByName(brokerNamespace);
     if (registered != null) return registered;
 
     final ready = ReceivePort();
     try {
-      await Isolate.spawn(
-        _runAgendaRuntimeMutationBroker,
-        ready.sendPort,
-        debugName: 'sked-agenda-runtime-mutation-lock',
-      );
+      await Isolate.spawn(_runAgendaRuntimeMutationBroker, (
+        ready: ready.sendPort,
+        lockFilePath: lockFilePath,
+        brokerNamespace: brokerNamespace,
+      ), debugName: 'sked-agenda-runtime-mutation-lock');
       final candidate = await ready.first.timeout(_brokerHandshakeTimeout);
       if (candidate is SendPort) return candidate;
     } finally {
@@ -109,16 +129,19 @@ Future<SendPort> _lookupOrCreateBroker() async {
   }
 }
 
-void _runAgendaRuntimeMutationBroker(SendPort ready) {
-  final broker = _AgendaRuntimeMutationBroker();
+void _runAgendaRuntimeMutationBroker(
+  ({SendPort ready, String? lockFilePath, String brokerNamespace})
+  configuration,
+) {
+  final broker = _AgendaRuntimeMutationBroker(configuration.lockFilePath);
   if (IsolateNameServer.registerPortWithName(
     broker.sendPort,
-    _agendaRuntimeMutationBrokerName,
+    configuration.brokerNamespace,
   )) {
-    ready.send(broker.sendPort);
+    configuration.ready.send(broker.sendPort);
     return;
   }
-  ready.send(null);
+  configuration.ready.send(null);
   broker.close();
 }
 
@@ -150,7 +173,7 @@ class _AgendaRuntimeMutationProcessLease {
 }
 
 class _AgendaRuntimeMutationBroker {
-  _AgendaRuntimeMutationBroker() {
+  _AgendaRuntimeMutationBroker(this._lockFilePath) {
     _commands
       // Keep this dedicated broker alive for the lifetime of the Dart VM. It
       // never executes a mutation itself, so a long synchronous action in a
@@ -167,6 +190,7 @@ class _AgendaRuntimeMutationBroker {
   static const acknowledged = 'acknowledged';
   static const granted = 'granted';
 
+  final String? _lockFilePath;
   final RawReceivePort _commands = RawReceivePort();
   final Queue<_AgendaRuntimeMutationRequest> _waiting =
       Queue<_AgendaRuntimeMutationRequest>();
@@ -237,12 +261,12 @@ class _AgendaRuntimeMutationBroker {
     var locked = false;
     try {
       try {
-        final path =
-            '${Directory.systemTemp.path}${Platform.pathSeparator}'
-            'sked_notification_runtime.lock';
-        lockFile = await File(path).open(mode: FileMode.append);
-        await lockFile.lock(FileLock.blockingExclusive);
-        locked = true;
+        final path = _lockFilePath;
+        if (path != null) {
+          lockFile = await File(path).open(mode: FileMode.append);
+          await lockFile.lock(FileLock.blockingExclusive);
+          locked = true;
+        }
       } catch (_) {
         // A read-only host still gets the process-local queue semantics.
       }

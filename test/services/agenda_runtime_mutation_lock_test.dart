@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as path;
 import 'package:sked/services/agenda_runtime_mutation_lock.dart';
+import 'package:sked/services/agenda_runtime_mutation_lock_stub.dart' as stub;
 
 const _runtimeMutationBrokerName =
     'com.mashiro.sked.agenda-runtime-mutation-lock.v1';
@@ -196,6 +199,308 @@ void main() {
       exited.close();
     }
   });
+
+  group('explicit runtime lock scope', () {
+    late Directory directory;
+
+    setUp(() async {
+      directory = await Directory.systemTemp.createTemp('sked-runtime-scope-');
+    });
+    tearDown(() => _deleteScopeDirectory(directory));
+
+    AgendaRuntimeMutationLockScope scopeFor(String name) =>
+        AgendaRuntimeMutationLockScope(
+          lockFilePath: path.join(directory.path, '$name.lock'),
+        );
+
+    test('rejects relative paths and mismatched broker identities', () {
+      final first = scopeFor('first');
+      final second = scopeFor('second');
+      expect(
+        () => AgendaRuntimeMutationLockScope(lockFilePath: 'relative.lock'),
+        throwsArgumentError,
+      );
+      if (Platform.isWindows) {
+        expect(
+          () => AgendaRuntimeMutationLockScope(
+            lockFilePath: r'\root-relative.lock',
+          ),
+          throwsArgumentError,
+        );
+      }
+      expect(
+        () => AgendaRuntimeMutationLockScope(
+          lockFilePath: first.lockFilePath,
+          brokerNamespace: second.brokerNamespace,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => AgendaRuntimeMutationLockScope(
+          lockFilePath: second.lockFilePath,
+          brokerNamespace: first.brokerNamespace,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test(
+      'the same scope serializes isolates and permits nested acquisition',
+      () async {
+        final scope = scopeFor('shared');
+        final alias = AgendaRuntimeMutationLockScope(
+          lockFilePath:
+              '${directory.path}${Platform.pathSeparator}unused'
+              '${Platform.pathSeparator}..${Platform.pathSeparator}shared.lock',
+          brokerNamespace: scope.brokerNamespace,
+        );
+        final events = ReceivePort();
+        final exited = ReceivePort();
+        final isolate = await Isolate.spawn(
+          _holdScopedAgendaRuntimeMutationLock,
+          (
+            events: events.sendPort,
+            lockFilePath: alias.lockFilePath,
+            brokerNamespace: alias.brokerNamespace,
+          ),
+          onExit: exited.sendPort,
+        );
+        final messages = StreamIterator<dynamic>(events);
+        SendPort? releaseRemote;
+        try {
+          expect(
+            await messages.moveNext().timeout(const Duration(seconds: 5)),
+            isTrue,
+          );
+          releaseRemote = messages.current as SendPort;
+          expect(
+            await messages.moveNext().timeout(const Duration(seconds: 5)),
+            isTrue,
+          );
+          expect(messages.current, 'entered');
+          var localEntered = false;
+          final local = _lockedIn(scope, () async {
+            localEntered = true;
+          });
+          try {
+            await Future<void>.delayed(const Duration(milliseconds: 25));
+            expect(localEntered, isFalse);
+          } finally {
+            releaseRemote.send(null);
+            await local.timeout(const Duration(seconds: 5));
+          }
+          await exited.first.timeout(const Duration(seconds: 5));
+          expect(localEntered, isTrue);
+          expect(await File(scope.lockFilePath).exists(), isTrue);
+          await _lockedIn(
+            alias,
+            () async {},
+          ).timeout(const Duration(seconds: 5));
+        } finally {
+          releaseRemote?.send(null);
+          isolate.kill(priority: Isolate.immediate);
+          await messages.cancel();
+          events.close();
+          exited.close();
+        }
+      },
+    );
+
+    test(
+      'different scopes enter concurrently and create distinct lock files',
+      () async {
+        final firstScope = scopeFor('first');
+        final secondScope = scopeFor('second');
+        final firstEntered = Completer<void>();
+        final releaseFirst = Completer<void>();
+        final first = _lockedIn(firstScope, () async {
+          firstEntered.complete();
+          await releaseFirst.future;
+        });
+        await firstEntered.future;
+        try {
+          await _lockedIn(secondScope, () async {
+            expect(releaseFirst.isCompleted, isFalse);
+            expect(await File(firstScope.lockFilePath).exists(), isTrue);
+            expect(await File(secondScope.lockFilePath).exists(), isTrue);
+            expect(
+              await FileSystemEntity.identical(
+                firstScope.lockFilePath,
+                secondScope.lockFilePath,
+              ),
+              isFalse,
+            );
+          }).timeout(const Duration(seconds: 5));
+        } finally {
+          releaseFirst.complete();
+          await first;
+        }
+      },
+    );
+
+    test('switching scopes cannot borrow the current owner token', () async {
+      final firstScope = scopeFor('first');
+      final secondScope = scopeFor('second');
+      final secondHeld = Completer<void>();
+      final releaseSecond = Completer<void>();
+      final blocker = _lockedIn(secondScope, () async {
+        secondHeld.complete();
+        await releaseSecond.future;
+      });
+      await secondHeld.future;
+      final firstEntered = Completer<void>();
+      var nestedEntered = false;
+      final first = _lockedIn(firstScope, () async {
+        firstEntered.complete();
+        await _lockedIn(secondScope, () async {
+          nestedEntered = true;
+        }).timeout(const Duration(seconds: 5));
+      });
+      try {
+        await firstEntered.future;
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+        expect(nestedEntered, isFalse);
+      } finally {
+        releaseSecond.complete();
+        await Future.wait([blocker, first]);
+      }
+      expect(nestedEntered, isTrue);
+    });
+
+    test('A to B to A reenters its still-active ancestor lock', () async {
+      final firstScope = scopeFor('first');
+      final secondScope = scopeFor('second');
+      final order = <String>[];
+      await _lockedIn(firstScope, () async {
+        order.add('A');
+        await _lockedIn(secondScope, () async {
+          order.add('B');
+          await _lockedIn(firstScope, () async {
+            order.add('A again');
+          }).timeout(const Duration(seconds: 5));
+        });
+      });
+      expect(order, ['A', 'B', 'A again']);
+      expect(await File(secondScope.lockFilePath).exists(), isTrue);
+    });
+
+    test(
+      'a retained callback keeps its scope but reacquires a released lease',
+      () async {
+        final scope = scopeFor('retained');
+        final trigger = Completer<void>();
+        late Future<void> callback;
+        var callbackEntered = false;
+        await _lockedIn(scope, () async {
+          callback = trigger.future.then((_) {
+            return withAgendaRuntimeMutationLock(() async {
+              callbackEntered = true;
+            });
+          });
+        });
+        final blockerEntered = Completer<void>();
+        final releaseBlocker = Completer<void>();
+        final blocker = _lockedIn(scope, () async {
+          blockerEntered.complete();
+          await releaseBlocker.future;
+        });
+        await blockerEntered.future;
+        try {
+          trigger.complete();
+          await Future<void>.delayed(const Duration(milliseconds: 25));
+          expect(callbackEntered, isFalse);
+        } finally {
+          releaseBlocker.complete();
+          await Future.wait([blocker, callback]);
+        }
+        expect(callbackEntered, isTrue);
+      },
+    );
+
+    test(
+      'an explicit default path shares the legacy broker and reentrancy',
+      () async {
+        final scope = AgendaRuntimeMutationLockScope(
+          lockFilePath: path.join(
+            Directory.systemTemp.path,
+            'sked_notification_runtime.lock',
+          ),
+          brokerNamespace: _runtimeMutationBrokerName,
+        );
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        var nestedEntered = false;
+        final owner = withAgendaRuntimeMutationLock(() async {
+          await _lockedIn(scope, () async {
+            nestedEntered = true;
+          }).timeout(const Duration(seconds: 5));
+          entered.complete();
+          await release.future;
+        });
+        var outsideEntered = false;
+        Future<void>? outside;
+        try {
+          await entered.future.timeout(const Duration(seconds: 5));
+          outside = _lockedIn(scope, () async {
+            outsideEntered = true;
+          });
+          expect(nestedEntered, isTrue);
+          await Future<void>.delayed(const Duration(milliseconds: 25));
+          expect(outsideEntered, isFalse);
+        } finally {
+          release.complete();
+          await owner;
+          if (outside != null) await outside;
+        }
+        expect(outsideEntered, isTrue);
+      },
+    );
+  });
+
+  test('the non-IO platform still executes the supplied action', () async {
+    final result = await stub.withPlatformAgendaRuntimeMutationLock(
+      () async => 42,
+      lockFilePath: '/isolated/runtime.lock',
+      brokerNamespace: 'unused-on-non-io',
+    );
+    expect(result, 42);
+  });
+}
+
+Future<T> _lockedIn<T>(
+  AgendaRuntimeMutationLockScope scope,
+  Future<T> Function() action,
+) => withAgendaRuntimeMutationLockScope(
+  scope,
+  () => withAgendaRuntimeMutationLock(action),
+);
+
+Future<void> _holdScopedAgendaRuntimeMutationLock(
+  ({SendPort events, String lockFilePath, String brokerNamespace})
+  configuration,
+) async {
+  final scope = AgendaRuntimeMutationLockScope(
+    lockFilePath: configuration.lockFilePath,
+    brokerNamespace: configuration.brokerNamespace,
+  );
+  // The helper acquires again in the same scope before it reports entry.
+  await _lockedIn(
+    scope,
+    () => _holdAgendaRuntimeMutationLock(configuration.events),
+  );
+}
+
+Future<void> _deleteScopeDirectory(Directory directory) async {
+  // Release messages and file close run asynchronously in the broker isolate.
+  for (var attempt = 0; ; attempt += 1) {
+    try {
+      await directory.delete(recursive: true);
+      return;
+    } on FileSystemException {
+      if (attempt == 119) rethrow;
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+  }
 }
 
 Future<void> _holdAgendaRuntimeMutationLock(SendPort events) async {
