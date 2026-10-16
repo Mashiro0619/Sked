@@ -8,6 +8,11 @@ It retains the production 450 ms UI-state save debounce. Native notification,
 startup update, filesystem and serialization performance are outside this UI
 suite; keep the existing pure-data benchmark alongside it.
 
+The [workspace60-v1 supplement](WORKSPACE_PERFORMANCE.md) runs the shared
+workspace actions in fresh processes without visiting settings. It provides
+a separate comparison population when original settings-route errors pollute
+the full journey; it does not replace full UI66 correctness acceptance.
+
 Both revisions mount their actual home screen and its production subscriptions.
 The host keeps a fixed theme/locale and isolated package metadata. Before timing,
 UI-only seeds receive the same bundled privacy-policy acceptance version and

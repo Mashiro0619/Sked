@@ -56,35 +56,61 @@ void main() {
     );
   });
 
-  testWidgets(
-    'sparse UI journey reaches production views and persists only in memory',
-    (tester) async {
-      tester.view.physicalSize =
-          (defaultTargetPlatform == TargetPlatform.windows
-              ? const Size(1280, 720)
-              : const Size(393, 852)) *
-          tester.view.devicePixelRatio;
-      addTearDown(tester.view.resetPhysicalSize);
-      final report = await runUiPerformanceBenchmarks(
-        tester,
-        smokeTestCodec: inlineDataTransferCodec,
-        config: const UiPerformanceConfig(
-          datasets: ['sparse'],
-          warmRuns: 0,
-          requireFrameTimings: false,
-        ),
-      );
-      expect(report['measurement'], 'widget-smoke-only');
-      final results = report['results']! as List;
-      expect(results, hasLength(11));
-      expect(
-        results.every((result) => (result as Map)['elapsedUs'] is int),
-        isTrue,
-      );
-    },
-    variant: TargetPlatformVariant({
-      TargetPlatform.windows,
-      TargetPlatform.android,
-    }),
-  );
+  for (final scope in UiPerformanceScope.values) {
+    testWidgets(
+      'sparse ${scope.name} journey reaches production views with isolated data',
+      (tester) async {
+        tester.view.physicalSize =
+            (defaultTargetPlatform == TargetPlatform.windows
+                ? const Size(1280, 720)
+                : const Size(393, 852)) *
+            tester.view.devicePixelRatio;
+        addTearDown(tester.view.resetPhysicalSize);
+        final report = await runUiPerformanceBenchmarks(
+          tester,
+          smokeTestCodec: inlineDataTransferCodec,
+          config: UiPerformanceConfig(
+            datasets: const ['sparse'],
+            warmRuns: 0,
+            scope: scope,
+            requireFrameTimings: false,
+          ),
+        );
+        expect(
+          report['measurement'],
+          scope == UiPerformanceScope.full
+              ? 'widget-smoke-only'
+              : 'workspace-widget-smoke-only',
+        );
+        final results = report['results']! as List;
+        expect(results.map((row) => (row as Map)['scenario']), [
+          'general.month.swipe',
+          'general.month.vertical_scroll',
+          'general.day.open_scroll',
+          'general.week.open_scroll',
+          'general.list.open_scroll',
+          'workspace.student.open',
+          'student.timetable.switch',
+          'student.week.scroll',
+          'student.day.open_scroll',
+          'workspace.general.open',
+          if (scope == UiPerformanceScope.full) 'settings.general.toggle',
+        ]);
+        if (scope == UiPerformanceScope.workspace) {
+          expect(
+            (report['protocol']! as Map)['scope'],
+            uiWorkspacePerformanceProtocol,
+          );
+        }
+        expect(
+          results.every((result) => (result as Map)['elapsedUs'] is int),
+          isTrue,
+        );
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.windows,
+        TargetPlatform.android,
+      }),
+    );
+  }
 }

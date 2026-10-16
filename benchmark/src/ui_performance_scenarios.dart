@@ -22,12 +22,23 @@ import 'ui_performance_metrics.dart';
 
 const uiPerformanceHarnessVersion = 2;
 
+enum UiPerformanceScope { full, workspace }
+
+const uiWorkspacePerformanceProtocol = <String, Object>{
+  'id': 'workspace60-v1',
+  'actionsPerIteration': 10,
+  'excludedScenarios': ['settings.general.toggle'],
+  'settingsRoutes': 'not visited; checked after every workspace iteration',
+  'comparisonBoundary': 'Fresh workspace-only population; never filtered or relabeled full UI66 results.',
+};
+
 class UiPerformanceConfig {
   const UiPerformanceConfig({
     this.label = 'local',
     this.revision = 'unknown',
     this.datasets = uiPerformanceDatasetNames,
     this.warmRuns = 1,
+    this.scope = UiPerformanceScope.full,
     this.requireFrameTimings = true,
     this.desktopSize = const Size(1280, 720),
   });
@@ -35,6 +46,7 @@ class UiPerformanceConfig {
   final String label, revision;
   final List<String> datasets;
   final int warmRuns;
+  final UiPerformanceScope scope;
   final bool requireFrameTimings;
   final Size desktopSize;
 }
@@ -258,8 +270,13 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
             'workspace.general.open',
             (_) => journey.switchWorkspace(AppMode.general),
           );
-          await measure('settings.general.toggle', journey.settings);
-          await journey.closeSettings();
+          if (config.scope == UiPerformanceScope.full) {
+            await measure('settings.general.toggle', journey.settings);
+            await journey.closeSettings();
+          } else {
+            expect(find.byType(SettingsPage), findsNothing);
+            expect(_key('general-month-calendar-panel'), findsOneWidget);
+          }
         }
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -299,8 +316,13 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
       'startedAtUtc': started.toIso8601String(),
       'finishedAtUtc': DateTime.now().toUtc().toIso8601String(),
       'measurement': config.requireFrameTimings
-          ? 'profile-engine-frames'
-          : 'widget-smoke-only',
+          ? (config.scope == UiPerformanceScope.workspace
+                ? 'profile-workspace-engine-frames'
+                : 'profile-engine-frames')
+          : (config.scope == UiPerformanceScope.workspace
+                ? 'workspace-widget-smoke-only'
+                : 'widget-smoke-only'),
+      if (config.scope == UiPerformanceScope.workspace) 'validation': 'passed',
       'runtime': {
         'os': Platform.operatingSystem,
         'osVersion': Platform.operatingSystemVersion,
@@ -318,6 +340,8 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
         'processMaxRssBytes': ProcessInfo.maxRss,
       },
       'protocol': {
+        if (config.scope == UiPerformanceScope.workspace)
+          'scope': uiWorkspacePerformanceProtocol,
         'host': uiPerformanceHostProtocol,
         'semantics': 'Version 2 native entrypoints bootstrap only an empty tree through endOfFrame and use testWidgets semanticsEnabled:false. Runtime semantics records actual native/framework endpoints and framework-listener changes; Profile requires agreement and no observed changes. Widget-only smoke may differ.',
         'warmRuns': config.warmRuns,
