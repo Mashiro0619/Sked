@@ -81,6 +81,9 @@ checksums and target IDs before comparing the three-process distributions.
 
 Input is injected through Flutter's real pointer/text interfaces, so this
 measures editor behavior and rendering with native fonts and real file writes.
+The text transport is registered for the run, allowing Profile input to use
+the editor's real `TextInput.setClient` ID; it does not replace controllers or
+save callbacks. Any registration owned by the caller is retained afterward.
 It does not measure the Windows/Android OS keyboard or IME service latency.
 Interaction timings include production route animations and settling; use the
 separate disk suite for command-only I/O timing.

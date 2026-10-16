@@ -86,7 +86,13 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
 
   await tester.binding.setSurfaceSize(size);
   SchedulerBinding.instance.addTimingsCallback(onFrames);
+  final registerTextInput = !tester.testTextInput.isRegistered;
   try {
+    if (registerTextInput) {
+      // Profile rejects client ID -1; retain the actual setClient ID.
+      // This transport injects text without changing editor controllers.
+      tester.testTextInput.register();
+    }
     for (final fixture in fixtures) {
       debugPrint('UI editor dataset: ${fixture.name}');
       final seed = const ImportExportService().normalizeAppData(
@@ -275,6 +281,7 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
     // Engine batches can arrive after an action ends; delivery is unmeasured.
     await Future<void>.delayed(const Duration(milliseconds: 1200));
   } finally {
+    if (registerTextInput) tester.testTextInput.unregister();
     SchedulerBinding.instance.removeTimingsCallback(onFrames);
     await tester.binding.setSurfaceSize(null);
   }
