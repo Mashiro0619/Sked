@@ -768,7 +768,7 @@ class _DayColumn extends StatelessWidget {
     final hasDenseHitTargets = geometries.any(
       (geometry) => geometry.hitHeight < _minimumCourseHitExtent,
     );
-    return Container(
+    final content = Container(
       key: ValueKey('timetable-day-column-$weekday'),
       width: width,
       decoration: BoxDecoration(
@@ -873,6 +873,9 @@ class _DayColumn extends StatelessWidget {
         ),
       ),
     );
+    // Keep animation listeners local to this day when many cards are replaced.
+    // A disabled ancestor still mutes the whole column, including ink effects.
+    return TickerMode(enabled: true, child: content);
   }
 }
 
