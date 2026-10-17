@@ -2,7 +2,7 @@
 
 本轮从 `77061b4172efdfac2c7cdd30f0b4953b6be31004` 开始，目标是在保留 Windows、Android 用户流程、存档兼容和编辑草稿的前提下，拆分共享状态与平台服务，减少无关重建和重复计算，并整理重复测试与采集入口。
 
-本文记录截至 `1142cfce894449df36994e866b179b706bec742e` 的实现，更新于 2026-10-17。基线之后的历史共 139 个提交，其中 137 个实现或测试提交、2 个纯文档提交；本次后续文档交付另计，历史总数不表示当前未推送数。当前 Source 全量为 **4,901 通过、1 跳过**，Windows Native/Packages、Android 构建、Linux 四时区/Chrome 和 Web Release 均有该 SHA 的终态；完整 UI66 通过保留原失败回执的离线补验。后续主画布长帧和 18 进程启动已有独立比较结果，同时保留内存上升与剩余长帧。**Android 真机按约定延期，Linux native 受本地环境阻塞；安装/发布、物理输入、完整辅助技术和 Web 视觉不在已完成范围内。** 历史 Disk30、UI60/Host11/编辑样本保持原始版本。
+最新续验代码检查点为 `e522134ac8db262c30c9823568d867dbaf4f860b`（2026-10-17）。最终仅保留 `1139840` 的列表本地日界复用；`1d45d46` 课表文字缓存未证实稳定收益，已由 `e522134` 签名撤回，tree 与 `1139840` 一致。最终 Source 为 **4,901 通过、1 跳过**，Windows Native/Packages、Android 构建、Web、完整 UI66，以及独立 Debian 13 Linux Release/链接与四时区 76 次执行均有该 SHA 独立终态。`5ef639c → e522134` 的最终交替三轮及所有长帧/内存代价见[最新续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。Android 真机、安装升级/认证、物理输入及完整辅助技术仍未验收。下文保留 `1142cfc` 原始 139 条提交链与当时验收，Disk30、UI60/Host11/编辑、启动和 `1d45d46` 候选样本不重标为最终源码。
 
 ## 计划覆盖与实现边界
 
@@ -15,7 +15,7 @@
 | 编辑、导入与跨路由归属 | 课程和事件入口复用任务控制器；异步解析、确认、保存绑定目标与会话；跨 Navigator 保留同一领域实例 | `0eec1f1`、`6200bbb`、`0adbe4f`、`ba31c14`、`426df37`、`8316388`、`80989cc`；草稿、晚返回、重复点击与失效恢复测试 |
 | 通知分层与重排范围 | 通知契约、身份、内存/原生网关、文案、载荷、后台处理和运行存储分离；协调器按耐久提交的相关领域筛选重排 | `755a2ea`、`2f8ad0e`、`cbc357a`、`690bdb6`、`357275c`、`2222b7e`；身份、去重、锁顺序、后台动作与排程测试 |
 | 测试、CI 与采集整理 | 合并等价夹具，删除转发层自证测试和重复采集入口；37 个历史脚本改为统一选择入口；CI 只测当前提交，覆盖率作为诊断附件 | `844d59b`、`86ccb0c`、`b35809e`、`44bc4ad`、`55371aa`、`73d1a80`、`6ca27c3`、`d8cd94f`；替代测试与删除理由见下文 |
-| 可比性能与最终验收 | 最终 SHA 的 Source、Windows/Android 构建、Linux 专项、Web 与 UI66 正确性已完成；Linux native 构建仍受环境阻塞 | 60+3 主画布比较保留 `041c6fd → d517f78`，18 个启动进程保留原始适配版 → `1142cfc`；历史 Disk30/UI60/Host11/编辑保留原版本与失败边界 |
+| 可比性能与最终验收 | e522134 Source、Native/UI66、Windows/Android/Web 与 Linux Release/四时区均有独立通过回执；设备/安装范围仍有边界 | [最新续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md) 为 `5ef639c → e522134` 交替三轮；所有候选与此前性能报告保留原版本和不利结果 |
 | 无障碍回归修复 | 保留日期标题/liveRegion；稳定画布关闭动作与子控件语义；最终 Slider 保留独立 Semantics、全局 Overlay，完整单表单的离屏锚点稳定且 hidden | `ce915f5`、`fb1ef2a`、`57751c2`、`d328a17` 的对应流程；旧局部/page Overlay 均废弃，新设计有独立 57 项、4 边缘和完整 UI66 证据 |
 
 ## 最终运行时与数据所有权
@@ -86,9 +86,9 @@
 | 设置滑块最终修复 | `d328a17` 保留独立 Slider Semantics 与全局 Overlay；无 headerSliver 的完整单表单从 ListView 改为 SingleChildScrollView，离屏锚点保留且 hidden | 57 项针对测试、4 个边缘全 RGBA 对照、完整 UI66 66+3 / 0 AX；局部/page Overlay 的失败仅留作历史诊断，不用于当前设计 |
 | 独立工作区测量 | `ef1aea3` 提交 UI60 协议与入口；6 项 widget 冒烟和原单进程 pilot 有各自来源，正式 d328a17 系列完成双方各三进程、60+3 可比项 | 原 pilot 保留 `4169dc72313d`，不混入正式样本；[UI/Host 性能报告](PROJECT_REFACTOR_UI_PERFORMANCE.md) 保留正式数值、退化和来源 |
 
-## 当前验收结果与历史证据
+## 此前 1142cfc 检查点与历史证据
 
-以下当前源码检查均对应 `1142cfce894449df36994e866b179b706bec742e`。历史性能报告的 after 版本分别列出，未通过文档更新改写原报告 revision。
+以下表格保留 `1142cfce894449df36994e866b179b706bec742e` 的原始执行；最新 `e522134` 仅以[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)及其独立回执为准。历史性能 after 版本没有通过文档更新改写。
 
 | 项目 | 当前事实 | 验收边界 |
 | --- | --- | --- |
@@ -179,15 +179,15 @@ Linux 四时区使用最终 HEAD 的 Git archive，冻结源码/锁文件与已�
 ## 剩余验收与限制
 
 - Android 真机按用户约定延期；设备可用后补通知、恢复、真实交互、旧数据/密钥升级和性能验收。完整辅助技术另列为尚未验收。
-- Linux native 尚无 Release 产物。Ubuntu 26.04 的官方源缺 `libwpe-1.0-dev`、`libwpebackend-fdo-1.0-dev`、`libwpewebkit-2.0-dev`；本地 Docker Desktop 尝试又在 Inference manager/socket 初始化阶段退出。回执保留，无镜像拉取、系统升级、改源或 Docker 重置。
+- Linux native 的最终 e522134 Release、动态链接和四时区已在独立 Debian 13 补齐；旧 Ubuntu/Docker 失败及候选阶段中断/代理加载失败保留为历史。Linux 图形运行、安装、通知和原生输入仍未验收。
 - Windows 安装、同签名升级、干净机器、WACK/商店认证、物理输入及完整辅助技术仍需对应环境验证；包检查与 MSAA 指定流程不覆盖这些项目。
-- Web 只完成 JavaScript Release 构建和 Linux Chrome 租约行为；CupertinoIcons 提示、Wasm dry run 与未作页面视觉验收的边界保留。
-- 原始编辑版 AX 错误仍使该比较无效；压力长帧、部分 raster/内存上升继续可见。启动已有隔离 Profile 结果，不把它扩大为未修改发布包或 OS/磁盘全冷状态。
+- Web：JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。`1d45d46` 与 `1142cfc` 的 RGB 一致、日程保存重载/Enter/Escape 仅为候选历史，课程 Enter 超时及窄屏 DOM overflow 保留；离线、实际 Wasm 与完整辅助技术未覆盖。
+- 最终交替三轮仍有 27/60 个交互至少一次 ≥100 ms build，包含挂载后后测全局最坏为 937.056 ms。实际帧节奏不同，整体 P95 方向只作描述，不能解释为固定节奏性能变化；全部 raster/RSS 反向变化见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。原始编辑版 AX 错误仍使旧编辑比较无效；历史启动的隔离 Profile 不能扩大为未修改发布包或 OS/磁盘全冷状态。
 - 本轮未推送、运行远端 CI、部署或发布；缓存整批清理仍按原约定暂停。
 
 [HANDOFF.md](HANDOFF.md) 同步该实现检查点与当前证据。启动、长帧、历史 UI/Host、Disk30 各附表保留实际版本与独立分母，文档提交不增加测试、采样或实现完成计数。
 
-## 本轮签名提交时间线
+## 此前 1142cfc 签名提交时间线
 
 基线 `77061b4` 不计入区间；截至 `1142cfc` 共 **139 条提交：137 条实现或测试、2 条纯文档**，时间均为 UTC+08:00。[139 条原审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/final-audit/commit-audit-1142cfce8944.json>)与[独立来源复核](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/evidence-audit/receipt-and-commit-audit-1142cfce.json>)覆盖完整对象、线性父链、单行格式、中文摘要和 SSH 签名。前 129 条另有[逐次原始签名回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/commit-audit-d328a17.json>)；后 10 条已补存逐次只读 verify-commit 输出。138 个范围含汉字，`844d59b` 的 CI 是保留的技术缩写。后续本次文档收口提交单独记录，不计入以下实现检查点。
 

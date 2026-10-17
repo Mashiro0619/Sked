@@ -1,6 +1,6 @@
 # Sked 项目交接
 
-交接日期：2026-10-17（Asia/Shanghai）。已提交实现检查点为 `1142cfce894449df36994e866b179b706bec742e`，后续纯文档提交另计。Source、Windows Native/Packages、Android 构建、Linux 四时区/Chrome 及 Web Release 均已保留该 SHA 的终态；当前完整 UI66 由离线 sidecar 补齐验收。性能样本保留各自的真实版本与适配条件，详见下表；长期规则以本文链接的维护文档及当前实现为准。
+交接日期：2026-10-17（Asia/Shanghai）。最终代码检查点为 `e522134ac8db262c30c9823568d867dbaf4f860b`，后续纯文档提交另计。最终仅保留列表日期复用，课表文字候选已签名撤回；Source/Native/UI66/Windows/Android/Web、Linux Release/四时区与最终 `5ef639c → e522134` 交替三轮见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。候选视觉和性能、旧启动/磁盘报告保留真实版本，当前证据不与候选拼接。
 
 ## 1. 当前状态与接手边界
 
@@ -8,19 +8,19 @@
 | --- | --- |
 | 工作目录／分支 | `D:\Project\Flutter\sked`，`main` |
 | 应用与工具链 | `2.3.0+17`；Flutter 3.47.7 / Dart 3.13.5；Windows 包版本 2.3.0.17 / 2.3.17.0 |
-| 提交范围 | `77061b4` 之后至 `1142cfc` 的历史共 139 个提交：137 个实现或测试提交、2 个纯文档提交。对象、父链、单行中文摘要和 SSH 签名均有回执；本次交接文档提交不计入 137，历史总数也不表示当前未推送数 |
-| Source | [9 步全部通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/source-20261016T234624419Z/receipt.json>)；完整 VM **4,901 通过、1 跳过**，格式检查 754 文件、0 改动，应用和内部插件分析通过。旧全量与定向结果不相加 |
-| Windows Packages | [4 步通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/windows-packages-20261017T001804579Z/receipt.json>)；Unsigned/Store 各自 Release 重建、MSIX 归档、身份/Toast/capabilities/payload 检查及归档 Store verifier 通过。未安装、WACK 或发布 |
-| Android 构建与 JVM | [5 步通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/android-20261017T000729778Z/receipt.json>)；APK/AAB 和合并安全产物已归档。JVM 任务为 `UP-TO-DATE`，保留 XML 的 10 项、0 失败/错误/跳过，不能写成当前 SHA 新执行 10 项 |
-| Linux 四时区／Chrome | [同 SHA 专项通过](<D:/Project/Flutter/sked/.scratch/refactor-20261017/final-audit/linux-final-1142cfce8944-20261017T002055669751Z/receipt.json>)；纽约/柏林/上海各 41 项、圣保罗 25 项，Chrome 155.0.8059.84 的实例租约 4 项。148 是按时区执行次数，不能和 VM 总数相加 |
-| Web Release | [默认 JavaScript Release 构建通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/web-20261017T002340535Z/receipt.json>)；index.html / main.dart.js 哈希已归档。CupertinoIcons 字体扫描提示保留，Wasm 仅 dry run，页面视觉未验收 |
-| Windows MSAA | [当前原生流程通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/windows-native-20261016T235958921Z/receipt.json>)；27/27 阶段、66 updates、5 次同 PID MSAA、28 buttons / 2 text checks，graph/AX/fatal 均 0。三份编译快照前后哈希一致；integrationPluginWarning=true 保留 |
-| 完整 UI66 正确性 | [离线补验通过](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/ui66/offline-20261017T002119423Z/sidecar.json>)；当前 SHA 的一进程、三规模 66 actions + 3 mounts，设置 6 项、scroll 36 项，0 AX/graph/fatal。原回执仍保留日期字符串误解析造成的 failed；sidecar 以正确类型重读，未重跑、未改断言，报告哈希本轮首次封存 |
-| 后续长帧比较 | `041c6fd → d517f78` 的新主画布滚动协议，两侧各 3 进程、60+3 可比项。5k 月份 cold build P95 410.955 → 97.736 ms；工作区切换仍约 0.575–0.628 s，raster 与 RSS 仍有上升项，见[长帧结果](PROJECT_REFACTOR_LONG_FRAME_RESULTS.md) |
+| 提交范围 | `1139840` 列表日期复用保留，`1d45d46` 课表文字缓存候选由 `e522134` 签名撤回；最终 tree 与 `1139840` 相同。三个提交签名历史保留；截至 `1142cfc` 的历史 139 条链路见主报告，总数不是当前未推送数 |
+| Source | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/source-20261017T064226756Z/receipt.json>)；9 步全部退出 0；完整 VM **4,901 通过、1 跳过**；754 文件格式检查零改动，应用和内部插件分析通过。候选首次 OOM 中断与降并发完整重跑另行保留，不混入本次计数 |
+| Windows Packages | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/windows-packages-20261017T071315555Z/receipt.json>)；Unsigned/Store 两类 Release/MSIX、身份/Toast/capabilities/payload 与归档 verifier 通过，两包未签名；未安装、升级、WACK 或发布 |
+| Android 构建与 JVM | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/android-20261017T071003773Z/receipt.json>)；APK/AAB 与合并安全产物归档；JUnit XML 10 项、0 失败/错误/跳过；Gradle 报告结果复用（`> Task :app:testDebugUnitTest UP-TO-DATE`），不能计作本 SHA 新执行；无真机 |
+| Linux 四时区／Chrome | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/linux-native/runs/acceptance-e522134ac8db-20261017T071537812Z/receipt.json>)；纽约 23 项、柏林 23 项、上海 23 项、圣保罗 7 项，共 76 次、零失败/跳过。最终范围为日期回归与列表投影两文件；此前较大时区矩阵和 Chrome 租约 4 项仍属于 `1142cfc` |
+| Web Release | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/web-20261017T070850958Z/receipt.json>)；JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。`1d45d46` 的 RGB/Enter/Escape 是候选历史，课程 Enter 超时与窄屏 DOM overflow 不改写为通过 |
+| Windows MSAA | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/windows-native-20261017T070331240Z/receipt.json>)；27/27 阶段、66 次语义更新、5 次同 PID MSAA、28 个按钮与 2 个文本检查；AX/graph/fatal 均 0；integrationPluginWarning=true 原样保留 |
+| 完整 UI66 正确性 | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/tools/ui66/runs/ui66-correctness-e522134ac8db-20261017T070507875Z/receipt.json>)；e522134 新进程直接通过 66 actions + 3 mounts、6 settings/36 scroll、0 AX/graph/fatal。旧 `1142cfc` failed/sidecar 不重写 |
+| 后续长帧比较 | 最终 `5ef639c → e522134` 两侧各三进程、ABBAAB、60+3 可比；5k 首次列表最大 build 中位数 886.417 → 374.376 ms。仍有 27/60 个交互至少一次 ≥100 ms，含挂载后后测全局最坏 937.056 ms；实际帧节奏不同，整体 P95 仅作描述。全部不利结果见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)；1d 候选样本另列 |
 | 独立进程启动 | 原版 `77061b4` 加存档启动/隔离适配层 → `1142cfc`，18 个 Windows Profile 进程。5k 就绪 raster 中位数 5.459 → 2.267 s（−58.47%），就绪报告 RSS 386.71 → 444.41 MiB（+14.92%）；详见[启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) |
 | 历史性能系列 | [Disk30](PROJECT_REFACTOR_DISK_PERFORMANCE.md) 的 after 保留 `1205c6e`；[UI60/Host11/编辑](PROJECT_REFACTOR_UI_PERFORMANCE.md) 保留 `d328a17` 系列。编辑 before AX 199/204/201 使数值比较 invalid，after 36 动作与读回 / 0 AX 仅作正确性证据 |
-| Linux native | [本地环境仍阻塞](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/linux-native-environment/receipt.json>)：Ubuntu 源缺 WPE 开发包；Docker Desktop 后端在初始化时退出，未拉镜像、未运行 Linux Release。四时区和 Chrome 专项不受此影响 |
-| 尚未覆盖 | Android 真机按用户约定延期；Windows 安装/同签名升级/WACK、完整辅助技术及 Web 视觉仍有各自边界。未推送、运行远端 CI、部署或发布 |
+| Linux native | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/linux-native/runs/acceptance-e522134ac8db-20261017T071537812Z/receipt.json>)；e522134 独立 Debian 13 Release/动态链接/四时区通过，1,026 个非生成文件字节不变，7 个生成文件只允许 CRLF→LF 后冻结；未图形运行、安装、通知或原生输入 |
+| 尚未覆盖 | Android 真机按约定延期；Windows 安装/同签名升级/干净机器/WACK、物理输入、完整辅助技术，Linux 图形运行/安装/通知及 Web 离线/Wasm 仍未覆盖。最终压力长帧与内存/raster 代价保留；未推送、远端 CI、部署或发布 |
 
 本轮已完成领域状态与组合根迁移、存储和计算边界、两个工作区投影与缓存、编辑及导入任务、通知分层，以及测试和 CI 精简；后续又修正公历校验、月页日期复用、缺失午夜日界与启动依赖组装。逐项实现和验收来源见[全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。启动比较包含显式基线适配、外部服务隔离与保留的 OS/字体/shader 缓存，不能写成未修改发布包、磁盘冷启动或真实像素呈现对照。
 
@@ -157,22 +157,23 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 | `199f021`、`d517f78` | 通知锁增加独立作用域；启动外部服务工厂按根生命周期装配并保持首页实例，支持显式隔离测量 |
 | `895ed70` | UI60/UI66 日周滚动固定到主画布，记录目标协议与几何；旧错误目标样本保留为失效证据 |
 | `c286e2c`、`1142cfc` | 增加正常窗口独立进程启动、原生时钟、分阶段 RSS/峰值和启动交互协议；[18 进程结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) 已另表保存 |
+| `1139840`、`1d45d46`、`e522134` | 列表日期复用保留；文字测量缓存候选经交替测量后撤回，最终 tree 与 `1139840` 相同；[最终续验与候选历史](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)分别记录 |
 
 这些是各自提交的验证与来源，不相加为全项目总通过数。采集命令见[原生场景入口](../integration_test/README.md)，通过 `capture_scenarios_test.dart` 与 `SKED_CAPTURE_SCENE` 选择组。公开文档的 32 张 JPEG 保持原样，继续使用[文档截图流程](screenshots/README.md)。场景截图不代替行为回归、原生辅助技术或 Profile 采样。
 
 ## 7. 继续执行与证据限制
 
-1. **以当前检查点回执交接。** Source、Native、Packages、Android、Linux 四时区/Chrome、Web 和 UI66 的本次结果见上表。[独立只读审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/evidence-audit/receipt-and-commit-audit-1142cfce.json>)核对归档哈希及 139 个提交；Source 的 diff-whitespace 只有 exit0 回执，零输出日志未单独落盘。纯文档更新不需要重跑整个矩阵。
-2. **保留性能样本的真实版本和代价。** 原始版编辑 AX 使改善比例不可用；新主画布比较仍有长帧/raster/RSS 上升。独立进程启动比较明确包含基线覆盖层、Profile、服务隔离和缓存条件；就绪报告 RSS 不是精确 raster 时刻 RSS，注入输入不是物理鼠标投递。
-3. **补齐平台环境后再做相应验收。** Linux native 的 WPE 缺包与 Docker 初始化失败均有回执，尚无 Release 产物；本轮没有升级 Ubuntu、改源或重置 Docker。Android 真机按用户约定延期，设备可用后验证通知、恢复、真实交互和数据升级；完整辅助技术另列为尚未验收。
-4. **保留发布边界。** 当前 Windows 两包与 Android APK/AAB 已构建归档；安装、同签名升级、干净机器、WACK/商店认证、远端 CI 与发布仍未执行，见[发布验收](RELEASE_ACCEPTANCE.md)。Web 是 JavaScript Release 构建，未作实际 Wasm 或页面视觉验收。
-5. **历史线索不冒充当前缺陷。** 2026-10-07 撤回前的提醒/AI 预览和拖宽跳变记录没有当前复现结论；旧局部/page Overlay 方案已废弃。旧 Windows Chrome 的工具路径适配结果仍属于 `d328a17`，最新浏览器证据来自 Linux。
+1. **以当前检查点回执交接。** 上表只承接 e522134 的独立成功终态与最终交替三轮；生成文档前核对归档/报告哈希和版本。候选 OOM 中断、Linux 失败、课程 Enter 超时及旧版 sidecar 均保留；纯文档更新不增加执行数。
+2. **保留性能样本的真实版本和代价。** 最终性能只取 `comparison-final` 并关联 `final-interleaved-audit`，`1d45d46` 的初始、控制与交替数据不能混入 e522134；文字缓存未证实稳定收益所以撤回。实际帧数与间隔不同，整体 P95 仅描述实际样本，不能推为固定节奏性能变化。所有交互/挂载长帧、raster/RSS 升高及原始三值保留；不宣称内存全面改善。旧编辑 AX 与启动适配/缓存/输入边界照旧。
+3. **按实际剩余平台范围继续。** Linux e522134 Release/链接与四时区已补齐，图形运行、通知、安装和原生输入仍未验收；旧 WPE 缺包/Docker 初始化失败不是当前构建阻塞。Android 真机按约定延期，设备可用后验证通知、恢复、真实交互、旧数据/密钥升级与性能；完整辅助技术另列。
+4. **保留发布边界。** 最终 Windows 两包、Android APK/AAB 与 Linux bundle 已构建归档；安装、同签名升级、干净机器、WACK/商店认证、远端 CI 与发布未执行。Web：JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执；不代表实际 Wasm、离线或在线产品交付。
+5. **历史线索不冒充当前缺陷。** 2026-10-07 撤回前的提醒/AI 预览与拖宽跳变没有当前复现结论；旧 Overlay 方案已废弃。Windows Chrome 工具适配、Linux Chrome 租约、候选 Chromium 视觉均保留各自来源，不能合并成最新完整浏览器验收。
 6. **整批缓存清理仍暂停。** 用户此前接受暂不删除日志、coverage、widget preview 等本地资料；`.scratch` 含隔离源码、构建、包、截图和原始报告。后续清理需重新核对具体路径，不沿用旧大小统计。
 
 ## 8. 推荐阅读顺序
 
 1. 本文与[全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。
-2. [长帧结果](PROJECT_REFACTOR_LONG_FRAME_RESULTS.md) → [启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) → [历史 UI/Host](PROJECT_REFACTOR_UI_PERFORMANCE.md)／[Disk30](PROJECT_REFACTOR_DISK_PERFORMANCE.md)。
+2. [最新续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md) → [此前长帧结果](PROJECT_REFACTOR_LONG_FRAME_RESULTS.md) → [启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) → [历史 UI/Host](PROJECT_REFACTOR_UI_PERFORMANCE.md)／[Disk30](PROJECT_REFACTOR_DISK_PERFORMANCE.md)。
 3. [PRODUCT](../PRODUCT.md)／[README](../README.md) → [DESIGN](../DESIGN.md) → [自适应规范](ADAPTIVE_WORKSPACES.md)／[桌面浮层](DESKTOP_FLOATING_PANELS.md)。
 4. [可靠性](RELIABILITY_BASELINE.md) → [通知契约](NOTIFICATION_DEDUPLICATION.md) → [依赖维护](DEPENDENCY_UPGRADES.md)。
 5. [发布验收](RELEASE_ACCEPTANCE.md) → [Android 通知矩阵](ANDROID_NOTIFICATION_ACCEPTANCE.md) → [更新机制](updates.md)／[Store 指南](microsoft-store.md)。
