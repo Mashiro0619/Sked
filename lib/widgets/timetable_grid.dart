@@ -2316,16 +2316,23 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
     const extraInset = 6.0;
     final width = math.max(0.0, inputs.width - inputs.badgeInset);
     final preferredWidth = math.max(0.0, width - extraInset * 2);
-    final preferredHeight = List.generate(
-      fields.length,
-      (i) => measure(i, preferredWidth, 1).height + fields[i].gap,
-    ).fold(extraInset * 2, (sum, value) => sum + value);
+    final preferredLineHeights = [
+      for (var i = 0; i < fields.length; i++)
+        measure(i, preferredWidth, 1).height,
+    ];
+    var preferredHeight = extraInset * 2;
+    for (var i = 0; i < fields.length; i++) {
+      preferredHeight += preferredLineHeights[i] + fields[i].gap;
+    }
     final spacious = width > extraInset * 2 && preferredHeight <= inputs.height;
     final inset = spacious ? extraInset : 0.0;
     final textWidth = math.max(0.0, width - inset * 2);
-    final minimumHeights = [
-      for (var i = 0; i < fields.length; i++) measure(i, textWidth, 1).height,
-    ];
+    final minimumHeights = spacious
+        ? preferredLineHeights
+        : [
+            for (var i = 0; i < fields.length; i++)
+              measure(i, textWidth, 1).height,
+          ];
     var remaining = math.max(0.0, inputs.height - inset * 2);
     final rows = <_DesktopCourseFieldLayout>[];
     for (var i = 0; i < fields.length && remaining > 0; i++) {
