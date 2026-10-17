@@ -30,13 +30,16 @@ CourseItem _course({
 Widget _grid({
   required List<CourseItem> courses,
   double scale = 1,
+  bool boldText = false,
+  ThemeData? theme,
   List<int> days = const [1, 2, 3, 4, 5, 6, 7],
   TextDirection direction = TextDirection.ltr,
   ValueChanged<TimetableCourseTapInfo>? onTap,
 }) => MaterialApp(
-  theme: ThemeData(platform: TargetPlatform.android),
+  theme: theme ?? ThemeData(platform: TargetPlatform.android),
   builder: (context, child) => MediaQuery(
-    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+    data: MediaQuery.of(context)
+        .copyWith(textScaler: TextScaler.linear(scale), boldText: boldText),
     child: Directionality(textDirection: direction, child: child!),
   ),
   home: Scaffold(
@@ -134,6 +137,240 @@ void _expectWholeVisibleLines(WidgetTester tester, String id, double scale) {
 }
 
 void main() {
+  testWidgets(
+    'retained typography keeps geometry and current conflict actions',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final course = _course(duration: 120);
+      final conflict = _course(id: 'conflict', duration: 120);
+      var oldCalls = 0;
+      TimetableCourseTapInfo? latest;
+      await tester.pumpWidget(
+        _grid(
+          courses: [course, conflict],
+          days: const [1],
+          onTap: (_) => oldCalls++,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final visual = tester.element(_visual());
+      final card = tester.getRect(_visual());
+      final titleBox = tester.getRect(_textIn(course.name));
+      final titleLines = _paragraph(tester, _textIn(course.name)).maxLines;
+
+      await tester.pumpWidget(
+        _grid(
+          courses: [
+            course,
+            conflict,
+            _course(id: 'third', duration: 120),
+          ],
+          days: const [1],
+          onTap: (value) => latest = value,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.element(_visual()), same(visual));
+      expect(tester.getRect(_visual()), card);
+      expect(tester.getRect(_textIn(course.name)), titleBox);
+      expect(_paragraph(tester, _textIn(course.name)).maxLines, titleLines);
+      expect(
+        find.byKey(const ValueKey('timetable-course-conflict-course')),
+        findsOneWidget,
+      );
+      _expectWholeVisibleLines(tester, 'course', 1);
+      await tester.tap(
+        find.byKey(const ValueKey('timetable-course-hit-course')),
+      );
+      expect(oldCalls, 0);
+      expect(latest?.isFullConflict, isTrue);
+      expect(
+        latest?.courses.map((item) => item.id),
+        unorderedEquals(['course', 'conflict', 'third']),
+      );
+    },
+  );
+
+  testWidgets('retained typography follows content, scale, theme and resize', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _grid(
+        courses: [
+          _course(title: 'First', location: '', teacher: '', duration: 120),
+        ],
+        days: const [1],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final visual = tester.element(_visual());
+    const title = 'Academic\nWriting\nWorkshop';
+    final changed = _course(
+      title: title,
+      location: 'Room B201',
+      teacher: 'Zheng',
+      duration: 120,
+    );
+    await tester.pumpWidget(_grid(courses: [changed], days: const [1]));
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    expect(_textIn('First'), findsNothing);
+    expect(_paragraph(tester, _textIn(title)).maxLines, 3);
+    expect(_paragraph(tester, _textIn(title)).didExceedMaxLines, isFalse);
+    expect(_textIn('Room B201'), findsOneWidget);
+    expect(_textIn('Zheng'), findsOneWidget);
+    _expectWholeVisibleLines(tester, 'course', 1);
+
+    final originalHeight = tester.getSize(_textIn(title)).height;
+    await tester.pumpWidget(
+      _grid(courses: [changed], days: const [1], scale: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    expect(tester.getSize(_textIn(title)).height, greaterThan(originalHeight));
+    _expectWholeVisibleLines(tester, 'course', 2);
+
+    final android = ThemeData(platform: TargetPlatform.android);
+    final largerFont = android.copyWith(
+      textTheme: android.textTheme
+          .apply(fontFamily: 'Ahem')
+          .copyWith(
+            titleSmall: const TextStyle(fontFamily: 'Ahem', fontSize: 18),
+            titleMedium: const TextStyle(fontFamily: 'Ahem', fontSize: 20),
+          ),
+    );
+    await tester.pumpWidget(
+      _grid(
+        courses: [changed],
+        days: const [1],
+        scale: 2,
+        boldText: true,
+        theme: largerFont,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    expect(tester.widget<Text>(_textIn(title)).style!.fontFamily, 'Ahem');
+    expect(
+      tester.widget<Text>(_textIn(title)).style!.fontWeight,
+      FontWeight.bold,
+    );
+    _expectWholeVisibleLines(tester, 'course', 2);
+
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    await tester.pumpWidget(
+      _grid(
+        courses: [changed],
+        days: const [1],
+        scale: 2,
+        boldText: true,
+        theme: largerFont,
+        direction: TextDirection.rtl,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    for (final element
+        in find
+            .descendant(of: _visual(), matching: find.byType(Text))
+            .evaluate()) {
+      expect(
+        _paragraph(tester, find.byWidget(element.widget)).textDirection,
+        TextDirection.rtl,
+      );
+    }
+    _expectWholeVisibleLines(tester, 'course', 2);
+
+    await tester.binding.setSurfaceSize(const Size(360, 700));
+    await tester.pumpWidget(_grid(courses: [changed], days: const [1]));
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    expect(_paragraph(tester, _textIn(title)).maxLines, 3);
+    expect(_paragraph(tester, _textIn(title)).didExceedMaxLines, isFalse);
+    _expectWholeVisibleLines(tester, 'course', 1);
+  });
+
+  testWidgets(
+    'retained typography reserves and releases conflict badge height',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      const title = 'Academic\nWriting\nWorkshop\nSeminar';
+      final course = _course(
+        title: title,
+        location: '',
+        teacher: '',
+        duration: 60,
+      );
+      await tester.pumpWidget(_grid(courses: [course], days: const [1]));
+      await tester.pumpAndSettle();
+      final visual = tester.element(_visual());
+      final initialLines = _paragraph(tester, _textIn(title)).maxLines!;
+      expect(initialLines, 4);
+      _expectWholeVisibleLines(tester, 'course', 1);
+
+      await tester.pumpWidget(
+        _grid(
+          courses: [
+            course,
+            _course(id: 'conflict', title: 'Other', duration: 60),
+          ],
+          days: const [1],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.element(_visual()), same(visual));
+      expect(
+        _paragraph(tester, _textIn(title)).maxLines,
+        lessThan(initialLines),
+      );
+      final badge = tester.getRect(
+        find.byKey(const ValueKey('timetable-course-conflict-course')),
+      );
+      expect(
+        tester.getRect(_textIn(title)).bottom,
+        lessThanOrEqualTo(badge.top - 2 + .01),
+      );
+      _expectWholeVisibleLines(tester, 'course', 1);
+
+      await tester.pumpWidget(_grid(courses: [course], days: const [1]));
+      await tester.pumpAndSettle();
+      expect(tester.element(_visual()), same(visual));
+      expect(
+        find.byKey(const ValueKey('timetable-course-conflict-course')),
+        findsNothing,
+      );
+      expect(_paragraph(tester, _textIn(title)).maxLines, initialLines);
+      _expectWholeVisibleLines(tester, 'course', 1);
+    },
+  );
+
+  testWidgets('font changes keep whole lines and release the unmounted card', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _grid(
+        courses: [_course(title: 'Academic\nWriting', duration: 120)],
+        days: const [1],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final visual = tester.element(_visual());
+    await tester.binding.handleSystemMessage({'type': 'fontsChange'});
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    _expectWholeVisibleLines(tester, 'course', 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.binding.handleSystemMessage({'type': 'fontsChange'});
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
   for (final width in [320.0, 360.0]) {
     for (final scale in [1.0, 1.3, 2.0]) {
       testWidgets(

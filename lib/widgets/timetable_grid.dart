@@ -1814,7 +1814,7 @@ class _CourseCard extends StatelessWidget {
 
 /// Fit complete lines to the time-sized card without scaling or clipping text.
 /// The title uses the available height first; optional fields use what remains.
-class _TouchCourseTypography extends StatelessWidget {
+class _TouchCourseTypography extends StatefulWidget {
   const _TouchCourseTypography({
     required this.title,
     required this.location,
@@ -1836,6 +1836,58 @@ class _TouchCourseTypography extends StatelessWidget {
   final double badgeExtent;
 
   @override
+  State<_TouchCourseTypography> createState() => _TouchCourseTypographyState();
+}
+
+typedef _TouchCourseField = ({String value, TextStyle style});
+typedef _TouchCourseLayoutInputs = ({
+  (String, String, String) text,
+  (TextStyle, TextStyle, TextStyle) styles,
+  double width,
+  double height,
+  TextScaler scaler,
+  TextDirection direction,
+  Locale? locale,
+  TextHeightBehavior? textHeightBehavior,
+  bool boldText,
+  bool hasBadge,
+  double badgeExtent,
+});
+typedef _TouchCourseFieldLayout = ({
+  int field,
+  int? lines,
+  double height,
+  double emptyTruncatedLineHeight,
+});
+typedef _TouchCourseLayout = ({
+  bool showBadge,
+  List<_TouchCourseFieldLayout> fields,
+});
+
+class _TouchCourseTypographyState extends State<_TouchCourseTypography> {
+  _TouchCourseLayoutInputs? _previousInputs;
+  _TouchCourseLayout? _previousLayout;
+
+  @override
+  void initState() {
+    super.initState();
+    PaintingBinding.instance.systemFonts.addListener(_handleFontsChanged);
+  }
+
+  @override
+  void dispose() {
+    PaintingBinding.instance.systemFonts.removeListener(_handleFontsChanged);
+    super.dispose();
+  }
+
+  void _handleFontsChanged() {
+    setState(() {
+      _previousInputs = null;
+      _previousLayout = null;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       if (constraints.maxWidth <= 0 || constraints.maxHeight <= 0) {
@@ -1850,50 +1902,38 @@ class _TouchCourseTypography extends StatelessWidget {
             : resolved;
       }
 
-      final fields = <({String value, TextStyle style})>[
-        if (title.isNotEmpty) (value: title, style: resolveStyle(titleStyle)),
-        if (location.isNotEmpty)
-          (value: location, style: resolveStyle(locationStyle)),
-        if (teacher.isNotEmpty)
-          (value: teacher, style: resolveStyle(teacherStyle)),
+      final titleStyle = resolveStyle(widget.titleStyle);
+      final locationStyle = resolveStyle(widget.locationStyle);
+      final teacherStyle = resolveStyle(widget.teacherStyle);
+      final fields = <_TouchCourseField>[
+        if (widget.title.isNotEmpty) (value: widget.title, style: titleStyle),
+        if (widget.location.isNotEmpty)
+          (value: widget.location, style: locationStyle),
+        if (widget.teacher.isNotEmpty)
+          (value: widget.teacher, style: teacherStyle),
       ];
       final scaler = MediaQuery.textScalerOf(context);
       final direction = Directionality.of(context);
       final locale = Localizations.maybeLocaleOf(context);
-      ({
-        double height,
-        double width,
-        int lines,
-        double emptyTruncatedLineHeight,
-      })
-      measure(int field, int? lines) {
-        final painter = TextPainter(
-          text: TextSpan(text: fields[field].value, style: fields[field].style),
-          textDirection: direction,
-          textScaler: scaler,
-          locale: locale,
-          textHeightBehavior: defaults.textHeightBehavior,
-          maxLines: lines,
-          ellipsis: lines == null ? null : '…',
-        )..layout(maxWidth: constraints.maxWidth);
-        final metrics = painter.computeLineMetrics();
-        final result = (
-          height: painter.height,
-          width: metrics.fold(
-            0.0,
-            (width, line) => math.max(width, line.width),
-          ),
-          lines: metrics.length,
-          emptyTruncatedLineHeight:
-              painter.didExceedMaxLines &&
-                  metrics.isNotEmpty &&
-                  metrics.last.width <= .01
-              ? metrics.last.height
-              : 0.0,
-        );
-        painter.dispose();
-        return result;
+      final inputs = (
+        text: (widget.title, widget.location, widget.teacher),
+        styles: (titleStyle, locationStyle, teacherStyle),
+        width: constraints.maxWidth,
+        height: constraints.maxHeight,
+        scaler: scaler,
+        direction: direction,
+        locale: locale,
+        textHeightBehavior: defaults.textHeightBehavior,
+        boldText: boldText,
+        hasBadge: widget.conflictBadge != null,
+        badgeExtent: widget.badgeExtent,
+      );
+      if (inputs != _previousInputs) {
+        final layout = _measureLayout(inputs, fields);
+        _previousInputs = inputs;
+        _previousLayout = layout;
       }
+      final layout = _previousLayout!;
 
       Widget omissionMark(int field, double height) => SizedBox(
         width: constraints.maxWidth,
@@ -1909,49 +1949,14 @@ class _TouchCourseTypography extends StatelessWidget {
         ),
       );
 
-      // A narrow card cannot spare an entire side column for the badge. Keep
-      // it below the text, and give a complete primary line precedence when
-      // even that line and the badge cannot coexist in a very short card.
-      final firstLineHeight = fields.isEmpty ? 0.0 : measure(0, 1).height;
-      final showBadge =
-          conflictBadge != null &&
-          constraints.maxWidth >= badgeExtent &&
-          constraints.maxHeight >= firstLineHeight + badgeExtent + 2;
-      var remaining = constraints.maxHeight - (showBadge ? badgeExtent + 2 : 0);
       final children = <Widget>[];
-      for (var field = 0; field < fields.length; field++) {
-        final firstLine = measure(field, 1);
-        if (firstLine.height > remaining) break;
-        if (firstLine.width > constraints.maxWidth + .01) {
-          // At the largest accessibility sizes even a single glyph (including
-          // the font's ellipsis) may exceed a fitted day column. Use a bounded
-          // omission mark instead of painting part of a character. The course
-          // hit target still exposes its full title and details.
-          if (field == 0) {
-            children.add(omissionMark(field, firstLine.height));
-          }
-          break;
+      for (final row in layout.fields) {
+        final field = row.field;
+        if (row.lines == null) {
+          children.add(omissionMark(field, row.height));
+          continue;
         }
-        final full = measure(field, null);
-        var lines = math.max(1, full.lines);
-        if (full.height > remaining ||
-            full.width > constraints.maxWidth + .01) {
-          var lower = 1;
-          var upper = lines;
-          while (lower < upper) {
-            final candidate = (lower + upper + 1) ~/ 2;
-            final measured = measure(field, candidate);
-            if (measured.height <= remaining &&
-                measured.width <= constraints.maxWidth + .01) {
-              lower = candidate;
-            } else {
-              upper = candidate - 1;
-            }
-          }
-          lines = lower;
-        }
-        final measured = measure(field, lines);
-        final height = measured.height;
+        final height = row.height;
         final text = Text(
           fields[field].value,
           style: fields[field].style,
@@ -1959,7 +1964,7 @@ class _TouchCourseTypography extends StatelessWidget {
           locale: locale,
           textHeightBehavior: defaults.textHeightBehavior,
           softWrap: true,
-          maxLines: lines,
+          maxLines: row.lines,
           overflow: TextOverflow.ellipsis,
         );
         children.add(
@@ -1969,7 +1974,7 @@ class _TouchCourseTypography extends StatelessWidget {
             // Some native fallback fonts leave the ellipsis-only final line
             // empty at narrow widths. Mark that measured empty line explicitly
             // without covering any text or altering its line height.
-            child: measured.emptyTruncatedLineHeight > 0
+            child: row.emptyTruncatedLineHeight > 0
                 ? Stack(
                     fit: StackFit.expand,
                     clipBehavior: Clip.none,
@@ -1978,10 +1983,10 @@ class _TouchCourseTypography extends StatelessWidget {
                       PositionedDirectional(
                         start: 0,
                         end: 0,
-                        top: height - measured.emptyTruncatedLineHeight,
+                        top: height - row.emptyTruncatedLineHeight,
                         child: omissionMark(
                           field,
-                          measured.emptyTruncatedLineHeight,
+                          row.emptyTruncatedLineHeight,
                         ),
                       ),
                     ],
@@ -1989,7 +1994,6 @@ class _TouchCourseTypography extends StatelessWidget {
                 : text,
           ),
         );
-        remaining -= height;
       }
       return Stack(
         children: [
@@ -1998,12 +2002,106 @@ class _TouchCourseTypography extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: children,
           ),
-          if (showBadge)
-            PositionedDirectional(end: 0, bottom: 0, child: conflictBadge!),
+          if (layout.showBadge)
+            PositionedDirectional(
+              end: 0,
+              bottom: 0,
+              child: widget.conflictBadge!,
+            ),
         ],
       );
     },
   );
+
+  // Keep just this mounted card's last numeric layout. Rebuild its widgets
+  // with current text, styles and badge so interaction/semantics never freeze.
+  _TouchCourseLayout _measureLayout(
+    _TouchCourseLayoutInputs inputs,
+    List<_TouchCourseField> fields,
+  ) {
+    ({double height, double width, int lines, double emptyTruncatedLineHeight})
+    measure(int field, int? lines) {
+      final painter = TextPainter(
+        text: TextSpan(text: fields[field].value, style: fields[field].style),
+        textDirection: inputs.direction,
+        textScaler: inputs.scaler,
+        locale: inputs.locale,
+        textHeightBehavior: inputs.textHeightBehavior,
+        maxLines: lines,
+        ellipsis: lines == null ? null : '…',
+      )..layout(maxWidth: inputs.width);
+      final metrics = painter.computeLineMetrics();
+      final result = (
+        height: painter.height,
+        width: metrics.fold(0.0, (width, line) => math.max(width, line.width)),
+        lines: metrics.length,
+        emptyTruncatedLineHeight:
+            painter.didExceedMaxLines &&
+                metrics.isNotEmpty &&
+                metrics.last.width <= .01
+            ? metrics.last.height
+            : 0.0,
+      );
+      painter.dispose();
+      return result;
+    }
+
+    // A narrow card cannot spare an entire side column for the badge. Keep
+    // it below the text, and give a complete primary line precedence when
+    // even that line and the badge cannot coexist in a very short card.
+    final firstLineHeight = fields.isEmpty ? 0.0 : measure(0, 1).height;
+    final showBadge =
+        inputs.hasBadge &&
+        inputs.width >= inputs.badgeExtent &&
+        inputs.height >= firstLineHeight + inputs.badgeExtent + 2;
+    var remaining = inputs.height - (showBadge ? inputs.badgeExtent + 2 : 0);
+    final rows = <_TouchCourseFieldLayout>[];
+    for (var field = 0; field < fields.length; field++) {
+      final firstLine = measure(field, 1);
+      if (firstLine.height > remaining) break;
+      if (firstLine.width > inputs.width + .01) {
+        // At the largest accessibility sizes even a single glyph (including
+        // the font's ellipsis) may exceed a fitted day column. Use a bounded
+        // omission mark instead of painting part of a character. The course
+        // hit target still exposes its full title and details.
+        if (field == 0) {
+          rows.add((
+            field: field,
+            lines: null,
+            height: firstLine.height,
+            emptyTruncatedLineHeight: 0,
+          ));
+        }
+        break;
+      }
+      final full = measure(field, null);
+      var lines = math.max(1, full.lines);
+      if (full.height > remaining || full.width > inputs.width + .01) {
+        var lower = 1;
+        var upper = lines;
+        while (lower < upper) {
+          final candidate = (lower + upper + 1) ~/ 2;
+          final measured = measure(field, candidate);
+          if (measured.height <= remaining &&
+              measured.width <= inputs.width + .01) {
+            lower = candidate;
+          } else {
+            upper = candidate - 1;
+          }
+        }
+        lines = lower;
+      }
+      final measured = measure(field, lines);
+      rows.add((
+        field: field,
+        lines: lines,
+        height: measured.height,
+        emptyTruncatedLineHeight: measured.emptyTruncatedLineHeight,
+      ));
+      remaining -= measured.height;
+    }
+    return (showBadge: showBadge, fields: List.unmodifiable(rows));
+  }
 }
 
 /// Soften secondary text only while it remains readable on the actual fill.
@@ -2032,7 +2130,7 @@ class _TouchCourseTypography extends StatelessWidget {
 
 /// A top-aligned hierarchy; spacing yields to readable text in short cards.
 /// Kept separate so touch typography and timetable geometry stay unchanged.
-class _DesktopCourseTypography extends StatelessWidget {
+class _DesktopCourseTypography extends StatefulWidget {
   const _DesktopCourseTypography({
     required this.title,
     required this.location,
@@ -2049,25 +2147,81 @@ class _DesktopCourseTypography extends StatelessWidget {
   final bool reserveConflict;
 
   @override
+  State<_DesktopCourseTypography> createState() =>
+      _DesktopCourseTypographyState();
+}
+
+typedef _DesktopCourseField = ({String value, TextStyle style, double gap});
+typedef _DesktopCourseLayoutInputs = ({
+  (String, String, String) text,
+  (TextStyle, TextStyle) styles,
+  TextStyle defaultStyle,
+  double width,
+  double height,
+  TextScaler scaler,
+  TextDirection direction,
+  Locale? locale,
+  TextHeightBehavior? textHeightBehavior,
+  bool boldText,
+  double badgeInset,
+});
+typedef _DesktopCourseFieldLayout = ({
+  int field,
+  double gap,
+  double height,
+  int lines,
+});
+typedef _DesktopCourseLayout = ({
+  double inset,
+  List<_DesktopCourseFieldLayout> fields,
+});
+
+class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
+  _DesktopCourseLayoutInputs? _previousInputs;
+  _DesktopCourseLayout? _previousLayout;
+
+  @override
+  void initState() {
+    super.initState();
+    PaintingBinding.instance.systemFonts.addListener(_handleFontsChanged);
+  }
+
+  @override
+  void dispose() {
+    PaintingBinding.instance.systemFonts.removeListener(_handleFontsChanged);
+    super.dispose();
+  }
+
+  void _handleFontsChanged() {
+    setState(() {
+      _previousInputs = null;
+      _previousLayout = null;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final base = DefaultTextStyle.of(context).style;
-      final fields = <({String value, TextStyle style, double gap})>[
-        if (title.isNotEmpty)
-          (value: title, style: base.merge(titleStyle), gap: 0),
-        if (location.isNotEmpty)
+      final defaults = DefaultTextStyle.of(context);
+      final boldText = MediaQuery.boldTextOf(context);
+      final titleStyle = defaults.style.merge(widget.titleStyle);
+      final metadataStyle = defaults.style.merge(widget.metadataStyle);
+      final fields = <_DesktopCourseField>[
+        if (widget.title.isNotEmpty)
+          (value: widget.title, style: titleStyle, gap: 0),
+        if (widget.location.isNotEmpty)
           (
-            value: location,
-            style: base.merge(metadataStyle),
-            gap: title.isEmpty ? 0 : 12,
+            value: widget.location,
+            style: metadataStyle,
+            gap: widget.title.isEmpty ? 0 : 12,
           ),
-        if (teacher.isNotEmpty)
+        if (widget.teacher.isNotEmpty)
           (
-            value: teacher,
-            style: base.merge(metadataStyle),
-            gap: location.isNotEmpty
+            value: widget.teacher,
+            style: metadataStyle,
+            gap: widget.location.isNotEmpty
                 ? 2
-                : title.isNotEmpty
+                : widget.title.isNotEmpty
                 ? 12
                 : 0,
           ),
@@ -2076,99 +2230,55 @@ class _DesktopCourseTypography extends StatelessWidget {
       final scaler = MediaQuery.textScalerOf(context);
       final direction = Directionality.of(context);
       final locale = Localizations.maybeLocaleOf(context);
-      final badgeInset = reserveConflict ? 22.0 : 0.0;
-      final width = math.max(0.0, constraints.maxWidth - badgeInset);
-      ({double height, int lines}) measure(int i, double maxWidth, int? lines) {
-        final painter = TextPainter(
-          text: TextSpan(text: fields[i].value, style: fields[i].style),
-          textDirection: direction,
-          textScaler: scaler,
-          locale: locale,
-          maxLines: lines,
-          ellipsis: lines == null ? null : '…',
-        )..layout(maxWidth: maxWidth);
-        final result = (
-          height: painter.height,
-          lines: painter.computeLineMetrics().length,
-        );
-        painter.dispose();
-        return result;
+      final textHeightBehavior =
+          defaults.textHeightBehavior ??
+          DefaultTextHeightBehavior.maybeOf(context);
+      final badgeInset = widget.reserveConflict ? 22.0 : 0.0;
+      final inputs = (
+        text: (widget.title, widget.location, widget.teacher),
+        styles: (titleStyle, metadataStyle),
+        defaultStyle: defaults.style,
+        width: constraints.maxWidth,
+        height: constraints.maxHeight,
+        scaler: scaler,
+        direction: direction,
+        locale: locale,
+        textHeightBehavior: textHeightBehavior,
+        boldText: boldText,
+        badgeInset: badgeInset,
+      );
+      if (inputs != _previousInputs) {
+        final layout = _measureLayout(inputs, fields);
+        _previousInputs = inputs;
+        _previousLayout = layout;
       }
-
-      // Preserve the reference spacing if at least one line per field fits.
-      // Long content determines its own line count, not the spacing mode.
-      const extraInset = 6.0;
-      final preferredWidth = math.max(0.0, width - extraInset * 2);
-      final preferredHeight = List.generate(
-        fields.length,
-        (i) => measure(i, preferredWidth, 1).height + fields[i].gap,
-      ).fold(extraInset * 2, (sum, value) => sum + value);
-      final spacious =
-          width > extraInset * 2 && preferredHeight <= constraints.maxHeight;
-      final inset = spacious ? extraInset : 0.0;
-      final textWidth = math.max(0.0, width - inset * 2);
-      final minimumHeights = [
-        for (var i = 0; i < fields.length; i++) measure(i, textWidth, 1).height,
-      ];
-      var remaining = math.max(0.0, constraints.maxHeight - inset * 2);
+      final layout = _previousLayout!;
       final children = <Widget>[];
-      for (var i = 0; i < fields.length && remaining > 0; i++) {
-        final gap = spacious ? fields[i].gap : 0.0;
-        final oneLine = minimumHeights[i];
-        if (i > 0 && gap + oneLine > remaining) break;
-        // A long title/location must not consume the teacher's last line.
-        var reserved = 0.0;
-        for (var j = i + 1; j < fields.length; j++) {
-          reserved += minimumHeights[j] + (spacious ? fields[j].gap : 0);
-        }
-        final budget = math.min(
-          remaining - gap,
-          math.max(oneLine, remaining - gap - reserved),
-        );
-        final full = measure(i, textWidth, null);
-        var lines = math.max(1, full.lines);
-        var height = full.height;
-        if (height > budget) {
-          // Find the largest whole-line layout that fits the real pixel budget.
-          // Measuring candidates also handles explicit newlines and font fallback.
-          var lower = 1;
-          var upper = lines;
-          while (lower < upper) {
-            final candidate = (lower + upper + 1) ~/ 2;
-            if (measure(i, textWidth, candidate).height <= budget) {
-              lower = candidate;
-            } else {
-              upper = candidate - 1;
-            }
-          }
-          lines = lower;
-          height = math.min(measure(i, textWidth, lines).height, budget);
-        }
-        if (gap > 0) children.add(SizedBox(height: gap));
+      for (final row in layout.fields) {
+        if (row.gap > 0) children.add(SizedBox(height: row.gap));
         children.add(
           SizedBox(
-            height: height,
+            height: row.height,
             child: ClipRect(
               child: Text(
-                fields[i].value,
-                style: fields[i].style,
+                fields[row.field].value,
+                style: fields[row.field].style,
                 textScaler: scaler,
                 locale: locale,
                 softWrap: true,
-                maxLines: lines,
+                maxLines: row.lines,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
         );
-        remaining -= height + gap;
       }
       return Padding(
         padding: EdgeInsetsDirectional.fromSTEB(
-          inset,
-          inset,
-          inset + badgeInset,
-          inset,
+          layout.inset,
+          layout.inset,
+          layout.inset + badgeInset,
+          layout.inset,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2177,6 +2287,84 @@ class _DesktopCourseTypography extends StatelessWidget {
       );
     },
   );
+
+  // Keep only the last numeric plan for this mounted card. Every build still
+  // creates Text widgets from its current fields and inherited presentation.
+  _DesktopCourseLayout _measureLayout(
+    _DesktopCourseLayoutInputs inputs,
+    List<_DesktopCourseField> fields,
+  ) {
+    ({double height, int lines}) measure(int i, double maxWidth, int? lines) {
+      final painter = TextPainter(
+        text: TextSpan(text: fields[i].value, style: fields[i].style),
+        textDirection: inputs.direction,
+        textScaler: inputs.scaler,
+        locale: inputs.locale,
+        maxLines: lines,
+        ellipsis: lines == null ? null : '…',
+      )..layout(maxWidth: maxWidth);
+      final result = (
+        height: painter.height,
+        lines: painter.computeLineMetrics().length,
+      );
+      painter.dispose();
+      return result;
+    }
+
+    // Preserve the reference spacing if at least one line per field fits.
+    // Long content determines its own line count, not the spacing mode.
+    const extraInset = 6.0;
+    final width = math.max(0.0, inputs.width - inputs.badgeInset);
+    final preferredWidth = math.max(0.0, width - extraInset * 2);
+    final preferredHeight = List.generate(
+      fields.length,
+      (i) => measure(i, preferredWidth, 1).height + fields[i].gap,
+    ).fold(extraInset * 2, (sum, value) => sum + value);
+    final spacious = width > extraInset * 2 && preferredHeight <= inputs.height;
+    final inset = spacious ? extraInset : 0.0;
+    final textWidth = math.max(0.0, width - inset * 2);
+    final minimumHeights = [
+      for (var i = 0; i < fields.length; i++) measure(i, textWidth, 1).height,
+    ];
+    var remaining = math.max(0.0, inputs.height - inset * 2);
+    final rows = <_DesktopCourseFieldLayout>[];
+    for (var i = 0; i < fields.length && remaining > 0; i++) {
+      final gap = spacious ? fields[i].gap : 0.0;
+      final oneLine = minimumHeights[i];
+      if (i > 0 && gap + oneLine > remaining) break;
+      // A long title/location must not consume the teacher's last line.
+      var reserved = 0.0;
+      for (var j = i + 1; j < fields.length; j++) {
+        reserved += minimumHeights[j] + (spacious ? fields[j].gap : 0);
+      }
+      final budget = math.min(
+        remaining - gap,
+        math.max(oneLine, remaining - gap - reserved),
+      );
+      final full = measure(i, textWidth, null);
+      var lines = math.max(1, full.lines);
+      var height = full.height;
+      if (height > budget) {
+        // Find the largest whole-line layout that fits the real pixel budget.
+        // Measuring candidates also handles explicit newlines and font fallback.
+        var lower = 1;
+        var upper = lines;
+        while (lower < upper) {
+          final candidate = (lower + upper + 1) ~/ 2;
+          if (measure(i, textWidth, candidate).height <= budget) {
+            lower = candidate;
+          } else {
+            upper = candidate - 1;
+          }
+        }
+        lines = lower;
+        height = math.min(measure(i, textWidth, lines).height, budget);
+      }
+      rows.add((field: i, gap: gap, height: height, lines: lines));
+      remaining -= height + gap;
+    }
+    return (inset: inset, fields: List.unmodifiable(rows));
+  }
 }
 
 class _CourseHitTarget extends StatelessWidget {
