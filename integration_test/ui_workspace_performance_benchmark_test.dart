@@ -12,7 +12,7 @@ void main() {
     await binding.endOfFrame;
   });
   testWidgets(
-    'profiles workspace60-v1 without visiting settings routes',
+    'profiles the declared workspace60 population without settings routes',
     (tester) async {
       final report = await runUiPerformanceBenchmarks(
         tester,
@@ -28,6 +28,10 @@ void main() {
           ),
           datasets: ['sparse', '1000', '5000'],
           warmRuns: 1,
+          listContentGuards: bool.fromEnvironment(
+            'SKED_UI_WORKSPACE_PERF_CONTENT_GUARDS',
+            defaultValue: false,
+          ),
         ),
       );
       binding.reportData = {'uiWorkspacePerformance': report};

@@ -1,15 +1,101 @@
+import 'dart:convert';
 import 'dart:ui' show Size;
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:material_ui/material_ui.dart' as ui;
 
 import '../benchmark/src/ui_performance_fixtures.dart';
 import '../benchmark/src/ui_performance_metrics.dart';
+import '../benchmark/src/ui_performance_host_setup.dart';
 import '../benchmark/src/ui_performance_scenarios.dart';
 import 'support/data_transfer_codec.dart';
 
 void main() {
+  testWidgets(
+    'list checkpoints observe only visible text without changing UI',
+    (tester) async {
+      final controller = ui.ScrollController();
+      addTearDown(controller.dispose);
+      var builds = 0;
+      await tester.pumpWidget(
+        ui.MaterialApp(
+          home: ui.Scaffold(
+            body: ui.Row(
+              children: [
+                const ui.Text('outside the measured list'),
+                ui.SizedBox(
+                  width: 300,
+                  height: 120,
+                  child: ui.ListView.builder(
+                    key: const ValueKey('checkpoint-list'),
+                    controller: controller,
+                    padding: ui.EdgeInsets.zero,
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(400),
+                    itemExtent: 40,
+                    itemCount: 100,
+                    itemBuilder: (_, index) {
+                      builds++;
+                      return ui.Align(
+                        alignment: ui.Alignment.centerLeft,
+                        child: ui.Text('row $index'),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final scrollable = find.descendant(
+        of: find.byKey(const ValueKey('checkpoint-list')),
+        matching: find.byType(ui.Scrollable),
+      );
+      expect(
+        find.text('row 8', skipOffstage: false),
+        findsOneWidget,
+        reason:
+            'The render cache must contain text outside the visible viewport.',
+      );
+      final initialBuilds = builds;
+      final opened = captureUiPerformanceListCheckpoint(
+        tester,
+        scrollable,
+        'opened',
+      );
+      final initial = opened['paragraphs']! as List<Map<String, Object?>>;
+      expect(initial.map((item) => item['text']), ['row 0', 'row 1', 'row 2']);
+      expect(controller.offset, 0);
+      expect(builds, initialBuilds);
+      expect(opened['viewport'], {'width': 300.0, 'height': 120.0});
+
+      controller.jumpTo(80);
+      await tester.pumpAndSettle();
+      final moved = captureUiPerformanceListCheckpoint(
+        tester,
+        scrollable,
+        'forward',
+      );
+      final forward = moved['paragraphs']! as List<Map<String, Object?>>;
+      expect(forward.map((item) => item['text']), ['row 2', 'row 3', 'row 4']);
+      expect(moved['offset'], 80);
+      expect(
+        (initial.last['rect']! as Map)['top'],
+        ((forward.first['rect']! as Map)['top']! as double) + 80,
+      );
+      expect(
+        moved['observationUs'],
+        (moved['observationEndUs']! as int) -
+            (moved['observationStartUs']! as int),
+      );
+      await tester.pumpWidget(const ui.SizedBox.shrink());
+    },
+  );
+
   for (final canvasOverflows in [true, false]) {
     testWidgets(
       canvasOverflows
@@ -156,9 +242,13 @@ void main() {
     );
   });
 
-  for (final scope in UiPerformanceScope.values) {
+  for (final (scope, contentGuards) in [
+    (UiPerformanceScope.full, false),
+    (UiPerformanceScope.workspace, false),
+    (UiPerformanceScope.workspace, true),
+  ]) {
     testWidgets(
-      'sparse ${scope.name} journey reaches production views with isolated data',
+      'sparse ${scope.name} journey with content guards $contentGuards reaches production views',
       (tester) async {
         tester.view.physicalSize =
             (defaultTargetPlatform == TargetPlatform.windows
@@ -174,6 +264,7 @@ void main() {
             warmRuns: 0,
             scope: scope,
             requireFrameTimings: false,
+            listContentGuards: contentGuards,
           ),
         );
         expect(
@@ -199,7 +290,9 @@ void main() {
         if (scope == UiPerformanceScope.workspace) {
           expect(
             (report['protocol']! as Map)['scope'],
-            uiWorkspacePerformanceProtocol,
+            contentGuards
+                ? uiWorkspaceContentPerformanceProtocol
+                : uiWorkspacePerformanceProtocol,
           );
         }
         expect(
@@ -210,6 +303,83 @@ void main() {
           results.every((result) => (result as Map)['elapsedUs'] is int),
           isTrue,
         );
+        expect(report['harnessVersion'], contentGuards ? 3 : 2);
+        if (contentGuards) {
+          expect(
+            (report['protocol']! as Map)['listContent'],
+            uiPerformanceListContentProtocol,
+          );
+          final fixture = buildUiPerformanceFixtures(names: ['sparse']).single;
+          expect(report['workloadInputs'], [
+            {
+              'dataset': 'sparse',
+              'inputSha256': sha256
+                  .convert(
+                    utf8.encode(
+                      jsonEncode(
+                        prepareUiPerformanceData(fixture.data).toJson(),
+                      ),
+                    ),
+                  )
+                  .toString(),
+            },
+          ]);
+          final row = results.singleWhere(
+            (row) => (row as Map)['scenario'] == 'general.list.open_scroll',
+          ) as Map;
+          final content = (row['details'] as Map)['listContent'] as Map;
+          final points = content['checkpoints'] as List;
+          expect(points.map((point) => (point as Map)['phase']), [
+            'opened',
+            'forward',
+            'returned',
+          ]);
+          for (final point in points.cast<Map>()) {
+            final paragraphs = point['paragraphs'] as List;
+            expect(paragraphs, isNotEmpty);
+            expect(
+              point['textSha256'],
+              sha256
+                  .convert(
+                    utf8.encode(
+                      jsonEncode([
+                        for (final paragraph in paragraphs)
+                          (paragraph as Map)['text'],
+                      ]),
+                    ),
+                  )
+                  .toString(),
+            );
+            expect(
+              point['observationStartUs'],
+              greaterThanOrEqualTo(row['startUs']),
+            );
+            expect(point['observationEndUs'], lessThanOrEqualTo(row['endUs']));
+          }
+          expect(
+            row['elapsedUs'],
+            (row['endUs'] as int) - (row['startUs'] as int),
+          );
+          expect(
+            results
+                .where(
+                  (item) =>
+                      (item as Map)['scenario'] != 'general.list.open_scroll',
+                )
+                .every(
+                  (item) => !((item as Map)['details'] as Map).containsKey(
+                    'listContent',
+                  ),
+                ),
+            isTrue,
+          );
+        } else {
+          expect(report.containsKey('workloadInputs'), isFalse);
+          expect(
+            (report['protocol'] as Map).containsKey('listContent'),
+            isFalse,
+          );
+        }
       },
       variant: TargetPlatformVariant({
         TargetPlatform.windows,

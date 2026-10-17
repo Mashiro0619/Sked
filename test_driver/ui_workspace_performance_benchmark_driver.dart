@@ -11,7 +11,7 @@ Future<void> main() => integrationDriver(
         report['mounts'] is! List ||
         (report['mounts'] as List).length != 3) {
       throw StateError(
-        'The workspace benchmark did not return the complete workspace60-v1 population.',
+        'The workspace benchmark did not return a complete workspace60 population.',
       );
     }
     final protocol = report['protocol'];
@@ -25,6 +25,59 @@ Future<void> main() => integrationDriver(
       throw StateError(
         'The workspace benchmark must scroll its primary canvas.',
       );
+    }
+    final scope = protocol is Map ? protocol['scope'] : null;
+    final content = protocol is Map ? protocol['listContent'] : null;
+    final legacy =
+        report['harnessVersion'] == 2 &&
+        scope is Map &&
+        scope['id'] == 'workspace60-v1';
+    final guarded =
+        report['harnessVersion'] == 3 &&
+        scope is Map &&
+        scope['id'] == 'workspace60-v2';
+    if ((!legacy && !guarded) || (legacy && content != null)) {
+      throw StateError(
+        'Unknown workspace harness and population version pair.',
+      );
+    }
+    if (guarded) {
+      if (content is! Map ||
+          content['version'] != 1 ||
+          content['id'] != 'workspace-list-content-v1' ||
+          report['workloadInputs'] is! List ||
+          (report['workloadInputs'] as List).length != 3) {
+        throw StateError(
+          'workspace60-v2 requires its input hashes and content protocol.',
+        );
+      }
+      final results = report['results'] as List;
+      final rows = results.where(
+        (row) => row is Map && row['scenario'] == 'general.list.open_scroll',
+      );
+      if (rows.length != 6) {
+        throw StateError('workspace60-v2 requires six list observations.');
+      }
+      for (final row in rows) {
+        final details = (row as Map)['details'];
+        final listContent = details is Map ? details['listContent'] : null;
+        final checkpoints = listContent is Map
+            ? listContent['checkpoints']
+            : null;
+        if (checkpoints is! List ||
+            checkpoints.length != 3 ||
+            checkpoints.any(
+              (point) =>
+                  point is! Map ||
+                  point['textSha256'] is! String ||
+                  point['paragraphs'] is! List ||
+                  (point['paragraphs'] as List).isEmpty,
+            )) {
+          throw StateError(
+            'workspace60-v2 returned incomplete visible list checkpoints.',
+          );
+        }
+      }
     }
     final label = report['label'];
     if (label is! String ||

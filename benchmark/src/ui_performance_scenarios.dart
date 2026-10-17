@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -52,6 +55,29 @@ const uiWorkspacePerformanceProtocol = <String, Object>{
   'comparisonBoundary': 'Fresh workspace-only population; never filtered or relabeled full UI66 results.',
 };
 
+/// Opt-in population: both revisions must use this same observer and workload.
+/// Historical workspace60-v1 reports cannot acquire these missing checkpoints.
+const uiWorkspaceContentPerformanceProtocol = <String, Object>{
+  'id': 'workspace60-v2',
+  'actionsPerIteration': 10,
+  'excludedScenarios': ['settings.general.toggle'],
+  'settingsRoutes': 'not visited; checked after every workspace iteration',
+  'comparisonBoundary': 'Fresh workspace-only population with visible list checkpoints; never relabel workspace60-v1 or full UI66 results.',
+};
+
+const uiPerformanceListContentProtocol = <String, Object>{
+  'version': 1,
+  'id': 'workspace-list-content-v1',
+  'scenario': 'general.list.open_scroll',
+  'checkpoints': ['opened', 'forward', 'returned'],
+  'content': 'Visible RenderParagraph text in render traversal order, with viewport-relative painted text boxes and their bounding rectangles.',
+  'observation': 'Synchronous read-only traversal of the actual scroll surface after existing settles; no extra pump, query, gesture or prewarming.',
+  'timing': 'Original continuous action windows include all observation work and frames; observationUs is diagnostic and is never subtracted.',
+  'hashes': 'Prepared fixture jsonEncode UTF-8 SHA-256 before any mount; checkpoint text-array SHA-256 only after all measured journeys.',
+  'extent': 'Initial and final maxScrollExtent remain raw estimates for this scenario only; compare visible content, geometry and actual offsets instead.',
+  'tolerancePhysicalPixels': 1,
+};
+
 class UiPerformanceConfig {
   const UiPerformanceConfig({
     this.label = 'local',
@@ -60,6 +86,7 @@ class UiPerformanceConfig {
     this.warmRuns = 1,
     this.scope = UiPerformanceScope.full,
     this.requireFrameTimings = true,
+    this.listContentGuards = false,
     this.desktopSize = const Size(1280, 720),
   });
 
@@ -68,6 +95,7 @@ class UiPerformanceConfig {
   final int warmRuns;
   final UiPerformanceScope scope;
   final bool requireFrameTimings;
+  final bool listContentGuards;
   final Size desktopSize;
 }
 
@@ -196,8 +224,28 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
   if (config.requireFrameTimings && smokeTestCodec != null) {
     throw ArgumentError('Profile measurements must use production codecs.');
   }
+  if (config.listContentGuards &&
+      config.scope != UiPerformanceScope.workspace) {
+    throw ArgumentError('List content guards require workspace60-v2 scope.');
+  }
   prepareUiPerformanceHost();
   final fixtures = buildUiPerformanceFixtures(names: config.datasets);
+  // Hash the exact prepared inputs before any measured mount. No occurrence
+  // queries are made, and no production projection or font caches are touched.
+  final preparedInputs = config.listContentGuards
+      ? [for (final fixture in fixtures) prepareUiPerformanceData(fixture.data)]
+      : null;
+  final workloadInputs = preparedInputs == null
+      ? null
+      : [
+          for (var i = 0; i < fixtures.length; i++)
+            {
+              'dataset': fixtures[i].name,
+              'inputSha256': sha256
+                  .convert(utf8.encode(jsonEncode(preparedInputs[i].toJson())))
+                  .toString(),
+            },
+        ];
   final desktop = switch (defaultTargetPlatform) {
     TargetPlatform.windows ||
     TargetPlatform.linux ||
@@ -232,7 +280,7 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
     for (var datasetIndex = 0; datasetIndex < fixtures.length; datasetIndex++) {
       final fixture = fixtures[datasetIndex];
       final session = UiPerformanceSession(
-        prepareUiPerformanceData(fixture.data),
+        preparedInputs?[datasetIndex] ?? prepareUiPerformanceData(fixture.data),
         dataTransferCodec: smokeTestCodec ?? const DataTransferCodec(),
       );
       try {
@@ -272,7 +320,12 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
           ]) {
             await measure('general.$view.open_scroll', (details) async {
               await journey.selectGeneralView(view);
-              await journey.scrollActive('general-home', details);
+              await journey.scrollActive(
+                'general-home',
+                details,
+                captureListContent:
+                    config.listContentGuards && view == generalViewList,
+              );
             });
           }
           await journey.selectGeneralView(generalViewMonth);
@@ -309,6 +362,29 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
       await Future<void>.delayed(const Duration(milliseconds: 1200));
     }
     final budget = 1000000 / refreshRate;
+    if (config.listContentGuards) {
+      // Serialization/hashing is outside every measurement window. Keep the
+      // original strings and rectangles in the report for independent checks.
+      for (final window in recorder.windows) {
+        final content = window.details['listContent'];
+        if (content is! Map<String, Object?>) continue;
+        final checkpoints =
+            content['checkpoints']! as List<Map<String, Object?>>;
+        for (final checkpoint in checkpoints) {
+          final paragraphs =
+              checkpoint['paragraphs']! as List<Map<String, Object?>>;
+          checkpoint['textSha256'] = sha256
+              .convert(
+                utf8.encode(
+                  jsonEncode([
+                    for (final paragraph in paragraphs) paragraph['text'],
+                  ]),
+                ),
+              )
+              .toString();
+        }
+      }
+    }
     for (final mount in mounts) {
       final selected = recorder.frames
           .where(
@@ -330,7 +406,9 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
     }
     report = {
       'schemaVersion': 1,
-      'harnessVersion': uiPerformanceHarnessVersion,
+      'harnessVersion': config.listContentGuards
+          ? 3
+          : uiPerformanceHarnessVersion,
       'label': config.label,
       'revision': config.revision,
       'startedAtUtc': started.toIso8601String(),
@@ -362,7 +440,11 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
       'protocol': {
         'scrollTargeting': uiPerformanceScrollTargetingProtocol,
         if (config.scope == UiPerformanceScope.workspace)
-          'scope': uiWorkspacePerformanceProtocol,
+          'scope': config.listContentGuards
+              ? uiWorkspaceContentPerformanceProtocol
+              : uiWorkspacePerformanceProtocol,
+        if (config.listContentGuards)
+          'listContent': uiPerformanceListContentProtocol,
         'host': uiPerformanceHostProtocol,
         'semantics': 'Version 2 native entrypoints bootstrap only an empty tree through endOfFrame and use testWidgets semanticsEnabled:false. Runtime semantics records actual native/framework endpoints and framework-listener changes; Profile requires agreement and no observed changes. Widget-only smoke may differ.',
         'warmRuns': config.warmRuns,
@@ -376,6 +458,7 @@ Future<Map<String, Object?>> runUiPerformanceBenchmarks(
         'gesture': '400ms timed drags at 60 pointer samples/second; production animation durations.',
       },
       'datasets': fixtures.map((fixture) => fixture.manifest).toList(),
+      'workloadInputs': ?workloadInputs,
       'mounts': mounts,
       'results': recorder.report(budget),
     };
@@ -409,8 +492,9 @@ Future<void> _settle(WidgetTester tester) async {
 Future<void> scrollUiPerformanceCanvas(
   WidgetTester tester,
   String root,
-  Map<String, Object?> details,
-) async {
+  Map<String, Object?> details, {
+  bool captureListContent = false,
+}) async {
   final canvas = find.descendant(
     of: _key(root),
     matching: _key('workspace-canvas'),
@@ -457,7 +541,78 @@ Future<void> scrollUiPerformanceCanvas(
     tester,
     find.byElementPredicate((element) => element == candidates.first),
     details,
+    captureListContent: captureListContent,
   );
+}
+
+/// Observe only the rendered portion of the selected surface, not the whole
+/// widget tree or mounted cache. Kept public solely for benchmark regressions.
+/// The synchronous traversal performs no application query or extra frame.
+Map<String, Object?> captureUiPerformanceListCheckpoint(
+  WidgetTester tester,
+  Finder scrollable,
+  String phase,
+) {
+  final started = developer.Timeline.now;
+  final surface = tester.renderObject<RenderBox>(scrollable);
+  final viewport = Offset.zero & surface.size;
+  final paragraphs = <Map<String, Object?>>[];
+  var visited = 0;
+
+  void visit(RenderObject node) {
+    visited++;
+    if (node is RenderOffstage && node.offstage) return;
+    if (node is RenderSliver && node.geometry?.visible == false) return;
+    Rect? bounds;
+    if (node is RenderBox) {
+      if (!node.hasSize) return;
+      bounds = MatrixUtils.transformRect(
+        node.getTransformTo(surface),
+        Offset.zero & node.size,
+      );
+      if (!bounds.overlaps(viewport)) return;
+    }
+    if (node is RenderParagraph) {
+      final text = node.text.toPlainText(includeSemanticsLabels: false);
+      if (text.isEmpty) return;
+      final transform = node.getTransformTo(surface);
+      final boxes = [
+        for (final box in node.getBoxesForSelection(
+          TextSelection(baseOffset: 0, extentOffset: text.length),
+        ))
+          MatrixUtils.transformRect(transform, box.toRect()),
+      ];
+      if (!boxes.any((box) => box.overlaps(viewport))) return;
+      final rect = boxes.reduce((left, right) => left.expandToInclude(right));
+      Map<String, double> rectangle(Rect value) => {
+        'left': value.left,
+        'top': value.top,
+        'width': value.width,
+        'height': value.height,
+      };
+      paragraphs.add({
+        'text': text,
+        'rect': rectangle(rect),
+        'boxes': [for (final box in boxes) rectangle(box)],
+      });
+      return;
+    }
+    node.visitChildren(visit);
+  }
+
+  visit(surface);
+  final position = tester.state<ScrollableState>(scrollable).position;
+  final finished = developer.Timeline.now;
+  return {
+    'phase': phase,
+    'offset': position.pixels,
+    'viewport': {'width': viewport.width, 'height': viewport.height},
+    'paragraphs': paragraphs,
+    'visitedRenderObjects': visited,
+    'observationStartUs': started,
+    'observationEndUs': finished,
+    'observationUs': finished - started,
+  };
 }
 
 Future<void> _scrollUiPerformanceSurface(
@@ -465,6 +620,7 @@ Future<void> _scrollUiPerformanceSurface(
   Finder surface,
   Map<String, Object?> details, {
   bool requireOverflow = false,
+  bool captureListContent = false,
 }) async {
   details.putIfAbsent('scrollScope', () => 'workspace-canvas');
   details.putIfAbsent('scrollTarget', () {
@@ -475,15 +631,39 @@ Future<void> _scrollUiPerformanceSurface(
       ? surface
       : find.descendant(of: surface, matching: find.byType(Scrollable)).first;
   final position = tester.state<ScrollableState>(scrollable).position;
+  final checkpoints = captureListContent ? <Map<String, Object?>>[] : null;
+  void observe(String phase) {
+    checkpoints?.add(
+      captureUiPerformanceListCheckpoint(tester, scrollable, phase),
+    );
+  }
+
+  if (checkpoints != null) {
+    details['listContent'] = <String, Object?>{
+      'version': 1,
+      'checkpoints': checkpoints,
+    };
+    observe('opened');
+  }
   details['maxScrollExtent'] = position.maxScrollExtent;
   if (requireOverflow) expect(position.maxScrollExtent, greaterThan(0));
   if (position.maxScrollExtent <= 0) {
     details['scrollStatus'] = 'content-fits-viewport';
     details['finalMaxScrollExtent'] = position.maxScrollExtent;
+    if (checkpoints != null) {
+      (details['listContent']! as Map<String, Object?>)['gestureDistance'] =
+          0.0;
+      observe('forward');
+      observe('returned');
+    }
     return;
   }
   final before = position.pixels;
   final distance = math.min(280.0, tester.getSize(scrollable).height * .65);
+  if (checkpoints != null) {
+    (details['listContent']! as Map<String, Object?>)['gestureDistance'] =
+        distance;
+  }
   await tester.timedDrag(
     scrollable,
     Offset(0, -distance),
@@ -491,6 +671,7 @@ Future<void> _scrollUiPerformanceSurface(
   );
   await _settle(tester);
   final after = position.pixels;
+  if (checkpoints != null) observe('forward');
   expect(
     after,
     greaterThan(before),
@@ -502,6 +683,7 @@ Future<void> _scrollUiPerformanceSurface(
     const Duration(milliseconds: 400),
   );
   await _settle(tester);
+  if (checkpoints != null) observe('returned');
   details.addAll({
     'scrollStatus': 'scrolled',
     'startOffset': before,
@@ -650,8 +832,16 @@ class _Journey {
     details['completedTimetableChanges'] = 2;
   }
 
-  Future<void> scrollActive(String root, Map<String, Object?> details) =>
-      scrollUiPerformanceCanvas(tester, root, details);
+  Future<void> scrollActive(
+    String root,
+    Map<String, Object?> details, {
+    bool captureListContent = false,
+  }) => scrollUiPerformanceCanvas(
+    tester,
+    root,
+    details,
+    captureListContent: captureListContent,
+  );
 
   Future<void> _scroll(
     Finder surface,
