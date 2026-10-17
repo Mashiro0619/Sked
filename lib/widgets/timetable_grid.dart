@@ -2423,6 +2423,7 @@ class _CourseHitTarget extends StatelessWidget {
     );
     final visual = ExcludeSemantics(
       child: Material(
+        type: MaterialType.transparency,
         color: Colors.transparent,
         child: InkWell(
           key: ValueKey('timetable-course-hit-$itemId'),

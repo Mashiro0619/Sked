@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -1626,6 +1628,141 @@ void main() {
     expect(tappedIds, const ['first-adjacent', 'second-adjacent']);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'course ink paints hover, press and keyboard focus with activation',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(960, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final previousHighlightStrategy = FocusManager.instance.highlightStrategy;
+      addTearDown(
+        () =>
+            FocusManager.instance.highlightStrategy = previousHighlightStrategy,
+      );
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTouch;
+      final boundaryKey = GlobalKey();
+      final tappedIds = <String>[];
+      final hit = find.byKey(
+        const ValueKey('timetable-course-hit-ink-feedback'),
+      );
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundaryKey,
+          child: _gridHarness(
+            platform: TargetPlatform.windows,
+            timetable: _timetableWithCourses([
+              _course(
+                id: 'ink-feedback',
+                weekday: 1,
+                startMinutes: 480,
+                endMinutes: 600,
+                title: 'Course',
+              ),
+            ]),
+            periodTimes: const [
+              CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 720),
+            ],
+            visibleWeekdays: const [1],
+            showDayHeader: false,
+            fitVisibleDaysToWidth: true,
+            onCourseTap: (info) => tappedIds.add(info.course.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final hitRect = tester.getRect(hit);
+
+      Future<List<int>> pixels() async => (await tester.runAsync(() async {
+        final boundary =
+            boundaryKey.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
+        final image = await boundary.toImage(pixelRatio: 1);
+        try {
+          final data = (await image.toByteData(
+            format: ui.ImageByteFormat.rawRgba,
+          ))!;
+          final bytes = data.buffer.asUint8List(
+            data.offsetInBytes,
+            data.lengthInBytes,
+          );
+          final region = <int>[];
+          for (var y = hitRect.top.ceil(); y < hitRect.bottom.floor(); y++) {
+            region.addAll(
+              bytes.sublist(
+                (y * image.width + hitRect.left.ceil()) * 4,
+                (y * image.width + hitRect.right.floor()) * 4,
+              ),
+            );
+          }
+          return region;
+        } finally {
+          image.dispose();
+        }
+      }))!;
+
+      final before = await pixels();
+      final mouse = await tester.createGesture(
+        kind: ui.PointerDeviceKind.mouse,
+        pointer: 7,
+      );
+      await mouse.addPointer(location: const Offset(2, 690));
+      try {
+        await mouse.moveTo(hitRect.center);
+        await tester.pumpAndSettle();
+        expect(
+          listEquals(await pixels(), before),
+          isFalse,
+          reason: 'Hover feedback must be painted above the course.',
+        );
+        await mouse.moveTo(const Offset(2, 690));
+        await tester.pumpAndSettle();
+        expect(listEquals(await pixels(), before), isTrue);
+
+        final press = await tester.startGesture(hitRect.center);
+        late List<int> pressed;
+        try {
+          await tester.pump(kPressTimeout);
+          await tester.pump(const Duration(milliseconds: 150));
+          pressed = await pixels();
+        } finally {
+          await press.up();
+        }
+        expect(
+          listEquals(pressed, before),
+          isFalse,
+          reason: 'A touch press must still paint its ink effect.',
+        );
+        await tester.pumpAndSettle();
+        expect(tappedIds, ['ink-feedback']);
+
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.alwaysTraditional;
+        final gesture = find
+            .descendant(of: hit, matching: find.byType(GestureDetector))
+            .last;
+        final focus = Focus.of(tester.element(gesture));
+        focus.requestFocus();
+        await tester.pumpAndSettle();
+        expect(focus.hasFocus, isTrue);
+        expect(
+          listEquals(await pixels(), before),
+          isFalse,
+          reason: 'Keyboard users must see which course has focus.',
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(tappedIds, ['ink-feedback', 'ink-feedback']);
+        expect(tester.getRect(hit), hitRect);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await mouse.removePointer();
+        FocusManager.instance.primaryFocus?.unfocus();
+        FocusManager.instance.highlightStrategy = previousHighlightStrategy;
+        await tester.pumpAndSettle();
+      }
+    },
+  );
 
   testWidgets('long press on a course never activates the empty slot action', (
     tester,
