@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:flutter/semantics.dart' show SemanticsProperties;
 import 'package:material_ui/material_ui.dart';
 
 import '../models/timetable_models.dart';
@@ -2443,10 +2444,7 @@ class _CourseHitTarget extends StatelessWidget {
       width: width,
       height: useVisualBounds ? geometry.visualHeight : geometry.hitHeight,
       child: includeSemantics
-          ? Semantics(
-              container: true,
-              button: true,
-              enabled: true,
+          ? _CourseSemantics(
               selected:
                   WorkspaceSelectionScope.of(context) ==
                   'course:${layout.course?.id}',
@@ -2484,14 +2482,57 @@ class _CourseSemanticTarget extends StatelessWidget {
       start: 0,
       end: 0,
       height: height,
-      child: Semantics(
-        container: true,
-        button: true,
-        enabled: true,
+      child: _CourseSemantics(
         label: _semanticLabelForGeometry(geometry),
         onTap: () => onTap(context),
         child: IgnorePointer(child: const SizedBox.expand()),
       ),
+    );
+  }
+}
+
+class _CourseSemantics extends StatefulWidget {
+  const _CourseSemantics({
+    required this.label,
+    this.selected,
+    required this.onTap,
+    required this.child,
+  });
+
+  final String label;
+  final bool? selected;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  State<_CourseSemantics> createState() => _CourseSemanticsState();
+}
+
+class _CourseSemanticsState extends State<_CourseSemantics> {
+  SemanticsProperties? _properties;
+
+  // Keep the action stable while resolving the current course and anchor.
+  void _handleTap() => widget.onTap();
+
+  @override
+  Widget build(BuildContext context) {
+    final previous = _properties;
+    if (previous == null ||
+        previous.label != widget.label ||
+        previous.selected != widget.selected) {
+      _properties = SemanticsProperties(
+        button: true,
+        enabled: true,
+        selected: widget.selected,
+        label: widget.label,
+        onTap: _handleTap,
+      );
+    }
+    // Reusing the properties also preserves the render object's unchanged path.
+    return Semantics.fromProperties(
+      container: true,
+      properties: _properties!,
+      child: widget.child,
     );
   }
 }
