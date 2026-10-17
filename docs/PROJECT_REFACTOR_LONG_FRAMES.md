@@ -77,4 +77,4 @@ CPU 诊断含采样与序列化开销，只用于定位。正式 before 另行�
 - 正式比较及完整分布：`.scratch/refactor-20261017/long-frames/comparison-canvas-v1/results/`。
 - 九对冻结来源：`.scratch/refactor-20261017/long-frames/perf-tools/source-review-canvas/manifest.fragment.json`。
 
-日期路径优化已获得实际测量支持，长帧尚未全部解决。Android 真机和真实进程冷启动仍需单独验收，启动隔离工作见 [启动附表](PROJECT_REFACTOR_STARTUP.md)。
+日期路径优化已获得实际测量支持，长帧尚未全部解决。Windows Profile 的独立进程时间与内存比较已经补齐，见 [启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md)；它使用隔离的外部依赖并保留 OS 缓存。Android 真机及 Release 安装态仍需单独验收，启动组合与测量边界见 [启动附表](PROJECT_REFACTOR_STARTUP.md)。

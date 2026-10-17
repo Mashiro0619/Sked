@@ -2,6 +2,8 @@
 
 本报告记录修正滚动目标协议后的六个独立 Windows Profile 进程。优化和有效测试的说明见 [长帧优化记录](PROJECT_REFACTOR_LONG_FRAMES.md)，原始结果与此前失效的比较分别保留。
 
+Windows Profile 的独立进程启动时间与 RSS 结果另见 [启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md)。两套协议的起点、数据与观测边界不同，分别保留对应版本和样本。
+
 本轮可支持的结论是：大数据量的月份往返和工作区切换，其构建尾帧与动作总耗时明显降低；仍存在数百毫秒长帧、部分课表与 raster 指标上升、个别进程离群，以及基本持平的进程峰值 RSS。不能写成全部 UI 已流畅、滚动零超帧、内存明显改善，或应用冷启动/Android 验收完成。
 
 完整来源：[summary.json](/D:/Project/Flutter/sked/.scratch/refactor-20261017/long-frames/comparison-canvas-v1/results/summary.json)、[sections.md](/D:/Project/Flutter/sked/.scratch/refactor-20261017/long-frames/comparison-canvas-v1/results/sections.md)、[distributions.json](/D:/Project/Flutter/sked/.scratch/refactor-20261017/long-frames/comparison-canvas-v1/results/distributions.json)。summary 状态为 comparable，60 个交互 case 与 3 个独立 mount case 全部纳入。两侧各 3 个进程，共 378 条原始测量记录、28,270 个帧样本；帧不跨进程合池。
@@ -314,4 +316,4 @@ after 仍有 28/60 个交互以及 2/3 个 mount 至少出现一次 ≥100 ms bu
 - 5000 mount：raw /mounts/2；summary /suites/ui60/mountComparisons/2。
 - 进程峰值 RSS：summary /suites/ui60/processMetrics/processMaxRssBytes。
 
-报告生成仅执行 Python 数据处理与源码只读检查；未运行 Flutter、构建或额外 profile，未更新 tracked docs/lib。
+本报告的独立复核仅重读保留的数据与源码，没有新增 Profile 样本。
