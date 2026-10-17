@@ -1,39 +1,32 @@
 # Sked 项目交接
 
-交接日期：2026-10-17（Asia/Shanghai）。本文件以 `d328a174e4047438feae79950b9b782c5fc2876c` 为已提交代码快照。最终滑块保留独立 Semantics 和全局 Overlay，无 headerSliver 的完整单表单改用 SingleChildScrollView，使离屏锚点保持在树中并标为 hidden；局部/page Overlay 均已废弃。57 项定向、四个滚动边缘对照与完整 UI66 已有通过证据；本 SHA 的 Source 阶段 9 步全部通过，完整 VM 为 4,861 通过、1 跳过。各次验收保留实际采样版本，候选通过已记录的源码哈希对应到提交，不能直接重写原报告 revision。长期规则以本文链接的维护文档及当前实现为准。
+交接日期：2026-10-17（Asia/Shanghai）。已提交实现检查点为 `1142cfce894449df36994e866b179b706bec742e`，后续纯文档提交另计。Source、Windows Native/Packages、Android 构建、Linux 四时区/Chrome 及 Web Release 均已保留该 SHA 的终态；当前完整 UI66 由离线 sidecar 补齐验收。性能样本保留各自的真实版本与适配条件，详见下表；长期规则以本文链接的维护文档及当前实现为准。
 
 ## 1. 当前状态与接手边界
 
-| 项目 | 本次核实结果 |
+| 项目 | 已核实结果与范围 |
 | --- | --- |
-| 工作目录 | `D:\Project\Flutter\sked` |
-| 分支 | `main` |
-| HEAD（文档检查点） | `d328a174e4047438feae79950b9b782c5fc2876c` |
-| 最新提交 | `fix(设置滚动): 保留离屏语义锚点与完整滑块提示` |
-| 应用版本 | `pubspec.yaml` 为 `2.3.0+17`；版本号不表示 HEAD 等同于发布标签 |
-| 工作区 | 原始基线后共 129 个实现提交；d328a17 的 Source、正式性能采样和本轮本机平台阶段均已结束。四份报告按同一文档提交合入，文档汇总提交不计入本文的 129 条实现时间线；写入时观察的 HEAD/工作区另存 manifest |
-| 磁盘 Profile | 原始版与当前版各 3 个独立进程、每进程 30 动作的比较已通过；24 项墙钟中位数下降、6 项上升，进程最大 RSS 中位数约 +3.01%，见[全部 30 项附表](PROJECT_REFACTOR_DISK_PERFORMANCE.md) |
-| 最新全量与修复 | `d328a17` 完整 VM 为 4,861 通过、1 跳过，Source 共 9 步全部通过。修正前 4,848/1/6 与 `ce915f5` 的 103 项定向仅保留为历史，不与新全量相加 |
-| 最终 Windows 构建与包检查 | d328a17 两次 Release 重建、Unsigned/Store MSIX 和归档 Store verifier 全通过；身份、Publisher、x64、AppId、Toast、capabilities、三份 payload 及包 SHA 已独立复核。版本为 2.3.0.17 / 2.3.17.0；先归档 Unsigned 再构建 Store，未安装、WACK 或发布 |
-| Android 构建与 JVM | `d328a17` 的 APK、JVM、AAB、合并安全产物及安全检查共 5 步通过；APK/AAB 归档哈希已复核。JVM 10 项、0 failure/error/skip，实际任务行与 XML 时间窗口支持本次执行；独立 sidecar 修正原回执对 CRLF 行的漏捕获，原回执保持不变，未作真机验收 |
-| Linux 专项与 Web | 同 SHA 的纽约/柏林/上海各 18 项、Linux Chrome 租约 4 项通过；Web Release 构建 exit0，归档 index/main.dart.js。Web 有 CupertinoIcons 字体扫描提示，Wasm 仅 dry run；不表示 Linux native build 或 Web 页面视觉验收 |
-| 最终 Windows MSAA | d328a17 的明确预构建 Profile 目标完成 27/27 阶段、69 updates、5 次 MSAA、28 buttons、2 text checks，graph/AX/fatal 均 0，退出 0；3 个编译快照前后哈希一致。integrationPluginWarning=true 保留，实际报告与探针完整 |
-| Windows Chrome | 同一实例租约测试经任务内 Flutter 工具适配通过 4 项。原版 CLI 在启动阶段失败；一个工具副本文件的两处 URI path 修复已验哈希，全局 SDK、应用和测试源未改，不能写成原版 CLI 直接通过 |
-| 滑块最终实现 | `d328a17` 保留各 Slider 的独立 Semantics 和原有全局 Overlay；完整单表单使用 SingleChildScrollView，离屏锚点保留且 hidden。57 项针对测试通过，900/1440 真实设置滚动/关闭场景包含其中；没有新增局部或页面 Overlay |
-| 滑块边缘对照 | 4 个滚动边缘场景的全 RGBA、几何与滚动偏移完全相同，viewport 内/边界/外均 0 像素差异、通道容差 0。旧局部 Overlay 丢失 871 像素和页面 owner 回归失败仅保留为废弃方案诊断；新对照仍是 widget-raster，不是原生窗口截图 |
-| 完整 UI66 正确性 | 提交前完整 Windows Profile 覆盖 3 规模 / 66 actions + 3 mounts，0 AX、原生/框架起止状态均 true 且无变化。报告保留 `ef1aea31ed79`，六文件候选哈希关联 `d328a17`；一进程完整正确性不等于性能前后六进程比较 |
-| UI60 正式 Profile | `workspace60-v1` 两端各 3 个独立进程已完成，比较器接受 60 项动作与 3 类 mount，全部进程记录 0 AX。旧单进程 pilot 仍保留 `4169dc72313d`；正式样本另存 `ui-workspace-before/after-final-d328a17`，不裁剪 UI66 或混用 warm 样本 |
-| Host11 正式比较 | 两端各 3 个独立 host 进程完成，11 项纯数据操作可比；保留 host JIT 与原生 Profile/真实 UI 响应的区别 |
-| 真实编辑正式采样 | 两端各 3 次已运行；before 三进程有 199/204/201 条 AX 拒绝，数值比较 invalid、0 项，不据此给出改善百分比。after 三进程共 36 动作、磁盘独立读回均通过，0 AX；只作为新版正确性证据 |
-| 性能比较工具 | UI60/预构建准入的 45 项 stdlib 检查通过；正式三套样本已采集并审计，既有 disk30 的 30 项与分布复算不变。旧 legacy-no-build-driver pilot 始终只作历史诊断，未混入正式总体 |
-| WSL 与 Chrome | 任务内 Chrome 155 的初次准备、版本/headless 探针与项目测试分层保留；`d328a17` Linux 阶段已通过 3 步，锁定源码后执行三个时区和 Chrome 租约测试。没有据此宣称 Linux native Release 构建 |
-| 最终验收 | 已安排的 Source、Android、Linux 专项、Web、Windows Native/Chrome/Packages 与性能系列均有终态。编辑数值比较受原始版 AX 限制；整进程冷启动和 Android 真机未验收，压力场景仍有长帧与内存回退。远端 CI、推送、安装、WACK 和发布本轮未执行 |
+| 工作目录／分支 | `D:\Project\Flutter\sked`，`main` |
+| 应用与工具链 | `2.3.0+17`；Flutter 3.47.7 / Dart 3.13.5；Windows 包版本 2.3.0.17 / 2.3.17.0 |
+| 提交范围 | `77061b4` 之后至 `1142cfc` 的历史共 139 个提交：137 个实现或测试提交、2 个纯文档提交。对象、父链、单行中文摘要和 SSH 签名均有回执；本次交接文档提交不计入 137，历史总数也不表示当前未推送数 |
+| Source | [9 步全部通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/source-20261016T234624419Z/receipt.json>)；完整 VM **4,901 通过、1 跳过**，格式检查 754 文件、0 改动，应用和内部插件分析通过。旧全量与定向结果不相加 |
+| Windows Packages | [4 步通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/windows-packages-20261017T001804579Z/receipt.json>)；Unsigned/Store 各自 Release 重建、MSIX 归档、身份/Toast/capabilities/payload 检查及归档 Store verifier 通过。未安装、WACK 或发布 |
+| Android 构建与 JVM | [5 步通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/android-20261017T000729778Z/receipt.json>)；APK/AAB 和合并安全产物已归档。JVM 任务为 `UP-TO-DATE`，保留 XML 的 10 项、0 失败/错误/跳过，不能写成当前 SHA 新执行 10 项 |
+| Linux 四时区／Chrome | [同 SHA 专项通过](<D:/Project/Flutter/sked/.scratch/refactor-20261017/final-audit/linux-final-1142cfce8944-20261017T002055669751Z/receipt.json>)；纽约/柏林/上海各 41 项、圣保罗 25 项，Chrome 155.0.8059.84 的实例租约 4 项。148 是按时区执行次数，不能和 VM 总数相加 |
+| Web Release | [默认 JavaScript Release 构建通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/web-20261017T002340535Z/receipt.json>)；index.html / main.dart.js 哈希已归档。CupertinoIcons 字体扫描提示保留，Wasm 仅 dry run，页面视觉未验收 |
+| Windows MSAA | [当前原生流程通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/windows-native-20261016T235958921Z/receipt.json>)；27/27 阶段、66 updates、5 次同 PID MSAA、28 buttons / 2 text checks，graph/AX/fatal 均 0。三份编译快照前后哈希一致；integrationPluginWarning=true 保留 |
+| 完整 UI66 正确性 | [离线补验通过](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/ui66/offline-20261017T002119423Z/sidecar.json>)；当前 SHA 的一进程、三规模 66 actions + 3 mounts，设置 6 项、scroll 36 项，0 AX/graph/fatal。原回执仍保留日期字符串误解析造成的 failed；sidecar 以正确类型重读，未重跑、未改断言，报告哈希本轮首次封存 |
+| 后续长帧比较 | `041c6fd → d517f78` 的新主画布滚动协议，两侧各 3 进程、60+3 可比项。5k 月份 cold build P95 410.955 → 97.736 ms；工作区切换仍约 0.575–0.628 s，raster 与 RSS 仍有上升项，见[长帧结果](PROJECT_REFACTOR_LONG_FRAME_RESULTS.md) |
+| 独立进程启动 | 原版 `77061b4` 加存档启动/隔离适配层 → `1142cfc`，18 个 Windows Profile 进程。5k 就绪 raster 中位数 5.459 → 2.267 s（−58.47%），就绪报告 RSS 386.71 → 444.41 MiB（+14.92%）；详见[启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) |
+| 历史性能系列 | [Disk30](PROJECT_REFACTOR_DISK_PERFORMANCE.md) 的 after 保留 `1205c6e`；[UI60/Host11/编辑](PROJECT_REFACTOR_UI_PERFORMANCE.md) 保留 `d328a17` 系列。编辑 before AX 199/204/201 使数值比较 invalid，after 36 动作与读回 / 0 AX 仅作正确性证据 |
+| Linux native | [本地环境仍阻塞](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/linux-native-environment/receipt.json>)：Ubuntu 源缺 WPE 开发包；Docker Desktop 后端在初始化时退出，未拉镜像、未运行 Linux Release。四时区和 Chrome 专项不受此影响 |
+| 尚未覆盖 | Android 真机按用户约定延期；Windows 安装/同签名升级/WACK、完整辅助技术及 Web 视觉仍有各自边界。未推送、运行远端 CI、部署或发布 |
 
-本轮已完成领域状态与组合根迁移、存储和计算边界、两个工作区缓存与投影、编辑及导入任务、通知分层，以及测试和 CI 精简。模块处理、测试取舍与逐项提交见 [全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。`d328a17` 的完整源码检查、正式 UI60/Host11、Windows 原生检查及 Windows/Android/Web 构建已有本次回执；磁盘性能保留 `1205c6e` 实测版本，Android 真机与整进程冷启动仍待补齐。
+本轮已完成领域状态与组合根迁移、存储和计算边界、两个工作区投影与缓存、编辑及导入任务、通知分层，以及测试和 CI 精简；后续又修正公历校验、月页日期复用、缺失午夜日界与启动依赖组装。逐项实现和验收来源见[全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。启动比较包含显式基线适配、外部服务隔离与保留的 OS/字体/shader 缓存，不能写成未修改发布包、磁盘冷启动或真实像素呈现对照。
 
-历史上已撤销的“Sked 2.3.0 完整体验优化最终计划”仍不应自动恢复；六类设置等撤回方案和旧“4257 项通过”不构成本轮的实现依据或测试证据。当前设置目录与工作区可见性以 [settings_catalog.dart](../lib/models/settings_catalog.dart) 为准。
+历史上已撤销的“Sked 2.3.0 完整体验优化最终计划”不自动恢复；六类设置等撤回方案和旧“4257 项通过”不构成本轮依据。设置目录与工作区可见性以 [settings_catalog.dart](../lib/models/settings_catalog.dart) 为准。
 
-用户已另行明确授权本次全项目重构、性能优化、测试精简与持续本地原子提交。每个独立改动经过针对性验证后立即提交，采用现有 SSH 签名与单行中文 `type(范围): 摘要`，逐次核对暂存内容和签名；推送、发布另行安排。Android 真机暂未提供时，先完成其余可做工作，最后补齐真机验收。接手时继续核对实际实现和证据，不把历史任务限制误作本轮尚待授权。
+用户已明确授权全项目重构、性能优化、测试精简与持续本地原子提交。独立改动验证后立即采用现有 SSH 签名与单行中文 `type(范围): 摘要` 提交，逐次核对暂存内容和签名；推送、发布另行安排。Android 真机暂未提供时先完成其余工作，设备可用后再补真机验收。继续执行时核对实际实现和证据，不重复询问已明确授权的范围。
 
 ## 2. 产品范围
 
@@ -85,7 +78,7 @@ WebView 的 Android、iOS、macOS override 固定了不可变 Git 提交，原�
 
 | 领域 | 入口及职责 |
 | --- | --- |
-| 启动与生命周期 | [main.dart](../lib/main.dart)：`AppRuntimeFactory`、`AppBootstrap(runtimeFactory: ...)` 与 `MyApp(app: ...)`；实例租约、加载写门禁及显式退出 flush 保持前置 |
+| 启动与生命周期 | [main.dart](../lib/main.dart)：`runSkedApp` 统一平台初始化；`AppBootstrap` 接收运行时工厂和 `AppStartupDependencies`，`MyApp` 保留同一首页实例；实例租约、加载写门禁及显式退出 flush 保持前置 |
 | 组合与依赖 | [app_runtime.dart](../lib/app_runtime.dart) 统一持有 19 个领域实例；[app_scope.dart](../lib/providers/app_scope.dart) 注册领域与独立 readiness 桥，跨 Navigator 捕获同一组实例 |
 | 会话与业务入口 | [app_session.dart](../lib/controllers/app_session.dart) 管理会话、写入状态、版本及提交；[controllers](../lib/controllers) 分别提供 Student、General、Settings、Workspace 的命令和只读视图，旧 TimetableProvider 与共享业务 mixin 已删除 |
 | 数据模型 | [models](../lib/models)：`AppData`、课表、日程、设置、工作区；[重复实例展开](../lib/models/general_event_occurrence.dart) 管理重复日程计算 |
@@ -138,7 +131,7 @@ git diff --check
 | 更新 | [update_service_test.dart](../test/services/update_service_test.dart)、[app_update_coordinator_test.dart](../test/services/app_update_coordinator_test.dart)、[更新弹窗测试](../test/widgets/app_update_dialog_test.dart) |
 | 原生交互／截图 | [integration_test](../integration_test)、[test_driver](../test_driver)；普通 `flutter test` 不等于这些原生场景已运行 |
 
-普通全量测试不能替代 Linux Chrome 实例租约和纽约／柏林／上海时区专项。CI 的完整 VM 测试只运行当前提交，不再检出覆盖率基线重跑；总覆盖率与 90% 改动行硬门禁已删除，LCOV 只保留为诊断附件。格式、分析、本地化一致性、核心行为、浏览器/时区和平台产物安全检查继续保留。
+普通全量测试不能替代 Linux Chrome 实例租约和纽约／柏林／上海／圣保罗四时区专项。CI 的完整 VM 测试只运行当前提交，不再检出覆盖率基线重跑；总覆盖率与 90% 改动行硬门禁已删除，LCOV 只保留为诊断附件。格式、分析、本地化一致性、核心行为、浏览器/时区和平台产物安全检查继续保留。
 
 构建入口：
 
@@ -153,42 +146,35 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 
 ## 6. 最近完成的实现与验收入口
 
-| 提交／入口 | 当前状态与范围 |
+| 提交／入口 | 已完成范围 |
 | --- | --- |
-| `4276e92` | 最终 AppRuntime 组装切换并删除旧门面；522 项定向回归通过 |
-| `ab9613b`、`ba7c5ff` | 合并普通内存夹具，18 个原全局状态测试按业务归入 `test/controllers`；对应 500 项回归通过，故障/竞争专用夹具保留 |
-| `206e307`、`4492184` | 真实隔离磁盘操作及 JSON/ICS 导入基准；sparse/1,000/5,000 全规模 Debug 原生冒烟通过 |
-| `d8cd94f` | 37 个历史界面采集入口归并为一个 selector，保留 40 个场景注册；`mobile-calendar-grids` 原生冒烟生成 48 张 PNG 与 manifest |
-| `ce915f5` | 日期标题/liveRegion 与提示语义修复，103 项定向通过；此后 d328a17 完整 VM 已通过，旧批次不重复计数 |
-| `1205c6e` | 真实课程和日程卡片 → 详情 → 编辑 → 保存，独立读回磁盘；三个规模 Debug 原生冒烟通过 |
-| `94d7c4c` | 修复 Profile 模式的有效文字输入客户端；提交前 1 进程、3 规模、12 动作 pilot 通过；本提交的两种 Windows MSIX 构建和包检查通过。后续正式采样另有独立来源和结论 |
-| `fb1ef2a` | 固定画布关闭动作的语义父节点，并保留独立子控件语义；10 项定向测试及两文件分析通过。isolated 原生流程 27/27、0 AX/graph，候选的两文件哈希已对应到该签名提交 |
-| `01a98c5` | 9 个基准文件完成真实首页装配与原生语义状态协议。UI 编辑 v2 的 12 动作/0 AX pilot 保留提交前 `fb1ef2a` revision，源码哈希对应本提交；不与后续正式六进程样本混用 |
-| `57751c2` | 五个原生无障碍工具文件已提交；live 入口 27 阶段、68 updates、5 次 MSAA、0 AX/graph。报告保留提交前 revision，原工具候选/验证哈希可追溯 |
-| `4169dc7` | 历史局部 Overlay 曾通过限定场景，后因顶部裁切被废弃；d328a17 已改用全局 Overlay 与完整表单滚动，并有独立新证据 |
-| `ef1aea3` | 独立 UI60 工作区场景及协议已提交；6 项 widget 冒烟、1 进程 60 actions + 3 mounts / 0 AX pilot 通过。原报告保留 `4169dc72313d`，正式两端各三进程另以 d328a17 系列采集 |
-| `d328a17` | 保留独立 Slider Semantics 和全局 Overlay；完整单表单改为 SingleChildScrollView。57 项定向、4 边缘全 RGBA 对照、完整 UI66 66+3 / 0 AX 通过；原 UI66 revision 保留 `ef1aea31ed79`，六文件候选哈希可追溯 |
+| `4276e92` | AppRuntime 组装切换并删除旧门面；领域与就绪订阅分离，后续全量已承接 |
+| `ab9613b`、`ba7c5ff` | 合并普通内存夹具，18 个旧全局状态测试按业务归入 `test/controllers`；故障/竞争专用夹具保留 |
+| `206e307`、`4492184`、`1205c6e` | 真实隔离磁盘操作、JSON/ICS 导入及课程/事件编辑基准；历史采样保留原版本和协议 |
+| `d8cd94f` | 37 个历史界面采集入口归并为一个 selector，保留 40 个场景注册；选定原生组生成 48 张 PNG，未声称重跑全部场景 |
+| `fb1ef2a`、`57751c2`、`d328a17` | 稳定画布子控件语义与 MSAA 工具；Slider 保留独立 Semantics/全局 Overlay，完整单表单滚动保留离屏锚点；57 项定向和 4 边缘全 RGBA 是该批历史证据 |
+| `61446c3`、`e5615f9`、`4d54cc3` | 公历校验避免重复时区查询，月页复用日期计算，修正缺失午夜后的跨日事件日界；CI 增加圣保罗专项 |
+| `199f021`、`d517f78` | 通知锁增加独立作用域；启动外部服务工厂按根生命周期装配并保持首页实例，支持显式隔离测量 |
+| `895ed70` | UI60/UI66 日周滚动固定到主画布，记录目标协议与几何；旧错误目标样本保留为失效证据 |
+| `c286e2c`、`1142cfc` | 增加正常窗口独立进程启动、原生时钟、分阶段 RSS/峰值和启动交互协议；[18 进程结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) 已另表保存 |
 
-这些是各自提交的验证，不相加为全项目总通过数。采集命令见 [原生场景入口](../integration_test/README.md)，使用 `capture_scenarios_test.dart` 与 `SKED_CAPTURE_SCENE`；每个进程选择一个组，复合 `floating-panels` 组需要统一输出目录时显式指定 `SKED_VISUAL_OUTPUT`。
-
-公开文档的 32 张 JPEG 保持原样，继续使用 [文档截图流程](screenshots/README.md) 与 `documentation_screenshots_test.dart`。场景截图用于几何、字体和状态审查，不能代替自动行为回归、原生辅助技术或 Profile 性能证据。
+这些是各自提交的验证与来源，不相加为全项目总通过数。采集命令见[原生场景入口](../integration_test/README.md)，通过 `capture_scenarios_test.dart` 与 `SKED_CAPTURE_SCENE` 选择组。公开文档的 32 张 JPEG 保持原样，继续使用[文档截图流程](screenshots/README.md)。场景截图不代替行为回归、原生辅助技术或 Profile 采样。
 
 ## 7. 继续执行与证据限制
 
-1. **保留最终源码和专项回执。** `d328a17` 的 Source 9 步全部通过，完整 VM 为 4,861 通过、1 跳过，见 [Source 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-d328a174e4047438feae79950b9b782c5fc2876c/source-20261016T135646651Z/receipt.json>)。同 SHA 的 Android 5 步、Linux 三时区各 18 项和 Chrome 租约 4 项、Web 构建也有独立结果。旧 103 项或 57 项定向不与全量相加。
-2. **按各自边界使用正式性能结果。** 磁盘 30 动作保留 `1205c6e` 实测；当前完整 [UI66](../benchmark/UI_PERFORMANCE.md) 为 66+3 / 0 AX 的正确性运行。新 [UI60](../benchmark/WORKSPACE_PERFORMANCE.md) 两端各三进程得到 60+3 可比项，Host11 得到 11 项可比操作，数值及退化见 [UI/Host 性能报告](PROJECT_REFACTOR_UI_PERFORMANCE.md)。真实编辑 before 的 AX 199/204/201 使比较 invalid，不能提供改善百分比；after 的 36 动作与读回 / 0 AX 单独保留。UI60 warm 与 UI66 前序不同，不混合或重复累计覆盖。
-3. **保持样本来源可审查。** 不修改 `77061b4` 的生产代码来适配基线；仅使用兼容测试适配器。旧 UI 报告没有运行时 input SHA 或 PID，保留冻结输入源码、原始报告/日志与启动证据，不事后伪造字段。v2 的两端必须同协议重采各三进程；旧 before 与含 5,211 条 AXTree 错误的 `ui-after-v2-home-pilot` 均只作历史诊断。`cold` 只表示该基准的新会话；磁盘 load 与 UI mount 都不是 OS 整进程冷启动。
-4. **保留滑块最终设计与验收范围。** `d328a17` 的 SingleChildScrollView、独立 Semantics 和全局 Overlay 已有 57 项定向、4 边缘全 RGBA 与完整 UI66 证据，见 [原生无障碍说明](NATIVE_ACCESSIBILITY_SMOKE.md)。旧 per-slider/page Overlay、8 组位置对照和 26+2 项测试只保留为历史，不再描述为当前实现。后续相关生产修改应重新判断证据适用范围；实际 AppBootstrap 冷启动仍受 Windows 默认通知 FFI 身份隔离限制，Android 平台流程与辅助技术待真机接入后验收。
-5. **保留产物与发布边界。** d328a17 的 Windows Unsigned/Store 新包已构建、归档和核验，见 [最终包回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-d328a174e4047438feae79950b9b782c5fc2876c/windows-packages-20261016T175255916Z/receipt.json>)；94d7c4c 包只保留为历史。Android APK/JVM/AAB/安全检查、Linux 时区/Chrome 和 Web Release 均有对应结果；这不等于真机、Linux native、Web 视觉或实际 Wasm 构建通过。同签名升级、干净机器与商店认证见 [发布验收](RELEASE_ACCEPTANCE.md)。本轮未安装、推送、WACK 或发布。
-6. **保留历史线索，按当前版本判断。** 2026-10-07 撤回前的“启动提醒与 AI 预览共存、拖宽跨阈值时画布跳变”仅是当时记录；本检查点没有独立复现结论，不将其写成当前仍存在或已经修复。历史图像和模拟 Android 布局也不作为当前真机证据。
-7. **整批缓存清理仍暂停。** 用户此前接受暂不删除日志、coverage、widget preview 等本地资料；不把再次清理或反复确认设为接手前置条件。`.scratch` 混有隔离源码、构建、发布包、截图、性能报告和日志，旧大小统计已过时，任何后续清理都应重新核对具体清单与目标路径。
+1. **以当前检查点回执交接。** Source、Native、Packages、Android、Linux 四时区/Chrome、Web 和 UI66 的本次结果见上表。[独立只读审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/evidence-audit/receipt-and-commit-audit-1142cfce.json>)核对归档哈希及 139 个提交；Source 的 diff-whitespace 只有 exit0 回执，零输出日志未单独落盘。纯文档更新不需要重跑整个矩阵。
+2. **保留性能样本的真实版本和代价。** 原始版编辑 AX 使改善比例不可用；新主画布比较仍有长帧/raster/RSS 上升。独立进程启动比较明确包含基线覆盖层、Profile、服务隔离和缓存条件；就绪报告 RSS 不是精确 raster 时刻 RSS，注入输入不是物理鼠标投递。
+3. **补齐平台环境后再做相应验收。** Linux native 的 WPE 缺包与 Docker 初始化失败均有回执，尚无 Release 产物；本轮没有升级 Ubuntu、改源或重置 Docker。Android 真机按用户约定延期，设备可用后验证通知、恢复、真实交互和数据升级；完整辅助技术另列为尚未验收。
+4. **保留发布边界。** 当前 Windows 两包与 Android APK/AAB 已构建归档；安装、同签名升级、干净机器、WACK/商店认证、远端 CI 与发布仍未执行，见[发布验收](RELEASE_ACCEPTANCE.md)。Web 是 JavaScript Release 构建，未作实际 Wasm 或页面视觉验收。
+5. **历史线索不冒充当前缺陷。** 2026-10-07 撤回前的提醒/AI 预览和拖宽跳变记录没有当前复现结论；旧局部/page Overlay 方案已废弃。旧 Windows Chrome 的工具路径适配结果仍属于 `d328a17`，最新浏览器证据来自 Linux。
+6. **整批缓存清理仍暂停。** 用户此前接受暂不删除日志、coverage、widget preview 等本地资料；`.scratch` 含隔离源码、构建、包、截图和原始报告。后续清理需重新核对具体路径，不沿用旧大小统计。
 
 ## 8. 推荐阅读顺序
 
-1. 本文的当前状态与 [全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。
-2. [PRODUCT](../PRODUCT.md) → [README](../README.md)：产品能力与平台边界。
-3. [DESIGN](../DESIGN.md) → [自适应规范](ADAPTIVE_WORKSPACES.md) → [桌面浮层](DESKTOP_FLOATING_PANELS.md)：界面任务与生命周期。
-4. [可靠性](RELIABILITY_BASELINE.md) → [通知契约](NOTIFICATION_DEDUPLICATION.md) → [依赖维护](DEPENDENCY_UPGRADES.md)：数据、平台和升级限制。
+1. 本文与[全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。
+2. [长帧结果](PROJECT_REFACTOR_LONG_FRAME_RESULTS.md) → [启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) → [历史 UI/Host](PROJECT_REFACTOR_UI_PERFORMANCE.md)／[Disk30](PROJECT_REFACTOR_DISK_PERFORMANCE.md)。
+3. [PRODUCT](../PRODUCT.md)／[README](../README.md) → [DESIGN](../DESIGN.md) → [自适应规范](ADAPTIVE_WORKSPACES.md)／[桌面浮层](DESKTOP_FLOATING_PANELS.md)。
+4. [可靠性](RELIABILITY_BASELINE.md) → [通知契约](NOTIFICATION_DEDUPLICATION.md) → [依赖维护](DEPENDENCY_UPGRADES.md)。
 5. [发布验收](RELEASE_ACCEPTANCE.md) → [Android 通知矩阵](ANDROID_NOTIFICATION_ACCEPTANCE.md) → [更新机制](updates.md)／[Store 指南](microsoft-store.md)。
 
-接手后只更新本文件中发生变化的交接状态，不再新增按日期命名的重复审查报告；长期约定更新到对应规范中。
+只更新发生变化的交接状态，不新增按日期命名的重复审查报告；长期约定维护在对应规范中。

@@ -44,7 +44,7 @@ git diff --check
 | 检查 | 当前配置及边界 |
 | --- | --- |
 | 通用 | 固定 Flutter 版本、双 lock 校验、本地化生成一致性、格式、分析、VM 测试；coverage 仅作为诊断附件。 |
-| 浏览器与日期 | Linux Chrome 验证实例 lease；纽约、柏林 DST 与上海无 DST 对照单独执行。普通全量测试不能代替这些专门任务。 |
+| 浏览器与日期 | Linux Chrome 验证实例 lease；纽约、柏林 DST、上海无 DST 对照及圣保罗午夜缺口单独执行。普通全量测试不能代替这些专门任务。 |
 | Android | Ubuntu / Java 17，以临时 CI 密钥构建 APK 和 Google Play 渠道 AAB；Debug JVM 单测与 Release 编译/混淆分别检查，再检查 merged manifest 与资源。 |
 | Web | Release 构建；构建成功不代表浏览器运行、视觉或 Wasm 已验收。 |
 | Linux | Debian 容器和 WPE WebKit 系统依赖下构建 Release。 |
@@ -58,6 +58,7 @@ flutter test --platform chrome test/services/app_instance_lease_web_test.dart
 TZ=America/New_York SKED_DST_TEST_ZONE=america-new-york flutter test test/date_dst_regression_test.dart
 TZ=Europe/Berlin SKED_DST_TEST_ZONE=europe-berlin flutter test test/date_dst_regression_test.dart
 TZ=Asia/Shanghai SKED_DST_TEST_ZONE=asia-shanghai flutter test test/date_dst_regression_test.dart
+TZ=America/Sao_Paulo SKED_DST_TEST_ZONE=america-sao-paulo flutter test test/date_dst_regression_test.dart
 ```
 
 Android 的直接 Gradle 调用应放在首次 Flutter Android 构建之后，因为 wrapper 文件由构建准备。Debug JVM 单测后构建 Release 时保持正常 `flutter build` 准备流程，避免 `--no-pub` 遗留开发插件注册器；不要手改生成文件或把测试插件移入运行时依赖。具体步骤以 CI 及 [workflow 契约测试](../test/tool/ci_workflow_test.dart) 为准。多个平台构建不要同时改写同一工作区的生成文件。
