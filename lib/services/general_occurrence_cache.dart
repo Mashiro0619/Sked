@@ -74,17 +74,29 @@ class GeneralOccurrenceCache {
     NotificationSettings notificationSettings = const NotificationSettings(),
   }) {
     final anchor = now ?? DateTime.now();
-    final candidates = occurrencesForRange(
-      general,
-      startInclusive: anchor.subtract(
-        boundedGeneralReminderLookback(overdueWindow),
-      ),
-      endExclusive: anchor.add(upcomingHorizon),
-      onlyVisibleCalendars: !notificationSettings.remindHiddenGeneralCalendars,
+    final start = anchor.subtract(
+      boundedGeneralReminderLookback(overdueWindow),
     );
+    final end = anchor.add(upcomingHorizon);
+    // Cache only the expansion, never the reminder status at a rounded time.
+    // A minute adds fewer than two minutes of candidates to the exact window
+    // while letting rebuilds and multiple reminder surfaces share that work.
+    final candidates = end.isAfter(start)
+        ? occurrencesForRange(
+            general,
+            startInclusive: _minuteBoundary(start),
+            endExclusive: _minuteBoundary(end, roundUp: true),
+            onlyVisibleCalendars:
+                !notificationSettings.remindHiddenGeneralCalendars,
+          )
+        : const <GeneralEventOccurrence>[];
     return _service.reminderItemsFromOccurrences(
       general,
-      candidates,
+      // Query.matches filters text and color, not time. Remove the additional
+      // boundary candidates before classification, including empty windows.
+      candidates.where(
+        (item) => item.end.isAfter(start) && item.start.isBefore(end),
+      ),
       now: anchor,
       occurrenceFilter: occurrenceFilter,
       notificationSettings: notificationSettings,
@@ -104,6 +116,19 @@ class GeneralOccurrenceCache {
     _schedulesIdentity = schedulesIdentity;
     _queries.clear();
   }
+}
+
+DateTime _minuteBoundary(DateTime value, {bool roundUp = false}) {
+  const minute = Duration.microsecondsPerMinute;
+  final micros = value.microsecondsSinceEpoch;
+  final remainder = micros % minute;
+  if (remainder == 0) return value;
+  // Epoch arithmetic preserves the chosen instant through repeated/missing
+  // local clock times, and the original representation remains in the key.
+  return DateTime.fromMicrosecondsSinceEpoch(
+    micros - remainder + (roundUp ? minute : 0),
+    isUtc: value.isUtc,
+  );
 }
 
 class _GeneralOccurrenceQueryCacheKey {

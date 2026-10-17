@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/general_calendar_service.dart';
 import 'package:sked/services/general_calendar_ics_service.dart';
+import 'package:sked/services/general_occurrence_cache.dart';
+import 'package:sked/services/general_occurrence_service.dart';
 import 'package:sked/services/import_export_service.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/utils/date_selection.dart';
@@ -97,6 +99,20 @@ void main() {
       expect(scenario.fallBefore.timeZoneOffset, scenario.fallOffsetBefore);
       expect(scenario.fallAfter.timeZoneOffset, scenario.fallOffsetAfter);
     });
+
+    test(
+      'reminder candidates preserve exact instants across clock changes',
+      () {
+        _expectReminderCacheAcrossClockChange(
+          scenario.springBefore,
+          scenario.springAfter,
+        );
+        _expectReminderCacheAcrossClockChange(
+          scenario.fallBefore,
+          scenario.fallAfter,
+        );
+      },
+    );
 
     test('calendar-day arithmetic preserves dates and wall-clock time', () {
       final springResult = addCalendarDays(scenario.springBefore, 2);
@@ -722,6 +738,10 @@ void _testMidnightGap() {
     expect(gap.hour, 1, reason: 'The requested midnight gap must be active.');
   });
 
+  test('reminder candidates preserve instants across the midnight gap', () {
+    _expectReminderCacheAcrossClockChange(before, after);
+  });
+
   test(
     'date navigation resolves each target day start across midnight gap',
     () {
@@ -785,6 +805,109 @@ void _testMidnightGap() {
     }
     expect(page.occurrencesByDay['2018-11-06'], isEmpty);
   });
+}
+
+void _expectReminderCacheAcrossClockChange(DateTime before, DateTime after) {
+  var transition = addCalendarDays(before, 1);
+  for (var hour = 1; hour <= 48; hour++) {
+    final instant = before.add(Duration(hours: hour));
+    if (instant.timeZoneOffset != before.timeZoneOffset) {
+      transition = instant;
+      break;
+    }
+  }
+  final repeated = transition.add(const Duration(minutes: 15, seconds: 30));
+  final clockBack = before.timeZoneOffset - after.timeZoneOffset;
+  final anchors = [
+    transition.subtract(const Duration(seconds: 30)),
+    transition.add(const Duration(seconds: 30)),
+    if (clockBack > Duration.zero) repeated.subtract(clockBack),
+    repeated,
+    repeated.add(const Duration(microseconds: 1)),
+  ];
+  if (clockBack > Duration.zero) {
+    expect(_dateAndHour(repeated.subtract(clockBack)), _dateAndHour(repeated));
+  }
+  final day = normalizeDateOnly(before);
+  GeneralEvent event(
+    String id,
+    DateTime start,
+    DateTime end, {
+    bool allDay = false,
+    bool daily = false,
+  }) => GeneralEvent(
+    id: id,
+    calendarId: 'calendar',
+    title: id,
+    startDateTimeIso: start.toIso8601String(),
+    endDateTimeIso: end.toIso8601String(),
+    isAllDay: allDay,
+    recurrenceRule: GeneralEventRecurrenceRule(
+      type: daily ? GeneralEventRecurrence.daily : GeneralEventRecurrence.none,
+      count: daily ? 4 : null,
+    ),
+    reminders: const [GeneralEventReminder(minutesBefore: 2880)],
+  );
+  final data = GeneralScheduleData(
+    activeScheduleId: 'calendar',
+    schedules: [
+      GeneralSchedule(
+        id: 'calendar',
+        name: 'Calendar',
+        events: [
+          event(
+            'all-day',
+            day,
+            addCalendarDays(day, 1),
+            allDay: true,
+            daily: true,
+          ),
+          event(
+            'local-daily',
+            before,
+            before.add(const Duration(hours: 1)),
+            daily: true,
+          ),
+          event(
+            'utc',
+            transition.subtract(const Duration(hours: 2)).toUtc(),
+            transition.add(const Duration(hours: 2)).toUtc(),
+          ),
+          for (var index = 0; index < anchors.length; index++) ...[
+            event(
+              'future-$index',
+              anchors[index].add(const Duration(hours: 24)),
+              anchors[index].add(const Duration(hours: 25)),
+            ),
+            event(
+              'past-$index',
+              anchors[index].subtract(const Duration(hours: 25)),
+              anchors[index].subtract(const Duration(hours: 24)),
+            ),
+          ],
+        ],
+      ),
+    ],
+  );
+  final cache = GeneralOccurrenceCache();
+  const reference = GeneralOccurrenceService();
+  List<(String, DateTime, GeneralReminderStatus)> snapshot(
+    List<GeneralReminderItem> items,
+  ) => [
+    for (final item in items)
+      (item.occurrence.occurrenceKey, item.occurrence.end, item.status),
+  ];
+  for (final anchor in [...anchors, ...anchors.reversed]) {
+    for (final now in [anchor, anchor.toUtc()]) {
+      final expected = reference.reminderItems(data, now: now);
+      expect(expected, isNotEmpty);
+      expect(
+        snapshot(cache.reminderItems(data, now: now)),
+        snapshot(expected),
+        reason: '$now / ${now.timeZoneOffset}',
+      );
+    }
+  }
 }
 
 String _dateAndHour(DateTime value) =>
