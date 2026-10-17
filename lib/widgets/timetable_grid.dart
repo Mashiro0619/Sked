@@ -2180,6 +2180,10 @@ typedef _DesktopCourseLayout = ({
 });
 
 class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
+  static final _mandatoryLineBreak = RegExp(
+    r'[\r\n\u000b\u000c\u0085\u2028\u2029]',
+  );
+
   _DesktopCourseLayoutInputs? _previousInputs;
   _DesktopCourseLayout? _previousLayout;
 
@@ -2297,7 +2301,11 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
     _DesktopCourseLayoutInputs inputs,
     List<_DesktopCourseField> fields,
   ) {
-    ({double height, int lines}) measure(int i, double maxWidth, int? lines) {
+    ({double height, int lines, bool didExceedMaxLines}) measure(
+      int i,
+      double maxWidth,
+      int? lines,
+    ) {
       final painter = TextPainter(
         text: TextSpan(text: fields[i].value, style: fields[i].style),
         textDirection: inputs.direction,
@@ -2309,6 +2317,7 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
       final result = (
         height: painter.height,
         lines: painter.computeLineMetrics().length,
+        didExceedMaxLines: painter.didExceedMaxLines,
       );
       painter.dispose();
       return result;
@@ -2319,39 +2328,45 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
     const extraInset = 6.0;
     final width = math.max(0.0, inputs.width - inputs.badgeInset);
     final preferredWidth = math.max(0.0, width - extraInset * 2);
-    final preferredLineHeights = [
-      for (var i = 0; i < fields.length; i++)
-        measure(i, preferredWidth, 1).height,
+    final preferredProbes = [
+      for (var i = 0; i < fields.length; i++) measure(i, preferredWidth, 1),
     ];
     var preferredHeight = extraInset * 2;
     for (var i = 0; i < fields.length; i++) {
-      preferredHeight += preferredLineHeights[i] + fields[i].gap;
+      preferredHeight += preferredProbes[i].height + fields[i].gap;
     }
     final spacious = width > extraInset * 2 && preferredHeight <= inputs.height;
     final inset = spacious ? extraInset : 0.0;
     final textWidth = math.max(0.0, width - inset * 2);
-    final minimumHeights = spacious
-        ? preferredLineHeights
-        : [
-            for (var i = 0; i < fields.length; i++)
-              measure(i, textWidth, 1).height,
-          ];
+    final minimumProbes = spacious
+        ? preferredProbes
+        : [for (var i = 0; i < fields.length; i++) measure(i, textWidth, 1)];
     var remaining = math.max(0.0, inputs.height - inset * 2);
     final rows = <_DesktopCourseFieldLayout>[];
     for (var i = 0; i < fields.length && remaining > 0; i++) {
       final gap = spacious ? fields[i].gap : 0.0;
-      final oneLine = minimumHeights[i];
+      final probe = minimumProbes[i];
+      final oneLine = probe.height;
       if (i > 0 && gap + oneLine > remaining) break;
       // A long title/location must not consume the teacher's last line.
       var reserved = 0.0;
       for (var j = i + 1; j < fields.length; j++) {
-        reserved += minimumHeights[j] + (spacious ? fields[j].gap : 0);
+        reserved += minimumProbes[j].height + (spacious ? fields[j].gap : 0);
       }
       final budget = math.min(
         remaining - gap,
         math.max(oneLine, remaining - gap - reserved),
       );
-      final full = measure(i, textWidth, null);
+      // A trailing hard break can add an empty line without reporting overflow
+      // in a one-line probe. Keep unrestricted measurement for those strings.
+      final full =
+          probe.lines == 1 &&
+              !probe.didExceedMaxLines &&
+              textWidth > 0 &&
+              textWidth.isFinite &&
+              !_mandatoryLineBreak.hasMatch(fields[i].value)
+          ? probe
+          : measure(i, textWidth, null);
       var lines = math.max(1, full.lines);
       var height = full.height;
       if (height > budget) {
@@ -2359,16 +2374,19 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
         // Measuring candidates also handles explicit newlines and font fallback.
         var lower = 1;
         var upper = lines;
+        var fittedHeight = oneLine;
         while (lower < upper) {
           final candidate = (lower + upper + 1) ~/ 2;
-          if (measure(i, textWidth, candidate).height <= budget) {
+          final candidateHeight = measure(i, textWidth, candidate).height;
+          if (candidateHeight <= budget) {
             lower = candidate;
+            fittedHeight = candidateHeight;
           } else {
             upper = candidate - 1;
           }
         }
         lines = lower;
-        height = math.min(measure(i, textWidth, lines).height, budget);
+        height = math.min(fittedHeight, budget);
       }
       rows.add((field: i, gap: gap, height: height, lines: lines));
       remaining -= height + gap;

@@ -254,6 +254,59 @@ void main() {
     },
   );
 
+  testWidgets('a trailing title newline retains its height before metadata', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final location = List.generate(
+      6,
+      (index) => 'Room ${index + 1}',
+    ).join('\n');
+    final plain = _course(
+      title: 'Course',
+      location: location,
+      teacher: 'Teacher',
+    );
+    await tester.pumpWidget(_grid(courses: [plain]));
+    await tester.pumpAndSettle();
+    final visual = tester.element(_visual());
+    final titleHeight = tester.getSize(_textIn('Course')).height;
+    final locationLines = _paragraph(tester, _textIn(location)).maxLines!;
+    expect(_paragraph(tester, _textIn('Course')).maxLines, 1);
+    expect(locationLines, greaterThan(1));
+
+    final withNewline = _course(
+      title: 'Course\n',
+      location: location,
+      teacher: 'Teacher',
+    );
+    await tester.pumpWidget(_grid(courses: [withNewline]));
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    expect(_paragraph(tester, _textIn('Course\n')).maxLines, 2);
+    expect(
+      tester.getSize(_textIn('Course\n')).height,
+      greaterThan(titleHeight),
+    );
+    expect(
+      _paragraph(tester, _textIn(location)).maxLines,
+      lessThan(locationLines),
+    );
+    expect(_paragraph(tester, _textIn(location)).didExceedMaxLines, isTrue);
+    expect(_textIn('Teacher'), findsOneWidget);
+    expect(_paragraph(tester, _textIn('Teacher')).didExceedMaxLines, isFalse);
+    _snapshot(tester);
+
+    await tester.pumpWidget(_grid(courses: [plain]));
+    await tester.pumpAndSettle();
+    expect(tester.element(_visual()), same(visual));
+    expect(_paragraph(tester, _textIn('Course')).maxLines, 1);
+    expect(tester.getSize(_textIn('Course')).height, titleHeight);
+    expect(_paragraph(tester, _textIn(location)).maxLines, locationLines);
+    expect(tester.takeException(), isNull);
+  });
+
   final windows = ThemeData(platform: TargetPlatform.windows);
   final largerFont = windows.copyWith(
     textTheme: windows.textTheme
