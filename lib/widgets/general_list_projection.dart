@@ -8,12 +8,21 @@ class GeneralListProjectionCache {
 
   GeneralListSnapshot project(List<GeneralEventOccurrence> occurrences) {
     if (identical(_source, occurrences)) return _snapshot!;
+    // The list covers many occurrences but only a small set of civil dates.
+    // Keep DateTime as the final grouping key: local midnight normalization
+    // (including skipped dates) must retain the existing grouping behavior.
+    final dates = <(int, int, int), DateTime>{};
     final grouped = <DateTime, List<GeneralEventOccurrence>>{};
     for (final occurrence in occurrences) {
       final start = occurrence.calendarDisplayStart;
       // All-day UTC events keep their declared calendar date; timed events
       // were converted to local calendar time by calendarDisplayStart.
-      final date = DateTime(start.year, start.month, start.day);
+      final parts = (start.year, start.month, start.day);
+      var date = dates[parts];
+      if (date == null) {
+        date = DateTime(parts.$1, parts.$2, parts.$3);
+        dates[parts] = date;
+      }
       (grouped[date] ??= []).add(occurrence);
     }
     final snapshot = GeneralListSnapshot._(
