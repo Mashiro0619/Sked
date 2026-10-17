@@ -1,4 +1,5 @@
 import '../models/timetable_models.dart';
+import '../utils/local_calendar_day.dart';
 
 /// Query results are immutable. Their identity keeps date grouping independent
 /// of selection, theme and viewport rebuilds without scanning the events again.
@@ -12,16 +13,21 @@ class GeneralListProjectionCache {
     // Keep DateTime as the final grouping key: local midnight normalization
     // (including skipped dates) must retain the existing grouping behavior.
     final dates = <(int, int, int), DateTime>{};
+    final localDates = LocalCalendarDateCache();
     final grouped = <DateTime, List<GeneralEventOccurrence>>{};
     for (final occurrence in occurrences) {
-      final start = occurrence.calendarDisplayStart;
-      // All-day UTC events keep their declared calendar date; timed events
-      // were converted to local calendar time by calendarDisplayStart.
-      final parts = (start.year, start.month, start.day);
-      var date = dates[parts];
-      if (date == null) {
-        date = DateTime(parts.$1, parts.$2, parts.$3);
-        dates[parts] = date;
+      final start = occurrence.start;
+      final DateTime date;
+      if (occurrence.isAllDay && start.isUtc) {
+        // UTC all-day events keep their declared date, rather than the date
+        // containing that instant in the local zone.
+        final parts = (start.year, start.month, start.day);
+        date = dates.putIfAbsent(
+          parts,
+          () => DateTime(parts.$1, parts.$2, parts.$3),
+        );
+      } else {
+        date = localDates.dateFor(start);
       }
       (grouped[date] ??= []).add(occurrence);
     }

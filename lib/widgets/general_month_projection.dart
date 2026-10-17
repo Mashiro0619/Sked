@@ -1,4 +1,5 @@
 import '../models/timetable_models.dart';
+import '../utils/local_calendar_day.dart';
 
 typedef GeneralMonthPages = ({
   GeneralMonthPage current,
@@ -214,8 +215,41 @@ Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
   final firstDay = calendarDate(days.first).date;
   final lastDay = calendarDate(days.last).date;
   final rangeEndExclusive = calendarDate(lastDay).next;
+  final intervals = [for (final day in days) LocalCalendarDay(day)];
+  final regularDays = intervals.every((day) => day.isRegular);
+  final buckets = [
+    for (final day in intervals) result[calendarDate(day.date).key]!,
+  ];
 
   for (final occurrence in occurrences) {
+    // Most view ranges contain ordinary civil days. Compare their resolved
+    // instant boundaries directly, without decoding the same endpoints or
+    // constructing end-minus-one-microsecond for every occurrence. The old
+    // path remains authoritative for irregular local dates and UTC all-day
+    // declarations (including mixed UTC/local endpoint representations).
+    if (regularDays &&
+        !(occurrence.isAllDay &&
+            (occurrence.start.isUtc || occurrence.end.isUtc))) {
+      final start = occurrence.start.microsecondsSinceEpoch;
+      final end = occurrence.end.microsecondsSinceEpoch;
+      if (end <= start) continue;
+      var lower = 0;
+      var upper = intervals.length;
+      while (lower < upper) {
+        final middle = lower + (upper - lower) ~/ 2;
+        if (intervals[middle].endMicros <= start) {
+          lower = middle + 1;
+        } else {
+          upper = middle;
+        }
+      }
+      for (var index = lower; index < intervals.length; index++) {
+        final day = intervals[index];
+        if (day.startMicros >= end) break;
+        buckets[index].add(occurrence);
+      }
+      continue;
+    }
     final displayStart = occurrence.calendarDisplayStart;
     final displayEnd = occurrence.calendarDisplayEnd;
     if (!displayEnd.isAfter(displayStart) ||
