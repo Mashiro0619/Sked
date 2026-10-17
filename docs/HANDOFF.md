@@ -1,10 +1,10 @@
 # Sked 项目交接
 
-交接日期：2026-10-17（Asia/Shanghai）。最新代码检查点为 `d9d98af879e024595bd676c30ba5363fb552b361`，完成列表逐条构建与事件焦点修复；123 项相关回归、4 项最终列表复验和前后各三轮 Windows Profile 流程均通过。严格 UI60 比较因列表长度估算变化为 `invalid`，本次帧数值仅作观察。此前 e522134 的完整平台矩阵保留原版本，详见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。
+交接日期：2026-10-18（Asia/Shanghai）。本轮实现、定向回归和同协议采样已完成，最终代码为 `0f5a8f96b04b7580f1759ef48dc9b91073f6c708`。改动涵盖日期与提醒候选复用、课表排版与语义复用、导航回调与 ticker 订阅边界，以及透明点击层去冗余。最新 8 文件回归 **143 项通过**，2 文件格式和 fatal-info 分析通过；日期 304/128 次按未变源码哈希关联，104 次本地补充单列。最终六轮 Profile 对照覆盖 `df5676f → 0f5a8f9` 完整改动集，严格可比且独立来源与数值审计通过，未隔离最后一项 Material 改动的单独收益；压力长帧及原平台边界仍保留，详见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。
 
 ## 1. 当前状态与接手边界
 
-本次 d9d98af 的范围见上文及[本地闭环回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/list-virtualization/closure.json>)。下表保留 **e522134 检查点**的综合验收，不表示 d9d98af 已重新执行全量、平台包、UI66、Linux 或浏览器矩阵。
+当前实现、分批回归、正式对照与阶段审计见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。[透明层 r2 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final-validation-r2/receipt.json>)记录 143 项回归，9 个源文件哈希对应当前提交；[日期验收汇总](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/actual-calendar-zones/20261017T132444816867Z/acceptance-summary.json>)只按 7 个未变关键文件关联。下表仍保留 **e522134 检查点**的综合验收，不表示当前代码已重跑全量、整套发布包、UI66、Linux 应用构建或完整浏览器矩阵。
 
 | 项目 | e522134 检查点的结果与范围 |
 | --- | --- |
@@ -161,15 +161,20 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 | `c286e2c`、`1142cfc` | 增加正常窗口独立进程启动、原生时钟、分阶段 RSS/峰值和启动交互协议；[18 进程结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) 已另表保存 |
 | `1139840`、`1d45d46`、`e522134` | 列表日期复用保留；文字测量缓存候选经交替测量后撤回，最终 tree 与 `1139840` 相同；[最终续验与候选历史](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)分别记录 |
 | `d9d98af` | 列表逐条构建、稳定事件焦点与日期标题语义；相关回归和前后各三轮原生流程通过，严格性能比较因长度估算变化拒绝，见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md) |
+| `df5676f`、`423d030`、`5da71f9` | 冻结 workspace60-v2 可见内容/位移协议；复用本地日界、月页区间和提醒候选窗口，304/128 次跨时区定向与 104 次本地补充单列 |
+| `32cf799`、`08026f9`、`9cd2c4c` | 复用卡片数值布局、完整单行与二分探针；77、139 等回归及 080 阶段比较保留各自版本与范围 |
+| `00c096b`、`d782a02` | 稳定导航回调、按星期列隔离 ticker 通知；138 项阶段回归与 d782 独立六轮比较保留所有长帧及资源代价 |
+| `86b95ff` | 复用未变语义属性并保留当前动作与目标；142 项阶段回归、六轮 ABBAAB、严格可比性及统计/来源审计通过，保留实际帧节奏混杂和所有长帧/资源代价 |
+| `0f5a8f9` | 仅显式指定 CourseHitTarget 的透明 Material 类型；143 项回归、独立六轮严格比较及来源/数值审计通过，墨水绘制/命中/语义和所有压力边界保留 |
 
 这些是各自提交的验证与来源，不相加为全项目总通过数。采集命令见[原生场景入口](../integration_test/README.md)，通过 `capture_scenarios_test.dart` 与 `SKED_CAPTURE_SCENE` 选择组。公开文档的 32 张 JPEG 保持原样，继续使用[文档截图流程](screenshots/README.md)。场景截图不代替行为回归、原生辅助技术或 Profile 采样。
 
 ## 7. 继续执行与证据限制
 
-1. **以当前检查点回执交接。** 最新 d9d98af 承接 123 项相关回归、4 项列表最终复验与前后各三轮 UI60 原生正确性；严格几何比较为 invalid，不计作性能验收通过。上表仍为 e522134 的综合矩阵。纯文档更新不增加执行数，全部旧失败与候选记录保留。
-2. **保留性能样本的真实版本和代价。** 本次 `08bedc4 → d9d98af` 放在 `list-virtualization/comparison`，只按观察数据解读，原 1 像素门槛拒绝结果保留；23/60 动作仍有 ≥100 ms build，最坏挂载 806.724 ms，峰值 RSS 中位数上升。此前 e522134 只使用 `remaining-performance/comparison-final` 与其审计，不混入候选、控制或本轮样本。
-3. **按实际剩余平台范围继续。** Linux e522134 Release/链接与四时区已补齐，图形运行、通知、安装和原生输入仍未验收；旧 WPE 缺包/Docker 初始化失败不是当前构建阻塞。Android 真机按约定延期，设备可用后验证通知、恢复、真实交互、旧数据/密钥升级与性能；完整辅助技术另列。
-4. **保留发布边界。** 上表 e522134 的 Windows 两包、Android APK/AAB 与 Linux bundle 已归档，d9d98af 本次只新增 Windows Profile 构建与明确列出的流程；未重新生成整套发布包。安装、同签名升级、干净机器、WACK/商店认证、远端 CI 和发布仍未执行；e522134 的有限浏览器结果保留其原版本。
+1. **以当前实现和分范围回执交接。** 0f5a8f9 的 143 项回归与 9 个源文件哈希已核对；304/128 按 7 个未变关键文件关联，104 仍为本地诊断。215 成功加 1 个加载失败、17/14 独立复验、77/138/139/142 阶段回归及 e522 的 4,901/1 各自保留，不相加为当前全量。透明层 r1 的 142 通过/1 hover 断言失败、单项时序修正复验，以及语义 r1 的 139 成功/3 清理失败均保留，文档更新不增加执行数。
+2. **保留本轮完成范围与压力边界。** 0f5a8f9 的六个新进程于 2026-10-18 01:22:25–01:35:10（UTC+08:00）按 ABBAAB 完成，各 60 actions + 3 mounts，严格比较 comparable，独立来源与数值复核通过。本轮实现和本地验证完成，仍有 18/60 个动作至少一次 build ≥100 ms；cold `student.day.open_scroll` 的最大 build 中位数升高 2.65%，完整窗口含返回周视图的工作。三次重复只作描述，源码/完整 bundle 已冻结，外部 SDK/pub cache 未整体归档；详见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。旧阶段与 CPU 诊断不混入本轮因果判断。
+3. **按实际剩余平台范围继续。** 当前 WSL 结果覆盖冻结实际源码的定向测试，e522 的 Linux Release/链接仍属于原版本；当前 Linux 图形运行、安装、通知和原生输入未验收。Android 真机按约定延期，设备可用后补通知、恢复、真实交互、旧数据/密钥升级和性能；完整辅助技术另列。
+4. **保留发布边界。** e522 的 Windows 两包、Android APK/AAB 与 Linux bundle 为原版本归档；本轮阶段 Profile 对照、诊断和定向回归不替代整套发布包、安装、同签名升级、干净机器、WACK/认证或远端 CI。e522 的有限浏览器结果保留原范围；本轮未推送、部署或发布。
 5. **历史线索不冒充当前缺陷。** 2026-10-07 撤回前的提醒/AI 预览与拖宽跳变没有当前复现结论；旧 Overlay 方案已废弃。Windows Chrome 工具适配、Linux Chrome 租约、候选 Chromium 视觉均保留各自来源，不能合并成最新完整浏览器验收。
 6. **整批缓存清理仍暂停。** 用户此前接受暂不删除日志、coverage、widget preview 等本地资料；`.scratch` 含隔离源码、构建、包、截图和原始报告。后续清理需重新核对具体路径，不沿用旧大小统计。
 

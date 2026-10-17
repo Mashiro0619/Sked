@@ -1,8 +1,123 @@
-# 重构续验：列表优化与分阶段验收
+# 重构续验：性能收尾与分阶段验收
 
-最新代码检查点为 `d9d98af879e024595bd676c30ba5363fb552b361`（2026-10-17）。本次完成逐条列表构建和事件焦点修复；上轮 `e522134` 的完整 VM、平台包、UI66、Linux 与浏览器记录仍保留原始版本，不重标为本次结果。
+本轮实现、定向回归和同协议采样已完成，最终代码为 `0f5a8f96b04b7580f1759ef48dc9b91073f6c708`（2026-10-18）。改动涵盖日期与提醒候选复用、课表排版与语义复用、导航回调与 ticker 订阅边界，以及透明点击层去冗余。最新 8 文件回归 **143 项通过**，2 文件格式检查零改动，fatal-info 分析通过；最终六轮 Profile 对照覆盖 `df5676f → 0f5a8f9` 完整改动集，严格可比且独立来源与数值复核通过，未隔离最后一项 Material 改动的单独收益。压力长帧和原平台验收边界仍保留，旧 `86b95ff/layout-final` 等阶段证据不重标为当前结果。
 
-## 逐条列表构建与事件焦点续改
+## 当前实现与分批回归
+
+| 提交 | 已验证的实现范围 |
+| --- | --- |
+| `423d030`、`5da71f9` | 复用普通本地日界与月页瞬时时间区间，异常日期和 UTC 全天/混合端点保留旧路径；提醒只复用向外取整的分钟候选窗口，随后按精确边界、实际 now、设置与处理状态分类 |
+| `32cf799`、`08026f9`、`9cd2c4c` | 复用已挂载卡片的数值布局，以及完整单行和二分探针的测量结果；内容、样式、约束、缩放、方向、locale、徽标和系统字体变化仍使相应布局失效 |
+| `00c096b`、`d782a02` | 导航使用读取当前 State 的稳定回调；每个星期列建立 ticker notifier 边界，禁用祖先仍静音整列 |
+| `86b95ff` | 未变 label/selected 复用课表语义属性，稳定语义动作仍调用当前目标；保留继承方向、选择状态和密集课程独立的 48 dp 语义目标，不扩大指针命中区域 |
+| `0f5a8f9` | 仅显式指定 CourseHitTarget 的透明 Material 类型，避免该透明命中层无可见用途的物理材质动画；新增 hover、press、键盘焦点墨水绘制及激活的 widget 回归 |
+
+[最新透明层回归回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final-validation-r2/receipt.json>)的 `baseRevision` 为 `86b95ff`；其 9 个源码哈希与当前提交对应文件一致，因此按文件内容关联到 `0f5a8f9`，不改写原回执。测试包含语义缓存、桌面排版、ticker 范围、工作区外壳、实时刷新、基准场景、普通课表及触屏排版 8 个文件；旧语义 r2 的 142 项仍属于 `86b95ff` 阶段。
+
+| 验证批次 | 结果与独立范围 | 来源 |
+| --- | --- | --- |
+| 当前 `0f5a8f9` | 8 文件 143 项通过；2 文件格式 0 改动，fatal-info 分析通过 | [透明层 r2 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final-validation-r2/receipt.json>) |
+| `86b95ff` 语义阶段 | 8 文件 142 项通过；2 文件格式 0 改动，fatal-info 分析通过 | [语义 r2 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/semantics-final-validation-r2/receipt.json>) |
+| 此前排版与 ticker 阶段 | `9cd2c4c` 的 139 项、`d782a02` 的 138 项、`08026f9` 的 77 项分别保留，范围与当前回归重叠 | [139](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/typography-final-validation-r1/receipt.json>)／[138](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/ticker-columns-validation-r2/receipt.json>)／[77](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/typography-first-layout-validation-r1/receipt.json>) |
+| 初始组合 UI 与独立复验 | 组合运行 215 项成功、1 个 desktop 测试文件加载失败，整轮仍为失败；修正后的 desktop 17 项与 touch 14 项独立列示 | [组合日志](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/final-ui-regression-r1.log>)／[desktop](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/desktop-typography-r2.log>)／[touch](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/touch-typography-r2.log>) |
+| 实际生产日历投影 | instant/list/month projection 与 calendar date utils 四文件，8 时区各 38 项，共 **304 次通过**，零失败/跳过 | [实际源码汇总](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/actual-calendar-zones/20261017T132444816867Z/acceptance-summary.json>) |
+| reminder/DST | 两文件在纽约、柏林、上海各 36 项，圣保罗 20 项，共 **128 次通过**；同时设置 TZ 和 SKED_DST_TEST_ZONE，零失败/跳过 | [四时区结果](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/actual-calendar-zones/20261017T132444816867Z/cache-dst-enabled.result.json>) |
+| 本地补充日期诊断 | 13×8＝**104 次通过**；补充 Lord Howe 半小时 DST 的转换日期、反向混合 UTC/local 全天端点和 VM 实际时区，测试只在隔离快照中存在 | [supplemental](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/actual-calendar-zones/20261017T132444816867Z/supplement.result.json>) |
+
+各批次数不相加为当前全项目通过数。日期汇总中的 7 个关键源码/测试文件在本轮复核中均未变，304/128 按这些文件的 SHA-256 关联；104 始终是本地补充。原 1,037 文件快照和归档哈希保留，不声称整个当前工作树等同于该旧快照。e522 的完整 VM **4,901 通过、1 跳过**及其平台矩阵继续保留在下方历史章节。
+
+透明层首次完整运行记录 **142 通过、1 个新增 hover 像素断言失败**；修正测试等待动画的时序后，[墨水单项复验](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-ink-validation-r1/receipt.json>)通过，再完成当前 143 项 r2。[透明层 r1](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final-validation-r1/receipt.json>)保留原失败状态，单项复验不与完整 r2 相加。
+
+此前语义测试 r1 为 **139 成功、3 失败**，测试结束时的 SemanticsHandle 释放问题经 `try/finally` 清理修正后才完成语义 r2；[r1 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/semantics-final-validation-r1/receipt.json>)、源副本和失败日志保留。ticker r1 的多余导入 info、组合 UI 的导入冲突、时区任务中断/未启用 DST 的试跑，以及 FTK1011 长路径构建失败与短路径重建也各自保留，不改写为通过。CPU 轮询与最终单次快照均只作诊断，RPC 开销及 VM 样本缓冲可能截断的限制不能并入正式比较或改写为零丢样。
+
+## 本轮最终 Windows Profile 对照
+
+本轮实际比较 `df5676f0611fe1b808c19eac15b8725031b8af76 → 0f5a8f96b04b7580f1759ef48dc9b91073f6c708`。[采样清单](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final/comparison/manifest.json>)记录两侧各三个新进程，按 ABBAAB 顺序串行执行；六轮均 passed、退出 0，各完成 60 actions + 3 mounts。AXTree、语义图、fatal 和隐式启动重试门控计数均为 0。[严格比较](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final/comparison/strict/summary.json>)为 **comparable**，保留完整原始窗口及内容观察开销。
+
+[候选构建](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final/builds/after/provenance.json>)的离线锁文件准备和 Windows Profile 构建均通过，构建于 `2026-10-18 01:20:46.957 +0800` 结束。回执记录 1,040 个源归档文件、31 个 bundle 文件、9 个冻结 harness 文件及三项 exe/AOT/engine 哈希；文件数不是测试数。前测复用原 df5676f 冻结构建，但本轮两侧全部重新启动；来源检查与完整快照见[前测](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final/comparison/before/provenance.json>)／[后测](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final/comparison/after/provenance.json>)。
+
+[时间线](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final/comparison/timeline.json>)如下，均为 `2026-10-18`、Asia/Shanghai（UTC+08:00）。PID 是 launcher PID，VM endpoint/isolate 来源另见回执，不将其写成应用 OS PID。
+
+| 次序 | 样本 | 开始时间 | 结束时间 | launcher PID |
+| --- | --- | --- | --- | ---: |
+| 1 | before/r1 | 01:22:25.275 | 01:24:32.524 | 83908 |
+| 2 | after/r1 | 01:24:35.910 | 01:26:38.018 | 105172 |
+| 3 | after/r2 | 01:26:41.622 | 01:28:43.322 | 80576 |
+| 4 | before/r2 | 01:28:46.727 | 01:30:53.874 | 66708 |
+| 5 | before/r3 | 01:30:57.368 | 01:33:04.813 | 30056 |
+| 6 | after/r3 | 01:33:08.299 | 01:35:10.640 | 39076 |
+
+以下数值取自本轮正式比较，已与[封存独立审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/transparency-0f5a8f9-comparison-audit/README.md>)一致；[完成回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/transparency-0f5a8f9-comparison-audit/audit-completion-receipt.json>)确认 1,575 个数值比较项、来源、六次新 VM/isolate 和非重叠 ABBAAB 顺序均复核通过。次数是不同动作的数量，最大帧与三轮最大值中位数分别记录，不把它们当作 P95 或总帧数。
+
+| 描述指标 | before → after |
+| --- | ---: |
+| 60 个动作中，三轮任一次最大 build ≥100 ms | 26 → 18 |
+| 60 个动作中，三轮最大 build 的中位数 ≥100 ms | 25 → 17 |
+| 不含 mount 的原始最坏 build | 708.754 → 585.285 ms |
+| 包含 mount 的原始最坏 build | 927.208 → 687.606 ms |
+| 三个进程动作内原始 ≥100 ms build 帧数 | 38 / 36 / 36 → 30 / 28 / 30 |
+| 整进程峰值 RSS 中位数 | 708,943,872 → 708,263,936 bytes（−0.0959%，基本持平） |
+
+固定列出六类 5,000 数据场景，两列均为三个进程最大 build 的中位数，单位 ms；cold 表示该数据在会话中的首次动作，不是 OS/磁盘冷启动。
+
+| 5,000 数据场景 | cold，前 → 后 | warm，前 → 后 |
+| --- | ---: | ---: |
+| `general.month.swipe` | 256.315 → 152.983 | 171.950 → 100.739 |
+| `general.list.open_scroll` | 308.914 → 180.035 | 239.350 → 116.582 |
+| `workspace.student.open` | 559.181 → 261.610 | 633.406 → 287.484 |
+| `student.timetable.switch` | 531.054 → 491.728 | 517.138 → 468.992 |
+| `student.day.open_scroll` | **569.263 → 584.334** | 591.694 → 552.477 |
+| `workspace.general.open` | 631.516 → 297.099 | 596.081 → 288.586 |
+
+负载和动作窗口需一并理解：课表侧的 5,000 夹具由 5 张课表、每张 1,000 门课程构成，当前课表当周实际包含 1,000 张课程卡，周一单日为 143 张。`student.timetable.switch` 执行课表 0→1→0；`student.day.open_scroll` 包含进入日视图、滚动和返回周视图，窗口也覆盖周视图重建。本轮没有对 0f5a8f9 再做 CPU 子步骤归因，不能把窗口内的最大帧唯一归给其中某个子步骤。
+
+5,000 数据首次学生/日程工作区打开的最大 build 中位数分别下降 53.22% 和 52.95%；同时，**cold `student.day.open_scroll` 为 569.263 → 584.334 ms，升高 2.65%**。当前最坏动作 build 585.285 ms 来自该完整动作窗口的 r1，含挂载的最坏 build 687.606 ms 来自 5,000 数据 mount/r3。动作内最坏 raster 为 28.650 → 37.217 ms。60 个动作中，最大 build 中位数有 15 项升高，build P95 有 20 项、raster 最大值有 38 项、raster P95 有 34 项、动作后 RSS 有 30 项升高；峰值 RSS 基本持平不表示所有场景的内存或 raster 都改善。完整逐轮原值、全部反向变化与原始位置见[审计数据](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/transparency-0f5a8f9-comparison-audit/audit.json>)和正式比较报告。
+
+独立从原始 FrameTiming 复核，6/6 进程、18/18 数据组、36/36 数据/phase 组的正相邻 `vsyncStartUs` 间隔中位数均为 **16.667 ms**。仍有少量约 4.167 ms 的间隔和长动作中的大间隔；分组中位数一致不能解释为所有帧间隔相同或实际呈现 60 FPS。三次重复只提供描述性结果，不能据此宣称统计显著性或单项代码的纯因果收益。
+
+至此，本轮已授权的实现、143 项定向回归、按未变源码哈希关联的日期验收、同协议 Windows Profile 采样和来源/数值复核完成。完成范围包含保留全部不利结果；压力场景仍有显著长帧，更大的渲染结构取舍未纳入本轮范围。仓库源码与完整程序 bundle 已冻结并核验，完整外部 SDK/pub cache 未整体归档。上方数值只属于本轮 df5676f → 0f5a8f9，旧 86b95ff 及更早样本保持独立；Android 真机、安装升级、完整辅助技术等原边界不因本轮完成而扩大。
+
+## 此前 86b95ff：layout-final 独立比较与审计
+
+本阶段实际对照 `df5676f0611fe1b808c19eac15b8725031b8af76 → 86b95fff93de4ecac97b57f17d44a6b5db92336d`。[采样清单](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/layout-final/comparison/manifest.json>)记录前、后、后、前、前、后（ABBAAB）的六次新启动，两侧各三轮，每轮 60 actions + 3 mounts，全部状态 passed、退出码 0；[严格比较](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/layout-final/comparison/strict/summary.json>)为 **comparable**。[封存审计入口](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/layout-86b95ff-comparison-audit/README.md>)确认来源及 1,575 个统计比较项复核通过，六轮原生日志门控（包括隐式启动重试）均未检出异常；性能收尾与纯代码因果收益仍未建立。
+
+[86 阶段构建回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/layout-final/builds/after/provenance.json>)记录隔离源码的离线锁文件准备和 Windows Profile 构建均退出 0，构建于 `2026-10-18 00:36:56.180 +0800` 结束。源归档包含 1,040 个文件，完整 bundle 包含 31 个文件，并单独记录 9 个冻结 harness 文件及 exe/AOT/engine 三项编译产物哈希；这些是文件数量，不能计作测试数。前测复用原 df5676f 冻结构建，后测使用 86 阶段构建，两侧均为该阶段的新启动。来源与完整文件快照见[前测回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/layout-final/comparison/before/provenance.json>)／[后测回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/layout-final/comparison/after/provenance.json>)。
+
+下表时间来自[原始运行时间线](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/layout-final/comparison/timeline.json>)，均为 `2026-10-18`、Asia/Shanghai（UTC+08:00）。PID 为 launcher PID；回执另保留每轮 VM endpoint/isolate 来源，不将 launcher PID 当作应用 OS PID。
+
+| 次序 | 样本 | 开始时间 | 结束时间 | launcher PID |
+| --- | --- | --- | --- | ---: |
+| 1 | before/r1 | 00:39:12.430 | 00:41:20.263 | 47200 |
+| 2 | after/r1 | 00:41:23.815 | 00:43:18.283 | 66064 |
+| 3 | after/r2 | 00:43:21.711 | 00:45:16.012 | 98156 |
+| 4 | before/r2 | 00:45:19.709 | 00:47:25.237 | 54860 |
+| 5 | before/r3 | 00:47:28.863 | 00:49:38.097 | 91648 |
+| 6 | after/r3 | 00:49:42.261 | 00:51:46.830 | 17664 |
+
+| 描述指标 | 86 阶段独立结果 |
+| --- | --- |
+| 60 个动作中，三轮任一次最大 build ≥100 ms | 26 → 20 个动作 |
+| 60 个动作中，三轮最大 build 的中位数 ≥100 ms | 25 → 16 个动作 |
+| 包含 mount 的原始最坏 build | 951.975 → 699.074 ms |
+| after 的原始最坏动作 build（不含 mount） | 594.564 ms，`5000/cold/student.timetable.switch` |
+| 整进程峰值 RSS 中位数 | 715,988,992 → 753,770,496 bytes，增加 36.031 MiB（5.2768%） |
+
+完整指标定义、三轮原值与所有反向变化见[数值审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/layout-86b95ff-comparison-audit/audit.md>)、[不利观察](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/layout-86b95ff-comparison-audit/unfavorable-observations.md>)和[全部反向变化](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/layout-86b95ff-comparison-audit/all-reverse-changes.json>)。动作计数、原始最大帧、最大值中位数与 P95 分别保留，不互相替代。
+
+本阶段存在**实际帧节奏混杂**：before 三进程相邻 vsync 间隔中位数为 `[16.667, 4.167, 16.667]` ms，after 为 `[4.167, 4.167, 12.5]` ms；进程内也发生切换，例如 before/r2 仅 sparse 为 4.167 ms，after/r3 从 sparse/cold 的 4.167 ms 转为 sparse/warm 及后续数据的 16.667 ms。[完整帧节奏明细](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/layout-86b95ff-comparison-audit/cadence-detail.json>)保留全部进程、数据/阶段与动作。P95 和比例受不同帧群体影响，只作描述；仍有显著课表长帧及 RSS 增长，因此该阶段没有建立性能收尾完成或纯代码因果收益。与 d782 的候选间数据也仅是描述性背景。
+
+## 此前同协议阶段与证据边界
+
+`df5676f` 引入的 workspace60-v2 仅在懒加载列表场景用有序可见文字、绘制几何和实际位移检查替代总长度估算一致性，保留 1 物理像素容差；其他场景仍检查原始长度边界。连续原始窗口保留内容观察开销。旧 workspace60-v1/UI66 样本不重标为新协议，三次重复仍只作描述。
+
+- `df5676f → 08026f9` 的[比较](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/comparison/strict/summary.json>)为 comparable；[独立审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/final-08026f9-audit/audit.md>)保留全部长帧、RSS/raster 代价。after/r3 的动作内相邻 vsync 间隔中位数为 4.167 ms，其余五次为 16.667 ms；该帧群体差异限制 P95/比例的解释，不能据此证明纯代码因果收益。
+- `df5676f → d782a02` 的[独立六轮比较](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/ticker-final/comparison/strict/summary.json>)为 comparable；[审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/d782-comparison-audit/audit.md>)记录六轮相邻 vsync 间隔中位数均为 16.667 ms，但仍存在课表长帧、周滚动尖峰及 raster/RSS 不利变化。该阶段的通过不等于当前版本性能收尾完成。
+
+新 Profile 对照也不替代 Android 真机、完整 UI66/settings、OS/磁盘冷启动、安装升级或完整原生辅助技术验收。本轮 WSL 结果确实覆盖冻结实际源码的定向测试，但不扩大为当前 Linux 应用 Release、图形、通知或安装验收。平台、发布与缓存清理边界继续按下方原版本记录保留。
+
+## 此前 d9d98af：逐条列表构建与事件焦点续改
+
+以下保留 d9d98af 阶段的原始记录；其中“本次”与后续建议均指当时，不代表当前阶段结论。
 
 原列表仅按日期组懒加载：一天进入视口时，该日全部事件都会构建。`d9d98af` 改为按日期标题和单条日程索引，只构建视口附近的条目；累计索引复用原分组，不为渲染再复制整份事件列表。稳定的日期、日历、事件与开始时间身份也修复了另一项可复现问题：在前面插入日程后，键盘焦点和 Enter 仍指向原事件。日期标题具有标题语义，列表语义计数只计算事件。
 
@@ -13,7 +128,7 @@
 - 固定测试字体下，首屏构建的同日事件数从 160 降为 13／15／5；六组首屏/滚动后图像的内容位置一致，两个 Windows 滚动图仅右侧滚动条存在像素差异。另以 Segoe UI／Material Icons 复核可读的列表行；部分无关控件仍显示测试占位字形。这些图像均为本地 widget 渲染，未宣称原生窗口或浏览器视觉验收。
 - `08bedc4 → d9d98af` 两侧各 **3 个新 Windows Profile 进程**，依次 ABBAAB，每进程完整执行 60 个交互和 3 次挂载；六轮均通过，AXTree／语义图／fatal 日志计数全部为 0。冻结的完整源码、程序目录和 9 个共同采集文件在每次启动前后核对。运行时间为 `2026-10-17 18:25:51 +0800` 至 `2026-10-17 18:38:02 +0800`。构建在此前完成，源检查、其他构建、CPU 诊断和截图测试未并行混入采样。
 
-## 本次性能观察与严格比较边界
+## 此前 d9d98af：性能观察与严格比较边界
 
 未修改的 [UI60 严格比较结果](<D:/Project/Flutter/sked/.scratch/refactor-20261017/list-virtualization/comparison/strict/summary.json>)为 **`invalid`**：首次拒绝位置的列表长度估算由 `13525.6` 变为 `12955.4` 逻辑像素，超过原有 1 物理像素门槛。逐条懒加载会改变 `maxScrollExtent` 估算；对所有样本复核，超出该门槛的 36 个初始/最终记录仅出现在 `general.list.open_scroll`。原门槛与失败报告保留，未改写为“可比”。
 
