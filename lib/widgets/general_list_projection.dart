@@ -25,30 +25,105 @@ class GeneralListProjectionCache {
       }
       (grouped[date] ??= []).add(occurrence);
     }
-    final snapshot = GeneralListSnapshot._(
-      List.unmodifiable([
-        for (final group in grouped.entries)
-          GeneralListDay._(
-            date: group.key,
-            occurrences: List.unmodifiable(group.value),
-          ),
-      ]),
-    );
+    final days = <GeneralListDay>[];
+    var rowCount = 0;
+    for (final group in grouped.entries) {
+      days.add(
+        GeneralListDay._(
+          date: group.key,
+          occurrences: List.unmodifiable(group.value),
+          firstRow: rowCount,
+        ),
+      );
+      rowCount += group.value.length + 1;
+    }
+    final snapshot = GeneralListSnapshot._(List.unmodifiable(days), rowCount);
     _source = occurrences;
     return _snapshot = snapshot;
   }
 }
 
 class GeneralListSnapshot {
-  const GeneralListSnapshot._(this.days);
+  const GeneralListSnapshot._(this.days, this.rowCount);
 
   final List<GeneralListDay> days;
+  final int rowCount;
+  int get occurrenceCount => rowCount - days.length;
   bool get isEmpty => days.isEmpty;
+
+  /// Index date headers and events without allocating a second list of rows.
+  GeneralListRow rowAt(int index) {
+    RangeError.checkValidIndex(index, this, 'index', rowCount);
+    var low = 0;
+    var high = days.length;
+    while (low + 1 < high) {
+      final middle = low + (high - low) ~/ 2;
+      if (days[middle]._firstRow > index) {
+        high = middle;
+      } else {
+        low = middle;
+      }
+    }
+    final day = days[low];
+    final occurrenceIndex = index - day._firstRow - 1;
+    return GeneralListRow._(
+      date: day.date,
+      occurrence: occurrenceIndex < 0 ? null : day.occurrences[occurrenceIndex],
+      semanticIndex: occurrenceIndex < 0 ? null : index - low - 1,
+    );
+  }
+
+  /// Resolve only mounted children when an immutable query snapshot changes.
+  /// Comparing source fields avoids formatting occurrence keys for every event.
+  int? rowIndexOf(GeneralListRowKey key) {
+    final (date, identity) = key;
+    for (final day in days) {
+      if (day.date != date) continue;
+      if (identity == null) return day._firstRow;
+      for (var index = 0; index < day.occurrences.length; index++) {
+        final occurrence = day.occurrences[index];
+        if (occurrence.calendar.id == identity.$1 &&
+            occurrence.event.id == identity.$2 &&
+            occurrence.start == identity.$3) {
+          return day._firstRow + index + 1;
+        }
+      }
+      return null;
+    }
+    return null;
+  }
 }
 
 class GeneralListDay {
-  const GeneralListDay._({required this.date, required this.occurrences});
+  const GeneralListDay._({
+    required this.date,
+    required this.occurrences,
+    required this._firstRow,
+  });
 
   final DateTime date;
   final List<GeneralEventOccurrence> occurrences;
+  final int _firstRow;
+}
+
+typedef GeneralListRowKey = (DateTime, (String, String, DateTime)?);
+
+class GeneralListRow {
+  const GeneralListRow._({
+    required this.date,
+    required this.occurrence,
+    required this.semanticIndex,
+  });
+
+  final DateTime date;
+  final GeneralEventOccurrence? occurrence;
+  final int? semanticIndex;
+
+  GeneralListRowKey get key {
+    final item = occurrence;
+    return (
+      date,
+      item == null ? null : (item.calendar.id, item.event.id, item.start),
+    );
+  }
 }

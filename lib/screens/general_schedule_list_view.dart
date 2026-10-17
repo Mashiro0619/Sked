@@ -65,28 +65,38 @@ class _ListCalendarView extends StatelessWidget {
         16,
         WorkbenchChromeMetrics.of(context).desktop ? 24 : 88,
       ),
-      itemCount: snapshot.days.length,
+      itemCount: snapshot.rowCount,
+      addSemanticIndexes: false,
+      semanticChildCount: snapshot.occurrenceCount,
+      findChildIndexCallback: (key) => key is ValueKey<GeneralListRowKey>
+          ? snapshot.rowIndexOf(key.value)
+          : null,
       itemBuilder: (context, index) {
-        final group = snapshot.days[index];
-        final date = group.date;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
+        final row = snapshot.rowAt(index);
+        final key = ValueKey(row.key);
+        final occurrence = row.occurrence;
+        if (occurrence == null) {
+          return Padding(
+            key: key,
+            padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
+            child: Semantics(
+              header: true,
               child: Text(
-                '${_formatDate(date)}  ${_weekdayLabel(context, date)}',
+                '${_formatDate(row.date)}  ${_weekdayLabel(context, row.date)}',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
-            for (final occurrence in group.occurrences)
-              Builder(
-                builder: (anchor) => _GeneralListOccurrenceTile(
-                  occurrence: occurrence,
-                  onTap: () => onOccurrenceTap(occurrence, anchor),
-                ),
-              ),
-          ],
+          );
+        }
+        return IndexedSemantics(
+          key: key,
+          index: row.semanticIndex!,
+          child: Builder(
+            builder: (anchor) => _GeneralListOccurrenceTile(
+              occurrence: occurrence,
+              onTap: () => onOccurrenceTap(occurrence, anchor),
+            ),
+          ),
         );
       },
     );
