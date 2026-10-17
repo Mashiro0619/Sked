@@ -1812,13 +1812,6 @@ class _CourseCard extends StatelessWidget {
   }
 }
 
-typedef _CourseTextMeasurement = ({
-  double height,
-  double width,
-  int lines,
-  double emptyTruncatedLineHeight,
-});
-
 /// Fit complete lines to the time-sized card without scaling or clipping text.
 /// The title uses the available height first; optional fields use what remains.
 class _TouchCourseTypography extends StatelessWidget {
@@ -1867,13 +1860,13 @@ class _TouchCourseTypography extends StatelessWidget {
       final scaler = MediaQuery.textScalerOf(context);
       final direction = Directionality.of(context);
       final locale = Localizations.maybeLocaleOf(context);
-      // The line search often revisits the same limit. Reuse only within this
-      // layout, so font, inherited style and viewport changes stay independent.
-      final measurements = <(int, int?), _CourseTextMeasurement>{};
-      _CourseTextMeasurement measure(int field, int? lines) {
-        final key = (field, lines);
-        final cached = measurements[key];
-        if (cached != null) return cached;
+      ({
+        double height,
+        double width,
+        int lines,
+        double emptyTruncatedLineHeight,
+      })
+      measure(int field, int? lines) {
         final painter = TextPainter(
           text: TextSpan(text: fields[field].value, style: fields[field].style),
           textDirection: direction,
@@ -1899,7 +1892,7 @@ class _TouchCourseTypography extends StatelessWidget {
               : 0.0,
         );
         painter.dispose();
-        return measurements[key] = result;
+        return result;
       }
 
       Widget omissionMark(int field, double height) => SizedBox(
