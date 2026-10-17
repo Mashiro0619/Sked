@@ -178,6 +178,14 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     unawaited(_openSettings());
   }
 
+  void _selectFromNavigation(AppMode mode) {
+    unawaited(_selectWorkspace(mode == AppMode.student ? 0 : 1));
+  }
+
+  void _toggleResourcesFromNavigation() {
+    unawaited(_toggleWorkspaceNavigation());
+  }
+
   void _prepareNavigationLayout(Object layoutIdentity) {
     final previousLayoutIdentity = _navigationLayoutIdentity;
     if (previousLayoutIdentity != null &&
@@ -227,9 +235,8 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
               WorkbenchChromeMetrics.of(context).desktop ||
               (width >= AppBreakpoints.expanded &&
                   MediaQuery.textScalerOf(context).scale(14) / 14 <= 1.5),
-          onSelect: (mode) =>
-              unawaited(_selectWorkspace(mode == AppMode.student ? 0 : 1)),
-          onToggleResources: () => unawaited(_toggleWorkspaceNavigation()),
+          onSelect: _selectFromNavigation,
+          onToggleResources: _toggleResourcesFromNavigation,
           child: _AdaptiveWorkspaceStack(
             key: _workspaceStackKey,
             selectedIndex: selectedIndex,
