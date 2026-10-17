@@ -1,10 +1,12 @@
 # Sked 项目交接
 
-交接日期：2026-10-17（Asia/Shanghai）。最终代码检查点为 `e522134ac8db262c30c9823568d867dbaf4f860b`，后续纯文档提交另计。最终仅保留列表日期复用，课表文字候选已签名撤回；Source/Native/UI66/Windows/Android/Web、Linux Release/四时区与最终 `5ef639c → e522134` 交替三轮见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。候选视觉和性能、旧启动/磁盘报告保留真实版本，当前证据不与候选拼接。
+交接日期：2026-10-17（Asia/Shanghai）。最新代码检查点为 `d9d98af879e024595bd676c30ba5363fb552b361`，完成列表逐条构建与事件焦点修复；123 项相关回归、4 项最终列表复验和前后各三轮 Windows Profile 流程均通过。严格 UI60 比较因列表长度估算变化为 `invalid`，本次帧数值仅作观察。此前 e522134 的完整平台矩阵保留原版本，详见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。
 
 ## 1. 当前状态与接手边界
 
-| 项目 | 已核实结果与范围 |
+本次 d9d98af 的范围见上文及[本地闭环回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/list-virtualization/closure.json>)。下表保留 **e522134 检查点**的综合验收，不表示 d9d98af 已重新执行全量、平台包、UI66、Linux 或浏览器矩阵。
+
+| 项目 | e522134 检查点的结果与范围 |
 | --- | --- |
 | 工作目录／分支 | `D:\Project\Flutter\sked`，`main` |
 | 应用与工具链 | `2.3.0+17`；Flutter 3.47.7 / Dart 3.13.5；Windows 包版本 2.3.0.17 / 2.3.17.0 |
@@ -158,15 +160,16 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 | `895ed70` | UI60/UI66 日周滚动固定到主画布，记录目标协议与几何；旧错误目标样本保留为失效证据 |
 | `c286e2c`、`1142cfc` | 增加正常窗口独立进程启动、原生时钟、分阶段 RSS/峰值和启动交互协议；[18 进程结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) 已另表保存 |
 | `1139840`、`1d45d46`、`e522134` | 列表日期复用保留；文字测量缓存候选经交替测量后撤回，最终 tree 与 `1139840` 相同；[最终续验与候选历史](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)分别记录 |
+| `d9d98af` | 列表逐条构建、稳定事件焦点与日期标题语义；相关回归和前后各三轮原生流程通过，严格性能比较因长度估算变化拒绝，见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md) |
 
 这些是各自提交的验证与来源，不相加为全项目总通过数。采集命令见[原生场景入口](../integration_test/README.md)，通过 `capture_scenarios_test.dart` 与 `SKED_CAPTURE_SCENE` 选择组。公开文档的 32 张 JPEG 保持原样，继续使用[文档截图流程](screenshots/README.md)。场景截图不代替行为回归、原生辅助技术或 Profile 采样。
 
 ## 7. 继续执行与证据限制
 
-1. **以当前检查点回执交接。** 上表只承接 e522134 的独立成功终态与最终交替三轮；生成文档前核对归档/报告哈希和版本。候选 OOM 中断、Linux 失败、课程 Enter 超时及旧版 sidecar 均保留；纯文档更新不增加执行数。
-2. **保留性能样本的真实版本和代价。** 最终性能只取 `comparison-final` 并关联 `final-interleaved-audit`，`1d45d46` 的初始、控制与交替数据不能混入 e522134；文字缓存未证实稳定收益所以撤回。实际帧数与间隔不同，整体 P95 仅描述实际样本，不能推为固定节奏性能变化。所有交互/挂载长帧、raster/RSS 升高及原始三值保留；不宣称内存全面改善。旧编辑 AX 与启动适配/缓存/输入边界照旧。
+1. **以当前检查点回执交接。** 最新 d9d98af 承接 123 项相关回归、4 项列表最终复验与前后各三轮 UI60 原生正确性；严格几何比较为 invalid，不计作性能验收通过。上表仍为 e522134 的综合矩阵。纯文档更新不增加执行数，全部旧失败与候选记录保留。
+2. **保留性能样本的真实版本和代价。** 本次 `08bedc4 → d9d98af` 放在 `list-virtualization/comparison`，只按观察数据解读，原 1 像素门槛拒绝结果保留；23/60 动作仍有 ≥100 ms build，最坏挂载 806.724 ms，峰值 RSS 中位数上升。此前 e522134 只使用 `remaining-performance/comparison-final` 与其审计，不混入候选、控制或本轮样本。
 3. **按实际剩余平台范围继续。** Linux e522134 Release/链接与四时区已补齐，图形运行、通知、安装和原生输入仍未验收；旧 WPE 缺包/Docker 初始化失败不是当前构建阻塞。Android 真机按约定延期，设备可用后验证通知、恢复、真实交互、旧数据/密钥升级与性能；完整辅助技术另列。
-4. **保留发布边界。** 最终 Windows 两包、Android APK/AAB 与 Linux bundle 已构建归档；安装、同签名升级、干净机器、WACK/商店认证、远端 CI 与发布未执行。Web：JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执；不代表实际 Wasm、离线或在线产品交付。
+4. **保留发布边界。** 上表 e522134 的 Windows 两包、Android APK/AAB 与 Linux bundle 已归档，d9d98af 本次只新增 Windows Profile 构建与明确列出的流程；未重新生成整套发布包。安装、同签名升级、干净机器、WACK/商店认证、远端 CI 和发布仍未执行；e522134 的有限浏览器结果保留其原版本。
 5. **历史线索不冒充当前缺陷。** 2026-10-07 撤回前的提醒/AI 预览与拖宽跳变没有当前复现结论；旧 Overlay 方案已废弃。Windows Chrome 工具适配、Linux Chrome 租约、候选 Chromium 视觉均保留各自来源，不能合并成最新完整浏览器验收。
 6. **整批缓存清理仍暂停。** 用户此前接受暂不删除日志、coverage、widget preview 等本地资料；`.scratch` 含隔离源码、构建、包、截图和原始报告。后续清理需重新核对具体路径，不沿用旧大小统计。
 

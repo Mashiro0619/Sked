@@ -2,7 +2,9 @@
 
 本轮从 `77061b4172efdfac2c7cdd30f0b4953b6be31004` 开始，目标是在保留 Windows、Android 用户流程、存档兼容和编辑草稿的前提下，拆分共享状态与平台服务，减少无关重建和重复计算，并整理重复测试与采集入口。
 
-最新续验代码检查点为 `e522134ac8db262c30c9823568d867dbaf4f860b`（2026-10-17）。最终仅保留 `1139840` 的列表本地日界复用；`1d45d46` 课表文字缓存未证实稳定收益，已由 `e522134` 签名撤回，tree 与 `1139840` 一致。最终 Source 为 **4,901 通过、1 跳过**，Windows Native/Packages、Android 构建、Web、完整 UI66，以及独立 Debian 13 Linux Release/链接与四时区 76 次执行均有该 SHA 独立终态。`5ef639c → e522134` 的最终交替三轮及所有长帧/内存代价见[最新续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。Android 真机、安装升级/认证、物理输入及完整辅助技术仍未验收。下文保留 `1142cfc` 原始 139 条提交链与当时验收，Disk30、UI60/Host11/编辑、启动和 `1d45d46` 候选样本不重标为最终源码。
+最新本地代码检查点为 `d9d98af879e024595bd676c30ba5363fb552b361`（2026-10-17），完成列表逐条构建、日期标题语义与插入后事件焦点保持。123 项相关回归、4 项列表最终复验和前后各三轮 Windows Profile 流程均通过；本次严格 UI60 比较因列表长度估算变化为 `invalid`，帧数值仅保留为观察数据，见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。本次没有重跑完整 VM、发布包、UI66、Linux 或浏览器矩阵。
+
+最近一次综合平台检查点为 `e522134ac8db262c30c9823568d867dbaf4f860b`（2026-10-17）。最终仅保留 `1139840` 的列表本地日界复用；`1d45d46` 课表文字缓存未证实稳定收益，已由 `e522134` 签名撤回，tree 与 `1139840` 一致。最终 Source 为 **4,901 通过、1 跳过**，Windows Native/Packages、Android 构建、Web、完整 UI66，以及独立 Debian 13 Linux Release/链接与四时区 76 次执行均有该 SHA 独立终态。`5ef639c → e522134` 的最终交替三轮及所有长帧/内存代价见[最新续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。Android 真机、安装升级/认证、物理输入及完整辅助技术仍未验收。下文保留 `1142cfc` 原始 139 条提交链与当时验收，Disk30、UI60/Host11/编辑、启动和 `1d45d46` 候选样本不重标为最终源码。
 
 ## 计划覆盖与实现边界
 
@@ -15,7 +17,7 @@
 | 编辑、导入与跨路由归属 | 课程和事件入口复用任务控制器；异步解析、确认、保存绑定目标与会话；跨 Navigator 保留同一领域实例 | `0eec1f1`、`6200bbb`、`0adbe4f`、`ba31c14`、`426df37`、`8316388`、`80989cc`；草稿、晚返回、重复点击与失效恢复测试 |
 | 通知分层与重排范围 | 通知契约、身份、内存/原生网关、文案、载荷、后台处理和运行存储分离；协调器按耐久提交的相关领域筛选重排 | `755a2ea`、`2f8ad0e`、`cbc357a`、`690bdb6`、`357275c`、`2222b7e`；身份、去重、锁顺序、后台动作与排程测试 |
 | 测试、CI 与采集整理 | 合并等价夹具，删除转发层自证测试和重复采集入口；37 个历史脚本改为统一选择入口；CI 只测当前提交，覆盖率作为诊断附件 | `844d59b`、`86ccb0c`、`b35809e`、`44bc4ad`、`55371aa`、`73d1a80`、`6ca27c3`、`d8cd94f`；替代测试与删除理由见下文 |
-| 可比性能与最终验收 | e522134 Source、Native/UI66、Windows/Android/Web 与 Linux Release/四时区均有独立通过回执；设备/安装范围仍有边界 | [最新续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md) 为 `5ef639c → e522134` 交替三轮；所有候选与此前性能报告保留原版本和不利结果 |
+| 可比性能与最终验收 | e522134 的综合平台矩阵保留；d9d98af 通过相关回归与前后各三轮 UI60 原生正确性，设备/安装范围仍有边界 | [续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)分别记录：本轮 `08bedc4 → d9d98af` 的严格比较 invalid 与观察数据，以及此前 `5ef639c → e522134` 交替三轮；不混用版本 |
 | 无障碍回归修复 | 保留日期标题/liveRegion；稳定画布关闭动作与子控件语义；最终 Slider 保留独立 Semantics、全局 Overlay，完整单表单的离屏锚点稳定且 hidden | `ce915f5`、`fb1ef2a`、`57751c2`、`d328a17` 的对应流程；旧局部/page Overlay 均废弃，新设计有独立 57 项、4 边缘和完整 UI66 证据 |
 
 ## 最终运行时与数据所有权
@@ -181,8 +183,8 @@ Linux 四时区使用最终 HEAD 的 Git archive，冻结源码/锁文件与已�
 - Android 真机按用户约定延期；设备可用后补通知、恢复、真实交互、旧数据/密钥升级和性能验收。完整辅助技术另列为尚未验收。
 - Linux native 的最终 e522134 Release、动态链接和四时区已在独立 Debian 13 补齐；旧 Ubuntu/Docker 失败及候选阶段中断/代理加载失败保留为历史。Linux 图形运行、安装、通知和原生输入仍未验收。
 - Windows 安装、同签名升级、干净机器、WACK/商店认证、物理输入及完整辅助技术仍需对应环境验证；包检查与 MSAA 指定流程不覆盖这些项目。
-- Web：JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。`1d45d46` 与 `1142cfc` 的 RGB 一致、日程保存重载/Enter/Escape 仅为候选历史，课程 Enter 超时及窄屏 DOM overflow 保留；离线、实际 Wasm 与完整辅助技术未覆盖。
-- 最终交替三轮仍有 27/60 个交互至少一次 ≥100 ms build，包含挂载后后测全局最坏为 937.056 ms。实际帧节奏不同，整体 P95 方向只作描述，不能解释为固定节奏性能变化；全部 raster/RSS 反向变化见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。原始编辑版 AX 错误仍使旧编辑比较无效；历史启动的隔离 Profile 不能扩大为未修改发布包或 OS/磁盘全冷状态。
+- Web：e522134 的 JavaScript Release 与该 SHA 的有限浏览器流程仍按原回执通过；本次 d9d98af 未重新执行 Web 构建或浏览器验收。候选 RGB、课程 Enter 超时及窄屏 DOM overflow 保留其原版本；离线、实际 Wasm 与完整辅助技术未覆盖。
+- d9d98af 本次样本仍有 23/60 个动作至少一次 ≥100 ms build，包含挂载后最坏为 806.724 ms；峰值 RSS 中位数 709.37 → 718.69 MiB。严格 UI60 比较因列表长度估算变化为 invalid，数据仅作观察。此前 e522134 的 27/60 与 937.056 ms 保留为另一批样本；原编辑版 AX、历史启动的隔离/缓存及真实设备边界仍保留。
 - 本轮未推送、运行远端 CI、部署或发布；缓存整批清理仍按原约定暂停。
 
 [HANDOFF.md](HANDOFF.md) 同步该实现检查点与当前证据。启动、长帧、历史 UI/Host、Disk30 各附表保留实际版本与独立分母，文档提交不增加测试、采样或实现完成计数。
