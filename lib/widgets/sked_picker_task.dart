@@ -32,6 +32,15 @@ typedef SkedPickerTaskBuilder<T> = Widget Function(
   bool Function() isSessionCurrent,
 );
 
+typedef _PickerPlacementContext = ({
+  Rect bounds,
+  Rect anchorBounds,
+  Rect? anchor,
+  SkedFloatingPlacement placement,
+  double width,
+  bool rtl,
+});
+
 /// A single, adaptive picker route with owner/session validity and focus restore.
 /// Content owns its draft and validation; resize and IME changes only reposition it.
 /// Opt into [waitForTransitionComplete] when the caller must keep its re-entry
@@ -204,7 +213,31 @@ class _PickerTaskHost<T> extends StatefulWidget {
 class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
   bool _finished = false;
   final _position = SkedFloatingPositionController();
+  _PickerPlacementContext? _lastDesktopLayout;
   Rect _bounds = Rect.zero;
+
+  Offset _desktopPosition(Size childSize, _PickerPlacementContext layout) {
+    // Content can relayout without rebuilding this host. Reuse its last origin
+    // while the trigger and viewport stay put, instead of choosing another side
+    // just because a calendar page or input form has a different height.
+    final retained =
+        _position.positionOverride(hasAnchor: layout.anchor != null) ??
+        (layout == _lastDesktopLayout ? _position.lastPosition : null);
+    final position = retained == null
+        ? positionSkedFloatingPanel(
+            bounds: layout.bounds,
+            size: childSize,
+            anchor: layout.anchor,
+            anchorBounds: layout.anchorBounds,
+            rtl: layout.rtl,
+            placement: layout.placement,
+          )
+        : boundSkedFloatingPosition(retained, childSize, layout.bounds);
+    _lastDesktopLayout = layout;
+    _position.recordLayout(position, childSize);
+    return position;
+  }
+
   void _drag(Offset delta) {
     if (!mounted || _finished || ModalRoute.of(context)?.isCurrent != true) {
       return;
@@ -287,6 +320,8 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
           ),
         ),
       );
+      final width = math.min(bounds.width, preferred.width);
+      final rtl = Directionality.of(context) == TextDirection.rtl;
       return CustomSingleChildLayout(
         delegate: _PickerTaskPosition(
           bounds: bounds,
@@ -296,12 +331,18 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
           bottomSheet: bottomSheet,
           constrainToAnchor: compactAnchor,
           desktop: metrics.desktop,
-          rtl: Directionality.of(context) == TextDirection.rtl,
-          width: math.min(bounds.width, preferred.width),
-          manualPosition: metrics.desktop
-              ? _position.positionOverride(hasAnchor: anchor != null)
+          rtl: rtl,
+          width: width,
+          desktopPosition: metrics.desktop
+              ? (childSize) => _desktopPosition(childSize, (
+                  bounds: bounds,
+                  anchorBounds: viewport,
+                  anchor: anchor,
+                  placement: widget.placement,
+                  width: width,
+                  rtl: rtl,
+                ))
               : null,
-          onPosition: _position.recordLayout,
         ),
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: compact && !bottomSheet
@@ -351,13 +392,11 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
     required this.constrainToAnchor,
     required this.desktop,
     required this.rtl,
-    required this.manualPosition,
-    required this.onPosition,
+    required this.desktopPosition,
   });
   final Rect bounds;
   final Rect anchorBounds;
-  final Offset? manualPosition;
-  final void Function(Offset, Size) onPosition;
+  final Offset Function(Size)? desktopPosition;
   final Rect? anchor;
   final SkedFloatingPlacement placement;
   final double width;
@@ -390,18 +429,7 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
       return Offset(bounds.left, bounds.bottom - childSize.height);
     }
     if (desktop) {
-      final position = manualPosition != null
-          ? boundSkedFloatingPosition(manualPosition!, childSize, bounds)
-          : positionSkedFloatingPanel(
-              bounds: bounds,
-              size: childSize,
-              anchor: anchor,
-              anchorBounds: anchorBounds,
-              rtl: rtl,
-              placement: placement,
-            );
-      onPosition(position, childSize);
-      return position;
+      return desktopPosition!(childSize);
     }
     var x = bounds.center.dx - childSize.width / 2;
     var y = bounds.center.dy - childSize.height / 2;
@@ -427,7 +455,7 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
   @override
   bool shouldRelayout(_PickerTaskPosition oldDelegate) =>
       placement != oldDelegate.placement ||
-      manualPosition != oldDelegate.manualPosition ||
+      desktopPosition != oldDelegate.desktopPosition ||
       bounds != oldDelegate.bounds ||
       anchorBounds != oldDelegate.anchorBounds ||
       anchor != oldDelegate.anchor ||

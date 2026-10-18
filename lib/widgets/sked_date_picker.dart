@@ -1185,6 +1185,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     bool feedback = false,
     bool compact = false,
     bool panelTitle = false,
+    bool draggable = true,
     String? semanticHint,
   }) {
     final desktopHeading =
@@ -1244,12 +1245,14 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                   child: text,
                 ),
               )
-            : SkedPickerTitle(
+            : draggable
+            ? SkedPickerTitle(
                 alignment: desktopHeading
                     ? AlignmentDirectional.centerStart
                     : AlignmentDirectional.topStart,
                 child: text,
-              ),
+              )
+            : text,
       ),
     );
   }
@@ -1457,6 +1460,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                         label,
                         feedback: widget.embedded || compact,
                         compact: compact,
+                        draggable: false,
                       ),
                     ),
                     if (retry || !compact)
