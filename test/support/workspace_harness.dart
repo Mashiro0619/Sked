@@ -131,7 +131,7 @@ class WorkspaceHarness extends StatefulWidget {
     this.locale = const Locale('en'),
     this.brightness = Brightness.light,
     this.fontFamily,
-    this.seedColor = const Color(0xff6750a4),
+    this.seedColor = const Color(defaultThemeSeedColorValue),
   });
   final AppRuntime provider;
   final Widget? home;

@@ -330,13 +330,13 @@ class _AppBootstrapGateState extends State<_AppBootstrapGate> {
         DesktopWindowHost(modalObserver: _windowModals, child: child!),
       ),
       theme: buildAppTheme(
-        seedColor: const Color(0xFF6750A4),
+        seedColor: const Color(defaultThemeSeedColorValue),
         brightness: Brightness.light,
         themeColorMode: themeColorModeSingle,
         colorfulUiColorValues: const {},
       ),
       darkTheme: buildAppTheme(
-        seedColor: const Color(0xFF6750A4),
+        seedColor: const Color(defaultThemeSeedColorValue),
         brightness: Brightness.dark,
         themeColorMode: themeColorModeSingle,
         colorfulUiColorValues: const {},

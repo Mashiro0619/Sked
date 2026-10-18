@@ -3,9 +3,11 @@ import 'sked_color_draft.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
+import '../utils/constants.dart';
 import 'sked_task_dialog.dart';
 
 const skedColorPresets = <int>[
+  defaultThemeSeedColorValue,
   0xFF6750A4,
   0xFF5E35B1,
   0xFF3949AB,

@@ -19,7 +19,7 @@ Color _textColor(WidgetTester tester, String text) =>
 
 void main() {
   const seeds = [
-    Color(0xff6750a4),
+    Color(defaultThemeSeedColorValue),
     Color(0xff101010),
     Color(0xffffffff),
     Color(0xffffff00),

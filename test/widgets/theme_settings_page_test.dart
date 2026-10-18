@@ -513,6 +513,7 @@ void main() {
       expect(palette, findsOneWidget);
       final paletteRect = tester.getRect(palette);
       const presetHexes = [
+        '#336699',
         '#6750A4',
         '#5E35B1',
         '#3949AB',
