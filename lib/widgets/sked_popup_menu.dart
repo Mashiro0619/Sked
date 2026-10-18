@@ -1,9 +1,50 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_tooltip.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
+import '../theme/sked_menu_style.dart';
+
+/// Anchored action menus share the same surface and motion as button menus.
+/// Callers retain ownership of positioning, result handling and route lifetime.
+Future<T?> showSkedMenu<T>({
+  required BuildContext context,
+  required List<PopupMenuEntry<T>> items,
+  RelativeRect? position,
+  PopupMenuPositionBuilder? positionBuilder,
+  T? initialValue,
+  BoxConstraints? constraints,
+  bool? requestFocus,
+  bool useRootNavigator = false,
+  String? semanticLabel,
+  RouteSettings? routeSettings,
+}) {
+  final menu = SkedMenuStyle.of(context);
+  return showMenu<T>(
+    context: context,
+    items: items,
+    position: position,
+    positionBuilder: positionBuilder,
+    initialValue: initialValue,
+    constraints: constraints,
+    requestFocus: requestFocus,
+    useRootNavigator: useRootNavigator,
+    semanticLabel: semanticLabel,
+    routeSettings: routeSettings,
+    color: menu.surface,
+    shape: menu.shape,
+    elevation: SkedMenuStyle.elevation,
+    shadowColor: menu.shadow,
+    surfaceTintColor: Colors.transparent,
+    menuPadding: SkedMenuStyle.padding,
+    clipBehavior: Clip.antiAlias,
+    popUpAnimationStyle: SkedMotionPolicy.of(context)
+        .routeStyle(AppMotion.menuAnimationStyle),
+  );
+}
 
 class SkedPopupMenuButton<T> extends StatelessWidget {
   const SkedPopupMenuButton({
@@ -46,6 +87,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final motion = SkedMotionPolicy.of(context);
+    final menu = SkedMenuStyle.of(context);
     if (focusNode != null) {
       return _FocusedPopupMenuButton<T>(
         focusNode: focusNode!,
@@ -62,7 +104,12 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
         constraints: constraints,
         style: style,
         iconSize: iconSize,
-        menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        color: menu.surface,
+        shape: menu.shape,
+        elevation: SkedMenuStyle.elevation,
+        shadowColor: menu.shadow,
+        surfaceTintColor: Colors.transparent,
+        menuPadding: SkedMenuStyle.padding,
         clipBehavior: Clip.antiAlias,
         popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
         itemBuilder: itemBuilder,
@@ -83,7 +130,12 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       constraints: constraints,
       style: style,
       iconSize: iconSize,
-      menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      color: menu.surface,
+      shape: menu.shape,
+      elevation: SkedMenuStyle.elevation,
+      shadowColor: menu.shadow,
+      surfaceTintColor: Colors.transparent,
+      menuPadding: SkedMenuStyle.padding,
       clipBehavior: Clip.antiAlias,
       popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
       itemBuilder: itemBuilder,
@@ -111,6 +163,11 @@ class _FocusedPopupMenuButton<T> extends PopupMenuButton<T> {
     super.constraints,
     super.style,
     super.iconSize,
+    super.color,
+    super.shape,
+    super.elevation,
+    super.shadowColor,
+    super.surfaceTintColor,
     super.menuPadding,
     super.clipBehavior,
     super.popUpAnimationStyle,
@@ -155,13 +212,16 @@ class SkedPopupMenuItem<T> extends PopupMenuItem<T> {
     super.value,
     super.onTap,
     super.enabled = true,
-    super.height = 48,
-    super.padding = EdgeInsets.zero,
+    this.selected = false,
+    super.height = SkedMenuStyle.itemHeight,
+    super.padding = SkedMenuStyle.itemPadding,
     super.textStyle,
     super.labelTextStyle,
     super.mouseCursor,
     required super.child,
   });
+
+  final bool selected;
 
   @override
   PopupMenuItemState<T, SkedPopupMenuItem<T>> createState() =>
@@ -177,7 +237,7 @@ class SkedCheckedPopupMenuItem<T> extends SkedPopupMenuItem<T> {
     required this.checked,
     super.enabled,
     required this.label,
-  }) : super(child: const SizedBox.shrink());
+  }) : super(selected: checked, child: const SizedBox.shrink());
   final bool checked;
   final String label;
   @override
@@ -187,54 +247,56 @@ class SkedCheckedPopupMenuItem<T> extends SkedPopupMenuItem<T> {
 
 class _SkedCheckedMenuState<T> extends _SkedPopupMenuItemState<T> {
   @override
+  Widget buildSemantics({required Widget child}) => Semantics(
+    role: SemanticsRole.menuItemCheckbox,
+    enabled: widget.enabled,
+    checked: selected,
+    button: true,
+    child: child,
+  );
+
+  @override
   Widget buildChild() {
     final item = widget as SkedCheckedPopupMenuItem<T>;
-    return Semantics(
-      checked: item.checked,
-      child: Row(
-        children: [
-          SizedBox(
-            width: 20,
-            child: item.checked ? const Icon(Icons.check, size: 20) : null,
-          ),
-          const SizedBox(width: 12),
-          Flexible(child: Text(item.label)),
-        ],
-      ),
+    return Row(
+      children: [
+        SizedBox(
+          width: SkedMenuStyle.iconSize,
+          child: item.checked ? const Icon(Icons.check) : null,
+        ),
+        const SizedBox(width: 12),
+        Flexible(child: Text(item.label)),
+      ],
     );
   }
 }
 
 class _SkedPopupMenuItemState<T>
     extends PopupMenuItemState<T, SkedPopupMenuItem<T>> {
+  bool get selected => widget.selected;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final menu = SkedMenuStyle.of(context);
     final popupMenuTheme = PopupMenuTheme.of(context);
-    final states = <WidgetState>{if (!widget.enabled) WidgetState.disabled};
-    final fallbackStyle = theme.textTheme.labelLarge?.copyWith(
-      color: widget.enabled
-          ? colors.onSurface
-          : colors.onSurface.withValues(alpha: 0.38),
-      fontWeight: FontWeight.w600,
-    );
+    final states = <WidgetState>{
+      if (!widget.enabled) WidgetState.disabled,
+      if (selected) WidgetState.selected,
+    };
     final style =
         widget.labelTextStyle?.resolve(states) ??
         popupMenuTheme.labelTextStyle?.resolve(states) ??
         widget.textStyle ??
         popupMenuTheme.textStyle ??
-        fallbackStyle ??
-        DefaultTextStyle.of(context).style;
-    final radius = skedShapeSchemeOf(context).fieldRadius;
+        menu.labelStyle(states);
 
-    Widget item = AnimatedDefaultTextStyle(
+    final item = AnimatedDefaultTextStyle(
       style: style,
       duration: SkedMotionPolicy.of(context).effects(SkedMotionSpeed.fast),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: widget.height),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: widget.padding ?? SkedMenuStyle.itemPadding,
           child: Align(
             alignment: AlignmentDirectional.centerStart,
             child: buildChild(),
@@ -243,32 +305,35 @@ class _SkedPopupMenuItemState<T>
       ),
     );
 
-    if (!widget.enabled) {
-      item = IconTheme.merge(
-        data: const IconThemeData(opacity: 0.38),
-        child: item,
-      );
-    }
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: SkedMenuStyle.itemMargin,
       child: MergeSemantics(
         child: buildSemantics(
-          child: InkWell(
-            onTap: widget.enabled ? handleTap : null,
-            canRequestFocus: widget.enabled,
-            mouseCursor: widget.enabled
-                ? widget.mouseCursor ?? SystemMouseCursors.click
-                : SystemMouseCursors.basic,
-            borderRadius: radius,
-            overlayColor: _menuOverlayColor(colors),
-            child: ListTileTheme.merge(
-              contentPadding: EdgeInsets.zero,
-              titleTextStyle: style,
-              iconColor: widget.enabled
-                  ? colors.onSurfaceVariant
-                  : colors.onSurface.withValues(alpha: 0.38),
-              child: item,
+          child: Ink(
+            decoration: ShapeDecoration(
+              color: selected ? menu.selectedSurface : Colors.transparent,
+              shape: menu.itemShape,
+            ),
+            child: InkWell(
+              onTap: widget.enabled ? handleTap : null,
+              canRequestFocus: widget.enabled,
+              mouseCursor: widget.enabled
+                  ? widget.mouseCursor ?? SystemMouseCursors.click
+                  : SystemMouseCursors.basic,
+              customBorder: menu.itemShape,
+              overlayColor: menu.overlayColor,
+              child: IconTheme.merge(
+                data: IconThemeData(
+                  color: menu.foreground(states),
+                  size: SkedMenuStyle.iconSize,
+                ),
+                child: ListTileTheme.merge(
+                  contentPadding: EdgeInsets.zero,
+                  titleTextStyle: style,
+                  iconColor: menu.foreground(states),
+                  child: item,
+                ),
+              ),
             ),
           ),
         ),
@@ -300,29 +365,11 @@ class _SkedPopupMenuDividerState<T> extends State<SkedPopupMenuDivider<T>> {
       child: Center(
         child: Divider(
           height: 1,
-          indent: 12,
-          endIndent: 12,
+          indent: SkedMenuStyle.itemPadding.left,
+          endIndent: SkedMenuStyle.itemPadding.right,
           color: colors.outlineVariant,
         ),
       ),
     );
   }
-}
-
-WidgetStateProperty<Color?> _menuOverlayColor(ColorScheme colors) {
-  return WidgetStateProperty.resolveWith((states) {
-    if (states.contains(WidgetState.disabled)) {
-      return Colors.transparent;
-    }
-    if (states.contains(WidgetState.pressed)) {
-      return colors.primary.withValues(alpha: 0.14);
-    }
-    if (states.contains(WidgetState.focused)) {
-      return colors.primary.withValues(alpha: 0.12);
-    }
-    if (states.contains(WidgetState.hovered)) {
-      return colors.primary.withValues(alpha: 0.08);
-    }
-    return null;
-  });
 }

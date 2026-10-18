@@ -143,15 +143,15 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             tooltip: l10n.defaultView,
             onSelected: onViewChanged,
             itemBuilder: (_) => [
-              CheckedPopupMenuItem(
+              SkedCheckedPopupMenuItem(
                 value: _StudentTimetableView.week,
                 checked: viewMode == _StudentTimetableView.week,
-                child: Text(l10n.viewWeek),
+                label: l10n.viewWeek,
               ),
-              CheckedPopupMenuItem(
+              SkedCheckedPopupMenuItem(
                 value: _StudentTimetableView.day,
                 checked: viewMode == _StudentTimetableView.day,
-                child: Text(l10n.viewDay),
+                label: l10n.viewDay,
               ),
             ],
             child: Padding(
@@ -2173,15 +2173,11 @@ class _EmptyTimetableImportMenuState extends State<_EmptyTimetableImportMenu> {
     setState(() => _menuOpen = true);
     _EmptyTimetableImportAction? selected;
     try {
-      selected = await showMenu<_EmptyTimetableImportAction>(
+      selected = await showSkedMenu<_EmptyTimetableImportAction>(
         context: context,
         positionBuilder: (_, constraints) =>
             _menuPositionBuilder(constraints, menuWidth),
         constraints: BoxConstraints.tightFor(width: menuWidth),
-        menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        clipBehavior: Clip.antiAlias,
-        popUpAnimationStyle: SkedMotionPolicy.of(context)
-            .routeStyle(AppMotion.menuAnimationStyle),
         items: [
           SkedPopupMenuItem(
             key: const ValueKey('empty-timetable-import-files'),

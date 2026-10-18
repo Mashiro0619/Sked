@@ -70,11 +70,11 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                 direction: direction,
               ),
               itemBuilder: (_) => [
-                PopupMenuItem(
+                SkedPopupMenuItem(
                   value: SettingsTransferDirection.import,
                   child: Text(l10n.importAction),
                 ),
-                PopupMenuItem(
+                SkedPopupMenuItem(
                   value: SettingsTransferDirection.export,
                   child: Text(l10n.exportAction),
                 ),

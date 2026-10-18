@@ -83,7 +83,6 @@ import '../widgets/general_event_editor_sheet.dart';
 import '../widgets/sked_expressive_components.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/ui_command.dart';
-import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'settings_page.dart';
 
@@ -1738,10 +1737,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ),
             itemBuilder: (_) => [
               for (final option in _generalViewOptions(l))
-                CheckedPopupMenuItem(
+                SkedCheckedPopupMenuItem(
                   value: option.value,
                   checked: option.value == view,
-                  child: Text(option.label),
+                  label: option.label,
                 ),
             ],
             child: Padding(
@@ -3459,11 +3458,11 @@ List<PopupMenuEntry<String>> _generalViewMenuItems(
   BuildContext context,
   String view,
 ) {
-  final colors = Theme.of(context).colorScheme;
   return [
     for (final item in _generalViewOptions(AppLocalizations.of(context)))
       SkedPopupMenuItem<String>(
         value: item.value,
+        selected: item.value == view,
         child: Semantics(
           selected: item.value == view,
           child: Row(
@@ -3472,14 +3471,7 @@ List<PopupMenuEntry<String>> _generalViewMenuItems(
               const SizedBox(width: 12),
               Expanded(child: Text(item.label)),
               item.value == view
-                  ? Icon(
-                      Icons.check_rounded,
-                      size: 20,
-                      color: skedReadableAccent(
-                        colors,
-                        surface: SkedSurface.colorOf(context),
-                      ),
-                    )
+                  ? const Icon(Icons.check_rounded, size: 20)
                   : const SizedBox.square(dimension: 20),
             ],
           ),
@@ -3512,13 +3504,9 @@ Future<void> _showGeneralViewSelectionMenu({
       ancestor: overlay,
     ),
   );
-  final selected = await showMenu<String>(
+  final selected = await showSkedMenu<String>(
     context: context,
     position: RelativeRect.fromRect(anchorRect, Offset.zero & overlay.size),
-    menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-    clipBehavior: Clip.antiAlias,
-    popUpAnimationStyle: SkedMotionPolicy.of(context)
-        .routeStyle(AppMotion.menuAnimationStyle),
     items: _generalViewMenuItems(context, view),
   );
   if (selected != null && selected != view && anchorContext.mounted) {

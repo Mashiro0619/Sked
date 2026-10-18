@@ -6,6 +6,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -24,7 +25,7 @@ void _size(WidgetTester tester, Size size) {
 Future<void> _view(WidgetTester tester, String label) async {
   await tester.tap(_key('general-view-switcher'));
   await tester.pumpAndSettle();
-  final item = find.widgetWithText(CheckedPopupMenuItem<String>, label);
+  final item = find.widgetWithText(SkedCheckedPopupMenuItem<String>, label);
   await tester.tap(item);
   await tester.pumpAndSettle();
 }

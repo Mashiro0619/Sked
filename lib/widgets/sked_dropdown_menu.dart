@@ -1,5 +1,3 @@
-import '../theme/sked_surface.dart';
-
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -13,6 +11,7 @@ import '../controllers/workspace_view_state.dart';
 import 'workbench_chrome_metrics.dart';
 
 import '../theme/sked_expressive_theme.dart';
+import '../theme/sked_menu_style.dart';
 
 /// Builds row content around a current-value anchor. The dropdown owns pointer
 /// activation and a single keyboard/semantics trigger for the whole row.
@@ -229,7 +228,9 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
     final effectiveInputDecorationTheme =
         dropdownTheme.inputDecorationTheme ?? theme.inputDecorationTheme;
     final baseMenuStyle =
-        dropdownTheme.menuStyle ?? MenuTheme.of(context).style;
+        dropdownTheme.menuStyle ??
+        MenuTheme.of(context).style ??
+        SkedMenuStyle.of(context).menuStyle;
     final selectedEntry = _entryForValue(_selectedValue);
     final expand = widget.expandedInsets == EdgeInsets.zero;
     final motion = SkedMotionPolicy.of(context);
@@ -267,6 +268,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
           onClose: _closed,
           animated: motion.spatialAnimationsEnabled,
           style: menuStyle,
+          clipBehavior: Clip.antiAlias,
           alignmentOffset: const Offset(0, _menuOffsetY),
           crossAxisUnconstrained: false,
           menuChildren: [
@@ -392,14 +394,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
         fixedSize: const WidgetStatePropertyAll<Size?>(null),
         minimumSize: WidgetStatePropertyAll(Size(math.min(144, maxWidth), 0)),
         maximumSize: WidgetStatePropertyAll(Size(maxWidth, maxHeight)),
-        padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
-        backgroundColor: WidgetStatePropertyAll(
-          Theme.of(context).colorScheme.surface,
-        ),
-        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
         alignment: AlignmentDirectional.bottomStart,
       );
     }
@@ -430,14 +424,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
       fixedSize: const WidgetStatePropertyAll<Size?>(null),
       minimumSize: WidgetStatePropertyAll(Size(width, 0)),
       maximumSize: WidgetStatePropertyAll(Size(width, height)),
-      padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
-      backgroundColor: WidgetStatePropertyAll(
-        Theme.of(context).colorScheme.surface,
-      ),
-      surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-      shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
       alignment: AlignmentDirectional.bottomStart,
     );
   }
@@ -470,56 +456,31 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final menu = SkedMenuStyle.of(context);
     final enabled = onSelected != null;
-    final accent = skedReadableAccent(
-      colors,
-      surface: colors.primary.withValues(alpha: 0.12),
-    );
-    final foregroundColor = !enabled
-        ? colors.onSurface.withValues(alpha: 0.38)
-        : selected
-        ? accent
-        : colors.onSurface;
-    final backgroundColor = selected
-        ? colors.primary.withValues(alpha: 0.12)
-        : Colors.transparent;
+    final style = menu.itemStyle(selected: selected);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: MenuItemButton(
-        leadingIcon: entry.leadingIcon,
-        trailingIcon:
-            entry.trailingIcon ??
-            (selected
-                ? Icon(Icons.check, color: accent)
-                : reserveCheckSpace
-                ? const SizedBox.square(dimension: 24)
-                : null),
-        closeOnActivate: !compact,
-        onPressed: enabled ? () => onSelected?.call(entry.value) : null,
-        style:
-            entry.style ??
-            ButtonStyle(
-              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
-              padding: const WidgetStatePropertyAll(
-                EdgeInsets.symmetric(horizontal: 12),
-              ),
-              shape: WidgetStatePropertyAll(skedShapeSchemeOf(context).compact),
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.focused)) {
-                  return colors.primary.withValues(alpha: 0.12);
-                }
-                return backgroundColor;
-              }),
-              foregroundColor: WidgetStatePropertyAll(foregroundColor),
-              iconColor: WidgetStatePropertyAll(foregroundColor),
-              overlayColor: _dropdownOverlayColor(colors),
-            ),
-        child: DefaultTextStyle.merge(
-          maxLines: compact ? null : 1,
-          overflow: compact ? TextOverflow.visible : TextOverflow.ellipsis,
-          child: entry.labelWidget ?? Text(entry.label),
+      padding: SkedMenuStyle.itemMargin,
+      child: Semantics(
+        checked: selected,
+        child: MenuItemButton(
+          leadingIcon: entry.leadingIcon,
+          trailingIcon:
+              entry.trailingIcon ??
+              (selected
+                  ? const Icon(Icons.check)
+                  : reserveCheckSpace
+                  ? const SizedBox.square(dimension: SkedMenuStyle.iconSize)
+                  : null),
+          closeOnActivate: !compact,
+          onPressed: enabled ? () => onSelected?.call(entry.value) : null,
+          style: entry.style?.merge(style) ?? style,
+          child: DefaultTextStyle.merge(
+            maxLines: compact ? null : 1,
+            overflow: compact ? TextOverflow.visible : TextOverflow.ellipsis,
+            child: entry.labelWidget ?? Text(entry.label),
+          ),
         ),
       ),
     );
@@ -543,22 +504,4 @@ class _SelectedDropdownLabel<T> extends StatelessWidget {
       child: entry.labelWidget ?? Text(entry.label),
     );
   }
-}
-
-WidgetStateProperty<Color?> _dropdownOverlayColor(ColorScheme colors) {
-  return WidgetStateProperty.resolveWith((states) {
-    if (states.contains(WidgetState.disabled)) {
-      return Colors.transparent;
-    }
-    if (states.contains(WidgetState.pressed)) {
-      return colors.primary.withValues(alpha: 0.14);
-    }
-    if (states.contains(WidgetState.focused)) {
-      return colors.primary.withValues(alpha: 0.12);
-    }
-    if (states.contains(WidgetState.hovered)) {
-      return colors.primary.withValues(alpha: 0.08);
-    }
-    return null;
-  });
 }

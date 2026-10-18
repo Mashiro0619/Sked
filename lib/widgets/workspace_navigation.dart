@@ -146,14 +146,12 @@ class WorkspaceModeMenu extends StatelessWidget {
       onSelected: (mode) => selectWorkspace(context, mode),
       itemBuilder: (_) => [
         for (final mode in workspace.enabledWorkspaces)
-          CheckedPopupMenuItem(
+          SkedCheckedPopupMenuItem(
             value: mode,
             checked: workspace.activeMode == mode,
-            child: Text(
-              mode == AppMode.student
-                  ? l10n.studentTimetable
-                  : l10n.generalSchedule,
-            ),
+            label: mode == AppMode.student
+                ? l10n.studentTimetable
+                : l10n.generalSchedule,
           ),
       ],
     );

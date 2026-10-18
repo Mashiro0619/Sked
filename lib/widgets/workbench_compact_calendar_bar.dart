@@ -4,10 +4,9 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_tooltip.dart';
+import 'sked_popup_menu.dart';
 
 import '../l10n/app_localizations.dart';
-import '../theme/app_motion.dart';
-import '../theme/sked_expressive_theme.dart';
 import 'workbench_chrome_metrics.dart';
 
 /// One command can live inline or in overflow without changing its callback,
@@ -299,7 +298,7 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
       );
     }
 
-    final selected = await showMenu<WorkbenchOverflowAction>(
+    final selected = await showSkedMenu<WorkbenchOverflowAction>(
       context: anchor,
       requestFocus: true,
       constraints: BoxConstraints(
@@ -307,16 +306,15 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
         maxWidth: 280,
         maxHeight: maximumHeight,
       ),
-      clipBehavior: Clip.antiAlias,
       positionBuilder: (_, _) => position(),
-      popUpAnimationStyle: SkedMotionPolicy.of(anchor)
-          .routeStyle(AppMotion.menuAnimationStyle),
       items: [
         for (var i = 0; i < items.length; i++) ...[
-          if (i > 0 && items[i].dividerBefore) const PopupMenuDivider(),
-          PopupMenuItem<WorkbenchOverflowAction>(
+          if (i > 0 && items[i].dividerBefore)
+            const SkedPopupMenuDivider<WorkbenchOverflowAction>(),
+          SkedPopupMenuItem<WorkbenchOverflowAction>(
             key: ValueKey(items[i].id),
             value: items[i],
+            selected: items[i].selected == true,
             enabled: items[i].onSelected != null,
             child: Builder(
               builder: (menuContext) {

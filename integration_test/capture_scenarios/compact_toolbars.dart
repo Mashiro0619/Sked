@@ -9,6 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/workbench_chrome_metrics.dart';
 import 'package:sked/widgets/workbench_compact_calendar_bar.dart';
 
@@ -115,7 +116,9 @@ void registerCaptureScenarios() {
             expect(t.widget<IconButton>(more).onPressed, isNotNull);
             await t.tap(more);
             await t.pumpAndSettle();
-            final items = find.byType(PopupMenuItem<WorkbenchOverflowAction>);
+            final items = find.byType(
+              SkedPopupMenuItem<WorkbenchOverflowAction>,
+            );
             expect(items, findsWidgets);
             final item = items.first;
             final menuSurface = find.ancestor(
@@ -139,7 +142,7 @@ void registerCaptureScenarios() {
             await t.sendKeyEvent(LogicalKeyboardKey.escape);
             await t.pumpAndSettle();
             expect(
-              find.byType(PopupMenuItem<WorkbenchOverflowAction>),
+              find.byType(SkedPopupMenuItem<WorkbenchOverflowAction>),
               findsNothing,
             );
             expect(

@@ -6,11 +6,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../utils/constants.dart';
 import '../widgets/workbench_chrome_metrics.dart';
-import '../widgets/sked_floating_surface.dart';
 import 'app_motion.dart';
 import 'color_contrast.dart';
 import 'general_calendar_color_theme.dart';
 import 'sked_expressive_theme.dart';
+import 'sked_menu_style.dart';
 
 ThemeMode themeModeFromValue(String value) {
   switch (value) {
@@ -70,31 +70,12 @@ ThemeData buildAppTheme({
       colorScheme.surfaceContainerHighest,
     ),
   );
-  final menuSurface = SkedSurfaceRole.content.resolve(colorScheme);
-  final menuOutline = desktop
-      ? SkedFloatingStyle.outline(colorScheme).color
-      : colorScheme.outlineVariant.withValues(alpha: 0.72);
-  final menuShape = desktop
-      ? RoundedRectangleBorder(
-          borderRadius: SkedFloatingStyle.radius,
-          side: BorderSide(color: menuOutline),
-        )
-      : shapes.menu.copyWith(side: BorderSide(color: menuOutline));
-  final menuOverlayColor = WidgetStateProperty.resolveWith<Color?>((states) {
-    if (states.contains(WidgetState.disabled)) {
-      return Colors.transparent;
-    }
-    if (states.contains(WidgetState.pressed)) {
-      return colorScheme.primary.withValues(alpha: 0.14);
-    }
-    if (states.contains(WidgetState.focused)) {
-      return colorScheme.primary.withValues(alpha: 0.12);
-    }
-    if (states.contains(WidgetState.hovered)) {
-      return colorScheme.primary.withValues(alpha: 0.08);
-    }
-    return null;
-  });
+  final menu = SkedMenuStyle(
+    colors: colorScheme,
+    textTheme: textTheme,
+    shapes: shapes,
+    desktop: desktop,
+  );
 
   return theme.copyWith(
     textTheme: textTheme,
@@ -396,95 +377,11 @@ ThemeData buildAppTheme({
           borderSide: BorderSide(color: accent, width: 2),
         ),
       ),
-      menuStyle: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll<Color>(menuSurface),
-        shadowColor: WidgetStatePropertyAll<Color>(
-          colorScheme.shadow.withValues(alpha: 0.18),
-        ),
-        surfaceTintColor: const WidgetStatePropertyAll<Color>(
-          Colors.transparent,
-        ),
-        elevation: const WidgetStatePropertyAll<double>(3),
-        padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
-          EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        ),
-        shape: WidgetStatePropertyAll<OutlinedBorder>(menuShape),
-        side: WidgetStatePropertyAll<BorderSide>(
-          BorderSide(color: menuOutline),
-        ),
-      ),
+      menuStyle: menu.menuStyle,
     ),
-    menuTheme: MenuThemeData(
-      style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll<Color>(menuSurface),
-        shadowColor: WidgetStatePropertyAll<Color>(
-          colorScheme.shadow.withValues(alpha: 0.18),
-        ),
-        surfaceTintColor: const WidgetStatePropertyAll<Color>(
-          Colors.transparent,
-        ),
-        elevation: const WidgetStatePropertyAll<double>(3),
-        padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
-          EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        ),
-        shape: WidgetStatePropertyAll<OutlinedBorder>(menuShape),
-        side: WidgetStatePropertyAll<BorderSide>(
-          BorderSide(color: menuOutline),
-        ),
-      ),
-    ),
-    menuButtonTheme: MenuButtonThemeData(
-      style: ButtonStyle(
-        minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(horizontal: 12),
-        ),
-        shape: WidgetStatePropertyAll(shapes.compact),
-        overlayColor: menuOverlayColor,
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.focused)) {
-            return colorScheme.primary.withValues(alpha: 0.12);
-          }
-          return Colors.transparent;
-        }),
-        foregroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) {
-            return colorScheme.onSurface.withValues(alpha: 0.38);
-          }
-          if (states.contains(WidgetState.focused)) {
-            return selectedAccent;
-          }
-          return colorScheme.onSurface;
-        }),
-        iconColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) {
-            return colorScheme.onSurface.withValues(alpha: 0.38);
-          }
-          if (states.contains(WidgetState.focused)) {
-            return selectedAccent;
-          }
-          return colorScheme.onSurfaceVariant;
-        }),
-      ),
-    ),
-    popupMenuTheme: PopupMenuThemeData(
-      color: menuSurface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 3,
-      shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
-      menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      shape: menuShape,
-      iconColor: colorScheme.onSurfaceVariant,
-      labelTextStyle: WidgetStateProperty.resolveWith((states) {
-        final color = states.contains(WidgetState.disabled)
-            ? colorScheme.onSurface.withValues(alpha: 0.38)
-            : colorScheme.onSurface;
-        return textTheme.labelLarge?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        );
-      }),
-    ),
+    menuTheme: MenuThemeData(style: menu.menuStyle),
+    menuButtonTheme: MenuButtonThemeData(style: menu.itemStyle()),
+    popupMenuTheme: menu.popupTheme,
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: colorScheme.inverseSurface,

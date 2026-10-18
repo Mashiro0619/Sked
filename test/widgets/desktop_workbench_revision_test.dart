@@ -12,6 +12,7 @@ import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/widgets/assistant_pane.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/workbench_resource_widgets.dart';
 
 import '../support/workbench_dense_data.dart';
@@ -72,7 +73,10 @@ void main() {
       await tester.tap(display);
       await tester.pumpAndSettle();
       expect(find.byType(GeneralDisplaySettingsPage), findsOneWidget);
-      expect(find.byType(PopupMenuItem<String>), findsNothing);
+      expect(
+        find.byWidgetPredicate((widget) => widget is SkedPopupMenuItem<String>),
+        findsNothing,
+      );
       await tester.pageBack();
       await tester.pumpAndSettle();
       await tester.pageBack();

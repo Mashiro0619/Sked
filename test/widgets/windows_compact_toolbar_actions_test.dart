@@ -13,6 +13,7 @@ import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/screens/timetable_display_settings_page.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/sked_week_picker.dart';
 import 'package:sked/widgets/workbench_compact_calendar_bar.dart';
 
@@ -312,7 +313,10 @@ void main() {
       t.view.physicalSize = const Size(1440, 1000);
       await t.pumpAndSettle();
       expect(_key('general-desktop-toolbar-more'), findsNothing);
-      expect(find.byType(PopupMenuItem<WorkbenchOverflowAction>), findsNothing);
+      expect(
+        find.byType(SkedPopupMenuItem<WorkbenchOverflowAction>),
+        findsNothing,
+      );
       expect(_key('sked-date-picker-content'), findsNothing);
       expect(_key('general-resource-date-picker'), findsOneWidget);
       expect(storage.writes, writes);
@@ -333,12 +337,21 @@ void main() {
     ) async {
       await _start(t, AppMode.student, width: width);
       await _more(t, AppMode.student);
-      expect(find.byType(PopupMenuItem<WorkbenchOverflowAction>), findsWidgets);
+      expect(
+        find.byType(SkedPopupMenuItem<WorkbenchOverflowAction>),
+        findsWidgets,
+      );
       await _escape(t);
-      expect(find.byType(PopupMenuItem<WorkbenchOverflowAction>), findsNothing);
+      expect(
+        find.byType(SkedPopupMenuItem<WorkbenchOverflowAction>),
+        findsNothing,
+      );
       await _more(t, AppMode.student);
       await _choose(t, 'student-view-choice-day');
-      expect(find.byType(PopupMenuItem<WorkbenchOverflowAction>), findsNothing);
+      expect(
+        find.byType(SkedPopupMenuItem<WorkbenchOverflowAction>),
+        findsNothing,
+      );
       expect(t.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   }
@@ -349,7 +362,10 @@ void main() {
       await _start(t, AppMode.student);
       await _more(t, AppMode.student);
       await _choose(t, 'student-timetable-picker-button');
-      expect(find.byType(PopupMenuItem<WorkbenchOverflowAction>), findsNothing);
+      expect(
+        find.byType(SkedPopupMenuItem<WorkbenchOverflowAction>),
+        findsNothing,
+      );
       await _escape(t);
       await _more(t, AppMode.student);
       expect(_key('workspace-actions-student'), findsNothing);
@@ -411,7 +427,7 @@ void main() {
         t.view.physicalSize = Size(330, height);
         await t.pumpAndSettle();
         expect(
-          find.byType(PopupMenuItem<WorkbenchOverflowAction>),
+          find.byType(SkedPopupMenuItem<WorkbenchOverflowAction>),
           findsNothing,
         );
         await _more(t, AppMode.general);

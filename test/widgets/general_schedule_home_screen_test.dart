@@ -19,6 +19,7 @@ import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/workbench_resource_widgets.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -803,7 +804,10 @@ void main() {
 
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
-    expect(find.byType(PopupMenuItem<String>), findsNothing);
+    expect(
+      find.byWidgetPredicate((widget) => widget is SkedPopupMenuItem<String>),
+      findsNothing,
+    );
     expect(find.byTooltip('Choose view: Week'), findsOneWidget);
 
     await tester.tap(switcher);
@@ -811,7 +815,10 @@ void main() {
     await tester.tap(find.text('Month').last);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Choose view: Month'), findsOneWidget);
-    expect(find.byType(PopupMenuItem<String>), findsNothing);
+    expect(
+      find.byWidgetPredicate((widget) => widget is SkedPopupMenuItem<String>),
+      findsNothing,
+    );
     expect(provider.generalView.selectedDate, DateTime(2026, 6, 16));
   });
 

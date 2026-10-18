@@ -41,7 +41,6 @@ import '../controllers/workspace_commands.dart';
 import '../controllers/workspace_view_state.dart';
 import '../providers/app_scope.dart';
 import '../previews/sked_preview_support.dart';
-import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/sked_task_header.dart';
@@ -682,15 +681,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                       : SettingsTransferDirection.export,
                                 ),
                           itemBuilder: (_) => [
-                            PopupMenuItem(
+                            SkedPopupMenuItem(
                               value: 'periods',
                               child: Text(l10n.managePeriodTimeSets),
                             ),
-                            PopupMenuItem(
+                            SkedPopupMenuItem(
                               value: 'import',
                               child: Text(l10n.importAction),
                             ),
-                            PopupMenuItem(
+                            SkedPopupMenuItem(
                               value: 'export',
                               child: Text(l10n.exportAction),
                             ),

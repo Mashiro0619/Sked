@@ -12,6 +12,7 @@ import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../support/workspace_harness.dart';
@@ -41,7 +42,7 @@ Future<void> _view(WidgetTester t, String value) async {
   await _tap(
     t,
     find.byWidgetPredicate(
-      (w) => w is CheckedPopupMenuItem<String> && w.value == value,
+      (w) => w is SkedCheckedPopupMenuItem<String> && w.value == value,
     ),
   );
 }
