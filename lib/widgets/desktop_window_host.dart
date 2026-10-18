@@ -94,8 +94,9 @@ class WorkbenchAppBar extends AppBar {
        );
 }
 
-/// Pages supply commands; this host owns native controls and the shared divider,
-/// never a second empty title bar. Geometry is sent to Win32 in logical pixels.
+/// Pages paint their own toolbar border below Navigator's overlays. This host
+/// owns native controls and their border, never a second empty title bar.
+/// Geometry is sent to Win32 in logical pixels.
 class DesktopWindowHost extends StatefulWidget {
   const DesktopWindowHost({
     super.key,
@@ -217,8 +218,8 @@ class _DesktopWindowHostState extends State<DesktopWindowHost> {
                         Positioned(
                           key: const ValueKey('desktop-window-divider'),
                           top: metrics.toolbarHeight - 1,
-                          left: 0,
                           right: 0,
+                          width: metrics.captionWidth,
                           height: 1,
                           child: IgnorePointer(
                             child: ColoredBox(color: colors.outlineVariant),
@@ -264,9 +265,7 @@ class _ChromeScrimClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final left = (size.width - captionWidth).clamp(0.0, size.width);
-    return Path()
-      ..addRect(Rect.fromLTRB(left, 0, size.width, size.height))
-      ..addRect(Rect.fromLTRB(0, size.height - 1, left, size.height));
+    return Path()..addRect(Rect.fromLTRB(left, 0, size.width, size.height));
   }
 
   @override
