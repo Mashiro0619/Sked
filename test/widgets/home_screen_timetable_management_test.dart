@@ -459,6 +459,7 @@ Future<void> _pumpHomeScreenWithProvider(
   WidgetTester tester,
   AppRuntime provider, {
   TextScaler textScaler = TextScaler.noScaling,
+  bool? boldText,
   Locale locale = const Locale('en'),
   TextDirection? textDirection,
   bool active = true,
@@ -476,7 +477,8 @@ Future<void> _pumpHomeScreenWithProvider(
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) {
           Widget result = MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: textScaler, boldText: boldText),
             child: child ?? const SizedBox.shrink(),
           );
           if (textDirection != null) {
@@ -3804,6 +3806,142 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets(
+    'Windows empty import menu stays anchored with normal, double and bold text',
+    (tester) async {
+      const size = Size(640, 900);
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      addTearDown(tester.view.reset);
+      final storage = _BlockingTimetableStorage(null)..completeSave();
+      final provider = await _createEmptyProvider(storage);
+      addTearDown(() async {
+        await _resetWidgetTree(tester);
+        provider.dispose();
+      });
+      final normalHeights = <String, double>{};
+
+      for (final (scale, boldText) in [
+        (1.0, false),
+        (2.0, false),
+        (2.0, true),
+      ]) {
+        await _pumpHomeScreenWithProvider(
+          tester,
+          provider,
+          locale: const Locale('zh'),
+          textScaler: TextScaler.linear(scale),
+          boldText: boldText,
+        );
+        final writes = storage.saveCount;
+        final saved = storage.data;
+        final committed = provider.session.committedData;
+        final anchor = find.byKey(
+          const ValueKey('empty-timetable-import-button'),
+        );
+        final anchorContext = tester.element(anchor);
+        final l10n = AppLocalizations.of(anchorContext);
+        final anchorRect = tester.getRect(anchor);
+        final viewport = Offset.zero & size;
+        final scrollable = Scrollable.maybeOf(anchorContext)?.context
+            .findRenderObject();
+        final contentViewport = scrollable is RenderBox
+            ? (scrollable.localToGlobal(Offset.zero) & scrollable.size)
+                  .intersect(viewport)
+            : viewport;
+        final safeViewport = contentViewport.deflate(8);
+
+        await tester.tap(anchor, kind: PointerDeviceKind.mouse);
+        await tester.pumpAndSettle();
+        final firstItem = find.byKey(
+          const ValueKey('empty-timetable-import-files'),
+        );
+        expect(firstItem.hitTestable(), findsOneWidget);
+        final surface = find
+            .ancestor(
+              of: firstItem,
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Material && widget.type == MaterialType.card,
+              ),
+            )
+            .first;
+        final menuRect = tester.getRect(surface);
+        expect(menuRect.left, greaterThanOrEqualTo(8));
+        expect(menuRect.right, lessThanOrEqualTo(size.width - 8));
+        expect(menuRect.top, greaterThanOrEqualTo(safeViewport.top - .1));
+        expect(menuRect.bottom, lessThanOrEqualTo(safeViewport.bottom + .1));
+        expect(menuRect.center.dx, closeTo(anchorRect.center.dx, 1));
+        if (safeViewport.bottom - anchorRect.bottom >= menuRect.height + 8) {
+          expect(menuRect.top - anchorRect.bottom, closeTo(8, .1));
+        } else {
+          expect(
+            anchorRect.top - safeViewport.top,
+            greaterThanOrEqualTo(menuRect.height + 7.9),
+          );
+          expect(anchorRect.top - menuRect.bottom, closeTo(8, .1));
+        }
+
+        for (final (id, text) in [
+          ('files', l10n.importTimetableFiles),
+          ('text', l10n.importTimetableText),
+          ('web', l10n.schoolWebImportEntry),
+        ]) {
+          final item = find.byKey(ValueKey('empty-timetable-import-$id'));
+          expect(item.hitTestable(), findsOneWidget);
+          final rowRect = tester.getRect(item);
+          final label = find.descendant(of: item, matching: find.text(text));
+          final paragraph = tester.renderObject<RenderParagraph>(label);
+          final textRect = tester.getRect(label);
+          expect(
+            paragraph.text.style!.fontWeight,
+            boldText ? FontWeight.bold : FontWeight.w400,
+          );
+          expect(rowRect.height, greaterThanOrEqualTo(32));
+          expect(paragraph.didExceedMaxLines, isFalse);
+          expect(rowRect.inflate(.1).contains(textRect.topLeft), isTrue);
+          expect(rowRect.inflate(.1).contains(textRect.bottomRight), isTrue);
+          final glyphs = paragraph.getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: text.length),
+          );
+          expect(glyphs, isNotEmpty);
+          for (final box in glyphs) {
+            final ink = box.toRect().shift(textRect.topLeft);
+            expect(textRect.inflate(.1).contains(ink.topLeft), isTrue);
+            expect(textRect.inflate(.1).contains(ink.bottomRight), isTrue);
+          }
+          if (scale == 1) {
+            normalHeights[id] = rowRect.height;
+            if (id == 'files') expect(rowRect.height, closeTo(32, .1));
+          } else {
+            expect(rowRect.height, greaterThan(normalHeights[id]!));
+            if (id == 'text') {
+              final firstCaret = paragraph.getOffsetForCaret(
+                const TextPosition(offset: 0),
+                Rect.zero,
+              );
+              final lastCaret = paragraph.getOffsetForCaret(
+                TextPosition(offset: text.length - 1),
+                Rect.zero,
+              );
+              expect(lastCaret.dy, greaterThan(firstCaret.dy));
+            }
+          }
+        }
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(firstItem, findsNothing);
+        expect(storage.saveCount, writes);
+        expect(storage.data, same(saved));
+        expect(provider.session.committedData, same(committed));
+        expect(provider.studentView.timetables, isEmpty);
+        expect(tester.takeException(), isNull);
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets('reduced motion shows the empty import menu immediately', (
     tester,

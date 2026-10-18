@@ -208,7 +208,9 @@ void runWorkspaceMenuSurfaceTests({WorkspaceMenuSurfaceCapture? capture}) {
           expect(surface, findsOneWidget);
           final menuElement = tester.element(surface);
           final rect = tester.getRect(surface);
-          final dividerProbe = Offset(rect.center.dx, dividerRect.center.dy);
+          // Use the side gutter: compact rows now start above the divider, so
+          // its center crosses the selected row rather than the plain surface.
+          final dividerProbe = Offset(rect.left + 3, dividerRect.center.dy);
           final points = [dividerProbe, ..._gutterPoints(rect)];
           expect(points, isNotEmpty);
 

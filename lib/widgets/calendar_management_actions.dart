@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_menu_item_content.dart';
 import 'sked_popup_menu.dart';
 import 'workbench_chrome_metrics.dart';
 
@@ -74,13 +75,7 @@ class CalendarManagementMenu extends StatelessWidget {
       if (compact) {
         return Text(text, style: danger ? TextStyle(color: error) : null);
       }
-      final row = Row(
-        children: [
-          Icon(icon),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text)),
-        ],
-      );
+      final row = SkedMenuItemContent(leading: Icon(icon), child: Text(text));
       return danger
           ? IconTheme.merge(
               data: IconThemeData(color: error),

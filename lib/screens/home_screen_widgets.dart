@@ -2074,6 +2074,59 @@ class _EmptyTimetableImportMenuState extends State<_EmptyTimetableImportMenu> {
   bool _menuOpen = false;
   RelativeRect? _lastMenuPosition;
 
+  double _menuHeightForWidth(double width) {
+    final menu = SkedMenuStyle.of(context);
+    final popupTheme = PopupMenuTheme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final labelWidth = math.max(
+      0.0,
+      width -
+          menu.padding.horizontal -
+          menu.itemMargin.horizontal -
+          menu.itemPadding.horizontal -
+          menu.iconSize -
+          menu.iconGap,
+    );
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+      maxLines: _EmptyTimetableImportMenuLabel.maxLines,
+      ellipsis: '…',
+    );
+    var height = menu.padding.vertical;
+    try {
+      for (final (label, enabled) in [
+        (l10n.importTimetableFiles, widget.onImport != null),
+        (l10n.importTimetableText, widget.onImportFromText != null),
+        (l10n.schoolWebImportEntry, widget.onImportFromWeb != null),
+      ]) {
+        final states = <WidgetState>{if (!enabled) WidgetState.disabled};
+        var labelStyle =
+            popupTheme.labelTextStyle?.resolve(states) ??
+            popupTheme.textStyle ??
+            menu.labelStyle(states);
+        if (MediaQuery.boldTextOf(context)) {
+          labelStyle = labelStyle.merge(
+            const TextStyle(fontWeight: FontWeight.bold),
+          );
+        }
+        painter.text = TextSpan(text: label, style: labelStyle);
+        painter.layout(maxWidth: labelWidth);
+        height +=
+            math.max(
+              menu.itemHeight,
+              math.max(menu.iconSize, painter.height) +
+                  menu.itemPadding.vertical,
+            ) +
+            menu.itemMargin.vertical;
+      }
+      return height;
+    } finally {
+      painter.dispose();
+    }
+  }
+
   RelativeRect _menuPositionBuilder(
     BoxConstraints constraints,
     double menuWidth,
@@ -2125,11 +2178,11 @@ class _EmptyTimetableImportMenuState extends State<_EmptyTimetableImportMenu> {
         scrollableRect.bottom - 8,
       ),
     );
-    final itemHeight = math.max(
-      48.0,
-      MediaQuery.textScalerOf(context).scale(14) * 2 * 1.2 + 12,
+    final effectiveMenuWidth = math.min(
+      menuWidth,
+      math.max(0.0, overlay.size.width - 32),
     );
-    final menuHeight = itemHeight * 3 + 20;
+    final menuHeight = _menuHeightForWidth(effectiveMenuWidth);
     const gap = 8.0;
     final spaceBelow = safeBottom - anchorRect.bottom - gap;
     final spaceAbove = anchorRect.top - safeTop - gap;
@@ -2139,10 +2192,6 @@ class _EmptyTimetableImportMenuState extends State<_EmptyTimetableImportMenu> {
         : anchorRect.top - gap - menuHeight;
     final maxMenuTop = math.max(safeTop, safeBottom - menuHeight);
     final menuTop = requestedTop.clamp(safeTop, maxMenuTop).toDouble();
-    final effectiveMenuWidth = math.min(
-      menuWidth,
-      math.max(0, overlay.size.width - 32),
-    );
     final idealLeft = anchorRect.center.dx - effectiveMenuWidth / 2;
     final maxMenuLeft = math.max(
       16.0,
@@ -2248,17 +2297,13 @@ class _EmptyTimetableImportMenuLabel extends StatelessWidget {
 
   final IconData icon;
   final String label;
+  static const maxLines = 2;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
-        ),
-      ],
+    return SkedMenuItemContent(
+      leading: Icon(icon),
+      child: Text(label, maxLines: maxLines, overflow: TextOverflow.ellipsis),
     );
   }
 }

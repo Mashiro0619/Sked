@@ -10,6 +10,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/widgets/course_system_reminder_field.dart';
+import 'package:sked/widgets/sked_menu_item_content.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
 
 import '../support/workspace_harness.dart';
@@ -105,29 +106,45 @@ void main() {
         );
         await t.tap(field);
         await t.pumpAndSettle();
-        final selected = t.widget<MenuItemButton>(
-          find
-              .ancestor(
-                of: find
-                    .text(
-                      t
-                          .widget<SkedDropdownMenu<CourseReminderBehavior>>(
-                            field,
-                          )
-                          .dropdownMenuEntries
-                          .first
-                          .label,
-                    )
-                    .last,
-                matching: find.byType(MenuItemButton),
-              )
-              .first,
+        final selectedItem = find
+            .ancestor(
+              of: find
+                  .text(
+                    t
+                        .widget<SkedDropdownMenu<CourseReminderBehavior>>(field)
+                        .dropdownMenuEntries
+                        .first
+                        .label,
+                  )
+                  .last,
+              matching: find.byType(MenuItemButton),
+            )
+            .first;
+        final selected = t.widget<MenuItemButton>(selectedItem);
+        final content = find.descendant(
+          of: selectedItem,
+          matching: find.byType(SkedMenuItemContent),
         );
-        expect(selected.trailingIcon, isA<Icon>());
-        final colors = Theme.of(t.element(field)).colorScheme;
+        expect(content, findsOneWidget);
+        expect(t.widget<SkedMenuItemContent>(content).selected, isTrue);
+        expect(
+          find.descendant(of: content, matching: find.byIcon(Icons.check)),
+          findsOneWidget,
+        );
+        final theme = Theme.of(t.element(field));
+        final selectionOpacity = switch (theme.platform) {
+          TargetPlatform.windows ||
+          TargetPlatform.macOS ||
+          TargetPlatform.linux => .06,
+          _ => .12,
+        };
+        final colors = theme.colorScheme;
         expect(
           selected.style!.backgroundColor!.resolve({}),
-          colors.primary.withValues(alpha: .12),
+          Color.alphaBlend(
+            colors.primary.withValues(alpha: selectionOpacity),
+            colors.surface.withValues(alpha: 1),
+          ),
         );
         final custom = find
             .ancestor(

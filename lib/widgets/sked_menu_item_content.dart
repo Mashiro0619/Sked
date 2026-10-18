@@ -19,28 +19,28 @@ class SkedMenuItemContent extends StatelessWidget {
   final bool? selected;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      if (leading != null) ...[
-        SizedBox.square(dimension: SkedMenuStyle.iconSize, child: leading),
-        const SizedBox(width: SkedMenuStyle.iconGap),
+  Widget build(BuildContext context) {
+    final menu = SkedMenuStyle.of(context);
+    return Row(
+      children: [
+        if (leading != null) ...[
+          SizedBox.square(dimension: menu.iconSize, child: leading),
+          SizedBox(width: menu.iconGap),
+        ],
+        Expanded(child: child),
+        if (trailing != null) ...[SizedBox(width: menu.iconGap), trailing!],
+        if (selected != null) ...[
+          SizedBox(width: menu.iconGap),
+          SizedBox.square(
+            dimension: menu.iconSize,
+            child: selected!
+                ? ExcludeSemantics(
+                    child: Icon(Icons.check, size: menu.iconSize),
+                  )
+                : null,
+          ),
+        ],
       ],
-      Expanded(child: child),
-      if (trailing != null) ...[
-        const SizedBox(width: SkedMenuStyle.iconGap),
-        trailing!,
-      ],
-      if (selected != null) ...[
-        const SizedBox(width: SkedMenuStyle.iconGap),
-        SizedBox.square(
-          dimension: SkedMenuStyle.iconSize,
-          child: selected!
-              ? const ExcludeSemantics(
-                  child: Icon(Icons.check, size: SkedMenuStyle.iconSize),
-                )
-              : null,
-        ),
-      ],
-    ],
-  );
+    );
+  }
 }

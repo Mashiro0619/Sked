@@ -31,13 +31,7 @@ class SkedMenuStyle {
   final SkedShapeScheme shapes;
   final bool desktop;
 
-  static const elevation = 3.0;
-  static const padding = EdgeInsets.symmetric(horizontal: 4, vertical: 6);
-  static const itemPadding = EdgeInsets.symmetric(horizontal: 12);
-  static const itemMargin = EdgeInsets.symmetric(vertical: 2);
-  static const itemHeight = 48.0;
-  static const iconSize = 20.0;
-  static const iconGap = 12.0;
+  static const minimumItemHeight = 32.0;
   static const minimumWidth = 144.0;
   static const maximumWidth = 360.0;
   static const constraints = BoxConstraints(
@@ -45,15 +39,30 @@ class SkedMenuStyle {
     maxWidth: maximumWidth,
   );
 
+  double get elevation => desktop ? 2 : 3;
+  EdgeInsets get padding => desktop
+      ? const EdgeInsets.all(4)
+      : const EdgeInsets.symmetric(horizontal: 4, vertical: 6);
+  EdgeInsets get itemPadding => desktop
+      ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
+      : const EdgeInsets.symmetric(horizontal: 12);
+  EdgeInsets get itemMargin =>
+      desktop ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 2);
+  double get itemHeight => desktop ? minimumItemHeight : 48;
+  double get iconSize => desktop ? 16 : 20;
+  double get iconGap => desktop ? 8 : 12;
+  double get _selectionOpacity => desktop ? .06 : .12;
+
   // Floating menus must obscure content, including grid lines, beneath them.
   Color get surface =>
       SkedSurfaceRole.content.resolve(colors).withValues(alpha: 1);
-  Color get shadow => colors.shadow.withValues(alpha: .18);
-  Color get outline => desktop
-      ? SkedFloatingStyle.outline(colors).color
-      : colors.outlineVariant.withValues(alpha: .72);
-  Color get selectedSurface =>
-      Color.alphaBlend(colors.primary.withValues(alpha: .12), surface);
+  Color get shadow => colors.shadow.withValues(alpha: desktop ? .14 : .18);
+  Color get outline =>
+      colors.outlineVariant.withValues(alpha: desktop ? .65 : .72);
+  Color get selectedSurface => Color.alphaBlend(
+    colors.primary.withValues(alpha: _selectionOpacity),
+    surface,
+  );
   Color get selectedForeground =>
       skedReadableAccent(colors, surface: selectedSurface);
 
@@ -82,8 +91,15 @@ class SkedMenuStyle {
 
   TextStyle get _labelStyle =>
       (textTheme.labelLarge ?? const TextStyle()).copyWith(
-        fontSize: textTheme.labelLarge?.fontSize ?? 14,
-        fontWeight: FontWeight.w600,
+        fontSize: textTheme.labelLarge?.fontSize ?? (desktop ? 13 : 14),
+        fontWeight: desktop ? FontWeight.w400 : FontWeight.w600,
+        letterSpacing: desktop ? 0 : textTheme.labelLarge?.letterSpacing,
+        // MenuAnchor resolves localized typography, while PopupMenuTheme keeps
+        // the original theme style. Give both the same desktop line metrics.
+        height: desktop ? 1.4 : textTheme.labelLarge?.height,
+        leadingDistribution: desktop
+            ? TextLeadingDistribution.even
+            : textTheme.labelLarge?.leadingDistribution,
       );
 
   TextStyle labelStyle(Set<WidgetState> states, {bool selected = false}) =>
@@ -98,11 +114,13 @@ class SkedMenuStyle {
     }
     final double opacity;
     if (states.contains(WidgetState.pressed)) {
-      opacity = .14;
-    } else if (checked || states.contains(WidgetState.focused)) {
-      opacity = .12;
+      opacity = desktop ? .10 : .14;
+    } else if (states.contains(WidgetState.focused)) {
+      opacity = desktop ? .08 : .12;
+    } else if (checked) {
+      opacity = _selectionOpacity;
     } else if (states.contains(WidgetState.hovered)) {
-      opacity = .08;
+      opacity = desktop ? .04 : .08;
     } else {
       return Colors.transparent;
     }
@@ -122,8 +140,8 @@ class SkedMenuStyle {
     backgroundColor: WidgetStatePropertyAll(surface),
     shadowColor: WidgetStatePropertyAll(shadow),
     surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-    elevation: const WidgetStatePropertyAll(elevation),
-    padding: const WidgetStatePropertyAll(padding),
+    elevation: WidgetStatePropertyAll(elevation),
+    padding: WidgetStatePropertyAll(padding),
     shape: WidgetStatePropertyAll(shape),
     side: WidgetStatePropertyAll(BorderSide(color: outline)),
     visualDensity: VisualDensity.standard,
@@ -141,14 +159,14 @@ class SkedMenuStyle {
   );
 
   ButtonStyle itemStyle({bool selected = false}) => ButtonStyle(
-    minimumSize: const WidgetStatePropertyAll(Size.fromHeight(itemHeight)),
-    padding: const WidgetStatePropertyAll(itemPadding),
+    minimumSize: WidgetStatePropertyAll(Size.fromHeight(itemHeight)),
+    padding: WidgetStatePropertyAll(itemPadding),
     shape: WidgetStatePropertyAll(itemShape),
     side: WidgetStateProperty.resolveWith(itemBorder),
     visualDensity: VisualDensity.standard,
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     textStyle: WidgetStatePropertyAll(_labelStyle),
-    iconSize: const WidgetStatePropertyAll(iconSize),
+    iconSize: WidgetStatePropertyAll(iconSize),
     overlayColor: overlayColor,
     animationDuration: Duration.zero,
     splashFactory: NoSplash.splashFactory,

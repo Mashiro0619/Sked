@@ -133,8 +133,14 @@ void runSkedMenuSurfaceTests({SkedMenuSurfaceCapture? capture}) {
           await tester.pumpAndSettle();
           await tester.tap(find.byKey(trigger));
           await tester.pumpAndSettle();
+          final elevation = switch (theme.platform) {
+            TargetPlatform.windows ||
+            TargetPlatform.macOS ||
+            TargetPlatform.linux => 2.0,
+            _ => 3.0,
+          };
           final surface = find.byWidgetPredicate(
-            (widget) => widget is Material && widget.elevation == 3,
+            (widget) => widget is Material && widget.elevation == elevation,
           );
           expect(surface, findsOneWidget);
           final rect = tester.getRect(surface);

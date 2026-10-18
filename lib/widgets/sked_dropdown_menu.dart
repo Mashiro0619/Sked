@@ -461,7 +461,7 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
     final style = menu.itemStyle(selected: selected);
 
     return Padding(
-      padding: SkedMenuStyle.itemMargin,
+      padding: menu.itemMargin,
       child: Semantics(
         checked: selected,
         child: MenuItemButton(

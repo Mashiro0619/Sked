@@ -3467,7 +3467,7 @@ List<PopupMenuEntry<String>> _generalViewMenuItems(
         child: Semantics(
           selected: item.value == view,
           child: SkedMenuItemContent(
-            leading: Icon(item.icon, size: 20),
+            leading: Icon(item.icon),
             selected: item.value == view,
             child: Text(item.label),
           ),

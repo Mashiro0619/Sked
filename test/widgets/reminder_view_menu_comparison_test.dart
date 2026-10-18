@@ -318,14 +318,33 @@ _Geometry _geometry(
       : otherRow.right - otherText.right;
   final end = ltr ? row.right - icon.right : icon.left - row.left;
   final gap = ltr ? icon.left - text.right : text.left - icon.right;
-  expect(start, closeTo(12, .1));
+  expect(start, closeTo(10, .1));
   expect(otherStart, closeTo(start, .1));
-  expect(end, closeTo(12, .1));
-  expect(gap, closeTo(12, .1), reason: 'Check belongs at the logical row end');
-  expect(icon.width, closeTo(20, .1));
-  expect(icon.height, closeTo(20, .1));
-  expect(row.height, greaterThanOrEqualTo(48));
-  expect(otherRow.height, closeTo(row.height, .1));
+  expect(end, closeTo(10, .1));
+  expect(gap, closeTo(8, .1), reason: 'Check belongs at the logical row end');
+  expect(icon.width, closeTo(16, .1));
+  expect(icon.height, closeTo(16, .1));
+  // 32 is a minimum, with 6 px above and below text when the label needs more.
+  expect(
+    row.height,
+    closeTo((text.height + 12).clamp(32, double.infinity), .1),
+  );
+  expect(
+    otherRow.height,
+    closeTo((otherText.height + 12).clamp(32, double.infinity), .1),
+  );
+  for (final (rowRect, labelRect) in [(row, text), (otherRow, otherText)]) {
+    expect(labelRect.top - rowRect.top, greaterThanOrEqualTo(5.9));
+    expect(rowRect.bottom - labelRect.bottom, greaterThanOrEqualTo(5.9));
+  }
+  for (final label in [selected, other]) {
+    final style = tester
+        .renderObject<RenderParagraph>(_label(label))
+        .text
+        .style!;
+    expect(style.fontWeight, FontWeight.w400);
+    expect(style.fontSize, 13);
+  }
   expect(
     tester.renderObject<RenderParagraph>(_label(other)).constraints.maxWidth,
     closeTo(
@@ -341,8 +360,27 @@ _Geometry _geometry(
     find.descendant(of: _row(other), matching: find.byIcon(Icons.check)),
     findsNothing,
   );
-  final menu = tester.getRect(_surface(selected));
+  final surface = _surface(selected);
+  final menu = tester.getRect(surface);
   expect(menu.width, inInclusiveRange(143.9, 360.1));
+  final rows = [
+    for (final element
+        in find
+            .descendant(of: surface, matching: find.byType(InkWell))
+            .evaluate())
+      tester.getRect(find.byWidget(element.widget)),
+  ]..sort((a, b) => a.top.compareTo(b.top));
+  expect(rows.first.top - menu.top, closeTo(4, .1));
+  expect(menu.bottom - rows.last.bottom, closeTo(4, .1));
+  expect(rows.first.left - menu.left, closeTo(4, .1));
+  expect(menu.right - rows.first.right, closeTo(4, .1));
+  for (var index = 1; index < rows.length; index++) {
+    expect(rows[index].top - rows[index - 1].bottom, closeTo(0, .1));
+  }
+  expect(
+    menu.height,
+    closeTo(rows.fold<double>(8, (sum, rect) => sum + rect.height), .1),
+  );
   return (start: start, end: end, height: row.height);
 }
 
@@ -422,6 +460,7 @@ Future<List<Color>> _checkpoint(
   ReminderViewMenuCapture? capture, {
   Set<WidgetState> selectedStates = const {},
   Set<WidgetState> otherStates = const {},
+  double selectedOpacity = .06,
   double otherOpacity = 0,
 }) async {
   await capture?.call(tester, scene);
@@ -437,7 +476,7 @@ Future<List<Color>> _checkpoint(
   return _backgrounds(
     tester,
     [fixture.selectedLabel, fixture.otherLabel],
-    [blend(.12), blend(otherOpacity)],
+    [blend(selectedOpacity), blend(otherOpacity)],
   );
 }
 
@@ -531,6 +570,7 @@ void runReminderViewMenuComparisonTests({ReminderViewMenuCapture? capture}) {
           String state, {
           Set<WidgetState> selected = const {},
           Set<WidgetState> other = const {},
+          double selectedOpacity = .06,
           double opacity = 0,
         }) async {
           final pixels = await _checkpoint(
@@ -540,6 +580,7 @@ void runReminderViewMenuComparisonTests({ReminderViewMenuCapture? capture}) {
             capture,
             selectedStates: selected,
             otherStates: other,
+            selectedOpacity: selectedOpacity,
             otherOpacity: opacity,
           );
           final previous = referencePixels[state];
@@ -572,23 +613,23 @@ void runReminderViewMenuComparisonTests({ReminderViewMenuCapture? capture}) {
         await check(
           'other-hover-first-frame',
           other: {WidgetState.hovered},
-          opacity: .08,
+          opacity: .04,
         );
         await tester.pump(const Duration(milliseconds: 50));
         await check(
           'other-hover-50ms',
           other: {WidgetState.hovered},
-          opacity: .08,
+          opacity: .04,
         );
         await tester.pumpAndSettle();
-        await check('other-hover', other: {WidgetState.hovered}, opacity: .08);
+        await check('other-hover', other: {WidgetState.hovered}, opacity: .04);
         await mouse.down(tester.getCenter(_row(fixture.otherLabel)));
         await tester.pump(kPressTimeout + const Duration(milliseconds: 1));
         await tester.pumpAndSettle();
         await check(
           'other-pressed',
           other: {WidgetState.hovered, WidgetState.pressed},
-          opacity: .14,
+          opacity: .10,
         );
         fixture.expectDraft();
         // Moving far outside before release cancels the press without selecting.
@@ -607,11 +648,38 @@ void runReminderViewMenuComparisonTests({ReminderViewMenuCapture? capture}) {
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.pumpAndSettle();
         await _keyboardFocus(tester, fixture.selectedLabel);
-        await check('selected-focus', selected: {WidgetState.focused});
+        await check(
+          'selected-focus',
+          selected: {WidgetState.focused},
+          selectedOpacity: .08,
+        );
         _expectFocusOutline(tester, fixture.selectedLabel);
+        await mouse.moveTo(tester.getCenter(_row(fixture.selectedLabel)));
+        await tester.pump();
+        await mouse.down(tester.getCenter(_row(fixture.selectedLabel)));
+        await tester.pump(kPressTimeout + const Duration(milliseconds: 1));
+        await tester.pumpAndSettle();
+        await check(
+          'selected-focused-pressed',
+          selected: {
+            WidgetState.focused,
+            WidgetState.hovered,
+            WidgetState.pressed,
+          },
+          selectedOpacity: .10,
+        );
+        await mouse.moveTo(_away);
+        await mouse.up();
+        await tester.pumpAndSettle();
+        await check(
+          'selected-focus-after-cancel',
+          selected: {WidgetState.focused},
+          selectedOpacity: .08,
+        );
+        fixture.expectDraft();
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pumpAndSettle();
-        await check('other-focus', other: {WidgetState.focused}, opacity: .12);
+        await check('other-focus', other: {WidgetState.focused}, opacity: .08);
         _expectFocusOutline(tester, fixture.otherLabel);
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();

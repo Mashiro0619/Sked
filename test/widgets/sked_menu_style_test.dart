@@ -37,11 +37,15 @@ class _MenuHarness extends StatefulWidget {
     required this.kind,
     required this.theme,
     required this.results,
+    this.entries = _entries,
+    this.textScale = 1,
   });
 
   final _MenuKind kind;
   final ThemeData theme;
   final List<String?> results;
+  final List<DropdownMenuEntry<String>> entries;
+  final double textScale;
 
   @override
   State<_MenuHarness> createState() => _MenuHarnessState();
@@ -57,22 +61,13 @@ class _MenuHarnessState extends State<_MenuHarness> {
   }
 
   List<PopupMenuEntry<String>> popupEntries() => [
-    SkedCheckedPopupMenuItem(
-      value: 'selected',
-      checked: selected == 'selected',
-      label: _selectedLabel,
-    ),
-    SkedCheckedPopupMenuItem(
-      value: 'other',
-      checked: selected == 'other',
-      label: _otherLabel,
-    ),
-    const SkedCheckedPopupMenuItem(
-      value: 'disabled',
-      checked: false,
-      enabled: false,
-      label: _disabledLabel,
-    ),
+    for (final entry in widget.entries)
+      SkedCheckedPopupMenuItem(
+        value: entry.value,
+        checked: selected == entry.value,
+        enabled: entry.enabled,
+        label: entry.label,
+      ),
   ];
 
   Widget control(BuildContext context) => switch (widget.kind) {
@@ -122,7 +117,7 @@ class _MenuHarnessState extends State<_MenuHarness> {
       key: _triggerKey,
       initialSelection: selected,
       expandedInsets: EdgeInsets.zero,
-      dropdownMenuEntries: _entries,
+      dropdownMenuEntries: widget.entries,
       onSelected: select,
     ),
     _MenuKind.settings => SettingsChoiceTile<String>(
@@ -130,7 +125,7 @@ class _MenuHarnessState extends State<_MenuHarness> {
       title: 'Layout',
       icon: Icons.view_week_outlined,
       value: selected,
-      entries: _entries,
+      entries: widget.entries,
       onSelected: select,
       changesAppData: false,
     ),
@@ -144,6 +139,11 @@ class _MenuHarnessState extends State<_MenuHarness> {
       locale: const Locale('en'),
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(widget.textScale)),
+        child: child!,
+      ),
       home: Scaffold(
         body: Padding(
           padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
@@ -232,19 +232,28 @@ typedef _Appearance = ({
 });
 
 _Appearance _inspectMenu(WidgetTester tester, Finder surface, ThemeData theme) {
+  final desktop = theme.platform == TargetPlatform.windows;
   final material = tester.widget<Material>(surface);
   expect(material.color, theme.colorScheme.surface.withValues(alpha: 1));
   expect(material.surfaceTintColor, Colors.transparent);
-  expect(material.elevation, 3);
+  expect(material.elevation, desktop ? 2 : 3);
+  expect(
+    material.shadowColor,
+    theme.colorScheme.shadow.withValues(alpha: desktop ? .14 : .18),
+  );
   expect(material.shape, isA<OutlinedBorder>());
   final shape = material.shape! as OutlinedBorder;
   expect(shape.side.style, BorderStyle.solid);
-  expect(shape.side.width, greaterThanOrEqualTo(1));
+  expect(shape.side.width, closeTo(1, .01));
   expect(shape.side.color.a, greaterThan(0));
   final outline = shape.getOuterPath(const Rect.fromLTWH(0, 0, 100, 100));
   expect(outline.contains(const Offset(50, 50)), isTrue);
   expect(outline.contains(const Offset(.1, .1)), isFalse);
-  if (theme.platform == TargetPlatform.windows) {
+  if (desktop) {
+    expect(
+      shape.side.color,
+      theme.colorScheme.outlineVariant.withValues(alpha: .65),
+    );
     expect(shape, isA<RoundedRectangleBorder>());
     expect(
       (shape as RoundedRectangleBorder).borderRadius.resolve(TextDirection.ltr),
@@ -253,13 +262,20 @@ _Appearance _inspectMenu(WidgetTester tester, Finder surface, ThemeData theme) {
   }
   for (final label in [_selectedLabel, _otherLabel, _disabledLabel]) {
     final row = _row(surface, label);
-    expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(row).height, closeTo(desktop ? 32 : 48, .1));
     expect(
       _paintedTextStyle(tester, _label(surface, label)).fontWeight,
-      FontWeight.w600,
+      desktop ? FontWeight.w400 : FontWeight.w600,
     );
+    if (desktop) {
+      final rowRect = tester.getRect(row);
+      final textRect = tester.getRect(_label(surface, label));
+      expect(textRect.top - rowRect.top, greaterThanOrEqualTo(5.9));
+      expect(rowRect.bottom - textRect.bottom, greaterThanOrEqualTo(5.9));
+    }
   }
   final normal = _paintedTextStyle(tester, _label(surface, _otherLabel));
+  expect(normal.fontSize, theme.textTheme.labelLarge?.fontSize ?? 14);
   expect(normal.color, theme.colorScheme.onSurface);
   expect(
     _paintedTextStyle(tester, _label(surface, _disabledLabel)).color,
@@ -287,13 +303,36 @@ _Appearance _inspectMenu(WidgetTester tester, Finder surface, ThemeData theme) {
       matching: find.byIcon(Icons.check),
     ),
   );
-  expect(labelRect.left - rowRect.left, closeTo(12, .01));
-  expect(rowRect.right - checkRect.right, closeTo(12, .01));
-  expect(checkRect.left, greaterThan(labelRect.right));
+  expect(labelRect.left - rowRect.left, closeTo(desktop ? 10 : 12, .01));
+  expect(rowRect.right - checkRect.right, closeTo(desktop ? 10 : 12, .01));
+  expect(checkRect.left - labelRect.right, closeTo(desktop ? 8 : 12, .01));
+  expect(checkRect.width, closeTo(desktop ? 16 : 20, .01));
+  expect(checkRect.height, closeTo(desktop ? 16 : 20, .01));
   expect(
     tester.getRect(_label(surface, _otherLabel)).left,
     closeTo(labelRect.left, .01),
     reason: 'Selected and unselected labels share their start edge.',
+  );
+  final rows = [
+    for (final label in [_selectedLabel, _otherLabel, _disabledLabel])
+      tester.getRect(_row(surface, label)),
+  ];
+  final surfaceRect = tester.getRect(surface);
+  expect(rows.first.left - surfaceRect.left, closeTo(4, .01));
+  expect(surfaceRect.right - rows.first.right, closeTo(4, .01));
+  expect(rows.first.top - surfaceRect.top, closeTo(desktop ? 4 : 8, .01));
+  expect(surfaceRect.bottom - rows.last.bottom, closeTo(desktop ? 4 : 8, .01));
+  for (var index = 1; index < rows.length; index++) {
+    expect(
+      rows[index].top - rows[index - 1].bottom,
+      closeTo(desktop ? 0 : 4, .01),
+    );
+  }
+  expect(
+    surfaceRect.height,
+    closeTo(desktop ? 104 : 168, .1),
+    reason:
+        'Three standard rows include only the agreed menu padding and margins.',
   );
   return (
     surface: material.color!,
@@ -392,7 +431,9 @@ void runSkedMenuStyleTests({SkedMenuStyleCapture? capture}) {
               disabled.centerRight + const Offset(-6, 0),
             ]);
             final selectedColor = Color.alphaBlend(
-              theme.colorScheme.primary.withValues(alpha: .12),
+              theme.colorScheme.primary.withValues(
+                alpha: platform == TargetPlatform.windows ? .06 : .12,
+              ),
               theme.colorScheme.surface,
             );
             for (final index in [0, 2, 3]) {
@@ -457,6 +498,106 @@ void runSkedMenuStyleTests({SkedMenuStyleCapture? capture}) {
       variant: TargetPlatformVariant.only(platform),
     );
   }
+
+  testWidgets('compact desktop rows expand for large text and multiline labels', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(900, 720);
+    addTearDown(tester.view.reset);
+    const longLabel =
+        'A longer selected choice that remains fully readable across multiple lines';
+    const entries = [
+      DropdownMenuEntry(value: 'selected', label: longLabel),
+      DropdownMenuEntry(value: 'other', label: _otherLabel),
+      DropdownMenuEntry(
+        value: 'disabled',
+        label: _disabledLabel,
+        enabled: false,
+      ),
+    ];
+    final theme = buildAppTheme(
+      seedColor: const Color(defaultThemeSeedColorValue),
+      brightness: Brightness.light,
+      themeColorMode: themeColorModeSingle,
+      colorfulUiColorValues: const {},
+    );
+    Size? reference;
+    try {
+      for (final kind in [_MenuKind.popup, _MenuKind.dropdown]) {
+        final results = <String?>[];
+        await tester.pumpWidget(
+          _MenuHarness(
+            key: ValueKey(kind),
+            kind: kind,
+            theme: theme,
+            results: results,
+            entries: entries,
+            textScale: 2,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _open(tester);
+        await capture?.call(
+          tester,
+          'menu-style-windows-large-text-${kind.name}',
+        );
+        final surface = _surface();
+        final label = _label(surface, longLabel);
+        final paragraph = tester.renderObject<RenderParagraph>(label);
+        final textRect = tester.getRect(label);
+        final rowRect = tester.getRect(_row(surface, longLabel));
+        final menuRect = tester.getRect(surface);
+        final naturalText = TextPainter(
+          text: paragraph.text,
+          textDirection: paragraph.textDirection,
+          textScaler: paragraph.textScaler,
+          locale: paragraph.locale,
+          strutStyle: paragraph.strutStyle,
+          textHeightBehavior: paragraph.textHeightBehavior,
+          textWidthBasis: paragraph.textWidthBasis,
+        )..layout(maxWidth: textRect.width);
+        addTearDown(naturalText.dispose);
+        expect(paragraph.textScaler.scale(13), closeTo(26, .01));
+        expect(paragraph.text.style!.fontWeight, FontWeight.w400);
+        expect(naturalText.computeLineMetrics().length, greaterThan(1));
+        expect(paragraph.didExceedMaxLines, isFalse);
+        expect(textRect.height, closeTo(naturalText.height, .1));
+        expect(rowRect.height, greaterThan(32));
+        expect(rowRect.height, greaterThanOrEqualTo(naturalText.height + 11.9));
+        expect(textRect.top - rowRect.top, greaterThanOrEqualTo(5.9));
+        expect(rowRect.bottom - textRect.bottom, greaterThanOrEqualTo(5.9));
+        expect(menuRect.width, inInclusiveRange(143.9, 360.1));
+        expect(menuRect.left, greaterThanOrEqualTo(0));
+        expect(menuRect.right, lessThanOrEqualTo(900));
+        expect(menuRect.bottom, lessThanOrEqualTo(720));
+        final check = tester.getRect(
+          find.descendant(
+            of: _row(surface, longLabel),
+            matching: find.byIcon(Icons.check),
+          ),
+        );
+        expect(check.size, const Size(16, 16));
+        expect(check.center.dy, closeTo(rowRect.center.dy, .1));
+        final layout = Size(textRect.width, rowRect.height);
+        if (reference == null) {
+          reference = layout;
+        } else {
+          expect(layout.width, closeTo(reference.width, .1));
+          expect(layout.height, closeTo(reference.height, .1));
+        }
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(results, isEmpty);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
 
   for (final kind in [
     _MenuKind.focusedPopup,

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 
 import 'package:material_ui/material_ui.dart';
@@ -37,10 +38,10 @@ Future<T?> showSkedMenu<T>({
     routeSettings: routeSettings,
     color: menu.surface,
     shape: menu.shape,
-    elevation: SkedMenuStyle.elevation,
+    elevation: menu.elevation,
     shadowColor: menu.shadow,
     surfaceTintColor: Colors.transparent,
-    menuPadding: SkedMenuStyle.padding,
+    menuPadding: menu.padding,
     clipBehavior: Clip.antiAlias,
     popUpAnimationStyle: SkedMotionPolicy.of(context)
         .routeStyle(AppMotion.menuAnimationStyle),
@@ -107,10 +108,10 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
         iconSize: iconSize,
         color: menu.surface,
         shape: menu.shape,
-        elevation: SkedMenuStyle.elevation,
+        elevation: menu.elevation,
         shadowColor: menu.shadow,
         surfaceTintColor: Colors.transparent,
-        menuPadding: SkedMenuStyle.padding,
+        menuPadding: menu.padding,
         clipBehavior: Clip.antiAlias,
         popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
         itemBuilder: itemBuilder,
@@ -133,10 +134,10 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       iconSize: iconSize,
       color: menu.surface,
       shape: menu.shape,
-      elevation: SkedMenuStyle.elevation,
+      elevation: menu.elevation,
       shadowColor: menu.shadow,
       surfaceTintColor: Colors.transparent,
-      menuPadding: SkedMenuStyle.padding,
+      menuPadding: menu.padding,
       clipBehavior: Clip.antiAlias,
       popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
       itemBuilder: itemBuilder,
@@ -214,8 +215,8 @@ class SkedPopupMenuItem<T> extends PopupMenuItem<T> {
     super.onTap,
     super.enabled = true,
     this.selected = false,
-    super.height = SkedMenuStyle.itemHeight,
-    super.padding = SkedMenuStyle.itemPadding,
+    super.height = SkedMenuStyle.minimumItemHeight,
+    super.padding,
     super.textStyle,
     super.labelTextStyle,
     super.mouseCursor,
@@ -293,9 +294,12 @@ class _SkedPopupMenuItemState<T>
       style: style,
       duration: SkedMotionPolicy.of(context).effects(SkedMotionSpeed.fast),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: widget.height),
+        // Height remains a minimum; touch density and larger labels can grow it.
+        constraints: BoxConstraints(
+          minHeight: math.max(widget.height, menu.itemHeight),
+        ),
         child: Padding(
-          padding: widget.padding ?? SkedMenuStyle.itemPadding,
+          padding: widget.padding ?? menu.itemPadding,
           child: Align(
             alignment: AlignmentDirectional.centerStart,
             child: buildChild(),
@@ -305,7 +309,7 @@ class _SkedPopupMenuItemState<T>
     );
 
     return Padding(
-      padding: SkedMenuStyle.itemMargin,
+      padding: menu.itemMargin,
       child: MergeSemantics(
         child: buildSemantics(
           child: InkWell(
@@ -331,7 +335,7 @@ class _SkedPopupMenuItemState<T>
               child: IconTheme.merge(
                 data: IconThemeData(
                   color: menu.foreground(states),
-                  size: SkedMenuStyle.iconSize,
+                  size: menu.iconSize,
                 ),
                 child: ListTileTheme.merge(
                   contentPadding: EdgeInsets.zero,
@@ -366,14 +370,15 @@ class _SkedPopupMenuDividerState<T> extends State<SkedPopupMenuDivider<T>> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final menu = SkedMenuStyle.of(context);
     return SizedBox(
       height: widget.height,
       child: Center(
         child: Divider(
           height: 1,
-          indent: SkedMenuStyle.itemPadding.left,
-          endIndent: SkedMenuStyle.itemPadding.right,
-          color: colors.outlineVariant,
+          indent: menu.itemPadding.left,
+          endIndent: menu.itemPadding.right,
+          color: menu.desktop ? menu.outline : colors.outlineVariant,
         ),
       ),
     );
