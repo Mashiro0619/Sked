@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'sked_tooltip.dart';
 import 'sked_menu_item_content.dart';
+import 'desktop_window_drag_guard.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -35,7 +36,9 @@ Future<T?> showSkedMenu<T>({
     requestFocus: requestFocus,
     useRootNavigator: useRootNavigator,
     semanticLabel: semanticLabel,
-    routeSettings: routeSettings,
+    routeSettings: menu.desktop
+        ? DesktopMenuRouteSettings(context, original: routeSettings)
+        : routeSettings,
     color: menu.surface,
     shape: menu.shape,
     elevation: menu.elevation,
@@ -90,6 +93,9 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final motion = SkedMotionPolicy.of(context);
     final menu = SkedMenuStyle.of(context);
+    final routeSettings = menu.desktop
+        ? DesktopMenuRouteSettings(context)
+        : null;
     if (focusNode != null) {
       return _FocusedPopupMenuButton<T>(
         focusNode: focusNode!,
@@ -114,6 +120,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
         menuPadding: menu.padding,
         clipBehavior: Clip.antiAlias,
         popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
+        routeSettings: routeSettings,
         itemBuilder: itemBuilder,
         child: child,
       );
@@ -140,6 +147,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       menuPadding: menu.padding,
       clipBehavior: Clip.antiAlias,
       popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
+      routeSettings: routeSettings,
       itemBuilder: itemBuilder,
       child: child,
     );
@@ -173,6 +181,7 @@ class _FocusedPopupMenuButton<T> extends PopupMenuButton<T> {
     super.menuPadding,
     super.clipBehavior,
     super.popUpAnimationStyle,
+    super.routeSettings,
     super.child,
   });
   final FocusNode focusNode;
@@ -308,7 +317,7 @@ class _SkedPopupMenuItemState<T>
       ),
     );
 
-    return Padding(
+    final content = Padding(
       padding: menu.itemMargin,
       child: MergeSemantics(
         child: buildSemantics(
@@ -349,6 +358,7 @@ class _SkedPopupMenuItemState<T>
         ),
       ),
     );
+    return menu.desktop ? DesktopMenuWindowGuard(child: content) : content;
   }
 }
 
