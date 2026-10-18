@@ -3,6 +3,7 @@ import 'dart:ui' show SemanticsRole;
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_tooltip.dart';
+import 'sked_menu_item_content.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -29,7 +30,7 @@ Future<T?> showSkedMenu<T>({
     position: position,
     positionBuilder: positionBuilder,
     initialValue: initialValue,
-    constraints: constraints,
+    constraints: constraints ?? SkedMenuStyle.constraints,
     requestFocus: requestFocus,
     useRootNavigator: useRootNavigator,
     semanticLabel: semanticLabel,
@@ -101,7 +102,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
         padding: padding,
         offset: offset,
         position: position,
-        constraints: constraints,
+        constraints: constraints ?? SkedMenuStyle.constraints,
         style: style,
         iconSize: iconSize,
         color: menu.surface,
@@ -127,7 +128,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       padding: padding,
       offset: offset,
       position: position,
-      constraints: constraints,
+      constraints: constraints ?? SkedMenuStyle.constraints,
       style: style,
       iconSize: iconSize,
       color: menu.surface,
@@ -258,22 +259,20 @@ class _SkedCheckedMenuState<T> extends _SkedPopupMenuItemState<T> {
   @override
   Widget buildChild() {
     final item = widget as SkedCheckedPopupMenuItem<T>;
-    return Row(
-      children: [
-        SizedBox(
-          width: SkedMenuStyle.iconSize,
-          child: item.checked ? const Icon(Icons.check) : null,
-        ),
-        const SizedBox(width: 12),
-        Flexible(child: Text(item.label)),
-      ],
-    );
+    return SkedMenuItemContent(selected: item.checked, child: Text(item.label));
   }
 }
 
 class _SkedPopupMenuItemState<T>
     extends PopupMenuItemState<T, SkedPopupMenuItem<T>> {
+  final _states = WidgetStatesController();
   bool get selected => widget.selected;
+
+  @override
+  void dispose() {
+    _states.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,19 +308,26 @@ class _SkedPopupMenuItemState<T>
       padding: SkedMenuStyle.itemMargin,
       child: MergeSemantics(
         child: buildSemantics(
-          child: Ink(
-            decoration: ShapeDecoration(
-              color: selected ? menu.selectedSurface : Colors.transparent,
-              shape: menu.itemShape,
-            ),
-            child: InkWell(
-              onTap: widget.enabled ? handleTap : null,
-              canRequestFocus: widget.enabled,
-              mouseCursor: widget.enabled
-                  ? widget.mouseCursor ?? SystemMouseCursors.click
-                  : SystemMouseCursors.basic,
-              customBorder: menu.itemShape,
-              overlayColor: menu.overlayColor,
+          child: InkWell(
+            statesController: _states,
+            onTap: widget.enabled ? handleTap : null,
+            canRequestFocus: widget.enabled,
+            mouseCursor:
+                widget.mouseCursor ?? WidgetStateMouseCursor.adaptiveClickable,
+            customBorder: menu.itemShape,
+            overlayColor: menu.overlayColor,
+            splashFactory: NoSplash.splashFactory,
+            child: ValueListenableBuilder<Set<WidgetState>>(
+              valueListenable: _states,
+              builder: (context, interaction, child) => Ink(
+                decoration: ShapeDecoration(
+                  color: menu.background({...states, ...interaction}),
+                  shape: menu.itemShape.copyWith(
+                    side: menu.itemBorder({...states, ...interaction}),
+                  ),
+                ),
+                child: child,
+              ),
               child: IconTheme.merge(
                 data: IconThemeData(
                   color: menu.foreground(states),

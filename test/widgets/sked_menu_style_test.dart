@@ -279,6 +279,22 @@ _Appearance _inspectMenu(WidgetTester tester, Finder surface, ThemeData theme) {
     ),
     findsNothing,
   );
+  final rowRect = tester.getRect(_row(surface, _selectedLabel));
+  final labelRect = tester.getRect(_label(surface, _selectedLabel));
+  final checkRect = tester.getRect(
+    find.descendant(
+      of: _row(surface, _selectedLabel),
+      matching: find.byIcon(Icons.check),
+    ),
+  );
+  expect(labelRect.left - rowRect.left, closeTo(12, .01));
+  expect(rowRect.right - checkRect.right, closeTo(12, .01));
+  expect(checkRect.left, greaterThan(labelRect.right));
+  expect(
+    tester.getRect(_label(surface, _otherLabel)).left,
+    closeTo(labelRect.left, .01),
+    reason: 'Selected and unselected labels share their start edge.',
+  );
   return (
     surface: material.color!,
     shape: shape,

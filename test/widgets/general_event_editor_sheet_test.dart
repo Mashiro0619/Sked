@@ -733,6 +733,117 @@ void main() {
     expect(find.text('Work'), findsOneWidget);
   });
 
+  for (final direction in [TextDirection.ltr, TextDirection.rtl]) {
+    testWidgets(
+      'long calendar choices retain hidden labels and color dots in a narrow $direction menu',
+      (tester) async {
+        _setTestViewport(tester, const Size(320, 900));
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+          _resetTestViewport(tester);
+        });
+        const hiddenName = '隐藏的项目与教学协作分类名称需要在窄屏内正确截断';
+        const visibleName = '当前可用的另一个很长很长的日常工作与学习安排分类';
+        final saved = <GeneralEvent>[];
+        await tester.pumpWidget(
+          _localizedCompactApp(
+            Directionality(
+              textDirection: direction,
+              child: GeneralEventEditorSheet(
+                calendars: const [
+                  GeneralSchedule(
+                    id: 'hidden',
+                    name: hiddenName,
+                    isVisible: false,
+                    events: [],
+                  ),
+                  GeneralSchedule(id: 'visible', name: visibleName, events: []),
+                ],
+                activeCalendarId: 'hidden',
+                initialDate: DateTime(2026, 10, 18),
+                onSave: (event) async => saved.add(event),
+              ),
+            ),
+            locale: const Locale('zh'),
+            textScaler: const TextScaler.linear(1.3),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        final picker = find.byType(SkedDropdownMenu<String>);
+        final l10n = AppLocalizations.of(tester.element(picker));
+        Finder item(String name) => find.ancestor(
+          of: find.text(name),
+          matching: find.byType(MenuItemButton),
+        );
+
+        for (final selectedName in [hiddenName, visibleName]) {
+          await tester.ensureVisible(picker);
+          await tester.pumpAndSettle();
+          await tester.tap(picker);
+          await tester.pumpAndSettle();
+          expect(find.byType(MenuItemButton), findsNWidgets(2));
+          final check = find.descendant(
+            of: item(selectedName),
+            matching: find.byIcon(Icons.check),
+          );
+          expect(check, findsOneWidget);
+          final checkRect = tester.getRect(check);
+
+          for (final name in [hiddenName, visibleName]) {
+            final entry = item(name);
+            expect(entry.hitTestable(), findsOneWidget);
+            expect(Directionality.of(tester.element(entry)), direction);
+            final entryRect = tester.getRect(entry);
+            final textRect = tester.getRect(
+              find.descendant(of: entry, matching: find.text(name)),
+            );
+            expect(textRect.width, lessThan(240));
+            expect(textRect.left, greaterThanOrEqualTo(entryRect.left));
+            expect(textRect.right, lessThanOrEqualTo(entryRect.right));
+            expect(
+              direction == TextDirection.ltr ? textRect.right : textRect.left,
+              direction == TextDirection.ltr
+                  ? lessThan(checkRect.left)
+                  : greaterThan(checkRect.right),
+            );
+            final dot = find.descendant(
+              of: entry,
+              matching: find.byWidgetPredicate((widget) {
+                if (widget is! Container) return false;
+                final decoration = widget.decoration;
+                return decoration is BoxDecoration &&
+                    decoration.shape == BoxShape.circle &&
+                    decoration.color != null;
+              }),
+            );
+            expect(dot, findsOneWidget);
+            expect(tester.getSize(dot), const Size(14, 14));
+            expect(entryRect.contains(tester.getCenter(dot)), isTrue);
+            expect(
+              find.descendant(of: entry, matching: find.byIcon(Icons.check)),
+              name == selectedName ? findsOneWidget : findsNothing,
+            );
+          }
+          final hiddenHint = find.descendant(
+            of: item(hiddenName),
+            matching: find.text(l10n.categoryHidden),
+          );
+          expect(hiddenHint, findsOneWidget);
+          expect(hiddenHint.hitTestable(), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await tester.tap(item(visibleName));
+          await tester.pumpAndSettle();
+          expect(find.byType(MenuItemButton), findsNothing);
+          expect(saved, isEmpty);
+          expect(tester.takeException(), isNull);
+        }
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
   testWidgets('save / cancel / delete cannot pop twice on rapid tap', (
     tester,
   ) async {

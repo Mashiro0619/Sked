@@ -81,6 +81,7 @@ import '../widgets/expressive_motion.dart';
 import '../widgets/general_event_details_sheet.dart';
 import '../widgets/general_event_editor_sheet.dart';
 import '../widgets/sked_expressive_components.dart';
+import '../widgets/sked_menu_item_content.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/ui_command.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -3465,15 +3466,10 @@ List<PopupMenuEntry<String>> _generalViewMenuItems(
         selected: item.value == view,
         child: Semantics(
           selected: item.value == view,
-          child: Row(
-            children: [
-              Icon(item.icon, size: 20),
-              const SizedBox(width: 12),
-              Expanded(child: Text(item.label)),
-              item.value == view
-                  ? const Icon(Icons.check_rounded, size: 20)
-                  : const SizedBox.square(dimension: 20),
-            ],
+          child: SkedMenuItemContent(
+            leading: Icon(item.icon, size: 20),
+            selected: item.value == view,
+            child: Text(item.label),
           ),
         ),
       ),

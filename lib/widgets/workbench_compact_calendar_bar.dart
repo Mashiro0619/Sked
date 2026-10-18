@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_tooltip.dart';
+import 'sked_menu_item_content.dart';
 import 'sked_popup_menu.dart';
 
 import '../l10n/app_localizations.dart';
@@ -337,15 +338,10 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
                 }
                 return Semantics(
                   selected: items[i].selected,
-                  child: Row(
-                    children: [
-                      Icon(
-                        items[i].selected == true ? Icons.check : items[i].icon,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(items[i].label)),
-                    ],
+                  child: SkedMenuItemContent(
+                    leading: items[i].icon == null ? null : Icon(items[i].icon),
+                    selected: items[i].selected,
+                    child: Text(items[i].label),
                   ),
                 );
               },

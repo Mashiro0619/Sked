@@ -2097,9 +2097,11 @@ class _CalendarDropdownItem extends StatelessWidget {
         if (WorkbenchChromeMetrics.of(context).desktop)
           Flexible(child: label)
         else
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 240),
-            child: label,
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
+              child: label,
+            ),
           ),
       ],
     );

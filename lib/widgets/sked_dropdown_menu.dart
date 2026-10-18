@@ -12,6 +12,7 @@ import 'workbench_chrome_metrics.dart';
 
 import '../theme/sked_expressive_theme.dart';
 import '../theme/sked_menu_style.dart';
+import 'sked_menu_item_content.dart';
 
 /// Builds row content around a current-value anchor. The dropdown owns pointer
 /// activation and a single keyboard/semantics trigger for the whole row.
@@ -279,7 +280,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
                       ? _selectedItem
                       : null,
                   compact: _managedMenu,
-                  reserveCheckSpace: widget.fieldBuilder != null,
                   entry: entry,
                   selected: entry.value == _selectedValue,
                   onSelected: widget.enabled && entry.enabled
@@ -374,10 +374,10 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
         ? WidgetStatePropertyAll(Size.fromWidth(anchorWidth))
         : null;
 
-    if (widget.fieldBuilder != null) {
+    if (_desktop || widget.fieldBuilder != null) {
       final media = MediaQuery.of(context);
       final maxWidth = math.min(
-        360.0,
+        SkedMenuStyle.maximumWidth,
         math.max(0.0, media.size.width - media.padding.horizontal - 16),
       );
       final maxHeight = math.min(
@@ -392,7 +392,9 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
       );
       return (baseStyle ?? const MenuStyle()).copyWith(
         fixedSize: const WidgetStatePropertyAll<Size?>(null),
-        minimumSize: WidgetStatePropertyAll(Size(math.min(144, maxWidth), 0)),
+        minimumSize: WidgetStatePropertyAll(
+          Size(math.min(SkedMenuStyle.minimumWidth, maxWidth), 0),
+        ),
         maximumSize: WidgetStatePropertyAll(Size(maxWidth, maxHeight)),
         alignment: AlignmentDirectional.bottomStart,
       );
@@ -442,7 +444,6 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
   const _SkedDropdownMenuItem({
     super.key,
     required this.compact,
-    required this.reserveCheckSpace,
     required this.entry,
     required this.selected,
     required this.onSelected,
@@ -450,7 +451,6 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
 
   final DropdownMenuEntry<T> entry;
   final bool compact;
-  final bool reserveCheckSpace;
   final bool selected;
   final ValueChanged<T>? onSelected;
 
@@ -465,21 +465,19 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
       child: Semantics(
         checked: selected,
         child: MenuItemButton(
-          leadingIcon: entry.leadingIcon,
-          trailingIcon:
-              entry.trailingIcon ??
-              (selected
-                  ? const Icon(Icons.check)
-                  : reserveCheckSpace
-                  ? const SizedBox.square(dimension: SkedMenuStyle.iconSize)
-                  : null),
+          requestFocusOnHover: false,
           closeOnActivate: !compact,
           onPressed: enabled ? () => onSelected?.call(entry.value) : null,
           style: entry.style?.merge(style) ?? style,
-          child: DefaultTextStyle.merge(
-            maxLines: compact ? null : 1,
-            overflow: compact ? TextOverflow.visible : TextOverflow.ellipsis,
-            child: entry.labelWidget ?? Text(entry.label),
+          child: SkedMenuItemContent(
+            leading: entry.leadingIcon,
+            trailing: entry.trailingIcon,
+            selected: selected,
+            child: DefaultTextStyle.merge(
+              maxLines: compact ? null : 1,
+              overflow: compact ? TextOverflow.visible : TextOverflow.ellipsis,
+              child: entry.labelWidget ?? Text(entry.label),
+            ),
           ),
         ),
       ),

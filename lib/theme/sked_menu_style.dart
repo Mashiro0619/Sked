@@ -37,6 +37,13 @@ class SkedMenuStyle {
   static const itemMargin = EdgeInsets.symmetric(vertical: 2);
   static const itemHeight = 48.0;
   static const iconSize = 20.0;
+  static const iconGap = 12.0;
+  static const minimumWidth = 144.0;
+  static const maximumWidth = 360.0;
+  static const constraints = BoxConstraints(
+    minWidth: minimumWidth,
+    maxWidth: maximumWidth,
+  );
 
   // Floating menus must obscure content, including grid lines, beneath them.
   Color get surface =>
@@ -82,20 +89,34 @@ class SkedMenuStyle {
   TextStyle labelStyle(Set<WidgetState> states, {bool selected = false}) =>
       _labelStyle.copyWith(color: foreground(states, selected: selected));
 
+  // InkWell paints focus and hover as separate overlays. Resolve their combined
+  // state once so pointer and keyboard menus cannot accumulate different tints.
+  Color background(Set<WidgetState> states, {bool selected = false}) {
+    final checked = selected || states.contains(WidgetState.selected);
+    if (states.contains(WidgetState.disabled)) {
+      return checked ? selectedSurface : Colors.transparent;
+    }
+    final double opacity;
+    if (states.contains(WidgetState.pressed)) {
+      opacity = .14;
+    } else if (checked || states.contains(WidgetState.focused)) {
+      opacity = .12;
+    } else if (states.contains(WidgetState.hovered)) {
+      opacity = .08;
+    } else {
+      return Colors.transparent;
+    }
+    return Color.alphaBlend(colors.primary.withValues(alpha: opacity), surface);
+  }
+
+  BorderSide itemBorder(Set<WidgetState> states) =>
+      states.contains(WidgetState.focused) &&
+          !states.contains(WidgetState.disabled)
+      ? BorderSide(color: selectedForeground)
+      : BorderSide.none;
+
   WidgetStateProperty<Color?> get overlayColor =>
-      WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) return Colors.transparent;
-        if (states.contains(WidgetState.pressed)) {
-          return colors.primary.withValues(alpha: .14);
-        }
-        if (states.contains(WidgetState.focused)) {
-          return colors.primary.withValues(alpha: .12);
-        }
-        if (states.contains(WidgetState.hovered)) {
-          return colors.primary.withValues(alpha: .08);
-        }
-        return null;
-      });
+      const WidgetStatePropertyAll(Colors.transparent);
 
   MenuStyle get menuStyle => MenuStyle(
     backgroundColor: WidgetStatePropertyAll(surface),
@@ -123,15 +144,17 @@ class SkedMenuStyle {
     minimumSize: const WidgetStatePropertyAll(Size.fromHeight(itemHeight)),
     padding: const WidgetStatePropertyAll(itemPadding),
     shape: WidgetStatePropertyAll(itemShape),
+    side: WidgetStateProperty.resolveWith(itemBorder),
     visualDensity: VisualDensity.standard,
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     textStyle: WidgetStatePropertyAll(_labelStyle),
     iconSize: const WidgetStatePropertyAll(iconSize),
     overlayColor: overlayColor,
+    animationDuration: Duration.zero,
+    splashFactory: NoSplash.splashFactory,
+    mouseCursor: WidgetStateMouseCursor.adaptiveClickable,
     backgroundColor: WidgetStateProperty.resolveWith(
-      (states) => selected || states.contains(WidgetState.selected)
-          ? selectedSurface
-          : Colors.transparent,
+      (states) => background(states, selected: selected),
     ),
     foregroundColor: WidgetStateProperty.resolveWith(
       (states) => foreground(states, selected: selected),
