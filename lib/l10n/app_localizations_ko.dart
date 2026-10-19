@@ -2905,4 +2905,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => '로그인 URL을 입력하세요.';
+
+  @override
+  String get languageNoResults => '일치하는 언어가 없습니다';
 }

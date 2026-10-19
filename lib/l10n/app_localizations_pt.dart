@@ -3047,4 +3047,7 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get schoolSitesLoginUrlRequired =>
       'Introduza um URL de início de sessão.';
+
+  @override
+  String get languageNoResults => 'Nenhum idioma correspondente';
 }

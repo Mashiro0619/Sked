@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Въведете име на училище.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Въведете URL адрес за вход.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Няма намерени езици",
+  "@languageNoResults": {}
 }

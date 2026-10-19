@@ -2992,4 +2992,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Enter a login URL.';
+
+  @override
+  String get languageNoResults => 'No matching languages';
 }

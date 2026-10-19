@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Sisesta kooli nimi.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Sisesta sisselogimise URL.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Sobivaid keeli ei leitud",
+  "@languageNoResults": {}
 }

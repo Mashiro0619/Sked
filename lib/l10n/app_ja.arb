@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "学校名を入力してください。",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "ログインページのURLを入力してください。",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "一致する言語がありません",
+  "@languageNoResults": {}
 }

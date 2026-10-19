@@ -2988,4 +2988,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'กรุณากรอก URL สำหรับเข้าสู่ระบบ';
+
+  @override
+  String get languageNoResults => 'ไม่พบภาษาที่ตรงกัน';
 }

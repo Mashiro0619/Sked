@@ -3036,4 +3036,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Adja meg a bejelentkezési URL-t.';
+
+  @override
+  String get languageNoResults => 'Nincs egyező nyelv';
 }

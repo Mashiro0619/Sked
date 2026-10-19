@@ -2058,5 +2058,7 @@
   "schoolSitesNameRequired": "請輸入學校名稱。",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "請輸入登入頁面連結。",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "找不到符合的語言",
+  "@languageNoResults": {}
 }

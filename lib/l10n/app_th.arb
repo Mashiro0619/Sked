@@ -2086,5 +2086,7 @@
   "schoolSitesNameRequired": "กรุณากรอกชื่อโรงเรียน",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "กรุณากรอก URL สำหรับเข้าสู่ระบบ",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "ไม่พบภาษาที่ตรงกัน",
+  "@languageNoResults": {}
 }

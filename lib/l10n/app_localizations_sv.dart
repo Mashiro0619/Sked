@@ -3018,4 +3018,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Ange en inloggningsadress.';
+
+  @override
+  String get languageNoResults => 'Inga matchande språk';
 }

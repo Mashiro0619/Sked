@@ -3050,4 +3050,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Gib eine Anmelde-URL ein.';
+
+  @override
+  String get languageNoResults => 'Keine passenden Sprachen gefunden';
 }

@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Εισαγάγετε το όνομα του σχολείου.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Εισαγάγετε τη διεύθυνση URL σύνδεσης.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Δεν βρέθηκαν αντίστοιχες γλώσσες",
+  "@languageNoResults": {}
 }

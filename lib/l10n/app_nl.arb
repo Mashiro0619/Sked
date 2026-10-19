@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Voer een schoolnaam in.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Voer een inlog-URL in.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Geen overeenkomende talen",
+  "@languageNoResults": {}
 }

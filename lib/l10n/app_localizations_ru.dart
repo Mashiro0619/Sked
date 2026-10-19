@@ -3044,4 +3044,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Введите URL страницы входа.';
+
+  @override
+  String get languageNoResults => 'Подходящие языки не найдены';
 }

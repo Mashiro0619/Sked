@@ -2897,4 +2897,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'ログインページのURLを入力してください。';
+
+  @override
+  String get languageNoResults => '一致する言語がありません';
 }

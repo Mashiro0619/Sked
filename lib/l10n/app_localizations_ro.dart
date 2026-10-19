@@ -3051,4 +3051,7 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get schoolSitesLoginUrlRequired =>
       'Introduceți un URL de autentificare.';
+
+  @override
+  String get languageNoResults => 'Nu s-au găsit limbi potrivite';
 }

@@ -3028,4 +3028,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Wpisz adres URL logowania.';
+
+  @override
+  String get languageNoResults => 'Brak pasujących języków';
 }

@@ -2086,5 +2086,7 @@
   "schoolSitesNameRequired": "Vnesite ime šole.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Vnesite URL za prijavo.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Ni ujemajočih se jezikov",
+  "@languageNoResults": {}
 }

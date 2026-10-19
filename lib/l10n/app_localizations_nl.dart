@@ -3036,4 +3036,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Voer een inlog-URL in.';
+
+  @override
+  String get languageNoResults => 'Geen overeenkomende talen';
 }

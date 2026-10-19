@@ -3010,4 +3010,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Sisesta sisselogimise URL.';
+
+  @override
+  String get languageNoResults => 'Sobivaid keeli ei leitud';
 }

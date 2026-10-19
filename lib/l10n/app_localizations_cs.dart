@@ -3019,4 +3019,7 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get schoolSitesLoginUrlRequired =>
       'Zadejte adresu přihlašovací stránky.';
+
+  @override
+  String get languageNoResults => 'Žádné odpovídající jazyky';
 }

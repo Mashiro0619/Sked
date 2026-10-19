@@ -5375,6 +5375,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a login URL.'**
   String get schoolSitesLoginUrlRequired;
+
+  /// No description provided for @languageNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching languages'**
+  String get languageNoResults;
 }
 
 class _AppLocalizationsDelegate

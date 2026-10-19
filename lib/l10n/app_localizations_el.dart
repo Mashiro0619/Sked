@@ -3066,4 +3066,7 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get schoolSitesLoginUrlRequired =>
       'Εισαγάγετε τη διεύθυνση URL σύνδεσης.';
+
+  @override
+  String get languageNoResults => 'Δεν βρέθηκαν αντίστοιχες γλώσσες';
 }

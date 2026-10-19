@@ -3060,4 +3060,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Въведете URL адрес за вход.';
+
+  @override
+  String get languageNoResults => 'Няма намерени езици';
 }

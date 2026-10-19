@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Saisissez le nom de l’établissement.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Saisissez une URL de connexion.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Aucune langue correspondante",
+  "@languageNoResults": {}
 }

@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Adja meg az iskola nevét.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Adja meg a bejelentkezési URL-t.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Nincs egyező nyelv",
+  "@languageNoResults": {}
 }

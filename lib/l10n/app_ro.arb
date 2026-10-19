@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Introduceți numele școlii.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Introduceți un URL de autentificare.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Nu s-au găsit limbi potrivite",
+  "@languageNoResults": {}
 }

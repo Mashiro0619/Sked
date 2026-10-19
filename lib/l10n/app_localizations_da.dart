@@ -3006,4 +3006,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Indtast en loginadresse.';
+
+  @override
+  String get languageNoResults => 'Ingen matchende sprog';
 }

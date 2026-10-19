@@ -2810,6 +2810,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => '请输入登录页链接。';
+
+  @override
+  String get languageNoResults => '未找到匹配的语言';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5619,4 +5622,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolSitesLoginUrlRequired => '請輸入登入頁面連結。';
+
+  @override
+  String get languageNoResults => '找不到符合的語言';
 }

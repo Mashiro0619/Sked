@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Введите название учебного заведения.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Введите URL страницы входа.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Подходящие языки не найдены",
+  "@languageNoResults": {}
 }

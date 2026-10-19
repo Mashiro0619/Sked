@@ -2086,5 +2086,7 @@
   "schoolSitesNameRequired": "Ange skolans namn.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Ange en inloggningsadress.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Inga matchande språk",
+  "@languageNoResults": {}
 }

@@ -3077,4 +3077,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Saisissez une URL de connexion.';
+
+  @override
+  String get languageNoResults => 'Aucune langue correspondante';
 }

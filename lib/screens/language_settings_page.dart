@@ -25,9 +25,24 @@ class LanguageSettingsPage extends StatefulWidget {
 }
 
 class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
+  final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
   String _query = '';
   bool _isSelectingLanguage = false;
   bool _languageSelectionPopped = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _query = '');
+    _searchFocus.requestFocus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +51,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         final commands = context.read<SettingsCommands>();
         final l10n = AppLocalizations.of(context);
         final languageOptions = supportedLanguageOptions(l10n);
+        final filteredOptions = _filterLanguageOptions(languageOptions, _query);
         final currentCode = normalizeLocaleCode(settings.localeCode);
         return PopScope(
           canPop: !_isSelectingLanguage,
@@ -55,10 +71,20 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                     constraints: const BoxConstraints(maxWidth: 720),
                     child: TextField(
                       key: const ValueKey('language-search'),
+                      controller: _searchController,
+                      focusNode: _searchFocus,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.search),
                         hintText: MaterialLocalizations.of(context)
                             .searchFieldLabel,
+                        suffixIcon: _query.isEmpty
+                            ? null
+                            : IconButton(
+                                key: const ValueKey('language-search-clear'),
+                                tooltip: l10n.clear,
+                                onPressed: _clearSearch,
+                                icon: const Icon(Icons.close),
+                              ),
                       ),
                       onChanged: (value) => setState(() => _query = value),
                     ),
@@ -70,10 +96,23 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                     child: ResponsiveSettingsSingleColumnBody(
                       child: Column(
                         children: [
-                          for (final option in _filterLanguageOptions(
-                            languageOptions,
-                            _query,
-                          ))
+                          if (filteredOptions.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 24,
+                              ),
+                              child: Semantics(
+                                liveRegion: true,
+                                child: Text(
+                                  l10n.languageNoResults,
+                                  key: const ValueKey('language-no-results'),
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                              ),
+                            ),
+                          for (final option in filteredOptions)
                             _LanguageOptionTile(
                               key: ValueKey('language-option-${option.code}'),
                               option: option,

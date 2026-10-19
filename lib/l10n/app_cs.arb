@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Zadejte název školy.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Zadejte adresu přihlašovací stránky.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Žádné odpovídající jazyky",
+  "@languageNoResults": {}
 }

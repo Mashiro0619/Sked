@@ -3028,4 +3028,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Vnesite URL za prijavo.';
+
+  @override
+  String get languageNoResults => 'Ni ujemajočih se jezikov';
 }

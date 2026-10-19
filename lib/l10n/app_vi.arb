@@ -2086,5 +2086,7 @@
   "schoolSitesNameRequired": "Nhập tên trường.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Nhập URL đăng nhập.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Không tìm thấy ngôn ngữ phù hợp",
+  "@languageNoResults": {}
 }

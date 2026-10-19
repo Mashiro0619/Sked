@@ -3011,4 +3011,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Nhập URL đăng nhập.';
+
+  @override
+  String get languageNoResults => 'Không tìm thấy ngôn ngữ phù hợp';
 }

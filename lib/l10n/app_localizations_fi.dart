@@ -3022,4 +3022,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolSitesLoginUrlRequired => 'Anna kirjautumissivun URL-osoite.';
+
+  @override
+  String get languageNoResults => 'Vastaavia kieliä ei löytynyt';
 }

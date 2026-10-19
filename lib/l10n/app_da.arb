@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Indtast skolens navn.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Indtast en loginadresse.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Ingen matchende sprog",
+  "@languageNoResults": {}
 }

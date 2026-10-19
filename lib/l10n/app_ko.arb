@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "학교 이름을 입력하세요.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "로그인 URL을 입력하세요.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "일치하는 언어가 없습니다",
+  "@languageNoResults": {}
 }

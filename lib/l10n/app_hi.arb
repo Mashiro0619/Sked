@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "स्कूल का नाम दर्ज करें।",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "लॉगिन URL दर्ज करें।",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "कोई मेल खाती भाषा नहीं मिली",
+  "@languageNoResults": {}
 }

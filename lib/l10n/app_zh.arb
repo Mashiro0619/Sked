@@ -2056,5 +2056,7 @@
   "schoolSitesNameRequired": "请输入学校名称。",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "请输入登录页链接。",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "未找到匹配的语言",
+  "@languageNoResults": {}
 }

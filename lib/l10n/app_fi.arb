@@ -2071,5 +2071,7 @@
   "schoolSitesNameRequired": "Anna koulun nimi.",
   "@schoolSitesNameRequired": {},
   "schoolSitesLoginUrlRequired": "Anna kirjautumissivun URL-osoite.",
-  "@schoolSitesLoginUrlRequired": {}
+  "@schoolSitesLoginUrlRequired": {},
+  "languageNoResults": "Vastaavia kieliä ei löytynyt",
+  "@languageNoResults": {}
 }

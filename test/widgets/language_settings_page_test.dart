@@ -132,6 +132,48 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('empty language search can be cleared without saving', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 800);
+    addTearDown(tester.view.reset);
+    final storage = _RetryableTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en'),
+    );
+    final provider = await _createProvider(storage);
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+    });
+    await _pumpHostPage(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
+    await tester.tap(find.text('Open language settings'));
+    await _pumpRouteTransition(tester);
+    final search = find.byKey(const ValueKey('language-search'));
+    await tester.enterText(search, 'zzzz-not-a-language');
+    await tester.pumpAndSettle();
+    final empty = find.byKey(const ValueKey('language-no-results'));
+    expect(empty, findsOneWidget);
+    expect(find.text('No matching languages'), findsOneWidget);
+    expect(find.byKey(const ValueKey('language-option-en')), findsNothing);
+    expect(tester.getRect(empty).right, lessThanOrEqualTo(320));
+
+    await tester.tap(find.byKey(const ValueKey('language-search-clear')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(search).controller!.text, isEmpty);
+    expect(tester.widget<TextField>(search).focusNode!.hasFocus, isTrue);
+    expect(empty, findsNothing);
+    expect(find.byKey(const ValueKey('language-option-en')), findsOneWidget);
+    expect(find.byKey(const ValueKey('language-option-de')), findsOneWidget);
+    expect(provider.settingsView.localeCode, 'en');
+    expect(storage.saveCount, 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'a completed language save retires only its route below a newer task',
     (tester) async {

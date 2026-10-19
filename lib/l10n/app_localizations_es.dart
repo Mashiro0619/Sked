@@ -3056,4 +3056,7 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get schoolSitesLoginUrlRequired =>
       'Introduce una URL de inicio de sesión.';
+
+  @override
+  String get languageNoResults => 'No se encontraron idiomas coincidentes';
 }
