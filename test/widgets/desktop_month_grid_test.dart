@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -161,6 +162,231 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  for (final direction in TextDirection.values) {
+    testWidgets(
+      'desktop month selection keeps every sampled frame stationary: $direction',
+      (t) async {
+        final dates = [
+          DateTime(2026, 9, 8),
+          DateTime(2026, 9, 16),
+          DateTime(2026, 9, 17),
+          DateTime(2026, 9, 11),
+        ];
+        final provider = await _mount(
+          t,
+          dpr: 1.25,
+          textDirection: direction,
+          events: [
+            for (final day in [11, 17])
+              GeneralEvent(
+                id: 'day-$day',
+                calendarId: 'empty',
+                title: 'Meeting on September $day',
+                startDateTimeIso: DateTime(2026, 9, day, 10).toIso8601String(),
+                endDateTimeIso: DateTime(2026, 9, day, 11).toIso8601String(),
+              ),
+          ],
+        );
+        final targets = <String, Finder>{
+          'panel': _key('general-month-calendar-panel'),
+          'weekdays': _key('general-month-weekday-header'),
+          'grid': _key('desktop-month-grid-lines'),
+          for (final date in dates) 'day-${date.day}': _cell(date),
+        };
+        final baseline = {
+          for (final entry in targets.entries)
+            entry.key: t.getRect(entry.value),
+        };
+        final movements = <String>[];
+
+        void sample(DateTime date, String frame) {
+          expect(provider.generalView.selectedDate, date);
+          final agenda = _key('general-selected-day-agenda');
+          expect(
+            find.descendant(
+              of: agenda,
+              matching: find.text(date.toIso8601String().split('T').first),
+            ),
+            findsOneWidget,
+          );
+          for (final day in [11, 17]) {
+            expect(
+              find.descendant(
+                of: agenda,
+                matching: find.text('Meeting on September $day'),
+              ),
+              day == date.day ? findsOneWidget : findsNothing,
+            );
+          }
+          for (final entry in targets.entries) {
+            final rect = t.getRect(entry.value);
+            if (rect != baseline[entry.key]) {
+              movements.add(
+                'Selected ${date.day}, $frame, ${entry.key}: '
+                '${rect.topLeft - baseline[entry.key]!.topLeft}; '
+                '${baseline[entry.key]} -> $rect',
+              );
+            }
+          }
+        }
+
+        for (final date in [...dates.skip(1), dates.first]) {
+          await t.tap(_cell(date), kind: ui.PointerDeviceKind.mouse);
+          await t.pump();
+          sample(date, 'first frame');
+          for (final (elapsed, step) in [(8, 8), (16, 8), (100, 84)]) {
+            await t.pump(Duration(milliseconds: step));
+            sample(date, '${elapsed}ms');
+          }
+          await t.pumpAndSettle();
+          sample(date, 'settled');
+        }
+        expect(
+          movements,
+          isEmpty,
+          reason:
+              'Selecting a day must not translate the visible month. '
+              'Frame changes:\n${movements.join('\n')}',
+        );
+        expect(t.takeException(), isNull);
+      },
+      variant: _desktop,
+    );
+  }
+
+  testWidgets(
+    'desktop month keyboard selection keeps the grid stationary and the agenda current',
+    (t) async {
+      final provider = await _mount(t, dpr: 1.25);
+      final semantics = t.ensureSemantics();
+      FocusNode dateFocus(int day) => Focus.of(
+        t.element(
+          _inside(_cell(DateTime(2026, 9, day)), 'desktop-month-date-number'),
+        ),
+      );
+      dateFocus(8).requestFocus();
+      await t.pumpAndSettle();
+      expect(dateFocus(8).hasPrimaryFocus, isTrue);
+      final targets = [
+        _key('general-month-calendar-panel'),
+        _key('general-month-weekday-header'),
+        _cell(DateTime(2026, 9, 8)),
+        _cell(DateTime(2026, 9, 15)),
+        _cell(DateTime(2026, 9, 22)),
+      ];
+      final baseline = targets.map(t.getRect).toList();
+      for (final key in [LogicalKeyboardKey.enter, LogicalKeyboardKey.space]) {
+        final previous = provider.generalView.selectedDate;
+        await t.sendKeyEvent(LogicalKeyboardKey.tab);
+        await t.pump();
+        // Exercise the current traversal policy without prescribing row/column
+        // order. Moving focus must not commit a selection until activation.
+        final day = [
+          for (var day = 1; day <= 30; day++)
+            if (dateFocus(day).hasPrimaryFocus) day,
+        ].single;
+        expect(day, isNot(previous.day));
+        expect(provider.generalView.selectedDate, previous);
+        await t.sendKeyEvent(key);
+        for (final (frame, step) in [
+          ('first frame', 0),
+          ('8ms', 8),
+          ('16ms', 8),
+          ('100ms', 84),
+        ]) {
+          await t.pump(Duration(milliseconds: step));
+          expect(targets.map(t.getRect), baseline, reason: '$key, $frame');
+          expect(provider.generalView.selectedDate, DateTime(2026, 9, day));
+          expect(
+            find.descendant(
+              of: _key('general-selected-day-agenda'),
+              matching: find.text('2026-09-${day.toString().padLeft(2, '0')}'),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            t
+                .getSemantics(_cell(DateTime(2026, 9, day)))
+                .getSemanticsData()
+                .flagsCollection
+                .isSelected,
+            ui.Tristate.isTrue,
+          );
+        }
+        await t.pumpAndSettle();
+        expect(targets.map(t.getRect), baseline, reason: '$key, settled');
+      }
+      semantics.dispose();
+      expect(t.takeException(), isNull);
+    },
+    variant: _desktop,
+  );
+
+  testWidgets(
+    'desktop month period navigation slides dates while keeping the panel and weekdays stationary',
+    (t) async {
+      final provider = await _mount(t, date: DateTime(2026, 9, 15), dpr: 1.25);
+      final panel = _key('general-month-calendar-panel');
+      final weekdays = _key('general-month-weekday-header');
+      final panelBefore = t.getRect(panel);
+      final weekdaysBefore = t.getRect(weekdays);
+      for (final (button, date, direction) in [
+        ('general-next-period', DateTime(2026, 10, 15), 1),
+        ('general-previous-period', DateTime(2026, 9, 15), -1),
+      ]) {
+        await t.tap(_key(button), kind: ui.PointerDeviceKind.mouse);
+        final grid = _key('general-month-date-grid-${date.year}-${date.month}');
+        final positions = <double>[];
+        for (final (frame, step) in [
+          ('first frame', 0),
+          ('16ms', 16),
+          ('100ms', 84),
+        ]) {
+          await t.pump(Duration(milliseconds: step));
+          expect(t.getRect(panel), panelBefore, reason: '$button, $frame');
+          expect(
+            t.getRect(weekdays),
+            weekdaysBefore,
+            reason: '$button, $frame',
+          );
+          expect(provider.generalView.selectedDate, date);
+          positions.add(t.getRect(grid).left);
+        }
+        await t.pumpAndSettle();
+        final settled = t.getRect(grid);
+        expect(t.getRect(panel), panelBefore);
+        expect(t.getRect(weekdays), weekdaysBefore);
+        expect(
+          (positions.first - settled.left) * direction,
+          closeTo(settled.width, .001),
+          reason: 'A real period change starts a full month page slide.',
+        );
+        final distances = positions
+            .map((position) => (position - settled.left).abs())
+            .toList();
+        expect(distances[1], inExclusiveRange(0, distances[0]));
+        expect(distances[2], inExclusiveRange(0, distances[1]));
+        expect(_cell(date).hitTestable(), findsOneWidget);
+        expect(
+          find.descendant(
+            of: _key('general-selected-day-agenda'),
+            matching: find.text(date.toIso8601String().split('T').first),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          t
+              .widget<WorkspaceFrame>(find.byType(WorkspaceFrame))
+              .controller
+              .hasPaneTasks,
+          isFalse,
+        );
+      }
+      expect(t.takeException(), isNull);
+    },
+    variant: _desktop,
+  );
+
   testWidgets(
     'desktop month reuses measured tracks and labels across selection and event edits',
     (t) async {

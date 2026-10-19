@@ -546,10 +546,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                       },
                     ),
                     child: SkedDirectionalTransition(
-                      // Pager gestures own their spatial motion and commit with
-                      // direction zero. Toolbar navigation keeps this transition.
+                      // The month grid owns its page motion. Selecting a day
+                      // must not translate the whole calendar or its weekday header.
+                      // Other pagers commit gestures with direction zero, while
+                      // their toolbar navigation keeps this transition.
                       trigger: _calendarDateKey(selectedDate),
-                      direction: dateNavigationDirection,
+                      direction: view == generalViewMonth
+                          ? 0
+                          : dateNavigationDirection,
                       fade: false,
                       scale: false,
                       child: ExpressiveSwitcher(
