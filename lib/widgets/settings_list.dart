@@ -1534,7 +1534,7 @@ class _SettingsToolbarNavigationEditorState
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Material(
-        color: SkedSurface.colorOf(context),
+        color: Colors.transparent,
         shape: shape,
         clipBehavior: Clip.antiAlias,
         // This list is shrink-wrapped and cannot scroll independently. The
