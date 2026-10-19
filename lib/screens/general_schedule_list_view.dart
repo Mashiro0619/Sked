@@ -141,17 +141,44 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
     if (WorkbenchChromeMetrics.of(context).desktop) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final inline =
-              !compactPanel &&
-              constraints.maxWidth >=
-                  600 * WorkbenchChromeMetrics.of(context).textScale;
+          final timeWidth = compactPanel ? 88.0 : 104.0;
+          const locationWidth = 150.0;
+          const calendarWidth = 120.0;
+          const repeatWidth = 28.0;
+          final hasLocation = occurrence.event.location.isNotEmpty;
+          final titleStyle = theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: MediaQuery.boldTextOf(context)
+                ? FontWeight.bold
+                : FontWeight.w600,
+          );
+          final titlePainter = TextPainter(
+            text: TextSpan(
+              text: occurrence.event.title,
+              style: DefaultTextStyle.of(context).style.merge(titleStyle),
+            ),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+            locale: Localizations.maybeLocaleOf(context),
+          )..layout();
+          final titleWidth = titlePainter.maxIntrinsicWidth.ceilToDouble();
+          titlePainter.dispose();
+          final inlineMetadataWidth =
+              20 + calendarWidth + (hasLocation ? locationWidth + 16 : 0);
+          final inlineTitleWidth =
+              constraints.maxWidth -
+              20 - // Row padding.
+              timeWidth -
+              20 - // Calendar marker and title gap.
+              inlineMetadataWidth -
+              repeatWidth;
+          // Move metadata beside the title only when the complete title fits.
+          // A wider window must not turn a readable title into an ellipsis.
+          final inline = !compactPanel && inlineTitleWidth >= titleWidth;
           final title = Text(
             occurrence.event.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: titleStyle,
           );
           return Semantics(
             selected: selected,
@@ -178,7 +205,7 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: inline ? 132 : (compactPanel ? 88 : 104),
+                        width: timeWidth,
                         child: Text(
                           _formatOccurrenceTime(context, occurrence),
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -217,18 +244,20 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
                       ),
                       if (inline) ...[
                         const SizedBox(width: 20),
-                        SizedBox(
-                          width: 150,
-                          child: Text(
-                            occurrence.event.location,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall,
+                        if (hasLocation) ...[
+                          SizedBox(
+                            width: locationWidth,
+                            child: Text(
+                              occurrence.event.location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
+                          const SizedBox(width: 16),
+                        ],
                         SizedBox(
-                          width: 120,
+                          width: calendarWidth,
                           child: Text(
                             occurrence.calendar.name,
                             maxLines: 1,
@@ -239,11 +268,17 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
                           ),
                         ),
                       ],
-                      if (repeatIcon != null)
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(start: 8),
-                          child: repeatIcon,
-                        ),
+                      SizedBox(
+                        width: inline || repeatIcon != null ? repeatWidth : 0,
+                        child: repeatIcon == null
+                            ? null
+                            : Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 8,
+                                ),
+                                child: repeatIcon,
+                              ),
+                      ),
                     ],
                   ),
                 ),
