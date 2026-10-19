@@ -20,6 +20,7 @@ import 'package:sked/app_runtime.dart';
 
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/theme/app_theme.dart';
+import 'package:sked/theme/color_contrast.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -83,12 +84,14 @@ class _ThemeSettingsHost extends StatelessWidget {
     this.locale = const Locale('en'),
     this.textScaler = TextScaler.noScaling,
     this.viewPadding = EdgeInsets.zero,
+    this.brightness = Brightness.light,
   });
 
   final AppRuntime provider;
   final Locale locale;
   final TextScaler textScaler;
   final EdgeInsets viewPadding;
+  final Brightness brightness;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +113,7 @@ class _ThemeSettingsHost extends StatelessWidget {
             ),
             theme: buildAppTheme(
               seedColor: Color(settings.themeSeedColorValue),
-              brightness: Brightness.light,
+              brightness: brightness,
               themeColorMode: settings.themeColorMode,
               colorfulUiColorValues: settings.colorfulUiColorValues,
             ),
@@ -196,6 +199,70 @@ Future<void> _chooseAppearance(
 }
 
 void main() {
+  for (final previewBrightness in Brightness.values) {
+    testWidgets(
+      '$previewBrightness preview icons contrast with their own surface',
+      (tester) async {
+        _setTestViewport(tester, const Size(1440, 1000));
+        addTearDown(() => _resetTestViewport(tester));
+        final base = buildInitialAppData(buildDefaultPeriodTimes());
+        final storage = _BlockingTimetableStorage(
+          base.copyWith(
+            studentMode: base.studentMode.copyWith(
+              themeMode: previewBrightness.name,
+              themeColorMode: themeColorModeSingle,
+              themeSeedColorValue: 0xff336699,
+            ),
+          ),
+        );
+        final provider = await _createProvider(storage);
+        addTearDown(provider.dispose);
+        await tester.pumpWidget(
+          _ThemeSettingsHost(
+            provider: provider,
+            brightness: previewBrightness == Brightness.light
+                ? Brightness.dark
+                : Brightness.light,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final preview = find.byKey(const ValueKey('theme-workspace-preview'));
+        expect(
+          tester.widget<Theme>(preview).data.brightness,
+          previewBrightness,
+        );
+        final surface = tester
+            .widget<Material>(
+              find
+                  .descendant(of: preview, matching: find.byType(Material))
+                  .first,
+            )
+            .color!;
+        final header = find
+            .ancestor(
+              of: find.descendant(
+                of: preview,
+                matching: find.byIcon(Icons.calendar_today_outlined),
+              ),
+              matching: find.byType(Row),
+            )
+            .first;
+        for (final glyph in [Icons.calendar_today_outlined, Icons.add]) {
+          final icon = tester.widget<Icon>(
+            find.descendant(of: header, matching: find.byIcon(glyph)),
+          );
+          expect(
+            colorContrastRatio(Color.alphaBlend(icon.color!, surface), surface),
+            greaterThanOrEqualTo(3),
+          );
+        }
+        expect(storage.saveCount, 0);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
   testWidgets(
     'a completed outline save retires only its route below a newer task',
     (tester) async {

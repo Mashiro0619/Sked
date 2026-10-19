@@ -1776,6 +1776,7 @@ class _WorkspaceThemePreview extends StatelessWidget {
       colorfulUiColorValues: target.colorfulUiColorValues,
     );
     final colors = theme.colorScheme;
+    final previewAccent = skedReadableAccent(colors, surface: colors.surface);
     final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
     return Theme(
       key: const ValueKey('theme-workspace-preview'),
@@ -1809,10 +1810,7 @@ class _WorkspaceThemePreview extends StatelessWidget {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 18,
-                            color: skedReadableAccent(
-                              colors,
-                              surface: SkedSurface.colorOf(context),
-                            ),
+                            color: previewAccent,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -1821,14 +1819,7 @@ class _WorkspaceThemePreview extends StatelessWidget {
                               style: theme.textTheme.labelLarge,
                             ),
                           ),
-                          Icon(
-                            Icons.add,
-                            size: 18,
-                            color: skedReadableAccent(
-                              colors,
-                              surface: SkedSurface.colorOf(context),
-                            ),
-                          ),
+                          Icon(Icons.add, size: 18, color: previewAccent),
                         ],
                       ),
                     ),
