@@ -3016,4 +3016,10 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get viewEvent => 'Näytä tapahtuma';
+
+  @override
+  String get schoolSitesNameRequired => 'Anna koulun nimi.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Anna kirjautumissivun URL-osoite.';
 }

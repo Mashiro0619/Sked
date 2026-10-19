@@ -3012,4 +3012,10 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get viewEvent => 'Visa händelse';
+
+  @override
+  String get schoolSitesNameRequired => 'Ange skolans namn.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Ange en inloggningsadress.';
 }

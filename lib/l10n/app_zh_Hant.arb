@@ -2054,5 +2054,9 @@
     }
   },
   "viewEvent": "查看日程",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "請輸入學校名稱。",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "請輸入登入頁面連結。",
+  "@schoolSitesLoginUrlRequired": {}
 }

@@ -3005,4 +3005,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get viewEvent => 'Xem sự kiện';
+
+  @override
+  String get schoolSitesNameRequired => 'Nhập tên trường.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Nhập URL đăng nhập.';
 }

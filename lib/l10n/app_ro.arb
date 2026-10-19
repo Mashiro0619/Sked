@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Vezi evenimentul",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Introduceți numele școlii.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Introduceți un URL de autentificare.",
+  "@schoolSitesLoginUrlRequired": {}
 }

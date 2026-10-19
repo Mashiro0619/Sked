@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Посмотреть событие",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Введите название учебного заведения.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Введите URL страницы входа.",
+  "@schoolSitesLoginUrlRequired": {}
 }

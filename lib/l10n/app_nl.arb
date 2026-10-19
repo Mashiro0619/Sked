@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Afspraak bekijken",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Voer een schoolnaam in.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Voer een inlog-URL in.",
+  "@schoolSitesLoginUrlRequired": {}
 }

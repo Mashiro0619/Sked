@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,11 +12,13 @@ import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
+import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/export_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
+import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:flutter/services.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -182,6 +185,7 @@ Future<void> _pumpSchoolSitesPage(
   ExportService? exportService,
   SchoolSiteService? siteService,
   Future<String?> Function()? pickJsonSource,
+  TargetPlatform platform = TargetPlatform.android,
 }) async {
   final resolvedSiteService =
       siteService ?? SchoolSiteService(store: _MemorySchoolSiteStore('[]'));
@@ -191,6 +195,7 @@ Future<void> _pumpSchoolSitesPage(
       child: MaterialApp(
         key: UniqueKey(),
         locale: const Locale('en'),
+        theme: ThemeData(platform: platform),
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SchoolSitesPage(
@@ -213,6 +218,94 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets(
+      'site selection follows the detail pane and narrow navigation on $platform',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final semantics = tester.ensureSemantics();
+        try {
+          final provider = await _createProvider();
+          addTearDown(provider.dispose);
+          const sites = [
+            SchoolSite(
+              name: 'Original school',
+              loginUrl: 'https://original.example/login',
+            ),
+            SchoolSite(
+              name: 'Other school',
+              loginUrl: 'https://other.example/login',
+            ),
+          ];
+          await _pumpSchoolSitesPage(
+            tester,
+            provider,
+            platform: platform,
+            siteService: SchoolSiteService(
+              store: _MemorySchoolSiteStore(encodeSchoolSites(sites)),
+            ),
+          );
+          Finder row(int index) =>
+              find.widgetWithText(ExpressiveDialogOption, sites[index].name);
+          void expectSelected(int selectedIndex) {
+            for (var index = 0; index < sites.length; index++) {
+              final selected = index == selectedIndex;
+              expect(
+                tester.widget<ExpressiveDialogOption>(row(index)).selected,
+                selected,
+              );
+              expect(
+                tester
+                    .getSemantics(row(index))
+                    .getSemanticsData()
+                    .flagsCollection
+                    .isSelected,
+                selected ? ui.Tristate.isTrue : ui.Tristate.isFalse,
+              );
+              expect(
+                find.descendant(
+                  of: row(index),
+                  matching: find.byIcon(Icons.check_circle),
+                ),
+                selected ? findsOneWidget : findsNothing,
+              );
+            }
+            expect(
+              tester.widget<SelectableText>(find.byType(SelectableText)).data,
+              sites[selectedIndex].loginUrl,
+            );
+          }
+
+          expectSelected(0);
+          await tester.tap(
+            find.descendant(of: row(1), matching: find.text(sites[1].name)),
+          );
+          await tester.pumpAndSettle();
+          expectSelected(1);
+
+          await tester.binding.setSurfaceSize(const Size(360, 800));
+          await tester.pumpAndSettle();
+          expect(find.byType(SelectableText), findsNothing);
+          expect(find.byIcon(Icons.check_circle), findsNothing);
+          await tester.tap(
+            find.descendant(of: row(0), matching: find.text(sites[0].name)),
+          );
+          await tester.pumpAndSettle();
+          final opened = tester.widget<SchoolWebImportPage>(
+            find.byType(SchoolWebImportPage),
+          );
+          expect(opened.site.name, sites[0].name);
+          expect(opened.site.loginUrl, sites[0].loginUrl);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+  }
+
   testWidgets(
     'site edit stays beside its list and keeps its draft across rotation',
     (tester) async {
@@ -289,47 +382,108 @@ void main() {
     },
   );
 
-  testWidgets('site form validates and retains its draft after a failed save', (
-    tester,
-  ) async {
-    final store = _MemorySchoolSiteStore('[]');
-    final service = SchoolSiteService(store: store);
-    await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: SchoolSitesPage(siteService: service),
-      ),
+  for (final (platform, size, textScale) in [
+    (TargetPlatform.android, const Size(360, 800), 2.0),
+    (TargetPlatform.windows, const Size(1280, 800), 1.0),
+  ]) {
+    testWidgets(
+      'site form locates errors and retains its draft after a failed save on $platform',
+      (tester) async {
+        await tester.binding.setSurfaceSize(size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final store = _MemorySchoolSiteStore('[]');
+        final service = SchoolSiteService(store: store);
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            theme: ThemeData(platform: platform),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
+            home: SchoolSitesPage(siteService: service),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'Empty school list');
+        final l = AppLocalizations.of(
+          tester.element(find.byType(SchoolSitesPage)),
+        );
+        await tester.tap(find.byTooltip(l.schoolSitesAdd));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'Opened school editor');
+        await tester.tap(find.text(l.save));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'Required field errors');
+        final fields = find.descendant(
+          of: find.byType(AppSheetScaffold),
+          matching: find.byType(TextField),
+        );
+        TextField nameField() => tester.widget<TextField>(fields.at(0));
+        TextField urlField() => tester.widget<TextField>(fields.at(1));
+        expect(nameField().decoration!.errorText, l.schoolSitesNameRequired);
+        expect(urlField().decoration!.errorText, l.schoolSitesLoginUrlRequired);
+        expect(nameField().focusNode!.hasFocus, isTrue);
+        expect(store.source, '[]');
+
+        await tester.enterText(fields.at(0), 'Retained school');
+        await tester.pumpAndSettle();
+        expect(nameField().decoration!.errorText, isNull);
+        expect(urlField().decoration!.errorText, l.schoolSitesLoginUrlRequired);
+        for (final invalidUrl in [
+          'school.example/login',
+          'https://',
+          'ftp://school.example/login',
+        ]) {
+          await tester.enterText(fields.at(1), invalidUrl);
+          await tester.tap(find.text(l.save));
+          await tester.pumpAndSettle();
+          expect(
+            urlField().decoration!.errorText,
+            l.schoolWebImportAddressInvalid,
+          );
+          expect(nameField().decoration!.errorText, isNull);
+          expect(urlField().focusNode!.hasFocus, isTrue);
+          expect(find.text(l.schoolSitesFormInvalid), findsNothing);
+          expect(urlField().controller!.text, invalidUrl);
+          expect(store.source, '[]');
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: 'URL error: $invalidUrl',
+          );
+        }
+
+        await tester.enterText(fields.at(1), 'https://school.example/login');
+        await tester.pumpAndSettle();
+        expect(urlField().decoration!.errorText, isNull);
+        store.failNext = true;
+        await tester.tap(find.text(l.save));
+        await tester.pumpAndSettle();
+        expect(find.byType(AppSheetScaffold), findsOneWidget);
+        expect(find.text(l.saveFailedRetry), findsOneWidget);
+        expect(nameField().controller!.text, 'Retained school');
+        expect(urlField().controller!.text, 'https://school.example/login');
+        expect(store.source, '[]');
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Retryable save failure',
+        );
+        await tester.tap(find.text(l.save));
+        await tester.pumpAndSettle();
+        expect(find.byType(AppSheetScaffold), findsNothing);
+        final saved = decodeSchoolSitesStrict(store.source!).single;
+        expect(saved.name, 'Retained school');
+        expect(saved.loginUrl, 'https://school.example/login');
+        expect(saved.isValid, isTrue);
+        expect(tester.takeException(), isNull);
+      },
     );
-    await tester.pumpAndSettle();
-    final l = AppLocalizations.of(tester.element(find.byType(SchoolSitesPage)));
-    await tester.tap(find.byTooltip(l.schoolSitesAdd));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(l.save));
-    await tester.pumpAndSettle();
-    expect(find.text(l.schoolSitesFormInvalid), findsOneWidget);
-    final fields = find.descendant(
-      of: find.byType(AppSheetScaffold),
-      matching: find.byType(TextField),
-    );
-    await tester.enterText(fields.at(0), 'Retained school');
-    await tester.enterText(fields.at(1), 'https://school.example/login');
-    store.failNext = true;
-    await tester.tap(find.text(l.save));
-    await tester.pumpAndSettle();
-    expect(find.byType(AppSheetScaffold), findsOneWidget);
-    expect(
-      tester.widget<TextField>(fields.at(0)).controller!.text,
-      'Retained school',
-    );
-    await tester.tap(find.text(l.save));
-    await tester.pumpAndSettle();
-    expect(find.byType(AppSheetScaffold), findsNothing);
-    expect(
-      decodeSchoolSitesStrict(store.source!).single.name,
-      'Retained school',
-    );
-  });
+  }
 
   TestWidgetsFlutterBinding.ensureInitialized();
 

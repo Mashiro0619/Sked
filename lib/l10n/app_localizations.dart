@@ -5363,6 +5363,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View event'**
   String get viewEvent;
+
+  /// No description provided for @schoolSitesNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a school name.'**
+  String get schoolSitesNameRequired;
+
+  /// No description provided for @schoolSitesLoginUrlRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a login URL.'**
+  String get schoolSitesLoginUrlRequired;
 }
 
 class _AppLocalizationsDelegate

@@ -2804,6 +2804,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get viewEvent => '查看日程';
+
+  @override
+  String get schoolSitesNameRequired => '请输入学校名称。';
+
+  @override
+  String get schoolSitesLoginUrlRequired => '请输入登录页链接。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5607,4 +5613,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get viewEvent => '查看日程';
+
+  @override
+  String get schoolSitesNameRequired => '請輸入學校名稱。';
+
+  @override
+  String get schoolSitesLoginUrlRequired => '請輸入登入頁面連結。';
 }

@@ -3004,4 +3004,10 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get viewEvent => 'Vaata sündmust';
+
+  @override
+  String get schoolSitesNameRequired => 'Sisesta kooli nimi.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Sisesta sisselogimise URL.';
 }

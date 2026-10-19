@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "일정 보기",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "학교 이름을 입력하세요.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "로그인 URL을 입력하세요.",
+  "@schoolSitesLoginUrlRequired": {}
 }

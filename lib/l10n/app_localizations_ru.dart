@@ -3038,4 +3038,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get viewEvent => 'Посмотреть событие';
+
+  @override
+  String get schoolSitesNameRequired => 'Введите название учебного заведения.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Введите URL страницы входа.';
 }

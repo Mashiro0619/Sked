@@ -3071,4 +3071,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get viewEvent => 'Voir l’événement';
+
+  @override
+  String get schoolSitesNameRequired => 'Saisissez le nom de l’établissement.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Saisissez une URL de connexion.';
 }

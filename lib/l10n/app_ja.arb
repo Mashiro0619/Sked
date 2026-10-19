@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "予定を表示",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "学校名を入力してください。",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "ログインページのURLを入力してください。",
+  "@schoolSitesLoginUrlRequired": {}
 }

@@ -3044,4 +3044,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get viewEvent => 'Termin anzeigen';
+
+  @override
+  String get schoolSitesNameRequired => 'Gib einen Schulnamen ein.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Gib eine Anmelde-URL ein.';
 }

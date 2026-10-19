@@ -3040,4 +3040,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get viewEvent => 'Ver evento';
+
+  @override
+  String get schoolSitesNameRequired => 'Introduza o nome da escola.';
+
+  @override
+  String get schoolSitesLoginUrlRequired =>
+      'Introduza um URL de início de sessão.';
 }

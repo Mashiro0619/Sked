@@ -2065,5 +2065,9 @@
     }
   },
   "viewEvent": "Termin anzeigen",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Gib einen Schulnamen ein.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Gib eine Anmelde-URL ein.",
+  "@schoolSitesLoginUrlRequired": {}
 }

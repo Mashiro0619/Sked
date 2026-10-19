@@ -3000,4 +3000,10 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get viewEvent => 'Vis begivenhed';
+
+  @override
+  String get schoolSitesNameRequired => 'Indtast skolens navn.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Indtast en loginadresse.';
 }

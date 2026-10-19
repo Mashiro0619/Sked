@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Преглед на събитието",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Въведете име на училище.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Въведете URL адрес за вход.",
+  "@schoolSitesLoginUrlRequired": {}
 }

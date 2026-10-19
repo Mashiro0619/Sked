@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Vis begivenhed",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Indtast skolens navn.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Indtast en loginadresse.",
+  "@schoolSitesLoginUrlRequired": {}
 }

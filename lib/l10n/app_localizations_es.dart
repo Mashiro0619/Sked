@@ -3048,4 +3048,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get viewEvent => 'Ver evento';
+
+  @override
+  String get schoolSitesNameRequired =>
+      'Introduce el nombre del centro educativo.';
+
+  @override
+  String get schoolSitesLoginUrlRequired =>
+      'Introduce una URL de inicio de sesión.';
 }

@@ -2997,4 +2997,10 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get viewEvent => 'इवेंट देखें';
+
+  @override
+  String get schoolSitesNameRequired => 'स्कूल का नाम दर्ज करें।';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'लॉगिन URL दर्ज करें।';
 }

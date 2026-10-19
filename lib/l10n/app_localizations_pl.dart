@@ -3022,4 +3022,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get viewEvent => 'Wyświetl wydarzenie';
+
+  @override
+  String get schoolSitesNameRequired => 'Wpisz nazwę szkoły.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Wpisz adres URL logowania.';
 }

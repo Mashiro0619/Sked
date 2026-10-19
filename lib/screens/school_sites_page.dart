@@ -394,6 +394,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) => _SchoolSiteRow(
                     site: _sites[index],
+                    selected: wide && index == selectedIndex,
                     enabled:
                         !_siteEditorOpen &&
                         (wide || (_supportsWebImport && !_webImportOpen)),
@@ -1400,22 +1401,29 @@ class _SchoolSitesEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ExpressiveEmptyState(
-      icon: Icons.school_outlined,
-      title: l10n.schoolSitesPageTitle,
-      message: l10n.schoolSitesEmpty,
-      actions: [
-        FilledButton.icon(
-          onPressed: onAdd,
-          icon: const Icon(Icons.add),
-          label: Text(l10n.schoolSitesAdd),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: ExpressiveEmptyState(
+            icon: Icons.school_outlined,
+            title: l10n.schoolSitesPageTitle,
+            message: l10n.schoolSitesEmpty,
+            actions: [
+              FilledButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.schoolSitesAdd),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: onHtmlImport,
+                icon: const Icon(Icons.code),
+                label: Text(l10n.schoolHtmlImportEntry),
+              ),
+            ],
+          ),
         ),
-        FilledButton.tonalIcon(
-          onPressed: onHtmlImport,
-          icon: const Icon(Icons.code),
-          label: Text(l10n.schoolHtmlImportEntry),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1423,26 +1431,35 @@ class _SchoolSitesEmptyState extends StatelessWidget {
 class _SchoolSiteRow extends StatelessWidget {
   const _SchoolSiteRow({
     required this.site,
+    required this.selected,
     required this.enabled,
     required this.onTap,
     required this.trailing,
   });
 
   final SchoolSite site;
+  final bool selected;
   final bool enabled;
   final VoidCallback? onTap;
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => ExpressiveDialogOption(
-    enabled: enabled,
-    onTap: onTap,
-    leading: const Icon(Icons.school_outlined),
-    title: Text(site.name),
-    subtitle: Text(site.loginUrl),
-    trailing: trailing,
-    titleMaxLines: null,
-    subtitleMaxLines: 2,
+  Widget build(BuildContext context) => ListTileTheme(
+    data: ListTileTheme.of(context).copyWith(
+      selectedTileColor: Theme.of(context).colorScheme.primary
+          .withValues(alpha: 0.12),
+    ),
+    child: ExpressiveDialogOption(
+      selected: selected,
+      enabled: enabled,
+      onTap: onTap,
+      leading: Icon(selected ? Icons.check_circle : Icons.school_outlined),
+      title: Text(site.name),
+      subtitle: Text(site.loginUrl),
+      trailing: trailing,
+      titleMaxLines: null,
+      subtitleMaxLines: 2,
+    ),
   );
 }
 
@@ -1462,6 +1479,9 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
   late final _url = TextEditingController(
     text: widget.initialSite?.loginUrl ?? '',
   );
+  final _nameFocus = FocusNode();
+  final _urlFocus = FocusNode();
+  bool _validationAttempted = false;
   bool _saving = false;
   bool _closing = false;
   String? _error;
@@ -1488,7 +1508,25 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
   void dispose() {
     _name.dispose();
     _url.dispose();
+    _nameFocus.dispose();
+    _urlFocus.dispose();
     super.dispose();
+  }
+
+  String? _validateUrl(AppLocalizations l) {
+    final value = _url.text.trim();
+    if (value.isEmpty) return l.schoolSitesLoginUrlRequired;
+    final uri = Uri.tryParse(value);
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.trim().isEmpty) {
+      return l.schoolWebImportAddressInvalid;
+    }
+    return null;
+  }
+
+  void _handleFieldChanged(String _) {
+    if (_validationAttempted) setState(() {});
   }
 
   Future<void> _save() async {
@@ -1499,7 +1537,11 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
       loginUrl: _url.text.trim(),
     );
     if (!site.isValid) {
-      setState(() => _error = l.schoolSitesFormInvalid);
+      setState(() {
+        _validationAttempted = true;
+        _error = null;
+      });
+      (site.name.isEmpty ? _nameFocus : _urlFocus).requestFocus();
       return;
     }
     setState(() {
@@ -1522,6 +1564,10 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final nameError = _validationAttempted && _name.text.trim().isEmpty
+        ? l.schoolSitesNameRequired
+        : null;
+    final urlError = _validationAttempted ? _validateUrl(l) : null;
     return PopScope(
       canPop: _closing,
       onPopInvokedWithResult: (didPop, _) {
@@ -1551,17 +1597,25 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
                 SkedEditorTextField(
                   label: l.schoolSitesNameLabel,
                   controller: _name,
+                  focusNode: _nameFocus,
                   enabled: !_saving,
                   icon: Icons.school_outlined,
                   headline: true,
+                  errorText: nameError,
+                  errorMaxLines: 4,
+                  onChanged: _handleFieldChanged,
                 ),
                 const SizedBox(height: 16),
                 SkedEditorTextField(
                   label: l.schoolSitesLoginUrlLabel,
                   controller: _url,
+                  focusNode: _urlFocus,
                   enabled: !_saving,
                   keyboardType: TextInputType.url,
                   icon: Icons.link,
+                  errorText: urlError,
+                  errorMaxLines: 4,
+                  onChanged: _handleFieldChanged,
                 ),
                 if (_error != null)
                   Padding(

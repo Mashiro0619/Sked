@@ -2891,4 +2891,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get viewEvent => '予定を表示';
+
+  @override
+  String get schoolSitesNameRequired => '学校名を入力してください。';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'ログインページのURLを入力してください。';
 }

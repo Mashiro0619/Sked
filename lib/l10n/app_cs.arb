@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Zobrazit událost",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Zadejte název školy.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Zadejte adresu přihlašovací stránky.",
+  "@schoolSitesLoginUrlRequired": {}
 }

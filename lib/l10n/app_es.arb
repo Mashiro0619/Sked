@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Ver evento",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Introduce el nombre del centro educativo.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Introduce una URL de inicio de sesión.",
+  "@schoolSitesLoginUrlRequired": {}
 }

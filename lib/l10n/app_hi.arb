@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "इवेंट देखें",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "स्कूल का नाम दर्ज करें।",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "लॉगिन URL दर्ज करें।",
+  "@schoolSitesLoginUrlRequired": {}
 }

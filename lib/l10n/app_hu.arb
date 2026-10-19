@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Esemény megtekintése",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Adja meg az iskola nevét.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Adja meg a bejelentkezési URL-t.",
+  "@schoolSitesLoginUrlRequired": {}
 }

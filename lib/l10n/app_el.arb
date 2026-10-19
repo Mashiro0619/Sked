@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Προβολή συμβάντος",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Εισαγάγετε το όνομα του σχολείου.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Εισαγάγετε τη διεύθυνση URL σύνδεσης.",
+  "@schoolSitesLoginUrlRequired": {}
 }

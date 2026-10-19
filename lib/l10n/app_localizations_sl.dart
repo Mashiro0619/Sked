@@ -3022,4 +3022,10 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get viewEvent => 'Prikaži dogodek';
+
+  @override
+  String get schoolSitesNameRequired => 'Vnesite ime šole.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Vnesite URL za prijavo.';
 }

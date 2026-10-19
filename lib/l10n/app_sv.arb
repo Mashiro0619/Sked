@@ -2082,5 +2082,9 @@
     }
   },
   "viewEvent": "Visa händelse",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Ange skolans namn.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Ange en inloggningsadress.",
+  "@schoolSitesLoginUrlRequired": {}
 }

@@ -2082,5 +2082,9 @@
     }
   },
   "viewEvent": "Xem sự kiện",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Nhập tên trường.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Nhập URL đăng nhập.",
+  "@schoolSitesLoginUrlRequired": {}
 }

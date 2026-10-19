@@ -2082,5 +2082,9 @@
     }
   },
   "viewEvent": "ดูกิจกรรม",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "กรุณากรอกชื่อโรงเรียน",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "กรุณากรอก URL สำหรับเข้าสู่ระบบ",
+  "@schoolSitesLoginUrlRequired": {}
 }

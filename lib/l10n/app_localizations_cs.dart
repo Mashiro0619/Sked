@@ -3012,4 +3012,11 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get viewEvent => 'Zobrazit událost';
+
+  @override
+  String get schoolSitesNameRequired => 'Zadejte název školy.';
+
+  @override
+  String get schoolSitesLoginUrlRequired =>
+      'Zadejte adresu přihlašovací stránky.';
 }

@@ -3044,4 +3044,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get viewEvent => 'Vezi evenimentul';
+
+  @override
+  String get schoolSitesNameRequired => 'Introduceți numele școlii.';
+
+  @override
+  String get schoolSitesLoginUrlRequired =>
+      'Introduceți un URL de autentificare.';
 }

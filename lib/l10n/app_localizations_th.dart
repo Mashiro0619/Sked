@@ -2982,4 +2982,10 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get viewEvent => 'ดูกิจกรรม';
+
+  @override
+  String get schoolSitesNameRequired => 'กรุณากรอกชื่อโรงเรียน';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'กรุณากรอก URL สำหรับเข้าสู่ระบบ';
 }

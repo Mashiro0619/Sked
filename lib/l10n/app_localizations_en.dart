@@ -2986,4 +2986,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewEvent => 'View event';
+
+  @override
+  String get schoolSitesNameRequired => 'Enter a school name.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Enter a login URL.';
 }

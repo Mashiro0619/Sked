@@ -2070,5 +2070,9 @@
     }
   },
   "viewEvent": "View event",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Enter a school name.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Enter a login URL.",
+  "@schoolSitesLoginUrlRequired": {}
 }

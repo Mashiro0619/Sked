@@ -2067,5 +2067,9 @@
     }
   },
   "viewEvent": "Vaata sündmust",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Sisesta kooli nimi.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Sisesta sisselogimise URL.",
+  "@schoolSitesLoginUrlRequired": {}
 }

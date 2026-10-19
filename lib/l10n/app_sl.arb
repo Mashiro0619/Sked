@@ -2082,5 +2082,9 @@
     }
   },
   "viewEvent": "Prikaži dogodek",
-  "@viewEvent": {}
+  "@viewEvent": {},
+  "schoolSitesNameRequired": "Vnesite ime šole.",
+  "@schoolSitesNameRequired": {},
+  "schoolSitesLoginUrlRequired": "Vnesite URL za prijavo.",
+  "@schoolSitesLoginUrlRequired": {}
 }

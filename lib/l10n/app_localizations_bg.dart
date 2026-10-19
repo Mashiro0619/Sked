@@ -3054,4 +3054,10 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get viewEvent => 'Преглед на събитието';
+
+  @override
+  String get schoolSitesNameRequired => 'Въведете име на училище.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Въведете URL адрес за вход.';
 }

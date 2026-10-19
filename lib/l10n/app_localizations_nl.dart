@@ -3030,4 +3030,10 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get viewEvent => 'Afspraak bekijken';
+
+  @override
+  String get schoolSitesNameRequired => 'Voer een schoolnaam in.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => 'Voer een inlog-URL in.';
 }

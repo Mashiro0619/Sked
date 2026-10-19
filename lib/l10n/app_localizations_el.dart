@@ -3059,4 +3059,11 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get viewEvent => 'Προβολή συμβάντος';
+
+  @override
+  String get schoolSitesNameRequired => 'Εισαγάγετε το όνομα του σχολείου.';
+
+  @override
+  String get schoolSitesLoginUrlRequired =>
+      'Εισαγάγετε τη διεύθυνση URL σύνδεσης.';
 }

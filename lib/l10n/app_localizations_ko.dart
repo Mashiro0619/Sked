@@ -2899,4 +2899,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get viewEvent => '일정 보기';
+
+  @override
+  String get schoolSitesNameRequired => '학교 이름을 입력하세요.';
+
+  @override
+  String get schoolSitesLoginUrlRequired => '로그인 URL을 입력하세요.';
 }
