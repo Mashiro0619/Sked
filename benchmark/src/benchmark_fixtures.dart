@@ -21,6 +21,9 @@ const performanceTimetableCount = 5;
 const performanceCoursesPerTimetable = 1000;
 const performanceSchoolSiteCount = 128;
 
+// Freeze the historical fixture color independently of product theme defaults.
+const _fixtureThemeSeedColorValue = 0xff6750a4;
+
 class PerformanceFixtures {
   PerformanceFixtures._({
     required this.generalData1000,
@@ -146,6 +149,7 @@ GeneralScheduleData _buildGeneralData(int eventCount) {
     dayStartHour: 6,
     dayEndHour: 23,
     timeGridMinutes: 30,
+    themeSeedColorValue: _fixtureThemeSeedColorValue,
     colorfulUiColorValues: const {
       'primary': 0xff336699,
       'secondary': 0xff669933,
@@ -270,6 +274,7 @@ AppData _buildAppData(GeneralScheduleData generalData) {
       'slot-1': 'course-0-1',
       'slot-2': 'course-1-2',
     },
+    themeSeedColorValue: _fixtureThemeSeedColorValue,
     colorfulUiColorValues: const {'primary': 0xff336699},
     courseNameColorValues: const {
       'Course 0-0': 0xff123456,
