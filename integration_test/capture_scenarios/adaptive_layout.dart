@@ -229,10 +229,22 @@ void registerCaptureScenarios() {
           await t.pumpAndSettle();
           await capture('time');
           if (size.width < 600 && platform == TargetPlatform.android) {
-            await t.enterText(
-              find.byKey(const ValueKey('sked-time-minute-input')),
-              '17',
+            final minuteInput = find.byKey(
+              const ValueKey('sked-time-minute-input'),
             );
+            if (minuteInput.evaluate().isEmpty) {
+              final keyboardMode = find.byKey(
+                const ValueKey('sked-time-input-toggle'),
+              );
+              expect(keyboardMode, findsOneWidget);
+              await t.ensureVisible(keyboardMode);
+              await t.pumpAndSettle();
+              await t.tap(keyboardMode);
+              await t.pumpAndSettle();
+            }
+            expect(minuteInput, findsOneWidget);
+            await t.enterText(minuteInput, '17');
+            expect(t.widget<TextField>(minuteInput).controller!.text, '17');
             t.view.viewInsets = const FakeViewPadding(bottom: 300);
             t.view.padding = const FakeViewPadding(top: 24);
             await t.pumpAndSettle();

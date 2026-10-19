@@ -320,10 +320,8 @@ void registerCaptureScenarios() {
             await tester.pumpAndSettle();
           }
           if (name == 'category-editor') {
-            expect(find.byType(AlertDialog), findsOneWidget);
-            expect(find.byType(BackButton), findsOneWidget);
             expect(
-              find.byKey(const ValueKey('rename-calendar-field')),
+              find.byKey(const ValueKey('rename-calendar-field')).hitTestable(),
               findsOneWidget,
             );
             expect(provider.generalView.schedules.first.isVisible, isTrue);

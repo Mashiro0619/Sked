@@ -217,7 +217,10 @@ void registerCaptureScenarios() {
         final details = find.byType(GeneralEventDetailsSheet);
         final l = AppLocalizations.of(t.element(details));
         await tap(
-          find.descendant(of: details, matching: find.byTooltip(l.editEvent)),
+          find.descendant(
+            of: details,
+            matching: key('general-event-edit-action'),
+          ),
         );
         final editor = find.byType(GeneralEventEditorSheet);
         await tap(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -26,6 +27,7 @@ void registerCaptureScenarios() {
       ),
     );
     await output.create(recursive: true);
+    final captures = <Map<String, Object?>>[];
     addTearDown(t.view.reset);
     for (final mode in AppMode.values) {
       for (final locale in ['zh', 'en']) {
@@ -34,6 +36,15 @@ void registerCaptureScenarios() {
             t.view.devicePixelRatio = 1;
             t.view.physicalSize = const Size(1600, 1100);
             final p = await workspaceProvider(mode: mode, locale: locale);
+            String domainSnapshot() => jsonEncode({
+              'timetables': p.studentView.timetables
+                  .map((table) => table.toJson())
+                  .toList(),
+              'calendars': p.generalView.schedules
+                  .map((calendar) => calendar.toJson())
+                  .toList(),
+            });
+            final originalDomainData = domainSnapshot();
             final captureKey = GlobalKey();
             await t.pumpWidget(
               RepaintBoundary(
@@ -124,6 +135,7 @@ void registerCaptureScenarios() {
               ),
               findsWidgets,
             );
+            final initialTimeGeometry = <String, Object?>{};
             Future<void> capture(String state, {bool settle = true}) async {
               if (settle) await t.pumpAndSettle();
               expect(t.takeException(), isNull);
@@ -135,9 +147,22 @@ void registerCaptureScenarios() {
                 final bytes = (await image.toByteData(
                   format: ui.ImageByteFormat.png,
                 ))!;
-                await File(
-                  '${output.path}/${mode.name}-$locale-$scale-${editing ? 'edit' : 'add'}-$state.png',
-                ).writeAsBytes(bytes.buffer.asUint8List());
+                final filename =
+                    '${mode.name}-$locale-$scale-${editing ? 'edit' : 'add'}-$state.png';
+                await File('${output.path}/$filename')
+                    .writeAsBytes(bytes.buffer.asUint8List());
+                captures.add({
+                  'file': filename,
+                  'mode': mode.name,
+                  'locale': locale,
+                  'textScale': scale,
+                  'editing': editing,
+                  'state': state,
+                  'widthPx': image.width,
+                  'heightPx': image.height,
+                  if (initialTimeGeometry.isNotEmpty)
+                    'initialTimeGeometry': initialTimeGeometry,
+                });
               } finally {
                 image.dispose();
               }
@@ -162,26 +187,81 @@ void registerCaptureScenarios() {
                 of: rows,
                 matching: find.text(strings.eventStartTime),
               );
-              expect(
-                t.getCenter(startLabel).dy,
-                closeTo(t.getCenter(dates.first).dy, .1),
+              final endLabel = find.descendant(
+                of: rows,
+                matching: find.text(strings.eventEndTime),
               );
+              final geometry = <String, ui.Rect>{
+                'startLabel': t.getRect(startLabel),
+                'startDate': t.getRect(dates.first),
+                'startTime': t.getRect(times.first),
+                'allDaySwitch': t.getRect(toggle),
+                'endLabel': t.getRect(endLabel),
+                'endDate': t.getRect(dates.last),
+                'endTime': t.getRect(times.last),
+              };
+              final entries = geometry.entries.toList();
+              for (var i = 0; i < entries.length; i++) {
+                for (var j = i + 1; j < entries.length; j++) {
+                  expect(
+                    entries[i].value.overlaps(entries[j].value),
+                    isFalse,
+                    reason:
+                        '${entries[i].key} must not overlap ${entries[j].key}',
+                  );
+                }
+              }
+              final labelRect = geometry['startLabel']!;
+              final dateRect = geometry['startDate']!;
+              final switchRect = geometry['allDaySwitch']!;
+              final inline =
+                  (labelRect.center.dy - dateRect.center.dy).abs() < .1;
               expect(
-                t.getCenter(toggle).dy,
-                closeTo(t.getCenter(dates.first).dy, .1),
+                switchRect.center.dy,
+                closeTo(labelRect.center.dy, .1),
+                reason: 'All-day remains aligned with the start label.',
               );
+              if (!inline) {
+                expect(
+                  labelRect.bottom,
+                  lessThanOrEqualTo(dateRect.top + .1),
+                  reason: 'A long label can move above its date control.',
+                );
+              }
+              for (final prefix in ['start', 'end']) {
+                final date = geometry['${prefix}Date']!;
+                final time = geometry['${prefix}Time']!;
+                final shareRow = (date.center.dy - time.center.dy).abs() < .1;
+                if (!shareRow) {
+                  expect(
+                    time.top,
+                    greaterThanOrEqualTo(date.bottom - .1),
+                    reason: 'Stacked time follows its date.',
+                  );
+                }
+              }
+              final startTimeRect = geometry['startTime']!;
+              final startBottom = dateRect.bottom > startTimeRect.bottom
+                  ? dateRect.bottom
+                  : startTimeRect.bottom;
               expect(
-                t.getCenter(times.first).dy,
-                closeTo(t.getCenter(dates.first).dy, .1),
+                geometry['endLabel']!.top,
+                greaterThanOrEqualTo(startBottom - .1),
+                reason: 'The end interval follows the whole start interval.',
               );
-              expect(
-                t.getRect(dates.last).top,
-                greaterThan(t.getRect(dates.first).bottom),
-              );
-              expect(
-                t.getRect(dates.first).left,
-                closeTo(t.getRect(dates.last).left, .1),
-              );
+              expect(geometry['endDate']!.left, closeTo(dateRect.left, .1));
+              initialTimeGeometry.addAll({
+                'layout': inline ? 'inline-labels' : 'labels-above',
+                'rects': {
+                  for (final entry in geometry.entries)
+                    entry.key: {
+                      'left': entry.value.left,
+                      'top': entry.value.top,
+                      'right': entry.value.right,
+                      'bottom': entry.value.bottom,
+                    },
+                },
+              });
             }
             await capture('floating');
             if (scale == 1) {
@@ -240,6 +320,11 @@ void registerCaptureScenarios() {
               expect(find.text(l.saveFailedRetry), findsWidgets);
               await capture('save-error');
             }
+            expect(
+              domainSnapshot(),
+              originalDomainData,
+              reason: 'Preview, layout changes and failed saves preserve domain data.',
+            );
             await t.pumpWidget(const SizedBox());
             await t.pumpAndSettle();
             p.dispose();
@@ -247,5 +332,14 @@ void registerCaptureScenarios() {
         }
       }
     }
+    expect(captures, hasLength(64));
+    await File('${output.path}/manifest.json').writeAsString(
+      const JsonEncoder.withIndent('  ').convert({
+        'captures': captures,
+        'source': 'integration_test/capture_scenarios/workspace_editor.dart',
+        'captureValidation': 'Allow labels above controls; verify interval order, no overlaps and unchanged domain data.',
+        'evidence': 'Actual Windows Flutter renderer with in-memory data; synthetic pointer and injected save failure, not native device or storage acceptance.',
+      }),
+    );
   });
 }

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 
 import '../../test/support/workspace_harness.dart';
@@ -79,6 +80,7 @@ void registerCaptureScenarios() {
             ),
           );
           await t.pumpAndSettle();
+          Map<String, Object?>? agendaGeometry;
           Future<Uint8List?> capture(String scene) async {
             expect(t.takeException(), isNull, reason: '$name $scene');
             final render =
@@ -98,6 +100,7 @@ void registerCaptureScenarios() {
                 'textScale': scale,
                 'brightness': brightness.name,
                 'platformStyle': platform.name,
+                'agendaGeometry': ?agendaGeometry,
                 'evidence': 'Windows Flutter renderer and real fonts; viewport and Android safe insets simulated, not Android device acceptance.',
               });
               final bar = k('adaptive-shell-navigation-bar');
@@ -146,10 +149,54 @@ void registerCaptureScenarios() {
             }
             await t.tap(k('general-day-agenda-toggle').hitTestable());
             await t.pumpAndSettle();
-            final header = t.getRect(k('workspace-inspector-header'));
-            final close = t.getRect(k('workspace-inspector-close'));
-            expect(close.top - header.top, 8);
-            expect(header.right - close.right, 8);
+            final agenda = k('general-selected-day-agenda');
+            expect(agenda, findsOneWidget);
+            final headerFinder = find.descendant(
+              of: agenda,
+              matching: k('workspace-view-header'),
+            );
+            final closeFinder = find.descendant(
+              of: agenda,
+              matching: k('workspace-inspector-close'),
+            );
+            final l10n = AppLocalizations.of(t.element(agenda));
+            final titleFinder = find.descendant(
+              of: headerFinder,
+              matching: find.text(l10n.selectedDayAgenda),
+            );
+            final rows = find.descendant(
+              of: agenda,
+              matching: find.byWidgetPredicate((widget) {
+                final key = widget.key;
+                return key is ValueKey<String> &&
+                    key.value.startsWith('general-agenda-');
+              }),
+            );
+            final firstItem = rows.evaluate().isNotEmpty
+                ? rows.first
+                : find.descendant(
+                    of: agenda,
+                    matching: find.text(l10n.noUpcomingEvents),
+                  );
+            expect(titleFinder.hitTestable(), findsOneWidget);
+            expect(closeFinder.hitTestable(), findsOneWidget);
+            expect(firstItem.hitTestable(), findsOneWidget);
+            final header = t.getRect(headerFinder);
+            final close = t.getRect(closeFinder);
+            final title = t.getRect(titleFinder);
+            final first = t.getRect(firstItem);
+            expect(title.overlaps(close), isFalse);
+            expect(header.bottom, lessThanOrEqualTo(first.top + .1));
+            expect(header.inflate(.1).contains(title.topLeft), isTrue);
+            expect(header.inflate(.1).contains(title.bottomRight), isTrue);
+            agendaGeometry = {
+              'headerKey': 'workspace-view-header',
+              'closeTopInset': close.top - header.top,
+              'closeRightInset': header.right - close.right,
+              'headerToFirstItemGap': first.top - header.bottom,
+              'titleCloseOverlap': title.overlaps(close),
+              'firstItemVisible': true,
+            };
             await capture('agenda-close-spacing');
             final mouse = await t.createGesture(
               kind: ui.PointerDeviceKind.mouse,
@@ -167,6 +214,7 @@ void registerCaptureScenarios() {
           await t.pumpWidget(const SizedBox.shrink());
           p.dispose();
         }
+        expect(manifest, hasLength(25));
       } finally {
         debugDefaultTargetPlatformOverride = null;
         DesktopWindowBridge.instance.available = true;
