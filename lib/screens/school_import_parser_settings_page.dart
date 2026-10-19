@@ -255,7 +255,10 @@ class _SchoolImportParserSettingsPageState
                           const SizedBox(height: 16),
                           SettingsSectionHeader(title: l10n.settingsAdvanced),
                           ExpansionTile(
-                            tilePadding: EdgeInsets.zero,
+                            tilePadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
                             childrenPadding: const EdgeInsets.only(top: 8),
                             initiallyExpanded: false,
                             title: Text(
@@ -955,7 +958,7 @@ class _ModelListDialogState extends State<_ModelListDialog>
                     toggleable: true,
                     selected: _selectedModel == model,
                     title: Text(model),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                     controlAffinity: ListTileControlAffinity.leading,
                   );
                 },

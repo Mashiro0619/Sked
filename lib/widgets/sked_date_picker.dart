@@ -1423,7 +1423,15 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
               ),
               style: TextButton.styleFrom(
                 alignment: AlignmentDirectional.centerStart,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                // Compact density otherwise removes vertical padding from the
+                // hover surface even when a larger inset is supplied here.
+                visualDensity: metrics.desktop ? VisualDensity.standard : null,
+                padding: metrics.desktop
+                    ? EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: widget.embedded ? 4 : 6,
+                      )
+                    : const EdgeInsets.symmetric(horizontal: 4),
                 minimumSize: Size(0, metrics.iconTarget),
                 tapTargetSize: metrics.desktop
                     ? MaterialTapTargetSize.shrinkWrap

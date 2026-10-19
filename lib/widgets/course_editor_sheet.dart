@@ -873,7 +873,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                                   CheckboxListTile(
                                     dense: true,
                                     contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
+                                      horizontal: 12,
                                     ),
                                     title: Text(
                                       l10n.periodNumberLabel(period.index),

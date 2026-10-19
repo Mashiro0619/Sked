@@ -680,7 +680,7 @@ class WorkspaceEditorDisclosure extends StatelessWidget {
         ),
         subtitle: subtitle == null ? null : Text(subtitle!),
         tilePadding: compact
-            ? EdgeInsets.zero
+            ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
             : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
         childrenPadding: compact
             ? const EdgeInsets.only(top: 12)

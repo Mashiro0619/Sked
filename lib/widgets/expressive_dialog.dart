@@ -208,7 +208,7 @@ class ExpressiveDialogOption extends StatelessWidget {
         selected: selected,
         enabled: enabled,
         contentPadding:
-            contentPadding ?? const EdgeInsets.symmetric(horizontal: 4),
+            contentPadding ?? const EdgeInsets.symmetric(horizontal: 12),
         minVerticalPadding: 8,
         leading: leading == null
             ? null
