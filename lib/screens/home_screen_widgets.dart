@@ -768,13 +768,13 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
   void _scheduleRevealSelected(_DayStripMetrics? metrics) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || metrics == null || !_scrollController.hasClients) return;
-      if (widget.fitToWidth) {
+      final position = _scrollController.position;
+      if (position.maxScrollExtent <= 0.5) {
         if (_scrollController.offset.abs() >= 0.5) {
           _scrollController.jumpTo(0);
         }
         return;
       }
-      final position = _scrollController.position;
       final selectedCenter =
           metrics.padding +
           ((widget.selectedWeekday - 1) * metrics.itemExtent) +
@@ -809,31 +809,61 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
     final today = DateTime.now();
     final textScaler = MediaQuery.textScalerOf(context);
     final textDirection = Directionality.of(context);
-    double singleLineHeight(String text, TextStyle? style) {
+    final boldText = MediaQuery.boldTextOf(context);
+    Size singleLineSize(String text, TextStyle? style) {
+      var effectiveStyle = DefaultTextStyle.of(context).style.merge(style);
+      if (boldText) {
+        effectiveStyle = effectiveStyle.copyWith(fontWeight: FontWeight.bold);
+      }
       final painter = TextPainter(
-        text: TextSpan(text: text, style: style),
+        text: TextSpan(text: text, style: effectiveStyle),
         maxLines: 1,
         textDirection: textDirection,
         textScaler: textScaler,
+        locale: Localizations.maybeLocaleOf(context),
       )..layout();
-      return painter.height;
+      final size = painter.size;
+      painter.dispose();
+      return size;
     }
 
     final localeCode = Localizations.localeOf(context).toLanguageTag();
-    final weekdayHeight = List.generate(
+    final weekdayLabels = List.generate(
       7,
-      (index) => singleLineHeight(
-        formatWeekdayShortLabel(index + 1, localeCode: localeCode),
-        theme.textTheme.labelMedium,
-      ),
-    ).reduce(math.max);
-    final dateHeight = List.generate(
+      (index) => formatWeekdayShortLabel(index + 1, localeCode: localeCode),
+    );
+    final dateLabels = List.generate(
       7,
-      (index) => singleLineHeight(
-        '${addCalendarDays(widget.weekStart, index).day}',
-        theme.textTheme.titleMedium,
-      ),
-    ).reduce(math.max);
+      (index) => '${addCalendarDays(widget.weekStart, index).day}',
+    );
+    final weekdaySizes = [
+      for (final label in weekdayLabels)
+        for (final weight in const [FontWeight.w500, FontWeight.w700])
+          singleLineSize(
+            label,
+            theme.textTheme.labelMedium?.copyWith(fontWeight: weight),
+          ),
+    ];
+    final dateSizes = [
+      for (final label in dateLabels)
+        for (final weight in const [FontWeight.w600, FontWeight.w800])
+          singleLineSize(
+            label,
+            theme.textTheme.titleMedium?.copyWith(fontWeight: weight),
+          ),
+    ];
+    final weekdayHeight = weekdaySizes
+        .map((size) => size.height)
+        .reduce(math.max);
+    final dateHeight = dateSizes.map((size) => size.height).reduce(math.max);
+    final weekdayWidth = weekdaySizes
+        .map((size) => size.width)
+        .reduce(math.max);
+    final dateWidth = dateSizes.map((size) => size.width).reduce(math.max);
+    // Include both selection weights, horizontal padding and the two borders.
+    // Fitting all seven days is a preference, subject to readable labels.
+    final minimumItemWidth = (math.max(weekdayWidth, dateWidth) + 10)
+        .ceilToDouble();
     final stripHeight = math
         .max(60.0, weekdayHeight + dateHeight + 12)
         .ceilToDouble();
@@ -842,6 +872,7 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
         final metrics = _DayStripMetrics.fromWidth(
           constraints.maxWidth,
           fitToWidth: widget.fitToWidth,
+          minimumItemWidth: minimumItemWidth,
         );
         _lastMetrics = metrics;
         _scheduleRevealSelected(metrics);
@@ -926,16 +957,15 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
                               ? () => widget.onSelected(weekday)
                               : null,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 3,
+                            ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  formatWeekdayShortLabel(
-                                    weekday,
-                                    localeCode: Localizations.localeOf(context)
-                                        .toLanguageTag(),
-                                  ),
+                                  weekdayLabels[index],
                                   style: theme.textTheme.labelMedium?.copyWith(
                                     color: foreground,
                                     fontWeight: selected
@@ -947,7 +977,7 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
                                   softWrap: false,
                                 ),
                                 Text(
-                                  '${date.day}',
+                                  dateLabels[index],
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     color: foreground,
                                     fontWeight: selected
@@ -988,15 +1018,23 @@ class _DayStripMetrics {
 
   double get itemExtent => itemWidth + gap;
 
-  factory _DayStripMetrics.fromWidth(double width, {required bool fitToWidth}) {
+  factory _DayStripMetrics.fromWidth(
+    double width, {
+    required bool fitToWidth,
+    required double minimumItemWidth,
+  }) {
     if (!fitToWidth) {
-      return const _DayStripMetrics(itemWidth: 54, gap: 4, padding: 4);
+      return _DayStripMetrics(
+        itemWidth: math.max(54, minimumItemWidth),
+        gap: 4,
+        padding: 4,
+      );
     }
     final safeWidth = width.isFinite && width > 0 ? width : 320.0;
     const gap = 2.0;
     const padding = 0.0;
     return _DayStripMetrics(
-      itemWidth: math.max(1.0, (safeWidth - gap * 6) / 7),
+      itemWidth: math.max(minimumItemWidth, (safeWidth - gap * 6) / 7),
       gap: gap,
       padding: padding,
     );
@@ -1606,8 +1644,7 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
         : widget.snapshot.liveCourseOutlineColorValue;
     final horizontalHandoffEnabled =
         widget.swipeEnabled &&
-        ((widget.viewMode == _StudentTimetableView.day &&
-                !widget.fitDaySelectorToWidth) ||
+        (widget.viewMode == _StudentTimetableView.day ||
             (widget.viewMode == _StudentTimetableView.week &&
                 !widget.fitWeekColumnsToWidth));
     final currentPageInteractive =

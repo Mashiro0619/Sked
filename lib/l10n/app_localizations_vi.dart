@@ -1301,25 +1301,25 @@ class AppLocalizationsVi extends AppLocalizations {
   String get weekdaySunday => 'Chủ nhật';
 
   @override
-  String get weekdayShortMonday => 'Thứ Hai';
+  String get weekdayShortMonday => 'T2';
 
   @override
-  String get weekdayShortTuesday => 'Thứ ba';
+  String get weekdayShortTuesday => 'T3';
 
   @override
-  String get weekdayShortWednesday => 'Thứ Tư';
+  String get weekdayShortWednesday => 'T4';
 
   @override
-  String get weekdayShortThursday => 'Thứ Năm';
+  String get weekdayShortThursday => 'T5';
 
   @override
-  String get weekdayShortFriday => 'Thứ Sáu';
+  String get weekdayShortFriday => 'T6';
 
   @override
-  String get weekdayShortSaturday => 'Thứ bảy';
+  String get weekdayShortSaturday => 'T7';
 
   @override
-  String get weekdayShortSunday => 'Mặt trời';
+  String get weekdayShortSunday => 'CN';
 
   @override
   String get monthJanuary => 'Tháng Jan';
