@@ -3,6 +3,7 @@ import 'dart:ui' show Tristate;
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,6 +11,8 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/theme/app_theme.dart';
+import 'package:sked/theme/color_contrast.dart';
+import 'package:sked/theme/sked_surface.dart';
 import 'package:sked/widgets/sked_week_picker.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
@@ -31,6 +34,8 @@ Future<void> _open(
   double scale = 1,
   Locale locale = const Locale('en'),
   Brightness brightness = Brightness.light,
+  Color seedColor = Colors.deepPurple,
+  bool boldText = false,
   FocusNode? triggerFocus,
   bool Function()? isCurrent,
   bool rtl = false,
@@ -42,7 +47,7 @@ Future<void> _open(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: buildAppTheme(
-        seedColor: Colors.deepPurple,
+        seedColor: seedColor,
         brightness: brightness,
         themeColorMode: themeColorModeSingle,
         colorfulUiColorValues: const {},
@@ -50,6 +55,7 @@ Future<void> _open(
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: TextScaler.linear(scale),
+          boldText: boldText,
           disableAnimations: reducedMotion,
         ),
         child: Directionality(
@@ -105,6 +111,82 @@ void _visible(WidgetTester t, int week) {
 }
 
 void main() {
+  for (final scenario in [
+    (selected: 95, bold: false),
+    (selected: 100, bold: false),
+    (selected: 100, bold: true),
+  ]) {
+    testWidgets(
+      'three-digit mobile week keeps its large text inside selected and focused markers: $scenario',
+      (t) async {
+        _size(t, const Size(360, 800));
+        final originalStrategy = FocusManager.instance.highlightStrategy;
+        addTearDown(
+          () => FocusManager.instance.highlightStrategy = originalStrategy,
+        );
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.alwaysTraditional;
+        final results = <int?>[];
+        await _open(
+          t,
+          results,
+          count: 100,
+          selected: scenario.selected,
+          scale: 2,
+          seedColor: Colors.white,
+          boldText: scenario.bold,
+        );
+        t.widget<Focus>(_key('sked-week-grid-focus')).focusNode!.requestFocus();
+        await t.sendKeyEvent(LogicalKeyboardKey.end);
+        await t.pumpAndSettle();
+        _visible(t, 100);
+        final marker = _key('student-week-touch-marker-100');
+        final markerRect = t.getRect(marker);
+        final text = find.descendant(
+          of: _week(100),
+          matching: find.text('100'),
+        );
+        final paragraph = t.renderObject<RenderParagraph>(text);
+        if (scenario.bold) {
+          expect(paragraph.text.style!.fontWeight, FontWeight.bold);
+        }
+        final textRect = t.getRect(text);
+        expect(paragraph.didExceedMaxLines, isFalse);
+        expect(markerRect.width, greaterThan(markerRect.height));
+        expect(textRect.left, greaterThan(markerRect.left + 2));
+        expect(textRect.right, lessThan(markerRect.right - 2));
+        expect(textRect.top, greaterThan(markerRect.top + 2));
+        expect(textRect.bottom, lessThan(markerRect.bottom - 2));
+        final decoration =
+            t.widget<DecoratedBox>(marker).decoration as BoxDecoration;
+        final border = decoration.border! as Border;
+        final surface = SkedSurface.colorOf(t.element(marker));
+        final background = Color.alphaBlend(
+          decoration.color ?? Colors.transparent,
+          surface,
+        );
+        expect(
+          colorContrastRatio(
+            Color.alphaBlend(border.top.color, background),
+            background,
+          ),
+          greaterThanOrEqualTo(3),
+        );
+        expect(t.widget<Semantics>(_week(100)).properties.focused, isTrue);
+        expect(
+          t.widget<Semantics>(_week(100)).properties.selected,
+          scenario.selected == 100,
+        );
+        expect(results, isEmpty);
+        await t.sendKeyEvent(LogicalKeyboardKey.enter);
+        await t.pumpAndSettle();
+        expect(results, [100]);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
   for (final today in [
     DateTime(2026, 9, 12),
     DateTime(2026, 9, 6),

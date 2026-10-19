@@ -137,10 +137,20 @@ void main() {
           );
           expect(number.style!.fontSize, 18);
           expect(number.style!.fontWeight, FontWeight.w600);
-          expect(
-            marker(t, 'student-week-touch-marker-2').shape,
-            BoxShape.circle,
+          if (scale == 1) {
+            expect(
+              marker(t, 'student-week-touch-marker-2').shape,
+              BoxShape.circle,
+            );
+          }
+          final selectedMarker = t.getRect(key('student-week-touch-marker-2'));
+          final selectedNumber = t.getRect(
+            find.descendant(of: week(2), matching: find.text('2')),
           );
+          expect(selectedNumber.left, greaterThan(selectedMarker.left + 2));
+          expect(selectedNumber.right, lessThan(selectedMarker.right - 2));
+          expect(selectedNumber.top, greaterThan(selectedMarker.top + 2));
+          expect(selectedNumber.bottom, lessThan(selectedMarker.bottom - 2));
           expect(marker(t, 'student-week-touch-marker-2').border, isNull);
           expect(t.getSize(week(2)).height, greaterThanOrEqualTo(48));
           expect(
@@ -314,12 +324,13 @@ void main() {
         final grid = t.widget<GridView>(key('sked-week-picker-grid'));
         final layout =
             grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-        expect(layout.crossAxisCount, switch (count) {
-          1 => 1,
-          18 => 5,
-          19 => 5,
-          _ => 5,
-        });
+        final columns = layout.crossAxisCount;
+        expect(columns, inInclusiveRange(1, 7));
+        expect(columns, lessThanOrEqualTo(count));
+        final rows = (count / columns).ceil();
+        // Fewer columns should require another row; wide text may reduce the
+        // available columns, but the grid should still avoid spare columns.
+        expect((columns - 1) * rows, lessThan(count));
         final selected = p.studentView.selectedWeek;
         final rect = t.getRect(week(selected));
         final viewport = t.getRect(key('sked-week-picker-grid'));
@@ -336,6 +347,14 @@ void main() {
         expect(p.studentView.selectedWeek, selected);
         expect(storage.writes, before);
         expect(marker(t, 'student-week-touch-marker-$count').border, isNotNull);
+        final markerRect = t.getRect(key('student-week-touch-marker-$count'));
+        final labelRect = t.getRect(
+          find.descendant(of: week(count), matching: find.text('$count')),
+        );
+        expect(labelRect.left, greaterThan(markerRect.left + 2));
+        expect(labelRect.right, lessThan(markerRect.right - 2));
+        expect(labelRect.top, greaterThan(markerRect.top + 2));
+        expect(labelRect.bottom, lessThan(markerRect.bottom - 2));
         await t.sendKeyEvent(LogicalKeyboardKey.space);
         await t.pumpAndSettle();
         expect(p.studentView.selectedWeek, count);

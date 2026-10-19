@@ -12,6 +12,7 @@ import 'sked_tooltip.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
+import '../theme/sked_surface.dart';
 import 'sked_panel_header.dart';
 import 'sked_picker_task.dart';
 import 'workbench_chrome_metrics.dart';
@@ -98,12 +99,31 @@ class _WeekGridLayout {
     int count,
   ) {
     final metrics = WorkbenchChromeMetrics.of(context);
-    final rowHeight = math.max(
+    final compact = WorkbenchChromeMetrics.compactTouch(context);
+    var rowHeight = math.max(
       metrics.desktop ? 36.0 : 48.0,
       20 * metrics.textScale + 12,
     );
-    final minimumWidth = math.max(rowHeight, 48 * metrics.textScale);
-    final compact = WorkbenchChromeMetrics.compactTouch(context);
+    var minimumWidth = math.max(rowHeight, 48 * metrics.textScale);
+    if (compact) {
+      final label = TextPainter(
+        text: TextSpan(
+          text: '$count',
+          style: _touchWeekLabelStyle(context, selected: true),
+        ),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      // The widest selectable number must fit its marker before deciding how
+      // many columns are available, including custom fonts and large text.
+      rowHeight = math.max(rowHeight, label.height + 14).ceilToDouble();
+      minimumWidth = math.max(
+        minimumWidth,
+        _touchWeekMarkerSize(label.size, rowHeight).width,
+      );
+      label.dispose();
+    }
     final fittingColumns = ((width + gap) / (minimumWidth + gap)).floor().clamp(
       1,
       compact ? 7 : 5,
@@ -114,6 +134,43 @@ class _WeekGridLayout {
     final columns = compact ? (count / rows).ceil() : fittingColumns;
     return _WeekGridLayout(columns, rowHeight, (count / columns).ceil());
   }
+}
+
+TextStyle _touchWeekLabelStyle(BuildContext context, {required bool selected}) {
+  final theme = Theme.of(context);
+  final style = theme.textTheme.titleMedium!.copyWith(
+    fontSize: 18,
+    height: 1.2,
+    fontWeight: MediaQuery.boldTextOf(context)
+        ? FontWeight.bold
+        : selected
+        ? FontWeight.w600
+        : FontWeight.w500,
+    color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+  return DefaultTextStyle.of(context).style.merge(style);
+}
+
+Size _touchWeekMarkerSize(Size label, double rowHeight) {
+  final height = math.min(rowHeight, math.max(rowHeight - 6, label.height + 8));
+  final radius = height / 2;
+  final innerRadius = math.max(0.0, radius - 2);
+  // The label sits 1 dp above the marker's center. Keep its full rectangle
+  // inside the rounded ends as well as the 2 dp keyboard focus border.
+  final halfLabelHeight = label.height / 2 + 1;
+  final capInset =
+      radius -
+      math.sqrt(
+        math.max(
+          0.0,
+          innerRadius * innerRadius - halfLabelHeight * halfLabelHeight,
+        ),
+      );
+  return Size(
+    math.max(height, label.width + capInset * 2).ceilToDouble(),
+    height,
+  );
 }
 
 class _SkedWeekPickerState extends State<SkedWeekPicker> {
@@ -426,6 +483,12 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
     final label = l.weekLabel(week);
     final selected = week == widget.selectedWeek;
     final focused = _focused && week == _focusedWeek;
+    final selectionColor = colors.primary.withValues(alpha: .12);
+    final surface = SkedSurface.colorOf(context);
+    final accent = skedReadableAccent(
+      colors,
+      surface: selected ? Color.alphaBlend(selectionColor, surface) : surface,
+    );
     final hint = today ? '$dates · ${l.today}' : dates;
     return SkedTooltip(
       message: '$label · $hint',
@@ -457,13 +520,9 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                   borderRadius: BorderRadius.circular(6),
                   child: Ink(
                     decoration: BoxDecoration(
-                      color: selected
-                          ? colors.primary.withValues(alpha: .12)
-                          : Colors.transparent,
+                      color: selected ? selectionColor : Colors.transparent,
                       borderRadius: BorderRadius.circular(6),
-                      border: focused
-                          ? Border.all(color: colors.primary)
-                          : null,
+                      border: focused ? Border.all(color: accent) : null,
                     ),
                     child: Stack(
                       children: [
@@ -492,7 +551,7 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                                 width: 4,
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color: colors.primary,
+                                  color: accent,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -515,6 +574,10 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
     required bool today,
   }) {
     final theme = Theme.of(context), colors = theme.colorScheme;
+    final style = _touchWeekLabelStyle(context, selected: selected);
+    final accent = selected
+        ? colors.onPrimary
+        : skedReadableAccent(colors, surface: SkedSurface.colorOf(context));
     final keyboardFocus =
         focused &&
         FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
@@ -523,25 +586,40 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
       onTap: () => _select(week),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final diameter = math.min(
-            constraints.maxWidth,
-            constraints.maxHeight - 6,
+          final label = TextPainter(
+            text: TextSpan(
+              text: '$week',
+              // Reserve the selected weight before activation, too.
+              style: _touchWeekLabelStyle(context, selected: true),
+            ),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+            maxLines: 1,
+          )..layout();
+          final markerSize = _touchWeekMarkerSize(
+            label.size,
+            constraints.maxHeight,
           );
+          label.dispose();
+          final markerHeight = markerSize.height;
+          final markerWidth = math.min(constraints.maxWidth, markerSize.width);
+          final circular = markerWidth == markerHeight;
           return Stack(
             alignment: Alignment.center,
             children: [
-              SizedBox.square(
-                dimension: diameter,
+              SizedBox(
+                width: markerWidth,
+                height: markerHeight,
                 child: DecoratedBox(
                   key: ValueKey('student-week-touch-marker-$week'),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    shape: circular ? BoxShape.circle : BoxShape.rectangle,
+                    borderRadius: circular
+                        ? null
+                        : BorderRadius.circular(markerHeight / 2),
                     color: selected ? colors.primary : null,
                     border: keyboardFocus
-                        ? Border.all(
-                            color: selected ? colors.onPrimary : colors.primary,
-                            width: 2,
-                          )
+                        ? Border.all(color: accent, width: 2)
                         : null,
                   ),
                 ),
@@ -552,24 +630,18 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                   '$week',
                   maxLines: 1,
                   softWrap: false,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 18,
-                    height: 1.2,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    color: selected ? colors.onPrimary : colors.onSurface,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: style,
                 ),
               ),
               if (today)
                 Positioned(
-                  bottom: (constraints.maxHeight - diameter) / 2 + 3,
+                  bottom: (constraints.maxHeight - markerHeight) / 2 + 3,
                   child: Container(
                     key: ValueKey('student-week-current-$week'),
                     width: 4,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: selected ? colors.onPrimary : colors.primary,
+                      color: accent,
                       shape: BoxShape.circle,
                     ),
                   ),
