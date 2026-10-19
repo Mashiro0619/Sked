@@ -56,9 +56,8 @@ class SkedDropdownMenu<T> extends StatefulWidget {
   State<SkedDropdownMenu<T>> createState() => _SkedDropdownMenuState<T>();
 }
 
-class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
-  static const double _menuOffsetY = 4;
-
+class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
+    with WidgetsBindingObserver {
   late T? _selectedValue = widget.initialSelection;
   final _menu = MenuController();
   final _triggerFocus = FocusNode(debugLabel: 'Dropdown trigger');
@@ -85,6 +84,19 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
               .join(',') &&
       (widget.workspace == null ||
           _workspaceView?.isEnabled(widget.workspace!) != false);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeMetrics() {
+    // The field may see unchanged, already-consumed page insets while the
+    // open popup's available overlay height changes with the keyboard.
+    if (mounted && _menu.isOpen) setState(() {});
+  }
 
   @override
   void didChangeDependencies() {
@@ -195,6 +207,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   @override
   void dispose() {
     _generation++;
+    WidgetsBinding.instance.removeObserver(this);
     _sessionChanges?.removeListener(_checkSession);
     _triggerFocus.dispose();
     super.dispose();
@@ -270,7 +283,9 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
           animated: motion.spatialAnimationsEnabled,
           style: menuStyle,
           clipBehavior: Clip.antiAlias,
-          alignmentOffset: const Offset(0, _menuOffsetY),
+          // MenuAnchor checks the upper bound before subtracting a flip offset.
+          // Keep the checked position when the menu opens above its anchor.
+          alignmentOffset: Offset.zero,
           crossAxisUnconstrained: false,
           menuChildren: [
             for (final entry in widget.dropdownMenuEntries)
@@ -370,12 +385,14 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   }
 
   MenuStyle _menuStyleForAnchor(MenuStyle? baseStyle, double anchorWidth) {
+    // The popup uses the overlay's insets. A page Scaffold or SafeArea may
+    // already have removed them from the field's MediaQuery.
+    final media = MediaQuery.of(Overlay.of(context).context);
     final fixedSize = anchorWidth.isFinite && anchorWidth > 0
         ? WidgetStatePropertyAll(Size.fromWidth(anchorWidth))
         : null;
 
     if (_desktop || widget.fieldBuilder != null) {
-      final media = MediaQuery.of(context);
       final maxWidth = math.min(
         SkedMenuStyle.maximumWidth,
         math.max(0.0, media.size.width - media.padding.horizontal - 16),
@@ -405,7 +422,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
         alignment: AlignmentDirectional.bottomStart,
       );
     }
-    final media = MediaQuery.of(context);
     final width = math.min(
       anchorWidth,
       math.max(0.0, media.size.width - media.padding.horizontal - 16),

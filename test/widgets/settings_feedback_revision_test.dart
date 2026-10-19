@@ -218,7 +218,7 @@ void main() {
         final menu = menuRect(t);
         expect(menu.width, lessThan(260));
         expect(menu.width, lessThan(row.width));
-        expect(menu.top, closeTo(anchor.bottom + 4, .1));
+        expect(menu.top, closeTo(anchor.bottom, .1));
         if (size.width > 600) {
           expect(
             direction == TextDirection.ltr ? menu.left : menu.right,
@@ -502,49 +502,94 @@ void main() {
     variant: platforms,
   );
 
-  testWidgets(
-    'settings popup respects physical safe areas and keyboard after page SafeArea removal',
-    (t) async {
-      viewport(t, const Size(320, 640));
-      t.view.padding = const FakeViewPadding(top: 24, left: 12, right: 12);
-      t.view.viewPadding = const FakeViewPadding(
-        top: 24,
-        bottom: 24,
-        left: 12,
-        right: 12,
-      );
-      t.view.viewInsets = const FakeViewPadding(bottom: 240);
-      addTearDown(t.view.resetPadding);
-      addTearDown(t.view.resetViewPadding);
-      addTearDown(t.view.resetViewInsets);
-      final p = await workspaceProvider();
-      addTearDown(p.dispose);
-      await t.pumpWidget(
-        WorkspaceHarness(
-          provider: p,
-          home: choiceSurface(
-            SettingsChoiceTile<int>(
-              key: const ValueKey('mode'),
-              title: 'Color mode',
-              icon: Icons.brightness_6,
-              value: 1,
-              entries: modes,
-              onSelected: (_) {},
+  for (final (keyboardInset, keyboardAlreadyVisible) in [
+    (0.0, true),
+    (240.0, true),
+    (242.0, true),
+    (300.0, true),
+    (300.0, false),
+  ]) {
+    testWidgets(
+      'settings popup respects physical safe areas and keyboard after page SafeArea removal: $keyboardInset, already visible $keyboardAlreadyVisible',
+      (t) async {
+        viewport(t, const Size(320, 640));
+        final initialInset = keyboardAlreadyVisible ? keyboardInset : 0.0;
+        t.view.padding = FakeViewPadding(
+          top: 24,
+          bottom: initialInset == 0 ? 24 : 0,
+          left: 12,
+          right: 12,
+        );
+        t.view.viewPadding = const FakeViewPadding(
+          top: 24,
+          bottom: 24,
+          left: 12,
+          right: 12,
+        );
+        t.view.viewInsets = FakeViewPadding(bottom: initialInset);
+        addTearDown(t.view.resetPadding);
+        addTearDown(t.view.resetViewPadding);
+        addTearDown(t.view.resetViewInsets);
+        final p = await workspaceProvider();
+        addTearDown(p.dispose);
+        final longMenu = keyboardInset == 300;
+        final entries = longMenu
+            ? [
+                for (var index = 0; index < 12; index++)
+                  DropdownMenuEntry(value: index, label: 'Option $index'),
+              ]
+            : modes;
+        final selected = <int?>[];
+        await t.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            home: choiceSurface(
+              SettingsChoiceTile<int>(
+                key: const ValueKey('mode'),
+                title: 'Color mode',
+                icon: Icons.brightness_6,
+                value: 1,
+                entries: entries,
+                onSelected: selected.add,
+              ),
             ),
           ),
-        ),
-      );
-      await t.pumpAndSettle();
-      await open(t, k('mode'));
-      final menu = menuRect(t);
-      expect(menu.left, greaterThanOrEqualTo(12));
-      expect(menu.right, lessThanOrEqualTo(308));
-      expect(menu.top, greaterThanOrEqualTo(24));
-      expect(menu.bottom, lessThanOrEqualTo(400));
-      expect(t.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
+        );
+        await t.pumpAndSettle();
+        await open(t, k('mode'));
+        if (!keyboardAlreadyVisible) {
+          t.view.padding = const FakeViewPadding(top: 24, left: 12, right: 12);
+          t.view.viewInsets = FakeViewPadding(bottom: keyboardInset);
+          await t.pumpAndSettle();
+        }
+        final menu = menuRect(t);
+        expect(menu.left, greaterThanOrEqualTo(12));
+        expect(menu.right, lessThanOrEqualTo(308));
+        expect(menu.top, greaterThanOrEqualTo(24));
+        expect(
+          menu.bottom,
+          lessThanOrEqualTo(keyboardInset == 0 ? 616 : 640 - keyboardInset),
+        );
+        if (keyboardInset == 242) {
+          expect(
+            menu.bottom,
+            lessThanOrEqualTo(t.getRect(anchorOf(k('mode'))).top),
+            reason: 'The menu should still attach above its value anchor.',
+          );
+        }
+        final last = menuItem(entries.last.label);
+        await t.ensureVisible(last);
+        await t.pumpAndSettle();
+        expect(last.hitTestable(), findsOneWidget);
+        await t.tap(last);
+        await t.pumpAndSettle();
+        expect(selected, [entries.last.value]);
+        expect(find.byType(MenuItemButton), findsNothing);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
 
   for (final reducedMotion in [false, true]) {
     testWidgets(
