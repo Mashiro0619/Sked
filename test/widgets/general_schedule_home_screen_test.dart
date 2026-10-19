@@ -800,7 +800,18 @@ void main() {
     await tester.tap(switcher);
     await tester.pumpAndSettle();
     expect(find.text('Day').last, findsOneWidget);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) =>
+              widget is SkedPopupMenuItem<String> &&
+              widget.selected &&
+              widget.value == generalViewWeek,
+        ),
+        matching: find.byIcon(Icons.check),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
@@ -5078,7 +5089,18 @@ void main() {
 
     expect(find.text('Day').last, findsOneWidget);
     expect(find.text('Month').last, findsOneWidget);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) =>
+              widget is SkedPopupMenuItem<String> &&
+              widget.selected &&
+              widget.value == generalViewWeek,
+        ),
+        matching: find.byIcon(Icons.check),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Week').last, findsOneWidget);
   });
 
