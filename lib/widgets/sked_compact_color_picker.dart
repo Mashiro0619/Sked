@@ -203,6 +203,7 @@ class _SkedCompactColorPickerState extends State<SkedCompactColorPicker> {
                     // Validation accepts surrounding whitespace without a length filter.
                     decoration: InputDecoration(
                       errorText: _valid ? null : widget.invalidHexMessage,
+                      errorMaxLines: 8,
                       isDense: true,
                       counterText: '',
                       contentPadding: const EdgeInsets.symmetric(
