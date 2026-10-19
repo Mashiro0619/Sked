@@ -538,11 +538,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   key: const ValueKey('notification-troubleshooting'),
                   title: l10n.notificationTroubleshooting,
                   subtitle: [
-                    permissionSubtitle,
+                    '${l10n.notificationPermission}: $permissionSubtitle',
                     if (_notificationService.isSupported &&
                         !kIsWeb &&
                         defaultTargetPlatform == TargetPlatform.android)
-                      exactAlarmSubtitle,
+                      '${l10n.notificationExactAlarm}: $exactAlarmSubtitle',
                   ].join('\n'),
                   leading: const Icon(Icons.health_and_safety_outlined),
                   trailing: const Icon(Icons.chevron_right),
