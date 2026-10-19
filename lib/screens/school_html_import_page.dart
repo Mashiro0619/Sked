@@ -218,6 +218,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                                       expands: true,
                                       maxLines: null,
                                       minLines: null,
+                                      textAlignVertical: TextAlignVertical.top,
                                       decoration: InputDecoration(
                                         labelText:
                                             l10n.schoolHtmlImportHtmlLabel,
@@ -227,7 +228,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                                               minWidth: 48,
                                               maxWidth: 48,
                                               minHeight: 48,
-                                              maxHeight: 48,
                                             ),
                                         prefixIcon: const Align(
                                           alignment: Alignment.topCenter,

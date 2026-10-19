@@ -13,6 +13,7 @@ import 'package:sked/providers/app_scope.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/services/school_import_api.dart';
+import 'package:sked/widgets/school_import_summary_preview.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 
@@ -61,7 +62,7 @@ String _parserText(String source, String format) => switch (format) {
   _ => source,
 };
 
-SchoolImportResponse _response() {
+SchoolImportResponse _response({String location = ''}) {
   return SchoolImportResponse(
     meta: const SchoolImportMeta(
       sourceUrl: 'https://school.example',
@@ -79,11 +80,11 @@ SchoolImportResponse _response() {
           ImportedPeriodTimeDraft(index: 1, startMinutes: 480, endMinutes: 525),
         ],
       ),
-      courses: const [
+      courses: [
         ImportedCourseDraft(
           name: 'Mathematics',
           teacher: '',
-          location: '',
+          location: location,
           dayOfWeek: 1,
           semesterWeeks: [1],
           periods: [1],
@@ -192,6 +193,137 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
+  for (final textScale in [1.0, 2.0]) {
+    testWidgets(
+      'course preview and import draft survive responsive widths at ${textScale}x',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 1000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final before = provider.workspaceView.data.toJson();
+        final controller = StreamController<SchoolImportStreamEvent>();
+        addTearDown(controller.close);
+        final results = await _pumpDirectPage(
+          tester,
+          controller,
+          provider,
+          canReplaceCurrent: true,
+          textScaler: TextScaler.linear(textScale),
+        );
+        controller.add(ParseDone(response: _response(location: 'Room A201')));
+        await tester.pumpAndSettle();
+        // Let the completed page finish aligning the review before the user
+        // starts reading and scrolling its preview.
+        for (var frame = 0; frame < 30; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportParsePage)),
+        );
+        final preview = find.byType(SchoolImportSummaryPreview);
+        final previewElement = tester.element(preview);
+        final name = find.byKey(
+          const ValueKey('school-import-parse-timetable-name'),
+        );
+        final nameElement = tester.element(name);
+        await tester.enterText(name, 'Retained timetable draft');
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+
+        for (final width in [1280.0, 800.0, 360.0, 1280.0]) {
+          await tester.binding.setSurfaceSize(Size(width, 1000));
+          await tester.pumpAndSettle();
+          expect(tester.element(preview), same(previewElement));
+          expect(tester.element(name), same(nameElement));
+          expect(
+            tester.widget<TextField>(name).controller!.text,
+            'Retained timetable draft',
+          );
+          final course = find.descendant(
+            of: preview,
+            matching: find.text('Mathematics'),
+          );
+          final details = find.descendant(
+            of: preview,
+            matching: find.textContaining('08:00–08:45'),
+          );
+          // Read the preview by scrolling the outer page. Its padding remains
+          // outside the independently scrollable course list at every width.
+          for (
+            var attempt = 0;
+            attempt < 6 &&
+                (course.hitTestable().evaluate().isEmpty ||
+                    details.hitTestable().evaluate().isEmpty);
+            attempt++
+          ) {
+            final viewport = tester.getRect(find.byType(ListView).first);
+            await tester.dragFrom(
+              Offset(viewport.left + 8, viewport.center.dy),
+              const Offset(0, -240),
+            );
+            await tester.pumpAndSettle();
+          }
+          final previewHeader = find.descendant(
+            of: preview,
+            matching: find.text(l10n.schoolWebImportPreview),
+          );
+          final scrollGeometry = find
+              .ancestor(of: course, matching: find.byType(Scrollable))
+              .evaluate()
+              .map((element) {
+                final scrollable =
+                    (element as StatefulElement).state as ScrollableState;
+                final position = scrollable.position;
+                return '${position.pixels}/${position.maxScrollExtent}'
+                    ' viewport=${position.viewportDimension}';
+              })
+              .join('; ');
+          final geometry =
+              'header=${tester.getRect(previewHeader)}, '
+              'course=${tester.getRect(course)}, scrolls=[$scrollGeometry]';
+          expect(
+            course.hitTestable(),
+            findsOneWidget,
+            reason:
+                'Course name must be visible at $width dp / ${textScale}x. '
+                '$geometry',
+          );
+          expect(
+            details.hitTestable(),
+            findsOneWidget,
+            reason:
+                'Course time and location must be visible at $width dp / ${textScale}x. '
+                '$geometry',
+          );
+          expect(tester.widget<Text>(details).data, contains('Room A201'));
+          expect(
+            find.widgetWithText(OutlinedButton, l10n.replaceCurrentTimetable),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        }
+
+        expect(results, isEmpty);
+        expect(provider.workspaceView.data.toJson(), before);
+        await tester.tap(
+          find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          results.single!.response.timetable.name,
+          'Retained timetable draft',
+        );
+        expect(
+          results.single!.applyRequest!.mode,
+          TimetableImportMode.addAsNew,
+        );
+        expect(provider.workspaceView.data.toJson(), before);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'an application scope does not enable direct import for a stream preview',
     (tester) async {
@@ -678,7 +810,7 @@ void main() {
     final l10n = AppLocalizations.of(
       tester.element(find.byType(SchoolImportParsePage)),
     );
-    expect(find.text('Parsed timetable'), findsOneWidget);
+    expect(find.text('Parsed timetable'), findsNWidgets(2));
     expect(find.textContaining('late mutation'), findsNothing);
     expect(find.text('unknownField'), findsNothing);
     expect(find.text('Check the imported week range.'), findsNothing);

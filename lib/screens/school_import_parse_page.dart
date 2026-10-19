@@ -878,14 +878,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                           ),
                         ),
                         secondary: _isDone && _response != null
-                            ? LayoutBuilder(
-                                builder: (context, constraints) =>
-                                    constraints.maxWidth < 500
-                                    ? SchoolImportSummaryPreview(
-                                        response: _response!,
-                                      )
-                                    : const SizedBox.shrink(),
-                              )
+                            ? SchoolImportSummaryPreview(response: _response!)
                             : (_error == null || _previewText.isNotEmpty)
                             ? _buildRawPreview(context, l10n)
                             : null,
