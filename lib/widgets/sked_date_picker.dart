@@ -16,6 +16,7 @@ import '../models/general_date_range.dart';
 import 'sked_date_range_controller.dart';
 import '../models/general_schedule_data.dart'
     show generalDateLabelFormatLocalized;
+import '../theme/sked_surface.dart';
 import '../utils/date_selection.dart';
 import '../utils/calendar_date_utils.dart';
 import 'workbench_chrome_metrics.dart';
@@ -1187,6 +1188,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     bool panelTitle = false,
     bool draggable = true,
     String? semanticHint,
+    String? narrowLabel,
   }) {
     final desktopHeading =
         WorkbenchChromeMetrics.of(context).desktop && !widget.embedded;
@@ -1201,28 +1203,71 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
             (match) => '${match[1]}\u2060${match[2]}',
           )
         : message ?? label;
-    final text = Text(
-      displayLabel,
-      semanticsLabel: keepDateUnits ? message ?? label : null,
+    final style =
+        (desktopHeading
+                ? skedPanelTitleStyle(context, prominent: !panelTitle)
+                : compact
+                ? Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: 18,
+                    height: 1.2,
+                    fontWeight: FontWeight.w600,
+                  )
+                : Theme.of(context).textTheme.titleSmall)
+            ?.copyWith(
+              color: failed ? Theme.of(context).colorScheme.error : null,
+            );
+    Text heading(String value, int lines) => Text(
+      value,
+      semanticsLabel: keepDateUnits || narrowLabel != null
+          ? message ?? label
+          : null,
       key: failed ? const ValueKey('sked-date-range-error') : null,
-      // Range feedback keeps one stable line so a failed save cannot move
-      // calendar cells beneath the pointer. Its tooltip exposes the full text.
-      maxLines: compact || (desktopHeading && !_rangeMode) ? 2 : 1,
+      maxLines: lines,
       overflow: TextOverflow.ellipsis,
-      style:
-          (desktopHeading
-                  ? skedPanelTitleStyle(context, prominent: !panelTitle)
-                  : compact
-                  ? Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 18,
-                      height: 1.2,
-                      fontWeight: FontWeight.w600,
-                    )
-                  : Theme.of(context).textTheme.titleSmall)
-              ?.copyWith(
-                color: failed ? Theme.of(context).colorScheme.error : null,
-              ),
+      style: style,
     );
+    final text = narrowLabel == null
+        ? heading(
+            displayLabel,
+            compact || (desktopHeading && !_rangeMode) ? 2 : 1,
+          )
+        : LayoutBuilder(
+            builder: (context, constraints) {
+              final painter = TextPainter(
+                text: TextSpan(
+                  text: label,
+                  style: _calendarMeasurementStyle(context, style),
+                ),
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context),
+                maxLines: 1,
+              )..layout();
+              var fittedLabel = label;
+              if (painter.width > constraints.maxWidth) {
+                fittedLabel = narrowLabel;
+                painter.text = TextSpan(
+                  text: narrowLabel,
+                  style: painter.text!.style,
+                );
+                painter.layout();
+              }
+              final lines = painter.width > constraints.maxWidth ? 2 : 1;
+              final height = math.max(
+                WorkbenchChromeMetrics.of(context).iconTarget,
+                painter.preferredLineHeight * lines,
+              );
+              painter.dispose();
+              // The month determines a stable slot even while range feedback
+              // is shown, so a retry cannot move the calendar under the pointer.
+              return SizedBox(
+                height: height,
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: heading(message ?? fittedLabel, lines),
+                ),
+              );
+            },
+          );
     return SkedTooltip(
       message: message ?? label,
       excludeFromSemantics: true,
@@ -1469,6 +1514,10 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                         feedback: widget.embedded || compact,
                         compact: compact,
                         draggable: false,
+                        narrowLabel:
+                            widget.embedded && _page == _CalendarPage.days
+                            ? DateFormat.yMMM(l.localeName).format(_month)
+                            : null,
                       ),
                     ),
                     if (retry || !compact)
@@ -1685,6 +1734,18 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     final isStart = DateUtils.isSameDay(day, rangeStart);
     final isEnd = DateUtils.isSameDay(day, rangeEnd);
     final endpoint = paintRange ? isStart || isEnd : selected;
+    final rangeColor = colors.primary.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.16 : 0.10,
+    );
+    final surface = SkedSurface.colorOf(context);
+    final hasRangeBand =
+        inRange &&
+        !(isStart && isEnd) &&
+        (paintRange || widget.selectionUnit == DateSelectionUnit.week);
+    final unfilledSurface = hasRangeBand
+        ? Color.alphaBlend(rangeColor, surface)
+        : surface;
+    final focusAccent = skedReadableAccent(colors, surface: unfilledSurface);
     final keyboardFocus =
         focused &&
         FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
@@ -1744,7 +1805,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                     height: compact ? 4 : 3,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: endpoint ? colors.onPrimary : colors.primary,
+                      color: endpoint ? colors.onPrimary : focusAccent,
                     ),
                   ),
                 ),
@@ -1754,10 +1815,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
             fit: StackFit.expand,
             alignment: Alignment.center,
             children: [
-              if (inRange &&
-                  !(isStart && isEnd) &&
-                  (paintRange ||
-                      widget.selectionUnit == DateSelectionUnit.week))
+              if (hasRangeBand)
                 PositionedDirectional(
                   // Only the inner half of an endpoint joins the range. A
                   // single date has no band, and RTL mirrors these joins.
@@ -1768,11 +1826,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                   child: DecoratedBox(
                     key: ValueKey('sked-date-range-band-${_key(day)}'),
                     decoration: BoxDecoration(
-                      color: colors.primary.withValues(
-                        alpha: theme.brightness == Brightness.dark
-                            ? 0.16
-                            : 0.10,
-                      ),
+                      color: rangeColor,
                       borderRadius: BorderRadiusDirectional.horizontal(
                         start: col == 0 && !isStart ? rowRadius : Radius.zero,
                         end: col == 6 && !isEnd ? rowRadius : Radius.zero,
@@ -1792,9 +1846,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                       color: endpoint ? colors.primary : null,
                       border: compact && keyboardFocus
                           ? Border.all(
-                              color: endpoint
-                                  ? colors.onPrimary
-                                  : colors.primary,
+                              color: endpoint ? colors.onPrimary : focusAccent,
                               width: 2,
                             )
                           : null,
@@ -1810,7 +1862,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                       key: ValueKey('sked-date-focus-${_key(day)}'),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(cornerRadius + 2),
-                        border: Border.all(color: colors.primary, width: 1.5),
+                        border: Border.all(color: focusAccent, width: 1.5),
                       ),
                     ),
                   ),
@@ -1921,6 +1973,10 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   ) {
     final style = Theme.of(context).textTheme.titleMedium!
         .copyWith(fontSize: 18, height: 1.2, fontWeight: FontWeight.w500);
+    final measurementStyle = _calendarMeasurementStyle(
+      context,
+      style.copyWith(fontWeight: FontWeight.w600),
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
         const gap = 4.0;
@@ -1933,10 +1989,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
         );
         var labelWidth = 0.0;
         for (final choice in choices) {
-          painter.text = TextSpan(
-            text: choice.label,
-            style: style.copyWith(fontWeight: FontWeight.w600),
-          );
+          painter.text = TextSpan(text: choice.label, style: measurementStyle);
           painter.layout();
           labelWidth = math.max(labelWidth, painter.width);
         }
@@ -1948,10 +2001,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
             (constraints.maxWidth - (columns - 1) * gap) / columns;
         var labelHeight = 0.0;
         for (final choice in choices) {
-          painter.text = TextSpan(
-            text: choice.label,
-            style: style.copyWith(fontWeight: FontWeight.w600),
-          );
+          painter.text = TextSpan(text: choice.label, style: measurementStyle);
           painter.layout(maxWidth: math.max(0, cellWidth - horizontalPadding));
           labelHeight = math.max(labelHeight, painter.height);
         }
@@ -2020,6 +2070,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   ) {
     if (_compactCalendar) return _compactChoiceGrid(context, choices);
     final c = Theme.of(context).colorScheme;
+    final surface = SkedSurface.colorOf(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2062,7 +2113,15 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(6),
                               border: choice.focused
-                                  ? Border.all(color: c.primary, width: 2)
+                                  ? Border.all(
+                                      color: skedReadableAccent(
+                                        c,
+                                        surface: choice.selected
+                                            ? c.secondaryContainer
+                                            : surface,
+                                      ),
+                                      width: 2,
+                                    )
                                   : null,
                             ),
                             child: Text(
@@ -2085,6 +2144,13 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       ],
     );
   }
+}
+
+TextStyle _calendarMeasurementStyle(BuildContext context, TextStyle? style) {
+  final effective = DefaultTextStyle.of(context).style.merge(style);
+  return MediaQuery.boldTextOf(context)
+      ? effective.copyWith(fontWeight: FontWeight.bold)
+      : effective;
 }
 
 double _calendarDayMarkerSize(Size cellSize, {required bool compact}) =>
@@ -2169,6 +2235,11 @@ class _CompactCalendarChoiceState extends State<_CompactCalendarChoice> {
         : _hovered && _enabled
         ? colors.primary.withValues(alpha: .05)
         : null;
+    final surface = SkedSurface.colorOf(context);
+    final accent = skedReadableAccent(
+      colors,
+      surface: color == null ? surface : Color.alphaBlend(color, surface),
+    );
     return Semantics(
       button: true,
       enabled: _enabled,
@@ -2213,7 +2284,7 @@ class _CompactCalendarChoiceState extends State<_CompactCalendarChoice> {
                   color: color,
                   borderRadius: BorderRadius.circular(999),
                   border: keyboardFocus
-                      ? Border.all(color: colors.primary, width: 2)
+                      ? Border.all(color: accent, width: 2)
                       : null,
                 ),
                 child: Padding(
@@ -2228,7 +2299,7 @@ class _CompactCalendarChoiceState extends State<_CompactCalendarChoice> {
                       color: !_enabled
                           ? colors.onSurface.withValues(alpha: .38)
                           : choice.selected
-                          ? colors.primary
+                          ? accent
                           : colors.onSurface,
                       fontWeight: choice.selected
                           ? FontWeight.w600

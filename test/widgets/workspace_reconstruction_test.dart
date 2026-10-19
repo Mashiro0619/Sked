@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -12,6 +13,7 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/sked_tooltip.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 
 import '../support/workspace_harness.dart';
@@ -167,19 +169,38 @@ void main() {
       final navigator = find.byKey(
         const ValueKey('general-resource-date-picker'),
       );
-      expect(
-        find.descendant(of: navigator, matching: find.text('January 2026')),
-        findsOneWidget,
-      );
+      void expectBrowsingMonth(String fullLabel, String shortLabel) {
+        final header = find.descendant(
+          of: navigator,
+          matching: find.byKey(const ValueKey('sked-date-month-year')),
+        );
+        final label = find
+            .descendant(of: header, matching: find.byType(Text))
+            .first;
+        expect(tester.widget<Text>(label).data, anyOf(fullLabel, shortLabel));
+        expect(tester.getSemantics(label).label, contains(fullLabel));
+        expect(
+          find.ancestor(
+            of: label,
+            matching: find.byWidgetPredicate(
+              (widget) => widget is SkedTooltip && widget.message == fullLabel,
+            ),
+          ),
+          findsOneWidget,
+        );
+        final rendered = tester.renderObject<RenderParagraph>(
+          find.descendant(of: label, matching: find.byType(RichText)),
+        );
+        expect(rendered.didExceedMaxLines, isFalse);
+      }
+
+      expectBrowsingMonth('January 2026', 'Jan 2026');
       await tester.tap(
         find.byKey(const ValueKey('general-resource-next-month')),
       );
       await tester.pumpAndSettle();
       expect(p.generalView.selectedDate, DateTime(2026, 2, 28));
-      expect(
-        find.descendant(of: navigator, matching: find.text('February 2026')),
-        findsOneWidget,
-      );
+      expectBrowsingMonth('February 2026', 'Feb 2026');
       expect(
         find.byKey(const ValueKey('general-day-agenda-toggle')),
         findsNothing,

@@ -1,12 +1,15 @@
 import 'dart:ui' show Tristate;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
+import 'package:sked/widgets/sked_tooltip.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -20,6 +23,29 @@ void _size(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+void _expectSidebarMonth(WidgetTester tester, DateTime month) {
+  final header = _in(_sidebar, 'sked-date-month-year');
+  final label = find.descendant(of: header, matching: find.byType(Text)).first;
+  final locale = AppLocalizations.of(tester.element(label)).localeName;
+  final fullLabel = DateFormat.yMMMM(locale).format(month);
+  final shortLabel = DateFormat.yMMM(locale).format(month);
+  expect(tester.widget<Text>(label).data, anyOf(fullLabel, shortLabel));
+  expect(tester.getSemantics(label).label, contains(fullLabel));
+  expect(
+    find.ancestor(
+      of: label,
+      matching: find.byWidgetPredicate(
+        (widget) => widget is SkedTooltip && widget.message == fullLabel,
+      ),
+    ),
+    findsOneWidget,
+  );
+  final rendered = tester.renderObject<RenderParagraph>(
+    find.descendant(of: label, matching: find.byType(RichText)),
+  );
+  expect(rendered.didExceedMaxLines, isFalse);
 }
 
 Future<void> _view(WidgetTester tester, String label) async {
@@ -116,34 +142,22 @@ void main() {
       await tester.tap(_key('general-resource-next-month'));
       await tester.pumpAndSettle();
       expect(p.generalView.selectedDate, DateTime(2026, 9, 10));
-      expect(
-        find.descendant(of: _sidebar, matching: find.text('October 2026')),
-        findsOneWidget,
-      );
+      _expectSidebarMonth(tester, DateTime(2026, 10));
       await tester.tap(
         _key('resource-calendar-${p.generalView.schedules.first.id}'),
       );
       await tester.pumpAndSettle();
-      expect(
-        find.descendant(of: _sidebar, matching: find.text('October 2026')),
-        findsOneWidget,
-      );
+      _expectSidebarMonth(tester, DateTime(2026, 10));
       await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(true);
       await tester.pumpAndSettle();
       await p.settingsCommands.updateHomeWorkspaceNavigationCollapsed(false);
       await tester.pumpAndSettle();
-      expect(
-        find.descendant(of: _sidebar, matching: find.text('October 2026')),
-        findsOneWidget,
-      );
+      _expectSidebarMonth(tester, DateTime(2026, 10));
       tester.view.physicalSize = const Size(800, 1100);
       await tester.pumpAndSettle();
       tester.view.physicalSize = const Size(1440, 900);
       await tester.pumpAndSettle();
-      expect(
-        find.descendant(of: _sidebar, matching: find.text('October 2026')),
-        findsOneWidget,
-      );
+      _expectSidebarMonth(tester, DateTime(2026, 10));
       expect(tester.element(_key('workspace-canvas')), same(canvas));
       await tester.tap(_in(_sidebar, 'sked-date-2026-10-13'));
       await tester.pumpAndSettle();
@@ -163,18 +177,12 @@ void main() {
       expect(p.generalView.selectedDate, DateTime(2026, 10, 6));
       await tester.tap(_key('general-resource-previous-month'));
       await tester.pumpAndSettle();
-      expect(
-        find.descendant(of: _sidebar, matching: find.text('September 2026')),
-        findsOneWidget,
-      );
+      _expectSidebarMonth(tester, DateTime(2026, 9));
       await tester.tap(_key('general-date-picker'));
       await tester.pumpAndSettle();
       await tester.tap(_in(_popup, 'sked-date-2026-10-06'));
       await tester.pumpAndSettle();
-      expect(
-        find.descendant(of: _sidebar, matching: find.text('October 2026')),
-        findsOneWidget,
-      );
+      _expectSidebarMonth(tester, DateTime(2026, 10));
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),

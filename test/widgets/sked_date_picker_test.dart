@@ -1,13 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/theme/app_theme.dart';
+import 'package:sked/theme/color_contrast.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/sked_tooltip.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -32,9 +37,11 @@ Future<void> _open(
   double scale = 1,
   FocusNode? focus,
   Alignment alignment = Alignment.topLeft,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: theme,
       locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -74,7 +81,352 @@ Future<void> _open(
   expect(find.byType(SkedDatePicker), findsOneWidget);
 }
 
+Finder _choiceText(String key) =>
+    find.descendant(of: _key(key), matching: find.byType(RichText)).first;
+
+Color _paintedBackground(WidgetTester tester, Finder text) {
+  var background = Colors.transparent;
+  tester.element(text).visitAncestorElements((element) {
+    final widget = element.widget;
+    final color = switch (widget) {
+      DecoratedBox(decoration: BoxDecoration(color: final color)) => color,
+      Material(color: final color) => color,
+      _ => null,
+    };
+    if (color != null) background = Color.alphaBlend(background, color);
+    return background.a < 1;
+  });
+  expect(background.a, 1);
+  return background;
+}
+
+void _expectReadableChoice(
+  WidgetTester tester,
+  String key, {
+  bool focused = false,
+}) {
+  final text = _choiceText(key);
+  final background = _paintedBackground(tester, text);
+  final foreground = tester
+      .renderObject<RenderParagraph>(text)
+      .text
+      .style!
+      .color!;
+  expect(
+    colorContrastRatio(Color.alphaBlend(foreground, background), background),
+    greaterThanOrEqualTo(4.5),
+    reason: '$key text',
+  );
+  if (focused) {
+    final marker = tester.widget<DecoratedBox>(
+      find
+          .descendant(
+            of: _key(key),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedBox &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration as BoxDecoration).border != null,
+            ),
+          )
+          .last,
+    );
+    final border = (marker.decoration as BoxDecoration).border! as Border;
+    expect(
+      colorContrastRatio(
+        Color.alphaBlend(border.top.color, background),
+        background,
+      ),
+      greaterThanOrEqualTo(3),
+      reason: '$key keyboard focus',
+    );
+  }
+}
+
 void main() {
+  testWidgets(
+    'system bold month headings fit both full and abbreviated width boundaries',
+    (tester) async {
+      _size(tester, const Size(800, 1000));
+      // Ahem has equal advances for all weights, so use Flutter's bundled
+      // regular/medium/bold faces to exercise the actual width difference.
+      const family = 'SkedPickerGeometry';
+      await tester.runAsync(() async {
+        final flutterRoot = Platform.environment['FLUTTER_ROOT'];
+        if (flutterRoot == null) {
+          fail('FLUTTER_ROOT is required for test fonts.');
+        }
+        final fonts = Directory(
+          '$flutterRoot/bin/cache/artifacts/material_fonts',
+        );
+        final loader = FontLoader(family);
+        for (final weight in ['regular', 'medium', 'bold']) {
+          loader.addFont(
+            File.fromUri(fonts.uri.resolve('roboto-$weight.ttf'))
+                .readAsBytes()
+                .then((bytes) => ByteData.sublistView(bytes)),
+          );
+        }
+        await loader.load();
+      });
+      final baseTheme = ThemeData();
+      final theme = baseTheme.copyWith(
+        textTheme: baseTheme.textTheme.apply(fontFamily: family),
+      );
+      Future<void> mount(double width, {bool bold = false}) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            locale: const Locale('en'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(boldText: bold),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: width,
+                  child: SkedDatePicker(
+                    embedded: true,
+                    initialDate: DateTime(2026, 9, 10),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                    onSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await mount(360);
+      final heading = _choiceText('sked-date-month-year');
+      final normal = tester.renderObject<RenderParagraph>(heading);
+      final style = normal.text.style!;
+      final chromeWidth = 360 - normal.constraints.maxWidth;
+      double widthOf(String label, TextStyle style) {
+        final painter = TextPainter(
+          text: TextSpan(text: label, style: style),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final width = painter.width;
+        painter.dispose();
+        return width;
+      }
+
+      for (final label in ['September 2026', 'Sep 2026']) {
+        final regularWidth = widthOf(label, style);
+        final boldWidth = widthOf(
+          label,
+          style.copyWith(fontWeight: FontWeight.bold),
+        );
+        expect(boldWidth, greaterThan(regularWidth));
+        await mount(chromeWidth + (regularWidth + boldWidth) / 2, bold: true);
+        final rendered = tester.renderObject<RenderParagraph>(heading);
+        expect(rendered.text.style!.fontWeight, FontWeight.bold);
+        expect(rendered.didExceedMaxLines, isFalse);
+        expect(tester.getSemantics(heading).label, contains('September 2026'));
+        expect(
+          tester
+              .widget<Text>(
+                find.ancestor(of: heading, matching: find.byType(Text)).first,
+              )
+              .data,
+          endsWith('2026'),
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  for (final scenario in [
+    (seed: const Color(0xfff9a825), brightness: Brightness.light),
+    (seed: Colors.white, brightness: Brightness.light),
+    (seed: const Color(0xff101010), brightness: Brightness.dark),
+  ]) {
+    testWidgets(
+      '${scenario.seed} ${scenario.brightness} selections and focus remain readable',
+      (tester) async {
+        _size(tester, const Size(360, 800));
+        final originalStrategy = FocusManager.instance.highlightStrategy;
+        addTearDown(
+          () => FocusManager.instance.highlightStrategy = originalStrategy,
+        );
+        final results = <DateTime?>[];
+        final theme = buildAppTheme(
+          seedColor: scenario.seed,
+          brightness: scenario.brightness,
+          themeColorMode: themeColorModeSingle,
+          colorfulUiColorValues: const {},
+        );
+        await _open(
+          tester,
+          results,
+          initial: DateTime(2026, 10, 19),
+          first: DateTime(2020),
+          last: DateTime(2035),
+          theme: theme,
+        );
+        expect(
+          Theme.of(tester.element(find.byType(SkedDatePicker)))
+              .colorScheme
+              .primary,
+          scenario.seed,
+        );
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.alwaysTraditional;
+        tester
+            .widget<Focus>(_key('sked-date-grid-focus'))
+            .focusNode!
+            .requestFocus();
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+        final dayMarker = theme.platform == TargetPlatform.android
+            ? 'sked-date-touch-marker-2026-10-20'
+            : 'sked-date-focus-2026-10-20';
+        final border =
+            (tester.widget<DecoratedBox>(_key(dayMarker)).decoration
+                        as BoxDecoration)
+                    .border!
+                as Border;
+        final dayBackground = _paintedBackground(
+          tester,
+          _choiceText('sked-date-2026-10-20'),
+        );
+        expect(
+          colorContrastRatio(
+            Color.alphaBlend(border.top.color, dayBackground),
+            dayBackground,
+          ),
+          greaterThanOrEqualTo(3),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        for (final page in ['month', 'year']) {
+          FocusManager.instance.highlightStrategy =
+              FocusHighlightStrategy.alwaysTouch;
+          await tester.tap(_key('sked-date-month-year'));
+          await tester.pumpAndSettle();
+          final selected = page == 'month'
+              ? 'sked-date-month-2026-10'
+              : 'sked-date-year-2026';
+          final next = page == 'month'
+              ? 'sked-date-month-2026-11'
+              : 'sked-date-year-2027';
+          _expectReadableChoice(tester, selected);
+          expect(
+            tester.getSemantics(_key(selected)).flagsCollection.isSelected,
+            Tristate.isTrue,
+          );
+          FocusManager.instance.highlightStrategy =
+              FocusHighlightStrategy.alwaysTraditional;
+          tester
+              .widget<Focus>(_key('sked-date-grid-focus'))
+              .focusNode!
+              .requestFocus();
+          await tester.pump();
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await tester.pumpAndSettle();
+          _expectReadableChoice(tester, next, focused: true);
+          _expectReadableChoice(tester, selected);
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+          await tester.pumpAndSettle();
+          _expectReadableChoice(tester, selected, focused: true);
+          expect(results, isEmpty);
+        }
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(results, [null]);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.windows,
+      }),
+    );
+  }
+
+  for (final scenario in [
+    (width: 220.0, scale: 1.0),
+    (width: 320.0, scale: 1.0),
+    (width: 280.0, scale: 2.0),
+  ]) {
+    testWidgets(
+      'embedded English month preserves its year at ${scenario.width} and ${scenario.scale}x',
+      (tester) async {
+        _size(tester, const Size(800, 1000));
+        final results = <DateTime>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scenario.scale)),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: scenario.width,
+                  child: SkedDatePicker(
+                    embedded: true,
+                    initialDate: DateTime(2026, 9, 10),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                    commitMode: DatePickerCommitMode.immediate,
+                    onSelected: results.add,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final label = find
+            .descendant(
+              of: _key('sked-date-month-year'),
+              matching: find.byType(Text),
+            )
+            .first;
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(of: label, matching: find.byType(RichText)),
+        );
+        expect(paragraph.didExceedMaxLines, isFalse);
+        expect(tester.widget<Text>(label).data, endsWith('2026'));
+        expect(tester.getSemantics(label).label, contains('September 2026'));
+        expect(
+          find.ancestor(
+            of: label,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is SkedTooltip && widget.message == 'September 2026',
+            ),
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(_key('sked-date-month-year'));
+        await tester.pumpAndSettle();
+        await tester.tap(_key('sked-date-month-2026-10'));
+        await tester.pumpAndSettle();
+        expect(results, isEmpty);
+        await tester.tap(_key('sked-date-2026-10-20'));
+        await tester.pumpAndSettle();
+        expect(results, [DateTime(2026, 10, 20)]);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
   testWidgets(
     'week selection highlights the row and returns the clicked day immediately',
     (tester) async {
