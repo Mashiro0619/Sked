@@ -1508,16 +1508,14 @@ class _SettingsToolbarNavigationEditorState
             ? 1 + progress * 0.02
             : 1.0;
         final lift = motion.spatialAnimationsEnabled ? -2 * progress : 0.0;
-        final elevation = motion.animationsEnabled ? progress * 4 : 0.0;
         return Transform.translate(
           offset: Offset(0, lift),
           child: Transform.scale(
             scale: scale,
             child: Material(
-              color: SkedSurface.colorOf(context),
+              type: MaterialType.transparency,
               shape: shape,
               clipBehavior: Clip.antiAlias,
-              elevation: elevation,
               child: child,
             ),
           ),
