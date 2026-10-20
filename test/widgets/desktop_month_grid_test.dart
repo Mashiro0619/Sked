@@ -162,6 +162,52 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  testWidgets(
+    'same-month clicks rebuild only the old and new selected date cells',
+    (t) async {
+      final provider = await _mount(t);
+      final rebuiltDays = <String>[];
+      var homeBuilds = 0;
+      final previous = debugOnRebuildDirtyWidget;
+      debugOnRebuildDirtyWidget = (element, builtOnce) {
+        previous?.call(element, builtOnce);
+        final key = element.widget.key;
+        if (key is ValueKey<String> &&
+            key.value.startsWith('general-month-day-cell-')) {
+          rebuiltDays.add(key.value);
+        }
+        if (element.widget is GeneralScheduleHomeScreen) homeBuilds++;
+      };
+      addTearDown(() => debugOnRebuildDirtyWidget = previous);
+      var selected = 8;
+      for (final next in [17, 11, 8]) {
+        rebuiltDays.clear();
+        homeBuilds = 0;
+        await t.tap(
+          _cell(DateTime(2026, 9, next)),
+          kind: ui.PointerDeviceKind.mouse,
+        );
+        await t.pumpAndSettle();
+        expect(provider.generalView.selectedDate, DateTime(2026, 9, next));
+        expect(
+          rebuiltDays,
+          unorderedEquals([
+            'general-month-day-cell-2026-9-$selected',
+            'general-month-day-cell-2026-9-$next',
+          ]),
+        );
+        expect(
+          homeBuilds,
+          1,
+          reason: 'No follow-up rebuild for an unused animation intent.',
+        );
+        selected = next;
+      }
+      expect(t.takeException(), isNull);
+    },
+    variant: _desktop,
+  );
+
   for (final direction in TextDirection.values) {
     testWidgets(
       'desktop month selection keeps every sampled frame stationary: $direction',

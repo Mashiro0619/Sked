@@ -605,7 +605,7 @@ class _DesktopMonthCalendarPanelState
   }
 }
 
-class _DesktopMonthDatePage extends StatelessWidget {
+class _DesktopMonthDatePage extends StatefulWidget {
   const _DesktopMonthDatePage({
     super.key,
     required this.columns,
@@ -628,7 +628,61 @@ class _DesktopMonthDatePage extends StatelessWidget {
   final ValueChanged<DateTime> onDaySelected;
 
   @override
+  State<_DesktopMonthDatePage> createState() => _DesktopMonthDatePageState();
+}
+
+class _DesktopMonthDatePageState extends State<_DesktopMonthDatePage> {
+  final _cells = <int, _DesktopMonthDayCell>{};
+
+  _DesktopMonthDayCell _cell(int index, Rect rect, bool selected) {
+    final date = widget.model.days[index];
+    final occurrences =
+        widget.occurrencesByDay[_calendarDateKey(date)] ??
+        const <GeneralEventOccurrence>[];
+    final today = _sameDay(date, widget.today);
+    final previous = _cells[index];
+    if (previous != null &&
+        previous.date == date &&
+        previous.month == widget.selectedDate.month &&
+        previous.isToday == today &&
+        previous.isSelected == selected &&
+        identical(previous.occurrences, occurrences) &&
+        previous.locale == widget.display.localeCode &&
+        previous.showLunar == widget.display.showLunarCalendar &&
+        previous.height == rect.height &&
+        identical(previous.metrics, widget.layout.metrics)) {
+      return previous;
+    }
+    // Unchanged dates keep their widget identity, including text and semantics.
+    // The callback reads the current page so retained cells never capture an
+    // obsolete navigation callback after workspace or viewport changes.
+    return _cells[index] = _DesktopMonthDayCell(
+      key: ValueKey(
+        'general-month-day-cell-${date.year}-${date.month}-${date.day}',
+      ),
+      date: date,
+      month: widget.selectedDate.month,
+      isToday: today,
+      isSelected: selected,
+      occurrences: occurrences,
+      locale: widget.display.localeCode,
+      showLunar: widget.display.showLunarCalendar,
+      height: rect.height,
+      metrics: widget.layout.metrics,
+      onTap: () => widget.onDaySelected(date),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final _DesktopMonthDatePage(
+      :columns,
+      :layout,
+      :model,
+      :selectedDate,
+      :rtl,
+    ) = widget;
+    _cells.removeWhere((index, _) => index >= model.days.length);
     final rows = layout.rows;
     Rect cellRect(int index) {
       var column = index % columns.count;
@@ -665,25 +719,7 @@ class _DesktopMonthDatePage extends StatelessWidget {
                 for (var index = 0; index < model.days.length; index++)
                   Positioned.fromRect(
                     rect: cellRect(index),
-                    child: _DesktopMonthDayCell(
-                      key: ValueKey(
-                        'general-month-day-cell-${model.days[index].year}-${model.days[index].month}-${model.days[index].day}',
-                      ),
-                      date: model.days[index],
-                      month: selectedDate.month,
-                      isToday: _sameDay(model.days[index], today),
-                      isSelected: index == selected,
-                      occurrences:
-                          occurrencesByDay[_calendarDateKey(
-                            model.days[index],
-                          )] ??
-                          const <GeneralEventOccurrence>[],
-                      locale: display.localeCode,
-                      showLunar: display.showLunarCalendar,
-                      height: cellRect(index).height,
-                      metrics: layout.metrics,
-                      onTap: () => onDaySelected(model.days[index]),
-                    ),
+                    child: _cell(index, cellRect(index), index == selected),
                   ),
               ],
             ),

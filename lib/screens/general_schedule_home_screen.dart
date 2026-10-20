@@ -983,14 +983,25 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     }
 
     final navigationGeneration = ++_dateNavigationGeneration;
-    if (mounted) {
-      setState(() {
+    final animateNavigation =
+        (_view ?? general.data.defaultView) != generalViewMonth ||
+        current.year != next.year ||
+        current.month != next.month;
+    if (animateNavigation) {
+      if (mounted) {
+        setState(() {
+          _dateNavigationTarget = next;
+          _dateNavigationDirection = direction;
+        });
+      } else {
         _dateNavigationTarget = next;
         _dateNavigationDirection = direction;
-      });
+      }
     } else {
-      _dateNavigationTarget = next;
-      _dateNavigationDirection = direction;
+      // Same-month selection is published synchronously by the view. It does
+      // not need an animation intent or a second full rebuild to clear one.
+      _dateNavigationTarget = null;
+      _dateNavigationDirection = 0;
     }
     try {
       if (general.customDateRange != null) {
@@ -1009,7 +1020,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       }
     } finally {
       if (mounted && _navigationBusy) setState(() => _navigationBusy = false);
-      if (navigationGeneration == _dateNavigationGeneration) {
+      if (animateNavigation &&
+          navigationGeneration == _dateNavigationGeneration) {
         if (!mounted) {
           _dateNavigationTarget = null;
           _dateNavigationDirection = 0;
