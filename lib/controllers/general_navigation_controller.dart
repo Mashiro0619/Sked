@@ -67,8 +67,11 @@ class GeneralNavigationController {
     bool moveCustomRange = true,
   }) async {
     _requireNavigationAllowed();
+    final range = _session.data.generalMode.customDateRange;
+    // A retained range does not make an ordinary focus change durable.
+    // Keep queued range and workspace operations ahead of later focus changes.
     if (_view.navigationPending ||
-        _session.data.generalMode.customDateRange != null) {
+        (range != null && (moveCustomRange || !_transactions.isIdle))) {
       await _commit(
         (data) => _calendar
             .setSelectedDate(data, date)
