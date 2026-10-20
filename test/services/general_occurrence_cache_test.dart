@@ -4,7 +4,9 @@ import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/models/general_schedule.dart';
 import 'package:sked/models/general_schedule_data.dart';
 import 'package:sked/models/notification_settings.dart';
+
 import 'package:sked/services/general_occurrence_cache.dart';
+
 import 'package:sked/services/general_occurrence_service.dart';
 
 void main() {
@@ -218,6 +220,495 @@ void main() {
     expect(identical(first, second), isTrue);
     expect(service.callCount, 1);
   });
+
+  group('containing range caching', () {
+    const reference = GeneralOccurrenceService();
+
+    GeneralOccurrenceQuery range(DateTime start, DateTime end) =>
+        GeneralOccurrenceQuery(startInclusive: start, endExclusive: end);
+
+    List<(String, String, int)> snapshot(List<GeneralEventOccurrence> items) =>
+        [
+          for (final item in items)
+            (item.occurrenceKey, item.end.toIso8601String(), item.sequence),
+        ];
+
+    test(
+      'reuses a month for distinct empty days without expanding history',
+      () {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        final data = dataFor([
+          GeneralSchedule(
+            id: 'calendar',
+            name: 'Calendar',
+            events: [
+              _reminderEvent(
+                'history',
+                base.subtract(const Duration(days: 20)),
+                base,
+              ),
+            ],
+          ),
+        ]);
+        cache.occurrencesForQuery(data, range(base, DateTime.utc(2026, 2)));
+        for (final day in [3, 8, 12, 26]) {
+          final requested = range(
+            DateTime.utc(2026, 1, day),
+            DateTime.utc(2026, 1, day + 1),
+          );
+          expect(cache.occurrencesForQuery(data, requested), isEmpty);
+        }
+        expect(service.queries, hasLength(1));
+      },
+    );
+
+    test(
+      'filters exact half-open edges and retains an immutable ordered result',
+      () {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        final start = DateTime.utc(2026, 1, 10);
+        final end = DateTime.utc(2026, 1, 11);
+        const tick = Duration(microseconds: 1);
+        final data = dataFor([
+          GeneralSchedule(
+            id: 'calendar',
+            name: 'Calendar',
+            events: [
+              _reminderEvent(
+                'before',
+                start.subtract(const Duration(days: 1)),
+                start,
+              ),
+              _reminderEvent('left', start.subtract(tick), start.add(tick)),
+              _reminderEvent(
+                'inside',
+                start.add(const Duration(hours: 1)),
+                start.add(const Duration(hours: 2)),
+              ),
+              _reminderEvent(
+                'all-day',
+                start,
+                end.add(const Duration(days: 1)),
+              ).copyWith(isAllDay: true),
+              _reminderEvent(
+                'right',
+                end.subtract(tick),
+                end.add(const Duration(hours: 1)),
+              ),
+              _reminderEvent('after', end, end.add(const Duration(days: 1))),
+              _reminderEvent(
+                'spanning',
+                start.subtract(const Duration(days: 20)),
+                end.add(const Duration(days: 20)),
+              ),
+            ],
+          ),
+        ]);
+        final broad = range(base, DateTime.utc(2026, 2));
+        final month = cache.occurrencesForQuery(data, broad);
+        final requested = range(start, end);
+        final day = cache.occurrencesForQuery(data, requested);
+        expect(day.map((item) => item.event.id), [
+          'spanning',
+          'left',
+          'all-day',
+          'inside',
+          'right',
+        ]);
+        expect(
+          snapshot(day),
+          snapshot(reference.occurrencesForQuery(data, requested)),
+        );
+        expect(() => day.clear(), throwsUnsupportedError);
+        expect(cache.occurrencesForQuery(data, requested), same(day));
+        expect(cache.occurrencesForQuery(data, broad), same(month));
+        expect(month, hasLength(7));
+        expect(service.queries, hasLength(1));
+      },
+    );
+
+    test(
+      'keeps exact queries for recurring, exception and all-day expansions',
+      () {
+        final local = DateTime(2026, 1, 28);
+        final data = dataFor([
+          GeneralSchedule(
+            id: 'calendar',
+            name: 'Calendar',
+            events: [
+              _reminderEvent(
+                'overnight',
+                local.add(const Duration(hours: 23)),
+                DateTime(2026, 1, 29, 2),
+              ).copyWith(
+                recurrenceRule: const GeneralEventRecurrenceRule(
+                  type: GeneralEventRecurrence.daily,
+                  count: 8,
+                ),
+                recurrenceExceptionDateIso: ['2026-01-30'],
+              ),
+              _reminderEvent(
+                'all-day-local',
+                local,
+                DateTime(2026, 1, 31),
+              ).copyWith(
+                isAllDay: true,
+                recurrenceRule: const GeneralEventRecurrenceRule(
+                  type: GeneralEventRecurrence.daily,
+                  count: 5,
+                ),
+                recurrenceExceptionDateIso: ['2026-01-29'],
+              ),
+              _reminderEvent(
+                'all-day-utc',
+                DateTime.utc(2026, 1, 30),
+                DateTime.utc(2026, 2, 2),
+              ).copyWith(
+                isAllDay: true,
+                recurrenceRule: const GeneralEventRecurrenceRule(
+                  type: GeneralEventRecurrence.weekly,
+                  count: 2,
+                ),
+              ),
+              _reminderEvent(
+                'month-end',
+                DateTime.utc(2026, 1, 31, 23),
+                DateTime.utc(2026, 2, 1, 1),
+              ).copyWith(
+                recurrenceRule: const GeneralEventRecurrenceRule(
+                  type: GeneralEventRecurrence.monthly,
+                  count: 3,
+                ),
+              ),
+            ],
+          ),
+        ]);
+        for (final utc in [false, true]) {
+          DateTime date(int month, int day, [int hour = 0]) => utc
+              ? DateTime.utc(2026, month, day, hour)
+              : DateTime(2026, month, day, hour);
+          final service = _RecordingOccurrenceService();
+          final cache = GeneralOccurrenceCache(service: service);
+          cache.occurrencesForQuery(data, range(date(1, 1), date(4, 1)));
+          for (final requested in [
+            range(date(1, 31), date(2, 1)),
+            range(date(2, 1, 1), date(2, 1, 2)),
+            range(date(2, 2), date(2, 3)),
+            range(date(2, 7), date(2, 8)),
+            range(date(2, 28), date(3, 1)),
+          ]) {
+            expect(
+              snapshot(cache.occurrencesForQuery(data, requested)),
+              snapshot(reference.occurrencesForQuery(data, requested)),
+            );
+          }
+          expect(service.queries, hasLength(6));
+        }
+      },
+    );
+
+    test('requires matching filters and both boundary representations', () {
+      final start = DateTime.utc(2026, 1, 10);
+      final end = DateTime.utc(2026, 1, 11);
+      final data = dataFor([
+        GeneralSchedule(
+          id: 'calendar',
+          name: 'Calendar',
+          events: [
+            _reminderEvent(
+              'team-red',
+              start,
+              end,
+            ).copyWith(colorValue: 0xff123456),
+            _reminderEvent(
+              'team-blue',
+              start,
+              end,
+            ).copyWith(colorValue: 0xff654321),
+            _reminderEvent(
+              'other-red',
+              start,
+              end,
+            ).copyWith(colorValue: 0xff123456),
+          ],
+        ),
+        GeneralSchedule(
+          id: 'hidden',
+          name: 'Hidden',
+          isVisible: false,
+          events: [
+            _reminderEvent(
+              'team-hidden',
+              start,
+              end,
+            ).copyWith(calendarId: 'hidden', colorValue: 0xff123456),
+          ],
+        ),
+      ]);
+      final parent = GeneralOccurrenceQuery(
+        startInclusive: base,
+        endExclusive: DateTime.utc(2026, 2),
+        searchQuery: '  TEAM  ',
+        colorValue: 0xff123456,
+      );
+      for (final (text, color, visible, localStart, localEnd, reused) in [
+        ('team', 0xff123456, true, false, false, true),
+        ('other', 0xff123456, true, false, false, false),
+        ('team', 0xff654321, true, false, false, false),
+        ('team', null, true, false, false, false),
+        ('team', 0xff123456, false, false, false, false),
+        ('team', 0xff123456, true, true, false, false),
+        ('team', 0xff123456, true, false, true, false),
+        ('team', 0xff123456, true, true, true, false),
+      ]) {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        cache.occurrencesForQuery(data, parent);
+        final requested = GeneralOccurrenceQuery(
+          startInclusive: localStart ? start.toLocal() : start,
+          endExclusive: localEnd ? end.toLocal() : end,
+          searchQuery: text,
+          colorValue: color,
+          onlyVisibleCalendars: visible,
+        );
+        expect(
+          snapshot(cache.occurrencesForQuery(data, requested)),
+          snapshot(reference.occurrencesForQuery(data, requested)),
+        );
+        expect(service.queries, hasLength(reused ? 1 : 2));
+      }
+    });
+
+    test('falls back for partial coverage, empty and reversed ranges', () {
+      DateTime date(int day) => DateTime.utc(2026, 1, day);
+      final data = dataFor([
+        GeneralSchedule(
+          id: 'calendar',
+          name: 'Calendar',
+          events: [_reminderEvent('spanning', date(1), date(10))],
+        ),
+      ]);
+      for (final requested in [
+        range(date(2), date(4)),
+        range(date(5), date(7)),
+        range(date(2), date(7)),
+        range(date(6), date(7)),
+        range(date(4), date(4)),
+        range(date(5), date(4)),
+      ]) {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        cache.occurrencesForQuery(data, range(date(3), date(6)));
+        expect(
+          snapshot(cache.occurrencesForQuery(data, requested)),
+          snapshot(reference.occurrencesForQuery(data, requested)),
+        );
+        expect(service.queries, hasLength(2));
+      }
+      for (final parent in [range(date(3), date(3)), range(date(6), date(3))]) {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        cache.occurrencesForQuery(data, parent);
+        expect(
+          cache.occurrencesForQuery(data, range(date(4), date(5))),
+          hasLength(1),
+        );
+        expect(service.queries, hasLength(2));
+      }
+    });
+
+    test('promotes a covering parent before bounded LRU eviction', () {
+      final service = _RecordingOccurrenceService();
+      final cache = GeneralOccurrenceCache(service: service);
+      final data = dataFor(schedules());
+      final parent = range(base, base.add(const Duration(minutes: 100)));
+      final month = cache.occurrencesForQuery(data, parent);
+      for (var index = 1000; index < 1063; index++) {
+        cache.occurrencesForQuery(data, query(index));
+      }
+      expect(service.queries, hasLength(64));
+      cache.occurrencesForQuery(data, query(5));
+      expect(service.queries, hasLength(64));
+      expect(cache.occurrencesForQuery(data, parent), same(month));
+      cache.occurrencesForQuery(data, query(1000));
+      expect(service.queries, hasLength(65));
+    });
+
+    test('bounds derived entries while their parent remains reusable', () {
+      final service = _RecordingOccurrenceService();
+      final cache = GeneralOccurrenceCache(service: service);
+      final data = dataFor(schedules());
+      cache.occurrencesForQuery(
+        data,
+        range(base, base.add(const Duration(minutes: 100))),
+      );
+      final first = cache.occurrencesForQuery(data, query(0));
+      for (var minute = 1; minute <= 64; minute++) {
+        cache.occurrencesForQuery(data, query(minute));
+      }
+      expect(cache.occurrencesForQuery(data, query(0)), isNot(same(first)));
+      expect(service.queries, hasLength(1));
+    });
+
+    test(
+      'invalidates containing and derived ranges on data changes and clear',
+      () {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        final data = dataFor(schedules()).normalized();
+        final requested = range(
+          DateTime.utc(2026, 1, 10),
+          DateTime.utc(2026, 1, 11),
+        );
+        cache.occurrencesForQuery(data, range(base, DateTime.utc(2026, 2)));
+        expect(cache.occurrencesForQuery(data, requested), isEmpty);
+        expect(service.queries, hasLength(1));
+        final changed = data.copyWith(
+          schedules: [
+            data.schedules.single.copyWith(
+              events: [
+                _reminderEvent(
+                  'new',
+                  DateTime.utc(2026, 1, 10, 9),
+                  DateTime.utc(2026, 1, 10, 10),
+                ),
+              ],
+            ),
+          ],
+        );
+        expect(
+          cache.occurrencesForQuery(changed, requested).single.event.id,
+          'new',
+        );
+        expect(service.queries, hasLength(2));
+        cache.clear();
+        expect(
+          cache.occurrencesForQuery(changed, requested).single.event.id,
+          'new',
+        );
+        expect(service.queries, hasLength(3));
+      },
+    );
+  });
+
+  test(
+    'keeps recurrence range behavior across DST and skipped-date candidates',
+    () {
+      const reference = GeneralOccurrenceService();
+      for (final (event, parentStart, parentEnd, childStart, childEnd) in [
+        (
+          _reminderEvent(
+            'skipped-date',
+            DateTime(2011, 12, 28, 9),
+            DateTime(2011, 12, 28, 10),
+          ).copyWith(
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.daily,
+              count: 10,
+            ),
+          ),
+          DateTime(2011, 12, 28),
+          DateTime(2012, 1, 5),
+          DateTime(2012, 1, 1),
+          DateTime(2012, 1, 3),
+        ),
+        (
+          _reminderEvent(
+            'raw-all-day',
+            DateTime.utc(2026, 3, 6, 23, 45),
+            DateTime.utc(2026, 3, 7, 23, 45),
+          ).copyWith(
+            isAllDay: true,
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.daily,
+              count: 10,
+            ),
+          ),
+          DateTime(2026, 3),
+          DateTime(2026, 4),
+          DateTime(2026, 3, 8, 19, 30),
+          DateTime(2026, 3, 8, 19, 40),
+        ),
+      ]) {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        final data = dataFor([
+          GeneralSchedule(id: 'calendar', name: 'Calendar', events: [event]),
+        ]);
+        cache.occurrencesForRange(
+          data,
+          startInclusive: parentStart,
+          endExclusive: parentEnd,
+        );
+        final requested = GeneralOccurrenceQuery(
+          startInclusive: childStart,
+          endExclusive: childEnd,
+        );
+        final items = cache.occurrencesForQuery(data, requested);
+        expect(
+          items.map((item) => (item.occurrenceKey, item.end, item.sequence)),
+          reference
+              .occurrencesForQuery(data, requested)
+              .map((item) => (item.occurrenceKey, item.end, item.sequence)),
+        );
+        expect(service.queries, hasLength(2));
+        expect(cache.occurrencesForQuery(data, requested), same(items));
+        expect(service.queries, hasLength(2));
+      }
+    },
+  );
+
+  test(
+    'rechecks containing-range eligibility when recurrence settings change',
+    () {
+      final service = _RecordingOccurrenceService();
+      final cache = GeneralOccurrenceCache(service: service);
+      final event = _reminderEvent(
+        'event',
+        DateTime.utc(2026, 1, 10, 9),
+        DateTime.utc(2026, 1, 10, 10),
+      );
+      final data = dataFor([
+        GeneralSchedule(id: 'calendar', name: 'Calendar', events: [event]),
+      ]).normalized();
+      final month = GeneralOccurrenceQuery(
+        startInclusive: base,
+        endExclusive: DateTime.utc(2026, 2),
+      );
+      final day = GeneralOccurrenceQuery(
+        startInclusive: DateTime.utc(2026, 1, 11),
+        endExclusive: DateTime.utc(2026, 1, 12),
+      );
+      cache.occurrencesForQuery(data, month);
+      expect(cache.occurrencesForQuery(data, day), isEmpty);
+      expect(service.queries, hasLength(1));
+      final recurring = data.copyWith(
+        schedules: [
+          data.schedules.single.copyWith(
+            events: [
+              event.copyWith(
+                recurrenceRule: const GeneralEventRecurrenceRule(
+                  type: GeneralEventRecurrence.daily,
+                  count: 3,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      cache.occurrencesForQuery(recurring, month);
+      final repeatedDay = cache.occurrencesForQuery(recurring, day);
+      expect(repeatedDay.single.sequence, 1);
+      expect(service.queries, hasLength(3));
+      expect(cache.occurrencesForQuery(recurring, day), same(repeatedDay));
+      expect(service.queries, hasLength(3));
+      cache.occurrencesForQuery(data, month);
+      expect(cache.occurrencesForQuery(data, day), isEmpty);
+      expect(service.queries, hasLength(4));
+    },
+  );
 
   group('reminder candidate caching', () {
     const reference = GeneralOccurrenceService();
@@ -559,7 +1050,8 @@ void main() {
       }
       cache.reminderItems(data, now: now.add(const Duration(seconds: 1)));
       expect(service.queries, hasLength(64));
-      cache.occurrencesForQuery(data, query(1000));
+      // Keep the new exact query outside all reminder candidate windows.
+      cache.occurrencesForQuery(data, query(10000));
       cache.reminderItems(data, now: now);
       expect(service.queries, hasLength(65));
       cache.reminderItems(data, now: now.add(const Duration(minutes: 1)));

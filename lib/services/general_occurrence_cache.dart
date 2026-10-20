@@ -8,6 +8,7 @@ class GeneralOccurrenceCache {
 
   final GeneralOccurrenceService _service;
   Object? _schedulesIdentity;
+  bool _canReuseContainingRanges = false;
   final _queries =
       <_GeneralOccurrenceQueryCacheKey, List<GeneralEventOccurrence>>{};
 
@@ -40,14 +41,41 @@ class GeneralOccurrenceCache {
       _queries[key] = cached;
       return cached;
     }
+    final covering = _coveringRange(key);
     final result = List<GeneralEventOccurrence>.unmodifiable(
-      _service.occurrencesForQuery(general, query),
+      covering == null
+          ? _service.occurrencesForQuery(general, query)
+          : covering.where(
+              (item) =>
+                  item.end.isAfter(query.startInclusive) &&
+                  item.start.isBefore(query.endExclusive),
+            ),
     );
     if (_queries.length >= _maxEntries) {
       _queries.remove(_queries.keys.first);
     }
     _queries[key] = result;
     return result;
+  }
+
+  List<GeneralEventOccurrence>? _coveringRange(
+    _GeneralOccurrenceQueryCacheKey query,
+  ) {
+    if (!_canReuseContainingRanges) return null;
+    MapEntry<_GeneralOccurrenceQueryCacheKey, List<GeneralEventOccurrence>>?
+    covering;
+    for (final entry in _queries.entries) {
+      if (entry.key.covers(query) &&
+          (covering == null || entry.value.length <= covering.value.length)) {
+        covering = entry;
+      }
+    }
+    if (covering == null) return null;
+    // Prefer the fewest candidates, keeping a reused parent in the same LRU
+    // as exact queries so selecting new days does not discard their month.
+    _queries.remove(covering.key);
+    _queries[covering.key] = covering.value;
+    return covering.value;
   }
 
   List<GeneralEventOccurrence> upcomingOccurrences(
@@ -105,6 +133,7 @@ class GeneralOccurrenceCache {
 
   void clear() {
     _schedulesIdentity = null;
+    _canReuseContainingRanges = false;
     _queries.clear();
   }
 
@@ -114,6 +143,13 @@ class GeneralOccurrenceCache {
       return;
     }
     _schedulesIdentity = schedulesIdentity;
+    // Recurrence expansion can choose a different first candidate or stop at
+    // a skipped civil date depending on the query. Only one-off events form
+    // a guaranteed superset for every contained range.
+    _canReuseContainingRanges = !general.schedules.any(
+      (schedule) =>
+          schedule.events.any((event) => event.recurrenceRule.isRepeating),
+    );
     _queries.clear();
   }
 }
@@ -161,6 +197,17 @@ class _GeneralOccurrenceQueryCacheKey {
   final bool onlyVisibleCalendars;
   final String searchQuery;
   final int? colorValue;
+
+  bool covers(_GeneralOccurrenceQueryCacheKey other) =>
+      endMicros > startMicros &&
+      other.endMicros > other.startMicros &&
+      startMicros <= other.startMicros &&
+      endMicros >= other.endMicros &&
+      startIsUtc == other.startIsUtc &&
+      endIsUtc == other.endIsUtc &&
+      onlyVisibleCalendars == other.onlyVisibleCalendars &&
+      searchQuery == other.searchQuery &&
+      colorValue == other.colorValue;
 
   @override
   bool operator ==(Object other) {
