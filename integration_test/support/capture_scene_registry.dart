@@ -37,6 +37,8 @@ import '../capture_scenarios/compact_toolbars.dart' as scene33;
 import '../capture_scenarios/workspace_chrome.dart' as scene34;
 import '../capture_scenarios/workspace_editor.dart' as scene35;
 import '../capture_scenarios/workspace_pages.dart' as scene36;
+import '../capture_scenarios/mobile_ui_fixes.dart' as scene37;
+import '../capture_scenarios/m3_expressive_controls.dart' as scene38;
 
 const captureSceneRegistry = <String, void Function()>{
   'category-panels': scene0.registerCaptureScenarios,
@@ -76,4 +78,6 @@ const captureSceneRegistry = <String, void Function()>{
   'workspace-chrome': scene34.registerCaptureScenarios,
   'workspace-editor': scene35.registerCaptureScenarios,
   'workspace-pages': scene36.registerCaptureScenarios,
+  'mobile-ui-fixes': scene37.registerCaptureScenarios,
+  'm3-expressive-controls': scene38.registerCaptureScenarios,
 };
