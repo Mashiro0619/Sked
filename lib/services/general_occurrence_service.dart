@@ -59,6 +59,7 @@ class GeneralOccurrenceService {
     GeneralScheduleData general,
     GeneralEventOccurrence occurrence,
   ) {
+    late final startDateTimeIso = occurrence.start.toIso8601String();
     return general.reminderAcknowledgements.any(
       (item) =>
           item.isHandled &&
@@ -66,7 +67,7 @@ class GeneralOccurrenceService {
             item.occurrenceKey,
             calendarId: occurrence.calendar.id,
             eventId: occurrence.event.id,
-            startDateTimeIso: occurrence.start.toIso8601String(),
+            startDateTimeIso: startDateTimeIso,
           ),
     );
   }
@@ -133,6 +134,11 @@ class GeneralOccurrenceService {
     NotificationSettings notificationSettings = const NotificationSettings(),
   }) {
     final items = <GeneralReminderItem>[];
+    // Parse history once per batch, only if a candidate passes the filters.
+    // Keeping the index local also observes undo and restored/raw snapshots.
+    late final handled = _HandledReminderIndex(
+      general.reminderAcknowledgements,
+    );
     for (final occurrence in occurrences) {
       if ((!occurrence.calendar.isVisible &&
               !notificationSettings.remindHiddenGeneralCalendars) ||
@@ -142,7 +148,7 @@ class GeneralOccurrenceService {
               )
               .isEmpty ||
           !(occurrenceFilter?.matches(occurrence) ?? true) ||
-          isReminderHandled(general, occurrence)) {
+          handled.contains(occurrence)) {
         continue;
       }
       GeneralReminderStatus? status;
@@ -165,6 +171,41 @@ class GeneralOccurrenceService {
       }
     }
     return items..sort(compareGeneralReminderItems);
+  }
+}
+
+class _HandledReminderIndex {
+  _HandledReminderIndex(Iterable<GeneralReminderAcknowledgement> history) {
+    for (final acknowledgement in history) {
+      if (!acknowledgement.isHandled) continue;
+      final key = acknowledgement.occurrenceKey;
+      final parsed = parseGeneralOccurrenceKey(key);
+      if (parsed == null) {
+        _rawKeys.add(key);
+      } else {
+        _parsedKeys.add((
+          parsed.calendarId,
+          parsed.eventId,
+          parsed.startDateTimeIso,
+        ));
+      }
+    }
+  }
+
+  final _parsedKeys = <(String, String, String)>{};
+  final _rawKeys = <String>{};
+
+  bool contains(GeneralEventOccurrence occurrence) {
+    if (_parsedKeys.isEmpty && _rawKeys.isEmpty) return false;
+    final calendarId = occurrence.calendar.id;
+    final eventId = occurrence.event.id;
+    // Match the exact ISO text, as generalOccurrenceKeyMatches does.
+    final startDateTimeIso = occurrence.start.toIso8601String();
+    return _parsedKeys.contains((calendarId, eventId, startDateTimeIso)) ||
+        // Only parse failures use the raw join. Adding parsed keys here too
+        // would change ownership for legacy strings that look like v2 keys.
+        (_rawKeys.isNotEmpty &&
+            _rawKeys.contains('$calendarId|$eventId|$startDateTimeIso'));
   }
 }
 
