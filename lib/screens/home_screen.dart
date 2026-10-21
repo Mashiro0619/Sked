@@ -44,6 +44,7 @@ import '../previews/sked_preview_support.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../theme/sked_menu_style.dart';
 import '../widgets/app_modal_sheet.dart';
+import '../widgets/sked_task_body.dart';
 import '../widgets/sked_task_header.dart';
 import '../widgets/workspace_frame.dart';
 import '../widgets/assistant_pane.dart' show AssistantPaneScope;

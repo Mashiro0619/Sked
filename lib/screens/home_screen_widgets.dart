@@ -1107,103 +1107,121 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
     final floating = SkedTaskDialogScope.maybeOf(context) != null;
     final metrics = WorkbenchChromeMetrics.of(context);
     final height = math.min(MediaQuery.sizeOf(context).height * 0.72, 640.0);
+    final compact = !floating && WorkbenchChromeMetrics.compactTouch(context);
+    final heading = Padding(
+      key: const ValueKey('timetable-picker-heading'),
+      padding: floating
+          ? skedPanelHeaderPadding
+          : const EdgeInsets.fromLTRB(16, 16, 12, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: SkedPickerTitle(
+              alignment: floating
+                  ? AlignmentDirectional.centerStart
+                  : AlignmentDirectional.topStart,
+              child: SkedTaskHeader(title: Text(l10n.multiTimetableSwitch)),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('timetable-picker-close'),
+            style: floating ? metrics.iconStyle : null,
+            onPressed: _busy || _childDialogOpen
+                ? null
+                : () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded),
+            tooltip: l10n.cancel,
+          ),
+        ],
+      ),
+    );
+    final status = UiCommandBusyIndicator(
+      busy: _busy,
+      semanticsKey: const ValueKey('timetable-picker-busy'),
+    );
+    final create = Builder(
+      builder: (anchor) => FilledButton.icon(
+        key: const ValueKey('timetable-picker-create'),
+        onPressed: _busy || _childDialogOpen
+            ? null
+            : () => _openChildDialog(() => widget.onCreate(anchor)),
+        icon: const Icon(Icons.add),
+        label: Text(l10n.createTimetable),
+      ),
+    );
+    Widget body({required bool sliver}) => ListenableBuilder(
+      listenable: widget.student,
+      builder: (context, _) {
+        final selectedId = widget.student.activeTimetableOrNull?.id;
+        final items = [
+          for (final item in widget.student.timetables)
+            _TimetableDrawerItem(
+              timetable: item,
+              selected: item.id == selectedId,
+              enabled: !_busy && !_childDialogOpen,
+              currentLabel: l10n.currentTimetableWeeks(item.config.totalWeeks),
+              switchLabel: l10n.tapToSwitchWeeks(item.config.totalWeeks),
+              editTooltip: l10n.editTimetable,
+              onTap: _busy || _childDialogOpen
+                  ? null
+                  : () => _switch(() => widget.onSwitch(context, item)),
+              onEdit: _busy || _childDialogOpen
+                  ? null
+                  : (anchor) => _openChildDialog(
+                      () => widget.onEdit(anchor, item),
+                      closeWhenNoTimetables: true,
+                    ),
+            ),
+        ];
+        return sliver
+            ? SkedTaskBody(
+                header: heading,
+                headerPadding: EdgeInsets.zero,
+                status: status,
+                bodyIsSliver: true,
+                semanticChildCount: items.length,
+                bodyKey: const PageStorageKey('timetable-picker-list'),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                footerPadding: const EdgeInsets.all(16),
+                footer: create,
+                child: SliverList.list(children: items),
+              )
+            : ListView(
+                shrinkWrap: floating,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: items,
+              );
+      },
+    );
     return PopScope(
       canPop: !_busy && !_childDialogOpen,
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: floating ? null : height,
-          child: Column(
-            mainAxisSize: floating ? MainAxisSize.min : MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                key: const ValueKey('timetable-picker-heading'),
-                padding: floating
-                    ? skedPanelHeaderPadding
-                    : const EdgeInsets.fromLTRB(16, 16, 12, 8),
-                child: Row(
+        child: compact
+            ? LayoutBuilder(
+                builder: (context, constraints) => ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: math.min(constraints.maxHeight, height),
+                  ),
+                  child: body(sliver: true),
+                ),
+              )
+            : SizedBox(
+                height: floating ? null : height,
+                child: Column(
+                  mainAxisSize: floating ? MainAxisSize.min : MainAxisSize.max,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: SkedPickerTitle(
-                        alignment: floating
-                            ? AlignmentDirectional.centerStart
-                            : AlignmentDirectional.topStart,
-                        child: SkedTaskHeader(
-                          title: Text(l10n.multiTimetableSwitch),
-                        ),
-                      ),
+                    heading,
+                    status,
+                    Flexible(
+                      fit: floating ? FlexFit.loose : FlexFit.tight,
+                      child: body(sliver: false),
                     ),
-                    IconButton(
-                      key: const ValueKey('timetable-picker-close'),
-                      style: floating ? metrics.iconStyle : null,
-                      onPressed: _busy || _childDialogOpen
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                      tooltip: l10n.cancel,
-                    ),
+                    Padding(padding: const EdgeInsets.all(16), child: create),
                   ],
                 ),
               ),
-              UiCommandBusyIndicator(
-                busy: _busy,
-                semanticsKey: const ValueKey('timetable-picker-busy'),
-              ),
-              Flexible(
-                fit: floating ? FlexFit.loose : FlexFit.tight,
-                child: ListenableBuilder(
-                  listenable: widget.student,
-                  builder: (context, _) {
-                    final selectedId = widget.student.activeTimetableOrNull?.id;
-                    return ListView(
-                      shrinkWrap: floating,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: [
-                        for (final item in widget.student.timetables)
-                          _TimetableDrawerItem(
-                            timetable: item,
-                            selected: item.id == selectedId,
-                            enabled: !_busy && !_childDialogOpen,
-                            currentLabel: l10n.currentTimetableWeeks(
-                              item.config.totalWeeks,
-                            ),
-                            switchLabel: l10n.tapToSwitchWeeks(
-                              item.config.totalWeeks,
-                            ),
-                            editTooltip: l10n.editTimetable,
-                            onTap: _busy || _childDialogOpen
-                                ? null
-                                : () => _switch(
-                                    () => widget.onSwitch(context, item),
-                                  ),
-                            onEdit: _busy || _childDialogOpen
-                                ? null
-                                : (anchor) => _openChildDialog(
-                                    () => widget.onEdit(anchor, item),
-                                    closeWhenNoTimetables: true,
-                                  ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Builder(
-                  builder: (anchor) => FilledButton.icon(
-                    onPressed: _busy || _childDialogOpen
-                        ? null
-                        : () => _openChildDialog(() => widget.onCreate(anchor)),
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.createTimetable),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1231,23 +1249,105 @@ class _TimetableDrawerItem extends StatelessWidget {
   final ValueChanged<BuildContext>? onEdit;
 
   @override
-  Widget build(BuildContext context) => ExpressiveDialogOption(
-    key: ValueKey('timetable-picker-item-${timetable.id}'),
-    selected: selected,
-    enabled: enabled,
-    leading: Icon(selected ? Icons.check_circle : Icons.calendar_view_week),
-    title: Text(timetable.config.name),
-    subtitle: Text(selected ? currentLabel : switchLabel),
-    trailing: Builder(
+  Widget build(BuildContext context) {
+    final metrics = WorkbenchChromeMetrics.of(context);
+    final edit = Builder(
       builder: (anchor) => IconButton(
+        key: ValueKey('timetable-picker-edit-${timetable.id}'),
         tooltip: editTooltip,
-        style: WorkbenchChromeMetrics.of(context).iconStyle,
+        style: metrics.iconStyle,
         icon: const Icon(Icons.edit_outlined),
         onPressed: enabled && onEdit != null ? () => onEdit!(anchor) : null,
       ),
-    ),
-    onTap: enabled ? onTap : null,
-  );
+    );
+    if (!WorkbenchChromeMetrics.compactTouch(context)) {
+      return ExpressiveDialogOption(
+        key: ValueKey('timetable-picker-item-${timetable.id}'),
+        selected: selected,
+        enabled: enabled,
+        leading: Icon(selected ? Icons.check_circle : Icons.calendar_view_week),
+        title: Text(timetable.config.name),
+        subtitle: Text(selected ? currentLabel : switchLabel),
+        trailing: edit,
+        onTap: enabled ? onTap : null,
+      );
+    }
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final accent = skedReadableAccent(
+      colors,
+      surface: colors.primary.withValues(alpha: 0.12),
+    );
+    final textColor = enabled
+        ? (selected ? accent : colors.onSurface)
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? (selected ? accent : colors.onSurfaceVariant)
+        : colors.onSurface.withValues(alpha: 0.38);
+    final radius = skedShapeSchemeOf(context).fieldRadius;
+    return Semantics(
+      key: ValueKey('timetable-picker-item-${timetable.id}'),
+      selected: selected,
+      enabled: enabled,
+      child: Material(
+        color: selected
+            ? colors.primary.withValues(alpha: 0.12)
+            : Colors.transparent,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: radius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                SizedBox.square(
+                  dimension: 40,
+                  child: Icon(
+                    selected ? Icons.check_circle : Icons.calendar_view_week,
+                    color: secondaryColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        timetable.config.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        selected ? currentLabel : switchLabel,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: secondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconTheme.merge(
+                  data: IconThemeData(color: secondaryColor),
+                  child: edit,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TimetableWeekPager extends StatefulWidget {

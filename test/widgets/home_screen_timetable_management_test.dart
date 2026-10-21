@@ -4253,6 +4253,281 @@ void main() {
     expect(find.text('Second timetable'), findsOneWidget);
   });
 
+  for (final scenario in [
+    for (final width in [320.0, 344.0, 360.0, 412.0])
+      for (final scale in [1.0, 2.0]) (width: width, scale: scale, count: 2),
+    (width: 344.0, scale: 1.0, count: 1),
+  ]) {
+    testWidgets(
+      'phone timetable picker ${scenario.width} ${scenario.scale}x ${scenario.count} items keeps edits inline and shrinks to content',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(scenario.width, 850);
+        addTearDown(tester.view.reset);
+        final original = _buildMultiTimetableStudentData();
+        final tables = original.studentMode.timetables
+            .take(scenario.count)
+            .map(
+              (table) => table.copyWith(
+                config: table.config.copyWith(
+                  name: table.id == 'table-1' ? '当前课表名称较长也应与编辑按钮并排' : '另一张课表',
+                ),
+              ),
+            )
+            .toList();
+        final storage = _MemoryTimetableStorage(
+          original.copyWith(
+            studentMode: original.studentMode.copyWith(timetables: tables),
+          ),
+        );
+        final provider = AppRuntime(
+          dataTransferCodec: inlineDataTransferCodec,
+          storage: storage,
+          privacyService: const _NoopPrivacyService(),
+          secretStore: const _NoopSecretStore(),
+        );
+        await provider.lifecycle.load();
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+          provider.dispose();
+        });
+        await _pumpHomeScreenWithProvider(
+          tester,
+          provider,
+          locale: const Locale('zh'),
+          textScaler: TextScaler.linear(scenario.scale),
+        );
+        await _openTimetablePicker(tester);
+        final sheet = tester.getRect(
+          find.byKey(const ValueKey('app-bottom-task-surface')),
+        );
+        expect(sheet.height, lessThanOrEqualTo(850 * .72));
+        if (scenario.scale == 1) expect(sheet.height, lessThan(450));
+        final create = find.byKey(const ValueKey('timetable-picker-create'));
+        expect(create.hitTestable(), findsOneWidget);
+        final list = find.byKey(const PageStorageKey('timetable-picker-list'));
+        final scrollable = find.descendant(
+          of: list,
+          matching: find.byType(Scrollable),
+        );
+        final position = tester.state<ScrollableState>(scrollable).position;
+        final semantics = tester.ensureSemantics();
+        try {
+          for (final table in tables) {
+            final item = find.byKey(
+              ValueKey('timetable-picker-item-${table.id}'),
+            );
+            final edit = find.byKey(
+              ValueKey('timetable-picker-edit-${table.id}'),
+            );
+            await tester.ensureVisible(item);
+            await tester.pumpAndSettle();
+            final itemRect = tester.getRect(item);
+            final editRect = tester.getRect(edit);
+            final titleRect = tester.getRect(
+              find.descendant(of: item, matching: find.text(table.config.name)),
+            );
+            expect(editRect.center.dy, closeTo(itemRect.center.dy, .01));
+            expect(editRect.left, greaterThan(titleRect.right));
+            expect(editRect.width, greaterThanOrEqualTo(48));
+            expect(editRect.height, greaterThanOrEqualTo(48));
+            expect(edit.hitTestable(), findsOneWidget);
+            expect(
+              tester
+                  .getSemantics(item)
+                  .getSemanticsData()
+                  .flagsCollection
+                  .isSelected,
+              table.id == 'table-1' ? ui.Tristate.isTrue : ui.Tristate.isFalse,
+            );
+          }
+        } finally {
+          semantics.dispose();
+        }
+        if (position.maxScrollExtent == 0) {
+          final last = tester.getRect(
+            find.byKey(ValueKey('timetable-picker-item-${tables.last.id}')),
+          );
+          expect(tester.getRect(create).top - last.bottom, closeTo(16, .1));
+        }
+        final writes = storage.saveCount;
+        await tester.tap(
+          find.byKey(ValueKey('timetable-picker-edit-${tables.last.id}')),
+        );
+        await tester.pumpAndSettle();
+        expect(provider.studentView.activeTimetable.id, 'table-1');
+        expect(storage.saveCount, writes);
+        expect(find.text('编辑课表'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
+  testWidgets(
+    'phone timetable picker scrolls many items with its create action reachable after rotation',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 568);
+      addTearDown(tester.view.reset);
+      final original = _buildMultiTimetableStudentData();
+      final tables = [
+        for (var i = 1; i <= 20; i++)
+          original.studentMode.timetables.first.copyWith(
+            id: 'table-$i',
+            config: original.studentMode.timetables.first.config.copyWith(
+              name: '第 $i 张课表',
+            ),
+          ),
+      ];
+      final storage = _MemoryTimetableStorage(
+        original.copyWith(
+          studentMode: original.studentMode.copyWith(timetables: tables),
+        ),
+      );
+      final provider = AppRuntime(
+        dataTransferCodec: inlineDataTransferCodec,
+        storage: storage,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.lifecycle.load();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        provider.dispose();
+      });
+      await _pumpHomeScreenWithProvider(
+        tester,
+        provider,
+        locale: const Locale('zh'),
+        textScaler: const TextScaler.linear(2),
+      );
+      await _openTimetablePicker(tester);
+      final list = find.byKey(const PageStorageKey('timetable-picker-list'));
+      final scrollable = find.descendant(
+        of: list,
+        matching: find.byType(Scrollable),
+      );
+      expect(
+        tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+        greaterThan(0),
+      );
+      final create = find.byKey(const ValueKey('timetable-picker-create'));
+      final createRect = tester.getRect(create);
+      final last = find.byKey(const ValueKey('timetable-picker-item-table-20'));
+      await tester.scrollUntilVisible(last, 250, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(last.hitTestable(), findsOneWidget);
+      expect(tester.getRect(create), createRect);
+      expect(create.hitTestable(), findsOneWidget);
+      tester.view.physicalSize = const Size(850, 320);
+      await tester.pumpAndSettle();
+      expect(create.hitTestable(), findsOneWidget);
+      expect(
+        tester
+            .getRect(find.byKey(const ValueKey('app-bottom-task-surface')))
+            .height,
+        lessThanOrEqualTo(320 * .72 + .01),
+      );
+      await tester.tap(create);
+      await tester.pumpAndSettle();
+      expect(find.text('新建课表'), findsOneWidget);
+      expect(storage.saveCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'phone timetable picker announces its item count and updates it while open',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 568);
+      addTearDown(tester.view.reset);
+      final original = _buildMultiTimetableStudentData();
+      final tables = [
+        for (var i = 1; i <= 20; i++)
+          original.studentMode.timetables.first.copyWith(
+            id: 'table-$i',
+            config: original.studentMode.timetables.first.config.copyWith(
+              name: '第 $i 张课表',
+            ),
+          ),
+      ];
+      final storage = _MemoryTimetableStorage(
+        original.copyWith(
+          studentMode: original.studentMode.copyWith(timetables: tables),
+        ),
+      );
+      final provider = AppRuntime(
+        dataTransferCodec: inlineDataTransferCodec,
+        storage: storage,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.lifecycle.load();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        provider.dispose();
+      });
+      final semantics = tester.ensureSemantics();
+      try {
+        await _pumpHomeScreenWithProvider(
+          tester,
+          provider,
+          locale: const Locale('zh'),
+        );
+        await _openTimetablePicker(tester);
+        final list = find.byKey(const PageStorageKey('timetable-picker-list'));
+        final scrollable = find.descendant(
+          of: list,
+          matching: find.byType(Scrollable),
+        );
+        final initialState = tester.state<ScrollableState>(scrollable);
+
+        void expectItemCount(int count) {
+          SemanticsData? scrolling;
+          void visit(SemanticsNode node) {
+            final data = node.getSemanticsData();
+            if ((data.scrollExtentMax ?? 0) > 0) scrolling = data;
+            node.visitChildren((child) {
+              visit(child);
+              return true;
+            });
+          }
+
+          visit(tester.getSemantics(list));
+          expect(scrolling, isNotNull);
+          expect(scrolling!.scrollChildCount, count);
+          expect(scrolling!.scrollIndex, 0);
+          expect(tester.state<ScrollableState>(scrollable), same(initialState));
+        }
+
+        expectItemCount(20);
+        await provider.studentCommands.addTimetable(
+          tables.first.config.copyWith(name: '新增课表'),
+        );
+        await tester.pumpAndSettle();
+        expectItemCount(21);
+        final addedId = provider.studentView.activeTimetable.id;
+        await provider.studentCommands.deleteTimetable(addedId);
+        await tester.pumpAndSettle();
+        expectItemCount(20);
+        tester.view.physicalSize = const Size(850, 320);
+        await tester.pumpAndSettle();
+        expectItemCount(20);
+        expect(storage.saveCount, 2);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
   testWidgets('compact timetable picker cannot close while saving', (
     tester,
   ) async {
