@@ -706,11 +706,23 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                             final week = index + 1;
                             final selected = draft.contains(week);
                             final colorScheme = Theme.of(context).colorScheme;
+                            void toggleWeek() {
+                              if (popped) return;
+                              setState(() {
+                                if (draft.contains(week)) {
+                                  draft.remove(week);
+                                } else {
+                                  draft.add(week);
+                                }
+                              });
+                            }
+
                             return Semantics(
                               key: ValueKey('course-semester-week-$week'),
                               button: true,
                               selected: selected,
                               label: l10n.weekLabel(week),
+                              onTap: toggleWeek,
                               child: ExcludeSemantics(
                                 child: Material(
                                   color: selected
@@ -727,15 +739,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                                     borderRadius: BorderRadius.circular(
                                       desktop ? 6 : 12,
                                     ),
-                                    onTap: () {
-                                      setState(() {
-                                        if (selected) {
-                                          draft.remove(week);
-                                        } else {
-                                          draft.add(week);
-                                        }
-                                      });
-                                    },
+                                    onTap: toggleWeek,
                                     child: Center(
                                       child: Text(
                                         '$week',

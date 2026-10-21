@@ -763,7 +763,15 @@ void main() {
       ui.Tristate.isTrue,
     );
 
-    await tester.tap(firstWeek);
+    final firstWeekNode = tester.getSemantics(firstWeek);
+    expect(
+      firstWeekNode.getSemanticsData().hasAction(ui.SemanticsAction.tap),
+      isTrue,
+    );
+    firstWeekNode.owner!.performAction(
+      firstWeekNode.id,
+      ui.SemanticsAction.tap,
+    );
     await tester.pump();
     expect(
       tester
@@ -772,6 +780,16 @@ void main() {
           .flagsCollection
           .isSelected,
       ui.Tristate.isFalse,
+    );
+    await tester.tap(firstWeek);
+    await tester.pump();
+    expect(
+      tester
+          .getSemantics(firstWeek)
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected,
+      ui.Tristate.isTrue,
     );
     expect(tester.takeException(), isNull);
     semantics.dispose();
