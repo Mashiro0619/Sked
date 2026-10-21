@@ -28,6 +28,8 @@ void main() {
   testWidgets('ExpressiveDialogOption fits compact width with long text', (
     tester,
   ) async {
+    var editTaps = 0;
+    var optionTaps = 0;
     await tester.binding.setSurfaceSize(const Size(260, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -47,10 +49,10 @@ void main() {
                 ),
                 trailing: IconButton(
                   tooltip: 'Edit',
-                  onPressed: () {},
+                  onPressed: () => editTaps++,
                   icon: const Icon(Icons.edit_outlined),
                 ),
-                onTap: () {},
+                onTap: () => optionTaps++,
               ),
             ),
           ),
@@ -59,8 +61,79 @@ void main() {
     );
 
     expect(find.byType(ExpressiveDialogOption), findsOneWidget);
+    final subtitleRect = tester.getRect(
+      find.text(
+        'A detailed subtitle with a long localized description and extra metadata',
+      ),
+    );
+    expect(
+      tester.getRect(find.byTooltip('Edit')).top,
+      greaterThanOrEqualTo(subtitleRect.bottom + 6),
+    );
+    await tester.tap(find.byTooltip('Edit'));
+    expect(editTaps, 1);
+    expect(optionTaps, 0);
     expect(tester.takeException(), isNull);
   });
+
+  for (final scale in [1.0, 2.0]) {
+    for (final showUnselectedIndicator in [false, true]) {
+      testWidgets('selection markers stay centered inline at $scale text scale '
+          '(unselected indicator: $showUnselectedIndicator)', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.android),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 220,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final selected in [true, false])
+                        ExpressiveDialogOption(
+                          key: ValueKey(selected),
+                          leading: const Icon(Icons.calendar_today_outlined),
+                          title: Text(selected ? '星期一' : '星期二'),
+                          titleMaxLines: null,
+                          selected: selected,
+                          unselectedIndicator: showUnselectedIndicator
+                              ? const Icon(Icons.radio_button_unchecked)
+                              : null,
+                          onTap: () {},
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final selectedRect = tester.getRect(find.byKey(const ValueKey(true)));
+        final unselectedRect = tester.getRect(
+          find.byKey(const ValueKey(false)),
+        );
+        expect(selectedRect.height, closeTo(unselectedRect.height, .01));
+        expect(selectedRect.height, greaterThanOrEqualTo(48));
+        for (final (label, icon) in [
+          ('星期一', Icons.check_circle),
+          if (showUnselectedIndicator) ('星期二', Icons.radio_button_unchecked),
+        ]) {
+          final labelRect = tester.getRect(find.text(label));
+          final markerRect = tester.getRect(find.byIcon(icon));
+          expect(markerRect.left, greaterThanOrEqualTo(labelRect.right));
+          expect(markerRect.center.dy, closeTo(labelRect.center.dy, .01));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 
   testWidgets(
     'ExpressiveDialogOption keeps a trailing action inline without leading',

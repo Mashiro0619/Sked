@@ -2440,7 +2440,7 @@ class _SelectableExportTile extends StatelessWidget {
     leading: leading,
     selected: selected,
     onTap: onTap,
-    trailing: selected ? null : const Icon(Icons.radio_button_unchecked),
+    unselectedIndicator: const Icon(Icons.radio_button_unchecked),
     subtitleMaxLines: 2,
   );
 }

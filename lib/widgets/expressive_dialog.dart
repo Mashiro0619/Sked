@@ -159,6 +159,7 @@ class ExpressiveDialogOption extends StatelessWidget {
     this.subtitle,
     this.leading,
     this.trailing,
+    this.unselectedIndicator,
     this.selected = false,
     this.enabled = true,
     this.titleMaxLines = 2,
@@ -171,6 +172,9 @@ class ExpressiveDialogOption extends StatelessWidget {
   final Widget? subtitle;
   final Widget? leading;
   final Widget? trailing;
+
+  /// An optional selection marker that stays inline, like the selected check.
+  final Widget? unselectedIndicator;
   final VoidCallback? onTap;
   final bool selected;
   final bool enabled;
@@ -204,7 +208,7 @@ class ExpressiveDialogOption extends StatelessWidget {
                     ? accent
                     : colors.onSurface.withValues(alpha: 0.38),
               )
-            : null);
+            : unselectedIndicator);
 
     if (WorkbenchChromeMetrics.of(context).desktop) {
       return ListTile(
@@ -310,13 +314,12 @@ class ExpressiveDialogOption extends StatelessWidget {
                           child: trailingWidget,
                         );
 
-                  // Keep an edit/action control alongside text whenever a compact
-                  // row can still provide a useful text column. Rows with a
-                  // leading icon need more room; without one, only very narrow
-                  // dialogs fall back to a second line for the trailing control.
+                  // Only independent trailing actions may move below the text.
+                  // Selection markers stay inline so selecting a short option
+                  // does not add a second line or move its check to the bottom.
                   final stackTrailing =
                       !keepTrailingInline &&
-                      trailingContent != null &&
+                      trailing != null &&
                       constraints.maxWidth <
                           (leadingWidget == null ? 160 : 300);
                   if (stackTrailing) {
