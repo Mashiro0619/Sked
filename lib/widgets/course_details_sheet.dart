@@ -128,7 +128,10 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
             tooltip: l10n.editCourseTooltip,
             style: viewTask
                 ? WorkbenchChromeMetrics.of(context).iconStyle
-                : null,
+                : IconButton.styleFrom(
+                    minimumSize: const Size.square(48),
+                    maximumSize: const Size.square(48),
+                  ),
             onPressed: _actionInProgress
                 ? null
                 : () {
@@ -155,7 +158,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
               label: l10n.place,
               value: course.location.isEmpty ? l10n.notFilled : course.location,
             ),
-            SizedBox(height: viewTask ? 12 : 10),
+            const SizedBox(height: 12),
             _PrimaryInfoCard(
               compact: viewTask,
               icon: Icons.schedule,
@@ -164,9 +167,9 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                   ? timeLabel
                   : '$timeLabel · ${_formatPeriodsLabel(l10n, course.periods)}',
             ),
-            SizedBox(height: viewTask ? 16 : 12),
+            const SizedBox(height: 16),
             SkedDetailGroup(
-              compact: viewTask,
+              compact: true,
               entries: [
                 (
                   label: l10n.teacherName,
@@ -198,12 +201,30 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                       ? l10n.notFilled
                       : course.credit.toString(),
                 ),
-                (
-                  label: l10n.remarks,
-                  value: course.remarks.isEmpty ? l10n.none : course.remarks,
-                ),
+                if (viewTask)
+                  (
+                    label: l10n.remarks,
+                    value: course.remarks.isEmpty ? l10n.none : course.remarks,
+                  ),
               ],
             ),
+            if (!viewTask) ...[
+              const SizedBox(height: 16),
+              Semantics(
+                header: true,
+                child: Text(
+                  l10n.remarks,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                course.remarks.isEmpty ? l10n.none : course.remarks,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+              ),
+            ],
             if (otherConflictCourses.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(l10n.conflictCourses, style: theme.textTheme.titleMedium),
@@ -254,7 +275,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
               Text(l10n.customFields, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               SkedDetailGroup(
-                compact: viewTask,
+                compact: true,
                 entries: [
                   for (final entry in course.customFields.entries)
                     (label: entry.key, value: entry.value.toString()),
@@ -278,6 +299,17 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
           );
         }
         final maxHeight = MediaQuery.of(context).size.height * 0.8;
+        final titleStyle = theme.textTheme.titleLarge!.copyWith(
+          fontSize: 22,
+          fontWeight: FontWeight.w500,
+          height: 1.3,
+          color: theme.colorScheme.onSurface,
+        );
+        final firstLineHeight =
+            MediaQuery.textScalerOf(context).scale(22) * titleStyle.height!;
+        final titleTopPadding = ((48 - firstLineHeight) / 2)
+            .clamp(0.0, 24.0)
+            .toDouble();
         return SafeArea(
           top: false,
           child: ConstrainedBox(
@@ -287,10 +319,19 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
               header: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: SkedTaskHeader(title: Text(course.name))),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: titleTopPadding),
+                      child: SkedTaskHeader(
+                        title: Text(course.name, style: titleStyle),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   editAction,
                 ],
               ),
+              headerPadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: details,
             ),
@@ -468,36 +509,39 @@ class _PrimaryInfoCard extends StatelessWidget {
         ],
       );
     }
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: skedReadableAccent(
-              colorScheme,
-              surface: SkedSurface.colorOf(context),
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: 24,
+          color: skedReadableAccent(
+            colorScheme,
+            surface: SkedSurface.colorOf(context),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(height: 4),
-                Text(value, style: Theme.of(context).textTheme.titleMedium),
-              ],
-            ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

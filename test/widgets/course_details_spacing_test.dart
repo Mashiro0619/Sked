@@ -21,6 +21,18 @@ Finder _key(String value) => find.byKey(ValueKey(value));
 Finder _primary(IconData icon) =>
     find.ancestor(of: find.byIcon(icon), matching: find.byType(Row)).first;
 
+void _expectPrimaryIconCentered(
+  WidgetTester tester, {
+  required IconData icon,
+  required String label,
+  required String value,
+}) {
+  final labelRect = tester.getRect(find.text(label));
+  final valueRect = tester.getRect(find.text(value));
+  final textGroupCenter = (labelRect.top + valueRect.bottom) / 2;
+  expect(tester.getCenter(find.byIcon(icon)).dy, closeTo(textGroupCenter, .1));
+}
+
 class _Fixture {
   _Fixture(this.provider, this.course);
 
@@ -56,6 +68,7 @@ Future<_Fixture> _pump(
   double scale = 1,
   bool viewTask = true,
   bool floating = true,
+  String? title,
   String remarks = _remarks,
 }) async {
   tester.view.devicePixelRatio = 1;
@@ -63,7 +76,7 @@ Future<_Fixture> _pump(
   addTearDown(tester.view.reset);
   final provider = await workspaceProvider(locale: locale);
   final course = provider.studentView.activeTimetable.courses.first.copyWith(
-    name: locale == 'zh' ? '计算方法' : 'Numerical Methods',
+    name: title ?? (locale == 'zh' ? '计算方法' : 'Numerical Methods'),
     teacher: locale == 'zh' ? '肖莎莎' : 'Prof. Chen',
     location: locale == 'zh' ? '辽河路校区 玉衡B308(公共机房)' : 'West campus · Room B308',
     dayOfWeek: 1,
@@ -378,41 +391,225 @@ void main() {
   );
 
   testWidgets(
-    'mobile details keep the existing heading, padded cards and loose rows',
+    'mobile details tighten the heading and keep separate aligned information',
     (tester) async {
-      final fixture = await _pump(tester, width: 390, viewTask: false);
+      final fixture = await _pump(
+        tester,
+        width: 390,
+        viewTask: false,
+        title: '马克思主义基本原理',
+      );
       final panel = tester.getRect(find.byKey(_panelKey));
       final strings = fixture.strings(tester);
+      final title = find.text(fixture.course.name);
       final heading = tester.widget<RichText>(
-        find.descendant(
-          of: find.text(fixture.course.name),
-          matching: find.byType(RichText),
-        ),
+        find.descendant(of: title, matching: find.byType(RichText)),
       );
       final theme = Theme.of(tester.element(find.byType(CourseDetailsSheet)));
+      final titleRow = tester.getRect(
+        find.ancestor(of: title, matching: find.byType(Row)).first,
+      );
+      final edit = find.byTooltip(strings.editCourseTooltip);
+      final editRect = tester.getRect(edit);
+      final place = tester.getRect(_primary(Icons.place_outlined));
+      final time = tester.getRect(_primary(Icons.schedule));
+      final body = tester.getRect(_key('sked-task-content'));
 
       expect(find.byType(WorkspaceViewPanel), findsNothing);
       final paintedStyle = heading.text.style!;
-      expect(paintedStyle.fontSize, theme.textTheme.headlineSmall!.fontSize);
-      expect(paintedStyle.height, theme.textTheme.headlineSmall!.height);
-      expect(paintedStyle.fontWeight, FontWeight.w400);
+      expect(paintedStyle.fontSize, 22);
+      expect(paintedStyle.fontWeight, FontWeight.w500);
       expect(paintedStyle.color, theme.colorScheme.onSurface);
+      expect(tester.getTopLeft(title).dx, closeTo(panel.left + 16, .1));
+      expect(titleRow.top - panel.top, inInclusiveRange(8, 16));
+      expect(place.top - titleRow.bottom, inInclusiveRange(6, 12));
+      expect(place.top - body.top, closeTo(0, .1));
+      expect(place.left, closeTo(panel.left + 16, .1));
+      expect(place.right, closeTo(panel.right - 16, .1));
+      expect(time.left, closeTo(place.left, .1));
+      expect(time.right, closeTo(place.right, .1));
+      expect(time.top - place.bottom, closeTo(12, .1));
       expect(
         tester.getTopLeft(find.byIcon(Icons.place_outlined)).dx - panel.left,
-        closeTo(30, .1),
+        closeTo(16, .1),
       );
       expect(
         tester.getSize(find.byIcon(Icons.place_outlined)),
         const Size(24, 24),
       );
-      expect(
-        tester.widget<Text>(find.text(strings.place)).style,
-        theme.textTheme.labelLarge,
+      expect(editRect.width, greaterThanOrEqualTo(48));
+      expect(editRect.height, greaterThanOrEqualTo(48));
+      expect(edit.hitTestable(), findsOneWidget);
+
+      final labels = [
+        strings.teacherName,
+        strings.dayOfWeek,
+        strings.semesterWeeks,
+        strings.credits,
+      ];
+      final values = fixture.values(tester).take(labels.length).toList();
+      final firstValue = tester.getRect(find.text(values.first));
+      for (var index = 0; index < labels.length; index++) {
+        final label = tester.getRect(find.text(labels[index]));
+        final value = tester.getRect(find.text(values[index]));
+        expect(label.left, closeTo(panel.left + 16, .1));
+        expect(value.left, closeTo(firstValue.left, .1));
+        expect(value.right, closeTo(panel.right - 16, .1));
+        expect(value.top, closeTo(label.top, .1));
+      }
+
+      // Time, weekday and teaching weeks stay separately labelled properties.
+      final timeLabel =
+          '${buildTimeRange(480, 575)} · ${strings.periodRangeLabel(1, 2)}';
+      expect(find.text(strings.place), findsOneWidget);
+      expect(find.text(fixture.course.location), findsOneWidget);
+      expect(find.text(strings.time), findsOneWidget);
+      expect(find.text(timeLabel), findsOneWidget);
+      expect(time.bottom, lessThan(tester.getTopLeft(find.text(labels[1])).dy));
+      _expectPrimaryIconCentered(
+        tester,
+        icon: Icons.place_outlined,
+        label: strings.place,
+        value: fixture.course.location,
       );
-      expect(
-        tester.getTopLeft(find.text(fixture.course.teacher)).dx,
-        greaterThan(tester.getTopLeft(find.text('2.5')).dx),
+      _expectPrimaryIconCentered(
+        tester,
+        icon: Icons.schedule,
+        label: strings.time,
+        value: timeLabel,
       );
+
+      final remarksLabel = tester.getRect(find.text(strings.remarks));
+      final remarks = tester.getRect(find.text(fixture.course.remarks));
+      final notesText = tester.widget<Text>(find.text(fixture.course.remarks));
+      expect(remarksLabel.left, closeTo(panel.left + 16, .1));
+      expect(remarks.top, greaterThan(remarksLabel.bottom));
+      expect(remarks.left, closeTo(panel.left + 16, .1));
+      expect(remarks.right, closeTo(panel.right - 16, .1));
+      expect(notesText.maxLines, isNull);
+      expect(notesText.overflow, isNot(TextOverflow.ellipsis));
+
+      await tester.tap(edit);
+      await tester.pumpAndSettle();
+      expect(fixture.editCount, 1);
+      expect(fixture.editAnchor, editRect);
+      expect(tester.takeException(), isNull);
+    },
+    variant: _mobile,
+  );
+
+  testWidgets(
+    'narrow large-text mobile details wrap the title and scroll full remarks',
+    (tester) async {
+      const title = '马克思主义基本原理与课程实践';
+      final remarks = '${List.filled(8, _remarks).join('\n')}\n备注结束';
+      final fixture = await _pump(
+        tester,
+        width: 320,
+        scale: 2,
+        viewTask: false,
+        title: title,
+        remarks: remarks,
+      );
+      final panel = tester.getRect(find.byKey(_panelKey));
+      final strings = fixture.strings(tester);
+      final titleFinder = find.text(title);
+      final titleText = tester.widget<Text>(titleFinder);
+      final titleParagraph = tester.renderObject<RenderParagraph>(titleFinder);
+      final titleLines = titleParagraph.getBoxesForSelection(
+        TextSelection(baseOffset: 0, extentOffset: title.length),
+      );
+
+      expect(titleLines.map((box) => box.top).toSet().length, greaterThan(1));
+      expect(titleText.maxLines, isNull);
+      expect(titleText.overflow, isNot(TextOverflow.ellipsis));
+      expect(titleParagraph.didExceedMaxLines, isFalse);
+      final headingViewport = tester.getRect(
+        find
+            .ancestor(
+              of: titleFinder,
+              matching: find.byType(SingleChildScrollView),
+            )
+            .first,
+      );
+      final titleEnding = titleParagraph.localToGlobal(
+        Offset(titleLines.last.left, titleLines.last.bottom - .1),
+      );
+      expect(headingViewport.contains(titleEnding), isTrue);
+
+      final edit = find.byTooltip(strings.editCourseTooltip);
+      final editRect = tester.getRect(edit);
+      expect(editRect.width, greaterThanOrEqualTo(48));
+      expect(editRect.height, greaterThanOrEqualTo(48));
+      expect(edit.hitTestable(), findsOneWidget);
+      await tester.tap(edit);
+      await tester.pumpAndSettle();
+      expect(fixture.editCount, 1);
+
+      final timeLabel =
+          '${buildTimeRange(480, 575)} · ${strings.periodRangeLabel(1, 2)}';
+      final place = tester.getRect(_primary(Icons.place_outlined));
+      final time = tester.getRect(_primary(Icons.schedule));
+      expect(time.top - place.bottom, closeTo(12, .1));
+      for (final info in [
+        (
+          icon: Icons.place_outlined,
+          label: strings.place,
+          value: fixture.course.location,
+        ),
+        (icon: Icons.schedule, label: strings.time, value: timeLabel),
+      ]) {
+        _expectPrimaryIconCentered(
+          tester,
+          icon: info.icon,
+          label: info.label,
+          value: info.value,
+        );
+        final valueParagraph = tester.renderObject<RenderParagraph>(
+          find.text(info.value),
+        );
+        final valueLines = valueParagraph.getBoxesForSelection(
+          TextSelection(baseOffset: 0, extentOffset: info.value.length),
+        );
+        expect(valueLines.map((box) => box.top).toSet().length, greaterThan(1));
+      }
+
+      final teacherLabel = tester.getRect(find.text(strings.teacherName));
+      final teacher = tester.getRect(find.text(fixture.course.teacher));
+      expect(teacher.top, greaterThan(teacherLabel.bottom));
+      expect(teacher.left, closeTo(panel.left + 16, .1));
+      expect(teacher.right, closeTo(panel.right - 16, .1));
+
+      final notes = find.text(remarks);
+      final paragraph = tester.renderObject<RenderParagraph>(notes);
+      expect(tester.widget<Text>(notes).data, endsWith('备注结束'));
+      expect(paragraph.didExceedMaxLines, isFalse);
+      expect(tester.getSize(notes).width, closeTo(panel.width - 32, .1));
+      expect(
+        tester.getTopLeft(notes).dy,
+        greaterThan(tester.getBottomLeft(find.text(strings.remarks)).dy),
+      );
+      final body = _key('sked-task-body-slot');
+      final scroll = tester
+          .state<ScrollableState>(
+            find.descendant(of: body, matching: find.byType(Scrollable)),
+          )
+          .position;
+      expect(scroll.maxScrollExtent, greaterThan(0));
+      scroll.jumpTo(scroll.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final ending = paragraph.getBoxesForSelection(
+        TextSelection(
+          baseOffset: remarks.length - 4,
+          extentOffset: remarks.length,
+        ),
+      );
+      expect(ending, isNotEmpty);
+      final lastLine = paragraph.localToGlobal(
+        Offset(ending.last.left, ending.last.bottom - .1),
+      );
+      expect(tester.getRect(body).contains(lastLine), isTrue);
+      expect(tester.getRect(edit), editRect);
       expect(tester.takeException(), isNull);
     },
     variant: _mobile,
