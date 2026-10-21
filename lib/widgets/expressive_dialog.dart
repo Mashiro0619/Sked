@@ -164,6 +164,7 @@ class ExpressiveDialogOption extends StatelessWidget {
     this.titleMaxLines = 2,
     this.subtitleMaxLines = 3,
     this.contentPadding,
+    this.keepTrailingInline = false,
   });
 
   final Widget title;
@@ -175,6 +176,9 @@ class ExpressiveDialogOption extends StatelessWidget {
   final bool enabled;
   final int? titleMaxLines, subtitleMaxLines;
   final EdgeInsetsGeometry? contentPadding;
+
+  /// Independent row actions stay beside the text; their text column wraps.
+  final bool keepTrailingInline;
 
   @override
   Widget build(BuildContext context) {
@@ -311,6 +315,7 @@ class ExpressiveDialogOption extends StatelessWidget {
                   // leading icon need more room; without one, only very narrow
                   // dialogs fall back to a second line for the trailing control.
                   final stackTrailing =
+                      !keepTrailingInline &&
                       trailingContent != null &&
                       constraints.maxWidth <
                           (leadingWidget == null ? 160 : 300);
@@ -339,6 +344,9 @@ class ExpressiveDialogOption extends StatelessWidget {
                   }
 
                   return Row(
+                    crossAxisAlignment: keepTrailingInline
+                        ? CrossAxisAlignment.start
+                        : CrossAxisAlignment.center,
                     children: [
                       if (leadingWidget != null) ...[
                         leadingWidget,

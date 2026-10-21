@@ -179,6 +179,16 @@ Future<AppRuntime> _createProvider() async {
   return provider;
 }
 
+Finder _recoveryScrollable() => find.descendant(
+  of: find.byKey(const ValueKey('school-sites-recovery-view')),
+  matching: find.byWidgetPredicate(
+    (widget) =>
+        widget is Scrollable &&
+        (widget.axisDirection == AxisDirection.down ||
+            widget.axisDirection == AxisDirection.up),
+  ),
+);
+
 Future<void> _pumpSchoolSitesPage(
   WidgetTester tester,
   AppRuntime provider, {
@@ -816,7 +826,13 @@ void main() {
     final importButton = find.byKey(
       const ValueKey('school-sites-recovery-import'),
     );
-    await tester.scrollUntilVisible(importButton, 180);
+    await tester.scrollUntilVisible(
+      importButton,
+      180,
+      scrollable: _recoveryScrollable(),
+    );
+    await tester.pumpAndSettle();
+    expect(importButton.hitTestable(), findsOneWidget);
     await tester.tap(importButton);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('school-sites-import-replace')));
@@ -864,7 +880,13 @@ void main() {
     final startFresh = find.byKey(
       const ValueKey('school-sites-recovery-start-fresh'),
     );
-    await tester.scrollUntilVisible(startFresh, 180);
+    await tester.scrollUntilVisible(
+      startFresh,
+      180,
+      scrollable: _recoveryScrollable(),
+    );
+    await tester.pumpAndSettle();
+    expect(startFresh.hitTestable(), findsOneWidget);
     await tester.tap(startFresh);
     await tester.pumpAndSettle();
 

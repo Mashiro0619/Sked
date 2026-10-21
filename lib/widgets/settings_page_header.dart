@@ -24,12 +24,14 @@ class SettingsPageScaffold extends StatelessWidget {
     required this.bodyBuilder,
     this.headerBottom,
     this.statusIndicator,
+    this.actions = const [],
   });
 
   final String title;
   final SettingsPageBodyBuilder bodyBuilder;
   final PreferredSizeWidget? headerBottom;
   final Widget? statusIndicator;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: _buildLayout);
@@ -82,6 +84,7 @@ class SettingsPageScaffold extends StatelessWidget {
       title: title,
       bottom: compact ? headerBottom : mobileBottom,
       toolbar: compact,
+      actions: actions,
     );
     return Scaffold(
       body: Stack(
@@ -147,6 +150,7 @@ class SettingsPageHeader extends StatelessWidget {
     this.headerKey = const ValueKey('settings-page-app-bar'),
     this.bottom,
     this.toolbar = false,
+    this.actions = const [],
   });
 
   final String title;
@@ -155,6 +159,7 @@ class SettingsPageHeader extends StatelessWidget {
   final Key headerKey;
   final PreferredSizeWidget? bottom;
   final bool toolbar;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +175,7 @@ class SettingsPageHeader extends StatelessWidget {
         title: _SettingsCompactTitle(compactTitle ?? title),
         bottom: bottom,
         reserveCaption: false,
-        actions: const [DesktopCaptionSpacer()],
+        actions: [...actions, const DesktopCaptionSpacer()],
       );
     }
     return SliverLayoutBuilder(
@@ -197,7 +202,7 @@ class SettingsPageHeader extends StatelessWidget {
             leading: wide ? null : BackButton(onPressed: back),
             title: _SettingsCompactTitle(compactTitle ?? title),
             bottom: bottom,
-            actions: const [DesktopCaptionSpacer()],
+            actions: [...actions, const DesktopCaptionSpacer()],
             flexibleSpace: const DesktopDragRegion(child: SizedBox.expand()),
             backgroundColor: SkedSurfaceRole.frame.resolve(colors),
             elevation: 0,
@@ -244,6 +249,7 @@ class SettingsPageHeader extends StatelessWidget {
               ),
             ),
             title: _SettingsCompactTitle(title, expandingHeader: true),
+            actions: actions,
             flexibleSpace: _SettingsExpandedTitle(
               title: title,
               style: titleStyle,

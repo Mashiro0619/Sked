@@ -1,12 +1,11 @@
 import '../widgets/sked_confirmation_dialog.dart';
 import '../widgets/workspace_editor_form.dart';
 
-import '../widgets/adaptive_navigation_scope.dart';
-
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
-import '../widgets/desktop_window_host.dart';
+import '../widgets/settings_page_header.dart';
+import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/sked_resizable.dart';
 import '../services/desktop_layout_preferences.dart';
 import '../widgets/workspace_route_lifecycle.dart';
@@ -113,109 +112,105 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     final l10n = AppLocalizations.of(context);
     final loadResult = _loadResult;
     final canUsePageActions = !_loading && loadResult?.canWrite == true;
-    return Scaffold(
-      appBar: WorkbenchAppBar(
-        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-        title: Text(l10n.schoolSitesPageTitle),
-        actions: [
-          IconButton(
-            tooltip: l10n.schoolSitesAdd,
-            onPressed:
-                !canUsePageActions || _siteEditorOpen || _siteMutationInProgress
-                ? null
-                : _addSite,
-            icon: const Icon(Icons.add),
+    return SettingsPageScaffold(
+      title: l10n.schoolSitesPageTitle,
+      actions: [
+        IconButton(
+          tooltip: l10n.schoolSitesAdd,
+          onPressed:
+              !canUsePageActions || _siteEditorOpen || _siteMutationInProgress
+              ? null
+              : _addSite,
+          icon: const Icon(Icons.add),
+        ),
+        IconButton(
+          tooltip: l10n.schoolHtmlImportEntry,
+          onPressed: !canUsePageActions || _htmlImportOpen
+              ? null
+              : _openHtmlImport,
+          icon: const Icon(Icons.code),
+        ),
+        SkedPopupMenuButton<_SchoolSitesMenuAction>(
+          tooltip: l10n.importExport,
+          enabled: canUsePageActions,
+          onSelected: _handleMenuAction,
+          itemBuilder: (context) => [
+            SkedPopupMenuItem(
+              value: _SchoolSitesMenuAction.toggleEditMode,
+              child: Text(_isEditMode ? l10n.confirm : l10n.schoolSitesEdit),
+            ),
+            SkedPopupMenuItem(
+              value: _SchoolSitesMenuAction.importJson,
+              enabled: !_jsonImportInProgress,
+              child: Text(l10n.schoolSitesImportJson),
+            ),
+            SkedPopupMenuItem(
+              value: _SchoolSitesMenuAction.shareJson,
+              enabled: !_jsonShareInProgress,
+              child: Text(l10n.schoolSitesShareJson),
+            ),
+            SkedPopupMenuItem(
+              value: _SchoolSitesMenuAction.saveJson,
+              enabled: !_jsonSaveInProgress,
+              child: Text(l10n.schoolSitesSaveJson),
+            ),
+            if (_recoveryPaths.isNotEmpty)
+              SkedPopupMenuItem(
+                value: _SchoolSitesMenuAction.recoveryArtifacts,
+                child: Text(l10n.dataRecoveryArtifactsAction),
+              ),
+          ],
+        ),
+      ],
+      bodyBuilder: (_, headerSliver) => DesktopResizableRegion(
+        layoutKey: DesktopLayoutRegion.schoolSites,
+        builder: (context, preferred, update, commit, reset) => AnimatedBuilder(
+          animation: _editorPane,
+          builder: (context, _) => _buildEditorHost(
+            _loading
+                ? _schoolSitesMessageBody(
+                    const Center(child: CircularProgressIndicator()),
+                    headerSliver,
+                  )
+                : loadResult?.canWrite == false
+                ? _SchoolSitesRecoveryView(
+                    headerSliver: headerSliver,
+                    status: loadResult!.recoveryStatus,
+                    hasArtifacts: _recoveryPaths.isNotEmpty,
+                    canReplace: loadResult.canReplaceAfterRecovery,
+                    isBusy: _recoveryActionInProgress,
+                    onRetry: _retryRecovery,
+                    onShowArtifacts: _recoveryPaths.isEmpty
+                        ? null
+                        : _showRecoveryArtifacts,
+                    onImportReplacement: loadResult.canReplaceAfterRecovery
+                        ? _importRecoveryJson
+                        : null,
+                    onStartFresh: loadResult.canReplaceAfterRecovery
+                        ? _confirmStartFresh
+                        : null,
+                  )
+                : _sites.isEmpty
+                ? _SchoolSitesEmptyState(
+                    headerSliver: headerSliver,
+                    onAdd: (_siteEditorOpen || _siteMutationInProgress)
+                        ? null
+                        : _addSite,
+                    onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
+                  )
+                : _buildSiteBrowser(
+                    l10n,
+                    preferred,
+                    update,
+                    commit,
+                    reset,
+                    headerSliver: headerSliver,
+                  ),
+            preferred,
+            update,
+            commit,
+            reset,
           ),
-          IconButton(
-            tooltip: l10n.schoolHtmlImportEntry,
-            onPressed: !canUsePageActions || _htmlImportOpen
-                ? null
-                : _openHtmlImport,
-            icon: const Icon(Icons.code),
-          ),
-          SkedPopupMenuButton<_SchoolSitesMenuAction>(
-            tooltip: l10n.importExport,
-            enabled: canUsePageActions,
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              SkedPopupMenuItem(
-                value: _SchoolSitesMenuAction.toggleEditMode,
-                child: Text(_isEditMode ? l10n.confirm : l10n.schoolSitesEdit),
-              ),
-              SkedPopupMenuItem(
-                value: _SchoolSitesMenuAction.importJson,
-                enabled: !_jsonImportInProgress,
-                child: Text(l10n.schoolSitesImportJson),
-              ),
-              SkedPopupMenuItem(
-                value: _SchoolSitesMenuAction.shareJson,
-                enabled: !_jsonShareInProgress,
-                child: Text(l10n.schoolSitesShareJson),
-              ),
-              SkedPopupMenuItem(
-                value: _SchoolSitesMenuAction.saveJson,
-                enabled: !_jsonSaveInProgress,
-                child: Text(l10n.schoolSitesSaveJson),
-              ),
-              if (_recoveryPaths.isNotEmpty)
-                SkedPopupMenuItem(
-                  value: _SchoolSitesMenuAction.recoveryArtifacts,
-                  child: Text(l10n.dataRecoveryArtifactsAction),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: DesktopResizableRegion(
-          layoutKey: DesktopLayoutRegion.schoolSites,
-          builder: (context, preferred, update, commit, reset) =>
-              AnimatedBuilder(
-                animation: _editorPane,
-                builder: (context, _) => _buildEditorHost(
-                  _loading
-                      ? const Center(child: CircularProgressIndicator())
-                      : loadResult?.canWrite == false
-                      ? _SchoolSitesRecoveryView(
-                          status: loadResult!.recoveryStatus,
-                          hasArtifacts: _recoveryPaths.isNotEmpty,
-                          canReplace: loadResult.canReplaceAfterRecovery,
-                          isBusy: _recoveryActionInProgress,
-                          onRetry: _retryRecovery,
-                          onShowArtifacts: _recoveryPaths.isEmpty
-                              ? null
-                              : _showRecoveryArtifacts,
-                          onImportReplacement:
-                              loadResult.canReplaceAfterRecovery
-                              ? _importRecoveryJson
-                              : null,
-                          onStartFresh: loadResult.canReplaceAfterRecovery
-                              ? _confirmStartFresh
-                              : null,
-                        )
-                      : _sites.isEmpty
-                      ? _SchoolSitesEmptyState(
-                          onAdd: (_siteEditorOpen || _siteMutationInProgress)
-                              ? null
-                              : _addSite,
-                          onHtmlImport: _htmlImportOpen
-                              ? null
-                              : _openHtmlImport,
-                        )
-                      : _buildSiteBrowser(
-                          l10n,
-                          preferred,
-                          update,
-                          commit,
-                          reset,
-                        ),
-                  preferred,
-                  update,
-                  commit,
-                  reset,
-                ),
-              ),
         ),
       ),
     );
@@ -354,8 +349,9 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     double? preferred,
     ValueChanged<double> update,
     VoidCallback commit,
-    VoidCallback reset,
-  ) => LayoutBuilder(
+    VoidCallback reset, {
+    Widget? headerSliver,
+  }) => LayoutBuilder(
     builder: (context, constraints) {
       final wide =
           !_editorPane.isOpen &&
@@ -381,6 +377,54 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
         280 * factor,
         maximumWidth,
       );
+      Widget siteRow(BuildContext context, int index) => _SchoolSiteRow(
+        key: ValueKey('school-site-row-$index'),
+        site: _sites[index],
+        selected: wide && index == selectedIndex,
+        enabled:
+            !_siteEditorOpen &&
+            (wide || (_supportsWebImport && !_webImportOpen)),
+        onTap: _siteEditorOpen
+            ? null
+            : wide
+            ? () => setState(() => _selectedSiteUrl = _sites[index].loginUrl)
+            : _supportsWebImport && !_webImportOpen
+            ? () => _openWebImportForSite(_sites[index])
+            : null,
+        trailing: _isEditMode
+            ? SkedPopupMenuButton<_SchoolSiteItemAction>(
+                key: ValueKey('school-site-actions-$index'),
+                enabled: !_siteEditorOpen && !_siteMutationInProgress,
+                onSelected: (action) async {
+                  switch (action) {
+                    case _SchoolSiteItemAction.edit:
+                      await _editSite(index);
+                      return;
+                    case _SchoolSiteItemAction.delete:
+                      await _deleteSite(index);
+                      return;
+                  }
+                },
+                itemBuilder: (context) => [
+                  SkedPopupMenuItem(
+                    value: _SchoolSiteItemAction.edit,
+                    child: Text(l10n.schoolSitesEdit),
+                  ),
+                  SkedPopupMenuItem(
+                    value: _SchoolSiteItemAction.delete,
+                    child: Text(l10n.delete),
+                  ),
+                ],
+              )
+            : IconButton(
+                key: ValueKey('school-site-edit-$index'),
+                tooltip: l10n.schoolSitesEdit,
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: _siteEditorOpen || _siteMutationInProgress
+                    ? null
+                    : () => _editSite(index),
+              ),
+      );
       return Stack(
         children: [
           Row(
@@ -388,60 +432,31 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
             children: [
               SizedBox(
                 width: wide ? listWidth : constraints.maxWidth,
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _sites.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _SchoolSiteRow(
-                    site: _sites[index],
-                    selected: wide && index == selectedIndex,
-                    enabled:
-                        !_siteEditorOpen &&
-                        (wide || (_supportsWebImport && !_webImportOpen)),
-                    onTap: _siteEditorOpen
-                        ? null
-                        : wide
-                        ? () => setState(
-                            () => _selectedSiteUrl = _sites[index].loginUrl,
-                          )
-                        : _supportsWebImport && !_webImportOpen
-                        ? () => _openWebImportForSite(_sites[index])
-                        : null,
-                    trailing: _isEditMode
-                        ? SkedPopupMenuButton<_SchoolSiteItemAction>(
-                            enabled:
-                                !_siteEditorOpen && !_siteMutationInProgress,
-                            onSelected: (action) async {
-                              switch (action) {
-                                case _SchoolSiteItemAction.edit:
-                                  await _editSite(index);
-                                  return;
-                                case _SchoolSiteItemAction.delete:
-                                  await _deleteSite(index);
-                                  return;
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              SkedPopupMenuItem(
-                                value: _SchoolSiteItemAction.edit,
-                                child: Text(l10n.schoolSitesEdit),
-                              ),
-                              SkedPopupMenuItem(
-                                value: _SchoolSiteItemAction.delete,
-                                child: Text(l10n.delete),
-                              ),
-                            ],
-                          )
-                        : IconButton(
-                            tooltip: l10n.schoolSitesEdit,
-                            icon: const Icon(Icons.edit_outlined),
-                            onPressed:
-                                _siteEditorOpen || _siteMutationInProgress
-                                ? null
-                                : () => _editSite(index),
+                child: headerSliver == null
+                    ? ListView.separated(
+                        key: const PageStorageKey('school-sites-scroll'),
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _sites.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: siteRow,
+                      )
+                    : CustomScrollView(
+                        key: const PageStorageKey('school-sites-scroll'),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        slivers: [
+                          headerSliver,
+                          SliverPadding(
+                            padding: const EdgeInsets.all(16),
+                            sliver: SliverList.separated(
+                              itemCount: _sites.length,
+                              itemBuilder: siteRow,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 10),
+                            ),
                           ),
-                  ),
-                ),
+                        ],
+                      ),
               ),
               if (wide) const VerticalDivider(width: 1),
               if (wide)
@@ -1299,6 +1314,7 @@ class _SchoolSitesRecoveryView extends StatelessWidget {
     required this.onShowArtifacts,
     required this.onImportReplacement,
     required this.onStartFresh,
+    this.headerSliver,
   });
 
   final SchoolSiteRecoveryStatus status;
@@ -1309,6 +1325,7 @@ class _SchoolSitesRecoveryView extends StatelessWidget {
   final VoidCallback? onShowArtifacts;
   final VoidCallback? onImportReplacement;
   final VoidCallback? onStartFresh;
+  final Widget? headerSliver;
 
   @override
   Widget build(BuildContext context) {
@@ -1375,16 +1392,9 @@ class _SchoolSitesRecoveryView extends StatelessWidget {
           ),
       ],
     );
-    return LayoutBuilder(
+    return KeyedSubtree(
       key: const ValueKey('school-sites-recovery-view'),
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: content,
-          ),
-        );
-      },
+      child: _schoolSitesMessageBody(content, headerSliver),
     );
   }
 }
@@ -1393,43 +1403,42 @@ class _SchoolSitesEmptyState extends StatelessWidget {
   const _SchoolSitesEmptyState({
     required this.onAdd,
     required this.onHtmlImport,
+    this.headerSliver,
   });
 
+  final Widget? headerSliver;
   final VoidCallback? onAdd;
   final VoidCallback? onHtmlImport;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: ExpressiveEmptyState(
-            icon: Icons.school_outlined,
-            title: l10n.schoolSitesPageTitle,
-            message: l10n.schoolSitesEmpty,
-            actions: [
-              FilledButton.icon(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.schoolSitesAdd),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: onHtmlImport,
-                icon: const Icon(Icons.code),
-                label: Text(l10n.schoolHtmlImportEntry),
-              ),
-            ],
+    return _schoolSitesMessageBody(
+      ExpressiveEmptyState(
+        icon: Icons.school_outlined,
+        title: l10n.schoolSitesPageTitle,
+        message: l10n.schoolSitesEmpty,
+        actions: [
+          FilledButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add),
+            label: Text(l10n.schoolSitesAdd),
           ),
-        ),
+          FilledButton.tonalIcon(
+            onPressed: onHtmlImport,
+            icon: const Icon(Icons.code),
+            label: Text(l10n.schoolHtmlImportEntry),
+          ),
+        ],
       ),
+      headerSliver,
     );
   }
 }
 
 class _SchoolSiteRow extends StatelessWidget {
   const _SchoolSiteRow({
+    super.key,
     required this.site,
     required this.selected,
     required this.enabled,
@@ -1458,7 +1467,8 @@ class _SchoolSiteRow extends StatelessWidget {
       subtitle: Text(site.loginUrl),
       trailing: trailing,
       titleMaxLines: null,
-      subtitleMaxLines: 2,
+      subtitleMaxLines: WorkbenchChromeMetrics.of(context).desktop ? 2 : null,
+      keepTrailingInline: true,
     ),
   );
 }
@@ -1635,3 +1645,21 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
     );
   }
 }
+
+Widget _schoolSitesMessageBody(Widget content, Widget? headerSliver) =>
+    headerSliver == null
+    ? LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: content,
+          ),
+        ),
+      )
+    : CustomScrollView(
+        key: const PageStorageKey('school-sites-scroll'),
+        slivers: [
+          headerSliver,
+          SliverToBoxAdapter(child: content),
+        ],
+      );

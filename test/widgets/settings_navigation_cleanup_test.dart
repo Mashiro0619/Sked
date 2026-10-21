@@ -9,7 +9,7 @@ import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/widgets/adaptive_navigation_scope.dart';
-import 'package:sked/widgets/desktop_window_host.dart';
+import 'package:sked/widgets/settings_page_header.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
 import '../support/workspace_harness.dart';
@@ -161,13 +161,14 @@ void main() {
         await t.pumpAndSettle();
         expect(find.byType(SchoolSitesPage), findsOneWidget);
         expect(find.byType(BackButton).hitTestable(), findsOneWidget);
-        final sitesBar = t.widget<WorkbenchAppBar>(
+        final sitesBar = t.widget<AppBar>(
           find.descendant(
-            of: find.byType(SchoolSitesPage),
-            matching: find.byType(WorkbenchAppBar),
+            of: find.byType(SettingsPageHeader),
+            matching: find.byWidgetPredicate((widget) => widget is AppBar),
           ),
         );
-        expect(sitesBar.automaticallyImplyLeading, !wide);
+        expect(sitesBar.automaticallyImplyLeading, isFalse);
+        expect(sitesBar.leading, wide ? isNull : isNotNull);
         await t.tap(find.byType(BackButton).hitTestable());
         await t.pumpAndSettle();
         expect(transfer, findsOneWidget);
