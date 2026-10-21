@@ -290,6 +290,39 @@ ThemeData buildAppTheme({
       thickness: 1,
       space: 1,
     ),
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled) ||
+            !states.contains(WidgetState.selected)) {
+          return null;
+        }
+        return accent;
+      }),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled) ||
+            !states.contains(WidgetState.selected)) {
+          return null;
+        }
+        if (states.contains(WidgetState.pressed) ||
+            states.contains(WidgetState.focused)) {
+          return accent.withValues(alpha: .10);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return accent.withValues(alpha: .08);
+        }
+        return null;
+      }),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: accent,
+      linearTrackColor: colorScheme.surfaceContainerHighest,
+      trackGap: 4,
+      stopIndicatorColor: accent,
+      stopIndicatorRadius: 2,
+      // material_ui still defaults to the legacy appearance behind this flag.
+      // ignore: deprecated_member_use
+      year2023: false,
+    ),
     switchTheme: SwitchThemeData(
       materialTapTargetSize: MaterialTapTargetSize.padded,
       thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -326,14 +359,24 @@ ThemeData buildAppTheme({
       }),
     ),
     sliderTheme: SliderThemeData(
-      activeTrackColor: colorScheme.primary,
+      // Standalone marks need contrast against the track and its surface;
+      // filled controls keep the user's exact primary/onPrimary pair.
+      activeTrackColor: accent,
       inactiveTrackColor: colorScheme.surfaceContainerHighest,
-      thumbColor: colorScheme.primary,
-      overlayColor: colorScheme.primary.withValues(alpha: 0.12),
+      thumbColor: accent,
+      activeTickMarkColor: _onColorFor(accent),
+      inactiveTickMarkColor: accent,
+      overlayColor: accent.withValues(alpha: 0.12),
       valueIndicatorColor: colorScheme.primary,
       valueIndicatorTextStyle: textTheme.labelMedium?.copyWith(
         color: colorScheme.onPrimary,
       ),
+      thumbShape: const HandleThumbShape(),
+      trackShape: const GappedSliderTrackShape(),
+      trackGap: 6,
+      // Select current defaults for the handle, track and value indicator.
+      // ignore: deprecated_member_use
+      year2023: false,
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(

@@ -1271,8 +1271,17 @@ class _ToolbarReorderHandleState extends State<_ToolbarReorderHandle> {
         : _showHoverHighlight
         ? colors.onSurface.withValues(alpha: 0.08)
         : Colors.transparent;
+    final surface = _SettingsTonalGroup.of(context)
+        ? SettingsVisuals.rowColor(colors)
+        : SkedSurface.colorOf(context);
     final border = _showFocusHighlight
-        ? BorderSide(color: colors.primary, width: 2)
+        ? BorderSide(
+            color: skedReadableAccent(
+              colors,
+              surface: Color.alphaBlend(background, surface),
+            ),
+            width: 2,
+          )
         : BorderSide.none;
     return AnimatedContainer(
       key: ValueKey('toolbar-navigation-drag-handle-visual-${widget.itemId}'),
