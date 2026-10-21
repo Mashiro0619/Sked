@@ -350,6 +350,84 @@ void main() {
   );
 
   testWidgets(
+    'compact manager detail releases the retained resource list focus',
+    (t) async {
+      final (p, storage) = await _fixture();
+      addTearDown(p.dispose);
+      final first = p.studentView.periodTimeSets.first;
+      final target = p.studentView.periodTimeSets.last;
+      await _openManager(t, p);
+      FocusNode rowFocus(String id) => Focus.of(
+        t.element(
+          find
+              .descendant(
+                of: _key('period-time-set-$id'),
+                matching: find.byType(Text),
+              )
+              .first,
+        ),
+      );
+      final firstFocus = rowFocus(first.id);
+      final targetFocus = rowFocus(target.id);
+      firstFocus.requestFocus();
+      await t.pump();
+      await t.sendKeyEvent(LogicalKeyboardKey.enter);
+      await t.pumpAndSettle();
+      final detailState = t.state(find.byType(PeriodTimesPage));
+      expect(firstFocus.hasPrimaryFocus, isTrue);
+
+      t.view.physicalSize = const Size(390, 800);
+      await t.pumpAndSettle();
+      expect(firstFocus.hasPrimaryFocus, isFalse);
+      expect(firstFocus.canRequestFocus, isFalse);
+      expect(targetFocus.canRequestFocus, isFalse);
+      for (var index = 0; index < 6; index++) {
+        await t.sendKeyEvent(LogicalKeyboardKey.tab);
+        await t.pumpAndSettle();
+        expect(firstFocus.hasPrimaryFocus, isFalse);
+        expect(targetFocus.hasPrimaryFocus, isFalse);
+      }
+      final nameFocus = t
+          .widget<EditableText>(
+            find.descendant(of: _name, matching: find.byType(EditableText)),
+          )
+          .focusNode;
+      nameFocus.requestFocus();
+      await t.pump();
+      targetFocus.requestFocus();
+      await t.pump();
+      expect(nameFocus.hasPrimaryFocus, isTrue);
+      await t.sendKeyEvent(LogicalKeyboardKey.enter);
+      await t.pumpAndSettle();
+      expect(t.state(find.byType(PeriodTimesPage)), same(detailState));
+      expect(
+        t.widget<PeriodTimesPage>(find.byType(PeriodTimesPage)).periodTimeSetId,
+        first.id,
+      );
+      expect(storage.writes, 0);
+
+      await t.tap(_back);
+      await t.pumpAndSettle();
+      expect(find.byType(PeriodTimesPage), findsNothing);
+      expect(firstFocus.canRequestFocus, isTrue);
+      expect(targetFocus.canRequestFocus, isTrue);
+      targetFocus.requestFocus();
+      await t.pump();
+      expect(targetFocus.hasPrimaryFocus, isTrue);
+      await t.sendKeyEvent(LogicalKeyboardKey.enter);
+      await t.pumpAndSettle();
+      expect(
+        t.widget<PeriodTimesPage>(find.byType(PeriodTimesPage)).periodTimeSetId,
+        target.id,
+      );
+      expect(targetFocus.hasPrimaryFocus, isFalse);
+      expect(targetFocus.canRequestFocus, isFalse);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
     'resizing retains the invalid draft and its visible period anchor',
     (t) async {
       final (p, storage) = await _fixture();

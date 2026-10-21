@@ -207,34 +207,37 @@ class _AdaptiveCollectionScaffoldState
     }
   }
 
-  Widget _list() => ListView.builder(
+  Widget _list({bool excludingFocus = false}) => ExcludeFocus(
     key: _listKey,
-    controller: _listController,
-    padding: const EdgeInsets.all(12),
-    itemCount: widget.items.length,
-    findChildIndexCallback: (key) =>
-        key is ValueKey<String> ? _itemIndices[key.value] : null,
-    itemBuilder: (context, index) {
-      final item = widget.items[index];
-      return KeyedSubtree(
-        key: ValueKey(item.id),
-        child: item.tileBuilder != null
-            ? item.tileBuilder!(
-                item.id == _selected,
-                () => unawaited(_select(item.id)),
-              )
-            : ListTile(
-                selected: item.id == _selected,
-                title: Text(item.title),
-                subtitle: item.subtitle == null ? null : Text(item.subtitle!),
-                trailing: item.trailing ?? const Icon(Icons.chevron_right),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    excluding: excludingFocus,
+    child: ListView.builder(
+      controller: _listController,
+      padding: const EdgeInsets.all(12),
+      itemCount: widget.items.length,
+      findChildIndexCallback: (key) =>
+          key is ValueKey<String> ? _itemIndices[key.value] : null,
+      itemBuilder: (context, index) {
+        final item = widget.items[index];
+        return KeyedSubtree(
+          key: ValueKey(item.id),
+          child: item.tileBuilder != null
+              ? item.tileBuilder!(
+                  item.id == _selected,
+                  () => unawaited(_select(item.id)),
+                )
+              : ListTile(
+                  selected: item.id == _selected,
+                  title: Text(item.title),
+                  subtitle: item.subtitle == null ? null : Text(item.subtitle!),
+                  trailing: item.trailing ?? const Icon(Icons.chevron_right),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onTap: () => unawaited(_select(item.id)),
                 ),
-                onTap: () => unawaited(_select(item.id)),
-              ),
-      );
-    },
+        );
+      },
+    ),
   );
   @override
   Widget build(BuildContext context) => DesktopResizableRegion(
@@ -337,7 +340,15 @@ class _AdaptiveCollectionScaffoldState
                                                   .titleLarge,
                                             ),
                                           )
-                                        : _list(),
+                                        : _list(
+                                            // Update the retained focus boundary
+                                            // as well as reparenting the list.
+                                            // A hidden home must release focus.
+                                            excludingFocus:
+                                                ModalRoute.of(context)
+                                                    ?.isCurrent !=
+                                                true,
+                                          ),
                                   ),
                                 ),
                               ),
