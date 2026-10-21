@@ -83,7 +83,9 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   static const _autoSaveDelay = Duration(milliseconds: 400);
 
   late final TextEditingController _nameController;
+  // Replace the list on time edits so unchanged drafts can retain their table.
   late List<CoursePeriodTime> _periodTimes;
+  _PeriodEditorTable? _periodTable;
   final _scrollController = ScrollController();
   final _scrollViewportKey = GlobalKey();
   final _periodRowKeys = <GlobalKey>[];
@@ -316,7 +318,6 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         800.0,
         math.max(0.0, constraints.maxWidth - padding * 2),
       );
-      final columns = _PeriodTableColumns.resolve(context, width, _periodTimes);
       return ScrollConfiguration(
         behavior: const MaterialScrollBehavior().copyWith(
           dragDevices: {
@@ -354,57 +355,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
                             : () => unawaited(_flushPendingAutoSave()),
                       ),
                       const SizedBox(height: 16),
-                      Material(
-                        key: const ValueKey('period-times-list'),
-                        type: MaterialType.transparency,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (columns != null)
-                              _PeriodTableHeader(columns: columns),
-                            for (
-                              var index = 0;
-                              index < _periodTimes.length;
-                              index++
-                            )
-                              KeyedSubtree(
-                                key: _periodRowKeys[index],
-                                child: _PeriodEditorRow(
-                                  key: ValueKey(
-                                    'period-row-${_periodTimes[index].index}',
-                                  ),
-                                  period: _periodTimes[index],
-                                  previous: index == 0
-                                      ? null
-                                      : _periodTimes[index - 1],
-                                  columns: columns,
-                                  timeEnabled:
-                                      !_timePickerOpen && !_interactionBlocked,
-                                  onPickStart: (anchor) => _pickPeriodTime(
-                                    index,
-                                    isStart: true,
-                                    anchorContext: anchor,
-                                  ),
-                                  onPickEnd: (anchor) => _pickPeriodTime(
-                                    index,
-                                    isStart: false,
-                                    anchorContext: anchor,
-                                  ),
-                                  onDelete:
-                                      _periodTimes.length > 1 &&
-                                          !_interactionBlocked
-                                      ? () => _removePeriod(index)
-                                      : null,
-                                ),
-                              ),
-                            _PeriodAddAction(
-                              onPressed: _interactionBlocked
-                                  ? null
-                                  : _addPeriod,
-                            ),
-                          ],
-                        ),
-                      ),
+                      _tableForCurrentDraft(),
                     ],
                   ),
                 ),
@@ -415,6 +366,29 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       );
     },
   );
+
+  Widget _tableForCurrentDraft() {
+    final previous = _periodTable;
+    final actionsEnabled = !_interactionBlocked;
+    final timeEnabled = actionsEnabled && !_timePickerOpen;
+    if (previous == null ||
+        !identical(previous.periodTimes, _periodTimes) ||
+        previous.actionsEnabled != actionsEnabled ||
+        previous.timeEnabled != timeEnabled) {
+      _periodTable = _PeriodEditorTable(
+        periodTimes: _periodTimes,
+        rowKeys: List.unmodifiable(_periodRowKeys),
+        actionsEnabled: actionsEnabled,
+        timeEnabled: timeEnabled,
+        onPickTime: _pickPeriodTime,
+        onDelete: _removePeriod,
+        onAdd: _addPeriod,
+      );
+    }
+    // Name/save updates still rebuild PopScope, menus and status immediately.
+    // Retain only the unrelated table; inherited layout changes reach it normally.
+    return _periodTable!;
+  }
 
   void _resetPeriodRowKeys() {
     _periodRowKeys
@@ -1087,9 +1061,11 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       final minutes = (picked.hour * 60) + picked.minute;
       setState(() {
         final currentPeriod = _periodTimes[targetIndex];
-        _periodTimes[targetIndex] = isStart
+        final next = [..._periodTimes];
+        next[targetIndex] = isStart
             ? currentPeriod.copyWith(startMinutes: minutes)
             : currentPeriod.copyWith(endMinutes: minutes);
+        _periodTimes = next;
       });
       _scheduleAutoSave();
     } finally {

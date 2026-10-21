@@ -2,6 +2,103 @@ part of 'period_times_page.dart';
 
 enum _PeriodEditorSaveState { invalid, failed, saving, pending, saved }
 
+class _PeriodEditorTable extends StatefulWidget {
+  const _PeriodEditorTable({
+    required this.periodTimes,
+    required this.rowKeys,
+    required this.actionsEnabled,
+    required this.timeEnabled,
+    required this.onPickTime,
+    required this.onDelete,
+    required this.onAdd,
+  });
+
+  final List<CoursePeriodTime> periodTimes;
+  final List<GlobalKey> rowKeys;
+  final bool actionsEnabled;
+  final bool timeEnabled;
+  final Future<void> Function(
+    int index, {
+    required bool isStart,
+    required BuildContext anchorContext,
+  })
+  onPickTime;
+  final ValueChanged<int> onDelete;
+  final VoidCallback onAdd;
+
+  @override
+  State<_PeriodEditorTable> createState() => _PeriodEditorTableState();
+}
+
+class _PeriodEditorTableState extends State<_PeriodEditorTable> {
+  Object? _columnInputs;
+  _PeriodTableColumns? _columns;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final inputs = (
+        widget.periodTimes,
+        constraints.maxWidth,
+        Theme.of(context),
+        DefaultTextStyle.of(context).style,
+        Directionality.of(context),
+        Localizations.maybeLocaleOf(context),
+        MediaQuery.textScalerOf(context),
+      );
+      if (_columnInputs != inputs) {
+        _columns = _PeriodTableColumns.resolve(
+          context,
+          constraints.maxWidth,
+          widget.periodTimes,
+        );
+        _columnInputs = inputs;
+      }
+      final columns = _columns;
+      return Material(
+        key: const ValueKey('period-times-list'),
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (columns != null) _PeriodTableHeader(columns: columns),
+            for (var index = 0; index < widget.periodTimes.length; index++)
+              KeyedSubtree(
+                key: widget.rowKeys[index],
+                child: _PeriodEditorRow(
+                  key: ValueKey(
+                    'period-row-${widget.periodTimes[index].index}',
+                  ),
+                  period: widget.periodTimes[index],
+                  previous: index == 0 ? null : widget.periodTimes[index - 1],
+                  columns: columns,
+                  timeEnabled: widget.timeEnabled,
+                  onPickStart: (anchor) => widget.onPickTime(
+                    index,
+                    isStart: true,
+                    anchorContext: anchor,
+                  ),
+                  onPickEnd: (anchor) => widget.onPickTime(
+                    index,
+                    isStart: false,
+                    anchorContext: anchor,
+                  ),
+                  onDelete:
+                      widget.periodTimes.length > 1 && widget.actionsEnabled
+                      ? () => widget.onDelete(index)
+                      : null,
+                ),
+              ),
+            _PeriodAddAction(
+              onPressed: widget.actionsEnabled ? widget.onAdd : null,
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 class _PeriodEditorHeading extends StatelessWidget {
   const _PeriodEditorHeading({
     required this.controller,
