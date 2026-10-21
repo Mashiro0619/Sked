@@ -301,7 +301,7 @@ typedef WorkspaceLayout = WorkbenchLayoutPolicy;
 
 /// The time canvas is never width-capped. Only task panes have a readable
 /// measure. The navigator stays in one Stack slot across all window sizes.
-class WorkspaceSelectionScope extends InheritedWidget {
+class WorkspaceSelectionScope extends InheritedModel<String> {
   const WorkspaceSelectionScope({
     super.key,
     required this.selectedId,
@@ -311,9 +311,27 @@ class WorkspaceSelectionScope extends InheritedWidget {
   static String? of(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<WorkspaceSelectionScope>()
       ?.selectedId;
+
+  /// Subscribe only to this item's selected state. Whole-selection consumers
+  /// can keep using [of] when every selection change matters to them.
+  static bool isSelected(BuildContext context, String id) =>
+      InheritedModel.inheritFrom<WorkspaceSelectionScope>(
+        context,
+        aspect: id,
+      )?.selectedId ==
+      id;
+
   @override
   bool updateShouldNotify(WorkspaceSelectionScope oldWidget) =>
       selectedId != oldWidget.selectedId;
+
+  @override
+  bool updateShouldNotifyDependent(
+    WorkspaceSelectionScope oldWidget,
+    Set<String> dependencies,
+  ) => dependencies.any(
+    (id) => (selectedId == id) != (oldWidget.selectedId == id),
+  );
 }
 
 class WorkspaceCanvasScope extends InheritedWidget {

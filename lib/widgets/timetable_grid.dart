@@ -1597,8 +1597,10 @@ class _CourseCard extends StatelessWidget {
             _isPrimaryLiveTarget
         ? effectiveOutlineWidth + (compact ? 1.2 : 1.6)
         : effectiveOutlineWidth;
-    final selected =
-        WorkspaceSelectionScope.of(context) == 'course:${layout.course?.id}';
+    final selected = WorkspaceSelectionScope.isSelected(
+      context,
+      'course:${layout.course?.id}',
+    );
     final side = selected
         ? BorderSide(color: colorScheme.primary, width: 2)
         : _isLiveHighlighted
@@ -2446,9 +2448,10 @@ class _CourseHitTarget extends StatelessWidget {
       height: useVisualBounds ? geometry.visualHeight : geometry.hitHeight,
       child: includeSemantics
           ? _CourseSemantics(
-              selected:
-                  WorkspaceSelectionScope.of(context) ==
-                  'course:${layout.course?.id}',
+              selected: WorkspaceSelectionScope.isSelected(
+                context,
+                'course:${layout.course?.id}',
+              ),
               label: _semanticLabelForGeometry(geometry),
               onTap: () => onTap(context),
               child: visual,
