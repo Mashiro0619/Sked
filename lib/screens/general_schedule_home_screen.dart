@@ -37,6 +37,8 @@ import 'package:material_ui/material_ui.dart';
 import '../widgets/sked_tooltip.dart';
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/gestures.dart'
+    show GestureBinding, PointerDownEvent, PointerEvent;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';

@@ -517,14 +517,340 @@ class _ReminderSummaryRow extends StatelessWidget {
         ),
       ),
       onTap: () => onOpen(context),
-      trailing: IconButton(
-        tooltip: l.markReminderHandled,
-        style: WorkbenchChromeMetrics.of(context).iconStyle,
-        icon: const Icon(Icons.check_circle_outline),
-        onPressed: busy ? null : onHandle,
+      trailing: _ReminderHandledTooltip(
+        message: l.markReminderHandled,
+        child: IconButton(
+          style: WorkbenchChromeMetrics.of(context).iconStyle,
+          icon: const Icon(Icons.check_circle_outline),
+          onPressed: busy ? null : onHandle,
+        ),
       ),
     );
   }
+}
+
+/// A lazy row can lose its semantics anchor before RawTooltip's deferred portal
+/// finishes an update. Keep Material's presentation and interaction settings,
+/// but attach this tooltip directly to the overlay's stable traversal tree.
+class _ReminderHandledTooltip extends Tooltip {
+  const _ReminderHandledTooltip({
+    required String message,
+    required Widget child,
+  }) : super(message: message, child: child);
+
+  @override
+  State<Tooltip> createState() => _ReminderHandledTooltipState();
+}
+
+class _ReminderHandledTooltipState extends TooltipState {
+  final _overlayKey = GlobalKey<_ReminderOverlayTooltipState>();
+
+  @override
+  bool ensureTooltipVisible() =>
+      _overlayKey.currentState?.ensureTooltipVisible() ?? false;
+
+  @override
+  Widget build(BuildContext context) {
+    // Material currently exposes its resolved presentation as RawTooltip.
+    // Keep the overlay/semantics regressions when upgrading that SDK contract.
+    final material = super.build(context);
+    if (material is! RawTooltip) return material;
+    return _ReminderOverlayTooltip(key: _overlayKey, configuration: material);
+  }
+}
+
+class _ReminderOverlayTooltip extends RawTooltip {
+  _ReminderOverlayTooltip({super.key, required this.configuration})
+    : super(
+        semanticsTooltip: configuration.semanticsTooltip,
+        tooltipBuilder: configuration.tooltipBuilder,
+        child: configuration.child,
+      );
+
+  final RawTooltip configuration;
+
+  @override
+  State<RawTooltip> createState() => _ReminderOverlayTooltipState();
+}
+
+class _ReminderOverlayTooltipState extends State<_ReminderOverlayTooltip>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  static _ReminderOverlayTooltipState? _active;
+  AnimationController? _backingController;
+  CurvedAnimation? _backingAnimation;
+  OverlayEntry? _entry;
+  Timer? _timer;
+  ScrollPosition? _scrollPosition;
+  ModalRoute<dynamic>? _route;
+  bool _tickerEnabled = true;
+  ThemeData? _theme;
+  TooltipThemeData? _tooltipTheme;
+  CapturedThemes? _themes;
+  Offset _target = Offset.zero;
+  Size _targetSize = Size.zero;
+
+  RawTooltip get _configuration => widget.configuration;
+  bool get _sourceVisible =>
+      mounted && _tickerEnabled && (_route?.isCurrent ?? true);
+
+  AnimationController get _controller {
+    if (_backingController case final controller?) return controller;
+    final style = _configuration.animationStyle;
+    return _backingController =
+        AnimationController(
+          vsync: this,
+          duration: style.duration ?? const Duration(milliseconds: 150),
+          reverseDuration:
+              style.reverseDuration ?? const Duration(milliseconds: 75),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.dismissed) _removeEntry();
+        });
+  }
+
+  CurvedAnimation get _animation => _backingAnimation ??= CurvedAnimation(
+    parent: _controller,
+    curve: _configuration.animationStyle.curve ?? Curves.fastOutSlowIn,
+    reverseCurve: _configuration.animationStyle.reverseCurve,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_pointerEvent);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route = ModalRoute.of(context);
+    _tickerEnabled = TickerMode.valuesOf(context).enabled;
+    final theme = Theme.of(context);
+    final tooltipTheme = TooltipTheme.of(context);
+    if (!_sourceVisible || _theme != theme || _tooltipTheme != tooltipTheme) {
+      _hideImmediately();
+    }
+    _theme = theme;
+    _tooltipTheme = tooltipTheme;
+    final position = Scrollable.maybeOf(context)?.position;
+    if (!identical(_scrollPosition, position)) {
+      _scrollPosition?.removeListener(_hideImmediately);
+      _scrollPosition = position;
+      position?.addListener(_hideImmediately);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_ReminderOverlayTooltip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.semanticsTooltip != widget.semanticsTooltip) {
+      _hideImmediately();
+    }
+  }
+
+  @override
+  void didChangeMetrics() => _hideImmediately();
+
+  void _pointerEvent(PointerEvent event) {
+    if (event is PointerDownEvent && _configuration.enableTapToDismiss) {
+      _hideImmediately();
+    }
+  }
+
+  void _scheduleShow() {
+    _timer?.cancel();
+    final delay = _configuration.hoverDelay;
+    if (delay == Duration.zero || _entry != null) {
+      ensureTooltipVisible();
+    } else {
+      _timer = Timer(delay, ensureTooltipVisible);
+    }
+  }
+
+  bool ensureTooltipVisible() {
+    _timer?.cancel();
+    _timer = null;
+    if (!_sourceVisible) return false;
+    if (_entry != null) {
+      _controller.forward();
+      return false;
+    }
+    final overlay = Overlay.of(context);
+    final sourceBox = context.findRenderObject();
+    final overlayBox = overlay.context.findRenderObject();
+    if (sourceBox is! RenderBox ||
+        overlayBox is! RenderBox ||
+        !sourceBox.attached ||
+        !sourceBox.hasSize) {
+      return false;
+    }
+    _active?._hideImmediately();
+    RawTooltip.dismissAllToolTips();
+    _active = this;
+    _target = sourceBox.localToGlobal(
+      sourceBox.size.center(Offset.zero),
+      ancestor: overlayBox,
+    );
+    _targetSize = sourceBox.size;
+    _themes = InheritedTheme.capture(from: context, to: overlay.context);
+    _entry = OverlayEntry(builder: _buildEntry);
+    overlay.insert(_entry!);
+    _controller.forward(from: 0);
+    unawaited(SemanticsService.tooltip(_configuration.semanticsTooltip ?? ''));
+    return true;
+  }
+
+  void _scheduleDismiss(Duration delay) {
+    _timer?.cancel();
+    _timer = null;
+    if (_entry == null) return;
+    if (delay == Duration.zero) {
+      _controller.reverse();
+    } else {
+      _timer = Timer(delay, _controller.reverse);
+    }
+  }
+
+  void _removeEntry() {
+    final entry = _entry;
+    _entry = null;
+    entry?.remove();
+    entry?.dispose();
+    if (identical(_active, this)) _active = null;
+  }
+
+  void _hideImmediately() {
+    _timer?.cancel();
+    _timer = null;
+    _removeEntry();
+    _backingController?.reset();
+  }
+
+  Widget _buildEntry(BuildContext context) => _themes!.wrap(
+    Positioned.fill(
+      bottom: MediaQuery.maybeViewInsetsOf(context)?.bottom ?? 0,
+      child: CustomSingleChildLayout(
+        delegate: _ReminderTooltipPosition(
+          target: _target,
+          targetSize: _targetSize,
+          position: _configuration.positionDelegate,
+        ),
+        child: IgnorePointer(
+          ignoring: _configuration.ignorePointer,
+          child: SelectionContainer.disabled(
+            child: _configuration.tooltipBuilder(context, _animation),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  void _longPress() {
+    if (_entry == null && _configuration.enableFeedback) {
+      unawaited(Feedback.forLongPress(context));
+    }
+    _configuration.onTriggered?.call();
+    ensureTooltipVisible();
+  }
+
+  void _tap() {
+    if (_entry == null && _configuration.enableFeedback) {
+      unawaited(Feedback.forTap(context));
+    }
+    _configuration.onTriggered?.call();
+    ensureTooltipVisible();
+    _scheduleDismiss(_configuration.touchDelay);
+  }
+
+  @override
+  void deactivate() {
+    _hideImmediately();
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_pointerEvent);
+    _scrollPosition?.removeListener(_hideImmediately);
+    _timer?.cancel();
+    _removeEntry();
+    _backingAnimation?.dispose();
+    _backingController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    tooltip: _configuration.semanticsTooltip,
+    child: MouseRegion(
+      onEnter: (_) => _scheduleShow(),
+      onExit: (_) => _scheduleDismiss(_configuration.dismissDelay),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        supportedDevices: const {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+          PointerDeviceKind.invertedStylus,
+          PointerDeviceKind.trackpad,
+          PointerDeviceKind.unknown,
+        },
+        onLongPress: _configuration.triggerMode == TooltipTriggerMode.longPress
+            ? _longPress
+            : null,
+        onLongPressEnd:
+            _configuration.triggerMode == TooltipTriggerMode.longPress
+            ? (_) => _scheduleDismiss(_configuration.touchDelay)
+            : null,
+        onTap: _configuration.triggerMode == TooltipTriggerMode.tap
+            ? _tap
+            : null,
+        child: _configuration.child,
+      ),
+    ),
+  );
+}
+
+class _ReminderTooltipPosition extends SingleChildLayoutDelegate {
+  const _ReminderTooltipPosition({
+    required this.target,
+    required this.targetSize,
+    required this.position,
+  });
+
+  final Offset target;
+  final Size targetSize;
+  final TooltipPositionDelegate? position;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      constraints.loosen();
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      position?.call(
+        TooltipPositionContext(
+          target: target,
+          targetSize: targetSize,
+          tooltipSize: childSize,
+          overlaySize: size,
+          verticalOffset: 24,
+        ),
+      ) ??
+      positionDependentBox(
+        size: size,
+        childSize: childSize,
+        target: target,
+        verticalOffset: 24,
+        preferBelow: true,
+      );
+
+  @override
+  bool shouldRelayout(_ReminderTooltipPosition oldDelegate) =>
+      target != oldDelegate.target ||
+      targetSize != oldDelegate.targetSize ||
+      position != oldDelegate.position;
 }
 
 /// Runtime-only, owned by the app shell rather than a toolbar or resized page.
