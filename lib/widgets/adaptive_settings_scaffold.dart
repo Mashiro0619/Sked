@@ -6,6 +6,7 @@ import 'workbench_chrome_metrics.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -48,6 +49,71 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
   final _overviewController = ScrollController();
   final _sectionKeys = <String, GlobalKey>{};
   String? _highlightedGroup;
+  String? _scrollTargetGroup;
+  bool _highlightSyncScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _overviewController.addListener(_scheduleHighlightSync);
+  }
+
+  void _scheduleHighlightSync() {
+    // A category click keeps its target highlighted throughout the jump,
+    // including when the last groups cannot reach the top of the viewport.
+    if (!mounted || _highlightSyncScheduled || _opening || _selected != null) {
+      return;
+    }
+    _highlightSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _highlightSyncScheduled = false;
+      if (mounted) _syncHighlightedGroup();
+    });
+    // Scroll metrics may be dispatched after the current frame has finished.
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _syncHighlightedGroup() {
+    if (_opening || _selected != null || !_overviewController.hasClients) {
+      return;
+    }
+    final position = _overviewController.position;
+    if (!position.hasContentDimensions) return;
+    const tolerance = 1.0;
+    final atStart = position.pixels <= position.minScrollExtent + tolerance;
+    final atEnd =
+        !atStart && position.pixels >= position.maxScrollExtent - tolerance;
+    String? highlighted;
+    for (final entry in widget.catalog.where((entry) => entry.category)) {
+      final section = _sectionKeys[entry.id]?.currentContext
+          ?.findRenderObject();
+      if (section is! RenderBox || !section.attached || !section.hasSize) {
+        continue;
+      }
+      final viewport = RenderAbstractViewport.maybeOf(section);
+      if (viewport == null) continue;
+      // Reveal offsets account for the pinned toolbar. Measure after layout
+      // so scrolling, text scaling and resized groups share the same boundary.
+      final offset = viewport.getOffsetToReveal(section, 0).offset;
+      // Several trailing groups may share the bottom scroll limit. Keep a
+      // clicked target selected until the viewport moves away from its anchor.
+      if (entry.id == _scrollTargetGroup &&
+          (offset.clamp(position.minScrollExtent, position.maxScrollExtent) -
+                      position.pixels)
+                  .abs() <=
+              tolerance) {
+        return;
+      }
+      highlighted ??= entry.id;
+      if (!atStart && (atEnd || offset <= position.pixels + tolerance)) {
+        highlighted = entry.id;
+      }
+    }
+    _scrollTargetGroup = null;
+    if (highlighted != null && highlighted != _highlightedGroup) {
+      setState(() => _highlightedGroup = highlighted);
+    }
+  }
 
   VoidCallback _registerPageExitGuard(
     ModalRoute<dynamic> route,
@@ -73,6 +139,7 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
   @override
   void dispose() {
     _pageExitGuards.clear();
+    _overviewController.removeListener(_scheduleHighlightSync);
     _overviewController.dispose();
     super.dispose();
   }
@@ -109,6 +176,7 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
       setState(() {
         _selected = null;
         _highlightedGroup = entry.id;
+        _scrollTargetGroup = entry.id;
       });
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
@@ -122,6 +190,7 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
       }
     } finally {
       _opening = false;
+      _scheduleHighlightSync();
     }
   }
 
@@ -250,6 +319,7 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
             () => GlobalKey(debugLabel: 'settings-section-${entry.id}'),
           );
         }
+        _scheduleHighlightSync();
         return PopScope(
           canPop: _selected == null,
           child: Scaffold(
@@ -314,15 +384,26 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                                 requestFocus: false,
                                 onGenerateRoute: (_) => MaterialPageRoute<void>(
                                   builder: (pageContext) => Scaffold(
-                                    body: widget.overviewBuilder(
-                                      pageContext,
-                                      _overviewController,
-                                      _sectionKeys,
-                                      _openDestination,
-                                      _SettingsOverviewAppBar(
-                                        onBack: () => unawaited(_back()),
-                                      ),
-                                    ),
+                                    body:
+                                        NotificationListener<
+                                          ScrollMetricsNotification
+                                        >(
+                                          onNotification: (notification) {
+                                            if (notification.depth == 0) {
+                                              _scheduleHighlightSync();
+                                            }
+                                            return false;
+                                          },
+                                          child: widget.overviewBuilder(
+                                            pageContext,
+                                            _overviewController,
+                                            _sectionKeys,
+                                            _openDestination,
+                                            _SettingsOverviewAppBar(
+                                              onBack: () => unawaited(_back()),
+                                            ),
+                                          ),
+                                        ),
                                   ),
                                 ),
                               ),
