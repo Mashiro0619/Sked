@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 import 'package:flutter/semantics.dart' show SemanticsProperties;
 import 'package:material_ui/material_ui.dart';
 
@@ -28,6 +28,7 @@ class TimetableCourseTapInfo {
     required this.courses,
     required this.isFullConflict,
     this.conflictKey,
+    this.selectedWeek,
     this.anchorRect,
   });
 
@@ -35,6 +36,9 @@ class TimetableCourseTapInfo {
   final List<CourseItem> courses;
   final bool isFullConflict;
   final String? conflictKey;
+
+  /// Week rendered by this grid when the course was tapped.
+  final int? selectedWeek;
   final Rect? anchorRect;
 
   TimetableCourseTapInfo copyWith({
@@ -42,6 +46,7 @@ class TimetableCourseTapInfo {
     List<CourseItem>? courses,
     bool? isFullConflict,
     String? conflictKey,
+    int? selectedWeek,
     Rect? anchorRect,
   }) {
     return TimetableCourseTapInfo(
@@ -49,6 +54,7 @@ class TimetableCourseTapInfo {
       courses: courses ?? this.courses,
       isFullConflict: isFullConflict ?? this.isFullConflict,
       conflictKey: conflictKey ?? this.conflictKey,
+      selectedWeek: selectedWeek ?? this.selectedWeek,
       anchorRect: anchorRect ?? this.anchorRect,
     );
   }
@@ -220,12 +226,17 @@ class _TimetableGridState extends State<TimetableGrid> {
     final preserveGaps = widget.preserveGaps || widget.entries != null;
     if (previous != null &&
         identical(previous.slots, _weekProjection.periodTimes) &&
+        listEquals(
+          previous.occupiedGapRanges,
+          _weekProjection.occupiedGapRanges,
+        ) &&
         previous.preserveGaps == preserveGaps &&
         previous.minuteHeight == minuteHeight) {
       return previous;
     }
     return _verticalLayout = _TimetableVerticalLayout(
       slots: _weekProjection.periodTimes,
+      occupiedGapRanges: _weekProjection.occupiedGapRanges,
       preserveGaps: preserveGaps,
       minuteHeight: minuteHeight,
     );
@@ -663,6 +674,8 @@ class _TimetableGridState extends State<TimetableGrid> {
                                                   isFullConflict:
                                                       item.isFullConflict,
                                                   conflictKey: item.conflictKey,
+                                                  selectedWeek:
+                                                      widget.selectedWeek,
                                                   anchorRect: anchor,
                                                 ),
                                               );
@@ -1176,45 +1189,49 @@ class _TimetableVerticalLayout {
     required this.slots,
     required this.preserveGaps,
     required this.minuteHeight,
-  }) : _slotTops = _buildSlotTops(slots, preserveGaps, minuteHeight) {
+    required this.occupiedGapRanges,
+  }) {
+    _collapsedRanges = _buildCollapsedRanges(slots, occupiedGapRanges);
     totalHeight = slots.isEmpty
         ? 0
         : preserveGaps
         ? (slots.last.endMinutes - slots.first.startMinutes) * minuteHeight
-        : slots.fold<double>(
+        : _collapsedRanges.fold<double>(
             0,
-            (sum, slot) => sum + _slotHeightFor(slot, minuteHeight),
+            (sum, range) => sum + (range.$2 - range.$1) * minuteHeight,
           );
+    _slotTops = [for (final slot in slots) minuteToY(slot.startMinutes)];
   }
 
   final List<CoursePeriodTime> slots;
   final bool preserveGaps;
   final double minuteHeight;
-  final List<double> _slotTops;
+  final List<(int, int)> occupiedGapRanges;
+  late final List<(int, int)> _collapsedRanges;
+  late final List<double> _slotTops;
   late final double totalHeight;
 
-  static List<double> _buildSlotTops(
+  static List<(int, int)> _buildCollapsedRanges(
     List<CoursePeriodTime> slots,
-    bool preserveGaps,
-    double minuteHeight,
+    List<(int, int)> occupiedGapRanges,
   ) {
-    if (slots.isEmpty) {
-      return const [];
+    final ranges = [
+      for (final slot in slots) (slot.startMinutes, slot.endMinutes),
+      ...occupiedGapRanges,
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
+    final merged = <(int, int)>[];
+    for (final range in ranges) {
+      if (range.$2 <= range.$1) continue;
+      if (merged.isEmpty || range.$1 > merged.last.$2) {
+        merged.add(range);
+      } else {
+        merged[merged.length - 1] = (
+          merged.last.$1,
+          math.max(merged.last.$2, range.$2),
+        );
+      }
     }
-    if (preserveGaps) {
-      final startMinutes = slots.first.startMinutes;
-      return [
-        for (final slot in slots)
-          (slot.startMinutes - startMinutes) * minuteHeight,
-      ];
-    }
-    var currentTop = 0.0;
-    final tops = <double>[];
-    for (final slot in slots) {
-      tops.add(currentTop);
-      currentTop += _slotHeightFor(slot, minuteHeight);
-    }
-    return tops;
+    return merged;
   }
 
   static double _slotHeightFor(CoursePeriodTime slot, double minuteHeight) {
@@ -1235,21 +1252,25 @@ class _TimetableVerticalLayout {
     if (slots.isEmpty) {
       return 0;
     }
-    final firstStart = slots.first.startMinutes;
-    final lastEnd = slots.last.endMinutes;
+    final firstStart = preserveGaps
+        ? slots.first.startMinutes
+        : _collapsedRanges.first.$1;
+    final lastEnd = preserveGaps
+        ? slots.last.endMinutes
+        : _collapsedRanges.last.$2;
     final clampedMinute = minute.clamp(firstStart, lastEnd).toInt();
     if (preserveGaps) {
       return (clampedMinute - firstStart) * minuteHeight;
     }
-    for (var index = 0; index < slots.length; index++) {
-      final slot = slots[index];
-      final top = _slotTops[index];
-      if (clampedMinute < slot.startMinutes) {
+    var top = 0.0;
+    for (final range in _collapsedRanges) {
+      if (clampedMinute < range.$1) {
         return top;
       }
-      if (clampedMinute <= slot.endMinutes) {
-        return top + (clampedMinute - slot.startMinutes) * minuteHeight;
+      if (clampedMinute <= range.$2) {
+        return top + (clampedMinute - range.$1) * minuteHeight;
       }
+      top += (range.$2 - range.$1) * minuteHeight;
     }
     return totalHeight;
   }
@@ -1399,6 +1420,26 @@ List<_CourseGeometry> _buildCourseGeometries({
           visualTop + (visualHeight > 0 ? math.min(1.0, visualHeight) : 0.0),
           range.bottom - (bottomInset * insetScale),
         );
+        // Overlapping cards already share physical pixels. Extending a short
+        // card's target can cover the still-visible part of a card behind it,
+        // so their pointer regions must follow the painted bounds exactly.
+        final hasVisualOverlap = ranges.any(
+          (other) =>
+              !identical(other.layout, range.layout) &&
+              other.top < range.bottom &&
+              other.bottom > range.top,
+        );
+        if (hasVisualOverlap) {
+          return _CourseGeometry(
+            layout: range.layout,
+            startMinutes: range.startMinutes,
+            endMinutes: range.endMinutes,
+            visualTop: visualTop,
+            visualHeight: math.max(0.0, visualBottom - visualTop),
+            hitTop: visualTop,
+            hitHeight: math.max(0.0, visualBottom - visualTop),
+          );
+        }
         final previousBoundary = previousBottom == null
             ? 0.0
             : (previousBottom + range.top) / 2;

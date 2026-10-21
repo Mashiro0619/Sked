@@ -16,18 +16,17 @@ import '../models/timetable_models.dart'
         CoursePeriodTime,
         TimetableData,
         buildTimeRange,
-        buildConflictKeyForCourses,
         compareDisplayedCourseChoice,
+        currentWeekFor,
         formatDayOfWeekLabel,
         formatSemesterWeeksValue,
-        isFullConflictGroup,
-        pickDisplayedCourseForConflict,
         resolveCourseTimeRange;
 import '../controllers/student_view_state.dart';
 import 'ui_command.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_panel_header.dart';
 import 'workspace_view_panel.dart';
+import 'timetable_week_projection.dart';
 
 class CourseDetailsSheet extends StatefulWidget {
   const CourseDetailsSheet({
@@ -40,6 +39,8 @@ class CourseDetailsSheet extends StatefulWidget {
     required this.onEdit,
     this.onEditAnchor,
     this.onSelectDisplayedCourse,
+    this.onSelectDisplayedConflict,
+    this.selectedWeek,
     this.onEditConflictCourse,
     this.onMissing,
   });
@@ -53,6 +54,9 @@ class CourseDetailsSheet extends StatefulWidget {
   final ValueChanged<BuildContext>? onEditAnchor;
   final FutureOr<void> Function() onEdit;
   final FutureOr<void> Function(CourseItem)? onSelectDisplayedCourse;
+  final FutureOr<void> Function(String conflictKey, CourseItem course)?
+  onSelectDisplayedConflict;
+  final int? selectedWeek;
   final FutureOr<void> Function(CourseItem)? onEditConflictCourse;
   final VoidCallback? onMissing;
 
@@ -63,6 +67,15 @@ class CourseDetailsSheet extends StatefulWidget {
 class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
   var _actionInProgress = false;
   var _missingNotified = false;
+  final _conflictProjection = TimetableWeekProjectionCache();
+  late final int _openedWeek;
+
+  @override
+  void initState() {
+    super.initState();
+    _openedWeek =
+        widget.selectedWeek ?? context.read<StudentViewState>().selectedWeek;
+  }
 
   Future<void> _runAction(
     FutureOr<void> Function()? action, {
@@ -112,11 +125,19 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
         final periodTimes = student.periodTimesForTimetable(timetable);
         final timeLabel = _effectiveTimeLabel(course, periodTimes);
 
-        final resolvedConflictCourses = _resolveConflictCourses(
+        final conflictLayout = _resolveConflictLayout(
           student: student,
           timetable: timetable,
           course: course,
         );
+        final resolvedConflictCourses = _sortConflictCourses(
+          timetable,
+          conflictLayout,
+          course,
+        );
+        final currentConflictKey = conflictLayout?.isFullConflict == true
+            ? conflictLayout?.conflictKey
+            : null;
         final otherConflictCourses = resolvedConflictCourses
             .where((item) => item.id != course.id)
             .toList();
@@ -237,15 +258,24 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                     subtitle:
                         '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${_effectiveTimeLabel(item, periodTimes)}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
                     actions: [
-                      if (widget.onSelectDisplayedCourse != null)
+                      if (currentConflictKey != null &&
+                          (widget.onSelectDisplayedConflict != null ||
+                              widget.onSelectDisplayedCourse != null) &&
+                          (conflictLayout?.selectableConflictCourseIds
+                                  ?.contains(item.id) ??
+                              true))
                         IconButton(
                           tooltip: l10n.setAsDisplayed,
                           onPressed: _actionInProgress
                               ? null
-                              : () => _runAction(
-                                  () => widget.onSelectDisplayedCourse!(item),
-                                  resetOnSuccess: false,
-                                ),
+                              : () => _runAction(() {
+                                  final select =
+                                      widget.onSelectDisplayedConflict;
+                                  if (select != null) {
+                                    return select(currentConflictKey, item);
+                                  }
+                                  return widget.onSelectDisplayedCourse!(item);
+                                }, resetOnSuccess: false),
                           icon: const Icon(Icons.visibility_outlined),
                         ),
                       if (widget.onEditConflictCourse != null)
@@ -352,77 +382,60 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
         : buildTimeRange(range.startMinutes, range.endMinutes);
   }
 
-  List<CourseItem> _resolveConflictCourses({
+  CourseLayout? _resolveConflictLayout({
     required StudentViewState student,
     required TimetableData timetable,
     required CourseItem course,
   }) {
-    if (!widget.isFullConflict) {
-      return [course];
+    final projection = _conflictProjection.project(
+      timetable: timetable,
+      periodTimes: student.periodTimesForTimetable(timetable),
+      selectedWeek: _openedWeek,
+      realCurrentWeek: currentWeekFor(timetable.config),
+      showPastEndedCourses: student.data.showPastEndedCourses,
+      showFutureCourses: student.data.showFutureCourses,
+      preserveGaps: student.data.preserveTimetableGaps,
+    );
+    final layouts = projection.resolveLayouts(
+      student.displayedCourseIdForConflict,
+    );
+    // Resolve the same live group as the canvas after week or course edits.
+    final dayLayouts = layouts[course.dayOfWeek] ?? const <CourseLayout>[];
+    final ownLayout = dayLayouts
+        .where((layout) => layout.course?.id == course.id)
+        .firstOrNull;
+    if (ownLayout != null) return ownLayout;
+    for (final layout in dayLayouts) {
+      if (layout.isFullConflict &&
+          layout.conflictCourses.whereType<CourseItem>().any(
+            (item) => item.id == course.id,
+          )) {
+        return layout;
+      }
     }
-
-    final periodTimes = student.periodTimesForTimetable(timetable);
-    CourseItem effectiveCourse(CourseItem item) {
-      final range = resolveCourseTimeRange(item, periodTimes);
-      return range == null
-          ? item
-          : item.copyWith(
-              startMinutes: range.startMinutes,
-              endMinutes: range.endMinutes,
-            );
-    }
-
-    final resolvedCourse = effectiveCourse(course);
-
-    final sameWeekdayCourses = timetable.courses
-        .where((item) => item.dayOfWeek == widget.weekday)
-        .map(effectiveCourse)
-        .toList();
-    final exactRangeCourses = sameWeekdayCourses
-        .where(
-          (item) =>
-              item.startMinutes == resolvedCourse.startMinutes &&
-              item.endMinutes == resolvedCourse.endMinutes,
-        )
-        .toList();
-    if (exactRangeCourses.length > 1 &&
-        isFullConflictGroup(exactRangeCourses)) {
-      return _sortConflictCourses(student, exactRangeCourses);
-    }
-
-    final containingCourses = sameWeekdayCourses
-        .where(
-          (item) =>
-              item.startMinutes <= resolvedCourse.startMinutes &&
-              item.endMinutes >= resolvedCourse.endMinutes,
-        )
-        .toList();
-    if (containingCourses.length > 1 &&
-        isFullConflictGroup(containingCourses)) {
-      return _sortConflictCourses(student, containingCourses);
-    }
-
-    return [course];
+    return null;
   }
 
   List<CourseItem> _sortConflictCourses(
-    StudentViewState student,
-    List<CourseItem> courses,
+    TimetableData timetable,
+    CourseLayout? layout,
+    CourseItem course,
   ) {
-    if (courses.length < 2) {
-      return courses;
-    }
-    final key =
-        widget.conflictKey ??
-        buildConflictKeyForCourses(widget.timetableId, widget.weekday, courses);
-    final displayedCourseId = student.displayedCourseIdForConflict(key);
-    final displayedCourse = pickDisplayedCourseForConflict(
-      courses,
-      displayedCourseId,
-    );
-    final others = [...courses.where((item) => item.id != displayedCourse.id)]
-      ..sort(compareDisplayedCourseChoice);
-    return [displayedCourse, ...others];
+    if (layout == null) return [course];
+    final ids = layout.conflictCourses
+        .whereType<CourseItem>()
+        .map((item) => item.id)
+        .toSet();
+    final courses = timetable.courses
+        .where((item) => ids.contains(item.id))
+        .toList();
+    courses.sort((a, b) {
+      if (a.id == b.id) return 0;
+      if (a.id == layout.course?.id) return -1;
+      if (b.id == layout.course?.id) return 1;
+      return compareDisplayedCourseChoice(a, b);
+    });
+    return courses;
   }
 
   void _notifyMissing() {

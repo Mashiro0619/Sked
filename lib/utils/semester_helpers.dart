@@ -34,6 +34,50 @@ bool matchesSemesterWeek(CourseItem course, int selectedWeek) {
       course.semesterWeeks.contains(selectedWeek);
 }
 
+enum CourseDisplayState { active, futureInactive, pastEnded }
+
+CourseDisplayState? courseDisplayStateForSemesterWeek(
+  CourseItem course, {
+  required int selectedWeek,
+  required int realCurrentWeek,
+  required bool showPastEndedCourses,
+  required bool showFutureCourses,
+}) {
+  if (matchesSemesterWeek(course, selectedWeek)) {
+    return CourseDisplayState.active;
+  }
+  final normalizedWeeks = normalizeSemesterWeeks(course.semesterWeeks);
+  if (normalizedWeeks.isEmpty) return CourseDisplayState.active;
+  if (selectedWeek < realCurrentWeek) {
+    final hasNextWeek = normalizedWeeks.any((week) => week > selectedWeek);
+    return hasNextWeek
+        ? showFutureCourses
+              ? CourseDisplayState.futureInactive
+              : null
+        : showPastEndedCourses
+        ? CourseDisplayState.pastEnded
+        : null;
+  }
+  if (selectedWeek > realCurrentWeek) {
+    final hasPastWeek = normalizedWeeks.any((week) => week < selectedWeek);
+    return hasPastWeek
+        ? showPastEndedCourses
+              ? CourseDisplayState.pastEnded
+              : null
+        : showFutureCourses
+        ? CourseDisplayState.futureInactive
+        : null;
+  }
+  final hasFutureWeek = normalizedWeeks.any((week) => week > realCurrentWeek);
+  return hasFutureWeek
+      ? showFutureCourses
+            ? CourseDisplayState.futureInactive
+            : null
+      : showPastEndedCourses
+      ? CourseDisplayState.pastEnded
+      : null;
+}
+
 String formatDayOfWeekLabel(
   int dayOfWeek, {
   String localeCode = defaultLocaleCode,
@@ -132,6 +176,8 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
   required int selectedWeek,
   required int realCurrentWeek,
   required DateTime now,
+  bool showPastEndedCourses = false,
+  bool showFutureCourses = true,
   String? Function(String conflictKey)? displayedCourseIdForConflict,
 }) {
   final today = normalizeDateOnly(now);
@@ -141,7 +187,10 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
     timetable: timetable,
     periodTimes: periodTimes,
     targetWeek: realCurrentWeek,
+    realCurrentWeek: realCurrentWeek,
     weekday: weekday,
+    showPastEndedCourses: showPastEndedCourses,
+    showFutureCourses: showFutureCourses,
     displayedCourseIdForConflict: displayedCourseIdForConflict,
     nowMinutes: nowMinutes,
   );
@@ -159,7 +208,10 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
     timetable: timetable,
     periodTimes: periodTimes,
     targetWeek: tomorrowWeek,
+    realCurrentWeek: realCurrentWeek,
     weekday: tomorrowWeekday,
+    showPastEndedCourses: showPastEndedCourses,
+    showFutureCourses: showFutureCourses,
     displayedCourseIdForConflict: displayedCourseIdForConflict,
   );
   if (tomorrowTarget == null) {
@@ -172,29 +224,57 @@ TimetableLiveCourseTarget? _courseTargetForDay({
   required TimetableData timetable,
   required List<CoursePeriodTime> periodTimes,
   required int targetWeek,
+  required int realCurrentWeek,
   required int weekday,
+  required bool showPastEndedCourses,
+  required bool showFutureCourses,
   required String? Function(String conflictKey)? displayedCourseIdForConflict,
   int? nowMinutes,
 }) {
-  final dayCourses =
-      timetable.courses
-          .where(
-            (course) =>
-                course.dayOfWeek == weekday &&
-                matchesSemesterWeek(course, targetWeek),
-          )
-          .map((course) {
-            final range = resolveCourseTimeRange(course, periodTimes);
-            return range == null
-                ? null
-                : course.copyWith(
-                    startMinutes: range.startMinutes,
-                    endMinutes: range.endMinutes,
-                  );
-          })
-          .whereType<CourseItem>()
-          .toList()
-        ..sort(_compareCoursesByStart);
+  final visibleCourses = <CourseItem>[];
+  final states = <CourseItem, CourseDisplayState>{};
+  for (final course in timetable.courses) {
+    if (course.dayOfWeek != weekday) continue;
+    final state = courseDisplayStateForSemesterWeek(
+      course,
+      selectedWeek: targetWeek,
+      realCurrentWeek: realCurrentWeek,
+      showPastEndedCourses: showPastEndedCourses,
+      showFutureCourses: showFutureCourses,
+    );
+    if (state == null) continue;
+    final range = resolveCourseTimeRange(course, periodTimes);
+    if (range == null) continue;
+    final resolved = course.copyWith(
+      startMinutes: range.startMinutes,
+      endMinutes: range.endMinutes,
+    );
+    visibleCourses.add(resolved);
+    states[resolved] = state;
+  }
+
+  // Resolve whole visible groups first, using the same key as the timetable.
+  // A hidden containing course must not regain the current-course outline just
+  // because the selected shorter course has not started or has already ended.
+  final dayCourses = <CourseItem>[];
+  for (final group in buildCourseOverlapGroups(visibleCourses)) {
+    final activeCourses = group
+        .where((course) => states[course] == CourseDisplayState.active)
+        .toList();
+    if (activeCourses.isEmpty) continue;
+    if (isFullConflictGroup(group)) {
+      final key = buildConflictKeyForCourses(timetable.id, weekday, group);
+      dayCourses.add(
+        pickDisplayedCourseForConflict(
+          activeCourses,
+          displayedCourseIdForConflict?.call(key),
+        ),
+      );
+    } else {
+      dayCourses.addAll(activeCourses);
+    }
+  }
+  dayCourses.sort(_compareCoursesByStart);
   if (dayCourses.isEmpty) {
     return null;
   }
@@ -211,12 +291,7 @@ TimetableLiveCourseTarget? _courseTargetForDay({
       return TimetableLiveCourseTarget(
         week: targetWeek,
         weekday: weekday,
-        courseId: _resolveDisplayedCourseId(
-          timetable.id,
-          weekday,
-          currentCourses,
-          displayedCourseIdForConflict,
-        ),
+        courseId: _resolveDisplayedCourseId(currentCourses),
         isCurrentCourse: true,
       );
     }
@@ -236,12 +311,7 @@ TimetableLiveCourseTarget? _courseTargetForDay({
         return TimetableLiveCourseTarget(
           week: targetWeek,
           weekday: weekday,
-          courseId: _resolveDisplayedCourseId(
-            timetable.id,
-            weekday,
-            nextCourses,
-            displayedCourseIdForConflict,
-          ),
+          courseId: _resolveDisplayedCourseId(nextCourses),
           isCurrentCourse: false,
         );
       }
@@ -256,12 +326,7 @@ TimetableLiveCourseTarget? _courseTargetForDay({
   return TimetableLiveCourseTarget(
     week: targetWeek,
     weekday: weekday,
-    courseId: _resolveDisplayedCourseId(
-      timetable.id,
-      weekday,
-      firstCourses,
-      displayedCourseIdForConflict,
-    ),
+    courseId: _resolveDisplayedCourseId(firstCourses),
     isCurrentCourse: false,
   );
 }
@@ -273,26 +338,8 @@ bool _isDateWithinTimetableRange(TimetableConfig config, DateTime date) {
   return !normalizedDate.isAfter(lastWeekEnd);
 }
 
-String _resolveDisplayedCourseId(
-  String timetableId,
-  int weekday,
-  List<CourseItem> courses,
-  String? Function(String conflictKey)? displayedCourseIdForConflict,
-) {
-  final sortedCourses = [...courses]..sort(_compareCoursesByStart);
-  if (isFullConflictGroup(sortedCourses)) {
-    final conflictKey = buildConflictKeyForCourses(
-      timetableId,
-      weekday,
-      sortedCourses,
-    );
-    return pickDisplayedCourseForConflict(
-      sortedCourses,
-      displayedCourseIdForConflict?.call(conflictKey),
-    ).id;
-  }
-  final prioritizedCourses = [...sortedCourses]
-    ..sort(compareCoursePaintPriority);
+String _resolveDisplayedCourseId(List<CourseItem> courses) {
+  final prioritizedCourses = [...courses]..sort(compareCoursePaintPriority);
   return prioritizedCourses.first.id;
 }
 
@@ -312,25 +359,56 @@ bool isFullConflictGroup(List<CourseItem> courses) {
   if (courses.length < 2) {
     return false;
   }
-  final first = courses.first;
-  final allSameRange = courses.every(
-    (item) =>
-        item.startMinutes == first.startMinutes &&
-        item.endMinutes == first.endMinutes,
-  );
-  if (allSameRange) {
-    return true;
+  for (var index = 0; index < courses.length; index++) {
+    final course = courses[index];
+    if (course.endMinutes <= course.startMinutes) return false;
+    for (
+      var otherIndex = index + 1;
+      otherIndex < courses.length;
+      otherIndex++
+    ) {
+      final other = courses[otherIndex];
+      if (course.dayOfWeek != other.dayOfWeek ||
+          (!_courseContains(course, other) &&
+              !_courseContains(other, course))) {
+        return false;
+      }
+    }
   }
-  if (courses.length == 2) {
-    return _courseContains(courses[0], courses[1]) ||
-        _courseContains(courses[1], courses[0]);
-  }
-  return false;
+  return true;
 }
 
 bool _courseContains(CourseItem outer, CourseItem inner) {
   return outer.startMinutes <= inner.startMinutes &&
       outer.endMinutes >= inner.endMinutes;
+}
+
+/// Groups connected overlaps without treating adjacent courses as conflicts.
+/// The input and its order stay unchanged, including for unsorted imports.
+List<List<CourseItem>> buildCourseOverlapGroups(List<CourseItem> courses) {
+  if (courses.isEmpty) return const [];
+  final sorted = [...courses]
+    ..sort((a, b) {
+      final dayCompare = a.dayOfWeek.compareTo(b.dayOfWeek);
+      return dayCompare != 0 ? dayCompare : _compareCoursesByStart(a, b);
+    });
+  final groups = <List<CourseItem>>[];
+  var current = <CourseItem>[];
+  var currentEnd = -1;
+  for (final course in sorted) {
+    if (current.isNotEmpty &&
+        (course.dayOfWeek != current.first.dayOfWeek ||
+            course.startMinutes >= currentEnd)) {
+      groups.add(current);
+      current = <CourseItem>[];
+    }
+    current.add(course);
+    if (current.length == 1 || course.endMinutes > currentEnd) {
+      currentEnd = course.endMinutes;
+    }
+  }
+  if (current.isNotEmpty) groups.add(current);
+  return groups;
 }
 
 CourseItem pickDisplayedCourseForConflict(
@@ -397,6 +475,30 @@ class ConflictKeyParts {
   final int startMinutes;
   final int endMinutes;
   final Set<String> courseIds;
+}
+
+/// Reads choices saved before versioned keys without rewriting loaded data.
+/// A versioned choice wins when both versions are present.
+String? readDisplayedCourseIdForConflict(
+  Map<String, String> preferences,
+  String conflictKey,
+) {
+  final direct = preferences[conflictKey];
+  if (direct != null) return direct;
+  final parsed = parseConflictKey(conflictKey);
+  if (parsed == null ||
+      parsed.timetableId.contains('|') ||
+      parsed.courseIds.any((id) => id.contains('|') || id.contains(','))) {
+    return null;
+  }
+  final courseIds = parsed.courseIds.toList()..sort();
+  return preferences[[
+    parsed.timetableId,
+    parsed.weekday,
+    parsed.startMinutes,
+    parsed.endMinutes,
+    courseIds.join(','),
+  ].join('|')];
 }
 
 ConflictKeyParts? parseConflictKey(String key) {

@@ -72,6 +72,7 @@ Future<AppRuntime> _createProvider({
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
   await provider.lifecycle.load();
+  await provider.studentCommands.setSelectedWeek(1);
   return provider;
 }
 

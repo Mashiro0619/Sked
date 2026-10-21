@@ -96,5 +96,8 @@ class StudentViewState extends ObservableViewState {
       const [];
 
   String? displayedCourseIdForConflict(String conflictKey) =>
-      data.conflictDisplayCourseIds[conflictKey];
+      readDisplayedCourseIdForConflict(
+        data.conflictDisplayCourseIds,
+        conflictKey,
+      );
 }

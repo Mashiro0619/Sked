@@ -239,6 +239,7 @@ void main() {
       find.byKey(const ValueKey('timetable-course-hit-alternative')),
     );
     expect(tapped!.course.id, 'alternative');
+    expect(tapped!.selectedWeek, 1);
     expect(
       tapped!.courses.map((course) => course.id),
       containsAll(['first', 'alternative']),
@@ -1575,6 +1576,153 @@ void main() {
     }
     semantics.dispose();
   });
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets(
+      'short overlapping course hits match their visible cards on $platform',
+      (tester) async {
+        await tester.binding.setSurfaceSize(
+          platform == TargetPlatform.android
+              ? const Size(390, 844)
+              : const Size(960, 700),
+        );
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final tapped = <TimetableCourseTapInfo>[];
+        await tester.pumpWidget(
+          _gridHarness(
+            timetable: _timetableWithCourses([
+              _course(
+                id: 'earlier-partial',
+                weekday: DateTime.monday,
+                startMinutes: 480,
+                endMinutes: 505,
+              ),
+              _course(
+                id: 'later-partial',
+                weekday: DateTime.monday,
+                startMinutes: 500,
+                endMinutes: 510,
+              ),
+            ]),
+            periodTimes: const [
+              CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),
+            ],
+            visibleWeekdays: const [DateTime.monday],
+            showDayHeader: false,
+            platform: platform,
+            onCourseTap: tapped.add,
+          ),
+        );
+        await tester.pumpAndSettle();
+        Rect visual(String id) =>
+            tester.getRect(find.byKey(ValueKey('timetable-course-visual-$id')));
+        Rect hit(String id) =>
+            tester.getRect(find.byKey(ValueKey('timetable-course-hit-$id')));
+        expect(hit('earlier-partial'), visual('earlier-partial'));
+        expect(hit('later-partial'), visual('later-partial'));
+        await tester.tapAt(
+          Offset(
+            visual('earlier-partial').center.dx,
+            visual('earlier-partial').top + 14,
+          ),
+        );
+        await tester.pump();
+        await tester.tapAt(visual('later-partial').center);
+        await tester.pump();
+        expect(tapped.map((info) => info.course.id), [
+          'earlier-partial',
+          'later-partial',
+        ]);
+        expect(tapped.first.isFullConflict, isFalse);
+        expect(tapped.first.conflictKey, isNull);
+        expect(tapped.first.courses.map((course) => course.id), [
+          'earlier-partial',
+          'later-partial',
+        ]);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'collapsed occupied gaps keep both custom and period courses reachable on $platform',
+      (tester) async {
+        await tester.binding.setSurfaceSize(
+          platform == TargetPlatform.android
+              ? const Size(390, 844)
+              : const Size(960, 700),
+        );
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final semantics = tester.ensureSemantics();
+        final tapped = <TimetableCourseTapInfo>[];
+        await tester.pumpWidget(
+          _gridHarness(
+            timetable: _timetableWithCourses([
+              _course(
+                id: 'gap-custom',
+                weekday: DateTime.monday,
+                startMinutes: 560,
+                endMinutes: 580,
+                periods: const [],
+              ),
+              _course(
+                id: 'after-gap-period',
+                weekday: DateTime.monday,
+                startMinutes: 600,
+                endMinutes: 660,
+                periods: const [2],
+              ),
+            ]),
+            periodTimes: const [
+              CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),
+              CoursePeriodTime(index: 2, startMinutes: 600, endMinutes: 660),
+            ],
+            visibleWeekdays: const [DateTime.monday],
+            showDayHeader: false,
+            preserveGaps: false,
+            platform: platform,
+            onCourseTap: tapped.add,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final gap = find.byKey(
+          const ValueKey('timetable-course-visual-gap-custom'),
+        );
+        final period = find.byKey(
+          const ValueKey('timetable-course-visual-after-gap-period'),
+        );
+        expect(
+          tester.getRect(gap).bottom,
+          lessThan(tester.getRect(period).top),
+        );
+        expect(tester.getSize(gap).height, greaterThan(0));
+        expect(find.byIcon(Icons.layers_outlined), findsNothing);
+        await tester.tap(
+          find.byKey(const ValueKey('timetable-course-hit-gap-custom')),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.byKey(const ValueKey('timetable-course-hit-after-gap-period')),
+        );
+        await tester.pump();
+        expect(tapped.map((info) => info.course.id), [
+          'gap-custom',
+          'after-gap-period',
+        ]);
+        expect(
+          (tapped.first.course.startMinutes, tapped.first.course.endMinutes),
+          (560, 580),
+        );
+        expect(tapped.every((info) => info.courses.length == 1), isTrue);
+        expect(tapped.every((info) => info.conflictKey == null), isTrue);
+        expect(
+          find.bySemanticsLabel('gap-custom, 09:20–09:40'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        semantics.dispose();
+      },
+    );
+  }
 
   testWidgets('adjacent course cards keep a visible vertical gap', (
     tester,

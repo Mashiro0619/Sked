@@ -16,6 +16,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       if (!mounted || !context.mounted || _pane.isOpen) return;
     }
     final commands = context.read<StudentCommands>();
+    final selectedWeek = info.selectedWeek ?? student.selectedWeek;
     _setCourseDetailsOpen(true);
     try {
       final canDismiss = context
@@ -63,6 +64,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
           weekday: info.course.dayOfWeek,
           conflictKey: info.conflictKey,
           isFullConflict: info.isFullConflict,
+          selectedWeek: selectedWeek,
           onEditAnchor: (anchor) => _pane.editorEntry =
               WorkspaceEditorConfiguration(anchorContext: anchor),
           onEdit: () => edit(info.course),
@@ -75,19 +77,16 @@ extension _HomeScreenCourseActions on _HomeScreenState {
               }
             }
           },
-          onSelectDisplayedCourse:
-              !info.isFullConflict || info.conflictKey == null
-              ? null
-              : (course) async {
-                  await commands.setDisplayedCourseForConflict(
-                    info.conflictKey!,
-                    course.id,
-                  );
-                  if (sheetContext.mounted) {
-                    completeSkedTaskRoute(sheetContext);
-                  }
-                },
-          onEditConflictCourse: !info.isFullConflict ? null : edit,
+          onSelectDisplayedConflict: (conflictKey, course) async {
+            await commands.setDisplayedCourseForConflict(
+              conflictKey,
+              course.id,
+            );
+            if (sheetContext.mounted) {
+              completeSkedTaskRoute(sheetContext);
+            }
+          },
+          onEditConflictCourse: edit,
         ),
       );
     } finally {

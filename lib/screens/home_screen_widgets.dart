@@ -1734,6 +1734,8 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
             selectedWeek: pageWeek,
             realCurrentWeek: realCurrentWeek,
             now: _now(),
+            showPastEndedCourses: widget.snapshot.showPastEndedCourses,
+            showFutureCourses: widget.snapshot.showFutureCourses,
             displayedCourseIdForConflict:
                 widget.snapshot.displayedCourseIdForConflict,
           )

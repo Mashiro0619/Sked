@@ -87,7 +87,14 @@ class StudentTimetableService {
               : item,
         )
         .toList();
-    return data.copyWith(timetables: updated);
+    return data.copyWith(
+      timetables: updated,
+      conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
+        data.conflictDisplayCourseIds,
+        updated,
+        periodTimeSets: data.periodTimeSets,
+      ),
+    );
   }
 
   StudentModeData saveCourse(
@@ -143,6 +150,7 @@ class StudentTimetableService {
       conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
         data.conflictDisplayCourseIds,
         timetables,
+        periodTimeSets: data.periodTimeSets,
       ),
       courseNameColorValues: buildStudentCourseNameColorValuesForTimetables(
         timetables,
@@ -211,17 +219,14 @@ class StudentTimetableService {
         : remaining.isEmpty
         ? ''
         : remaining.first.id;
-    final remainingCourseIds = remaining
-        .expand((item) => item.courses)
-        .map((item) => item.id)
-        .toSet();
-    final filteredPrefs = Map<String, String>.from(
-      data.conflictDisplayCourseIds,
-    )..removeWhere((_, value) => !remainingCourseIds.contains(value));
     return data.copyWith(
       activeTimetableId: nextActiveId,
       timetables: remaining,
-      conflictDisplayCourseIds: filteredPrefs,
+      conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
+        data.conflictDisplayCourseIds,
+        remaining,
+        periodTimeSets: data.periodTimeSets,
+      ),
       courseNameColorValues: buildStudentCourseNameColorValuesForTimetables(
         remaining,
         existing: data.courseNameColorValues,
@@ -273,7 +278,14 @@ class StudentTimetableService {
     if (index < 0) return data;
     final updated = [...data.periodTimeSets];
     updated[index] = normalized;
-    return data.copyWith(periodTimeSets: updated);
+    return data.copyWith(
+      periodTimeSets: updated,
+      conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
+        data.conflictDisplayCourseIds,
+        data.timetables,
+        periodTimeSets: updated,
+      ),
+    );
   }
 
   StudentModeData deletePeriodTimeSet(
@@ -316,7 +328,14 @@ class StudentTimetableService {
               : item,
         )
         .toList();
-    return data.copyWith(timetables: updated);
+    return data.copyWith(
+      timetables: updated,
+      conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
+        data.conflictDisplayCourseIds,
+        updated,
+        periodTimeSets: data.periodTimeSets,
+      ),
+    );
   }
 
   StudentModeData setDisplayedCourseForConflict(
@@ -330,6 +349,7 @@ class StudentTimetableService {
       conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
         updated,
         data.timetables,
+        periodTimeSets: data.periodTimeSets,
       ),
     );
   }
@@ -346,6 +366,7 @@ class StudentTimetableService {
       conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
         data.conflictDisplayCourseIds,
         updated,
+        periodTimeSets: data.periodTimeSets,
       ),
       courseNameColorValues: buildStudentCourseNameColorValuesForTimetables(
         updated,
@@ -380,20 +401,68 @@ CourseItem normalizeStudentCourse(
 
 Map<String, String> filterStudentConflictDisplayCourseIds(
   Map<String, String> preferences,
-  List<TimetableData> timetables,
-) {
-  final courseIdsByTimetable = <String, Set<String>>{
-    for (final timetable in timetables)
-      timetable.id: timetable.courses.map((course) => course.id).toSet(),
+  List<TimetableData> timetables, {
+  List<PeriodTimeSet> periodTimeSets = const [],
+}) {
+  final timetablesById = <String, TimetableData>{
+    for (final timetable in timetables) timetable.id: timetable,
+  };
+  final periodsById = <String, List<CoursePeriodTime>>{
+    for (final periodTimeSet in periodTimeSets)
+      periodTimeSet.id: periodTimeSet.periodTimes,
   };
   return Map<String, String>.from(preferences)..removeWhere((key, value) {
     final parsed = parseConflictKey(key);
-    if (parsed == null) return true;
-    final courseIds = courseIdsByTimetable[parsed.timetableId];
-    return courseIds == null ||
-        !courseIds.contains(value) ||
-        parsed.courseIds.isEmpty ||
-        parsed.courseIds.any((id) => !courseIds.contains(id));
+    if (parsed == null ||
+        parsed.courseIds.length < 2 ||
+        !parsed.courseIds.contains(value) ||
+        parsed.weekday < DateTime.monday ||
+        parsed.weekday > DateTime.sunday ||
+        parsed.startMinutes < 0 ||
+        parsed.endMinutes > 24 * 60 ||
+        parsed.endMinutes <= parsed.startMinutes) {
+      return true;
+    }
+    final timetable = timetablesById[parsed.timetableId];
+    if (timetable == null) return true;
+    final coursesById = <String, CourseItem>{
+      for (final course in timetable.courses) course.id: course,
+    };
+    final courses = <CourseItem>[];
+    var unresolvedTime = false;
+    for (final id in parsed.courseIds) {
+      final course = coursesById[id];
+      if (course == null || course.dayOfWeek != parsed.weekday) return true;
+      final periodTimes = periodsById[timetable.config.periodTimeSetId];
+      final range = resolveCourseTimeRange(course, periodTimes ?? const []);
+      if (range == null) {
+        if (course.startMinutes != 0 ||
+            course.endMinutes != 0 ||
+            periodTimes != null) {
+          return true;
+        }
+        // Older callers may not have loaded period templates yet. Keep their
+        // valid member identities until the effective range can be checked.
+        unresolvedTime = true;
+        continue;
+      }
+      courses.add(
+        course.copyWith(
+          startMinutes: range.startMinutes,
+          endMinutes: range.endMinutes,
+        ),
+      );
+    }
+    if (unresolvedTime) return false;
+    if (!isFullConflictGroup(courses)) return true;
+    final startMinutes = courses
+        .map((course) => course.startMinutes)
+        .reduce((a, b) => a < b ? a : b);
+    final endMinutes = courses
+        .map((course) => course.endMinutes)
+        .reduce((a, b) => a > b ? a : b);
+    return startMinutes != parsed.startMinutes ||
+        endMinutes != parsed.endMinutes;
   });
 }
 

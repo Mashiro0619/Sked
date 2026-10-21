@@ -196,7 +196,7 @@ void main() {
         gaps: false,
       ).resolveLayouts(null)[1]!.single;
       expect(active.displayState, CourseDisplayState.active);
-      expect((active.startMinutes, active.endMinutes), (600, 660));
+      expect((active.startMinutes, active.endMinutes), (560, 580));
       final expanded = _project(
         cache,
         timetable,
@@ -233,6 +233,133 @@ void main() {
     expect(projection.resolveLayouts(select), same(changed));
     selected = 'deleted-choice';
     expect(projection.resolveLayouts(select)[1]!.single.course!.id, 'long');
+  });
+
+  test('nested conflicts retain every choice and a stable group key', () {
+    final courses = [
+      _course('outer', start: 480, end: 660),
+      _course('middle', start: 500, end: 640),
+      _course('inner', start: 520, end: 620),
+    ];
+    final cache = TimetableWeekProjectionCache();
+    final first = _project(cache, _timetable(courses));
+    final initial = first.resolveLayouts(null)[1]!.single;
+    expect(initial.course!.id, 'outer');
+    expect(initial.isFullConflict, isTrue);
+    expect(initial.conflictCourses, hasLength(3));
+    expect(initial.selectableConflictCourseIds, {'outer', 'middle', 'inner'});
+    final selected = first.resolveLayouts((_) => 'inner')[1]!.single;
+    expect(selected.course!.id, 'inner');
+    expect(selected.conflictKey, initial.conflictKey);
+    final reordered = _project(
+      cache,
+      _timetable(courses.reversed.toList()),
+    ).resolveLayouts((_) => 'inner')[1]!.single;
+    expect(reordered.conflictKey, initial.conflictKey);
+    expect(reordered.course!.id, 'inner');
+  });
+
+  test('partial overlap choices include direct neighbors only', () {
+    final layouts = _project(
+      TimetableWeekProjectionCache(),
+      _timetable([
+        _course('a', start: 480, end: 540),
+        _course('b', start: 520, end: 580),
+        _course('c', start: 570, end: 610),
+      ]),
+    ).resolveLayouts(null)[1]!;
+    expect(layouts.map((layout) => layout.isFullConflict), everyElement(false));
+    List<String> choices(int index) => layouts[index].conflictCourses
+        .cast<CourseItem>()
+        .map((course) => course.id)
+        .toList();
+    expect(choices(0), ['a', 'b']);
+    expect(choices(1), ['b', 'a', 'c']);
+    expect(choices(2), ['c', 'b']);
+    expect(layouts.map((layout) => layout.conflictKey), everyElement(isNull));
+  });
+
+  test('inactive preferences cannot hide active conflict courses', () {
+    final cache = TimetableWeekProjectionCache();
+    final timetable = _timetable([
+      _course('future', weeks: const [3], end: 600),
+      _course('active', weeks: const [2]),
+      _course('other-active', weeks: const [2]),
+      _course('past', weeks: const [1]),
+    ]);
+    final projection = _project(cache, timetable, week: 2, currentWeek: 2);
+    final initial = projection.resolveLayouts((_) => 'future')[1]!.single;
+    expect(initial.course!.id, 'active');
+    expect(initial.displayState, CourseDisplayState.active);
+    expect(initial.conflictCourses, hasLength(4));
+    expect(initial.selectableConflictCourseIds, {'active', 'other-active'});
+    final selected = projection
+        .resolveLayouts((_) => 'other-active')[1]!
+        .single;
+    expect(selected.course!.id, 'other-active');
+    final nextWeek = _project(
+      cache,
+      timetable,
+      week: 3,
+      currentWeek: 2,
+    ).resolveLayouts((_) => 'other-active')[1]!.single;
+    expect(nextWeek.course!.id, 'future');
+    expect(nextWeek.displayState, CourseDisplayState.active);
+    expect(nextWeek.selectableConflictCourseIds, {'future'});
+    expect(nextWeek.conflictKey, initial.conflictKey);
+  });
+
+  test('active partial overlaps paint above inactive preview cards', () {
+    final layouts = _project(
+      TimetableWeekProjectionCache(),
+      _timetable([
+        _course('active', start: 480, end: 540),
+        _course('future', weeks: const [2], start: 500, end: 560),
+      ]),
+    ).resolveLayouts(null)[1]!;
+    expect(layouts.map((layout) => layout.course!.id), ['future', 'active']);
+    expect(layouts.last.displayState, CourseDisplayState.active);
+    expect(layouts.last.priorityDepth, 0);
+    expect(layouts.last.conflictCourses.cast<CourseItem>().map((c) => c.id), [
+      'active',
+      'future',
+    ]);
+  });
+
+  test('collapsing gaps preserves real conflict times and keys', () {
+    final cache = TimetableWeekProjectionCache();
+    final timetable = _timetable([
+      _course('gap-outer', start: 560, end: 590),
+      _course('gap-inner', start: 570, end: 580),
+      _course('next-period', start: 600, end: 660),
+    ]);
+    final expanded = _project(cache, timetable).resolveLayouts(null)[1]!;
+    final collapsedProjection = _project(cache, timetable, gaps: false);
+    expect(collapsedProjection.occupiedGapRanges, [(560, 590), (570, 580)]);
+    final collapsed = collapsedProjection.resolveLayouts(null)[1]!;
+    expect(collapsed, hasLength(2));
+    expect(collapsed.first.isFullConflict, isTrue);
+    expect(collapsed.first.conflictCourses, hasLength(2));
+    expect(collapsed.first.conflictKey, expanded.first.conflictKey);
+    expect(
+      (collapsed.first.startMinutes, collapsed.first.endMinutes),
+      (560, 590),
+    );
+    expect(collapsed.last.course!.id, 'next-period');
+    expect(collapsed.last.conflictCourses, hasLength(1));
+  });
+
+  test('normal multi-period courses do not retain empty gaps', () {
+    final projection = _project(
+      TimetableWeekProjectionCache(),
+      _timetable([_course('spanning-periods', start: 480, end: 660)]),
+      gaps: false,
+    );
+    expect(projection.occupiedGapRanges, isEmpty);
+    expect(
+      projection.resolveLayouts(null)[1]!.single.conflictCourses,
+      hasLength(1),
+    );
   });
 
   test('hybrid entries retain overlap order and refresh when replaced', () {

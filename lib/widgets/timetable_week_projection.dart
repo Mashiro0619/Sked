@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import '../models/timetable_models.dart';
 import 'timetable_entry.dart';
 
-enum CourseDisplayState { active, futureInactive, pastEnded }
+export '../utils/semester_helpers.dart' show CourseDisplayState;
 
 class CourseLayout {
   const CourseLayout({
@@ -16,6 +16,7 @@ class CourseLayout {
     required this.conflictCourses,
     required this.displayState,
     this.conflictKey,
+    this.selectableConflictCourseIds,
   });
 
   final CourseItem? course;
@@ -25,6 +26,10 @@ class CourseLayout {
   final List<Object> conflictCourses;
   final CourseDisplayState displayState;
   final String? conflictKey;
+
+  /// Only the highest-priority visible state can replace this week's card.
+  /// Other conflict members remain available for viewing and editing.
+  final Set<String>? selectableConflictCourseIds;
 
   int get startMinutes => entry?.startMinutes ?? course!.startMinutes;
   int get endMinutes => entry?.endMinutes ?? course!.endMinutes;
@@ -92,7 +97,6 @@ class TimetableWeekProjectionCache {
       realCurrentWeek: realCurrentWeek,
       showPastEndedCourses: showPastEndedCourses,
       showFutureCourses: showFutureCourses,
-      preserveGaps: preserveGaps,
       entries: _entries,
     );
   }
@@ -135,6 +139,7 @@ class TimetableWeekProjection {
   TimetableWeekProjection._({
     required this.periodTimes,
     required this.courseSpacing,
+    required this.occupiedGapRanges,
     required Map<int, List<CourseLayout>> layouts,
     required List<_ConflictChoices> conflicts,
   }) : _layouts = Map.unmodifiable({
@@ -145,6 +150,9 @@ class TimetableWeekProjection {
 
   final List<CoursePeriodTime> periodTimes;
   final bool courseSpacing;
+
+  /// Retain these custom-course intervals when empty timetable gaps collapse.
+  final List<(int, int)> occupiedGapRanges;
   final List<_ConflictChoices> _conflicts;
   Map<int, List<CourseLayout>> _layouts;
 
@@ -156,8 +164,10 @@ class TimetableWeekProjection {
     final changedDays = <int, List<CourseLayout>>{};
     for (final conflict in _conflicts) {
       final id = displayedCourseIdForConflict?.call(conflict.key);
+      final preferredState = conflict.layouts.first.displayState;
       final choice = conflict.layouts.firstWhere(
-        (layout) => layout.course!.id == id,
+        (layout) =>
+            layout.course!.id == id && layout.displayState == preferredState,
         orElse: () => conflict.layouts.first,
       );
       if (identical(_layouts[conflict.weekday]![conflict.index], choice)) {
@@ -201,7 +211,6 @@ TimetableWeekProjection _projectWeek({
   required int realCurrentWeek,
   required bool showPastEndedCourses,
   required bool showFutureCourses,
-  required bool preserveGaps,
   required List<TimetableEntry>? entries,
 }) {
   final layouts = <int, List<CourseLayout>>{
@@ -246,7 +255,7 @@ TimetableWeekProjection _projectWeek({
     for (final course in timetable.courses) {
       final day = coursesByDay[course.dayOfWeek];
       if (day == null) continue;
-      final state = _displayStateForCourse(
+      final state = courseDisplayStateForSemesterWeek(
         course,
         selectedWeek: selectedWeek,
         realCurrentWeek: realCurrentWeek,
@@ -254,11 +263,7 @@ TimetableWeekProjection _projectWeek({
         showFutureCourses: showFutureCourses,
       );
       if (state == null) continue;
-      final resolved = _courseWithResolvedPeriodTime(
-        course,
-        periodTimes,
-        preserveGaps: preserveGaps,
-      );
+      final resolved = _courseWithResolvedPeriodTime(course, periodTimes);
       day.add(resolved);
       states[resolved] = state;
     }
@@ -272,23 +277,52 @@ TimetableWeekProjection _projectWeek({
       for (final group in buildOverlapGroups(day.value)) {
         final fullConflict = isFullConflictGroup(group.courses);
         final courses = group.courses
-          ..sort(
-            fullConflict
-                ? compareDisplayedCourseChoice
-                : compareCoursePaintPriority,
-          );
+          ..sort((a, b) {
+            // Inactive previews must not hide a course that meets this week.
+            // Full conflicts pick the first choice, while partial conflicts
+            // paint the last course on top of the earlier cards.
+            final state = _displayPriority(states[a]!)
+                .compareTo(_displayPriority(states[b]!));
+            if (state != 0) return fullConflict ? state : -state;
+            return fullConflict
+                ? compareDisplayedCourseChoice(a, b)
+                : compareCoursePaintPriority(a, b);
+          });
         final key = fullConflict
             ? buildConflictKeyForCourses(timetable.id, day.key, courses)
+            : null;
+        final selectableCourseIds = fullConflict
+            ? Set<String>.unmodifiable({
+                for (final course in courses)
+                  if (states[course] == states[courses.first]) course.id,
+              })
             : null;
         final choices = [
           for (var index = 0; index < courses.length; index++)
             CourseLayout(
               course: courses[index],
-              priorityDepth: fullConflict ? 0 : index,
+              priorityDepth: fullConflict
+                  ? 0
+                  : courses
+                        .take(index)
+                        .where(
+                          (course) => states[course] == states[courses[index]],
+                        )
+                        .length,
               isFullConflict: fullConflict,
-              conflictCourses: fullConflict ? courses : [courses[index]],
+              conflictCourses: fullConflict
+                  ? courses
+                  : [
+                      courses[index],
+                      for (final other in courses)
+                        if (!identical(other, courses[index]) &&
+                            other.startMinutes < courses[index].endMinutes &&
+                            other.endMinutes > courses[index].startMinutes)
+                          other,
+                    ],
               displayState: states[courses[index]]!,
               conflictKey: key,
+              selectableConflictCourseIds: selectableCourseIds,
             ),
         ];
         if (fullConflict) {
@@ -307,8 +341,25 @@ TimetableWeekProjection _projectWeek({
       }
     }
   }
+  final occupiedGapRanges =
+      <(int, int)>{
+        if (entries == null)
+          for (final day in layouts.values)
+            for (final layout in day)
+              for (final course in layout.conflictCourses.cast<CourseItem>())
+                if (course.endMinutes > course.startMinutes &&
+                    !periodTimes.any(
+                      (slot) =>
+                          course.startMinutes < slot.endMinutes &&
+                          course.endMinutes > slot.startMinutes,
+                    ))
+                  (course.startMinutes, course.endMinutes),
+      }.toList()..sort(
+        (a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : a.$2.compareTo(b.$2),
+      );
   return TimetableWeekProjection._(
     periodTimes: periodTimes,
+    occupiedGapRanges: List.unmodifiable(occupiedGapRanges),
     courseSpacing:
         entries == null ||
         entries.every((e) => e.kind == TimetableEntryKind.course),
@@ -319,9 +370,8 @@ TimetableWeekProjection _projectWeek({
 
 CourseItem _courseWithResolvedPeriodTime(
   CourseItem course,
-  List<CoursePeriodTime> periodTimes, {
-  required bool preserveGaps,
-}) {
+  List<CoursePeriodTime> periodTimes,
+) {
   if (periodTimes.isEmpty) {
     return course;
   }
@@ -333,28 +383,16 @@ CourseItem _courseWithResolvedPeriodTime(
       timeRange: buildTimeRange(range.startMinutes, range.endMinutes),
     );
   }
-  if (preserveGaps || course.endMinutes <= course.startMinutes) {
-    return course;
-  }
-
-  // When gaps are collapsed, a course entirely inside a gap maps to zero
-  // height. Anchor it to the nearest configured period so it remains visible
-  // and participates in the same overlap group as the period it occupies.
-  final start = course.startMinutes;
-  final end = course.endMinutes;
-  final overlapsSlot = periodTimes.where(
-    (slot) => start < slot.endMinutes && end > slot.startMinutes,
-  );
-  if (overlapsSlot.isNotEmpty) return course;
-  final anchor = periodTimes.firstWhere(
-    (slot) => end <= slot.startMinutes,
-    orElse: () => periodTimes.last,
-  );
-  return course.copyWith(
-    startMinutes: anchor.startMinutes,
-    endMinutes: anchor.endMinutes,
-  );
+  // Collapsing gaps changes only the grid geometry. Keep the real time here
+  // so nearby courses do not become false conflicts or change their keys.
+  return course;
 }
+
+int _displayPriority(CourseDisplayState state) => switch (state) {
+  CourseDisplayState.active => 0,
+  CourseDisplayState.futureInactive => 1,
+  CourseDisplayState.pastEnded => 2,
+};
 
 List<List<TimetableEntry>> _buildEntryOverlapGroups(
   List<TimetableEntry> entries,
@@ -392,76 +430,8 @@ int _compareEntryPaintPriority(TimetableEntry a, TimetableEntry b) {
   return a.id.compareTo(b.id);
 }
 
-CourseDisplayState? _displayStateForCourse(
-  CourseItem course, {
-  required int selectedWeek,
-  required int realCurrentWeek,
-  required bool showPastEndedCourses,
-  required bool showFutureCourses,
-}) {
-  if (matchesSemesterWeek(course, selectedWeek)) {
-    return CourseDisplayState.active;
-  }
-  if (course.semesterWeeks.isEmpty) {
-    return CourseDisplayState.active;
-  }
-  final normalizedWeeks = normalizeSemesterWeeks(course.semesterWeeks);
-  if (normalizedWeeks.isEmpty) {
-    return CourseDisplayState.active;
-  }
-  if (selectedWeek < realCurrentWeek) {
-    final nextWeek = normalizedWeeks.firstWhere(
-      (week) => week > selectedWeek,
-      orElse: () => -1,
-    );
-    if (nextWeek != -1) {
-      return showFutureCourses ? CourseDisplayState.futureInactive : null;
-    }
-    return showPastEndedCourses ? CourseDisplayState.pastEnded : null;
-  }
-  if (selectedWeek > realCurrentWeek) {
-    final lastWeek = normalizedWeeks.lastWhere(
-      (week) => week < selectedWeek,
-      orElse: () => -1,
-    );
-    if (lastWeek != -1) {
-      return showPastEndedCourses ? CourseDisplayState.pastEnded : null;
-    }
-    return showFutureCourses ? CourseDisplayState.futureInactive : null;
-  }
-  final hasFutureWeek = normalizedWeeks.any((week) => week > realCurrentWeek);
-  if (hasFutureWeek) {
-    return showFutureCourses ? CourseDisplayState.futureInactive : null;
-  }
-  return showPastEndedCourses ? CourseDisplayState.pastEnded : null;
-}
-
 List<OverlapGroup> buildOverlapGroups(List<CourseItem> courses) {
-  if (courses.isEmpty) {
-    return const [];
-  }
-  final groups = <OverlapGroup>[];
-  var currentCourses = <CourseItem>[];
-  var currentEnd = -1;
-
-  for (final course in courses) {
-    if (currentCourses.isEmpty) {
-      currentCourses = [course];
-      currentEnd = course.endMinutes;
-      continue;
-    }
-    if (course.startMinutes < currentEnd) {
-      currentCourses.add(course);
-      currentEnd = math.max(currentEnd, course.endMinutes);
-      continue;
-    }
-    groups.add(OverlapGroup(List<CourseItem>.from(currentCourses)));
-    currentCourses = [course];
-    currentEnd = course.endMinutes;
-  }
-
-  if (currentCourses.isNotEmpty) {
-    groups.add(OverlapGroup(List<CourseItem>.from(currentCourses)));
-  }
-  return groups;
+  return [
+    for (final group in buildCourseOverlapGroups(courses)) OverlapGroup(group),
+  ];
 }

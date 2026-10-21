@@ -1758,7 +1758,10 @@ END:VCALENDAR
           timetable(
             id: 'other',
             name: 'Other',
-            courses: [course(id: 'shared', name: 'Other')],
+            courses: [
+              course(id: 'shared', name: 'Other'),
+              course(id: 'other_conflict', name: 'Other Conflict'),
+            ],
           ),
         ],
         periodTimeSets: [
@@ -1768,7 +1771,7 @@ END:VCALENDAR
         activeTimetableId: 'active',
         conflictDisplayCourseIds: const {
           'active|1|480|525|old,another': 'old',
-          'other|1|480|525|shared': 'shared',
+          'other|1|480|525|other_conflict,shared': 'shared',
         },
       );
       final source = timetableEnvelope(
@@ -1804,7 +1807,7 @@ END:VCALENDAR
       expect(mutation.selectedTimetable!.config.periodTimeSetId, 'set2');
       expect(mutation.selectedTimetable!.courses.single.id, 'shared_copy');
       expect(mutation.data.conflictDisplayCourseIds, {
-        'other|1|480|525|shared': 'shared',
+        'other|1|480|525|other_conflict,shared': 'shared',
       });
     });
 

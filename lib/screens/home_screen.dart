@@ -988,7 +988,7 @@ class _StudentHomeSnapshot {
   final String toolbarHiddenItemsBehavior;
 
   String? displayedCourseIdForConflict(String key) =>
-      conflictDisplayCourseIds[key];
+      readDisplayedCourseIdForConflict(conflictDisplayCourseIds, key);
 
   @override
   bool operator ==(Object other) {
