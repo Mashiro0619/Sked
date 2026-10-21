@@ -15,6 +15,8 @@ class SkedTaskBody extends StatelessWidget {
     this.divider = false,
     this.headerDivider = false,
     this.headerHeightFraction = .3,
+    this.bodyIsSliver = false,
+    this.semanticChildCount,
     this.bodyKey,
     this.viewportKey,
     this.headerPadding = const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -25,6 +27,10 @@ class SkedTaskBody extends StatelessWidget {
   final Widget header, child;
   final Widget? footer, status;
   final bool fillHeight, divider, headerDivider;
+
+  /// Render [child] in a bounded lazy viewport instead of an eager scroll body.
+  final bool bodyIsSliver;
+  final int? semanticChildCount;
   final double headerHeightFraction;
   final Key? bodyKey, viewportKey;
   final EdgeInsetsGeometry headerPadding, contentPadding, footerPadding;
@@ -73,26 +79,52 @@ class SkedTaskBody extends StatelessWidget {
             fit: fillHeight ? FlexFit.tight : FlexFit.loose,
             child: SizedBox(
               key: viewportKey,
-              child: _FocusedTaskViewport(
-                scrollKey: bodyKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (shortViewport) ...[
-                      Padding(padding: headerPadding, child: header),
-                      if (headerDivider) const Divider(height: 1),
-                    ],
-                    // A stable slot keeps field state when the short-window
-                    // fallback moves the title into this same scroll viewport.
-                    Padding(
-                      key: const ValueKey('sked-task-content'),
-                      padding: contentPadding,
-                      child: child,
+              child: bodyIsSliver
+                  ? CustomScrollView(
+                      key: bodyKey,
+                      // Flexible gives this viewport a finite height budget.
+                      // Shrink short lists without measuring offscreen rows.
+                      shrinkWrap: !fillHeight,
+                      semanticChildCount: semanticChildCount,
+                      slivers: [
+                        if (shortViewport)
+                          SliverToBoxAdapter(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Padding(padding: headerPadding, child: header),
+                                if (headerDivider) const Divider(height: 1),
+                              ],
+                            ),
+                          ),
+                        SliverPadding(
+                          key: const ValueKey('sked-task-content'),
+                          padding: contentPadding,
+                          sliver: child,
+                        ),
+                      ],
+                    )
+                  : _FocusedTaskViewport(
+                      scrollKey: bodyKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (shortViewport) ...[
+                            Padding(padding: headerPadding, child: header),
+                            if (headerDivider) const Divider(height: 1),
+                          ],
+                          // A stable slot keeps field state when the short-window
+                          // fallback moves the title into this same scroll viewport.
+                          Padding(
+                            key: const ValueKey('sked-task-content'),
+                            padding: contentPadding,
+                            child: child,
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ),
           if (footer != null) ...[

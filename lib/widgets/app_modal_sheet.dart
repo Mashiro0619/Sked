@@ -234,6 +234,8 @@ class AppSheetScaffold extends StatelessWidget {
     this.contentPadding = const EdgeInsets.fromLTRB(16, 0, 16, 12),
     this.actionPadding,
     this.busy = false,
+    this.bodyIsSliver = false,
+    this.semanticChildCount,
   }) : editorActions = null,
        compact = true,
        _editor = false;
@@ -256,12 +258,18 @@ class AppSheetScaffold extends StatelessWidget {
   }) : actions = const [],
        leading = null,
        heightFactor = null,
+       bodyIsSliver = false,
+       semanticChildCount = null,
        _editor = true;
 
   final Widget title, child;
   final Widget? subtitle, leading;
   final VoidCallback? onClose;
   final bool closeEnabled, busy, compact, _editor;
+
+  /// Put a sliver [child] in the shared body's bounded scroll viewport.
+  final bool bodyIsSliver;
+  final int? semanticChildCount;
   final List<Widget> actions;
   final SkedEditorActions? editorActions;
 
@@ -280,7 +288,9 @@ class AppSheetScaffold extends StatelessWidget {
     final resolvedActions = editorActions?.trailing(context) ?? actions;
     final resolvedLeading = editorActions?.leading(context) ?? leading;
     final status = busy ? const UiCommandBusyIndicator(busy: true) : null;
-    if ((editor?.enabled == true || (_editor && desktop)) && onClose != null) {
+    if (!bodyIsSliver &&
+        (editor?.enabled == true || (_editor && desktop)) &&
+        onClose != null) {
       return WorkspaceEditorScaffold(
         title: title,
         subtitle: subtitle,
@@ -312,6 +322,8 @@ class AppSheetScaffold extends StatelessWidget {
       child: SkedTaskBody(
         status: status,
         fillHeight: inTaskPane,
+        bodyIsSliver: bodyIsSliver,
+        semanticChildCount: semanticChildCount,
         header: SkedTaskHeader(
           key: const ValueKey('app-sheet-header'),
           title: title,

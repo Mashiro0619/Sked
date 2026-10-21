@@ -272,65 +272,92 @@ class _ReminderStripState extends State<_ReminderStrip>
             title: Text('${l.reminder} · ${items.length}'),
             subtitle: automatic ? Text(l.reminderAutoCloseHint) : null,
             contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+            bodyIsSliver: true,
+            semanticChildCount: items.length,
+            child: SliverMainAxisGroup(
+              slivers: [
                 if (items.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(l.noUpcomingEvents),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(l.noUpcomingEvents),
+                    ),
                   ),
-                for (var i = 0; i < groups.length; i++) ...[
-                  if (i > 0)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Divider(height: 1, color: colors.outlineVariant),
-                    ),
-                  Padding(
-                    key: ValueKey(
-                      'general-reminder-group-${groups[i].status.name}',
-                    ),
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _reminderStatusIcon(groups[i].status),
-                          size: 16,
-                          color: _reminderStatusColor(groups[i].status, colors),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${_reminderStatusLabel(groups[i].status, l)} · ${groups[i].items.length}',
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: _reminderStatusColor(
-                                    groups[i].status,
-                                    colors,
-                                  ),
-                                ),
+                for (var i = 0; i < groups.length; i++)
+                  SliverMainAxisGroup(
+                    key: ValueKey('reminder-section-${groups[i].status.name}'),
+                    slivers: [
+                      if (i > 0)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Divider(
+                              height: 1,
+                              color: colors.outlineVariant,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  for (final item in groups[i].items)
-                    host.row(
-                      item.occurrence,
-                      source: source,
-                      builder: (activate) => _ReminderSummaryRow(
-                        item: item,
-                        busy: _handling.contains(item.occurrence.occurrenceKey),
-                        onOpen: (_) => activate(),
-                        onHandle: () {
-                          if (host.session.blocked) return;
-                          host.session.dismissPreview();
-                          unawaited(_handleReminder(item.occurrence));
-                        },
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          key: ValueKey(
+                            'general-reminder-group-${groups[i].status.name}',
+                          ),
+                          padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _reminderStatusIcon(groups[i].status),
+                                size: 16,
+                                color: _reminderStatusColor(
+                                  groups[i].status,
+                                  colors,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  '${_reminderStatusLabel(groups[i].status, l)} · ${groups[i].items.length}',
+                                  style: Theme.of(context).textTheme.labelMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: _reminderStatusColor(
+                                          groups[i].status,
+                                          colors,
+                                        ),
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                ],
+                      _reminderRowsSliver(
+                        groups[i].items,
+                        (item) => host.row(
+                          item.occurrence,
+                          source: source,
+                          builder: (activate) => _ReminderSummaryRow(
+                            item: item,
+                            busy: _handling.contains(
+                              item.occurrence.occurrenceKey,
+                            ),
+                            onOpen: (_) => activate(),
+                            onHandle: () {
+                              if (host.session.blocked) return;
+                              host.session.dismissPreview();
+                              unawaited(_handleReminder(item.occurrence));
+                            },
+                          ),
+                        ),
+                        semanticIndexOffset: groups
+                            .take(i)
+                            .fold<int>(
+                              0,
+                              (count, group) => count + group.items.length,
+                            ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -340,25 +367,55 @@ class _ReminderStripState extends State<_ReminderStrip>
     return AppSheetScaffold(
       key: const ValueKey('general-reminders-list'),
       title: Text(l.reminder),
-      child: Column(
-        children: [
+      bodyIsSliver: true,
+      semanticChildCount: items.length,
+      child: SliverMainAxisGroup(
+        slivers: [
           if (items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(l.noUpcomingEvents),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l.noUpcomingEvents),
+              ),
             ),
-          for (final item in items)
-            _ReminderSummaryRow(
+          _reminderRowsSliver(
+            items,
+            (item) => _ReminderSummaryRow(
               item: item,
               busy: _handling.contains(item.occurrence.occurrenceKey),
               onOpen: (anchor) =>
                   widget.onOccurrenceTap(item.occurrence, anchor),
               onHandle: () => unawaited(_handleReminder(item.occurrence)),
             ),
+          ),
         ],
       ),
     );
   }
+}
+
+Widget _reminderRowsSliver(
+  List<GeneralReminderItem> items,
+  Widget Function(GeneralReminderItem) buildRow, {
+  int semanticIndexOffset = 0,
+}) {
+  final indices = {
+    for (var index = 0; index < items.length; index++)
+      items[index].occurrence.occurrenceKey: index,
+  };
+  return SliverList.builder(
+    itemCount: items.length,
+    semanticIndexOffset: semanticIndexOffset,
+    findChildIndexCallback: (key) =>
+        key is ValueKey<String> ? indices[key.value] : null,
+    itemBuilder: (context, index) {
+      final item = items[index];
+      return KeyedSubtree(
+        key: ValueKey(item.occurrence.occurrenceKey),
+        child: buildRow(item),
+      );
+    },
+  );
 }
 
 Duration _delayUntilNextMinute(DateTime now) {

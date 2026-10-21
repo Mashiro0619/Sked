@@ -66,6 +66,8 @@ class WorkspaceViewPanel extends StatelessWidget {
     this.toolbar,
     this.status,
     this.bodyViewportKey,
+    this.bodyIsSliver = false,
+    this.semanticChildCount,
     this.contentPadding = const EdgeInsets.fromLTRB(12, 10, 12, 12),
     this.headerPadding = skedPanelHeaderPadding,
     this.headerVerticalAlignment = CrossAxisAlignment.center,
@@ -76,6 +78,10 @@ class WorkspaceViewPanel extends StatelessWidget {
   final Widget? subtitle, headerAction, toolbar, status;
   final Widget child;
   final Key? bodyViewportKey;
+
+  /// [child] is a sliver when the viewing task contains a lazy collection.
+  final bool bodyIsSliver;
+  final int? semanticChildCount;
   final EdgeInsetsGeometry contentPadding;
   final EdgeInsetsGeometry headerPadding;
   final CrossAxisAlignment headerVerticalAlignment;
@@ -111,6 +117,8 @@ class WorkspaceViewPanel extends StatelessWidget {
             contentPadding: contentPadding,
             viewportKey: bodyViewportKey,
             bodyKey: const ValueKey('workspace-view-body'),
+            bodyIsSliver: bodyIsSliver,
+            semanticChildCount: semanticChildCount,
             header: Padding(
               key: const ValueKey('workspace-view-header'),
               padding: headerPadding,

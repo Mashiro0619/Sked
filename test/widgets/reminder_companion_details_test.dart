@@ -401,7 +401,11 @@ void main() {
     );
     await t.pumpAndSettle();
     final target = inList(find.text('Project deadline'));
-    await t.ensureVisible(target);
+    await t.scrollUntilVisible(
+      target,
+      150,
+      scrollable: inList(find.byType(Scrollable)).last,
+    );
     await t.pumpAndSettle();
     final body = t.state<ScrollableState>(inList(find.byType(Scrollable)).last);
     final offset = body.position.pixels;

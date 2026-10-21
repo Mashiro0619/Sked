@@ -539,7 +539,13 @@ void main() {
       await t.drag(primaryScroll, const Offset(0, -130));
       await t.pumpAndSettle();
       expect(details, findsNothing);
-      await t.ensureVisible(row('Project deadline'));
+      await t.scrollUntilVisible(
+        row('Project deadline'),
+        150,
+        scrollable: find
+            .descendant(of: list, matching: find.byType(Scrollable))
+            .last,
+      );
       await t.pumpAndSettle();
       await t.tap(row('Project deadline'));
       await t.pumpAndSettle();
