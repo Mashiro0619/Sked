@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Šolska nastavitev ni na voljo. Najprej preveri school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Ni uspelo naložiti šolske nastavitve. Preverite obliko datoteke JSON.",
+  "schoolWebImportSchoolLoadFailed": "Konfiguracije šole ni bilo mogoče naložiti. Poskusite znova.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Uvozi trenutno stran",
   "@schoolWebImportImportCurrentPage": {},

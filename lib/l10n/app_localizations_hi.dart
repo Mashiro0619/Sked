@@ -1074,7 +1074,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'स्कूल कॉन्फ़िगरेशन लोड नहीं हो सका। JSON फ़ाइल फ़ॉर्मेट जाँचें।';
+      'विद्यालय की कॉन्फ़िगरेशन लोड नहीं हो सकी। फिर से प्रयास करें।';
 
   @override
   String get schoolWebImportImportCurrentPage => 'वर्तमान पेज आयात करें';

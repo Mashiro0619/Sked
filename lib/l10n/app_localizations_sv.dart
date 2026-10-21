@@ -1078,7 +1078,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Misslyckades ladda skolkonfigurationen. Kontrollera filformatet JSON.';
+      'Skolkonfigurationen kunde inte läsas in. Försök igen.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importera aktuell sida';

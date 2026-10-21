@@ -1090,7 +1090,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'A eșuat încărcarea configurației școlii. Verificați formatul de fișier JSON.';
+      'Configurația școlii nu a putut fi încărcată. Încercați din nou.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importează pagina curentă';

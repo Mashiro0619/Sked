@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Kooli konfiguratsioon ei ole saadaval. Kontrollige kõigepealt school_sites.jsoni.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Kooli konfiguratsiooni laadimine nurjus. Kontrollige JSON failivormingut.",
+  "schoolWebImportSchoolLoadFailed": "Kooli seadistust ei saanud laadida. Proovi uuesti.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Praeguse lehekülje importimine",
   "@schoolWebImportImportCurrentPage": {},

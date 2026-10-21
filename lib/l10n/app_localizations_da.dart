@@ -1070,7 +1070,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Kunne ikke indlæse skolekonfiguration. Tjek JSON-filformatet.';
+      'Skolekonfigurationen kunne ikke indlæses. Prøv igen.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importer nuværende side';

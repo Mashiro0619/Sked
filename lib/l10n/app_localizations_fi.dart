@@ -1082,7 +1082,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Koulun asetuksen lataaminen epäonnistui. Tarkista JSON-tiedostomuoto.';
+      'Koulun määrityksiä ei voitu ladata. Yritä uudelleen.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Tuo nykyinen sivu';

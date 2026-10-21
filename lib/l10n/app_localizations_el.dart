@@ -1099,7 +1099,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Αποτυχία φόρτωσης ρυθμίσεων σχολείου. Ελέγξτε τη μορφή αρχείου JSON.';
+      'Δεν ήταν δυνατή η φόρτωση της διαμόρφωσης του σχολείου. Δοκιμάστε ξανά.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Εισαγωγή τρέχουσας σελίδας';

@@ -1076,7 +1076,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Kooli konfiguratsiooni laadimine nurjus. Kontrollige JSON failivormingut.';
+      'Kooli seadistust ei saanud laadida. Proovi uuesti.';
 
   @override
   String get schoolWebImportImportCurrentPage =>

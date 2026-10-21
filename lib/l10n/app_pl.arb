@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Nie ma dostępnej konfiguracji szkoły. Najpierw sprawdź school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Nie udało się załadować konfiguracji szkoły. Sprawdź format pliku JSON.",
+  "schoolWebImportSchoolLoadFailed": "Nie udało się wczytać konfiguracji szkoły. Spróbuj ponownie.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importuj bieżącą stronę",
   "@schoolWebImportImportCurrentPage": {},

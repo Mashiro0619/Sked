@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Nu este disponibilă configurația școlii. Verificați mai întâi school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "A eșuat încărcarea configurației școlii. Verificați formatul de fișier JSON.",
+  "schoolWebImportSchoolLoadFailed": "Configurația școlii nu a putut fi încărcată. Încercați din nou.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importează pagina curentă",
   "@schoolWebImportImportCurrentPage": {},

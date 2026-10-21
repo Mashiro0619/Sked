@@ -157,6 +157,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   bool _isParsing = false;
   bool _isLoadingSchools = true;
   bool _hasRequestedSchoolsLoad = false;
+  bool _schoolsLoadInFlight = false;
   bool _hasStartedInitialLoad = false;
   bool _isHandlingSystemBack = false;
   bool _isExitConfirmationOpen = false;
@@ -314,7 +315,17 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
             : !_supportsWebView
             ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
             : _schoolLoadError != null
-            ? _buildMessage(_schoolLoadError!)
+            ? _buildMessage(
+                _schoolLoadError!,
+                actions: [
+                  FilledButton.icon(
+                    key: const ValueKey('school-web-import-retry-schools'),
+                    onPressed: () => unawaited(_loadSchools()),
+                    icon: const Icon(Icons.refresh),
+                    label: Text(l10n.dataRecoveryRetryAction),
+                  ),
+                ],
+              )
             : _isLoadingSchools
             ? const Center(child: CircularProgressIndicator())
             : _sites.isEmpty || _selectedSite == null
@@ -427,7 +438,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
     );
   }
 
-  Widget _buildMessage(String message) {
+  Widget _buildMessage(String message, {List<Widget> actions = const []}) {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         child: ConstrainedBox(
@@ -435,6 +446,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
           child: ExpressiveEmptyState(
             icon: Icons.language_outlined,
             title: message,
+            actions: actions,
           ),
         ),
       ),
@@ -908,11 +920,17 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   }
 
   Future<void> _loadSchools() async {
+    if (_schoolsLoadInFlight || !mounted || !routeWorkspaceEnabled) return;
+    _schoolsLoadInFlight = true;
     final l10n = AppLocalizations.of(context);
+    setState(() {
+      _isLoadingSchools = true;
+      _schoolLoadError = null;
+    });
     try {
       final sites =
           await (widget.loadSites?.call() ?? _siteService.loadSites());
-      if (!mounted) {
+      if (!mounted || !routeWorkspaceEnabled) {
         return;
       }
       final selected = sites
@@ -926,13 +944,15 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
       _scheduleInitialSchoolOpen();
     } catch (error, stackTrace) {
       debugPrint('Failed to load schools for web import: $error\n$stackTrace');
-      if (!mounted) {
+      if (!mounted || !routeWorkspaceEnabled) {
         return;
       }
       setState(() {
         _isLoadingSchools = false;
         _schoolLoadError = l10n.schoolWebImportSchoolLoadFailed;
       });
+    } finally {
+      _schoolsLoadInFlight = false;
     }
   }
 

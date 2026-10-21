@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Ingen skolkonfiguration är tillgänglig. Kontrollera school_sites.json först.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Misslyckades ladda skolkonfigurationen. Kontrollera filformatet JSON.",
+  "schoolWebImportSchoolLoadFailed": "Skolkonfigurationen kunde inte läsas in. Försök igen.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importera aktuell sida",
   "@schoolWebImportImportCurrentPage": {},

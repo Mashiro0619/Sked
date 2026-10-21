@@ -1017,7 +1017,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportNoSchools => '当前没有可用学校配置，请先检查 school_sites.json。';
 
   @override
-  String get schoolWebImportSchoolLoadFailed => '学校配置加载失败，请检查 JSON 文件格式。';
+  String get schoolWebImportSchoolLoadFailed => '学校配置加载失败，请重试。';
 
   @override
   String get schoolWebImportImportCurrentPage => '导入当前页';
@@ -3826,7 +3826,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportNoSchools => '當前沒有可用學校設定，請先檢查 school_sites.json。';
 
   @override
-  String get schoolWebImportSchoolLoadFailed => '學校設定載入失敗，請檢查 JSON 檔案格式。';
+  String get schoolWebImportSchoolLoadFailed => '學校設定載入失敗，請重試。';
 
   @override
   String get schoolWebImportImportCurrentPage => '匯入目前頁面';

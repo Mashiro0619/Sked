@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Δεν υπάρχει διαθέσιμη διαμόρφωση σχολείου. Ελέγξτε πρώτα το school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Αποτυχία φόρτωσης ρυθμίσεων σχολείου. Ελέγξτε τη μορφή αρχείου JSON.",
+  "schoolWebImportSchoolLoadFailed": "Δεν ήταν δυνατή η φόρτωση της διαμόρφωσης του σχολείου. Δοκιμάστε ξανά.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Εισαγωγή τρέχουσας σελίδας",
   "@schoolWebImportImportCurrentPage": {},

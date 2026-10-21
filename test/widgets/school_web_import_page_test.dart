@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' show SemanticsAction;
+
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -517,6 +520,73 @@ void main() {
   });
 
   group('school web import browser shell', () {
+    testWidgets(
+      'school configuration retry is guarded and recovers after a second failure',
+      (tester) async {
+        final provider = await _createConfiguredProvider();
+        addTearDown(provider.dispose);
+        final pendingRetry = Completer<List<SchoolSite>>();
+        final browser = _WebViewHarness();
+        var attempts = 0;
+        await tester.pumpWidget(
+          _browserApp(
+            provider: provider,
+            webViewBuilder: browser.build,
+            supportsPopupWindows: true,
+            loadSites: () async {
+              attempts++;
+              if (attempts == 1) throw StateError('Initial load failure');
+              if (attempts == 2) return pendingRetry.future;
+              return [_site];
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+        final retry = find.byKey(
+          const ValueKey('school-web-import-retry-schools'),
+        );
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolWebImportPage)),
+        );
+        expect(find.text(l10n.schoolWebImportSchoolLoadFailed), findsOneWidget);
+        expect(retry.hitTestable(), findsOneWidget);
+        final oldCallback = tester.widget<FilledButton>(retry).onPressed!;
+        final semantics = tester.ensureSemantics();
+        try {
+          final node = tester.getSemantics(retry);
+          expect(
+            node.getSemanticsData().hasAction(SemanticsAction.tap),
+            isTrue,
+          );
+          node.owner!.performAction(node.id, SemanticsAction.tap);
+          oldCallback();
+          await tester.pump();
+          expect(attempts, 2);
+          expect(retry, findsNothing);
+          expect(find.text(l10n.schoolWebImportSchoolLoadFailed), findsNothing);
+          expect(find.byType(CircularProgressIndicator), findsOneWidget);
+          pendingRetry.completeError(StateError('Retry load failure'));
+          await tester.pumpAndSettle();
+          expect(retry.hitTestable(), findsOneWidget);
+          expect(
+            find.text(l10n.schoolWebImportSchoolLoadFailed),
+            findsOneWidget,
+          );
+          await tester.tap(retry);
+          await tester.pumpAndSettle();
+          expect(attempts, 3);
+          expect(retry, findsNothing);
+          expect(find.text(l10n.schoolWebImportSchoolLoadFailed), findsNothing);
+          expect(find.text('pane-root'), findsOneWidget);
+          expect(browser.configurations, isNotEmpty);
+          expect(tester.takeException(), isNull);
+        } finally {
+          semantics.dispose();
+        }
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+
     testWidgets('initial school load waits until inherited widgets are ready', (
       tester,
     ) async {

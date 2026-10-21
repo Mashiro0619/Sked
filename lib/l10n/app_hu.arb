@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Nincs iskolai konfiguráció elérhető. Ellenőrizze először a school_sites.json-t.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Nem sikerült betölteni az iskola konfigurációját. Ellenőrizze a JSON fájlformátumot.",
+  "schoolWebImportSchoolLoadFailed": "Az iskola konfigurációját nem sikerült betölteni. Próbálja újra.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Aktuális oldal importálása",
   "@schoolWebImportImportCurrentPage": {},

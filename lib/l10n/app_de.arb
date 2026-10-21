@@ -734,7 +734,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Keine Schulkonfiguration verfügbar. Prüfen Sie zuerst school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Schulkonfiguration konnte nicht geladen werden. Prüfen Sie das JSON-Dateiformat.",
+  "schoolWebImportSchoolLoadFailed": "Die Schulkonfiguration konnte nicht geladen werden. Bitte erneut versuchen.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Aktuelle Seite importieren",
   "@schoolWebImportImportCurrentPage": {},

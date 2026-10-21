@@ -2029,7 +2029,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolWebImportSchoolLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to load school configuration. Check the JSON file format.'**
+  /// **'Couldn\'t load school configuration. Try again.'**
   String get schoolWebImportSchoolLoadFailed;
 
   /// No description provided for @schoolWebImportImportCurrentPage.

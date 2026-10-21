@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "ไม่มีการตั้งค่าโรงเรียน ตรวจสอบ school_sites.json ก่อน",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "ล้มเหลวในการโหลดการตั้งค่าโรงเรียน ตรวจสอบรูปแบบไฟล์ JSON",
+  "schoolWebImportSchoolLoadFailed": "โหลดการตั้งค่าโรงเรียนไม่สำเร็จ โปรดลองอีกครั้ง",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "นำเข้าหน้าปัจจุบัน",
   "@schoolWebImportImportCurrentPage": {},

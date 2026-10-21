@@ -1040,8 +1040,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '사용 가능한 학교 설정이 없습니다. 먼저 school_sites.json을 확인하세요.';
 
   @override
-  String get schoolWebImportSchoolLoadFailed =>
-      '학교 설정을 불러오지 못했습니다. JSON 파일 형식을 확인하세요.';
+  String get schoolWebImportSchoolLoadFailed => '학교 설정을 불러오지 못했습니다. 다시 시도하세요.';
 
   @override
   String get schoolWebImportImportCurrentPage => '현재 페이지 가져오기';

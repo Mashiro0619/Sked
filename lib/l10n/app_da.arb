@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Der er ingen skolekonfiguration tilgængelig. Tjek school_sites.json først.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Kunne ikke indlæse skolekonfiguration. Tjek JSON-filformatet.",
+  "schoolWebImportSchoolLoadFailed": "Skolekonfigurationen kunne ikke indlæses. Prøv igen.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importer nuværende side",
   "@schoolWebImportImportCurrentPage": {},

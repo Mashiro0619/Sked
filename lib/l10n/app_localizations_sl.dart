@@ -1081,7 +1081,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Ni uspelo naložiti šolske nastavitve. Preverite obliko datoteke JSON.';
+      'Konfiguracije šole ni bilo mogoče naložiti. Poskusite znova.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Uvozi trenutno stran';

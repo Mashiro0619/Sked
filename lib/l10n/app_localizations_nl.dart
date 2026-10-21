@@ -1081,7 +1081,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Schoolinstellingen laden mislukt. Controleer de indeling van het JSON-bestand.';
+      'De schoolconfiguratie kon niet worden geladen. Probeer het opnieuw.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Huidige pagina importeren';

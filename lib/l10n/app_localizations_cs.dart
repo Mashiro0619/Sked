@@ -1076,7 +1076,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Nepodařilo se načíst konfiguraci školy. Zkontrolujte formát souboru JSON.';
+      'Konfiguraci školy se nepodařilo načíst. Zkuste to znovu.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importovat aktuální stránku';

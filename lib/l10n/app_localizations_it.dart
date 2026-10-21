@@ -1092,7 +1092,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Impossibile caricare la configurazione scolastica. Controlla il formato del file JSON.';
+      'Impossibile caricare la configurazione della scuola. Riprova.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Importa pagina corrente';

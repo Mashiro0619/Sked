@@ -758,7 +758,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "当前没有可用学校配置，请先检查 school_sites.json。",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "学校配置加载失败，请检查 JSON 文件格式。",
+  "schoolWebImportSchoolLoadFailed": "学校配置加载失败，请重试。",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "导入当前页",
   "@schoolWebImportImportCurrentPage": {},

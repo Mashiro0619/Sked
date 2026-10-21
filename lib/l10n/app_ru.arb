@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Конфигурация учебных заведений недоступна. Сначала проверьте school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Не удалось загрузить конфигурацию учебных заведений. Проверьте формат JSON-файла.",
+  "schoolWebImportSchoolLoadFailed": "Не удалось загрузить конфигурацию учебного заведения. Повторите попытку.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Импортировать текущую страницу",
   "@schoolWebImportImportCurrentPage": {},

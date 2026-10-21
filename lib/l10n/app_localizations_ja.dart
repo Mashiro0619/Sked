@@ -1039,8 +1039,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '学校設定がありません。まず school_sites.json を確認してください。';
 
   @override
-  String get schoolWebImportSchoolLoadFailed =>
-      '学校設定の読み込みに失敗しました。JSONファイル形式を確認してください。';
+  String get schoolWebImportSchoolLoadFailed => '学校設定を読み込めませんでした。もう一度お試しください。';
 
   @override
   String get schoolWebImportImportCurrentPage => '現在のページをインポート';

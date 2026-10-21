@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Školní konfigurace není k dispozici. Nejprve zkontrolujte school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Nepodařilo se načíst konfiguraci školy. Zkontrolujte formát souboru JSON.",
+  "schoolWebImportSchoolLoadFailed": "Konfiguraci školy se nepodařilo načíst. Zkuste to znovu.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importovat aktuální stránku",
   "@schoolWebImportImportCurrentPage": {},

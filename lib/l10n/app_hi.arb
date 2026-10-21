@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "कोई स्कूल कॉन्फ़िगरेशन उपलब्ध नहीं है। पहले school_sites.json जाँचें।",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "स्कूल कॉन्फ़िगरेशन लोड नहीं हो सका। JSON फ़ाइल फ़ॉर्मेट जाँचें।",
+  "schoolWebImportSchoolLoadFailed": "विद्यालय की कॉन्फ़िगरेशन लोड नहीं हो सकी। फिर से प्रयास करें।",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "वर्तमान पेज आयात करें",
   "@schoolWebImportImportCurrentPage": {},

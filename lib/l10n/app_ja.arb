@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "学校設定がありません。まず school_sites.json を確認してください。",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "学校設定の読み込みに失敗しました。JSONファイル形式を確認してください。",
+  "schoolWebImportSchoolLoadFailed": "学校設定を読み込めませんでした。もう一度お試しください。",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "現在のページをインポート",
   "@schoolWebImportImportCurrentPage": {},

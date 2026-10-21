@@ -1070,7 +1070,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'ล้มเหลวในการโหลดการตั้งค่าโรงเรียน ตรวจสอบรูปแบบไฟล์ JSON';
+      'โหลดการตั้งค่าโรงเรียนไม่สำเร็จ โปรดลองอีกครั้ง';
 
   @override
   String get schoolWebImportImportCurrentPage => 'นำเข้าหน้าปัจจุบัน';

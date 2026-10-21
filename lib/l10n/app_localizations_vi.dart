@@ -1079,7 +1079,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Không thể tải cấu hình trường. Kiểm tra định dạng tập tin JSON.';
+      'Không tải được cấu hình trường. Vui lòng thử lại.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Nhập trang hiện tại';

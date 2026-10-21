@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Không có cấu hình trường có sẵn. Kiểm tra school_sites.json trước.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Không thể tải cấu hình trường. Kiểm tra định dạng tập tin JSON.",
+  "schoolWebImportSchoolLoadFailed": "Không tải được cấu hình trường. Vui lòng thử lại.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Nhập trang hiện tại",
   "@schoolWebImportImportCurrentPage": {},

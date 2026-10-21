@@ -1092,7 +1092,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Nem sikerült betölteni az iskola konfigurációját. Ellenőrizze a JSON fájlformátumot.';
+      'Az iskola konfigurációját nem sikerült betölteni. Próbálja újra.';
 
   @override
   String get schoolWebImportImportCurrentPage => 'Aktuális oldal importálása';

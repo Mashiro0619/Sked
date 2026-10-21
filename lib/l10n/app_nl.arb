@@ -732,7 +732,7 @@
   "@schoolWebImportUnsupportedPlatform": {},
   "schoolWebImportNoSchools": "Er zijn geen scholen ingesteld. Controleer eerst school_sites.json.",
   "@schoolWebImportNoSchools": {},
-  "schoolWebImportSchoolLoadFailed": "Schoolinstellingen laden mislukt. Controleer de indeling van het JSON-bestand.",
+  "schoolWebImportSchoolLoadFailed": "De schoolconfiguratie kon niet worden geladen. Probeer het opnieuw.",
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Huidige pagina importeren",
   "@schoolWebImportImportCurrentPage": {},

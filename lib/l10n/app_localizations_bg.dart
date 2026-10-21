@@ -1094,7 +1094,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Грешка при зареждане на конфигурацията на училището. Проверете формата на файла JSON.';
+      'Конфигурацията на училището не можа да се зареди. Опитайте отново.';
 
   @override
   String get schoolWebImportImportCurrentPage =>

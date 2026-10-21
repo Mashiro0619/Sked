@@ -1088,7 +1088,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolWebImportSchoolLoadFailed =>
-      'Не удалось загрузить конфигурацию учебных заведений. Проверьте формат JSON-файла.';
+      'Не удалось загрузить конфигурацию учебного заведения. Повторите попытку.';
 
   @override
   String get schoolWebImportImportCurrentPage =>
