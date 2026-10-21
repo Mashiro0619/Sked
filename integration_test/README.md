@@ -53,6 +53,7 @@ Windows 渲染必须标为模拟布局，不能称为 Android 真机验收。
 | `mobile-tasks` | 移动端编辑任务 | [mobile_tasks.dart](capture_scenarios/mobile_tasks.dart) |
 | `mobile-ui-fixes` | 日期内边距、课表切换、设置标题、提醒控件及月历按压 | [mobile_ui_fixes.dart](capture_scenarios/mobile_ui_fixes.dart) |
 | `m3-expressive-controls` | 日期与周次状态反馈、键盘调色、可读滑块进度及静态加载 | [m3_expressive_controls.dart](capture_scenarios/m3_expressive_controls.dart) |
+| `school-sites-mobile` | 学校单站点初始状态、短名与长链接、独立编辑、模拟 IME、返回与取消草稿、20 条列表滚动折叠；320 英文 2 倍、360／393 中文、800 横屏及 1280 桌面共 54 张 | [school_sites_mobile.dart](capture_scenarios/school_sites_mobile.dart) |
 | `panel-headings` | 面板标题及内容起点 | [panel_headings.dart](capture_scenarios/panel_headings.dart) |
 | `period-time-sets` | 节次时间组管理 | [period_time_sets.dart](capture_scenarios/period_time_sets.dart) |
 | `period-times-editor` | 节次编辑 | [period_times_editor.dart](capture_scenarios/period_times_editor.dart) |
