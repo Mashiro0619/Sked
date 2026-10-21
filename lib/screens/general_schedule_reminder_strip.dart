@@ -521,7 +521,11 @@ class _ReminderSummaryRow extends StatelessWidget {
         message: l.markReminderHandled,
         child: IconButton(
           style: WorkbenchChromeMetrics.of(context).iconStyle,
-          icon: const Icon(Icons.check_circle_outline),
+          // Keep the name inside IconButton's own semantics boundary.
+          icon: Semantics(
+            tooltip: l.markReminderHandled,
+            child: const Icon(Icons.check_circle_outline),
+          ),
           onPressed: busy ? null : onHandle,
         ),
       ),
@@ -781,33 +785,28 @@ class _ReminderOverlayTooltipState extends State<_ReminderOverlayTooltip>
   }
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    tooltip: _configuration.semanticsTooltip,
-    child: MouseRegion(
-      onEnter: (_) => _scheduleShow(),
-      onExit: (_) => _scheduleDismiss(_configuration.dismissDelay),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        supportedDevices: const {
-          PointerDeviceKind.touch,
-          PointerDeviceKind.stylus,
-          PointerDeviceKind.invertedStylus,
-          PointerDeviceKind.trackpad,
-          PointerDeviceKind.unknown,
-        },
-        onLongPress: _configuration.triggerMode == TooltipTriggerMode.longPress
-            ? _longPress
-            : null,
-        onLongPressEnd:
-            _configuration.triggerMode == TooltipTriggerMode.longPress
-            ? (_) => _scheduleDismiss(_configuration.touchDelay)
-            : null,
-        onTap: _configuration.triggerMode == TooltipTriggerMode.tap
-            ? _tap
-            : null,
-        child: _configuration.child,
-      ),
+  // The button supplies its own name; an outer annotation would label the row.
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => _scheduleShow(),
+    onExit: (_) => _scheduleDismiss(_configuration.dismissDelay),
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      supportedDevices: const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.unknown,
+      },
+      onLongPress: _configuration.triggerMode == TooltipTriggerMode.longPress
+          ? _longPress
+          : null,
+      onLongPressEnd: _configuration.triggerMode == TooltipTriggerMode.longPress
+          ? (_) => _scheduleDismiss(_configuration.touchDelay)
+          : null,
+      onTap: _configuration.triggerMode == TooltipTriggerMode.tap ? _tap : null,
+      child: _configuration.child,
     ),
   );
 }

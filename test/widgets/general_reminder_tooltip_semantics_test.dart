@@ -26,6 +26,17 @@ Finder _title(int index) => find.descendant(
 );
 Finder get _handled =>
     find.descendant(of: _list, matching: find.byTooltip('Mark handled')).first;
+Finder get _handledButton => find
+    .ancestor(
+      of: find
+          .descendant(
+            of: _list,
+            matching: find.byIcon(Icons.check_circle_outline),
+          )
+          .first,
+      matching: find.byType(IconButton),
+    )
+    .first;
 
 AppData _groupedData() =>
     buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en').copyWith(
@@ -62,6 +73,7 @@ Future<void> _mount(
   WidgetTester tester, {
   ReminderSummaryClock? clock,
   bool touch = false,
+  WorkspaceMemoryStorage? storage,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = touch
@@ -70,7 +82,7 @@ Future<void> _mount(
   addTearDown(tester.view.reset);
   final provider = await workspaceProvider(
     mode: AppMode.general,
-    storage: WorkspaceMemoryStorage(_groupedData()),
+    storage: storage ?? WorkspaceMemoryStorage(_groupedData()),
   );
   addTearDown(provider.dispose);
   await tester.pumpWidget(
@@ -93,6 +105,52 @@ ScrollableState _body(WidgetTester tester) => tester.state<ScrollableState>(
 void main() {
   final binding = _AuditedBinding();
   setUp(binding.audit.reset);
+
+  for (final touch in [false, true]) {
+    testWidgets(
+      'the handled button owns its name and semantic action: touch=$touch',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        final storage = WorkspaceMemoryStorage(_groupedData());
+        try {
+          await _mount(tester, touch: touch, storage: storage);
+          final button = tester.getSemantics(_handledButton);
+          final data = button.getSemanticsData();
+          final row = tester.getSemantics(_title(100));
+          expect(button.id, isNot(row.id));
+          expect(data.tooltip, 'Mark handled');
+          expect(data.flagsCollection.isButton, isTrue);
+          expect(data.hasAction(ui.SemanticsAction.tap), isTrue);
+          expect(row.getSemanticsData().tooltip, isEmpty);
+
+          button.owner!.performAction(button.id, ui.SemanticsAction.tap);
+          await tester.pumpAndSettle();
+          final acknowledgement =
+              storage.data.generalMode.reminderAcknowledgements.single;
+          expect(
+            parseGeneralOccurrenceKey(acknowledgement.occurrenceKey)?.eventId,
+            'event-100',
+          );
+          expect(acknowledgement.isHandled, isTrue);
+          expect(_title(100), findsNothing);
+          expect(_title(101), findsOneWidget);
+          expect(
+            tester.getSemantics(_handledButton).getSemanticsData().tooltip,
+            'Mark handled',
+          );
+          expect(binding.audit.errors, isEmpty);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+          semantics.dispose();
+        }
+      },
+      variant: TargetPlatformVariant.only(
+        touch ? TargetPlatform.android : TargetPlatform.windows,
+      ),
+    );
+  }
 
   testWidgets(
     'ending a handled tooltip while recycling its row keeps native semantics reachable',
@@ -180,7 +238,7 @@ void main() {
       final semantics = tester.ensureSemantics();
       try {
         await _mount(tester, touch: true);
-        final data = tester.getSemantics(_handled).getSemanticsData();
+        final data = tester.getSemantics(_handledButton).getSemanticsData();
         expect(data.tooltip, 'Mark handled');
         expect(data.hasAction(ui.SemanticsAction.tap), isTrue);
         await tester.longPress(_handled);
