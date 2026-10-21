@@ -67,7 +67,7 @@ void main() {
 
   for (final brightness in Brightness.values) {
     testWidgets(
-      'bottom workspace presses and pointer hover paint no pill or ripple in $brightness',
+      'bottom workspace paints temporary state layers without persistent pills or ripples in $brightness',
       (t) async {
         _viewport(t, const Size(393, 850));
         final p = await workspaceProvider();
@@ -83,29 +83,36 @@ void main() {
         final before = await _barPixels(t, boundary);
         final inkTheme = Theme.of(t.element(_bar));
         expect(inkTheme.splashFactory, same(NoSplash.splashFactory));
+        expect(
+          t.widget<NavigationBar>(_bar).indicatorColor,
+          Colors.transparent,
+        );
         final overlay = t.widget<NavigationBar>(_bar).overlayColor!;
-        for (final states in [
-          <WidgetState>{},
-          {WidgetState.pressed},
-          {WidgetState.selected, WidgetState.pressed},
-          {WidgetState.hovered},
-          {WidgetState.selected, WidgetState.hovered},
-          {WidgetState.disabled},
+        for (final (states, alpha) in [
+          (<WidgetState>{}, .0),
+          ({WidgetState.pressed}, .12),
+          ({WidgetState.selected, WidgetState.pressed}, .12),
+          ({WidgetState.hovered}, .08),
+          ({WidgetState.selected, WidgetState.hovered}, .08),
+          ({WidgetState.focused}, .12),
+          ({WidgetState.disabled}, .0),
+          ({WidgetState.disabled, WidgetState.hovered}, .0),
         ]) {
-          expect(overlay.resolve(states), Colors.transparent);
+          expect(overlay.resolve(states)!.a, closeTo(alpha, .001));
         }
-        expect(overlay.resolve({WidgetState.focused}), inkTheme.focusColor);
-        expect(inkTheme.focusColor.a, greaterThan(0));
         for (final mode in ['student', 'general']) {
           final destination = _key('adaptive-shell-$mode-destination');
           final gesture = await t.startGesture(t.getCenter(destination));
+          // Resolve the tap-down delay, then sample the state-layer fade.
+          await t.pump(const Duration(milliseconds: 150));
           for (final duration in [60, 120]) {
             await t.pump(Duration(milliseconds: duration));
             expect(
               listEquals(await _barPixels(t, boundary), before),
-              isTrue,
-              reason: 'No painted press effect on $mode.',
+              isFalse,
+              reason: 'A held $mode destination must show its state layer.',
             );
+            expect(p.workspaceView.activeMode, AppMode.student);
           }
           await gesture.cancel();
           await t.pumpAndSettle();
@@ -119,22 +126,24 @@ void main() {
         await mouse.moveTo(
           t.getCenter(_key('adaptive-shell-student-destination')),
         );
-        await t.pump(const Duration(milliseconds: 180));
-        expect(listEquals(await _barPixels(t, boundary), before), isTrue);
+        await t.pumpAndSettle();
+        expect(listEquals(await _barPixels(t, boundary), before), isFalse);
         await mouse.down(
           t.getCenter(_key('adaptive-shell-student-destination')),
         );
+        await t.pump(const Duration(milliseconds: 150));
         await t.pump(const Duration(milliseconds: 80));
-        expect(listEquals(await _barPixels(t, boundary), before), isTrue);
+        expect(listEquals(await _barPixels(t, boundary), before), isFalse);
         await mouse.up();
-        await t.pump(const Duration(milliseconds: 80));
-        expect(listEquals(await _barPixels(t, boundary), before), isTrue);
+        await t.pumpAndSettle();
+        expect(listEquals(await _barPixels(t, boundary), before), isFalse);
         await mouse.removePointer();
         await t.pumpAndSettle();
+        expect(listEquals(await _barPixels(t, boundary), before), isTrue);
         await t.tap(_key('adaptive-shell-general-destination'));
         await t.pumpAndSettle();
         expect(p.workspaceView.activeMode, AppMode.general);
-        // The no-ink policy is local: calendar buttons retain Material feedback.
+        // Suppressing navigation ripples does not affect calendar Material ink.
         final canvas = find.byType(GeneralScheduleHomeScreen);
         expect(
           Theme.of(t.element(canvas)).splashFactory,

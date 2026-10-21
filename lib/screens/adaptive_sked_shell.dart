@@ -932,14 +932,18 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
       key: const ValueKey('adaptive-shell-navigation-bar'),
       height: contentHeight,
       indicatorColor: Colors.transparent,
-      // Keep the flat icon treatment for pointer/touch interaction. A focused
-      // destination must still be discoverable when navigating by keyboard.
+      // The flat selected icon still needs feedback before navigation commits.
       overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
-        if (states.contains(WidgetState.disabled) ||
-            states.contains(WidgetState.pressed)) {
-          return Colors.transparent;
+        if (states.contains(WidgetState.disabled)) return Colors.transparent;
+        if (states.contains(WidgetState.pressed)) {
+          return selectedColor.withValues(alpha: .12);
         }
-        if (states.contains(WidgetState.focused)) return theme.focusColor;
+        if (states.contains(WidgetState.focused)) {
+          return selectedColor.withValues(alpha: .12);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return selectedColor.withValues(alpha: .08);
+        }
         return Colors.transparent;
       }),
       labelTextStyle: labelStyles,
