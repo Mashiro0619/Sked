@@ -1,8 +1,6 @@
 import '../widgets/sked_confirmation_dialog.dart';
 import '../theme/sked_surface.dart';
 
-import '../widgets/desktop_window_host.dart';
-
 import 'dart:async';
 
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -51,9 +49,9 @@ import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/export_save_flow.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/settings_page_header.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/adaptive_settings_scaffold.dart';
-import '../widgets/adaptive_navigation_scope.dart';
 import '../models/settings_destination.dart';
 import '../models/settings_catalog.dart';
 import 'workspace_features_page.dart';
@@ -483,20 +481,15 @@ class _SettingsPageState extends State<SettingsPage>
       );
       return PopScope(
         canPop: !busy,
-        child: Scaffold(
-          appBar: WorkbenchAppBar(
-            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-            title: Text(
-              widget.transferDirection == SettingsTransferDirection.import
-                  ? l10n.importAction
-                  : widget.transferDirection == SettingsTransferDirection.export
-                  ? l10n.exportAction
-                  : student
-                  ? l10n.dataImportExport
-                  : l10n.generalScheduleImportExport,
-            ),
-          ),
-          body: SafeArea(
+        child: SettingsPageScaffold(
+          title: widget.transferDirection == SettingsTransferDirection.import
+              ? l10n.importAction
+              : widget.transferDirection == SettingsTransferDirection.export
+              ? l10n.exportAction
+              : student
+              ? l10n.dataImportExport
+              : l10n.generalScheduleImportExport,
+          bodyBuilder: (_, headerSliver) => SafeArea(
             top: false,
             child: Column(
               children: [
@@ -506,6 +499,7 @@ class _SettingsPageState extends State<SettingsPage>
                   child: student
                       ? _dataTransferController.studentPageContent(
                           context,
+                          headerSliver: headerSliver,
                           busy: busy,
                           importEnabled: !maintenance.isReserved,
                           direction: widget.transferDirection,
@@ -536,6 +530,7 @@ class _SettingsPageState extends State<SettingsPage>
                         )
                       : _dataTransferController.generalPageContent(
                           context,
+                          headerSliver: headerSliver,
                           busy: busy,
                           importEnabled: !maintenance.isReserved,
                           direction: widget.transferDirection,
@@ -556,14 +551,12 @@ class _SettingsPageState extends State<SettingsPage>
       SettingsDestination.about => (l10n.settingsSectionAbout, aboutChildren),
       _ => (l10n.settingsDataPrivacy, privacyChildren),
     };
-    return Scaffold(
-      appBar: WorkbenchAppBar(
-        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-        title: Text(title),
-      ),
-      body: SafeArea(
+    return SettingsPageScaffold(
+      title: title,
+      bodyBuilder: (_, headerSliver) => SafeArea(
         top: false,
         child: ResponsiveSettingsSingleColumnBody(
+          headerSliver: headerSliver,
           children: [
             SettingsConnectedGroup(
               title: title,

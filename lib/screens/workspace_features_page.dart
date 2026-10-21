@@ -1,9 +1,6 @@
 import '../widgets/sked_confirmation_dialog.dart';
-import '../widgets/desktop_window_host.dart';
 
 import 'dart:async';
-
-import '../widgets/adaptive_navigation_scope.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +15,7 @@ import '../models/timetable_models.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/agenda_notification_service.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/settings_page_header.dart';
 import '../widgets/ui_command.dart';
 
 class WorkspaceFeaturesPage extends StatefulWidget {
@@ -216,18 +214,16 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
     }
     return PopScope<void>(
       canPop: !uiCommandBusy,
-      child: Scaffold(
-        appBar: WorkbenchAppBar(
-          automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-          title: Text(l.workspaceFeatures),
-        ),
-        body: Column(
+      child: SettingsPageScaffold(
+        title: l.workspaceFeatures,
+        statusIndicator: UiCommandBusyIndicator(busy: uiCommandBusy),
+        bodyBuilder: (_, headerSliver) => Column(
           children: [
-            UiCommandBusyIndicator(busy: uiCommandBusy),
             Expanded(
               child: SettingsInteractionBlocker(
                 blocked: uiCommandBusy,
                 child: ResponsiveSettingsSingleColumnBody(
+                  headerSliver: headerSliver,
                   children: [
                     controls.first,
                     SettingsConnectedGroup(

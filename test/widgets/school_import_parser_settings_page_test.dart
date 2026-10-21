@@ -485,7 +485,10 @@ void main() {
     final api = _ImmediateSchoolImportApi();
     await _pumpPage(tester, provider, api);
 
-    await tester.tap(_fetchModelsButton());
+    final fetch = _fetchModelsButton();
+    await Scrollable.ensureVisible(tester.element(fetch), alignment: .5);
+    await tester.pumpAndSettle();
+    await tester.tap(fetch);
     await tester.pumpAndSettle();
 
     expect(_modelDialog(), findsOneWidget);
@@ -849,7 +852,10 @@ void main() {
     );
     await _pumpPage(tester, provider, const SchoolImportApi());
 
-    await tester.tap(find.byType(ExpansionTile));
+    final advanced = find.byType(ExpansionTile);
+    await Scrollable.ensureVisible(tester.element(advanced), alignment: .5);
+    await tester.pumpAndSettle();
+    await tester.tap(advanced);
     await tester.pumpAndSettle();
     final resetPrompt = find.text('Reset default prompt');
     await tester.ensureVisible(resetPrompt);

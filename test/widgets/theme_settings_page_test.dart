@@ -135,19 +135,24 @@ void _resetTestViewport(WidgetTester tester) {
   tester.view.resetDevicePixelRatio();
 }
 
+Finder _themeScrollView() =>
+    find.byKey(const PageStorageKey('theme-settings-scroll-view'));
+
+Future<void> _revealThemeSetting(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    200,
+    scrollable: find
+        .descendant(of: _themeScrollView(), matching: find.byType(Scrollable))
+        .first,
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openOutlineSettingsPage(WidgetTester tester) async {
   final outlineCard = find.byKey(const ValueKey('theme-outline-settings-card'));
-  for (
-    var attempt = 0;
-    attempt < 12 && outlineCard.evaluate().isEmpty;
-    attempt++
-  ) {
-    await tester.drag(find.byType(ListView), const Offset(0, -240));
-    await tester.pump();
-  }
+  await _revealThemeSetting(tester, outlineCard);
   expect(outlineCard, findsOneWidget);
-  await tester.scrollUntilVisible(outlineCard, 200);
-  await tester.pumpAndSettle();
   final l10n = AppLocalizations.of(tester.element(outlineCard));
   final tapTarget = find.descendant(
     of: outlineCard,
@@ -474,11 +479,26 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final list = find.byType(ListView);
+      final list = _themeScrollView();
       final preview = find.byKey(const ValueKey('theme-workspace-preview'));
       expect(tester.getSize(list).width, 704);
       expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
-      expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+      final scrollable = find
+          .descendant(of: list, matching: find.byType(Scrollable))
+          .first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final content = find.descendant(
+        of: list,
+        matching: find.byKey(
+          const ValueKey('responsive-settings-single-column-content'),
+        ),
+      );
+      expect(
+        tester.getRect(list).bottom - tester.getRect(content).bottom,
+        closeTo(24, .01),
+      );
       final controls = tester.getRect(
         find.byKey(const ValueKey('theme-brightness-mode-choice-list')),
       );
@@ -657,11 +677,20 @@ void main() {
         await tester.ensureVisible(field);
         await tester.pumpAndSettle();
         expect(tester.getSize(field).height, greaterThanOrEqualTo(48));
-        await tester.tap(field);
+        final dropdown = find.descendant(
+          of: field,
+          matching: find.byType(SkedDropdownMenu<String>),
+        );
+        await tester.ensureVisible(dropdown);
+        await tester.pumpAndSettle();
+        expect(dropdown.hitTestable(), findsOneWidget);
+        await tester.tap(dropdown);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        await tester.binding.handlePopRoute();
+        expect(find.byType(MenuItemButton).hitTestable(), findsWidgets);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
+        expect(find.byType(MenuItemButton).hitTestable(), findsNothing);
       }
       expect(tester.takeException(), isNull);
     }
@@ -787,8 +816,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final customColor = find.text('Custom color').last;
-    await tester.scrollUntilVisible(customColor, 200);
-    await tester.pumpAndSettle();
+    await _revealThemeSetting(tester, customColor);
     await tester.tap(customColor);
     await tester.pumpAndSettle();
 
@@ -1350,8 +1378,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final customColor = find.text('Custom color').last;
-    await tester.scrollUntilVisible(customColor, 200);
-    await tester.pumpAndSettle();
+    await _revealThemeSetting(tester, customColor);
     await tester.tap(customColor);
     await tester.pumpAndSettle();
 
@@ -1410,8 +1437,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final customColor = find.text('Custom color').last;
-    await tester.scrollUntilVisible(customColor, 200);
-    await tester.pumpAndSettle();
+    await _revealThemeSetting(tester, customColor);
     await tester.tap(customColor);
     await tester.pumpAndSettle();
 
@@ -1497,8 +1523,7 @@ void main() {
       data: colorfulData(),
       open: () async {
         final tile = find.byKey(const ValueKey('theme-ui-color-primary'));
-        await tester.scrollUntilVisible(tile, 200);
-        await tester.pumpAndSettle();
+        await _revealThemeSetting(tester, tile);
         await tester.tap(tile);
       },
     );
@@ -1509,8 +1534,7 @@ void main() {
         final tile = find.byKey(
           const ValueKey('theme-ui-color-$colorfulCourseTextColorKey'),
         );
-        await tester.scrollUntilVisible(tile, 200);
-        await tester.pumpAndSettle();
+        await _revealThemeSetting(tester, tile);
         await tester.tap(tile);
       },
       edit: () async {

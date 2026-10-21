@@ -1,7 +1,5 @@
 import '../widgets/expressive_dialog.dart';
 
-import '../widgets/desktop_window_host.dart';
-
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -13,6 +11,7 @@ import '../controllers/settings_view_state.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/settings_page_header.dart';
 import '../widgets/sked_task_route.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/adaptive_navigation_scope.dart';
@@ -53,19 +52,22 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         final languageOptions = supportedLanguageOptions(l10n);
         final filteredOptions = _filterLanguageOptions(languageOptions, _query);
         final currentCode = normalizeLocaleCode(settings.localeCode);
+        final searchHeight =
+            32 +
+            (MediaQuery.textScalerOf(context).scale(16) * 1.5 + 32).clamp(
+              56.0,
+              double.infinity,
+            );
         return PopScope(
           canPop: !_isSelectingLanguage,
-          child: Scaffold(
-            appBar: WorkbenchAppBar(
-              automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(
-                context,
-              ),
-              title: Text(l10n.language),
-            ),
-            body: Column(
-              children: [
-                UiCommandBusyIndicator(busy: _isSelectingLanguage),
-                Padding(
+          child: SettingsPageScaffold(
+            title: l10n.language,
+            statusIndicator: UiCommandBusyIndicator(busy: _isSelectingLanguage),
+            headerBottom: PreferredSize(
+              preferredSize: Size.fromHeight(searchHeight),
+              child: SizedBox(
+                height: searchHeight,
+                child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 720),
@@ -90,10 +92,18 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                     ),
                   ),
                 ),
+              ),
+            ),
+            bodyBuilder: (_, headerSliver) => Column(
+              children: [
                 Expanded(
                   child: SafeArea(
                     top: false,
                     child: ResponsiveSettingsSingleColumnBody(
+                      scrollViewKey: const PageStorageKey(
+                        'language-settings-scroll',
+                      ),
+                      headerSliver: headerSliver,
                       child: Column(
                         children: [
                           if (filteredOptions.isEmpty)

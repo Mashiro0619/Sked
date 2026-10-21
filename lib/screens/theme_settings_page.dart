@@ -9,8 +9,6 @@ import '../widgets/sked_dropdown_menu.dart';
 import 'dart:async';
 import 'dart:convert';
 
-import '../widgets/adaptive_navigation_scope.dart';
-
 import 'package:material_ui/material_ui.dart';
 
 import '../widgets/sked_compact_color_picker.dart';
@@ -30,6 +28,7 @@ import '../controllers/workspace_view_state.dart';
 import '../providers/workspace_theme_target.dart';
 import '../theme/app_theme.dart';
 import '../widgets/settings_preview_layout.dart';
+import '../widgets/settings_page_header.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
@@ -518,23 +517,21 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         final outlineWidth = provider.liveCourseOutlineWidth;
         final switcherDuration = SkedMotionPolicy.of(context)
             .effects(SkedMotionSpeed.fast);
-        return Scaffold(
-          appBar: WorkbenchAppBar(
-            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-            title: Text(l10n.theme),
+        return SettingsPageScaffold(
+          title: l10n.theme,
+          statusIndicator: UiCommandBusyIndicator(
+            busy: uiCommandBusy,
+            showDelay: const Duration(milliseconds: 180),
           ),
-          body: SafeArea(
+          bodyBuilder: (_, headerSliver) => SafeArea(
             top: false,
             child: Column(
               children: [
-                UiCommandBusyIndicator(
-                  busy: uiCommandBusy,
-                  showDelay: const Duration(milliseconds: 180),
-                ),
                 Expanded(
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
                     child: SettingsPreviewLayout(
+                      headerSliver: headerSliver,
                       preview: _WorkspaceThemePreview(target: provider),
                       scrollViewKey: const PageStorageKey(
                         'theme-settings-scroll-view',

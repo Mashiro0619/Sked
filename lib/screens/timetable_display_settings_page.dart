@@ -1,8 +1,6 @@
 import '../utils/mobile_toolbar_layout.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 
-import '../widgets/desktop_window_host.dart';
-import '../widgets/adaptive_navigation_scope.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
 
@@ -17,6 +15,7 @@ import '../utils/constants.dart';
 import '../controllers/settings_commands.dart';
 import '../controllers/workspace_view_state.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/settings_page_header.dart';
 import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
 
@@ -50,38 +49,21 @@ class _TimetableDisplaySettingsPageState
             workspace.enabledWorkspaces.length > 1 &&
             settings.hideHomeWorkspaceNavigation;
         final l10n = AppLocalizations.of(context);
-        return Scaffold(
-          appBar: WorkbenchAppBar(
-            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-            title: Semantics(
-              header: true,
-              label: l10n.timetableDisplaySettings,
-              child: SingleChildScrollView(
-                key: const ValueKey('timetable-display-settings-title-scroll'),
-                scrollDirection: Axis.horizontal,
-                physics: const ClampingScrollPhysics(),
-                child: ExcludeSemantics(
-                  child: Text(
-                    l10n.timetableDisplaySettings,
-                    maxLines: 1,
-                    softWrap: false,
-                  ),
-                ),
-              ),
-            ),
+        return SettingsPageScaffold(
+          title: l10n.timetableDisplaySettings,
+          statusIndicator: UiCommandBusyIndicator(
+            busy: uiCommandBusy,
+            showDelay: const Duration(milliseconds: 180),
           ),
-          body: Column(
+          bodyBuilder: (_, headerSliver) => Column(
             children: [
-              UiCommandBusyIndicator(
-                busy: uiCommandBusy,
-                showDelay: const Duration(milliseconds: 180),
-              ),
               Expanded(
                 child: SafeArea(
                   top: false,
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
                     child: ResponsiveSettingsBody(
+                      headerSliver: headerSliver,
                       connectedSections: true,
                       scrollViewKey: const ValueKey(
                         'timetable-display-settings-list',

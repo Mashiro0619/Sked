@@ -68,7 +68,8 @@ void main() {
       final toggle = find.byKey(
         const ValueKey('notification-remind-hidden-general-calendars'),
       );
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
+      await tester.pumpAndSettle();
       expect(provider.settingsView.remindHiddenGeneralCalendars, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();

@@ -2234,23 +2234,27 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final generalImportExportTile = find.text('Category import & export');
-        await tester.ensureVisible(generalImportExportTile);
-        await tester.pumpAndSettle();
-        await tester.tap(generalImportExportTile);
-        await tester.pumpAndSettle();
-
+        final transferPage = find.byKey(
+          const PageStorageKey('transfer-page-scroll'),
+        );
+        expect(transferPage, findsOneWidget);
+        expect(find.byType(BottomSheet), findsNothing);
         expect(find.text('Import JSON file'), findsOneWidget);
         expect(find.text('Import ICS file'), findsOneWidget);
 
+        final copyIcs = find.text('Copy ICS');
+        expect(copyIcs.hitTestable(), findsNothing);
         await tester.scrollUntilVisible(
-          find.text('Copy ICS'),
+          copyIcs,
           160,
-          scrollable: find.byType(Scrollable).last,
+          scrollable: find
+              .descendant(of: transferPage, matching: find.byType(Scrollable))
+              .first,
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Copy ICS'), findsOneWidget);
+        expect(copyIcs.hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
       },
     );
 

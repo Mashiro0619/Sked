@@ -304,7 +304,17 @@ void main() {
         await t.tap(grid);
         await t.pumpAndSettle();
         expect(p.settingsView.showTimetableGridLines, !previous);
-        await t.tap(find.byType(BackButton).hitTestable().first);
+        final pageBack = find.descendant(
+          of: k('settings-page-app-bar'),
+          matching: find.byType(BackButton),
+        );
+        final back = pageBack.evaluate().isEmpty
+            ? k('settings-sidebar-back-true')
+            : pageBack;
+        await t.ensureVisible(back);
+        await t.pumpAndSettle();
+        expect(back.hitTestable(), findsOneWidget);
+        await t.tap(back);
         await t.pumpAndSettle();
         expect(k('settings-overview-general'), findsOneWidget);
         await t.ensureVisible(k('settings-check-for-updates'));

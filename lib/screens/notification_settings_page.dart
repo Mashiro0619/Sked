@@ -1,8 +1,4 @@
-import '../widgets/desktop_window_host.dart';
-
 import 'dart:async';
-
-import '../widgets/adaptive_navigation_scope.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
@@ -19,6 +15,7 @@ import '../services/agenda_notification_runtime_store.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/android_productivity_bridge.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/settings_page_header.dart';
 import '../widgets/ui_command.dart';
 
 /// Application-wide notification and productivity integration settings.
@@ -602,29 +599,23 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         }
         return PopScope<void>(
           canPop: !uiCommandBusy,
-          child: Scaffold(
-            appBar: WorkbenchAppBar(
-              automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(
-                context,
-              ),
-              title: Text(
-                widget.troubleshooting
-                    ? l10n.notificationTroubleshooting
-                    : l10n.notificationSettingsSection,
-              ),
+          child: SettingsPageScaffold(
+            title: widget.troubleshooting
+                ? l10n.notificationTroubleshooting
+                : l10n.notificationSettingsSection,
+            statusIndicator: UiCommandBusyIndicator(
+              busy: uiCommandBusy,
+              showDelay: const Duration(milliseconds: 180),
             ),
-            body: Column(
+            bodyBuilder: (_, headerSliver) => Column(
               children: [
-                UiCommandBusyIndicator(
-                  busy: uiCommandBusy,
-                  showDelay: const Duration(milliseconds: 180),
-                ),
                 Expanded(
                   child: SafeArea(
                     top: false,
                     child: SettingsInteractionBlocker(
                       blocked: uiCommandBusy,
                       child: ResponsiveSettingsBody(
+                        headerSliver: headerSliver,
                         connectedSections: true,
                         children: pageChildren,
                       ),

@@ -25,6 +25,7 @@ import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/settings_list.dart';
+import 'package:sked/widgets/settings_page_header.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
@@ -659,7 +660,8 @@ void main() {
       final toggle = find.byKey(
         const ValueKey('settings-include-prerelease-updates'),
       );
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
+      await tester.pumpAndSettle();
       expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
@@ -690,7 +692,8 @@ void main() {
       final toggle = find.byKey(
         const ValueKey('settings-include-prerelease-updates'),
       );
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
+      await tester.pumpAndSettle();
       expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
@@ -728,7 +731,8 @@ void main() {
       final toggle = find.byKey(
         const ValueKey('settings-include-prerelease-updates'),
       );
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
+      await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(provider.settingsView.includePrereleaseUpdates, isTrue);
@@ -756,7 +760,8 @@ void main() {
       final toggle = find.byKey(
         const ValueKey('settings-include-prerelease-updates'),
       );
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
+      await tester.pumpAndSettle();
       final writesBefore = storage.saveCount;
       await tester.tap(toggle);
       await tester.pump();
@@ -1579,16 +1584,21 @@ void main() {
     await tester.tap(find.text('Open settings host'));
     await _pumpRouteTransition(tester);
 
-    final importExportTile = find.text('Category import & export');
-    expect(importExportTile, findsOneWidget);
-
-    await tester.ensureVisible(importExportTile);
-    await tester.pumpAndSettle();
-    await tester.tap(importExportTile);
-    await tester.pumpAndSettle();
+    final header = find.byType(SettingsPageHeader);
+    expect(header, findsOneWidget);
+    expect(
+      tester.widget<SettingsPageHeader>(header).title,
+      'Category import & export',
+    );
 
     final pasteJsonAction = find.text('Paste JSON');
     expect(pasteJsonAction, findsOneWidget);
+    await Scrollable.ensureVisible(
+      tester.element(pasteJsonAction),
+      alignment: .5,
+    );
+    await tester.pumpAndSettle();
+    expect(pasteJsonAction.hitTestable(), findsOneWidget);
 
     await tester.tap(pasteJsonAction);
     await tester.tap(pasteJsonAction, warnIfMissed: false);

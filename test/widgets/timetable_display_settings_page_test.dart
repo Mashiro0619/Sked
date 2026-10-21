@@ -12,6 +12,7 @@ import 'package:sked/app_runtime.dart';
 
 import 'package:sked/screens/timetable_display_settings_page.dart';
 import 'package:sked/widgets/settings_list.dart';
+import 'package:sked/widgets/settings_page_header.dart';
 
 import '../support/data_transfer_codec.dart';
 import '../support/timetable_storage_fakes.dart';
@@ -62,7 +63,12 @@ Future<void> _pumpPage(
 
 Future<void> _toggleSetting(WidgetTester tester, String title) async {
   final titleFinder = find.text(title);
-  final verticalScrollable = find.byType(Scrollable).first;
+  final verticalScrollable = find
+      .descendant(
+        of: find.byKey(const ValueKey('timetable-display-settings-list')),
+        matching: find.byType(Scrollable),
+      )
+      .first;
   await tester.scrollUntilVisible(
     titleFinder,
     120,
@@ -73,8 +79,11 @@ Future<void> _toggleSetting(WidgetTester tester, String title) async {
     of: titleFinder,
     matching: find.byType(SettingsSwitchTile),
   );
-  await tester.ensureVisible(tile);
-  await tester.tap(find.descendant(of: tile, matching: find.byType(Switch)));
+  await Scrollable.ensureVisible(tester.element(tile), alignment: .5);
+  await tester.pumpAndSettle();
+  final toggle = find.descendant(of: tile, matching: find.byType(Switch));
+  expect(toggle.hitTestable(), findsOneWidget);
+  await tester.tap(toggle);
   await tester.pumpAndSettle();
 }
 
@@ -129,9 +138,22 @@ void main() {
 
     await _pumpPage(tester, provider);
 
-    final title = find.text('Timetable display and interaction');
+    final expanded = find.byKey(const ValueKey('settings-expanded-title'));
+    expect(
+      tester.widget<Text>(expanded).data,
+      'Timetable display and interaction',
+    );
+    expect(tester.getSize(expanded).width, lessThanOrEqualTo(288));
+    expect(tester.getSize(expanded).height, greaterThan(40));
+    final list = find.byKey(const ValueKey('timetable-display-settings-list'));
+    await tester.drag(list, const Offset(0, -300));
+    await tester.pumpAndSettle();
     final titleScroll = find.byKey(
-      const ValueKey('timetable-display-settings-title-scroll'),
+      const ValueKey('settings-compact-title-scroll'),
+    );
+    final title = find.descendant(
+      of: titleScroll,
+      matching: find.text('Timetable display and interaction'),
     );
     expect(title, findsOneWidget);
     expect(titleScroll, findsOneWidget);
@@ -188,7 +210,12 @@ void main() {
     addTearDown(provider.dispose);
     await _pumpPage(tester, provider);
 
-    expect(find.text('Timetable display and interaction'), findsOneWidget);
+    final header = find.byType(SettingsPageHeader);
+    expect(header, findsOneWidget);
+    expect(
+      tester.widget<SettingsPageHeader>(header).title,
+      'Timetable display and interaction',
+    );
 
     await _toggleSetting(tester, 'Allow outside tap to close course popup');
     expect(provider.settingsView.closeCoursePopupOnOutsideTap, isFalse);

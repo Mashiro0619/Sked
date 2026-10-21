@@ -271,6 +271,7 @@ class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
     this.padding,
     this.topPadding = 8,
     this.bottomPadding = 24,
+    this.headerSliver,
   });
 
   final Widget? child;
@@ -280,12 +281,36 @@ class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double topPadding;
   final double bottomPadding;
+  final Widget? headerSliver;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final horizontalPadding = constraints.maxWidth < 600 ? 16.0 : 24.0;
+        final contentPadding =
+            padding ??
+            EdgeInsets.fromLTRB(
+              horizontalPadding,
+              topPadding,
+              horizontalPadding,
+              bottomPadding,
+            );
+        final content = Center(
+          child: ConstrainedBox(
+            key: const ValueKey('responsive-settings-single-column-content'),
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: SizedBox(
+              width: double.infinity,
+              child:
+                  child ??
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: children ?? const [],
+                  ),
+            ),
+          ),
+        );
         return ScrollConfiguration(
           behavior: const MaterialScrollBehavior().copyWith(
             dragDevices: {
@@ -296,38 +321,28 @@ class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
               PointerDeviceKind.invertedStylus,
             },
           ),
-          child: ListView(
-            key: scrollViewKey,
-            controller: controller,
-            padding:
-                padding ??
-                EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  topPadding,
-                  horizontalPadding,
-                  bottomPadding,
+          child: headerSliver != null
+              ? CustomScrollView(
+                  key: scrollViewKey,
+                  controller: controller,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  slivers: [
+                    headerSliver!,
+                    SliverPadding(
+                      padding: contentPadding,
+                      sliver: SliverToBoxAdapter(child: content),
+                    ),
+                  ],
+                )
+              : ListView(
+                  key: scrollViewKey,
+                  controller: controller,
+                  padding: contentPadding,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  children: [content],
                 ),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            children: [
-              Center(
-                child: ConstrainedBox(
-                  key: const ValueKey(
-                    'responsive-settings-single-column-content',
-                  ),
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child:
-                        child ??
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: children ?? const [],
-                        ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         );
       },
     );

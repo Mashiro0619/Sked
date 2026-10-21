@@ -1,8 +1,6 @@
 import '../utils/mobile_toolbar_layout.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 
-import '../widgets/desktop_window_host.dart';
-import '../widgets/adaptive_navigation_scope.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 
 import 'dart:async';
@@ -17,6 +15,7 @@ import '../controllers/general_view_state.dart';
 import '../controllers/settings_view_state.dart';
 import '../controllers/workspace_view_state.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/settings_page_header.dart';
 import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
 
@@ -50,23 +49,21 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
         final workspaceFallback =
             workspace.enabledWorkspaces.length > 1 &&
             settings.hideHomeWorkspaceNavigation;
-        return Scaffold(
-          appBar: WorkbenchAppBar(
-            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-            title: Text(l10n.generalDisplaySettings),
+        return SettingsPageScaffold(
+          title: l10n.generalDisplaySettings,
+          statusIndicator: UiCommandBusyIndicator(
+            busy: uiCommandBusy,
+            showDelay: const Duration(milliseconds: 180),
           ),
-          body: Column(
+          bodyBuilder: (_, headerSliver) => Column(
             children: [
-              UiCommandBusyIndicator(
-                busy: uiCommandBusy,
-                showDelay: const Duration(milliseconds: 180),
-              ),
               Expanded(
                 child: SafeArea(
                   top: false,
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
                     child: ResponsiveSettingsBody(
+                      headerSliver: headerSliver,
                       connectedSections: true,
                       scrollViewKey: const ValueKey(
                         'general-display-settings-list',

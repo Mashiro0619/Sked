@@ -257,7 +257,7 @@ void main() {
     await tester.tap(find.text('Open language settings'));
     await _pumpRouteTransition(tester);
 
-    final list = find.byType(ListView);
+    final list = find.byKey(const PageStorageKey('language-settings-scroll'));
     expect(tester.getSize(list).width, 1024);
     expect(
       tester
@@ -270,7 +270,20 @@ void main() {
       lessThanOrEqualTo(720),
     );
     expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
-    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(of: list, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    final content = find.byKey(
+      const ValueKey('responsive-settings-single-column-content'),
+    );
+    expect(
+      tester.getRect(list).bottom - tester.getRect(content).bottom,
+      closeTo(24, 0.01),
+    );
     expect(tester.takeException(), isNull);
   });
 

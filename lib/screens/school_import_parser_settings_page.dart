@@ -1,8 +1,6 @@
 import '../widgets/sked_confirmation_dialog.dart';
 import '../widgets/workspace_editor_form.dart';
-import '../widgets/adaptive_navigation_scope.dart';
 
-import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
 
@@ -20,6 +18,7 @@ import '../services/school_import_http_consent.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/settings_page_header.dart';
 import '../widgets/sked_task_route.dart';
 import '../widgets/ui_command.dart';
 
@@ -160,22 +159,18 @@ class _SchoolImportParserSettingsPageState
               unawaited(_flushAndPop());
             }
           },
-          child: Scaffold(
-            appBar: WorkbenchAppBar(
-              automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(
-                context,
-              ),
-              title: Text(l10n.schoolImportParserSettingsTitle),
+          child: SettingsPageScaffold(
+            title: l10n.schoolImportParserSettingsTitle,
+            statusIndicator: UiCommandBusyIndicator(
+              busy: _isSavingApiKey || _isSavingTextSettings,
             ),
-            body: Column(
+            bodyBuilder: (_, headerSliver) => Column(
               children: [
-                UiCommandBusyIndicator(
-                  busy: _isSavingApiKey || _isSavingTextSettings,
-                ),
                 Expanded(
                   child: SafeArea(
                     top: false,
                     child: ResponsiveSettingsSingleColumnBody(
+                      headerSliver: headerSliver,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [

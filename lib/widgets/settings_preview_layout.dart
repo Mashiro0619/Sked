@@ -13,10 +13,12 @@ class SettingsPreviewLayout extends StatelessWidget {
     required this.preview,
     required this.children,
     this.scrollViewKey,
+    this.headerSliver,
   });
   final Widget preview;
   final List<Widget> children;
   final Key? scrollViewKey;
+  final Widget? headerSliver;
   @override
   Widget build(BuildContext context) => DesktopResizableRegion(
     layoutKey: DesktopLayoutRegion.themePreview,
@@ -46,6 +48,7 @@ class SettingsPreviewLayout extends StatelessWidget {
                 Expanded(
                   child: ResponsiveSettingsSingleColumnBody(
                     scrollViewKey: scrollViewKey,
+                    headerSliver: headerSliver,
                     children: [
                       ...children,
                       if (!wide)

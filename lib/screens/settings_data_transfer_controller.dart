@@ -248,6 +248,7 @@ class SettingsDataTransferController {
     List<Widget> additionalImports = const [],
     List<Widget> importConfiguration = const [],
     SettingsTransferDirection? direction,
+    Widget? headerSliver,
   }) => _TransferPageContent(
     spec: _studentSpec(context),
     onAction: onAction,
@@ -256,6 +257,7 @@ class SettingsDataTransferController {
     additionalImports: additionalImports,
     importConfiguration: importConfiguration,
     direction: direction,
+    headerSliver: headerSliver,
   );
   Widget generalPageContent(
     BuildContext context, {
@@ -263,9 +265,11 @@ class SettingsDataTransferController {
     required bool busy,
     bool importEnabled = true,
     SettingsTransferDirection? direction,
+    Widget? headerSliver,
   }) => _TransferPageContent(
     spec: _generalSpec(context),
     direction: direction,
+    headerSliver: headerSliver,
     onAction: onAction,
     busy: busy,
     importEnabled: importEnabled,
@@ -417,6 +421,7 @@ class _TransferPageContent<T> extends StatelessWidget {
     this.additionalImports = const [],
     this.importConfiguration = const [],
     this.direction,
+    this.headerSliver,
   });
   final _TransferSheetSpec<T> spec;
   final ValueChanged<T> onAction;
@@ -425,6 +430,7 @@ class _TransferPageContent<T> extends StatelessWidget {
   final List<Widget> additionalImports;
   final List<Widget> importConfiguration;
   final SettingsTransferDirection? direction;
+  final Widget? headerSliver;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -475,36 +481,50 @@ class _TransferPageContent<T> extends StatelessWidget {
           ],
         ],
       );
-      return SingleChildScrollView(
-        key: const PageStorageKey('transfer-page-scroll'),
-        padding: EdgeInsets.fromLTRB(inset, 24, inset, 32),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            key: const ValueKey('transfer-page-content'),
-            constraints: BoxConstraints(maxWidth: split ? 1040 : 680),
-            child: direction != null
-                ? (direction == SettingsTransferDirection.import
-                      ? imports
-                      : group(1))
-                : split
-                ? Row(
-                    key: const ValueKey('transfer-two-columns'),
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: imports),
-                      const SizedBox(width: 24),
-                      Expanded(child: group(1)),
-                    ],
-                  )
-                : Column(
-                    key: const ValueKey('transfer-single-column'),
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [imports, const SizedBox(height: 24), group(1)],
-                  ),
-          ),
+      final content = Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          key: const ValueKey('transfer-page-content'),
+          constraints: BoxConstraints(maxWidth: split ? 1040 : 680),
+          child: direction != null
+              ? (direction == SettingsTransferDirection.import
+                    ? imports
+                    : group(1))
+              : split
+              ? Row(
+                  key: const ValueKey('transfer-two-columns'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: imports),
+                    const SizedBox(width: 24),
+                    Expanded(child: group(1)),
+                  ],
+                )
+              : Column(
+                  key: const ValueKey('transfer-single-column'),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [imports, const SizedBox(height: 24), group(1)],
+                ),
         ),
       );
+      final padding = EdgeInsets.fromLTRB(inset, 24, inset, 32);
+      return headerSliver == null
+          ? SingleChildScrollView(
+              key: const PageStorageKey('transfer-page-scroll'),
+              padding: padding,
+              child: content,
+            )
+          : CustomScrollView(
+              key: const PageStorageKey('transfer-page-scroll'),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: [
+                headerSliver!,
+                SliverPadding(
+                  padding: padding,
+                  sliver: SliverToBoxAdapter(child: content),
+                ),
+              ],
+            );
     },
   );
 }
