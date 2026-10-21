@@ -1627,15 +1627,17 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
     final pageWeek = index + 1;
     final weekStart = startOfWeekFor(widget.config, pageWeek);
     final realCurrentWeek = currentWeekFor(widget.config);
-    final liveCourseTarget = currentOrNextCourseTargetFor(
-      timetable: widget.timetable,
-      periodTimes: widget.snapshot.periodTimes,
-      selectedWeek: pageWeek,
-      realCurrentWeek: realCurrentWeek,
-      now: _now(),
-      displayedCourseIdForConflict:
-          widget.snapshot.displayedCourseIdForConflict,
-    );
+    final liveCourseTarget = widget.snapshot.liveCourseOutlineEnabled
+        ? currentOrNextCourseTargetFor(
+            timetable: widget.timetable,
+            periodTimes: widget.snapshot.periodTimes,
+            selectedWeek: pageWeek,
+            realCurrentWeek: realCurrentWeek,
+            now: _now(),
+            displayedCourseIdForConflict:
+                widget.snapshot.displayedCourseIdForConflict,
+          )
+        : null;
     final liveCourseOutlineColorValue =
         widget.snapshot.liveCourseOutlineFollowTheme
         ? deriveLiveCourseOutlineColorFromSeed(
