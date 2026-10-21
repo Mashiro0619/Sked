@@ -563,6 +563,7 @@ void main() {
         generalMode: base.generalMode.copyWith(
           selectedDateIso: '2026-06-19',
           showWeekends: false,
+          viewSwitchBehavior: generalViewSwitchBehaviorCycle,
         ),
       ),
     );
@@ -698,6 +699,7 @@ void main() {
         generalMode: base.generalMode.copyWith(
           selectedDateIso: '2026-06-16',
           defaultView: generalViewWeek,
+          viewSwitchBehavior: generalViewSwitchBehaviorCycle,
         ),
       ),
     );
@@ -748,6 +750,9 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
+    await provider.generalCommands.updateDisplaySettings(
+      viewSwitchBehavior: generalViewSwitchBehaviorCycle,
+    );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
     final initialDate = provider.generalView.selectedDate;
 
@@ -779,7 +784,7 @@ void main() {
     expect(provider.generalView.selectedDate, initialDate);
   });
 
-  testWidgets('menu view switcher opens, cancels, and selects once', (
+  testWidgets('default view menu opens, cancels, and selects once', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -787,13 +792,7 @@ void main() {
     final base = _buildGeneralDataWithCalendars([
       const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
     ], activeId: 'cal1');
-    final provider = await _createGeneralProvider(
-      base.copyWith(
-        generalMode: base.generalMode.copyWith(
-          viewSwitchBehavior: generalViewSwitchBehaviorMenu,
-        ),
-      ),
-    );
+    final provider = await _createGeneralProvider(base);
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     final switcher = find.byKey(const ValueKey('general-view-switcher'));
@@ -1039,6 +1038,7 @@ void main() {
         generalMode: base.generalMode.copyWith(
           selectedDateIso: '2026-07-15',
           dateLabelFormat: generalDateLabelFormatSlash,
+          viewSwitchBehavior: generalViewSwitchBehaviorCycle,
         ),
       ),
     );
@@ -1387,7 +1387,13 @@ void main() {
       ],
     );
     final base = _buildGeneralDataWithCalendars([calendar], activeId: 'cal1');
-    final provider = await _createGeneralProvider(base);
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          viewSwitchBehavior: generalViewSwitchBehaviorCycle,
+        ),
+      ),
+    );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     Future<void> openAndCloseDetails(Finder target) async {
@@ -2320,6 +2326,7 @@ void main() {
           schedules: [calendar],
           selectedDateIso: '2026-05-25',
           defaultView: generalViewWeek,
+          viewSwitchBehavior: generalViewSwitchBehaviorCycle,
         ),
       ),
     );
@@ -4978,6 +4985,7 @@ void main() {
       base.copyWith(
         generalMode: base.generalMode.copyWith(
           hiddenToolbarNavigationIds: const ['category', 'date', 'view'],
+          viewSwitchBehavior: generalViewSwitchBehaviorCycle,
         ),
       ),
     );

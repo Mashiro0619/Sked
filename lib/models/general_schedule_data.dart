@@ -188,7 +188,7 @@ String normalizeGeneralViewSwitchBehavior(String? value) {
     case generalViewSwitchBehaviorCycle:
       return value!;
     default:
-      return generalViewSwitchBehaviorCycle;
+      return generalViewSwitchBehaviorMenu;
   }
 }
 
@@ -217,7 +217,7 @@ String normalizeGeneralDateLabelFormat(String? value) {
 
 String _decodeGeneralViewSwitchBehavior(Map<String, dynamic> json) {
   if (!json.containsKey('viewSwitchBehavior')) {
-    return generalViewSwitchBehaviorCycle;
+    return generalViewSwitchBehaviorMenu;
   }
   final value = json['viewSwitchBehavior'];
   if (value is! String ||
@@ -276,7 +276,7 @@ class GeneralScheduleData {
     this.selectedDateIso,
     this.customDateRange,
     this.defaultView = generalViewWeek,
-    this.viewSwitchBehavior = generalViewSwitchBehaviorCycle,
+    this.viewSwitchBehavior = generalViewSwitchBehaviorMenu,
     this.toolbarWidthPolicy = generalToolbarWidthPolicyContent,
     this.dateLabelFormat = generalDateLabelFormatSlash,
     this.fitWeekColumnsToWidth = true,

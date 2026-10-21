@@ -1111,7 +1111,7 @@ bool _hasDefaultGeneralData(GeneralScheduleData data) {
     return false;
   }
   if (data.defaultView != generalViewWeek ||
-      data.viewSwitchBehavior != generalViewSwitchBehaviorCycle ||
+      data.viewSwitchBehavior != generalViewSwitchBehaviorMenu ||
       data.toolbarWidthPolicy != generalToolbarWidthPolicyContent ||
       data.dateLabelFormat != generalDateLabelFormatSlash ||
       !data.showWeekends ||

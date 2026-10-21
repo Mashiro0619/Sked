@@ -991,20 +991,20 @@ END:VCALENDAR
     await provider.lifecycle.load();
     expect(
       provider.generalView.data.viewSwitchBehavior,
-      generalViewSwitchBehaviorCycle,
+      generalViewSwitchBehaviorMenu,
     );
 
     await provider.generalCommands.updateDisplaySettings(
-      viewSwitchBehavior: generalViewSwitchBehaviorMenu,
+      viewSwitchBehavior: generalViewSwitchBehaviorCycle,
     );
 
     expect(
       provider.generalView.data.viewSwitchBehavior,
-      generalViewSwitchBehaviorMenu,
+      generalViewSwitchBehaviorCycle,
     );
     expect(
       storage.data!.generalMode.viewSwitchBehavior,
-      generalViewSwitchBehaviorMenu,
+      generalViewSwitchBehaviorCycle,
     );
     expect(
       storage.data!.studentMode.fitDaySelectorToWidth,

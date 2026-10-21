@@ -1180,10 +1180,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('General schedule'));
     await tester.pumpAndSettle();
-    for (var index = 0; index < 3; index++) {
-      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
-      await tester.pumpAndSettle();
-    }
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is PopupMenuItem<String> && widget.value == generalViewMonth,
+      ),
+    );
     await tester.pumpAndSettle();
 
     Finder viewSwitcher() =>
@@ -1301,10 +1305,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('General schedule'));
     await tester.pumpAndSettle();
-    for (var index = 0; index < 3; index++) {
-      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
-      await tester.pumpAndSettle();
-    }
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is PopupMenuItem<String> && widget.value == generalViewMonth,
+      ),
+    );
     await tester.pumpAndSettle();
     final saveCountBeforeResize = storage.saveCount;
 

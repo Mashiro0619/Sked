@@ -297,14 +297,18 @@ void main() {
     await _pumpPage(tester, provider);
 
     final dropdown = find.byKey(const ValueKey('general-view-switch-behavior'));
+    expect(
+      tester.widget<SettingsChoiceTile<String>>(dropdown).value,
+      generalViewSwitchBehaviorMenu,
+    );
     await tester.tap(dropdown);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open view menu').last);
+    await tester.tap(find.text('Cycle through views').last);
     await tester.pumpAndSettle();
 
     expect(
       provider.generalView.data.viewSwitchBehavior,
-      generalViewSwitchBehaviorMenu,
+      generalViewSwitchBehaviorCycle,
     );
   });
 

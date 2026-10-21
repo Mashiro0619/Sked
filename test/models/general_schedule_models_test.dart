@@ -614,24 +614,33 @@ void main() {
     );
 
     test('view switch behavior round-trips and copyWith preserves it', () {
-      final data = GeneralScheduleData(
-        activeScheduleId: 'sched1',
-        schedules: [
-          GeneralSchedule(id: 'sched1', name: 'My Schedule', events: const []),
-        ],
-        viewSwitchBehavior: generalViewSwitchBehaviorMenu,
-      );
-
-      final decoded = GeneralScheduleData.fromJson(data.toJson());
-      expect(decoded.viewSwitchBehavior, generalViewSwitchBehaviorMenu);
-      expect(
-        decoded.copyWith(selectedDateIso: '2026-05-29').viewSwitchBehavior,
+      for (final behavior in [
         generalViewSwitchBehaviorMenu,
-      );
-      expect(
-        decoded.copyWith(viewSwitchBehavior: 'unknown').viewSwitchBehavior,
         generalViewSwitchBehaviorCycle,
-      );
+      ]) {
+        final data = GeneralScheduleData(
+          activeScheduleId: 'sched1',
+          schedules: [
+            GeneralSchedule(
+              id: 'sched1',
+              name: 'My Schedule',
+              events: const [],
+            ),
+          ],
+          viewSwitchBehavior: behavior,
+        );
+
+        final decoded = GeneralScheduleData.fromJson(data.toJson());
+        expect(decoded.viewSwitchBehavior, behavior);
+        expect(
+          decoded.copyWith(selectedDateIso: '2026-05-29').viewSwitchBehavior,
+          behavior,
+        );
+        expect(
+          decoded.copyWith(viewSwitchBehavior: 'unknown').viewSwitchBehavior,
+          generalViewSwitchBehaviorMenu,
+        );
+      }
     });
 
     test(
@@ -749,7 +758,7 @@ void main() {
       expect(decoded.toolbarWidthPolicy, generalToolbarWidthPolicyContent);
     });
 
-    test('missing view switch behavior defaults to cycle', () {
+    test('missing view switch behavior defaults to menu', () {
       final decoded = GeneralScheduleData.fromJson({
         'schemaVersion': generalScheduleSchemaVersion,
         'activeScheduleId': 'sched1',
@@ -758,16 +767,21 @@ void main() {
         ],
       });
 
-      expect(decoded.viewSwitchBehavior, generalViewSwitchBehaviorCycle);
+      expect(decoded.viewSwitchBehavior, generalViewSwitchBehaviorMenu);
     });
 
     test('legacy empty payload preserves a valid view switch behavior', () {
-      final decoded = GeneralScheduleData.fromJson({
-        'viewSwitchBehavior': generalViewSwitchBehaviorMenu,
-      });
+      for (final behavior in [
+        generalViewSwitchBehaviorMenu,
+        generalViewSwitchBehaviorCycle,
+      ]) {
+        final decoded = GeneralScheduleData.fromJson({
+          'viewSwitchBehavior': behavior,
+        });
 
-      expect(decoded.viewSwitchBehavior, generalViewSwitchBehaviorMenu);
-      expect(decoded.schedules, isNotEmpty);
+        expect(decoded.viewSwitchBehavior, behavior);
+        expect(decoded.schedules, isNotEmpty);
+      }
     });
 
     test('invalid view switch behavior is rejected by the model decoder', () {

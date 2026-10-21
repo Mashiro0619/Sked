@@ -3818,7 +3818,13 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is PopupMenuItem<String> &&
+              widget.value == generalViewList,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Today'), findsNothing);

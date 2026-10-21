@@ -144,6 +144,8 @@ GeneralScheduleData _buildGeneralData(int eventCount) {
     schedules: List<GeneralSchedule>.unmodifiable(schedules),
     selectedDateIso: '2026-03-01',
     defaultView: generalViewMonth,
+    // Keep historical snapshot checksums independent of product defaults.
+    viewSwitchBehavior: generalViewSwitchBehaviorCycle,
     showWeekends: true,
     showLunarCalendar: true,
     dayStartHour: 6,
