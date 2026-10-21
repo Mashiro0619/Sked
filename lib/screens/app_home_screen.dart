@@ -1393,6 +1393,8 @@ class _FirstLaunchPrivacyConsent extends StatefulWidget {
 class _FirstLaunchPrivacyConsentState
     extends State<_FirstLaunchPrivacyConsent> {
   late final TapGestureRecognizer _linkRecognizer;
+  final _linkFocus = FocusNode(debugLabel: 'First launch privacy policy');
+  var _showFocusHighlight = false;
 
   @override
   void initState() {
@@ -1409,6 +1411,7 @@ class _FirstLaunchPrivacyConsentState
   @override
   void dispose() {
     _linkRecognizer.dispose();
+    _linkFocus.dispose();
     super.dispose();
   }
 
@@ -1417,27 +1420,49 @@ class _FirstLaunchPrivacyConsentState
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Text.rich(
-      key: const ValueKey('first-launch-privacy-consent'),
-      TextSpan(
-        children: [
-          TextSpan(text: widget.beforeText),
-          TextSpan(
-            text: widget.linkText,
-            recognizer: _linkRecognizer,
-            mouseCursor: SystemMouseCursors.click,
-            style: TextStyle(
-              color: skedReadableAccent(
-                colors,
-                surface: SkedSurface.colorOf(context),
+    return FocusableActionDetector(
+      key: const ValueKey('first-launch-privacy-link-focus'),
+      focusNode: _linkFocus,
+      onShowFocusHighlight: (show) =>
+          setState(() => _showFocusHighlight = show),
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onOpenPolicy();
+            return null;
+          },
+        ),
+      },
+      child: Text.rich(
+        key: const ValueKey('first-launch-privacy-consent'),
+        TextSpan(
+          children: [
+            TextSpan(text: widget.beforeText),
+            TextSpan(
+              text: widget.linkText,
+              recognizer: _linkRecognizer,
+              mouseCursor: SystemMouseCursors.click,
+              style: TextStyle(
+                color: skedReadableAccent(
+                  colors,
+                  surface: SkedSurface.colorOf(context),
+                ),
+                decoration: _showFocusHighlight
+                    ? TextDecoration.underline
+                    : null,
+                decorationThickness: 2,
               ),
             ),
-          ),
-          TextSpan(text: widget.afterText),
-        ],
+            TextSpan(text: widget.afterText),
+          ],
+        ),
+        textAlign: TextAlign.center,
+        style: textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
       ),
-      textAlign: TextAlign.center,
-      style: textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
     );
   }
 }
