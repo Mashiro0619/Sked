@@ -2798,6 +2798,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get colorHexInvalid => '6자리 16진수 색상 코드를 입력하세요.';
 
   @override
+  String get colorPickerHue => '색조';
+
+  @override
+  String get colorPickerSaturation => '채도';
+
+  @override
+  String get colorPickerValue => '명도';
+
+  @override
+  String get colorPickerHex => '16진수 색상';
+
+  @override
+  String get colorPickerSpectrum => '색상 스펙트럼';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      '왼쪽과 오른쪽 화살표로 채도를, 위쪽과 아래쪽 화살표로 명도를 조절하세요.';
+
+  @override
   String categoryColorSlot(int number) {
     return '테마 색상 $number';
   }

@@ -2897,6 +2897,25 @@ class AppLocalizationsDa extends AppLocalizations {
   String get colorHexInvalid => 'Angiv en sekscifret hexadecimal farvekode.';
 
   @override
+  String get colorPickerHue => 'Farvetone';
+
+  @override
+  String get colorPickerSaturation => 'Mætning';
+
+  @override
+  String get colorPickerValue => 'Lysstyrke';
+
+  @override
+  String get colorPickerHex => 'Hexfarve';
+
+  @override
+  String get colorPickerSpectrum => 'Farvespektrum';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Brug venstre og højre pil til at justere mætning og op og ned til at justere lysstyrke.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Temafarve $number';
   }

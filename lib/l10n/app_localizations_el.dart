@@ -2956,6 +2956,25 @@ class AppLocalizationsEl extends AppLocalizations {
       'Εισαγάγετε εξαψήφιο δεκαεξαδικό κωδικό χρώματος.';
 
   @override
+  String get colorPickerHue => 'Απόχρωση';
+
+  @override
+  String get colorPickerSaturation => 'Κορεσμός';
+
+  @override
+  String get colorPickerValue => 'Φωτεινότητα';
+
+  @override
+  String get colorPickerHex => 'Δεκαεξαδικό χρώμα';
+
+  @override
+  String get colorPickerSpectrum => 'Φάσμα χρωμάτων';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Χρησιμοποιήστε τα αριστερά και δεξιά βέλη για τον κορεσμό και τα πάνω και κάτω βέλη για τη φωτεινότητα.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Χρώμα θέματος $number';
   }

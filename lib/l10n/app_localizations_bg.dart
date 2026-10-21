@@ -2949,6 +2949,25 @@ class AppLocalizationsBg extends AppLocalizations {
       'Въведете шестцифрен шестнадесетичен код на цвят.';
 
   @override
+  String get colorPickerHue => 'Нюанс';
+
+  @override
+  String get colorPickerSaturation => 'Наситеност';
+
+  @override
+  String get colorPickerValue => 'Яркост';
+
+  @override
+  String get colorPickerHex => 'Шестнадесетичен цвят';
+
+  @override
+  String get colorPickerSpectrum => 'Цветови спектър';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Използвайте стрелките наляво и надясно за наситеността, а нагоре и надолу за яркостта.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Цвят на темата $number';
   }

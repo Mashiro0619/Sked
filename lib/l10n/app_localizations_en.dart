@@ -2883,6 +2883,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get colorHexInvalid => 'Enter a six-digit hex color.';
 
   @override
+  String get colorPickerHue => 'Hue';
+
+  @override
+  String get colorPickerSaturation => 'Saturation';
+
+  @override
+  String get colorPickerValue => 'Brightness';
+
+  @override
+  String get colorPickerHex => 'Hex color';
+
+  @override
+  String get colorPickerSpectrum => 'Color spectrum';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Use Left and Right to adjust saturation, and Up and Down to adjust brightness.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Theme color $number';
   }

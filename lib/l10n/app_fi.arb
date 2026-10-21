@@ -1967,6 +1967,12 @@
   "categoryThemePalette": "Teeman väripaletti",
   "categoryCustomColor": "Mukautettu",
   "colorHexInvalid": "Anna kuusimerkkinen heksadesimaalivärikoodi.",
+  "colorPickerHue": "Sävy",
+  "colorPickerSaturation": "Kylläisyys",
+  "colorPickerValue": "Kirkkaus",
+  "colorPickerHex": "Heksadesimaaliväri",
+  "colorPickerSpectrum": "Värispektri",
+  "colorPickerSpectrumKeyboardHint": "Säädä kylläisyyttä vasemmalla ja oikealla nuolella sekä kirkkautta ylä- ja alanuolella.",
   "categoryColorSlot": "Teeman väri {number}",
   "@categoryColorSlot": {
     "placeholders": {

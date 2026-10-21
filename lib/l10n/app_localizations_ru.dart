@@ -2935,6 +2935,25 @@ class AppLocalizationsRu extends AppLocalizations {
       'Введите шестизначный шестнадцатеричный код цвета.';
 
   @override
+  String get colorPickerHue => 'Оттенок';
+
+  @override
+  String get colorPickerSaturation => 'Насыщенность';
+
+  @override
+  String get colorPickerValue => 'Яркость';
+
+  @override
+  String get colorPickerHex => 'Шестнадцатеричный цвет';
+
+  @override
+  String get colorPickerSpectrum => 'Цветовой спектр';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Используйте стрелки влево и вправо для настройки насыщенности, а вверх и вниз — для яркости.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Цвет темы $number';
   }

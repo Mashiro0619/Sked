@@ -1967,6 +1967,12 @@
   "categoryThemePalette": "Палитра на темата",
   "categoryCustomColor": "По избор",
   "colorHexInvalid": "Въведете шестцифрен шестнадесетичен код на цвят.",
+  "colorPickerHue": "Нюанс",
+  "colorPickerSaturation": "Наситеност",
+  "colorPickerValue": "Яркост",
+  "colorPickerHex": "Шестнадесетичен цвят",
+  "colorPickerSpectrum": "Цветови спектър",
+  "colorPickerSpectrumKeyboardHint": "Използвайте стрелките наляво и надясно за наситеността, а нагоре и надолу за яркостта.",
   "categoryColorSlot": "Цвят на темата {number}",
   "@categoryColorSlot": {
     "placeholders": {

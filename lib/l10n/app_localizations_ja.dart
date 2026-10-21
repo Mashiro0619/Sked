@@ -2791,6 +2791,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get colorHexInvalid => '6桁の16進数で色を入力してください。';
 
   @override
+  String get colorPickerHue => '色相';
+
+  @override
+  String get colorPickerSaturation => '彩度';
+
+  @override
+  String get colorPickerValue => '明度';
+
+  @override
+  String get colorPickerHex => '16進数カラー';
+
+  @override
+  String get colorPickerSpectrum => 'カラースペクトル';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint => '左右の矢印キーで彩度を、上下の矢印キーで明度を調整します。';
+
+  @override
   String categoryColorSlot(int number) {
     return 'テーマの色 $number';
   }

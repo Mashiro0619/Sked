@@ -2901,6 +2901,25 @@ class AppLocalizationsEt extends AppLocalizations {
       'Sisesta kuuekohaline kuueteistkümnendsüsteemis värvikood.';
 
   @override
+  String get colorPickerHue => 'Värvitoon';
+
+  @override
+  String get colorPickerSaturation => 'Küllastus';
+
+  @override
+  String get colorPickerValue => 'Heledus';
+
+  @override
+  String get colorPickerHex => 'Kuueteistkümnendvärv';
+
+  @override
+  String get colorPickerSpectrum => 'Värvispekter';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Küllastuse muutmiseks kasuta vasakut ja paremat noolt, heleduse muutmiseks üles- ja allanoolt.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Teema värv $number';
   }

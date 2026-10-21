@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "Themapalet",
   "categoryCustomColor": "Aangepast",
   "colorHexInvalid": "Voer een hexadecimale kleurcode van zes tekens in.",
+  "colorPickerHue": "Tint",
+  "colorPickerSaturation": "Verzadiging",
+  "colorPickerValue": "Helderheid",
+  "colorPickerHex": "Hexkleur",
+  "colorPickerSpectrum": "Kleurenspectrum",
+  "colorPickerSpectrumKeyboardHint": "Gebruik de pijlen links en rechts om de verzadiging aan te passen, en omhoog en omlaag voor de helderheid.",
   "categoryColorSlot": "Themakleur {number}",
   "@categoryColorSlot": {
     "placeholders": {

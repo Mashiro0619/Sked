@@ -1967,6 +1967,12 @@
   "categoryThemePalette": "Temapaletten",
   "categoryCustomColor": "Brugerdefineret",
   "colorHexInvalid": "Angiv en sekscifret hexadecimal farvekode.",
+  "colorPickerHue": "Farvetone",
+  "colorPickerSaturation": "Mætning",
+  "colorPickerValue": "Lysstyrke",
+  "colorPickerHex": "Hexfarve",
+  "colorPickerSpectrum": "Farvespektrum",
+  "colorPickerSpectrumKeyboardHint": "Brug venstre og højre pil til at justere mætning og op og ned til at justere lysstyrke.",
   "categoryColorSlot": "Temafarve {number}",
   "@categoryColorSlot": {
     "placeholders": {

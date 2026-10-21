@@ -2927,6 +2927,25 @@ class AppLocalizationsNl extends AppLocalizations {
       'Voer een hexadecimale kleurcode van zes tekens in.';
 
   @override
+  String get colorPickerHue => 'Tint';
+
+  @override
+  String get colorPickerSaturation => 'Verzadiging';
+
+  @override
+  String get colorPickerValue => 'Helderheid';
+
+  @override
+  String get colorPickerHex => 'Hexkleur';
+
+  @override
+  String get colorPickerSpectrum => 'Kleurenspectrum';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Gebruik de pijlen links en rechts om de verzadiging aan te passen, en omhoog en omlaag voor de helderheid.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Themakleur $number';
   }

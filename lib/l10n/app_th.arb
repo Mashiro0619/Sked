@@ -2005,6 +2005,12 @@
   "categoryThemePalette": "ชุดสีธีม",
   "categoryCustomColor": "กำหนดเอง",
   "colorHexInvalid": "กรุณาระบุรหัสสีเลขฐานสิบหก 6 หลัก",
+  "colorPickerHue": "เฉดสี",
+  "colorPickerSaturation": "ความอิ่มตัว",
+  "colorPickerValue": "ความสว่าง",
+  "colorPickerHex": "รหัสสีฐานสิบหก",
+  "colorPickerSpectrum": "สเปกตรัมสี",
+  "colorPickerSpectrumKeyboardHint": "ใช้ลูกศรซ้ายและขวาเพื่อปรับความอิ่มตัว และลูกศรขึ้นและลงเพื่อปรับความสว่าง",
   "categoryColorSlot": "สีธีม {number}",
   "@categoryColorSlot": {
     "placeholders": {

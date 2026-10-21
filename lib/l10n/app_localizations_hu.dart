@@ -2926,6 +2926,25 @@ class AppLocalizationsHu extends AppLocalizations {
   String get colorHexInvalid => 'Adjon meg hatjegyű hexadecimális színkódot.';
 
   @override
+  String get colorPickerHue => 'Árnyalat';
+
+  @override
+  String get colorPickerSaturation => 'Telítettség';
+
+  @override
+  String get colorPickerValue => 'Fényerő';
+
+  @override
+  String get colorPickerHex => 'Hexadecimális szín';
+
+  @override
+  String get colorPickerSpectrum => 'Színspektrum';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'A bal és jobb nyíllal a telítettséget, a fel és le nyíllal a fényerőt állíthatja.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Téma színe: $number';
   }

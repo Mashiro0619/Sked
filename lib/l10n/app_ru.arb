@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "Палитра темы",
   "categoryCustomColor": "Свой цвет",
   "colorHexInvalid": "Введите шестизначный шестнадцатеричный код цвета.",
+  "colorPickerHue": "Оттенок",
+  "colorPickerSaturation": "Насыщенность",
+  "colorPickerValue": "Яркость",
+  "colorPickerHex": "Шестнадцатеричный цвет",
+  "colorPickerSpectrum": "Цветовой спектр",
+  "colorPickerSpectrumKeyboardHint": "Используйте стрелки влево и вправо для настройки насыщенности, а вверх и вниз — для яркости.",
   "categoryColorSlot": "Цвет темы {number}",
   "@categoryColorSlot": {
     "placeholders": {

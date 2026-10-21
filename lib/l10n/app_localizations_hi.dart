@@ -2894,6 +2894,25 @@ class AppLocalizationsHi extends AppLocalizations {
   String get colorHexInvalid => 'छह अंकों का हेक्स रंग कोड दर्ज करें।';
 
   @override
+  String get colorPickerHue => 'रंगत';
+
+  @override
+  String get colorPickerSaturation => 'संतृप्ति';
+
+  @override
+  String get colorPickerValue => 'चमक';
+
+  @override
+  String get colorPickerHex => 'हेक्स रंग';
+
+  @override
+  String get colorPickerSpectrum => 'रंग स्पेक्ट्रम';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'संतृप्ति बदलने के लिए बाएँ और दाएँ तीर का, और चमक बदलने के लिए ऊपर और नीचे तीर का उपयोग करें।';
+
+  @override
   String categoryColorSlot(int number) {
     return 'थीम का रंग $number';
   }

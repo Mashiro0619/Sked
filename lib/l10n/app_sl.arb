@@ -2005,6 +2005,12 @@
   "categoryThemePalette": "Paleta teme",
   "categoryCustomColor": "Po meri",
   "colorHexInvalid": "Vnesite šestmestno šestnajstiško barvno kodo.",
+  "colorPickerHue": "Odtenek",
+  "colorPickerSaturation": "Nasičenost",
+  "colorPickerValue": "Svetlost",
+  "colorPickerHex": "Šestnajstiška barva",
+  "colorPickerSpectrum": "Barvni spekter",
+  "colorPickerSpectrumKeyboardHint": "S puščicama levo in desno prilagodite nasičenost, s puščicama gor in dol pa svetlost.",
   "categoryColorSlot": "Barva teme {number}",
   "@categoryColorSlot": {
     "placeholders": {

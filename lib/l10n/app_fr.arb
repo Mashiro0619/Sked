@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "Palette du thème",
   "categoryCustomColor": "Personnalisée",
   "colorHexInvalid": "Saisissez une couleur hexadécimale à six caractères.",
+  "colorPickerHue": "Teinte",
+  "colorPickerSaturation": "Saturation",
+  "colorPickerValue": "Luminosité",
+  "colorPickerHex": "Couleur hexadécimale",
+  "colorPickerSpectrum": "Spectre des couleurs",
+  "colorPickerSpectrumKeyboardHint": "Utilisez les flèches gauche et droite pour régler la saturation, et haut et bas pour régler la luminosité.",
   "categoryColorSlot": "Couleur du thème {number}",
   "@categoryColorSlot": {
     "placeholders": {

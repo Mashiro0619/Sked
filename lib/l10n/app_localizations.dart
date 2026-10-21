@@ -5190,6 +5190,42 @@ abstract class AppLocalizations {
   /// **'Enter a six-digit hex color.'**
   String get colorHexInvalid;
 
+  /// Accessible label for the hue control.
+  ///
+  /// In en, this message translates to:
+  /// **'Hue'**
+  String get colorPickerHue;
+
+  /// Accessible label for adjusting color saturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get colorPickerSaturation;
+
+  /// Accessible label for adjusting color brightness (HSV value).
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get colorPickerValue;
+
+  /// Associated label for the hexadecimal color text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Hex color'**
+  String get colorPickerHex;
+
+  /// Accessible label for the two-dimensional color spectrum.
+  ///
+  /// In en, this message translates to:
+  /// **'Color spectrum'**
+  String get colorPickerSpectrum;
+
+  /// Keyboard instructions for the two-dimensional color spectrum.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Left and Right to adjust saturation, and Up and Down to adjust brightness.'**
+  String get colorPickerSpectrumKeyboardHint;
+
   /// No description provided for @categoryColorSlot.
   ///
   /// In en, this message translates to:

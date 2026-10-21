@@ -2909,6 +2909,25 @@ class AppLocalizationsCs extends AppLocalizations {
   String get colorHexInvalid => 'Zadejte šestimístný šestnáctkový kód barvy.';
 
   @override
+  String get colorPickerHue => 'Odstín';
+
+  @override
+  String get colorPickerSaturation => 'Sytost';
+
+  @override
+  String get colorPickerValue => 'Jas';
+
+  @override
+  String get colorPickerHex => 'Hexadecimální barva';
+
+  @override
+  String get colorPickerSpectrum => 'Barevné spektrum';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Šipkami vlevo a vpravo upravte sytost, šipkami nahoru a dolů jas.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Barva motivu $number';
   }

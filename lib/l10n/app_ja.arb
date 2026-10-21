@@ -1967,6 +1967,12 @@
   "categoryThemePalette": "テーマの配色",
   "categoryCustomColor": "カスタム",
   "colorHexInvalid": "6桁の16進数で色を入力してください。",
+  "colorPickerHue": "色相",
+  "colorPickerSaturation": "彩度",
+  "colorPickerValue": "明度",
+  "colorPickerHex": "16進数カラー",
+  "colorPickerSpectrum": "カラースペクトル",
+  "colorPickerSpectrumKeyboardHint": "左右の矢印キーで彩度を、上下の矢印キーで明度を調整します。",
   "categoryColorSlot": "テーマの色 {number}",
   "@categoryColorSlot": {
     "placeholders": {

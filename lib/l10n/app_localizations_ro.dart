@@ -2940,6 +2940,25 @@ class AppLocalizationsRo extends AppLocalizations {
       'Introdu un cod de culoare hexazecimal din șase caractere.';
 
   @override
+  String get colorPickerHue => 'Nuanță';
+
+  @override
+  String get colorPickerSaturation => 'Saturație';
+
+  @override
+  String get colorPickerValue => 'Luminozitate';
+
+  @override
+  String get colorPickerHex => 'Culoare hexazecimală';
+
+  @override
+  String get colorPickerSpectrum => 'Spectru de culori';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Folosiți săgețile stânga și dreapta pentru saturație, iar sus și jos pentru luminozitate.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Culoarea temei $number';
   }

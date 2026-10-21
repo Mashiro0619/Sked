@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "Paleta temei",
   "categoryCustomColor": "Personalizată",
   "colorHexInvalid": "Introdu un cod de culoare hexazecimal din șase caractere.",
+  "colorPickerHue": "Nuanță",
+  "colorPickerSaturation": "Saturație",
+  "colorPickerValue": "Luminozitate",
+  "colorPickerHex": "Culoare hexazecimală",
+  "colorPickerSpectrum": "Spectru de culori",
+  "colorPickerSpectrumKeyboardHint": "Folosiți săgețile stânga și dreapta pentru saturație, iar sus și jos pentru luminozitate.",
   "categoryColorSlot": "Culoarea temei {number}",
   "@categoryColorSlot": {
     "placeholders": {

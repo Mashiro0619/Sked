@@ -1967,6 +1967,12 @@
   "categoryThemePalette": "Paleta motivu",
   "categoryCustomColor": "Vlastní",
   "colorHexInvalid": "Zadejte šestimístný šestnáctkový kód barvy.",
+  "colorPickerHue": "Odstín",
+  "colorPickerSaturation": "Sytost",
+  "colorPickerValue": "Jas",
+  "colorPickerHex": "Hexadecimální barva",
+  "colorPickerSpectrum": "Barevné spektrum",
+  "colorPickerSpectrumKeyboardHint": "Šipkami vlevo a vpravo upravte sytost, šipkami nahoru a dolů jas.",
   "categoryColorSlot": "Barva motivu {number}",
   "@categoryColorSlot": {
     "placeholders": {

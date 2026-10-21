@@ -2936,6 +2936,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get colorHexInvalid => 'Digite uma cor hexadecimal de seis dígitos.';
 
   @override
+  String get colorPickerHue => 'Matiz';
+
+  @override
+  String get colorPickerSaturation => 'Saturação';
+
+  @override
+  String get colorPickerValue => 'Brilho';
+
+  @override
+  String get colorPickerHex => 'Cor hexadecimal';
+
+  @override
+  String get colorPickerSpectrum => 'Espectro de cores';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Use as setas para a esquerda e para a direita para ajustar a saturação, e para cima e para baixo para ajustar o brilho.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Cor do tema $number';
   }

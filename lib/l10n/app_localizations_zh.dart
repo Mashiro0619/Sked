@@ -2708,6 +2708,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get colorHexInvalid => '请输入六位十六进制颜色。';
 
   @override
+  String get colorPickerHue => '色相';
+
+  @override
+  String get colorPickerSaturation => '饱和度';
+
+  @override
+  String get colorPickerValue => '明度';
+
+  @override
+  String get colorPickerHex => '十六进制颜色';
+
+  @override
+  String get colorPickerSpectrum => '颜色光谱';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint => '使用左右方向键调整饱和度，使用上下方向键调整明度。';
+
+  @override
   String categoryColorSlot(int number) {
     return '主题颜色 $number';
   }
@@ -5518,6 +5536,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get colorHexInvalid => '請輸入六位十六進位顏色。';
+
+  @override
+  String get colorPickerHue => '色相';
+
+  @override
+  String get colorPickerSaturation => '飽和度';
+
+  @override
+  String get colorPickerValue => '明度';
+
+  @override
+  String get colorPickerHex => '十六進位顏色';
+
+  @override
+  String get colorPickerSpectrum => '顏色光譜';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint => '使用左右方向鍵調整飽和度，使用上下方向鍵調整明度。';
 
   @override
   String categoryColorSlot(int number) {

@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "थीम के रंग",
   "categoryCustomColor": "कस्टम",
   "colorHexInvalid": "छह अंकों का हेक्स रंग कोड दर्ज करें।",
+  "colorPickerHue": "रंगत",
+  "colorPickerSaturation": "संतृप्ति",
+  "colorPickerValue": "चमक",
+  "colorPickerHex": "हेक्स रंग",
+  "colorPickerSpectrum": "रंग स्पेक्ट्रम",
+  "colorPickerSpectrumKeyboardHint": "संतृप्ति बदलने के लिए बाएँ और दाएँ तीर का, और चमक बदलने के लिए ऊपर और नीचे तीर का उपयोग करें।",
   "categoryColorSlot": "थीम का रंग {number}",
   "@categoryColorSlot": {
     "placeholders": {

@@ -2909,6 +2909,25 @@ class AppLocalizationsSv extends AppLocalizations {
   String get colorHexInvalid => 'Ange en sexsiffrig hexadecimal färgkod.';
 
   @override
+  String get colorPickerHue => 'Nyans';
+
+  @override
+  String get colorPickerSaturation => 'Mättnad';
+
+  @override
+  String get colorPickerValue => 'Ljusstyrka';
+
+  @override
+  String get colorPickerHex => 'Hexfärg';
+
+  @override
+  String get colorPickerSpectrum => 'Färgspektrum';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Använd vänster- och högerpilarna för att justera mättnaden och uppåt- och nedåtpilarna för att justera ljusstyrkan.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Temafärg $number';
   }

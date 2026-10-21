@@ -82,6 +82,9 @@ void main() {
     var valid = true;
     await t.pumpWidget(
       MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: StatefulBuilder(
             builder: (context, setState) => SkedTaskDialogScope(

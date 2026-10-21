@@ -2919,6 +2919,25 @@ class AppLocalizationsSl extends AppLocalizations {
   String get colorHexInvalid => 'Vnesite šestmestno šestnajstiško barvno kodo.';
 
   @override
+  String get colorPickerHue => 'Odtenek';
+
+  @override
+  String get colorPickerSaturation => 'Nasičenost';
+
+  @override
+  String get colorPickerValue => 'Svetlost';
+
+  @override
+  String get colorPickerHex => 'Šestnajstiška barva';
+
+  @override
+  String get colorPickerSpectrum => 'Barvni spekter';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'S puščicama levo in desno prilagodite nasičenost, s puščicama gor in dol pa svetlost.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Barva teme $number';
   }

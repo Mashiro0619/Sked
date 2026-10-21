@@ -2919,6 +2919,25 @@ class AppLocalizationsPl extends AppLocalizations {
   String get colorHexInvalid => 'Wpisz sześciocyfrowy szesnastkowy kod koloru.';
 
   @override
+  String get colorPickerHue => 'Odcień';
+
+  @override
+  String get colorPickerSaturation => 'Nasycenie';
+
+  @override
+  String get colorPickerValue => 'Jasność';
+
+  @override
+  String get colorPickerHex => 'Kolor szesnastkowy';
+
+  @override
+  String get colorPickerSpectrum => 'Widmo kolorów';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Użyj strzałek w lewo i w prawo, aby zmienić nasycenie, a w górę i w dół, aby zmienić jasność.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Kolor motywu $number';
   }

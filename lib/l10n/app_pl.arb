@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "Paleta motywu",
   "categoryCustomColor": "Niestandardowy",
   "colorHexInvalid": "Wpisz sześciocyfrowy szesnastkowy kod koloru.",
+  "colorPickerHue": "Odcień",
+  "colorPickerSaturation": "Nasycenie",
+  "colorPickerValue": "Jasność",
+  "colorPickerHex": "Kolor szesnastkowy",
+  "colorPickerSpectrum": "Widmo kolorów",
+  "colorPickerSpectrumKeyboardHint": "Użyj strzałek w lewo i w prawo, aby zmienić nasycenie, a w górę i w dół, aby zmienić jasność.",
   "categoryColorSlot": "Kolor motywu {number}",
   "@categoryColorSlot": {
     "placeholders": {

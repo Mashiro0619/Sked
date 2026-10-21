@@ -2879,6 +2879,25 @@ class AppLocalizationsTh extends AppLocalizations {
   String get colorHexInvalid => 'กรุณาระบุรหัสสีเลขฐานสิบหก 6 หลัก';
 
   @override
+  String get colorPickerHue => 'เฉดสี';
+
+  @override
+  String get colorPickerSaturation => 'ความอิ่มตัว';
+
+  @override
+  String get colorPickerValue => 'ความสว่าง';
+
+  @override
+  String get colorPickerHex => 'รหัสสีฐานสิบหก';
+
+  @override
+  String get colorPickerSpectrum => 'สเปกตรัมสี';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'ใช้ลูกศรซ้ายและขวาเพื่อปรับความอิ่มตัว และลูกศรขึ้นและลงเพื่อปรับความสว่าง';
+
+  @override
   String categoryColorSlot(int number) {
     return 'สีธีม $number';
   }

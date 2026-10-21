@@ -1967,6 +1967,12 @@
   "categoryThemePalette": "Παλέτα θέματος",
   "categoryCustomColor": "Προσαρμοσμένο",
   "colorHexInvalid": "Εισαγάγετε εξαψήφιο δεκαεξαδικό κωδικό χρώματος.",
+  "colorPickerHue": "Απόχρωση",
+  "colorPickerSaturation": "Κορεσμός",
+  "colorPickerValue": "Φωτεινότητα",
+  "colorPickerHex": "Δεκαεξαδικό χρώμα",
+  "colorPickerSpectrum": "Φάσμα χρωμάτων",
+  "colorPickerSpectrumKeyboardHint": "Χρησιμοποιήστε τα αριστερά και δεξιά βέλη για τον κορεσμό και τα πάνω και κάτω βέλη για τη φωτεινότητα.",
   "categoryColorSlot": "Χρώμα θέματος {number}",
   "@categoryColorSlot": {
     "placeholders": {

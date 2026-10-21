@@ -2939,6 +2939,25 @@ class AppLocalizationsDe extends AppLocalizations {
       'Geben Sie einen sechsstelligen Hex-Farbwert ein.';
 
   @override
+  String get colorPickerHue => 'Farbton';
+
+  @override
+  String get colorPickerSaturation => 'Sättigung';
+
+  @override
+  String get colorPickerValue => 'Helligkeit';
+
+  @override
+  String get colorPickerHex => 'Hex-Farbe';
+
+  @override
+  String get colorPickerSpectrum => 'Farbspektrum';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Mit Links und Rechts die Sättigung und mit Oben und Unten die Helligkeit anpassen.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Designfarbe $number';
   }

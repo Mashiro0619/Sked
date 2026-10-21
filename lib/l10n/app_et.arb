@@ -1967,6 +1967,12 @@
   "categoryThemePalette": "Teema värvipalett",
   "categoryCustomColor": "Kohandatud",
   "colorHexInvalid": "Sisesta kuuekohaline kuueteistkümnendsüsteemis värvikood.",
+  "colorPickerHue": "Värvitoon",
+  "colorPickerSaturation": "Küllastus",
+  "colorPickerValue": "Heledus",
+  "colorPickerHex": "Kuueteistkümnendvärv",
+  "colorPickerSpectrum": "Värvispekter",
+  "colorPickerSpectrumKeyboardHint": "Küllastuse muutmiseks kasuta vasakut ja paremat noolt, heleduse muutmiseks üles- ja allanoolt.",
   "categoryColorSlot": "Teema värv {number}",
   "@categoryColorSlot": {
     "placeholders": {

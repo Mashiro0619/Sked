@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "Téma színpalettája",
   "categoryCustomColor": "Egyéni",
   "colorHexInvalid": "Adjon meg hatjegyű hexadecimális színkódot.",
+  "colorPickerHue": "Árnyalat",
+  "colorPickerSaturation": "Telítettség",
+  "colorPickerValue": "Fényerő",
+  "colorPickerHex": "Hexadecimális szín",
+  "colorPickerSpectrum": "Színspektrum",
+  "colorPickerSpectrumKeyboardHint": "A bal és jobb nyíllal a telítettséget, a fel és le nyíllal a fényerőt állíthatja.",
   "categoryColorSlot": "Téma színe: {number}",
   "@categoryColorSlot": {
     "placeholders": {

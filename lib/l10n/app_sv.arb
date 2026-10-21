@@ -2005,6 +2005,12 @@
   "categoryThemePalette": "Temafärger",
   "categoryCustomColor": "Anpassad",
   "colorHexInvalid": "Ange en sexsiffrig hexadecimal färgkod.",
+  "colorPickerHue": "Nyans",
+  "colorPickerSaturation": "Mättnad",
+  "colorPickerValue": "Ljusstyrka",
+  "colorPickerHex": "Hexfärg",
+  "colorPickerSpectrum": "Färgspektrum",
+  "colorPickerSpectrumKeyboardHint": "Använd vänster- och högerpilarna för att justera mättnaden och uppåt- och nedåtpilarna för att justera ljusstyrkan.",
   "categoryColorSlot": "Temafärg {number}",
   "@categoryColorSlot": {
     "placeholders": {

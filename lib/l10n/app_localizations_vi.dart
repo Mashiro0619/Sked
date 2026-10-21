@@ -2902,6 +2902,25 @@ class AppLocalizationsVi extends AppLocalizations {
   String get colorHexInvalid => 'Nhập mã màu thập lục phân gồm sáu ký tự.';
 
   @override
+  String get colorPickerHue => 'Sắc độ';
+
+  @override
+  String get colorPickerSaturation => 'Độ bão hòa';
+
+  @override
+  String get colorPickerValue => 'Độ sáng';
+
+  @override
+  String get colorPickerHex => 'Màu thập lục phân';
+
+  @override
+  String get colorPickerSpectrum => 'Phổ màu';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Dùng phím mũi tên trái và phải để điều chỉnh độ bão hòa, và lên và xuống để điều chỉnh độ sáng.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Màu giao diện $number';
   }

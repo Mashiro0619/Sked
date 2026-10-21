@@ -1988,6 +1988,12 @@
   "categoryThemePalette": "Designpalette",
   "categoryCustomColor": "Benutzerdefiniert",
   "colorHexInvalid": "Geben Sie einen sechsstelligen Hex-Farbwert ein.",
+  "colorPickerHue": "Farbton",
+  "colorPickerSaturation": "Sättigung",
+  "colorPickerValue": "Helligkeit",
+  "colorPickerHex": "Hex-Farbe",
+  "colorPickerSpectrum": "Farbspektrum",
+  "colorPickerSpectrumKeyboardHint": "Mit Links und Rechts die Sättigung und mit Oben und Unten die Helligkeit anpassen.",
   "categoryColorSlot": "Designfarbe {number}",
   "@categoryColorSlot": {
     "placeholders": {

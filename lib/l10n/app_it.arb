@@ -1990,6 +1990,12 @@
   "categoryThemePalette": "Tavolozza del tema",
   "categoryCustomColor": "Personalizzato",
   "colorHexInvalid": "Inserisci un colore esadecimale di sei cifre.",
+  "colorPickerHue": "Tonalità",
+  "colorPickerSaturation": "Saturazione",
+  "colorPickerValue": "Luminosità",
+  "colorPickerHex": "Colore esadecimale",
+  "colorPickerSpectrum": "Spettro dei colori",
+  "colorPickerSpectrumKeyboardHint": "Usa le frecce sinistra e destra per regolare la saturazione, e su e giù per regolare la luminosità.",
   "categoryColorSlot": "Colore del tema {number}",
   "@categoryColorSlot": {
     "placeholders": {

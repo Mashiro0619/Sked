@@ -2913,6 +2913,25 @@ class AppLocalizationsFi extends AppLocalizations {
   String get colorHexInvalid => 'Anna kuusimerkkinen heksadesimaalivärikoodi.';
 
   @override
+  String get colorPickerHue => 'Sävy';
+
+  @override
+  String get colorPickerSaturation => 'Kylläisyys';
+
+  @override
+  String get colorPickerValue => 'Kirkkaus';
+
+  @override
+  String get colorPickerHex => 'Heksadesimaaliväri';
+
+  @override
+  String get colorPickerSpectrum => 'Värispektri';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Säädä kylläisyyttä vasemmalla ja oikealla nuolella sekä kirkkautta ylä- ja alanuolella.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Teeman väri $number';
   }

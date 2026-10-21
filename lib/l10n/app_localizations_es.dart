@@ -2945,6 +2945,25 @@ class AppLocalizationsEs extends AppLocalizations {
       'Introduce un color hexadecimal de seis dígitos.';
 
   @override
+  String get colorPickerHue => 'Tono';
+
+  @override
+  String get colorPickerSaturation => 'Saturación';
+
+  @override
+  String get colorPickerValue => 'Brillo';
+
+  @override
+  String get colorPickerHex => 'Color hexadecimal';
+
+  @override
+  String get colorPickerSpectrum => 'Espectro de colores';
+
+  @override
+  String get colorPickerSpectrumKeyboardHint =>
+      'Usa las flechas izquierda y derecha para ajustar la saturación, y arriba y abajo para ajustar el brillo.';
+
+  @override
   String categoryColorSlot(int number) {
     return 'Color del tema $number';
   }
