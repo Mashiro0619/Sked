@@ -38,6 +38,14 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
     final studentCommands = context.read<StudentCommands>();
     final appScope = AppScope.capture(context)!;
     final l = AppLocalizations.of(context);
+    final usageCounts = <String, int>{};
+    for (final timetable in studentView.timetables) {
+      usageCounts.update(
+        timetable.config.periodTimeSetId,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+    }
     Future<void> createSet() async {
       String? createdId;
       final saved = await runUiCommand(
@@ -71,7 +79,7 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
             title: set.name,
             subtitle: l.periodTimeSetUsageSummary(
               set.periodTimes.length,
-              studentView.timetablesUsingPeriodTimeSet(set.id).length,
+              usageCounts[set.id] ?? 0,
             ),
             tileBuilder: (selected, openDetail) => ExpressiveDialogOption(
               key: ValueKey('period-time-set-${set.id}'),
@@ -80,7 +88,7 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
               subtitle: Text(
                 l.periodTimeSetUsageSummary(
                   set.periodTimes.length,
-                  studentView.timetablesUsingPeriodTimeSet(set.id).length,
+                  usageCounts[set.id] ?? 0,
                 ),
               ),
               trailing: const Icon(Icons.chevron_right),

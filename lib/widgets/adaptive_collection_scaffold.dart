@@ -59,6 +59,9 @@ class _AdaptiveCollectionScaffoldState
   final _pageExitGuards = <ModalRoute<dynamic>, Future<bool> Function()>{};
   final _contentRevision = ValueNotifier(0);
   final _homeKey = GlobalKey();
+  final _listKey = GlobalKey(debugLabel: 'period-time-set-list');
+  final _listController = ScrollController();
+  late Map<String, int> _itemIndices;
   String? _selected;
   Route<void>? _selectedRoute;
   bool _changing = false;
@@ -69,6 +72,7 @@ class _AdaptiveCollectionScaffoldState
   @override
   void didUpdateWidget(covariant AdaptiveCollectionScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _indexItems();
     _contentRevision.value++;
     _requestInitialSelection();
     final selected = _selected;
@@ -84,7 +88,15 @@ class _AdaptiveCollectionScaffoldState
   @override
   void initState() {
     super.initState();
+    _indexItems();
     _requestInitialSelection();
+  }
+
+  void _indexItems() {
+    _itemIndices = {
+      for (var index = 0; index < widget.items.length; index++)
+        widget.items[index].id: index,
+    };
   }
 
   void _requestInitialSelection() {
@@ -100,10 +112,11 @@ class _AdaptiveCollectionScaffoldState
   void dispose() {
     _pageExitGuards.clear();
     _contentRevision.dispose();
+    _listController.dispose();
     super.dispose();
   }
 
-  bool _contains(String id) => widget.items.any((item) => item.id == id);
+  bool _contains(String id) => _itemIndices.containsKey(id);
 
   VoidCallback _registerPageExitGuard(
     ModalRoute<dynamic> route,
@@ -194,27 +207,34 @@ class _AdaptiveCollectionScaffoldState
     }
   }
 
-  Widget _list() => ListView(
+  Widget _list() => ListView.builder(
+    key: _listKey,
+    controller: _listController,
     padding: const EdgeInsets.all(12),
-    children: [
-      for (final item in widget.items)
-        if (item.tileBuilder != null)
-          item.tileBuilder!(
-            item.id == _selected,
-            () => unawaited(_select(item.id)),
-          )
-        else
-          ListTile(
-            selected: item.id == _selected,
-            title: Text(item.title),
-            subtitle: item.subtitle == null ? null : Text(item.subtitle!),
-            trailing: item.trailing ?? const Icon(Icons.chevron_right),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            onTap: () => unawaited(_select(item.id)),
-          ),
-    ],
+    itemCount: widget.items.length,
+    findChildIndexCallback: (key) =>
+        key is ValueKey<String> ? _itemIndices[key.value] : null,
+    itemBuilder: (context, index) {
+      final item = widget.items[index];
+      return KeyedSubtree(
+        key: ValueKey(item.id),
+        child: item.tileBuilder != null
+            ? item.tileBuilder!(
+                item.id == _selected,
+                () => unawaited(_select(item.id)),
+              )
+            : ListTile(
+                selected: item.id == _selected,
+                title: Text(item.title),
+                subtitle: item.subtitle == null ? null : Text(item.subtitle!),
+                trailing: item.trailing ?? const Icon(Icons.chevron_right),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onTap: () => unawaited(_select(item.id)),
+              ),
+      );
+    },
   );
   @override
   Widget build(BuildContext context) => DesktopResizableRegion(
@@ -278,10 +298,9 @@ class _AdaptiveCollectionScaffoldState
                     children: [
                       SizedBox(
                         width: wide ? listWidth : 0,
-                        child: Offstage(
-                          offstage: !wide,
-                          child: ExcludeFocus(excluding: !wide, child: _list()),
-                        ),
+                        // Reparent the same list into the compact home route.
+                        // There is no second hidden list to build or lay out.
+                        child: wide ? _list() : const SizedBox.shrink(),
                       ),
                       SizedBox(
                         width: wide ? 1 : 0,
