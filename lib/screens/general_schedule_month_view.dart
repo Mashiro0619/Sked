@@ -1446,91 +1446,54 @@ class _MonthDayCell extends StatelessWidget {
         ),
       ),
     );
-    final compactButtonBackground = isSelected
-        ? colorScheme.primary.withValues(alpha: 0.12)
-        : Colors.transparent;
-    final compactDateContent = Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: double.infinity,
-            height: compactButtonHeight,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: compactButtonSize,
-                  height: compactButtonHeight,
-                  child: Material(
-                    key: isSelected
-                        ? _generalMonthCompactSelectedDayFeedbackKey
-                        : null,
-                    color: compactButtonBackground,
-                    shape: RoundedSuperellipseBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-                // The decorative selection must not constrain or ellipsize a date.
-                // Use the entire cell for glyphs; large lunar labels may wrap.
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          date.day.toString(),
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.visible,
-                          textAlign: TextAlign.center,
-                          style: compactDateStyle,
-                        ),
-                        if (showLunarCalendar) const SizedBox(height: 1),
-                        if (showLunarCalendar) compactLunarWidget,
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 2),
-          compactEventMarker,
-        ],
-      ),
-    );
-    final semanticsLabel = occurrences.isNotEmpty
-        ? AppLocalizations.of(context)
-              .monthDayEvents(date.day, occurrences.length)
-        : '${date.day}';
+    final l10n = AppLocalizations.of(context);
+    final semanticsLabel = [
+      MaterialLocalizations.of(context).formatFullDate(date),
+      if (isToday) l10n.today,
+      if (occurrences.isNotEmpty)
+        l10n.generalScheduleEventCount(occurrences.length),
+    ].join(', ');
 
     if (compact) {
-      return Semantics(
-        button: true,
+      return _MonthDaySemantics(
         selected: isSelected,
         label: semanticsLabel,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.all(2),
-              child: compactDateContent,
+        onTap: onTap,
+        builder: (focusNode) => _CompactMonthDaySurface(
+          focusNode: focusNode,
+          date: date,
+          isSelected: isSelected,
+          isToday: isToday,
+          markerSize: Size(compactButtonSize, compactButtonHeight),
+          onTap: onTap,
+          eventMarker: compactEventMarker,
+          dateContent: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  date.day.toString(),
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
+                  textAlign: TextAlign.center,
+                  style: compactDateStyle,
+                ),
+                if (showLunarCalendar) const SizedBox(height: 1),
+                if (showLunarCalendar) compactLunarWidget,
+              ],
             ),
           ),
         ),
       );
     }
 
-    return Semantics(
-      button: true,
+    return _MonthDaySemantics(
       selected: isSelected,
       label: semanticsLabel,
-      child: Material(
+      onTap: onTap,
+      builder: (focusNode) => Material(
         color: standardBackgroundColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
@@ -1541,6 +1504,7 @@ class _MonthDayCell extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
+          focusNode: focusNode,
           borderRadius: BorderRadius.circular(6),
           onTap: onTap,
           child: Padding(
@@ -1551,6 +1515,178 @@ class _MonthDayCell extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Keeps the complete date and the live keyboard focus on one semantic node.
+class _MonthDaySemantics extends StatefulWidget {
+  const _MonthDaySemantics({
+    required this.selected,
+    required this.label,
+    required this.onTap,
+    required this.builder,
+  });
+
+  final bool selected;
+  final String label;
+  final VoidCallback onTap;
+  final Widget Function(FocusNode focusNode) builder;
+
+  @override
+  State<_MonthDaySemantics> createState() => _MonthDaySemanticsState();
+}
+
+class _MonthDaySemanticsState extends State<_MonthDaySemantics> {
+  final _focusNode = FocusNode(debugLabel: 'Month day');
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _focusNode,
+    builder: (context, _) => Semantics(
+      button: true,
+      selected: widget.selected,
+      label: widget.label,
+      onTap: widget.onTap,
+      focusable: _focusNode.canRequestFocus,
+      focused: _focusNode.canRequestFocus ? _focusNode.hasFocus : null,
+      onFocus: _focusNode.canRequestFocus ? _focusNode.requestFocus : null,
+      excludeSemantics: true,
+      child: widget.builder(_focusNode),
+    ),
+  );
+}
+
+/// The whole cell receives input; only the date marker paints interaction state.
+class _CompactMonthDaySurface extends StatefulWidget {
+  const _CompactMonthDaySurface({
+    required this.focusNode,
+    required this.date,
+    required this.isSelected,
+    required this.isToday,
+    required this.markerSize,
+    required this.onTap,
+    required this.dateContent,
+    required this.eventMarker,
+  });
+
+  final FocusNode focusNode;
+  final DateTime date;
+  final bool isSelected, isToday;
+  final Size markerSize;
+  final VoidCallback onTap;
+  final Widget dateContent, eventMarker;
+
+  @override
+  State<_CompactMonthDaySurface> createState() =>
+      _CompactMonthDaySurfaceState();
+}
+
+class _CompactMonthDaySurfaceState extends State<_CompactMonthDaySurface> {
+  final _states = WidgetStatesController();
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_highlightModeChanged);
+  }
+
+  void _highlightModeChanged(FocusHighlightMode mode) {
+    if (_states.value.contains(WidgetState.focused)) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_highlightModeChanged);
+    _states.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      focusNode: widget.focusNode,
+      statesController: _states,
+      onTap: widget.onTap,
+      borderRadius: BorderRadius.circular(14),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      splashFactory: NoSplash.splashFactory,
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: widget.markerSize.height,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox.fromSize(
+                      key: ValueKey(
+                        'general-month-day-feedback-${widget.date.year}-${widget.date.month}-${widget.date.day}',
+                      ),
+                      size: widget.markerSize,
+                      child: ValueListenableBuilder<Set<WidgetState>>(
+                        valueListenable: _states,
+                        builder: (context, states, _) {
+                          final colors = Theme.of(context).colorScheme;
+                          final pressed = states.contains(WidgetState.pressed);
+                          final hovered = states.contains(WidgetState.hovered);
+                          final focused =
+                              states.contains(WidgetState.focused) &&
+                              FocusManager.instance.highlightMode ==
+                                  FocusHighlightMode.traditional;
+                          final alpha = pressed
+                              ? (widget.isSelected ? .20 : .08)
+                              : widget.isSelected
+                              ? .12
+                              : hovered
+                              ? .05
+                              : .0;
+                          return Material(
+                            key: widget.isSelected
+                                ? _generalMonthCompactSelectedDayFeedbackKey
+                                : null,
+                            color: colors.primary.withValues(alpha: alpha),
+                            animationDuration: Duration.zero,
+                            shape: RoundedSuperellipseBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: focused
+                                  ? BorderSide(
+                                      color: skedReadableAccent(colors),
+                                      width: 2,
+                                    )
+                                  : widget.isToday
+                                  ? BorderSide(
+                                      color: skedReadableAccent(colors),
+                                      width: 1,
+                                    )
+                                  : BorderSide.none,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    // The marker must not constrain or ellipsize date/lunar text.
+                    Positioned.fill(child: widget.dateContent),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 2),
+              widget.eventMarker,
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _MonthAgendaHeader extends StatelessWidget {
