@@ -15,6 +15,7 @@ import '../theme/sked_expressive_theme.dart';
 import '../theme/sked_surface.dart';
 import 'sked_panel_header.dart';
 import 'sked_picker_task.dart';
+import 'sked_picker_marker_target.dart';
 import 'workbench_chrome_metrics.dart';
 
 /// A bounded semester-week navigation task, never a persisted preference.
@@ -581,10 +582,9 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
     final keyboardFocus =
         focused &&
         FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return SkedPickerMarkerTarget(
       onTap: () => _select(week),
-      child: LayoutBuilder(
+      builder: (context, stateOpacity) => LayoutBuilder(
         builder: (context, constraints) {
           final label = TextPainter(
             text: TextSpan(
@@ -617,7 +617,14 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                     borderRadius: circular
                         ? null
                         : BorderRadius.circular(markerHeight / 2),
-                    color: selected ? colors.primary : null,
+                    color: stateOpacity > 0
+                        ? Color.alphaBlend(
+                            accent.withValues(alpha: stateOpacity),
+                            selected ? colors.primary : Colors.transparent,
+                          )
+                        : selected
+                        ? colors.primary
+                        : null,
                     border: keyboardFocus
                         ? Border.all(color: accent, width: 2)
                         : null,

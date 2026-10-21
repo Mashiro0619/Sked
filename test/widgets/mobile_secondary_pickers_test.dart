@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -46,6 +49,7 @@ Future<(AppRuntime, _Storage)> home(
   AppMode mode = AppMode.general,
   int weeks = 19,
   double scale = 1,
+  String? fontFamily,
 }) async {
   final base = mobileLayoutData();
   final storage = _Storage(
@@ -68,6 +72,7 @@ Future<(AppRuntime, _Storage)> home(
       locale: const Locale('zh'),
       textScale: scale,
       brightness: scale == 1.3 ? Brightness.dark : Brightness.light,
+      fontFamily: fontFamily,
     ),
   );
   await t.pumpAndSettle();
@@ -106,6 +111,93 @@ Future<void> pickDate(WidgetTester t, {bool end = false}) async {
 
 BoxDecoration marker(WidgetTester t, String value) =>
     t.widget<DecoratedBox>(key(value)).decoration as BoxDecoration;
+
+Future<void> expectMarkerOnlyFeedback(
+  WidgetTester t,
+  Finder target,
+  String markerKey,
+) async {
+  final inkFinder = find.descendant(of: target, matching: find.byType(InkWell));
+  expect(inkFinder, findsOneWidget);
+  final ink = t.widget<InkWell>(inkFinder);
+  expect(ink.splashFactory, NoSplash.splashFactory);
+  expect(ink.canRequestFocus, isFalse);
+  expect(ink.excludeFromSemantics, isTrue);
+  for (final states in [
+    <WidgetState>{},
+    for (final state in WidgetState.values) {state},
+  ]) {
+    expect(ink.overlayColor!.resolve(states), Colors.transparent);
+  }
+  expect(
+    t
+        .widget<Material>(
+          find.ancestor(of: inkFinder, matching: find.byType(Material)).first,
+        )
+        .color,
+    Colors.transparent,
+  );
+  final semantics = t.ensureSemantics();
+  try {
+    await t.pump();
+    final node = t.getSemantics(target);
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    expect(
+      node.debugListChildrenInOrder(DebugSemanticsDumpOrder.traversalOrder),
+      isEmpty,
+      reason: 'The containing picker cell owns the only interactive node',
+    );
+    final before = marker(t, markerKey);
+    final focusBefore = FocusManager.instance.primaryFocus;
+    final press = await t.startGesture(
+      t.getRect(target).bottomLeft + const Offset(1, -1),
+      kind: PointerDeviceKind.touch,
+    );
+    try {
+      await t.pump(const Duration(milliseconds: 150));
+      expect(ink.statesController!.value, contains(WidgetState.pressed));
+      expect(marker(t, markerKey).color, isNot(before.color));
+      expect(marker(t, markerKey).border, isNull);
+      expect(FocusManager.instance.primaryFocus, same(focusBefore));
+    } finally {
+      await press.cancel();
+      await t.pumpAndSettle();
+    }
+    expect(ink.statesController!.value, isNot(contains(WidgetState.pressed)));
+    expect(marker(t, markerKey), before);
+    expect(FocusManager.instance.primaryFocus, same(focusBefore));
+  } finally {
+    semantics.dispose();
+  }
+}
+
+void expectDateContentInset(WidgetTester t, {bool calendar = true}) {
+  final surface = t.getRect(key('sked-date-picker-surface'));
+  final inset = surface.width < 336 ? 8.0 : 12.0;
+  final safe = surface.deflate(inset);
+  for (final value in [
+    if (calendar) ...['sked-date-compact-header', 'sked-date-grid-focus'],
+    if (!calendar) 'sked-date-input',
+    'sked-date-input-toggle',
+    'sked-date-today',
+    'sked-date-cancel',
+    'sked-date-confirm',
+  ]) {
+    final rect = t.getRect(key(value));
+    expect(rect.left, greaterThanOrEqualTo(safe.left - .01), reason: value);
+    expect(rect.right, lessThanOrEqualTo(safe.right + .01), reason: value);
+  }
+  if (calendar) {
+    final header = t.getRect(key('sked-date-compact-header'));
+    expect(header.top, closeTo(safe.top, .01));
+    expect(header.left, closeTo(safe.left, .01));
+    expect(header.right, closeTo(safe.right, .01));
+  }
+  expect(
+    t.getRect(key('sked-date-confirm')).bottom,
+    lessThanOrEqualTo(safe.bottom + .01),
+  );
+}
 
 void main() {
   for (final width in [320.0, 360.0, 393.0, 412.0]) {
@@ -153,10 +245,13 @@ void main() {
           expect(selectedNumber.bottom, lessThan(selectedMarker.bottom - 2));
           expect(marker(t, 'student-week-touch-marker-2').border, isNull);
           expect(t.getSize(week(2)).height, greaterThanOrEqualTo(48));
-          expect(
-            find.descendant(of: week(2), matching: find.byType(InkWell)),
-            findsNothing,
+          await expectMarkerOnlyFeedback(
+            t,
+            week(2),
+            'student-week-touch-marker-2',
           );
+          expect(p.studentView.selectedWeek, 2);
+          expect(storage.writes, before);
           if (scale == 1) expect(surface.height, lessThanOrEqualTo(288));
           await tap(t, key('sked-week-picker-close'));
           expect(storage.writes, before);
@@ -193,6 +288,12 @@ void main() {
           );
           expect(t.getSize(day(22)).height, greaterThanOrEqualTo(48));
           expect(marker(t, 'sked-date-touch-marker-2026-09-21').border, isNull);
+          await expectMarkerOnlyFeedback(
+            t,
+            day(22),
+            'sked-date-touch-marker-2026-09-22',
+          );
+          expectDateContentInset(t);
           expect(
             t.getRect(key('sked-date-picker-surface')).height,
             lessThan(scale == 1 ? 410 : 660),
@@ -217,6 +318,60 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'phone single date keeps full two-digit labels inside its padded grid at 2x',
+    (t) async {
+      size(t, const Size(320, 850));
+      const family = 'SkedMobileDateGeometry';
+      await t.runAsync(() async {
+        final flutterRoot = Platform.environment['FLUTTER_ROOT'];
+        if (flutterRoot == null) {
+          fail('FLUTTER_ROOT is required for test fonts.');
+        }
+        final fonts = Directory(
+          '$flutterRoot/bin/cache/artifacts/material_fonts',
+        );
+        final loader = FontLoader(family);
+        for (final weight in ['regular', 'medium', 'bold']) {
+          loader.addFont(
+            File.fromUri(fonts.uri.resolve('roboto-$weight.ttf'))
+                .readAsBytes()
+                .then((bytes) => ByteData.sublistView(bytes)),
+          );
+        }
+        await loader.load();
+      });
+      final (_, storage) = await home(t, scale: 2, fontFamily: family);
+      await editEvent(t);
+      await pickDate(t);
+      final writes = storage.writes;
+      expectDateContentInset(t);
+      for (final value in [21, 22, 30]) {
+        final label = find.descendant(
+          of: day(value),
+          matching: find.text('$value'),
+        );
+        final paragraph = t.renderObject<RenderParagraph>(label);
+        expect(paragraph.didExceedMaxLines, isFalse, reason: '$value');
+        expect(
+          paragraph.size.width,
+          lessThanOrEqualTo(t.getSize(day(value)).width),
+        );
+      }
+      await tap(t, key('sked-date-previous'));
+      expect(key('sked-date-2026-08-31'), findsOneWidget);
+      expectDateContentInset(t);
+      await tap(t, key('sked-date-month-year'));
+      expectDateContentInset(t);
+      await tap(t, key('sked-date-month-year'));
+      expectDateContentInset(t);
+      await tap(t, key('sked-date-cancel'));
+      expect(storage.writes, writes);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   testWidgets(
     'phone single date selection is draft-only, cancels cleanly and cannot create a range',
@@ -276,21 +431,39 @@ void main() {
     'phone single date keeps direct input, IME actions and owner session',
     (t) async {
       size(t, const Size(320, 850));
-      final (p, storage) = await home(t, scale: 1.3);
+      final (p, storage) = await home(t, scale: 2);
       await editEvent(t);
       await pickDate(t);
       final state = t.state(find.byType(SkedDatePicker));
       final before = storage.writes;
       await tap(t, key('sked-date-input-toggle'));
       await t.enterText(key('sked-date-input'), 'not a date');
+      t.view.physicalSize = const Size(320, 568);
       t.view.viewInsets = const FakeViewPadding(bottom: 300);
       t.view.padding = const FakeViewPadding(top: 24);
       await t.pumpAndSettle();
       await tap(t, key('sked-date-confirm'));
       expect(t.state(find.byType(SkedDatePicker)), same(state));
       expect(storage.writes, before);
+      expectDateContentInset(t, calendar: false);
+      expect(
+        t.getRect(key('sked-date-picker-surface')).bottom,
+        lessThanOrEqualTo(260),
+      );
+      t.view.physicalSize = const Size(850, 320);
+      t.view.viewInsets = const FakeViewPadding(bottom: 170);
+      await t.pumpAndSettle();
+      expect(t.state(find.byType(SkedDatePicker)), same(state));
+      expect(
+        t.widget<TextField>(key('sked-date-input')).controller!.text,
+        'not a date',
+      );
+      await tap(t, key('sked-date-confirm'));
+      expect(storage.writes, before);
+      expectDateContentInset(t, calendar: false);
       await tap(t, key('sked-date-cancel'));
       expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+      t.view.physicalSize = const Size(320, 850);
       t.view.viewInsets = const FakeViewPadding();
       await t.pumpAndSettle();
       await pickDate(t);

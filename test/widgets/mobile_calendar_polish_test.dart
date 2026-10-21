@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -86,6 +87,67 @@ Future<TestGesture> drag(WidgetTester t, int start, int end) async {
   await g.moveTo(t.getCenter(day(end)));
   await t.pump();
   return g;
+}
+
+Future<void> expectMarkerOnlyFeedback(
+  WidgetTester t,
+  Finder target,
+  String markerKey,
+) async {
+  final inkFinder = find.descendant(of: target, matching: find.byType(InkWell));
+  expect(inkFinder, findsOneWidget);
+  final ink = t.widget<InkWell>(inkFinder);
+  expect(ink.splashFactory, NoSplash.splashFactory);
+  expect(ink.canRequestFocus, isFalse);
+  expect(ink.excludeFromSemantics, isTrue);
+  for (final states in [
+    <WidgetState>{},
+    for (final state in WidgetState.values) {state},
+  ]) {
+    expect(ink.overlayColor!.resolve(states), Colors.transparent);
+  }
+  expect(
+    t
+        .widget<Material>(
+          find.ancestor(of: inkFinder, matching: find.byType(Material)).first,
+        )
+        .color,
+    Colors.transparent,
+  );
+  final semantics = t.ensureSemantics();
+  try {
+    await t.pump();
+    final node = t.getSemantics(target);
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    expect(
+      node.debugListChildrenInOrder(DebugSemanticsDumpOrder.traversalOrder),
+      isEmpty,
+      reason: 'The containing date owns the only interactive semantics node',
+    );
+    BoxDecoration decoration() =>
+        t.widget<DecoratedBox>(key(markerKey)).decoration as BoxDecoration;
+    final before = decoration();
+    final focusBefore = FocusManager.instance.primaryFocus;
+    final press = await t.startGesture(
+      t.getRect(target).bottomLeft + const Offset(1, -1),
+      kind: PointerDeviceKind.touch,
+    );
+    try {
+      await t.pump(const Duration(milliseconds: 150));
+      expect(ink.statesController!.value, contains(WidgetState.pressed));
+      expect(decoration().color, isNot(before.color));
+      expect(decoration().border, isNull);
+      expect(FocusManager.instance.primaryFocus, same(focusBefore));
+    } finally {
+      await press.cancel();
+      await t.pumpAndSettle();
+    }
+    expect(ink.statesController!.value, isNot(contains(WidgetState.pressed)));
+    expect(decoration(), before);
+    expect(FocusManager.instance.primaryFocus, same(focusBefore));
+  } finally {
+    semantics.dispose();
+  }
 }
 
 void main() {
@@ -453,10 +515,15 @@ void main() {
       expect(marker.borderRadius, BorderRadius.circular(8));
       expect(marker.border, isNull);
       expect(marker.color, Theme.of(t.element(day(22))).colorScheme.primary);
-      expect(
-        find.descendant(of: day(22), matching: find.byType(InkWell)),
-        findsNothing,
+      final chooseEnd = stepHint();
+      final beforeRange = p.generalView.customDateRange;
+      await expectMarkerOnlyFeedback(
+        t,
+        day(22),
+        'sked-date-touch-marker-2026-09-22',
       );
+      expect(stepHint(), chooseEnd);
+      expect(p.generalView.customDateRange, beforeRange);
       await t.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await t.pumpAndSettle();
       await t.sendKeyEvent(LogicalKeyboardKey.enter);

@@ -23,6 +23,7 @@ import 'workbench_chrome_metrics.dart';
 import 'sked_panel_header.dart';
 import 'sked_picker_task.dart';
 import 'sked_picker_actions.dart';
+import 'sked_picker_marker_target.dart';
 
 export '../utils/date_selection.dart' show DateSelectionUnit;
 export 'sked_date_range_controller.dart';
@@ -1319,10 +1320,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                 : double.infinity,
           ),
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: constraints.maxWidth < 336 ? 0 : 12,
-              vertical: 8,
-            ),
+            padding: EdgeInsets.all(constraints.maxWidth < 336 ? 8 : 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1713,7 +1711,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
 
   /// Day, week and custom ranges share centered, rounded-square date markers.
   /// Bands stay inside each row so full weeks retain whitespace between rows.
-  /// Compact touch avoids persistent Material ink after a cancelled range pan.
+  /// Compact touch paints interaction state only inside these date markers.
   Widget _roundedDayCell(
     BuildContext context, {
     required DateTime day,
@@ -1755,141 +1753,152 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
             _choose(day);
           }
         : null;
-    return SizedBox(
-      height: height,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final markerSize = _calendarDayMarkerSize(
-            Size(constraints.maxWidth, height),
-            compact: compact,
-          );
-          final rowRadius = Radius.circular(compact ? markerSize / 2 : 5);
-          final content = Stack(
-            alignment: Alignment.center,
-            children: [
-              // Center the number itself, not a number-and-indicator group.
-              // Today is positioned independently and must not shift the label.
-              Text(
-                '${day.day}',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                softWrap: false,
-                style:
-                    (compact
-                            ? theme.textTheme.titleMedium?.copyWith(
-                                fontSize: 18,
-                              )
-                            : theme.textTheme.labelMedium)
-                        ?.copyWith(
-                          height: 1.2,
-                          color: endpoint
-                              ? colors.onPrimary
-                              : !allowed
-                              ? colors.onSurface.withValues(alpha: 0.38)
-                              : day.month == _month.month
-                              ? colors.onSurface
-                              : colors.onSurfaceVariant.withValues(
-                                  alpha: compact ? 0.65 : 1,
-                                ),
-                          fontWeight: endpoint
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                        ),
-              ),
-              if (today)
-                Positioned(
-                  bottom: (height - markerSize) / 2 + (compact ? 3 : 1),
-                  child: Container(
-                    key: const ValueKey('sked-date-today-marker'),
-                    width: compact ? 4 : 3,
-                    height: compact ? 4 : 3,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: endpoint ? colors.onPrimary : focusAccent,
-                    ),
-                  ),
-                ),
-            ],
-          );
-          return Stack(
-            fit: StackFit.expand,
-            alignment: Alignment.center,
-            children: [
-              if (hasRangeBand)
-                PositionedDirectional(
-                  // Only the inner half of an endpoint joins the range. A
-                  // single date has no band, and RTL mirrors these joins.
-                  start: isStart ? constraints.maxWidth / 2 : 0,
-                  end: isEnd ? constraints.maxWidth / 2 : 0,
-                  height: markerSize,
-                  top: (height - markerSize) / 2,
-                  child: DecoratedBox(
-                    key: ValueKey('sked-date-range-band-${_key(day)}'),
-                    decoration: BoxDecoration(
-                      color: rangeColor,
-                      borderRadius: BorderRadiusDirectional.horizontal(
-                        start: col == 0 && !isStart ? rowRadius : Radius.zero,
-                        end: col == 6 && !isEnd ? rowRadius : Radius.zero,
+    Widget buildCell(
+      BuildContext context,
+      double stateOpacity,
+    ) => LayoutBuilder(
+      builder: (context, constraints) {
+        final markerSize = _calendarDayMarkerSize(
+          Size(constraints.maxWidth, height),
+          compact: compact,
+        );
+        final rowRadius = Radius.circular(compact ? markerSize / 2 : 5);
+        final content = Stack(
+          alignment: Alignment.center,
+          children: [
+            // Center the number itself, not a number-and-indicator group.
+            // Today is positioned independently and must not shift the label.
+            Text(
+              '${day.day}',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
+              style:
+                  (compact
+                          ? theme.textTheme.titleMedium?.copyWith(fontSize: 18)
+                          : theme.textTheme.labelMedium)
+                      ?.copyWith(
+                        height: 1.2,
+                        color: endpoint
+                            ? colors.onPrimary
+                            : !allowed
+                            ? colors.onSurface.withValues(alpha: 0.38)
+                            : day.month == _month.month
+                            ? colors.onSurface
+                            : colors.onSurfaceVariant.withValues(
+                                alpha: compact ? 0.65 : 1,
+                              ),
+                        fontWeight: endpoint
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                       ),
+            ),
+            if (today)
+              Positioned(
+                bottom: (height - markerSize) / 2 + (compact ? 3 : 1),
+                child: Container(
+                  key: const ValueKey('sked-date-today-marker'),
+                  width: compact ? 4 : 3,
+                  height: compact ? 4 : 3,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: endpoint ? colors.onPrimary : focusAccent,
+                  ),
+                ),
+              ),
+          ],
+        );
+        return Stack(
+          fit: StackFit.expand,
+          alignment: Alignment.center,
+          children: [
+            if (hasRangeBand)
+              PositionedDirectional(
+                // Only the inner half of an endpoint joins the range. A
+                // single date has no band, and RTL mirrors these joins.
+                start: isStart ? constraints.maxWidth / 2 : 0,
+                end: isEnd ? constraints.maxWidth / 2 : 0,
+                height: markerSize,
+                top: (height - markerSize) / 2,
+                child: DecoratedBox(
+                  key: ValueKey('sked-date-range-band-${_key(day)}'),
+                  decoration: BoxDecoration(
+                    color: rangeColor,
+                    borderRadius: BorderRadiusDirectional.horizontal(
+                      start: col == 0 && !isStart ? rowRadius : Radius.zero,
+                      end: col == 6 && !isEnd ? rowRadius : Radius.zero,
                     ),
                   ),
                 ),
+              ),
+            Center(
+              child: SizedBox.square(
+                dimension: markerSize,
+                child: DecoratedBox(
+                  key: ValueKey(
+                    'sked-date-${compact ? 'touch' : 'range'}-marker-${_key(day)}',
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(cornerRadius),
+                    color: stateOpacity > 0
+                        ? Color.alphaBlend(
+                            (endpoint ? colors.onPrimary : focusAccent)
+                                .withValues(alpha: stateOpacity),
+                            endpoint ? colors.primary : Colors.transparent,
+                          )
+                        : endpoint
+                        ? colors.primary
+                        : null,
+                    border: compact && keyboardFocus
+                        ? Border.all(
+                            color: endpoint ? colors.onPrimary : focusAccent,
+                            width: 2,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+            if (!compact && keyboardFocus)
               Center(
                 child: SizedBox.square(
-                  dimension: markerSize,
+                  dimension: markerSize + 4,
                   child: DecoratedBox(
-                    key: ValueKey(
-                      'sked-date-${compact ? 'touch' : 'range'}-marker-${_key(day)}',
-                    ),
+                    key: ValueKey('sked-date-focus-${_key(day)}'),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(cornerRadius),
-                      color: endpoint ? colors.primary : null,
-                      border: compact && keyboardFocus
-                          ? Border.all(
-                              color: endpoint ? colors.onPrimary : focusAccent,
-                              width: 2,
-                            )
-                          : null,
+                      borderRadius: BorderRadius.circular(cornerRadius + 2),
+                      border: Border.all(color: focusAccent, width: 1.5),
                     ),
                   ),
                 ),
               ),
-              if (!compact && keyboardFocus)
-                Center(
-                  child: SizedBox.square(
-                    dimension: markerSize + 4,
-                    child: DecoratedBox(
-                      key: ValueKey('sked-date-focus-${_key(day)}'),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(cornerRadius + 2),
-                        border: Border.all(color: focusAccent, width: 1.5),
-                      ),
-                    ),
-                  ),
-                ),
-              if (compact)
-                GestureDetector(
+            if (compact)
+              content
+            else
+              // Ink sits above the band and marker, not hidden below their
+              // opaque decorations. The entire day remains the hit target.
+              Material(
+                color: Colors.transparent,
+                child: _CalendarDayInkWell(
                   key: ValueKey('sked-date-${_key(day)}'),
-                  behavior: HitTestBehavior.opaque,
                   onTap: onTap,
+                  borderRadius: BorderRadius.circular(cornerRadius),
                   child: content,
-                )
-              else
-                // Ink sits above the band and marker, not hidden below their
-                // opaque decorations. The entire day remains the hit target.
-                Material(
-                  color: Colors.transparent,
-                  child: _CalendarDayInkWell(
-                    key: ValueKey('sked-date-${_key(day)}'),
-                    onTap: onTap,
-                    borderRadius: BorderRadius.circular(cornerRadius),
-                    child: content,
-                  ),
                 ),
-            ],
-          );
-        },
-      ),
+              ),
+          ],
+        );
+      },
+    );
+    return SizedBox(
+      height: height,
+      child: compact
+          ? SkedPickerMarkerTarget(
+              key: ValueKey('sked-date-${_key(day)}'),
+              onTap: onTap,
+              builder: buildCell,
+            )
+          : buildCell(context, 0),
     );
   }
 
