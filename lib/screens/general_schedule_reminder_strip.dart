@@ -262,6 +262,11 @@ class _ReminderStripState extends State<_ReminderStrip>
             items: items.where((item) => item.status == status).toList(),
           ),
       ].where((group) => group.items.isNotEmpty).toList();
+      final groupedItems = [for (final group in groups) ...group.items];
+      final groupStarts = {
+        for (var i = 0; i < groups.length; i++)
+          groups[i].items.first.occurrence.occurrenceKey: i,
+      };
       return _ReminderAutoDismiss(
         enabled: widget.autoClose,
         isOwnerActive: widget.isOwnerActive ?? () => widget.active,
@@ -274,92 +279,86 @@ class _ReminderStripState extends State<_ReminderStrip>
             contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             bodyIsSliver: true,
             semanticChildCount: items.length,
-            child: SliverMainAxisGroup(
-              slivers: [
-                if (items.isEmpty)
-                  SliverToBoxAdapter(
+            child: items.isEmpty
+                ? SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Text(l.noUpcomingEvents),
                     ),
-                  ),
-                for (var i = 0; i < groups.length; i++)
-                  SliverMainAxisGroup(
-                    key: ValueKey('reminder-section-${groups[i].status.name}'),
-                    slivers: [
-                      if (i > 0)
-                        SliverToBoxAdapter(
-                          child: Padding(
+                  )
+                // Keep every reminder in one lazy sequence. Separate lists
+                // build each group's first row off screen, letting geometric
+                // focus traversal jump past unbuilt rows in the current group.
+                : _reminderRowsSliver(groupedItems, (item) {
+                    final row = host.row(
+                      item.occurrence,
+                      source: source,
+                      builder: (activate) => _ReminderSummaryRow(
+                        item: item,
+                        busy: _handling.contains(item.occurrence.occurrenceKey),
+                        onOpen: (_) => activate(),
+                        onHandle: () {
+                          if (host.session.blocked) return;
+                          host.session.dismissPreview();
+                          unawaited(_handleReminder(item.occurrence));
+                        },
+                      ),
+                    );
+                    final groupIndex =
+                        groupStarts[item.occurrence.occurrenceKey];
+                    final group = groupIndex == null
+                        ? null
+                        : groups[groupIndex];
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (groupIndex != null && groupIndex > 0)
+                          Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Divider(
                               height: 1,
                               color: colors.outlineVariant,
                             ),
                           ),
-                        ),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          key: ValueKey(
-                            'general-reminder-group-${groups[i].status.name}',
-                          ),
-                          padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _reminderStatusIcon(groups[i].status),
-                                size: 16,
-                                color: _reminderStatusColor(
-                                  groups[i].status,
-                                  colors,
+                        if (group != null)
+                          Padding(
+                            key: ValueKey(
+                              'general-reminder-group-${group.status.name}',
+                            ),
+                            padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _reminderStatusIcon(group.status),
+                                  size: 16,
+                                  color: _reminderStatusColor(
+                                    group.status,
+                                    colors,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  '${_reminderStatusLabel(groups[i].status, l)} · ${groups[i].items.length}',
-                                  style: Theme.of(context).textTheme.labelMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: _reminderStatusColor(
-                                          groups[i].status,
-                                          colors,
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '${_reminderStatusLabel(group.status, l)} · ${group.items.length}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: _reminderStatusColor(
+                                            group.status,
+                                            colors,
+                                          ),
                                         ),
-                                      ),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      _reminderRowsSliver(
-                        groups[i].items,
-                        (item) => host.row(
-                          item.occurrence,
-                          source: source,
-                          builder: (activate) => _ReminderSummaryRow(
-                            item: item,
-                            busy: _handling.contains(
-                              item.occurrence.occurrenceKey,
+                              ],
                             ),
-                            onOpen: (_) => activate(),
-                            onHandle: () {
-                              if (host.session.blocked) return;
-                              host.session.dismissPreview();
-                              unawaited(_handleReminder(item.occurrence));
-                            },
                           ),
-                        ),
-                        semanticIndexOffset: groups
-                            .take(i)
-                            .fold<int>(
-                              0,
-                              (count, group) => count + group.items.length,
-                            ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+                        row,
+                      ],
+                    );
+                  }),
           ),
         ),
       );
@@ -396,25 +395,28 @@ class _ReminderStripState extends State<_ReminderStrip>
 
 Widget _reminderRowsSliver(
   List<GeneralReminderItem> items,
-  Widget Function(GeneralReminderItem) buildRow, {
-  int semanticIndexOffset = 0,
-}) {
+  Widget Function(GeneralReminderItem) buildRow,
+) {
   final indices = {
     for (var index = 0; index < items.length; index++)
       items[index].occurrence.occurrenceKey: index,
   };
-  return SliverList.builder(
-    itemCount: items.length,
-    semanticIndexOffset: semanticIndexOffset,
-    findChildIndexCallback: (key) =>
-        key is ValueKey<String> ? indices[key.value] : null,
-    itemBuilder: (context, index) {
-      final item = items[index];
-      return KeyedSubtree(
-        key: ValueKey(item.occurrence.occurrenceKey),
-        child: buildRow(item),
-      );
-    },
+  // Cache rows above the viewport can geometrically overlap the fixed panel
+  // header. Traverse this sequence as one group so reverse Tab cannot jump to
+  // a header control before reaching the previous reminder.
+  return FocusTraversalGroup(
+    child: SliverList.builder(
+      itemCount: items.length,
+      findChildIndexCallback: (key) =>
+          key is ValueKey<String> ? indices[key.value] : null,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return KeyedSubtree(
+          key: ValueKey(item.occurrence.occurrenceKey),
+          child: buildRow(item),
+        );
+      },
+    ),
   );
 }
 
