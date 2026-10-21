@@ -1,12 +1,13 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
-
-import 'dart:async';
+import 'package:provider/provider.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/widgets/course_system_reminder_field.dart';
@@ -14,17 +15,26 @@ import 'package:sked/widgets/sked_menu_item_content.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
 
 import '../support/workspace_harness.dart';
+import '../support/agenda_coordinator_harness.dart';
 
 class _Gateway extends MemoryAgendaNotificationGateway {
-  bool fail = false;
   int reads = 0;
-  Completer<bool>? pending;
   @override
   Future<bool> get notificationsEnabled async {
     reads++;
-    if (fail) throw StateError('query failed');
-    if (pending != null) return pending!.future;
     return permissionGranted;
+  }
+
+  @override
+  Future<bool> get exactAlarmsAllowed async {
+    reads++;
+    return exactAlarmGranted;
+  }
+
+  @override
+  Future<bool> get batteryOptimizationIgnored async {
+    reads++;
+    return batteryOptimizationGranted;
   }
 }
 
@@ -43,13 +53,6 @@ void main() {
         addTearDown(p.dispose);
         final minutes = TextEditingController(text: '25');
         addTearDown(minutes.dispose);
-        final gateway = _Gateway();
-        final service = AgendaNotificationService(
-          enabled: true,
-          gateway: gateway,
-          runtimeStore: MemoryAgendaNotificationRuntimeStore(),
-        );
-        addTearDown(service.dispose);
         var behavior = CourseReminderBehavior.inherit;
         var changes = 0;
         final enabled = ValueNotifier(true);
@@ -72,7 +75,6 @@ void main() {
                               behavior: behavior,
                               enabled: isEnabled,
                               minutesController: minutes,
-                              notificationService: service,
                               onChanged: (value) => refresh(() {
                                 behavior = value;
                                 changes++;
@@ -188,7 +190,6 @@ void main() {
         await t.pumpAndSettle();
         expect(changes, 1);
         expect(find.byType(MenuItemButton), findsNothing);
-        expect(gateway.scheduled, isEmpty);
         expect(t.takeException(), isNull);
         await t.pumpWidget(const SizedBox());
       },
@@ -200,7 +201,7 @@ void main() {
   }
 
   testWidgets(
-    'system reminder describes defaults, master switch and permission failures without scheduling',
+    'reminder keeps dynamic defaults without prose or querying notification permissions',
     (tester) async {
       final p = await workspaceProvider();
       addTearDown(p.dispose);
@@ -213,21 +214,27 @@ void main() {
         gateway: gateway,
         runtimeStore: MemoryAgendaNotificationRuntimeStore(),
       );
-      addTearDown(service.dispose);
+      final coordinator = buildTestAgendaCoordinator(
+        provider: p,
+        notificationService: service,
+      );
+      addTearDown(coordinator.dispose);
       final minutes = TextEditingController(text: '25');
       addTearDown(minutes.dispose);
       var behavior = CourseReminderBehavior.inherit;
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: p,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: StatefulBuilder(
-                builder: (context, setState) => CourseSystemReminderField(
-                  behavior: behavior,
-                  minutesController: minutes,
-                  notificationService: service,
-                  onChanged: (value) => setState(() => behavior = value),
+          home: Provider<AgendaCoordinator>.value(
+            value: coordinator,
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: StatefulBuilder(
+                  builder: (context, setState) => CourseSystemReminderField(
+                    behavior: behavior,
+                    minutesController: minutes,
+                    onChanged: (value) => setState(() => behavior = value),
+                  ),
                 ),
               ),
             ),
@@ -235,28 +242,41 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('System reminder'), findsOneWidget);
+      final field = find.byType(CourseSystemReminderField);
+      final selector = find.byKey(const ValueKey('course-reminder-behavior'));
+      final l = AppLocalizations.of(tester.element(field));
       expect(
-        find.textContaining('No default course reminder is set'),
+        find.text(l.courseReminderInherit(l.notificationReminderOff)),
         findsOneWidget,
       );
-      expect(find.textContaining('System reminders are off'), findsOneWidget);
-      expect(find.text('Blocked by the system'), findsOneWidget);
-      expect(find.text('Required for precise reminder times'), findsOneWidget);
-      expect(gateway.scheduled, isEmpty);
+      for (final prose in [
+        l.courseReminderMasterOff,
+        l.courseReminderDefaultOff,
+        l.courseReminderPermissionUnknown,
+        l.notificationPermissionDenied,
+        l.notificationPermissionChecking,
+        l.notificationPermissionRequestFailed,
+        l.notificationExactAlarmRequired,
+        l.notificationBatteryOptimizationRequired,
+        l.notificationPlatformUnsupported,
+        l.courseReminderDeliveryHint,
+      ]) {
+        expect(find.text(prose), findsNothing);
+      }
+      expect(tester.getRect(field).bottom, tester.getRect(selector).bottom);
+      expect(gateway.reads, 0);
       await p.settingsCommands.updateNotificationSettings(
         enabled: true,
         courseDefaultMinutesBefore: 10,
       );
       await tester.pumpAndSettle();
-      expect(find.text('Use default (10 minutes before)'), findsOneWidget);
       expect(
-        find.textContaining('No default course reminder is set'),
-        findsNothing,
+        find.text(l.courseReminderInherit(l.notificationReminderCustom(10))),
+        findsOneWidget,
       );
-      await tester.tap(find.byKey(const ValueKey('course-reminder-behavior')));
+      await tester.tap(selector);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Custom').last);
+      await tester.tap(find.text(l.recurrenceCustom).last);
       await tester.pumpAndSettle();
       expect(behavior, CourseReminderBehavior.custom);
       expect(
@@ -264,128 +284,59 @@ void main() {
         findsOneWidget,
       );
       expect(minutes.text, '25');
-      expect(gateway.scheduled, isEmpty);
-      expect(tester.takeException(), isNull);
-    },
-  );
-  testWidgets(
-    'query errors retry in place without a settings jump or changing the caller draft',
-    (tester) async {
-      final p = await workspaceProvider();
-      addTearDown(p.dispose);
-      final gateway = _Gateway()..fail = true;
-      final service = AgendaNotificationService(
-        enabled: true,
-        gateway: gateway,
-        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
-      );
-      addTearDown(service.dispose);
-      final minutes = TextEditingController(text: '25'),
-          draft = TextEditingController(text: 'Course draft');
-      addTearDown(minutes.dispose);
-      addTearDown(draft.dispose);
-      await tester.pumpWidget(
-        WorkspaceHarness(
-          provider: p,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: Column(
-                children: [
-                  TextField(
-                    key: const ValueKey('test-course-draft'),
-                    controller: draft,
-                  ),
-                  CourseSystemReminderField(
-                    behavior: CourseReminderBehavior.custom,
-                    minutesController: minutes,
-                    notificationService: service,
-                    onChanged: (_) {},
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.text('Could not read notification permission. Try again.'),
-        findsOneWidget,
-      );
-      gateway.fail = false;
-      await tester.tap(find.text('Retry'));
-      await tester.pumpAndSettle();
-      expect(gateway.reads, 2);
-      expect(
-        find.byKey(const ValueKey('course-open-notifications')),
-        findsNothing,
-      );
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
-      expect(draft.text, 'Course draft');
-      expect(minutes.text, '25');
+      expect(gateway.reads, 0);
       expect(gateway.scheduled, isEmpty);
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+
   testWidgets(
-    'late permission reads do not update disposed forms and unsupported mode is explicit',
+    'custom reminder keeps validation and zero-minute drafts when disabled',
     (tester) async {
       final p = await workspaceProvider();
       addTearDown(p.dispose);
-      final gateway = _Gateway()..pending = Completer<bool>();
-      final service = AgendaNotificationService(
-        enabled: true,
-        gateway: gateway,
-        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
-      );
-      addTearDown(service.dispose);
-      final minutes = TextEditingController();
+      final minutes = TextEditingController(text: 'invalid');
+      final focus = FocusNode();
       addTearDown(minutes.dispose);
+      addTearDown(focus.dispose);
+      var blocked = false;
+      String? error = 'Enter a non-negative whole number';
+      late StateSetter refresh;
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: p,
           home: Scaffold(
-            body: CourseSystemReminderField(
-              behavior: CourseReminderBehavior.disabled,
-              minutesController: minutes,
-              notificationService: service,
-              onChanged: (_) {},
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-      expect(find.text('Checking permission…'), findsOneWidget);
-      await tester.pumpWidget(const SizedBox.shrink());
-      gateway.pending!.complete(true);
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-      final unsupported = AgendaNotificationService(
-        enabled: false,
-        gateway: gateway,
-        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
-      );
-      addTearDown(unsupported.dispose);
-      await tester.pumpWidget(
-        WorkspaceHarness(
-          provider: p,
-          home: Scaffold(
-            body: CourseSystemReminderField(
-              behavior: CourseReminderBehavior.disabled,
-              minutesController: minutes,
-              notificationService: unsupported,
-              onChanged: (_) {},
-              enabled: false,
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                refresh = setState;
+                return CourseSystemReminderField(
+                  behavior: CourseReminderBehavior.custom,
+                  minutesController: minutes,
+                  minutesFocusNode: focus,
+                  minutesError: error,
+                  enabled: !blocked,
+                  onMinutesChanged: (_) => setState(() => error = null),
+                  onChanged: (_) {},
+                );
+              },
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(
-        find.text('This platform does not provide native notifications.'),
-        findsOneWidget,
+      final input = find.byKey(
+        const ValueKey('course-reminder-custom-minutes'),
       );
+      expect(find.text(error!), findsOneWidget);
+      await tester.enterText(input, '0');
+      await tester.pumpAndSettle();
+      expect(find.text('Enter a non-negative whole number'), findsNothing);
+      refresh(() => blocked = true);
+      await tester.pumpAndSettle();
+      expect(minutes.text, '0');
       expect(
         tester
             .widget<SkedDropdownMenu<CourseReminderBehavior>>(
@@ -394,6 +345,9 @@ void main() {
             .enabled,
         isFalse,
       );
+      expect(tester.widget<TextField>(input).enabled, isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 }

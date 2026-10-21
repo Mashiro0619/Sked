@@ -7,8 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
-import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/course_system_reminder_field.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
@@ -98,7 +96,6 @@ class _Fixture {
     required this.behavior,
     required this.minutes,
     required this.changes,
-    required this.gateway,
   });
 
   final _MenuKind kind;
@@ -107,7 +104,6 @@ class _Fixture {
   final ValueNotifier<CourseReminderBehavior> behavior;
   final TextEditingController minutes;
   final List<CourseReminderBehavior> changes;
-  final MemoryAgendaNotificationGateway gateway;
 
   Finder get trigger => find.byKey(
     ValueKey(
@@ -119,7 +115,6 @@ class _Fixture {
 
   void expectDraft({bool changed = false}) {
     expect(minutes.text, '17');
-    expect(gateway.scheduled, isEmpty);
     expect(
       changes,
       changed && kind == _MenuKind.reminder
@@ -158,16 +153,9 @@ Future<_Fixture> _mount(
   final behavior = ValueNotifier(CourseReminderBehavior.inherit);
   final minutes = TextEditingController(text: '17');
   final changes = <CourseReminderBehavior>[];
-  final gateway = MemoryAgendaNotificationGateway();
-  final service = AgendaNotificationService(
-    enabled: true,
-    gateway: gateway,
-    runtimeStore: MemoryAgendaNotificationRuntimeStore(),
-  );
   addTearDown(() async {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
-    service.dispose();
     minutes.dispose();
     behavior.dispose();
     width.dispose();
@@ -202,7 +190,6 @@ Future<_Fixture> _mount(
                                 CourseSystemReminderField(
                                   behavior: value,
                                   minutesController: minutes,
-                                  notificationService: service,
                                   onChanged: (value) {
                                     changes.add(value);
                                     behavior.value = value;
@@ -241,7 +228,6 @@ Future<_Fixture> _mount(
     behavior: behavior,
     minutes: minutes,
     changes: changes,
-    gateway: gateway,
   );
 }
 
