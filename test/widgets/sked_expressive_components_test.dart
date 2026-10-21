@@ -1,10 +1,33 @@
+import 'dart:ui' as ui;
 import 'dart:ui' show SemanticsRole;
 
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/sked_expressive_loading_indicator.dart';
 import 'package:sked/widgets/expressive_motion.dart';
+
+const _loadingCaptureKey = ValueKey('loading-frame-capture');
+
+Future<List<int>> _loadingPixels(WidgetTester tester) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(_loadingCaptureKey),
+  );
+  return (await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    try {
+      final data = (await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      ))!;
+      return data.buffer.asUint8List().toList();
+    } finally {
+      image.dispose();
+    }
+  }))!;
+}
 
 void main() {
   testWidgets('toolbar gives unused action space back to its title', (
@@ -535,7 +558,8 @@ void main() {
       ),
     );
     expect(find.bySemanticsLabel('Loading'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(const ValueKey('sked-loading-static')), findsOneWidget);
     final semantics = tester.getSemantics(
       find.byType(SkedExpressiveLoadingIndicator),
     );
@@ -588,7 +612,8 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(const ValueKey('sked-loading-static')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -631,7 +656,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const ValueKey('sked-loading-static')), findsOneWidget);
     expect(find.bySemanticsLabel('Paused'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -649,7 +674,7 @@ void main() {
         home: SkedExpressiveLoadingIndicator(semanticsLabel: 'Reduced motion'),
       ),
     );
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const ValueKey('sked-loading-static')), findsOneWidget);
     expect(find.bySemanticsLabel('Reduced motion'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -669,5 +694,111 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pump(const Duration(milliseconds: 700));
     expect(tester.takeException(), isNull);
+  });
+
+  for (final (reduced, disabled) in [
+    (true, false),
+    (false, true),
+    (true, true),
+  ]) {
+    testWidgets(
+      'loading fallback is pixel-static with no ticker: reduce=$reduced disable=$disabled',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: MediaQuery(
+                data: MediaQueryData(disableAnimations: disabled),
+                child: SkedMotionPolicyScope(
+                  disableAnimations: disabled,
+                  reduceMotion: reduced,
+                  child: const Center(
+                    child: RepaintBoundary(
+                      key: _loadingCaptureKey,
+                      child: SkedExpressiveLoadingIndicator(
+                        semanticsLabel: 'Loading',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final before = await _loadingPixels(tester);
+          await tester.pump(const Duration(milliseconds: 180));
+          expect(listEquals(before, await _loadingPixels(tester)), isTrue);
+          expect(tester.binding.hasScheduledFrame, isFalse);
+          final data = tester
+              .getSemantics(find.byType(SkedExpressiveLoadingIndicator))
+              .getSemanticsData();
+          expect(data.role, SemanticsRole.loadingSpinner);
+          expect(data.label, 'Loading');
+          expect(data.value, isEmpty);
+          expect(find.byType(CircularProgressIndicator), findsNothing);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+  }
+
+  testWidgets('runtime accessibility changes stop and restart loading motion', (
+    tester,
+  ) async {
+    var reduced = false;
+    var disabled = false;
+    late StateSetter update;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            update = setState;
+            return MediaQuery(
+              data: MediaQueryData(disableAnimations: disabled),
+              child: SkedMotionPolicyScope(
+                disableAnimations: disabled,
+                reduceMotion: reduced,
+                child: const Center(
+                  child: RepaintBoundary(
+                    key: _loadingCaptureKey,
+                    child: SkedExpressiveLoadingIndicator(
+                      semanticsLabel: 'Loading',
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    update(() => reduced = true);
+    await tester.pumpAndSettle();
+    final reducedPixels = await _loadingPixels(tester);
+    await tester.pump(const Duration(milliseconds: 180));
+    expect(listEquals(reducedPixels, await _loadingPixels(tester)), isTrue);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+
+    update(() => reduced = false);
+    await tester.pump();
+    final animatedPixels = await _loadingPixels(tester);
+    await tester.pump(const Duration(milliseconds: 180));
+    expect(listEquals(animatedPixels, await _loadingPixels(tester)), isFalse);
+    expect(tester.binding.hasScheduledFrame, isTrue);
+
+    update(() => disabled = true);
+    await tester.pumpAndSettle();
+    final disabledPixels = await _loadingPixels(tester);
+    await tester.pump(const Duration(milliseconds: 180));
+    expect(listEquals(disabledPixels, await _loadingPixels(tester)), isTrue);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

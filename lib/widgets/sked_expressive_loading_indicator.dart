@@ -5,6 +5,7 @@ import 'dart:ui' show SemanticsRole;
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_expressive_theme.dart';
+import '../theme/sked_surface.dart';
 
 /// A compact, single-controller loading visual inspired by M3 Expressive
 /// shape motion. It is deliberately not named or presented as Flutter's
@@ -72,7 +73,10 @@ class _SkedExpressiveLoadingIndicatorState
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final color = widget.color ?? colors.primary;
+    final color =
+        widget.color ??
+        Theme.of(context).progressIndicatorTheme.color ??
+        skedReadableAccent(colors, surface: SkedSurface.colorOf(context));
     final value = widget.value;
     if (value != null) {
       // Keep the determinate percentage available to screen readers. The
@@ -111,7 +115,11 @@ class _SkedExpressiveLoadingIndicatorState
               ),
             ),
           )
-        : CircularProgressIndicator(color: color, strokeWidth: 3);
+        : CustomPaint(
+            key: const ValueKey('sked-loading-static'),
+            size: Size.square(widget.size),
+            painter: _SkedStaticLoadingPainter(color: color),
+          );
 
     return Semantics(
       container: true,
@@ -132,6 +140,34 @@ class _SkedExpressiveLoadingIndicatorState
     _controller?.dispose();
     super.dispose();
   }
+}
+
+/// A resting spinner, with no determinate value and no replacement ticker.
+class _SkedStaticLoadingPainter extends CustomPainter {
+  const _SkedStaticLoadingPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final width = math.min(3.0, size.shortestSide / 4);
+    canvas.drawArc(
+      (Offset.zero & size).deflate(width / 2),
+      -math.pi / 2,
+      math.pi * 1.5,
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = width
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SkedStaticLoadingPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _SkedLoadingPainter extends CustomPainter {
