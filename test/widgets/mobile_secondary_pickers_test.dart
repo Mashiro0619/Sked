@@ -333,9 +333,9 @@ void main() {
           '$flutterRoot/bin/cache/artifacts/material_fonts',
         );
         final loader = FontLoader(family);
-        for (final weight in ['regular', 'medium', 'bold']) {
+        for (final weight in ['Regular', 'Medium', 'Bold']) {
           loader.addFont(
-            File.fromUri(fonts.uri.resolve('roboto-$weight.ttf'))
+            File.fromUri(fonts.uri.resolve('Roboto-$weight.ttf'))
                 .readAsBytes()
                 .then((bytes) => ByteData.sublistView(bytes)),
           );
