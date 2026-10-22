@@ -255,8 +255,11 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _ConflictCourseCard(
                     title: item.name,
-                    subtitle:
-                        '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${_effectiveTimeLabel(item, periodTimes)}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
+                    location: item.location.isEmpty
+                        ? l10n.locationNotFilled
+                        : item.location,
+                    time:
+                        '${_effectiveTimeLabel(item, periodTimes)}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
                     actions: [
                       if (currentConflictKey != null &&
                           (widget.onSelectDisplayedConflict != null ||
@@ -562,76 +565,57 @@ class _PrimaryInfoCard extends StatelessWidget {
 class _ConflictCourseCard extends StatelessWidget {
   const _ConflictCourseCard({
     required this.title,
-    required this.subtitle,
+    required this.location,
+    required this.time,
     required this.actions,
   });
 
   final String title;
-  final String subtitle;
+  final String location;
+  final String time;
   final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final textBlock = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: theme.textTheme.titleMedium),
-        const SizedBox(height: 2),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-    final actionWrap = Wrap(
-      spacing: 4,
-      runSpacing: 4,
-      alignment: WrapAlignment.end,
-      children: actions,
+    final metadataStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: colors.onSurfaceVariant,
     );
     return Material(
       color: colors.surfaceContainerLow,
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (actions.isEmpty) {
-              return Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8),
-                child: textBlock,
-              );
-            }
-            if (constraints.maxWidth < 360) {
-              return Column(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: textBlock,
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: actionWrap,
-                  ),
+                  Text(title, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(location, style: metadataStyle),
+                  const SizedBox(height: 2),
+                  Text(time, style: metadataStyle),
                 ],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: textBlock),
-                const SizedBox(width: 8),
-                actionWrap,
-              ],
-            );
-          },
+              ),
+            ),
+            if (actions.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Flex(
+                direction: MediaQuery.textScalerOf(context).scale(16) >= 24
+                    ? Axis.vertical
+                    : Axis.horizontal,
+                mainAxisSize: MainAxisSize.min,
+                spacing: 4,
+                children: actions,
+              ),
+            ],
+          ],
         ),
       ),
     );
