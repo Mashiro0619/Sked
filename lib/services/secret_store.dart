@@ -10,7 +10,11 @@ abstract class SecretStore {
 
 class FlutterSecureSecretStore implements SecretStore {
   const FlutterSecureSecretStore({
-    this._storage = const FlutterSecureStorage(),
+    this._storage = const FlutterSecureStorage(
+      // Back up supported migrations while keeping the existing namespace,
+      // cipher defaults and error recovery behavior.
+      aOptions: AndroidOptions(migrateWithBackup: true),
+    ),
   });
 
   static const _customSchoolImportApiKey = 'custom_school_import_api_key';

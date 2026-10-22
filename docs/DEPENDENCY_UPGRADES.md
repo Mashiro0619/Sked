@@ -19,7 +19,11 @@
 
 ### 安全存储大版本迁移
 
-目前声明 `flutter_secure_storage: ^10.3.1`，lock 锁定 10.3.1。[v11 的迁移说明](https://pub.dev/packages/flutter_secure_storage/changelog) 涉及旧加密路径移除及 Android 工具链变化，不能当作普通补丁升级。升级时重新核对上游要求，并至少提供：
+目前声明 `flutter_secure_storage: ^11.2.0`。项目引入安全存储时已使用 10.3.1 的默认加密算法，没有配置 v11 移除的旧算法或 `encryptedSharedPreferences`。这不能代替已安装版本的实际升级验证；[v11 的迁移说明](https://pub.dev/packages/flutter_secure_storage/changelog) 明确要求使用 v9 或更早加密路径的数据先经过 v10 迁移，不能通过打开迁移备份让 v11 直接恢复已移除的算法。
+
+[FlutterSecureSecretStore](../lib/services/secret_store.dart) 保持原有 key、默认 namespace 和各平台的密钥位置，Android 开启 `migrateWithBackup` 保护仍受支持的算法迁移。插件原有的默认算法和 `resetOnError` 恢复行为保持不变；关闭后，部分无法初始化的存储连现有显式清除路径也无法恢复。插件抛出的异常继续交给现有密钥控制器处理，读取异常不能冒充“未保存密钥”，也不能因此清理旧 AppData 中唯一可恢复的密钥。[适配器回归测试](../test/services/secret_store_test.dart) 验证插件接收的参数、读写清除和错误传播；它们不证明 Android KeyStore 或其他平台原生存储迁移成功。
+
+11.2.0 已从 11.0.0 的固定 compileSdk 37 改回继承 Flutter；本项目 Flutter 3.47.7 提供 compile/target SDK 36、min SDK 24，满足本次解析版本的要求。后续升级仍须核对插件实际 Gradle 配置，并至少提供：
 
 - 相同签名的真实旧安装升级后读取旧密钥，包括跨版本直接升级路径。
 - 新密钥写入、读取、清除，以及失败、升级中断和恢复验证。
