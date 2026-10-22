@@ -3526,14 +3526,12 @@ void main() {
 
     expect(find.byType(HomeScreen), findsOneWidget);
     final monday = find.byKey(const ValueKey('student-day-1'));
-    if (monday.evaluate().isEmpty) {
-      await tester.drag(
-        find.byKey(const ValueKey('student-day-strip')),
-        const Offset(600, 0),
-      );
-      await tester.pumpAndSettle();
-    }
     expect(monday, findsOneWidget);
+    // The current day can scroll Monday outside the narrow viewport while
+    // keeping its widget mounted. Reveal it before sending a real pointer tap.
+    await tester.ensureVisible(monday);
+    await tester.pumpAndSettle();
+    expect(monday.hitTestable(), findsOneWidget);
     await tester.tap(monday);
     await tester.pumpAndSettle();
     expect(
