@@ -3,6 +3,7 @@ import 'package:sked/models/general_event.dart';
 import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/models/general_schedule.dart';
 import 'package:sked/models/general_schedule_data.dart';
+import 'package:sked/models/notification_settings.dart';
 import 'package:sked/services/general_occurrence_service.dart';
 
 void main() {
@@ -457,6 +458,201 @@ void main() {
 
       expect(items, hasLength(1));
       expect(items.single.status, equals(GeneralReminderStatus.upcoming));
+    });
+
+    test(
+      'custom and inherited two-day reminders appear at their exact due time',
+      () {
+        final start = DateTime(2026, 10, 25, 9);
+        final due = start.subtract(const Duration(days: 2));
+        for (final inherit in [false, true]) {
+          final event =
+              buildEvent(
+                id: 'two-days',
+                title: 'Two-day reminder',
+                start: start,
+                reminders: const [GeneralEventReminder(minutesBefore: 2880)],
+              ).copyWith(
+                reminderBehavior: inherit
+                    ? GeneralEventReminderBehavior.inherit
+                    : GeneralEventReminderBehavior.custom,
+              );
+          final data = buildData(events: [event]);
+          const settings = NotificationSettings(
+            generalDefaultMinutesBefore: 2880,
+          );
+          expect(
+            service.reminderItems(
+              data,
+              now: due.subtract(const Duration(microseconds: 1)),
+              notificationSettings: settings,
+            ),
+            isEmpty,
+          );
+          for (final (now, expected) in [
+            (due, GeneralReminderStatus.upcoming),
+            (
+              start.subtract(const Duration(hours: 23)),
+              GeneralReminderStatus.upcoming,
+            ),
+            (start, GeneralReminderStatus.inProgress),
+            (
+              start.add(const Duration(hours: 1)),
+              GeneralReminderStatus.overdue,
+            ),
+          ]) {
+            final items = service.reminderItems(
+              data,
+              now: now,
+              notificationSettings: settings,
+            );
+            expect(items.single.status, expected, reason: '$inherit / $now');
+          }
+        }
+      },
+    );
+
+    test('includes a one-day reminder exactly at the default horizon', () {
+      final now = DateTime(2026, 10, 23, 9);
+      final data = buildData(
+        events: [
+          buildEvent(
+            id: 'due',
+            title: 'Due now',
+            start: now.add(const Duration(days: 1)),
+            reminders: const [GeneralEventReminder(minutesBefore: 1440)],
+          ),
+          buildEvent(
+            id: 'not-due',
+            title: 'Later reminder',
+            start: now.add(const Duration(days: 1)),
+            reminders: const [GeneralEventReminder(minutesBefore: 5)],
+          ),
+        ],
+      );
+      expect(
+        service
+            .reminderItems(data, now: now)
+            .map((item) => item.occurrence.event.id),
+        ['due'],
+      );
+    });
+
+    test(
+      'does not expand explicit nonpositive horizons for future reminders',
+      () {
+        final now = DateTime(2026, 10, 23, 9);
+        final data = buildData(
+          events: [
+            buildEvent(
+              id: 'future',
+              title: 'Future',
+              start: now.add(const Duration(days: 2)),
+              reminders: const [GeneralEventReminder(minutesBefore: 2880)],
+            ),
+          ],
+        );
+        for (final horizon in [
+          Duration.zero,
+          const Duration(microseconds: -1),
+        ]) {
+          expect(
+            service.reminderItems(data, now: now, upcomingHorizon: horizon),
+            isEmpty,
+          );
+          expect(
+            generalReminderCandidateEndExclusive(
+              data,
+              anchor: now,
+              upcomingHorizon: horizon,
+              notificationSettings: const NotificationSettings(),
+            ),
+            now.add(horizon),
+          );
+        }
+      },
+    );
+
+    test('ignores hidden calendars unless their reminders are enabled', () {
+      final now = DateTime(2026, 10, 23, 9);
+      final data = buildData(
+        calendarVisible: false,
+        events: [
+          buildEvent(
+            id: 'hidden',
+            title: 'Hidden',
+            start: now.add(const Duration(days: 2)),
+            reminders: const [GeneralEventReminder(minutesBefore: 2880)],
+          ),
+        ],
+      );
+      expect(service.reminderItems(data, now: now), isEmpty);
+      expect(
+        service
+            .reminderItems(
+              data,
+              now: now,
+              notificationSettings: const NotificationSettings(
+                remindHiddenGeneralCalendars: true,
+              ),
+            )
+            .single
+            .status,
+        GeneralReminderStatus.upcoming,
+      );
+    });
+
+    test(
+      'large imported lead values do not overflow reminder time arithmetic',
+      () {
+        final now = DateTime(2026, 10, 23, 9);
+        final data = buildData(
+          events: [
+            buildEvent(
+              id: 'large-lead',
+              title: 'Large lead',
+              start: now.add(const Duration(days: 2)),
+              reminders: const [
+                GeneralEventReminder(minutesBefore: 9223372036854775807),
+              ],
+            ),
+          ],
+        );
+        expect(
+          service.reminderItems(data, now: now).single.status,
+          GeneralReminderStatus.upcoming,
+        );
+        expect(
+          data.schedules.single.events.single.reminders.single.minutesBefore,
+          9223372036854775807,
+        );
+      },
+    );
+
+    test('huge leads retain every occurrence of a finite recurring event', () {
+      final now = DateTime(2026, 10, 23, 9);
+      final event =
+          buildEvent(
+            id: 'finite-large-lead',
+            title: 'Finite recurrence',
+            start: now.add(const Duration(days: 2)),
+            reminders: const [
+              GeneralEventReminder(minutesBefore: 9223372036854775807),
+            ],
+          ).copyWith(
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.daily,
+              count: 3,
+            ),
+          );
+      final items = service.reminderItems(buildData(events: [event]), now: now);
+      expect(items, hasLength(3));
+      expect(items.map((item) => item.occurrence.sequence), [0, 1, 2]);
+      expect(
+        items.every((item) => item.status == GeneralReminderStatus.upcoming),
+        isTrue,
+      );
+      expect(event.reminders.single.minutesBefore, 9223372036854775807);
     });
 
     test('classifies as overdue when event ended before now', () {

@@ -747,14 +747,14 @@ void main() {
       expect(service.queries, hasLength(1));
     });
 
-    test('filters expanded candidates at the exact half-open edges', () {
+    test('filters exact lookback and inclusive reminder-due edges', () {
       final service = _RecordingOccurrenceService();
       final cache = GeneralOccurrenceCache(service: service);
       final now = base.add(
         const Duration(hours: 12, seconds: 30, microseconds: 123456),
       );
       final start = now.subtract(const Duration(hours: 24));
-      final end = now.add(const Duration(hours: 24));
+      final end = now.add(const Duration(days: 2));
       const tick = Duration(microseconds: 1);
       final data = reminderData([
         _reminderEvent(
@@ -794,6 +794,8 @@ void main() {
       expect(first.map((item) => item.occurrence.event.id), [
         'spanning',
         'future-inside',
+        // Its two-day reminder becomes due exactly now.
+        'future-at',
         'old-inside',
       ]);
       final next = cache.reminderItems(data, now: now.add(tick));
@@ -801,6 +803,7 @@ void main() {
         'spanning',
         'future-inside',
         'future-at',
+        'future-after',
       ]);
       for (final anchor in [now, now.add(tick), now.subtract(tick)]) {
         expect(
@@ -809,6 +812,148 @@ void main() {
         );
       }
       expect(service.queries, hasLength(1));
+    });
+
+    test(
+      'widens cached candidates when an inherited lead grows to two days',
+      () {
+        final service = _RecordingOccurrenceService();
+        final cache = GeneralOccurrenceCache(service: service);
+        final now = base.add(const Duration(hours: 9));
+        final start = now.add(const Duration(days: 2));
+        final data = reminderData([
+          _reminderEvent(
+            'inherited',
+            start,
+            start.add(const Duration(hours: 1)),
+          ).copyWith(
+            reminderBehavior: GeneralEventReminderBehavior.inherit,
+            reminders: const [],
+          ),
+        ]);
+        const shortLead = NotificationSettings(generalDefaultMinutesBefore: 5);
+        const longLead = NotificationSettings(
+          generalDefaultMinutesBefore: 2880,
+        );
+        expect(
+          cache.reminderItems(data, now: now, notificationSettings: shortLead),
+          isEmpty,
+        );
+        final visible = cache.reminderItems(
+          data,
+          now: now,
+          notificationSettings: longLead,
+        );
+        expect(visible.single.status, GeneralReminderStatus.upcoming);
+        expect(service.queries, hasLength(2));
+        expect(service.queries.last.endExclusive.isAfter(start), isTrue);
+        expect(
+          cache.reminderItems(data, now: now, notificationSettings: shortLead),
+          isEmpty,
+        );
+        expect(service.queries, hasLength(2));
+        for (final (anchor, status) in [
+          (
+            start.subtract(const Duration(hours: 23)),
+            GeneralReminderStatus.upcoming,
+          ),
+          (start, GeneralReminderStatus.inProgress),
+          (start.add(const Duration(hours: 1)), GeneralReminderStatus.overdue),
+        ]) {
+          final actual = cache.reminderItems(
+            data,
+            now: anchor,
+            notificationSettings: longLead,
+          );
+          expect(actual.single.status, status);
+          expect(
+            _reminderSnapshot(actual),
+            _reminderSnapshot(
+              reference.reminderItems(
+                data,
+                now: anchor,
+                notificationSettings: longLead,
+              ),
+            ),
+          );
+        }
+      },
+    );
+
+    test(
+      'does not include an ordinary horizon edge before its reminder is due',
+      () {
+        final cache = GeneralOccurrenceCache();
+        final now = base.add(const Duration(hours: 9));
+        final start = now.add(const Duration(hours: 24));
+        final data = reminderData([
+          _reminderEvent(
+            'not-due',
+            start,
+            start.add(const Duration(hours: 1)),
+          ).copyWith(reminders: const [GeneralEventReminder(minutesBefore: 5)]),
+        ]);
+        expect(cache.reminderItems(data, now: now), isEmpty);
+        expect(
+          generalReminderCandidateEndExclusive(
+            data,
+            anchor: now,
+            upcomingHorizon: const Duration(hours: 24),
+            notificationSettings: const NotificationSettings(),
+          ),
+          start,
+        );
+      },
+    );
+
+    test('a huge one-off lead does not expand unrelated daily recurrences', () {
+      final service = _RecordingOccurrenceService();
+      final cache = GeneralOccurrenceCache(service: service);
+      final now = base.add(const Duration(hours: 9, seconds: 15));
+      final dailyStart = now.add(const Duration(minutes: 10));
+      final data = reminderData([
+        _reminderEvent(
+          'far-one-off',
+          now.add(const Duration(days: 1000)),
+          now.add(const Duration(days: 1000, hours: 1)),
+        ).copyWith(
+          reminders: const [
+            GeneralEventReminder(minutesBefore: 9223372036854775807),
+          ],
+        ),
+        _reminderEvent(
+          'daily-short-lead',
+          dailyStart,
+          dailyStart.add(const Duration(hours: 1)),
+        ).copyWith(
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+          ),
+          reminders: const [GeneralEventReminder(minutesBefore: 15)],
+        ),
+      ]);
+      final first = cache.reminderItems(data, now: now);
+      expect(first.map((item) => item.occurrence.event.id), [
+        'daily-short-lead',
+        'far-one-off',
+      ]);
+      expect(service.queries, hasLength(2));
+      final dailyQuery = service.eventIdsByQuery.indexWhere(
+        (ids) => ids.contains('daily-short-lead'),
+      );
+      expect(service.queries[dailyQuery].endExclusive.year, 2026);
+      expect(service.resultCounts[dailyQuery], lessThanOrEqualTo(2));
+      final snapshots = List<Object>.of(service.scheduleIdentities);
+      cache.reminderItems(data, now: now.add(const Duration(seconds: 1)));
+      expect(service.queries, hasLength(2));
+      final later = now.add(const Duration(minutes: 1));
+      expect(
+        _reminderSnapshot(cache.reminderItems(data, now: later)),
+        _reminderSnapshot(reference.reminderItems(data, now: later)),
+      );
+      expect(service.queries, hasLength(4));
+      expect(identical(service.scheduleIdentities[2], snapshots[0]), isTrue);
+      expect(identical(service.scheduleIdentities[3], snapshots[1]), isTrue);
     });
 
     test('retains custom, bounded, and empty window behavior', () {
@@ -1106,7 +1251,7 @@ void main() {
           'old',
           now.subtract(const Duration(minutes: 2)),
           now.subtract(const Duration(seconds: 50)),
-        ),
+        ).copyWith(reminders: const [GeneralEventReminder(minutesBefore: 0)]),
       ]);
       final items = cache.reminderItems(
         data,
@@ -1151,6 +1296,9 @@ List<(String, String, int, GeneralReminderStatus)> _reminderSnapshot(
 
 class _RecordingOccurrenceService extends GeneralOccurrenceService {
   final queries = <GeneralOccurrenceQuery>[];
+  final eventIdsByQuery = <List<String>>[];
+  final resultCounts = <int>[];
+  final scheduleIdentities = <Object>[];
 
   @override
   List<GeneralEventOccurrence> occurrencesForQuery(
@@ -1158,7 +1306,14 @@ class _RecordingOccurrenceService extends GeneralOccurrenceService {
     GeneralOccurrenceQuery query,
   ) {
     queries.add(query);
-    return super.occurrencesForQuery(general, query);
+    eventIdsByQuery.add([
+      for (final schedule in general.schedules)
+        for (final event in schedule.events) event.id,
+    ]);
+    scheduleIdentities.add(general.schedules);
+    final result = super.occurrencesForQuery(general, query);
+    resultCounts.add(result.length);
+    return result;
   }
 }
 

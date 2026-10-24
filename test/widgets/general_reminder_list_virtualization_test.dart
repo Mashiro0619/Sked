@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/app_runtime.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/services/general_reminder_items.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 
 import '../support/reminder_summary_harness.dart';
@@ -65,15 +68,60 @@ class _PendingStorage extends WorkspaceMemoryStorage {
   }
 }
 
-Future<void> _mount(
+AppData _largeIndexedData(int count) {
+  final start = _now.toUtc().add(const Duration(hours: 1));
+  final base = _data(0);
+  return base.copyWith(
+    generalMode: base.generalMode.copyWith(
+      schedules: [
+        GeneralSchedule(
+          id: 'reminders',
+          name: 'Reminders',
+          events: [
+            GeneralEvent(
+              id: 'indexed-daily',
+              calendarId: 'reminders',
+              title: 'Indexed daily',
+              startDateTimeIso: start.toIso8601String(),
+              endDateTimeIso: start
+                  .add(const Duration(hours: 1))
+                  .toIso8601String(),
+              recurrenceRule: GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.daily,
+                count: count,
+              ),
+              reminderBehavior: GeneralEventReminderBehavior.custom,
+              reminders: [
+                GeneralEventReminder(minutesBefore: (count + 1) * 1440),
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+GeneralReminderItems _indexedItems(AppRuntime provider) =>
+    provider.generalView.reminderItems(
+      now: _now,
+      occurrenceFilter: GeneralOccurrenceQuery(
+        startInclusive: _now.subtract(const Duration(hours: 24)),
+        endExclusive: _now.add(const Duration(hours: 24)),
+      ),
+    ) as GeneralReminderItems;
+
+Future<AppRuntime> _mount(
   WidgetTester tester,
   WorkspaceMemoryStorage storage, {
   bool touch = false,
+  int? expectedReminderCount,
+  Size? viewport,
+  double scale = 1,
 }) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = touch
-      ? const Size(390, 844)
-      : const Size(1440, 900);
+  tester.view.physicalSize =
+      viewport ?? (touch ? const Size(390, 844) : const Size(1440, 900));
   addTearDown(tester.view.reset);
   final provider = await workspaceProvider(
     mode: AppMode.general,
@@ -81,23 +129,247 @@ Future<void> _mount(
   );
   addTearDown(provider.dispose);
   await tester.pumpWidget(
-    reminderSummaryHarness(provider, ReminderSummaryClock()),
+    reminderSummaryHarness(provider, ReminderSummaryClock(), scale: scale),
   );
   await tester.pumpAndSettle();
   if (touch) {
     await tester.tap(_key('general-toolbar-more-button'));
     await tester.pumpAndSettle();
   }
+  if (expectedReminderCount != null) {
+    expect(
+      find.text('$expectedReminderCount').evaluate().isNotEmpty ||
+          find.text('Reminder · $expectedReminderCount').evaluate().isNotEmpty,
+      isTrue,
+      reason: 'The reminder action must expose the complete count.',
+    );
+  }
   await tester.tap(_key('general-reminders-action'));
   await tester.pumpAndSettle();
   expect(_list, findsOneWidget);
+  return provider;
 }
 
+Finder get _bodyViewport =>
+    find.descendant(of: _list, matching: find.byType(CustomScrollView)).last;
+
 ScrollableState _body(WidgetTester tester) => tester.state<ScrollableState>(
-  find.descendant(of: _list, matching: find.byType(Scrollable)).last,
+  find.descendant(of: _bodyViewport, matching: find.byType(Scrollable)).first,
 );
 
+SliverChildBuilderDelegate _rowDelegate(WidgetTester tester) =>
+    tester
+            .widget<SliverList>(
+              find
+                  .descendant(of: _list, matching: find.byType(SliverList))
+                  .last,
+            )
+            .delegate
+        as SliverChildBuilderDelegate;
+
+List<int> _semanticIndices(WidgetTester tester) => tester
+    .widgetList<IndexedSemantics>(
+      find.descendant(of: _list, matching: find.byType(IndexedSemantics)),
+    )
+    .map((widget) => widget.index)
+    .toList();
+
+Future<void> _page(WidgetTester tester, String action) async {
+  final button = _key('general-reminder-$action-page');
+  await tester.ensureVisible(button);
+  await tester.pumpAndSettle();
+  expect(button.hitTestable(), findsOneWidget);
+  expect(tester.widget<IconButton>(button).onPressed, isNotNull);
+  await tester.tap(button);
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    testWidgets(
+      '400001 indexed reminders page to the last occurrence and safely retry handling on $platform',
+      (tester) async {
+        const count = 400001;
+        final storage = WorkspaceMemoryStorage(_largeIndexedData(count));
+        final provider = await _mount(
+          tester,
+          storage,
+          touch: platform == TargetPlatform.android,
+          expectedReminderCount: count,
+        );
+        try {
+          final items = _indexedItems(provider);
+          expect(items.length, count);
+          expect(items.retainedRowCount, lessThan(100));
+          expect(_rows.evaluate().length, inExclusiveRange(0, 60));
+          expect(
+            tester.widget<CustomScrollView>(_bodyViewport).semanticChildCount,
+            count,
+          );
+          final first = items.first.occurrence;
+          final last = items.last.occurrence;
+          expect(first.sequence, 0);
+          expect(last.sequence, count - 1);
+          expect(items.indexOfOccurrenceKey(last.occurrenceKey), count - 1);
+          expect(last.start, first.start.add(const Duration(days: count - 1)));
+          var delegate = _rowDelegate(tester);
+          expect(delegate.childCount, 100);
+          expect(delegate.semanticIndexOffset, 0);
+          expect(
+            delegate.findChildIndexCallback!(ValueKey(last.occurrenceKey)),
+            isNull,
+          );
+          _body(tester).position.jumpTo(1000);
+          await tester.pumpAndSettle();
+          expect(_rows.evaluate().length, inExclusiveRange(0, 60));
+          expect(items.retainedRowCount, lessThan(100));
+
+          var lastPageBuilds = 0;
+          final oldRebuildHook = debugOnRebuildDirtyWidget;
+          debugOnRebuildDirtyWidget = (element, builtOnce) {
+            oldRebuildHook?.call(element, builtOnce);
+            if (element.widget.runtimeType.toString() ==
+                '_ReminderSummaryRow') {
+              lastPageBuilds++;
+            }
+          };
+          try {
+            await _page(tester, 'last');
+          } finally {
+            debugOnRebuildDirtyWidget = oldRebuildHook;
+          }
+          expect(
+            lastPageBuilds,
+            inInclusiveRange(1, 100),
+            reason: 'A distant page must not build intermediate reminders.',
+          );
+          expect(_body(tester).position.pixels, 0);
+          expect(_key(last.occurrenceKey).hitTestable(), findsOneWidget);
+          delegate = _rowDelegate(tester);
+          expect(delegate.childCount, 1);
+          expect(delegate.semanticIndexOffset, count - 1);
+          expect(
+            delegate.findChildIndexCallback!(ValueKey(last.occurrenceKey)),
+            0,
+          );
+          expect(
+            delegate.findChildIndexCallback!(ValueKey(first.occurrenceKey)),
+            isNull,
+          );
+          expect(_semanticIndices(tester), [count - 1]);
+
+          await _page(tester, 'previous');
+          delegate = _rowDelegate(tester);
+          expect(delegate.childCount, 100);
+          expect(delegate.semanticIndexOffset, 399900);
+          _body(tester).position.jumpTo(_body(tester).position.maxScrollExtent);
+          await tester.pumpAndSettle();
+          expect(_rows.evaluate().length, inExclusiveRange(0, 60));
+          await _page(tester, 'first');
+          expect(_rowDelegate(tester).semanticIndexOffset, 0);
+          expect(_body(tester).position.pixels, 0);
+
+          final nextButton = _key('general-reminder-next-page');
+          final nextIcon = find.descendant(
+            of: nextButton,
+            matching: find.byType(Icon),
+          );
+          final nextFocus = Focus.of(tester.element(nextIcon));
+          nextFocus.requestFocus();
+          await tester.pumpAndSettle();
+          expect(nextFocus.hasFocus, isTrue);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(_rowDelegate(tester).semanticIndexOffset, 100);
+          await _page(tester, 'last');
+
+          final lastAction = find.descendant(
+            of: _key(last.occurrenceKey),
+            matching: find.byTooltip('Mark handled'),
+          );
+          storage.saveError = StateError(
+            'expected indexed reminder write failure',
+          );
+          await tester.tap(lastAction);
+          await tester.pumpAndSettle();
+          expect(storage.data.generalMode.reminderAcknowledgements, isEmpty);
+          expect(_indexedItems(provider).length, count);
+          expect(lastAction.hitTestable(), findsOneWidget);
+          expect(_key('ui-command-failure-notice'), findsOneWidget);
+          await tester.tap(lastAction);
+          await tester.pumpAndSettle();
+          expect(
+            storage.data.generalMode.reminderAcknowledgements,
+            hasLength(1),
+          );
+          final remaining = _indexedItems(provider);
+          expect(remaining.length, count - 1);
+          expect(remaining.indexOfOccurrenceKey(last.occurrenceKey), isNull);
+          expect(_key(last.occurrenceKey), findsNothing);
+          delegate = _rowDelegate(tester);
+          expect(delegate.childCount, 100);
+          expect(delegate.semanticIndexOffset, 399900);
+          expect(
+            tester.widget<CustomScrollView>(_bodyViewport).semanticChildCount,
+            count - 1,
+          );
+          expect(remaining.retainedRowCount, lessThanOrEqualTo(256));
+          expect(tester.takeException(), isNull);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+        }
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
+  testWidgets(
+    'indexed reminder pagination remains usable at 320dp with twofold text',
+    (tester) async {
+      const count = 400001;
+      final storage = WorkspaceMemoryStorage(_largeIndexedData(count));
+      final provider = await _mount(
+        tester,
+        storage,
+        touch: true,
+        expectedReminderCount: count,
+        viewport: const Size(320, 844),
+        scale: 2,
+      );
+      try {
+        for (final action in ['first', 'previous', 'next', 'last']) {
+          final button = _key('general-reminder-$action-page');
+          await tester.ensureVisible(button);
+          await tester.pumpAndSettle();
+          expect(button.hitTestable(), findsOneWidget);
+        }
+        await _page(tester, 'last');
+        final last = _indexedItems(provider).last.occurrence;
+        expect(_semanticIndices(tester), [count - 1]);
+        final lastAction = find.descendant(
+          of: _key(last.occurrenceKey),
+          matching: find.byTooltip('Mark handled'),
+        );
+        await tester.ensureVisible(lastAction);
+        await tester.pumpAndSettle();
+        expect(lastAction.hitTestable(), findsOneWidget);
+        await tester.tap(lastAction);
+        await tester.pumpAndSettle();
+        expect(storage.data.generalMode.reminderAcknowledgements, hasLength(1));
+        expect(_indexedItems(provider).length, count - 1);
+        expect(_rowDelegate(tester).semanticIndexOffset, 399900);
+        await _page(tester, 'first');
+        expect(_rowDelegate(tester).semanticIndexOffset, 0);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
   testWidgets(
     'reminder groups keep one ordered semantic index range after handling',
     (tester) async {

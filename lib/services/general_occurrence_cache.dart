@@ -9,8 +9,12 @@ class GeneralOccurrenceCache {
   final GeneralOccurrenceService _service;
   Object? _schedulesIdentity;
   bool _canReuseContainingRanges = false;
+  final _reminderGroupsByDefault =
+      <int?, List<GeneralReminderCandidateGroup>>{};
   final _queries =
       <_GeneralOccurrenceQueryCacheKey, List<GeneralEventOccurrence>>{};
+  Object? _indexedReminderKey;
+  GeneralReminderItems? _indexedReminders;
 
   List<GeneralEventOccurrence> occurrencesForRange(
     GeneralScheduleData general, {
@@ -33,7 +37,15 @@ class GeneralOccurrenceCache {
     GeneralOccurrenceQuery query,
   ) {
     _ensureFreshFor(general);
-    final key = _GeneralOccurrenceQueryCacheKey.from(query);
+    return _cachedOccurrencesForQuery(general, query);
+  }
+
+  List<GeneralEventOccurrence> _cachedOccurrencesForQuery(
+    GeneralScheduleData general,
+    GeneralOccurrenceQuery query, {
+    Object? cacheScope,
+  }) {
+    final key = _GeneralOccurrenceQueryCacheKey.from(query, cacheScope);
     final cached = _queries[key];
     if (cached != null) {
       // Map insertion order is the eviction order; reinsert hits at the end.
@@ -101,30 +113,88 @@ class GeneralOccurrenceCache {
     GeneralOccurrenceQuery? occurrenceFilter,
     NotificationSettings notificationSettings = const NotificationSettings(),
   }) {
+    _ensureFreshFor(general);
     final anchor = now ?? DateTime.now();
+    if (_service.usesIndexedReminderItems(
+      general,
+      upcomingHorizon: upcomingHorizon,
+      notificationSettings: notificationSettings,
+      occurrenceFilter: occurrenceFilter,
+    )) {
+      final key = (
+        general.reminderAcknowledgements,
+        notificationSettings.generalDefaultMinutesBefore,
+        notificationSettings.remindHiddenGeneralCalendars,
+        anchor.microsecondsSinceEpoch,
+        anchor.isUtc,
+        upcomingHorizon,
+        boundedGeneralReminderLookback(overdueWindow),
+        occurrenceFilter?.searchQuery.trim().toLowerCase(),
+        occurrenceFilter?.colorValue,
+      );
+      if (_indexedReminderKey == key) return _indexedReminders!;
+      final items = _service.indexedReminderItems(
+        general,
+        now: anchor,
+        upcomingHorizon: upcomingHorizon,
+        overdueWindow: overdueWindow,
+        occurrenceFilter: occurrenceFilter,
+        notificationSettings: notificationSettings,
+      );
+      // Retain one compact snapshot and a bounded row cache, never a full list
+      // per minute for a recurrence with hundreds of thousands of reminders.
+      _indexedReminderKey = key;
+      _indexedReminders = items;
+      return items;
+    }
+    _indexedReminderKey = null;
+    _indexedReminders = null;
+    final defaultLead = notificationSettings.generalDefaultMinutesBefore;
+    var groups = _reminderGroupsByDefault[defaultLead];
+    if (groups == null) {
+      groups = generalReminderCandidateGroups(general, defaultLead);
+      if (_reminderGroupsByDefault.length >= 4) {
+        _reminderGroupsByDefault.remove(_reminderGroupsByDefault.keys.first);
+      }
+      _reminderGroupsByDefault[defaultLead] = groups;
+    }
     final start = anchor.subtract(
       boundedGeneralReminderLookback(overdueWindow),
     );
-    final end = anchor.add(upcomingHorizon);
     // Cache only the expansion, never the reminder status at a rounded time.
     // A minute adds fewer than two minutes of candidates to the exact window
     // while letting rebuilds and multiple reminder surfaces share that work.
-    final candidates = end.isAfter(start)
-        ? occurrencesForRange(
-            general,
-            startInclusive: _minuteBoundary(start),
-            endExclusive: _minuteBoundary(end, roundUp: true),
-            onlyVisibleCalendars:
-                !notificationSettings.remindHiddenGeneralCalendars,
-          )
-        : const <GeneralEventOccurrence>[];
-    return _service.reminderItemsFromOccurrences(
-      general,
+    final candidates = <GeneralEventOccurrence>[];
+    for (final group in groups) {
+      final end = generalReminderCandidateEndExclusive(
+        group.data,
+        anchor: anchor,
+        upcomingHorizon: upcomingHorizon,
+        notificationSettings: notificationSettings,
+        maximumMinutesBefore: group.maximumMinutesBefore,
+      );
+      if (!end.isAfter(start)) continue;
+      final expanded = _cachedOccurrencesForQuery(
+        group.data,
+        GeneralOccurrenceQuery(
+          startInclusive: _minuteBoundary(start),
+          endExclusive: _minuteBoundary(end, roundUp: true),
+          onlyVisibleCalendars:
+              !notificationSettings.remindHiddenGeneralCalendars,
+        ),
+        cacheScope: group.cacheScope,
+      );
       // Query.matches filters text and color, not time. Remove the additional
       // boundary candidates before classification, including empty windows.
-      candidates.where(
-        (item) => item.end.isAfter(start) && item.start.isBefore(end),
-      ),
+      candidates.addAll(
+        expanded.where(
+          (item) => item.end.isAfter(start) && item.start.isBefore(end),
+        ),
+      );
+    }
+    return _service.reminderItemsFromOccurrences(
+      general,
+      candidates,
       now: anchor,
       occurrenceFilter: occurrenceFilter,
       notificationSettings: notificationSettings,
@@ -134,7 +204,10 @@ class GeneralOccurrenceCache {
   void clear() {
     _schedulesIdentity = null;
     _canReuseContainingRanges = false;
+    _reminderGroupsByDefault.clear();
     _queries.clear();
+    _indexedReminderKey = null;
+    _indexedReminders = null;
   }
 
   void _ensureFreshFor(GeneralScheduleData general) {
@@ -143,6 +216,9 @@ class GeneralOccurrenceCache {
       return;
     }
     _schedulesIdentity = schedulesIdentity;
+    _indexedReminderKey = null;
+    _indexedReminders = null;
+    _reminderGroupsByDefault.clear();
     // Recurrence expansion can choose a different first candidate or stop at
     // a skipped civil date depending on the query. Only one-off events form
     // a guaranteed superset for every contained range.
@@ -176,9 +252,13 @@ class _GeneralOccurrenceQueryCacheKey {
     required this.onlyVisibleCalendars,
     required this.searchQuery,
     required this.colorValue,
+    this.cacheScope,
   });
 
-  factory _GeneralOccurrenceQueryCacheKey.from(GeneralOccurrenceQuery query) {
+  factory _GeneralOccurrenceQueryCacheKey.from(
+    GeneralOccurrenceQuery query,
+    Object? cacheScope,
+  ) {
     return _GeneralOccurrenceQueryCacheKey(
       startMicros: query.startInclusive.microsecondsSinceEpoch,
       startIsUtc: query.startInclusive.isUtc,
@@ -187,6 +267,7 @@ class _GeneralOccurrenceQueryCacheKey {
       onlyVisibleCalendars: query.onlyVisibleCalendars,
       searchQuery: query.searchQuery.trim().toLowerCase(),
       colorValue: query.colorValue,
+      cacheScope: cacheScope,
     );
   }
 
@@ -197,6 +278,7 @@ class _GeneralOccurrenceQueryCacheKey {
   final bool onlyVisibleCalendars;
   final String searchQuery;
   final int? colorValue;
+  final Object? cacheScope;
 
   bool covers(_GeneralOccurrenceQueryCacheKey other) =>
       endMicros > startMicros &&
@@ -207,7 +289,8 @@ class _GeneralOccurrenceQueryCacheKey {
       endIsUtc == other.endIsUtc &&
       onlyVisibleCalendars == other.onlyVisibleCalendars &&
       searchQuery == other.searchQuery &&
-      colorValue == other.colorValue;
+      colorValue == other.colorValue &&
+      identical(cacheScope, other.cacheScope);
 
   @override
   bool operator ==(Object other) {
@@ -218,7 +301,8 @@ class _GeneralOccurrenceQueryCacheKey {
         other.endIsUtc == endIsUtc &&
         other.onlyVisibleCalendars == onlyVisibleCalendars &&
         other.searchQuery == searchQuery &&
-        other.colorValue == colorValue;
+        other.colorValue == colorValue &&
+        identical(cacheScope, other.cacheScope);
   }
 
   @override
@@ -230,5 +314,6 @@ class _GeneralOccurrenceQueryCacheKey {
     onlyVisibleCalendars,
     searchQuery,
     colorValue,
+    cacheScope,
   );
 }
