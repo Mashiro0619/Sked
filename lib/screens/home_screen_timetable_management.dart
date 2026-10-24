@@ -215,6 +215,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     var periodTimeSetPickerOpen = false;
     var busy = false;
     var deleteDialogOpen = false;
+    var shortenDialogOpen = false;
     try {
       final result = await showAppModalSheet<String>(
         context: context,
@@ -251,7 +252,8 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                 busy ||
                 startDatePickerOpen ||
                 periodTimeSetPickerOpen ||
-                deleteDialogOpen,
+                deleteDialogOpen ||
+                shortenDialogOpen,
             onExit: () => popWith(null),
             child: StatefulBuilder(
               builder: (context, setDialogState) {
@@ -259,13 +261,15 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                     busy ||
                     startDatePickerOpen ||
                     periodTimeSetPickerOpen ||
-                    deleteDialogOpen;
+                    deleteDialogOpen ||
+                    shortenDialogOpen;
 
                 Future<void> saveChanges() async {
                   if (busy ||
                       startDatePickerOpen ||
                       periodTimeSetPickerOpen ||
                       deleteDialogOpen ||
+                      shortenDialogOpen ||
                       popped) {
                     return;
                   }
@@ -290,6 +294,73 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                       offset: totalWeeks.toString().length,
                     ),
                   );
+                  if (!SkedTaskSessionScope.isCurrent(context)) return;
+                  if (!creating && totalWeeks < initialConfig.totalWeeks) {
+                    final current = student.timetables
+                        .where((item) => item.id == timetable.id)
+                        .firstOrNull;
+                    if (current == null) return;
+                    final affectedCount = current.courses
+                        .where(
+                          (course) =>
+                              course.semesterWeeks.isEmpty ||
+                              course.semesterWeeks.any(
+                                (week) =>
+                                    week > totalWeeks &&
+                                    week <= initialConfig.totalWeeks,
+                              ),
+                        )
+                        .length;
+                    if (affectedCount > 0) {
+                      setDialogState(() => shortenDialogOpen = true);
+                      bool? confirmed;
+                      try {
+                        confirmed = await showExpressiveDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          waitForTransitionComplete: true,
+                          session: SkedTaskSessionScope.maybeOf(context)
+                              ?.session,
+                          builder: (_) => SkedMutationConfirmationDialog(
+                            key: const ValueKey(
+                              'shorten-semester-confirmation',
+                            ),
+                            workspace: AppMode.student,
+                            title: l10n.shortenSemesterTitle,
+                            message: l10n.shortenSemesterMessage(
+                              totalWeeks,
+                              affectedCount,
+                            ),
+                            confirmLabel: l10n.save,
+                            debugLabel: 'Confirm shorter semester',
+                            onConfirm: null,
+                          ),
+                        );
+                      } finally {
+                        if (context.mounted && !popped) {
+                          setDialogState(() => shortenDialogOpen = false);
+                        } else {
+                          shortenDialogOpen = false;
+                        }
+                      }
+                      if (!context.mounted ||
+                          popped ||
+                          confirmed != true ||
+                          !SkedTaskSessionScope.isCurrent(context)) {
+                        return;
+                      }
+                      final latest = student.timetables
+                          .where((item) => item.id == timetable.id)
+                          .firstOrNull;
+                      if (!identical(latest, current)) {
+                        showUiFailureFeedback(
+                          context: context,
+                          message: l10n.saveFailedRetry,
+                        );
+                        return;
+                      }
+                    }
+                  }
                   setDialogState(() => busy = true);
                   final saved = await runUiCommandWithFeedback(
                     context: context,
@@ -324,6 +395,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                       startDatePickerOpen ||
                       periodTimeSetPickerOpen ||
                       deleteDialogOpen ||
+                      shortenDialogOpen ||
                       popped) {
                     return;
                   }
@@ -425,6 +497,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                   startDatePickerOpen ||
                                   periodTimeSetPickerOpen ||
                                   deleteDialogOpen ||
+                                  shortenDialogOpen ||
                                   popped) {
                                 return;
                               }
@@ -471,6 +544,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                   startDatePickerOpen ||
                                   periodTimeSetPickerOpen ||
                                   deleteDialogOpen ||
+                                  shortenDialogOpen ||
                                   popped) {
                                 return;
                               }

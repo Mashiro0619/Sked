@@ -678,6 +678,130 @@ Rect _emptyTimetableImportMenuRect(WidgetTester tester) {
 
 void main() {
   testWidgets(
+    'shortening semester confirms affected courses and retains all week selections',
+    (tester) async {
+      final initial = _buildPopulatedStudentData();
+      final table = initial.studentMode.timetables.single;
+      final late = CourseItem(
+        id: 'late-course',
+        name: 'Late seminar',
+        teacher: 'Teacher',
+        location: 'A201',
+        dayOfWeek: 1,
+        semesterWeeks: const [17, 18, 19, 20],
+        periods: const [1],
+        startMinutes: 480,
+        endMinutes: 525,
+        timeRange: '08:00–08:45',
+        credit: 1,
+        remarks: '',
+        customFields: const {},
+      );
+      final storage = _MemoryTimetableStorage(
+        initial.copyWith(
+          studentMode: initial.studentMode.copyWith(
+            timetables: [
+              table.copyWith(
+                config: table.config.copyWith(totalWeeks: 20),
+                courses: [
+                  late,
+                  late.copyWith(
+                    id: 'mixed-course',
+                    name: 'Mixed weeks',
+                    semesterWeeks: const [1, 17],
+                  ),
+                  late.copyWith(
+                    id: 'all-semester-course',
+                    name: 'Whole semester',
+                    semesterWeeks: const [],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      final provider = AppRuntime(
+        dataTransferCodec: inlineDataTransferCodec,
+        storage: storage,
+        workspaceMutationLock: (action) => action(),
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      addTearDown(provider.dispose);
+      await provider.lifecycle.load();
+      final savesAfterLoad = storage.saveCount;
+      await _pumpHomeScreenWithProvider(tester, provider);
+      await _openTimetablePicker(tester);
+      await tester.tap(find.byTooltip('Edit timetable'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(1), '16');
+      await _saveTimetableDialog(tester);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('shorten-semester-confirmation')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Courses with later sessions: 3'),
+        findsOneWidget,
+      );
+      expect(storage.saveCount, savesAfterLoad);
+      final confirm = find.byKey(
+        const ValueKey('shorten-semester-confirmation'),
+      );
+      await tester.tap(
+        find.descendant(
+          of: confirm,
+          matching: find.widgetWithText(TextButton, 'Cancel'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(provider.studentView.activeTimetable.config.totalWeeks, 20);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text,
+        '16',
+      );
+      await _saveTimetableDialog(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('shorten-semester-confirmation')),
+          matching: find.widgetWithText(FilledButton, 'Save'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(provider.studentView.activeTimetable.config.totalWeeks, 16);
+      expect(provider.studentView.activeTimetable.courses.first.semesterWeeks, [
+        17,
+        18,
+        19,
+        20,
+      ]);
+      expect(provider.studentView.activeTimetable.courses[1].semesterWeeks, [
+        1,
+        17,
+      ]);
+      expect(
+        provider.studentView.activeTimetable.courses.last.semesterWeeks,
+        isEmpty,
+      );
+      await provider.studentCommands.updateTimetableConfigFor(
+        table.id,
+        table.config.copyWith(totalWeeks: 20),
+      );
+      expect(provider.studentView.activeTimetable.courses.first.semesterWeeks, [
+        17,
+        18,
+        19,
+        20,
+      ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'compact week selection and browsing never persist data; selecting the same week is a no-op',
     (tester) async {
       tester.view.devicePixelRatio = 1;
