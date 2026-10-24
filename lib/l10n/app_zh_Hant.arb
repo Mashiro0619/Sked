@@ -1179,6 +1179,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "在這裡貼上 BEGIN:VCALENDAR 內容",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS 匯出不保留提醒",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "匯出的 ICS 不含提醒。若要保留提醒設定，請選擇 JSON。",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "匯出 JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "繼續使用 ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "從 ICS 匯入的事件將關閉提醒。若要還原提醒設定，請使用 JSON。",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "取代事件和提醒？",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "用 ICS 事件取代「{calendar}」會覆寫此分類的事件，並關閉這些事件的提醒。可取消後先匯出 JSON 備份，或返回並改為新增分類。",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "發現 {count} 個事件。要新增為分類，還是取代現有分類？",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1204,7 +1224,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "已修正結束時間不晚於開始時間的事件。",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "不支援的 ICS 欄位已寫入備註：{fields}",
+  "importWarningUnsupportedFields": "已忽略不支援的 ICS 欄位：{fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2066,5 +2086,23 @@
   "schoolSitesLoginUrlRequired": "請輸入登入頁面連結。",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "找不到符合的語言",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "月檢視文字",
+  "themeGeneralFestivalTextColor": "節日/假日",
+  "themeGeneralSolarTermTextColor": "節氣",
+  "themeGeneralLunarTextColor": "農曆日期",
+  "courseTextLowContrastHint": "此文字色在部分課程卡片上可能難以辨認（對比度低於 4.5:1）。你可以保留選擇或更換顏色。",
+  "shortenSemesterTitle": "縮短學期？",
+  "shortenSemesterMessage": "學期將縮短至 {weeks} 週，{count} 門課程的部分安排將超出顯示範圍。課程及週次會保留；恢復學期週數後可再次查看。",
+  "defaultGeneralCalendarName": "我的日曆",
+  "icsImportReportTitle": "匯入報告",
+  "icsImportReportAction": "查看報告",
+  "icsExportFailureTitle": "無法匯出為 ICS",
+  "icsCopyDiagnosticsAction": "複製詳情",
+  "icsUnsupportedTimeZoneMessage": "此 ICS 含有 Sked 暫時無法安全解析的具名時區，未匯入任何內容。請從來源日曆匯出 UTC 或浮動本地時間後重試。",
+  "icsExportMonthlyAnchorMismatchMessage": "此月度日程無法準確轉換為 ICS。請匯出 JSON 以保留日期。",
+  "icsExportEmptyRecurrenceMessage": "此重複日程沒有可匯出為 ICS 的有效實例。請匯出 JSON 以保留記錄。",
+  "icsImportedCalendarName": "匯入的日曆",
+  "icsUntitledEventName": "無標題日程",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

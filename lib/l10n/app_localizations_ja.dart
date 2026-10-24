@@ -1766,6 +1766,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pasteIcsContentHint => 'BEGIN:VCALENDAR から始まる内容を貼り付けてください';
 
   @override
+  String get icsReminderExportTitle => 'ICS へのエクスポートにはリマインダーは含まれません';
+
+  @override
+  String get icsReminderExportMessage =>
+      'エクスポートした ICS にリマインダーは含まれません。リマインダーの設定を保持するには、JSON を選んでください。';
+
+  @override
+  String get icsReminderExportJsonAction => 'JSON をエクスポート';
+
+  @override
+  String get icsReminderExportContinueAction => 'ICS で続行';
+
+  @override
+  String get icsReminderImportNotice =>
+      'ICS からインポートした予定のリマインダーはオフになります。リマインダーの設定を復元するには、JSON を使用してください。';
+
+  @override
+  String get icsReminderReplaceTitle => '予定とリマインダーを置き換えますか？';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return '「$calendar」を ICS の予定で置き換えると、このカテゴリの予定が上書きされ、リマインダーがオフになります。先に JSON のバックアップをエクスポートする場合はキャンセルしてください。または、戻って新しいカテゴリとして追加できます。';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return '$count 件の予定が見つかりました。新しいカテゴリとして追加しますか？それとも既存のカテゴリを置き換えますか？';
   }
@@ -1786,7 +1811,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return '未対応の ICS フィールドをメモに追加しました：$fields';
+    return '未対応の ICS フィールドを無視しました：$fields';
   }
 
   @override
@@ -2917,4 +2942,61 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get languageNoResults => '一致する言語がありません';
+
+  @override
+  String get themeGeneralMonthTextColors => '月表示のテキスト';
+
+  @override
+  String get themeGeneralFestivalTextColor => '祭日・祝日';
+
+  @override
+  String get themeGeneralSolarTermTextColor => '二十四節気';
+
+  @override
+  String get themeGeneralLunarTextColor => '旧暦の日付';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'この文字色は一部の授業カードで読みにくくなる場合があります（コントラスト比 4.5:1 未満）。そのまま保存するか、別の色を選べます。';
+
+  @override
+  String get shortenSemesterTitle => '学期を短縮しますか？';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return '学期を $weeks 週に短縮します。それ以降の授業がある科目は $count 件です。科目と週の選択は保持されます。週数を戻すと再び表示されます。';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'マイカレンダー';
+
+  @override
+  String get icsImportReportTitle => 'インポートレポート';
+
+  @override
+  String get icsImportReportAction => 'レポートを表示';
+
+  @override
+  String get icsExportFailureTitle => 'ICS にエクスポートできません';
+
+  @override
+  String get icsCopyDiagnosticsAction => '詳細をコピー';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'この ICS には Sked が安全に解釈できない名前付きタイムゾーンが含まれています。何もインポートされませんでした。元のカレンダーから UTC またはタイムゾーンのない現地時刻でエクスポートし、再試行してください。';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'この毎月の予定は ICS で正確に表現できません。日付を保持するには JSON でエクスポートしてください。';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'この繰り返し予定には ICS にエクスポートできる有効な予定がありません。記録を保持するには JSON でエクスポートしてください。';
+
+  @override
+  String get icsImportedCalendarName => 'インポートしたカレンダー';
+
+  @override
+  String get icsUntitledEventName => '無題の予定';
 }

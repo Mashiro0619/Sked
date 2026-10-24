@@ -1732,6 +1732,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pasteIcsContentHint => '在这里粘贴 BEGIN:VCALENDAR 内容';
 
   @override
+  String get icsReminderExportTitle => 'ICS 导出不保留提醒';
+
+  @override
+  String get icsReminderExportMessage => '导出的 ICS 不含提醒。要保留提醒设置，请选择 JSON。';
+
+  @override
+  String get icsReminderExportJsonAction => '导出 JSON';
+
+  @override
+  String get icsReminderExportContinueAction => '继续使用 ICS';
+
+  @override
+  String get icsReminderImportNotice => '从 ICS 导入的事件将关闭提醒。要恢复提醒设置，请使用 JSON。';
+
+  @override
+  String get icsReminderReplaceTitle => '替换事件和提醒？';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return '用 ICS 事件替换“$calendar”会覆盖此分类的事件，并关闭这些事件的提醒。可取消后先导出 JSON 备份，或返回并改为新增分类。';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return '发现 $count 个事件。要新增为分类，还是替换已有分类？';
   }
@@ -1752,7 +1775,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return '不支持的 ICS 字段已写入备注：$fields';
+    return '已忽略不支持的 ICS 字段：$fields';
   }
 
   @override
@@ -2831,6 +2854,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get languageNoResults => '未找到匹配的语言';
+
+  @override
+  String get themeGeneralMonthTextColors => '月视图文本';
+
+  @override
+  String get themeGeneralFestivalTextColor => '节日/假日';
+
+  @override
+  String get themeGeneralSolarTermTextColor => '节气';
+
+  @override
+  String get themeGeneralLunarTextColor => '农历日期';
+
+  @override
+  String get courseTextLowContrastHint =>
+      '此文字色在部分课程卡片上可能难以辨认（对比度低于 4.5:1）。你可以保留选择或更换颜色。';
+
+  @override
+  String get shortenSemesterTitle => '缩短学期？';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return '学期将缩短至 $weeks 周，$count 门课程的部分安排将超出显示范围。课程及周次会保留；恢复学期周数后可再次查看。';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => '我的日历';
+
+  @override
+  String get icsImportReportTitle => '导入报告';
+
+  @override
+  String get icsImportReportAction => '查看报告';
+
+  @override
+  String get icsExportFailureTitle => '无法导出为 ICS';
+
+  @override
+  String get icsCopyDiagnosticsAction => '复制详情';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      '此 ICS 含有 Sked 暂时无法安全解析的命名时区，未导入任何内容。请从源日历导出 UTC 或浮动本地时间后重试。';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      '此月度日程无法准确转换为 ICS。请导出 JSON 以保留日期。';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      '此重复日程没有可导出为 ICS 的有效实例。请导出 JSON 以保留记录。';
+
+  @override
+  String get icsImportedCalendarName => '导入的日历';
+
+  @override
+  String get icsUntitledEventName => '无标题日程';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4559,6 +4639,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get pasteIcsContentHint => '在這裡貼上 BEGIN:VCALENDAR 內容';
 
   @override
+  String get icsReminderExportTitle => 'ICS 匯出不保留提醒';
+
+  @override
+  String get icsReminderExportMessage => '匯出的 ICS 不含提醒。若要保留提醒設定，請選擇 JSON。';
+
+  @override
+  String get icsReminderExportJsonAction => '匯出 JSON';
+
+  @override
+  String get icsReminderExportContinueAction => '繼續使用 ICS';
+
+  @override
+  String get icsReminderImportNotice => '從 ICS 匯入的事件將關閉提醒。若要還原提醒設定，請使用 JSON。';
+
+  @override
+  String get icsReminderReplaceTitle => '取代事件和提醒？';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return '用 ICS 事件取代「$calendar」會覆寫此分類的事件，並關閉這些事件的提醒。可取消後先匯出 JSON 備份，或返回並改為新增分類。';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return '發現 $count 個事件。要新增為分類，還是取代現有分類？';
   }
@@ -4579,7 +4682,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return '不支援的 ICS 欄位已寫入備註：$fields';
+    return '已忽略不支援的 ICS 欄位：$fields';
   }
 
   @override
@@ -5661,4 +5764,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get languageNoResults => '找不到符合的語言';
+
+  @override
+  String get themeGeneralMonthTextColors => '月檢視文字';
+
+  @override
+  String get themeGeneralFestivalTextColor => '節日/假日';
+
+  @override
+  String get themeGeneralSolarTermTextColor => '節氣';
+
+  @override
+  String get themeGeneralLunarTextColor => '農曆日期';
+
+  @override
+  String get courseTextLowContrastHint =>
+      '此文字色在部分課程卡片上可能難以辨認（對比度低於 4.5:1）。你可以保留選擇或更換顏色。';
+
+  @override
+  String get shortenSemesterTitle => '縮短學期？';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return '學期將縮短至 $weeks 週，$count 門課程的部分安排將超出顯示範圍。課程及週次會保留；恢復學期週數後可再次查看。';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => '我的日曆';
+
+  @override
+  String get icsImportReportTitle => '匯入報告';
+
+  @override
+  String get icsImportReportAction => '查看報告';
+
+  @override
+  String get icsExportFailureTitle => '無法匯出為 ICS';
+
+  @override
+  String get icsCopyDiagnosticsAction => '複製詳情';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      '此 ICS 含有 Sked 暫時無法安全解析的具名時區，未匯入任何內容。請從來源日曆匯出 UTC 或浮動本地時間後重試。';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      '此月度日程無法準確轉換為 ICS。請匯出 JSON 以保留日期。';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      '此重複日程沒有可匯出為 ICS 的有效實例。請匯出 JSON 以保留記錄。';
+
+  @override
+  String get icsImportedCalendarName => '匯入的日曆';
+
+  @override
+  String get icsUntitledEventName => '無標題日程';
 }

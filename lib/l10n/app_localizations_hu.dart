@@ -1845,6 +1845,33 @@ class AppLocalizationsHu extends AppLocalizations {
   String get pasteIcsContentHint => 'Illessze ide a BEGIN:VCALENDAR tartalmat';
 
   @override
+  String get icsReminderExportTitle =>
+      'Az ICS-export nem tartalmaz emlékeztetőket';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Az exportált ICS nem tartalmazza az emlékeztetőket. Az emlékeztetők beállításainak megőrzéséhez válaszd a JSON-t.';
+
+  @override
+  String get icsReminderExportJsonAction => 'JSON exportálása';
+
+  @override
+  String get icsReminderExportContinueAction => 'Folytatás ICS-sel';
+
+  @override
+  String get icsReminderImportNotice =>
+      'Az ICS-ből importált események emlékeztetői ki lesznek kapcsolva. Az emlékeztetők beállításainak visszaállításához használj JSON-t.';
+
+  @override
+  String get icsReminderReplaceTitle =>
+      'Lecseréled az eseményeket és emlékeztetőket?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Ha a(z) „$calendar” kategóriát ICS-eseményekkel cseréled le, a kategória eseményei felülíródnak, és az emlékeztetőik kikapcsolnak. Válaszd a megszakítást, és előbb exportálj egy JSON biztonsági másolatot, vagy lépj vissza, és adj hozzá új kategóriát.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return '$count esemény található. Új kategóriaként adja hozzá őket, vagy lecserél egy meglévőt?';
   }
@@ -1868,7 +1895,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'A nem támogatott ICS-mezők a jegyzetekbe kerültek: $fields';
+    return 'A nem támogatott ICS-mezők figyelmen kívül maradtak: $fields';
   }
 
   @override
@@ -3058,4 +3085,61 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Nincs egyező nyelv';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Havi nézet szövege';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Ünnepek és munkaszüneti napok';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Napévszakaszok';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Holdnaptári dátumok';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'Ez a szövegszín egyes kurzuskártyákon nehezen olvasható lehet (4.5:1 alatti kontraszt). Megtarthatja, vagy választhat másik színt.';
+
+  @override
+  String get shortenSemesterTitle => 'Lerövidíti a félévet?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'A félév a(z) $weeks. héten ér véget. Későbbi órákkal rendelkező kurzusok: $count. A kurzusok és a kiválasztott hetek megmaradnak. Állítsa vissza a hetek számát az újbóli megjelenítéshez.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Saját naptár';
+
+  @override
+  String get icsImportReportTitle => 'Importálási jelentés';
+
+  @override
+  String get icsImportReportAction => 'Jelentés megtekintése';
+
+  @override
+  String get icsExportFailureTitle => 'Nem exportálható ICS-ként';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Részletek másolása';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'Ez az ICS olyan névvel ellátott időzónákat tartalmaz, amelyeket a Sked nem tud biztonságosan értelmezni. Semmi sem lett importálva. Exportáljon UTC vagy időzóna nélküli helyi időpontokat a forrásnaptárból, és próbálja újra.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Ez a havi esemény nem ábrázolható pontosan ICS-ben. A dátumok megőrzéséhez exportáljon JSON-t.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'Ennek az ismétlődő eseménynek nincs érvényes előfordulása az ICS-exporthoz. A bejegyzés megőrzéséhez exportáljon JSON-t.';
+
+  @override
+  String get icsImportedCalendarName => 'Importált naptár';
+
+  @override
+  String get icsUntitledEventName => 'Névtelen esemény';
 }

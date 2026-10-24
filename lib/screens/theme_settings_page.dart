@@ -127,26 +127,15 @@ int _effectiveGeneralMonthTextColorValue(
 }
 
 String _generalMonthTextColorGroupTitle(BuildContext context) {
-  final localeName = AppLocalizations.of(context).localeName;
-  if (localeName.startsWith('zh')) {
-    return '月视图文本';
-  }
-  return 'Month view text';
+  return AppLocalizations.of(context).themeGeneralMonthTextColors;
 }
 
 String _generalMonthTextColorLabel(BuildContext context, String key) {
-  final localeName = AppLocalizations.of(context).localeName;
-  if (localeName.startsWith('zh')) {
-    return switch (key) {
-      colorfulGeneralFestivalTextColorKey => '节日/假日',
-      colorfulGeneralSolarTermTextColorKey => '节气',
-      _ => '农历日期',
-    };
-  }
+  final l10n = AppLocalizations.of(context);
   return switch (key) {
-    colorfulGeneralFestivalTextColorKey => 'Festivals and holidays',
-    colorfulGeneralSolarTermTextColorKey => 'Solar terms',
-    _ => 'Lunar dates',
+    colorfulGeneralFestivalTextColorKey => l10n.themeGeneralFestivalTextColor,
+    colorfulGeneralSolarTermTextColorKey => l10n.themeGeneralSolarTermTextColor,
+    _ => l10n.themeGeneralLunarTextColor,
   };
 }
 

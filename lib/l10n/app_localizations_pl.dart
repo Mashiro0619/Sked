@@ -1830,6 +1830,31 @@ class AppLocalizationsPl extends AppLocalizations {
   String get pasteIcsContentHint => 'Wklej tutaj zawartość BEGIN:VCALENDAR';
 
   @override
+  String get icsReminderExportTitle => 'Eksport ICS nie obejmuje przypomnień';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Przypomnienia nie są uwzględniane w wyeksportowanym pliku ICS. Wybierz JSON, aby zachować ustawienia przypomnień.';
+
+  @override
+  String get icsReminderExportJsonAction => 'Eksportuj JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'Kontynuuj z ICS';
+
+  @override
+  String get icsReminderImportNotice =>
+      'Wydarzenia zaimportowane z ICS będą miały wyłączone przypomnienia. Użyj JSON, aby przywrócić ustawienia przypomnień.';
+
+  @override
+  String get icsReminderReplaceTitle => 'Zastąpić wydarzenia i przypomnienia?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Zastąpienie kategorii „$calendar” wydarzeniami z ICS nadpisze jej wydarzenia i wyłączy ich przypomnienia. Anuluj, aby najpierw wyeksportować kopię zapasową JSON, lub wróć i dodaj nową kategorię.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'Znalezione wydarzenia: $count. Dodać je jako nową kategorię czy zastąpić istniejącą?';
   }
@@ -1853,7 +1878,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Nieobsługiwane pola ICS dodano do notatek: $fields';
+    return 'Nieobsługiwane pola ICS zostały pominięte: $fields';
   }
 
   @override
@@ -3050,4 +3075,61 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Brak pasujących języków';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Tekst widoku miesiąca';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Święta i dni wolne';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Okresy słoneczne';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Daty księżycowe';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'Ten kolor tekstu może być trudny do odczytania na niektórych kartach kursów (kontrast poniżej 4.5:1). Możesz go zachować lub wybrać inny.';
+
+  @override
+  String get shortenSemesterTitle => 'Skrócić semestr?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'Semestr zakończy się w tygodniu $weeks. Kursy z późniejszymi zajęciami: $count. Kursy i wybrane tygodnie zostaną zachowane. Przywróć liczbę tygodni, aby znów je zobaczyć.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Mój kalendarz';
+
+  @override
+  String get icsImportReportTitle => 'Raport importu';
+
+  @override
+  String get icsImportReportAction => 'Zobacz raport';
+
+  @override
+  String get icsExportFailureTitle => 'Nie można wyeksportować do ICS';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Kopiuj szczegóły';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'Ten ICS zawiera nazwane strefy czasowe, których Sked nie może bezpiecznie zinterpretować. Niczego nie zaimportowano. Wyeksportuj UTC lub lokalne czasy bez strefy czasowej z kalendarza źródłowego i spróbuj ponownie.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Tego comiesięcznego wydarzenia nie można dokładnie przedstawić w ICS. Wyeksportuj JSON, aby zachować daty.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'To wydarzenie cykliczne nie ma prawidłowych wystąpień do eksportu do ICS. Wyeksportuj JSON, aby zachować wpis.';
+
+  @override
+  String get icsImportedCalendarName => 'Zaimportowany kalendarz';
+
+  @override
+  String get icsUntitledEventName => 'Wydarzenie bez tytułu';
 }

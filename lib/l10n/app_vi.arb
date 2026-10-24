@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Dán nội dung BEGIN:VCALENDAR vào đây",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "Xuất ICS không bao gồm lời nhắc",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Lời nhắc không được đưa vào ICS đã xuất. Chọn JSON để giữ cài đặt lời nhắc.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Xuất JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Tiếp tục với ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Lời nhắc của các sự kiện nhập từ ICS sẽ bị tắt. Dùng JSON để khôi phục cài đặt lời nhắc.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Thay thế sự kiện và lời nhắc?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Thay thế “{calendar}” bằng các sự kiện ICS sẽ ghi đè sự kiện trong danh mục và tắt lời nhắc của chúng. Hủy để xuất bản sao lưu JSON trước, hoặc quay lại và thêm danh mục mới.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Tìm thấy {count} sự kiện. Thêm thành danh mục mới hay thay thế danh mục hiện có?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Đã điều chỉnh một sự kiện có giờ kết thúc không muộn hơn giờ bắt đầu.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Các trường ICS không được hỗ trợ đã được thêm vào ghi chú: {fields}",
+  "importWarningUnsupportedFields": "Đã bỏ qua các trường ICS không được hỗ trợ: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2094,5 +2114,23 @@
   "schoolSitesLoginUrlRequired": "Nhập URL đăng nhập.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Không tìm thấy ngôn ngữ phù hợp",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Văn bản chế độ xem tháng",
+  "themeGeneralFestivalTextColor": "Lễ hội và ngày nghỉ",
+  "themeGeneralSolarTermTextColor": "Tiết khí",
+  "themeGeneralLunarTextColor": "Ngày âm lịch",
+  "courseTextLowContrastHint": "Màu chữ này có thể khó đọc trên một số thẻ môn học (độ tương phản dưới 4.5:1). Bạn có thể giữ màu này hoặc chọn màu khác.",
+  "shortenSemesterTitle": "Rút ngắn học kỳ?",
+  "shortenSemesterMessage": "Học kỳ sẽ kết thúc ở tuần {weeks}. Số môn có buổi học sau đó: {count}. Môn học và các tuần đã chọn sẽ được giữ lại. Khôi phục số tuần để xem lại.",
+  "defaultGeneralCalendarName": "Lịch của tôi",
+  "icsImportReportTitle": "Báo cáo nhập",
+  "icsImportReportAction": "Xem báo cáo",
+  "icsExportFailureTitle": "Không thể xuất dạng ICS",
+  "icsCopyDiagnosticsAction": "Sao chép chi tiết",
+  "icsUnsupportedTimeZoneMessage": "ICS này chứa múi giờ có tên mà Sked không thể diễn giải an toàn. Chưa nhập nội dung nào. Hãy xuất giờ UTC hoặc giờ địa phương không gắn múi giờ từ lịch nguồn rồi thử lại.",
+  "icsExportMonthlyAnchorMismatchMessage": "Không thể biểu diễn chính xác sự kiện hằng tháng này trong ICS. Hãy xuất JSON để giữ nguyên ngày.",
+  "icsExportEmptyRecurrenceMessage": "Sự kiện lặp lại này không có lần diễn ra hợp lệ để xuất ICS. Hãy xuất JSON để giữ bản ghi.",
+  "icsImportedCalendarName": "Lịch đã nhập",
+  "icsUntitledEventName": "Sự kiện không có tiêu đề",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

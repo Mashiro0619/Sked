@@ -1831,6 +1831,31 @@ class AppLocalizationsSl extends AppLocalizations {
   String get pasteIcsContentHint => 'Sem prilepite vsebino BEGIN:VCALENDAR';
 
   @override
+  String get icsReminderExportTitle => 'Izvoz ICS ne vključuje opomnikov';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Opomniki niso vključeni v izvoženi ICS. Izberite JSON, da ohranite nastavitve opomnikov.';
+
+  @override
+  String get icsReminderExportJsonAction => 'Izvozi JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'Nadaljuj z ICS';
+
+  @override
+  String get icsReminderImportNotice =>
+      'Dogodki, uvoženi iz ICS, bodo imeli izklopljene opomnike. Za obnovitev nastavitev opomnikov uporabite JSON.';
+
+  @override
+  String get icsReminderReplaceTitle => 'Zamenjaj dogodke in opomnike?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Če kategorijo »$calendar« zamenjate z dogodki iz ICS, bodo njeni dogodki prepisani, njihovi opomniki pa izklopljeni. Prekličite, da najprej izvozite varnostno kopijo JSON, ali se vrnite in dodajte novo kategorijo.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'Najdeni dogodki: $count. Jih želite dodati kot novo kategorijo ali zamenjati obstoječo kategorijo?';
   }
@@ -1854,7 +1879,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Nepodprta polja ICS so bila dodana v opombe: $fields';
+    return 'Nepodprta polja ICS so bila prezrta: $fields';
   }
 
   @override
@@ -3050,4 +3075,61 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Ni ujemajočih se jezikov';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Besedilo mesečnega pogleda';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Prazniki in prosti dnevi';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Sončna obdobja';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Lunini datumi';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'To barvo besedila je na nekaterih karticah predmetov morda težko brati (kontrast pod 4.5:1). Lahko jo ohranite ali izberete drugo.';
+
+  @override
+  String get shortenSemesterTitle => 'Skrajšam semester?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'Semester se bo končal v tednu $weeks. Predmeti s poznejšimi urami: $count. Predmeti in izbrani tedni bodo ohranjeni. Obnovite število tednov za ponovni prikaz.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Moj koledar';
+
+  @override
+  String get icsImportReportTitle => 'Poročilo o uvozu';
+
+  @override
+  String get icsImportReportAction => 'Prikaži poročilo';
+
+  @override
+  String get icsExportFailureTitle => 'Izvoz v ICS ni mogoč';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Kopiraj podrobnosti';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'Ta ICS vsebuje poimenovane časovne pasove, ki jih Sked ne more varno razbrati. Nič ni bilo uvoženo. Iz izvornega koledarja izvozite UTC ali krajevne čase brez časovnega pasu in poskusite znova.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Tega mesečnega dogodka ni mogoče natančno predstaviti v ICS. Izvozite JSON, da ohranite datume.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'Ta ponavljajoči se dogodek nima veljavnih pojavitev za izvoz v ICS. Izvozite JSON, da ohranite zapis.';
+
+  @override
+  String get icsImportedCalendarName => 'Uvožen koledar';
+
+  @override
+  String get icsUntitledEventName => 'Dogodek brez naslova';
 }

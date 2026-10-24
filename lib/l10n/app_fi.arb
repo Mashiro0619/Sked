@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Liitä BEGIN:VCALENDAR-sisältö tähän",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS-vienti ei sisällä muistutuksia",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Viety ICS ei sisällä muistutuksia. Valitse JSON, jos haluat säilyttää muistutusasetukset.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Vie JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Jatka ICS:llä",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "ICS:stä tuotujen tapahtumien muistutukset ovat pois päältä. Käytä JSON-muotoa muistutusasetusten palauttamiseen.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Korvataanko tapahtumat ja muistutukset?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Kategorian ”{calendar}” korvaaminen ICS-tapahtumilla korvaa sen tapahtumat ja poistaa niiden muistutukset käytöstä. Peruuta ja vie ensin JSON-varmuuskopio tai palaa takaisin ja lisää uusi kategoria.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Löytyi {count} tapahtumaa. Lisätäänkö ne uutena kategoriana vai korvataanko olemassa oleva kategoria?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Muokattiin tapahtumaa, jonka loppuaika ei ollut alkuajan jälkeen.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "ICS-kentät, joita ei tueta, lisättiin muistiinpanoihin: {fields}",
+  "importWarningUnsupportedFields": "ICS-kentät, joita ei tueta, ohitettiin: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Anna kirjautumissivun URL-osoite.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Vastaavia kieliä ei löytynyt",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Kuukausinäkymän teksti",
+  "themeGeneralFestivalTextColor": "Juhlat ja pyhäpäivät",
+  "themeGeneralSolarTermTextColor": "Aurinkojaksot",
+  "themeGeneralLunarTextColor": "Kuukalenterin päivät",
+  "courseTextLowContrastHint": "Tätä tekstiväriä voi olla vaikea lukea joissakin kurssikorteissa (kontrasti alle 4.5:1). Voit säilyttää sen tai valita toisen värin.",
+  "shortenSemesterTitle": "Lyhennetäänkö lukukautta?",
+  "shortenSemesterMessage": "Lukukausi päättyy viikolla {weeks}. Kursseja, joilla on myöhempiä tunteja: {count}. Kurssit ja valitut viikot säilyvät. Palauta viikkojen määrä nähdäksesi ne uudelleen.",
+  "defaultGeneralCalendarName": "Oma kalenteri",
+  "icsImportReportTitle": "Tuontiraportti",
+  "icsImportReportAction": "Näytä raportti",
+  "icsExportFailureTitle": "ICS-vienti ei onnistu",
+  "icsCopyDiagnosticsAction": "Kopioi tiedot",
+  "icsUnsupportedTimeZoneMessage": "Tämä ICS sisältää nimettyjä aikavyöhykkeitä, joita Sked ei voi tulkita turvallisesti. Mitään ei tuotu. Vie lähdekalenterista UTC-ajat tai paikalliset ajat ilman aikavyöhykettä ja yritä uudelleen.",
+  "icsExportMonthlyAnchorMismatchMessage": "Tätä kuukausittaista tapahtumaa ei voida esittää tarkasti ICS-muodossa. Vie JSON säilyttääksesi päivämäärät.",
+  "icsExportEmptyRecurrenceMessage": "Tällä toistuvalla tapahtumalla ei ole kelvollisia esiintymiä ICS-vientiä varten. Vie JSON säilyttääksesi tietueen.",
+  "icsImportedCalendarName": "Tuotu kalenteri",
+  "icsUntitledEventName": "Nimetön tapahtuma",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

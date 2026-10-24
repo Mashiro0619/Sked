@@ -1,5 +1,8 @@
 import 'dart:collection';
 
+import '../l10n/app_locale.dart';
+import '../utils/localized_names.dart';
+
 import '../data/migrations/migration.dart';
 import '../utils/constants.dart';
 import '../utils/time_utils.dart';
@@ -510,7 +513,9 @@ class GeneralScheduleData {
       'toolbarHiddenItemsBehavior',
     );
     if ((schemaVersion ?? 0) < 2 && !_hasLegacySchedulePayload(json)) {
-      return GeneralScheduleData.createDefault().copyWith(
+      return GeneralScheduleData.createDefault(
+        localeCode: localeCode ?? defaultLocaleCode,
+      ).copyWith(
         viewSwitchBehavior: viewSwitchBehavior,
         toolbarWidthPolicy: toolbarWidthPolicy,
         dateLabelFormat: dateLabelFormat,
@@ -535,14 +540,20 @@ class GeneralScheduleData {
         _listValue(json['schedules'])
             .map(_asStringKeyedMap)
             .whereType<Map<String, dynamic>>()
-            .map(GeneralSchedule.fromJson)
+            .map(
+              (json) => GeneralSchedule.fromJson(json, localeCode: localeCode),
+            )
             .toList()
           ..sort((a, b) {
             final order = a.sortOrder.compareTo(b.sortOrder);
             return order != 0 ? order : a.name.compareTo(b.name);
           });
     final withDefaults = schedules.isEmpty
-        ? <GeneralSchedule>[createDefaultGeneralSchedule()]
+        ? <GeneralSchedule>[
+            createDefaultGeneralSchedule(
+              localeCode: localeCode ?? defaultLocaleCode,
+            ),
+          ]
         : schedules;
     final activeId = _stringValue(json['activeScheduleId']);
     final resolvedActiveId = withDefaults.any((s) => s.id == activeId)
@@ -604,11 +615,16 @@ class GeneralScheduleData {
           .whereType<Map<String, dynamic>>()
           .map(GeneralReminderAcknowledgement.fromJson)
           .toList(),
-    ).normalized(migrateLegacyElapsedExceptions: (schemaVersion ?? 1) < 4);
+    ).normalized(
+      migrateLegacyElapsedExceptions: (schemaVersion ?? 1) < 4,
+      localeCode: localeCode ?? defaultLocaleCode,
+    );
   }
 
-  factory GeneralScheduleData.createDefault() {
-    final schedule = createDefaultGeneralSchedule();
+  factory GeneralScheduleData.createDefault({
+    String localeCode = defaultLocaleCode,
+  }) {
+    final schedule = createDefaultGeneralSchedule(localeCode: localeCode);
     final data = GeneralScheduleData(
       activeScheduleId: schedule.id,
       schedules: [schedule],
@@ -759,9 +775,12 @@ class GeneralScheduleData {
 
   GeneralScheduleData normalized({
     bool migrateLegacyElapsedExceptions = false,
+    String localeCode = defaultLocaleCode,
   }) {
     final rawSchedules = schedules.isEmpty
-        ? <GeneralSchedule>[createDefaultGeneralSchedule()]
+        ? <GeneralSchedule>[
+            createDefaultGeneralSchedule(localeCode: localeCode),
+          ]
         : schedules;
     final usedScheduleIds = <String>{};
     final usedEventIds = <String>{};
@@ -827,7 +846,7 @@ class GeneralScheduleData {
         schedule.copyWith(
           id: scheduleId,
           name: schedule.name.trim().isEmpty
-              ? 'My calendar'
+              ? defaultGeneralCalendarName(localeCode: localeCode)
               : schedule.name.trim(),
           sortOrder: normalizedSchedules.length,
           events: List.unmodifiable(normalizedEvents),

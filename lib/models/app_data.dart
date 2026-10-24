@@ -347,7 +347,10 @@ class AppData {
       studentModeJson = migrated;
       studentMode = StudentModeData.fromJson(migrated, localeCode: localeCode);
       generalModeJson = const {};
-      generalMode = GeneralScheduleData.fromJson(const {});
+      generalMode = GeneralScheduleData.fromJson(
+        const {},
+        localeCode: localeCode,
+      );
       activeMode = studentMode.timetables.isNotEmpty
           ? AppMode.student
           : AppMode.general;
@@ -360,8 +363,11 @@ class AppData {
       generalModeJson =
           appDataStringKeyedMap(migrated['generalMode']) ?? const {};
       generalMode = migrated.containsKey('generalMode')
-          ? GeneralScheduleData.fromJson(generalModeJson)
-          : _buildDefaultGeneralMode();
+          ? GeneralScheduleData.fromJson(
+              generalModeJson,
+              localeCode: localeCode,
+            )
+          : _buildDefaultGeneralMode(localeCode: localeCode);
       activeMode = parseAppMode(_nullableStringValue(migrated['activeMode']));
     }
 
@@ -632,8 +638,10 @@ bool _decodeHomeWorkspaceNavigationCollapsed(Map<String, dynamic> json) {
   return value;
 }
 
-GeneralScheduleData _buildDefaultGeneralMode() {
-  return GeneralScheduleData.createDefault();
+GeneralScheduleData _buildDefaultGeneralMode({
+  String localeCode = defaultLocaleCode,
+}) {
+  return GeneralScheduleData.createDefault(localeCode: localeCode);
 }
 
 // Import/Export support
@@ -823,9 +831,8 @@ AppData buildInitialAppData(
       periodTimeSets: [defaultSet],
       themeMode: newUserDefaultThemeMode,
     ),
-    generalMode: GeneralScheduleData.createDefault().copyWith(
-      themeMode: newUserDefaultThemeMode,
-    ),
+    generalMode: GeneralScheduleData.createDefault(localeCode: localeCode)
+        .copyWith(themeMode: newUserDefaultThemeMode),
     localeCode: localeCode,
   );
 }
@@ -842,7 +849,10 @@ class GeneralScheduleExportData {
     'schedules': schedules.map((s) => s.toJson()).toList(),
   };
 
-  factory GeneralScheduleExportData.fromJson(Map<String, dynamic> json) {
+  factory GeneralScheduleExportData.fromJson(
+    Map<String, dynamic> json, {
+    String localeCode = defaultLocaleCode,
+  }) {
     final schemaVersion = readOptionalAppDataVersion(
       json,
       'schemaVersion',
@@ -861,7 +871,10 @@ class GeneralScheduleExportData {
     final usedScheduleIds = <String>{};
     final schedules = <GeneralSchedule>[];
     for (var i = 0; i < scheduleMaps.length; i++) {
-      final schedule = GeneralSchedule.fromJson(scheduleMaps[i]);
+      final schedule = GeneralSchedule.fromJson(
+        scheduleMaps[i],
+        localeCode: localeCode,
+      );
       final scheduleId = normalizeImportedId(
         schedule.id,
         fallbackPrefix: 'calendar',
@@ -878,7 +891,7 @@ class GeneralScheduleExportData {
                   event.copyWith(calendarId: scheduleId),
               ],
             )
-            .normalized(sortOrderFallback: i),
+            .normalized(sortOrderFallback: i, localeCode: localeCode),
       );
     }
     if (raw.isNotEmpty && schedules.isEmpty) {
@@ -906,5 +919,8 @@ GeneralScheduleExportData decodeGeneralScheduleDataEnvelope(
     expectedSchema: generalScheduleDataSchema,
     localeCode: localeCode,
   );
-  return GeneralScheduleExportData.fromJson(envelope.data);
+  return GeneralScheduleExportData.fromJson(
+    envelope.data,
+    localeCode: localeCode,
+  );
 }

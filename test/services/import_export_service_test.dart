@@ -349,6 +349,42 @@ void main() {
   });
 
   group('general JSON import', () {
+    test('calendar name fallbacks follow the import locale and preserve saved names', () {
+      final source = ImportExportEnvelope(
+        schema: generalScheduleDataSchema,
+        version: importExportVersion,
+        data: const {
+          'schedules': [
+            {'id': 'missing', 'events': []},
+            {'id': 'empty', 'name': '   ', 'events': []},
+            {'id': 'english', 'name': 'My calendar', 'events': []},
+            {'id': 'named', 'name': '旅行安排', 'events': []},
+          ],
+        },
+      ).encode();
+
+      final chinese = service.previewImportGeneralSchedules(
+        source,
+        localeCode: 'zh',
+      );
+      expect(chinese.map((item) => item.name), [
+        '我的日历',
+        '我的日历',
+        'My calendar',
+        '旅行安排',
+      ]);
+      final traditional = decodeGeneralScheduleDataEnvelope(
+        source,
+        localeCode: 'zh-Hant',
+      );
+      expect(traditional.schedules.first.name, '我的日曆');
+      final defaultLocale = decodeGeneralScheduleDataEnvelope(source);
+      expect(defaultLocale.schedules.take(2).map((item) => item.name), [
+        'My calendar',
+        'My calendar',
+      ]);
+    });
+
     test(
       'decodes general schedule envelope while ignoring malformed entries',
       () {

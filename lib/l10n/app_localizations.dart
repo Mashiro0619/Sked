@@ -3376,6 +3376,48 @@ abstract class AppLocalizations {
   /// **'Paste BEGIN:VCALENDAR content here'**
   String get pasteIcsContentHint;
 
+  /// Title explaining that Sked currently omits reminders when exporting ICS.
+  ///
+  /// In en, this message translates to:
+  /// **'ICS export does not include reminders'**
+  String get icsReminderExportTitle;
+
+  /// Explains reminder loss before ICS export and offers JSON, which preserves Sked reminder settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are not included in the exported ICS. Choose JSON to keep reminder settings.'**
+  String get icsReminderExportMessage;
+
+  /// Action choosing JSON for the already selected categories instead of ICS.
+  ///
+  /// In en, this message translates to:
+  /// **'Export JSON'**
+  String get icsReminderExportJsonAction;
+
+  /// Explicit action continuing the requested ICS export after the format warning.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with ICS'**
+  String get icsReminderExportContinueAction;
+
+  /// Explains that Sked currently imports ICS events with reminders disabled. ICS as a standard can contain alarms.
+  ///
+  /// In en, this message translates to:
+  /// **'Events imported from ICS will have reminders turned off. Use JSON to restore reminder settings.'**
+  String get icsReminderImportNotice;
+
+  /// Title asking for explicit confirmation before replacing category events and reminders with imported ICS data.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace events and reminders?'**
+  String get icsReminderReplaceTitle;
+
+  /// Reminder-loss warning after choosing a category to replace. calendar is the user-provided category name.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacing “{calendar}” with ICS events will overwrite its events and turn off their reminders. Cancel to export a JSON backup first, or go back and add a new category instead.'**
+  String icsReminderReplaceMessage(String calendar);
+
   /// No description provided for @importIcsPreviewPrompt.
   ///
   /// In en, this message translates to:
@@ -3409,7 +3451,7 @@ abstract class AppLocalizations {
   /// No description provided for @importWarningUnsupportedFields.
   ///
   /// In en, this message translates to:
-  /// **'Unsupported ICS fields were added to notes: {fields}'**
+  /// **'Unsupported ICS fields were ignored: {fields}'**
   String importWarningUnsupportedFields(Object fields);
 
   /// No description provided for @importWarningUnsupportedRRuleFrequency.
@@ -5313,7 +5355,7 @@ abstract class AppLocalizations {
   /// No description provided for @periodTimeSetUsageSummary.
   ///
   /// In en, this message translates to:
-  /// **'{periodCount} periods · Used by {timetableCount} timetables'**
+  /// **'{periodCount, plural, =1{1 period} other{{periodCount} periods}} · {timetableCount, plural, =1{Used by 1 timetable} other{Used by {timetableCount} timetables}}'**
   String periodTimeSetUsageSummary(int periodCount, int timetableCount);
 
   /// No description provided for @chooseTimetableImportMethod.
@@ -5417,6 +5459,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No matching languages'**
   String get languageNoResults;
+
+  /// No description provided for @themeGeneralMonthTextColors.
+  ///
+  /// In en, this message translates to:
+  /// **'Month view text'**
+  String get themeGeneralMonthTextColors;
+
+  /// No description provided for @themeGeneralFestivalTextColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Festivals and holidays'**
+  String get themeGeneralFestivalTextColor;
+
+  /// No description provided for @themeGeneralSolarTermTextColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Solar terms'**
+  String get themeGeneralSolarTermTextColor;
+
+  /// No description provided for @themeGeneralLunarTextColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunar dates'**
+  String get themeGeneralLunarTextColor;
+
+  /// No description provided for @courseTextLowContrastHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This text color may be hard to read on some course cards (contrast below 4.5:1). You can keep it or choose another color.'**
+  String get courseTextLowContrastHint;
+
+  /// No description provided for @shortenSemesterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shorten semester?'**
+  String get shortenSemesterTitle;
+
+  /// No description provided for @shortenSemesterMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The semester will end at week {weeks}. Courses with later sessions: {count}. Courses and week selections will be kept. Restore the week count to view them again.'**
+  String shortenSemesterMessage(int weeks, int count);
+
+  /// No description provided for @defaultGeneralCalendarName.
+  ///
+  /// In en, this message translates to:
+  /// **'My calendar'**
+  String get defaultGeneralCalendarName;
+
+  /// No description provided for @icsImportReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import report'**
+  String get icsImportReportTitle;
+
+  /// No description provided for @icsImportReportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View report'**
+  String get icsImportReportAction;
+
+  /// No description provided for @icsExportFailureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot export as ICS'**
+  String get icsExportFailureTitle;
+
+  /// No description provided for @icsCopyDiagnosticsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy details'**
+  String get icsCopyDiagnosticsAction;
+
+  /// No description provided for @icsUnsupportedTimeZoneMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This ICS contains named time zones that Sked cannot interpret safely. Nothing was imported. Export UTC or floating local times from the source calendar and try again.'**
+  String get icsUnsupportedTimeZoneMessage;
+
+  /// No description provided for @icsExportMonthlyAnchorMismatchMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This monthly event cannot be represented accurately in ICS. Export JSON to keep its dates.'**
+  String get icsExportMonthlyAnchorMismatchMessage;
+
+  /// No description provided for @icsExportEmptyRecurrenceMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This recurring event has no valid occurrences to export as ICS. Export JSON to keep the record.'**
+  String get icsExportEmptyRecurrenceMessage;
+
+  /// No description provided for @icsImportedCalendarName.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported calendar'**
+  String get icsImportedCalendarName;
+
+  /// No description provided for @icsUntitledEventName.
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled event'**
+  String get icsUntitledEventName;
 }
 
 class _AppLocalizationsDelegate

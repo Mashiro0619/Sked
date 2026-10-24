@@ -274,13 +274,16 @@ bool _matchesImportedGeneralScheduleId(
   return normalizedId == trimmed || normalizedId == sanitizeImportedId(trimmed);
 }
 
-GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
+GeneralScheduleData _normalizeGeneralScheduleData(
+  GeneralScheduleData data, {
+  required String localeCode,
+}) {
   final sourceSchedules = data.schedules.isEmpty
-      ? const [
+      ? [
           GeneralSchedule(
             id: 'schedule_import',
-            name: 'My calendar',
-            events: [],
+            name: defaultGeneralCalendarName(localeCode: localeCode),
+            events: const [],
           ),
         ]
       : data.schedules;
@@ -351,7 +354,7 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
                 : schedule.sortOrder,
             events: events,
           )
-          .normalized(sortOrderFallback: scheduleIndex)
+          .normalized(sortOrderFallback: scheduleIndex, localeCode: localeCode)
           .copyWith(sortOrder: schedules.length),
     );
   }

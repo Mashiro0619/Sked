@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Lipește aici conținutul BEGIN:VCALENDAR",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "Exportul ICS nu include mementouri",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Mementourile nu sunt incluse în fișierul ICS exportat. Alege JSON pentru a păstra setările mementourilor.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Exportă JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Continuă cu ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Evenimentele importate din ICS vor avea mementourile dezactivate. Folosește JSON pentru a restabili setările mementourilor.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Înlocuiești evenimentele și mementourile?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Înlocuirea categoriei „{calendar}” cu evenimente ICS va suprascrie evenimentele acesteia și le va dezactiva mementourile. Anulează pentru a exporta mai întâi o copie de rezervă JSON sau revino și adaugă o categorie nouă.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Evenimente găsite: {count}. Le adaugi într-o categorie nouă sau înlocuiești una existentă?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "S-a ajustat un eveniment al cărui sfârșit nu era după început.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Câmpurile ICS neacceptate au fost adăugate la note: {fields}",
+  "importWarningUnsupportedFields": "Câmpurile ICS neacceptate au fost ignorate: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Introduceți un URL de autentificare.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Nu s-au găsit limbi potrivite",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Textul vizualizării lunare",
+  "themeGeneralFestivalTextColor": "Sărbători și zile libere",
+  "themeGeneralSolarTermTextColor": "Perioade solare",
+  "themeGeneralLunarTextColor": "Date lunare",
+  "courseTextLowContrastHint": "Această culoare a textului poate fi greu de citit pe unele carduri de curs (contrast sub 4.5:1). O poți păstra sau poți alege alta.",
+  "shortenSemesterTitle": "Scurtezi semestrul?",
+  "shortenSemesterMessage": "Semestrul se va încheia în săptămâna {weeks}. Cursuri cu ore ulterioare: {count}. Cursurile și săptămânile selectate vor fi păstrate. Restabilește numărul de săptămâni pentru a le vedea din nou.",
+  "defaultGeneralCalendarName": "Calendarul meu",
+  "icsImportReportTitle": "Raport de import",
+  "icsImportReportAction": "Vezi raportul",
+  "icsExportFailureTitle": "Nu se poate exporta ca ICS",
+  "icsCopyDiagnosticsAction": "Copiază detaliile",
+  "icsUnsupportedTimeZoneMessage": "Acest ICS conține fusuri orare denumite pe care Sked nu le poate interpreta în siguranță. Nu s-a importat nimic. Exportă UTC sau ore locale fără fus orar din calendarul sursă și încearcă din nou.",
+  "icsExportMonthlyAnchorMismatchMessage": "Acest eveniment lunar nu poate fi reprezentat exact în ICS. Exportă JSON pentru a păstra datele.",
+  "icsExportEmptyRecurrenceMessage": "Acest eveniment recurent nu are apariții valide pentru exportul ICS. Exportă JSON pentru a păstra înregistrarea.",
+  "icsImportedCalendarName": "Calendar importat",
+  "icsUntitledEventName": "Eveniment fără titlu",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

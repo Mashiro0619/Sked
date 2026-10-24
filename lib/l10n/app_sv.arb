@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Klistra in innehåll som börjar med BEGIN:VCALENDAR här",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS-export inkluderar inte påminnelser",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Påminnelser ingår inte i den exporterade ICS-filen. Välj JSON för att behålla påminnelseinställningarna.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Exportera JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Fortsätt med ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Påminnelser kommer att vara avstängda för händelser som importeras från ICS. Använd JSON för att återställa påminnelseinställningarna.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Ersätt händelser och påminnelser?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Om du ersätter ”{calendar}” med ICS-händelser skrivs kategorins händelser över och deras påminnelser stängs av. Avbryt för att först exportera en JSON-säkerhetskopia, eller gå tillbaka och lägg till en ny kategori i stället.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Hittade {count} händelser. Lägga till dem som en ny kategori eller ersätta en befintlig kategori?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Justerade en händelse vars sluttid inte låg efter starttiden.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "ICS-fält som inte stöds lades till i anteckningarna: {fields}",
+  "importWarningUnsupportedFields": "ICS-fält som inte stöds ignorerades: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2094,5 +2114,23 @@
   "schoolSitesLoginUrlRequired": "Ange en inloggningsadress.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Inga matchande språk",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Text i månadsvyn",
+  "themeGeneralFestivalTextColor": "Högtider och helgdagar",
+  "themeGeneralSolarTermTextColor": "Solperioder",
+  "themeGeneralLunarTextColor": "Måndatum",
+  "courseTextLowContrastHint": "Den här textfärgen kan vara svår att läsa på vissa kurskort (kontrast under 4.5:1). Du kan behålla den eller välja en annan färg.",
+  "shortenSemesterTitle": "Förkorta terminen?",
+  "shortenSemesterMessage": "Terminen slutar vecka {weeks}. Kurser med senare lektioner: {count}. Kurser och valda veckor sparas. Återställ antalet veckor för att visa dem igen.",
+  "defaultGeneralCalendarName": "Min kalender",
+  "icsImportReportTitle": "Importrapport",
+  "icsImportReportAction": "Visa rapport",
+  "icsExportFailureTitle": "Kan inte exportera som ICS",
+  "icsCopyDiagnosticsAction": "Kopiera detaljer",
+  "icsUnsupportedTimeZoneMessage": "Den här ICS-filen innehåller namngivna tidszoner som Sked inte kan tolka säkert. Inget importerades. Exportera UTC eller lokala tider utan tidszon från källkalendern och försök igen.",
+  "icsExportMonthlyAnchorMismatchMessage": "Den här månatliga händelsen kan inte återges exakt i ICS. Exportera JSON för att behålla datumen.",
+  "icsExportEmptyRecurrenceMessage": "Den här återkommande händelsen har inga giltiga förekomster att exportera som ICS. Exportera JSON för att behålla posten.",
+  "icsImportedCalendarName": "Importerad kalender",
+  "icsUntitledEventName": "Händelse utan titel",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

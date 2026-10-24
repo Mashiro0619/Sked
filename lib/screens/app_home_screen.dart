@@ -994,7 +994,7 @@ bool _hasDefaultFirstLaunchData(AppData data) {
     return false;
   }
   return _hasDefaultStudentData(data.studentMode) &&
-      _hasDefaultGeneralData(data.generalMode) &&
+      _hasDefaultGeneralData(data.generalMode, localeCode: data.localeCode) &&
       _hasDefaultAiApiSettings(data.aiApiSettings) &&
       !data.hideHomeWorkspaceNavigation &&
       !data.homeWorkspaceNavigationCollapsed;
@@ -1099,12 +1099,17 @@ bool _matchesPeriodTimes(
   return true;
 }
 
-bool _hasDefaultGeneralData(GeneralScheduleData data) {
+bool _hasDefaultGeneralData(
+  GeneralScheduleData data, {
+  required String localeCode,
+}) {
   if (data.schedules.length != 1) return false;
   final schedule = data.schedules.single;
   if (data.activeScheduleId != schedule.id) return false;
   if (schedule.events.isNotEmpty) return false;
-  if (schedule.name != 'My calendar' ||
+  if ((schedule.name != 'My calendar' &&
+          schedule.name !=
+              defaultGeneralCalendarName(localeCode: localeCode)) ||
       schedule.colorValue != defaultGeneralCalendarColorValue ||
       !schedule.isVisible ||
       schedule.sortOrder != 0) {

@@ -114,3 +114,23 @@ String noActiveScheduleToReplaceMessage({
 }) {
   return _stringsForLocale(localeCode).noActiveScheduleToReplaceMessage;
 }
+
+String defaultGeneralCalendarName({String localeCode = defaultLocaleCode}) =>
+    _stringsForLocale(localeCode).defaultGeneralCalendarName;
+
+String icsUnsupportedTimeZoneMessage({String localeCode = defaultLocaleCode}) =>
+    _stringsForLocale(localeCode).icsUnsupportedTimeZoneMessage;
+
+String icsExportMonthlyAnchorMismatchMessage({
+  String localeCode = defaultLocaleCode,
+}) => _stringsForLocale(localeCode).icsExportMonthlyAnchorMismatchMessage;
+
+String icsExportEmptyRecurrenceMessage({
+  String localeCode = defaultLocaleCode,
+}) => _stringsForLocale(localeCode).icsExportEmptyRecurrenceMessage;
+
+String icsImportedCalendarName({String localeCode = defaultLocaleCode}) =>
+    _stringsForLocale(localeCode).icsImportedCalendarName;
+
+String icsUntitledEventName({String localeCode = defaultLocaleCode}) =>
+    _stringsForLocale(localeCode).icsUntitledEventName;

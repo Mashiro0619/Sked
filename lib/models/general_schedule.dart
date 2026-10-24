@@ -1,4 +1,6 @@
 import 'general_event.dart';
+import '../l10n/app_locale.dart';
+import '../utils/localized_names.dart';
 
 const defaultGeneralCalendarColorValue = 0xFF4DB6AC;
 const generalCalendarColorSlot2Value = -101;
@@ -109,7 +111,10 @@ class GeneralSchedule {
         .toList();
     return GeneralSchedule(
       id: id,
-      name: _stringValue(json['name'], 'My calendar'),
+      name: _stringValue(
+        json['name'],
+        defaultGeneralCalendarName(localeCode: localeCode ?? defaultLocaleCode),
+      ),
       colorValue:
           _intValue(json['colorValue']) ?? defaultGeneralCalendarColorValue,
       isVisible: _boolValue(json['isVisible']) ?? true,
@@ -153,11 +158,16 @@ class GeneralSchedule {
     );
   }
 
-  GeneralSchedule normalized({int sortOrderFallback = 0}) {
+  GeneralSchedule normalized({
+    int sortOrderFallback = 0,
+    String localeCode = defaultLocaleCode,
+  }) {
     final normalizedId = id.trim().isEmpty ? _generateScheduleId() : id.trim();
     return copyWith(
       id: normalizedId,
-      name: name.trim().isEmpty ? 'My calendar' : name.trim(),
+      name: name.trim().isEmpty
+          ? defaultGeneralCalendarName(localeCode: localeCode)
+          : name.trim(),
       sortOrder: sortOrder < 0 ? sortOrderFallback : sortOrder,
       events: List.unmodifiable([
         for (final event in events)
@@ -168,12 +178,15 @@ class GeneralSchedule {
 }
 
 GeneralSchedule createDefaultGeneralSchedule({
-  String name = 'My calendar',
+  String? name,
+  String localeCode = defaultLocaleCode,
   int colorValue = defaultGeneralCalendarColorValue,
 }) {
   return GeneralSchedule(
     id: _generateScheduleId(),
-    name: name,
+    name: name == null || name.trim().isEmpty
+        ? defaultGeneralCalendarName(localeCode: localeCode)
+        : name,
     colorValue: colorValue,
     events: const [],
   );

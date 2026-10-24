@@ -1856,6 +1856,33 @@ class AppLocalizationsEl extends AppLocalizations {
       'Επικολλήστε εδώ περιεχόμενο που αρχίζει με BEGIN:VCALENDAR';
 
   @override
+  String get icsReminderExportTitle =>
+      'Η εξαγωγή ICS δεν περιλαμβάνει υπενθυμίσεις';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Οι υπενθυμίσεις δεν περιλαμβάνονται στο εξαγόμενο αρχείο ICS. Επιλέξτε JSON για να διατηρήσετε τις ρυθμίσεις υπενθυμίσεων.';
+
+  @override
+  String get icsReminderExportJsonAction => 'Εξαγωγή JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'Συνέχεια με ICS';
+
+  @override
+  String get icsReminderImportNotice =>
+      'Οι υπενθυμίσεις των συμβάντων που εισάγονται από ICS θα είναι απενεργοποιημένες. Χρησιμοποιήστε JSON για να επαναφέρετε τις ρυθμίσεις υπενθυμίσεων.';
+
+  @override
+  String get icsReminderReplaceTitle =>
+      'Αντικατάσταση συμβάντων και υπενθυμίσεων;';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Η αντικατάσταση της κατηγορίας «$calendar» με συμβάντα από ICS θα αντικαταστήσει τα συμβάντα της και θα απενεργοποιήσει τις υπενθυμίσεις τους. Ακυρώστε για να εξαγάγετε πρώτα ένα αντίγραφο ασφαλείας JSON ή επιστρέψτε και προσθέστε μια νέα κατηγορία.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'Βρέθηκαν $count συμβάντα. Προσθήκη σε νέα κατηγορία ή αντικατάσταση υπάρχουσας;';
   }
@@ -1879,7 +1906,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Μη υποστηριζόμενα πεδία ICS προστέθηκαν στις σημειώσεις: $fields';
+    return 'Αγνοήθηκαν μη υποστηριζόμενα πεδία ICS: $fields';
   }
 
   @override
@@ -3088,4 +3115,61 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Δεν βρέθηκαν αντίστοιχες γλώσσες';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Κείμενο μηνιαίας προβολής';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Γιορτές και αργίες';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Ηλιακές περίοδοι';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Σεληνιακές ημερομηνίες';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'Αυτό το χρώμα κειμένου μπορεί να δυσκολεύει την ανάγνωση σε ορισμένες κάρτες μαθημάτων (αντίθεση κάτω από 4.5:1). Μπορείτε να το κρατήσετε ή να επιλέξετε άλλο.';
+
+  @override
+  String get shortenSemesterTitle => 'Συντόμευση εξαμήνου;';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'Το εξάμηνο θα τελειώσει την εβδομάδα $weeks. Μαθήματα με μεταγενέστερες συναντήσεις: $count. Τα μαθήματα και οι επιλεγμένες εβδομάδες διατηρούνται. Επαναφέρετε τον αριθμό εβδομάδων για να τα δείτε ξανά.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Το ημερολόγιό μου';
+
+  @override
+  String get icsImportReportTitle => 'Αναφορά εισαγωγής';
+
+  @override
+  String get icsImportReportAction => 'Προβολή αναφοράς';
+
+  @override
+  String get icsExportFailureTitle => 'Αδύνατη η εξαγωγή σε ICS';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Αντιγραφή λεπτομερειών';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'Αυτό το ICS περιέχει ονομαστικές ζώνες ώρας που το Sked δεν μπορεί να ερμηνεύσει με ασφάλεια. Δεν εισήχθη τίποτα. Εξαγάγετε UTC ή τοπικές ώρες χωρίς ζώνη ώρας από το αρχικό ημερολόγιο και δοκιμάστε ξανά.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Αυτό το μηνιαίο συμβάν δεν μπορεί να αναπαρασταθεί με ακρίβεια σε ICS. Εξαγάγετε JSON για να διατηρήσετε τις ημερομηνίες.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'Αυτό το επαναλαμβανόμενο συμβάν δεν έχει έγκυρες εμφανίσεις για εξαγωγή σε ICS. Εξαγάγετε JSON για να διατηρήσετε την εγγραφή.';
+
+  @override
+  String get icsImportedCalendarName => 'Εισαγόμενο ημερολόγιο';
+
+  @override
+  String get icsUntitledEventName => 'Συμβάν χωρίς τίτλο';
 }

@@ -1822,6 +1822,32 @@ class AppLocalizationsEt extends AppLocalizations {
   String get pasteIcsContentHint => 'Kleebi siia BEGIN:VCALENDAR sisu';
 
   @override
+  String get icsReminderExportTitle => 'ICS-eksport ei sisalda meeldetuletusi';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Eksporditud ICS ei sisalda meeldetuletusi. Meeldetuletuste seadete säilitamiseks vali JSON.';
+
+  @override
+  String get icsReminderExportJsonAction => 'Ekspordi JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'Jätka ICS-iga';
+
+  @override
+  String get icsReminderImportNotice =>
+      'ICS-ist imporditud sündmuste meeldetuletused on välja lülitatud. Meeldetuletuste seadete taastamiseks kasuta JSON-i.';
+
+  @override
+  String get icsReminderReplaceTitle =>
+      'Kas asendada sündmused ja meeldetuletused?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Kategooria „$calendar“ asendamine ICS-i sündmustega kirjutab selle sündmused üle ja lülitab nende meeldetuletused välja. Tühista, et eksportida esmalt JSON-varukoopia, või mine tagasi ja lisa uus kategooria.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'Leiti $count sündmust. Kas lisada need uue kategooriana või asendada olemasolev kategooria?';
   }
@@ -1845,7 +1871,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Toetamata ICS-väljad lisati märkmetesse: $fields';
+    return 'Toetamata ICS-välju eirati: $fields';
   }
 
   @override
@@ -3032,4 +3058,61 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Sobivaid keeli ei leitud';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Kuuvaate tekst';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Tähtpäevad ja pühad';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Päikeseperioodid';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Kuukalendri kuupäevad';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'Seda tekstivärvi võib mõnel kursusekaardil olla raske lugeda (kontrast alla 4.5:1). Võid selle alles jätta või valida teise värvi.';
+
+  @override
+  String get shortenSemesterTitle => 'Kas lühendada semestrit?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'Semester lõpeb nädalal $weeks. Hilisemate tundidega kursusi: $count. Kursused ja valitud nädalad säilivad. Nende uuesti nägemiseks taasta nädalate arv.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Minu kalender';
+
+  @override
+  String get icsImportReportTitle => 'Impordiaruanne';
+
+  @override
+  String get icsImportReportAction => 'Vaata aruannet';
+
+  @override
+  String get icsExportFailureTitle => 'ICS-ina ei saa eksportida';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Kopeeri üksikasjad';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'See ICS sisaldab nimega ajavööndeid, mida Sked ei saa ohutult tõlgendada. Midagi ei imporditud. Ekspordi lähtekalendrist UTC või ajavööndita kohalikud kellaajad ja proovi uuesti.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Seda igakuist sündmust ei saa ICS-is täpselt esitada. Kuupäevade säilitamiseks ekspordi JSON.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'Sellel korduval sündmusel pole kehtivaid kordusi ICS-i eksportimiseks. Kirje säilitamiseks ekspordi JSON.';
+
+  @override
+  String get icsImportedCalendarName => 'Imporditud kalender';
+
+  @override
+  String get icsUntitledEventName => 'Pealkirjata sündmus';
 }

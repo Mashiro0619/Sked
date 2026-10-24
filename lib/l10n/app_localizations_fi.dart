@@ -1829,6 +1829,32 @@ class AppLocalizationsFi extends AppLocalizations {
   String get pasteIcsContentHint => 'Liitä BEGIN:VCALENDAR-sisältö tähän';
 
   @override
+  String get icsReminderExportTitle => 'ICS-vienti ei sisällä muistutuksia';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Viety ICS ei sisällä muistutuksia. Valitse JSON, jos haluat säilyttää muistutusasetukset.';
+
+  @override
+  String get icsReminderExportJsonAction => 'Vie JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'Jatka ICS:llä';
+
+  @override
+  String get icsReminderImportNotice =>
+      'ICS:stä tuotujen tapahtumien muistutukset ovat pois päältä. Käytä JSON-muotoa muistutusasetusten palauttamiseen.';
+
+  @override
+  String get icsReminderReplaceTitle =>
+      'Korvataanko tapahtumat ja muistutukset?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Kategorian ”$calendar” korvaaminen ICS-tapahtumilla korvaa sen tapahtumat ja poistaa niiden muistutukset käytöstä. Peruuta ja vie ensin JSON-varmuuskopio tai palaa takaisin ja lisää uusi kategoria.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'Löytyi $count tapahtumaa. Lisätäänkö ne uutena kategoriana vai korvataanko olemassa oleva kategoria?';
   }
@@ -1852,7 +1878,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'ICS-kentät, joita ei tueta, lisättiin muistiinpanoihin: $fields';
+    return 'ICS-kentät, joita ei tueta, ohitettiin: $fields';
   }
 
   @override
@@ -3044,4 +3070,61 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Vastaavia kieliä ei löytynyt';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Kuukausinäkymän teksti';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Juhlat ja pyhäpäivät';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Aurinkojaksot';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Kuukalenterin päivät';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'Tätä tekstiväriä voi olla vaikea lukea joissakin kurssikorteissa (kontrasti alle 4.5:1). Voit säilyttää sen tai valita toisen värin.';
+
+  @override
+  String get shortenSemesterTitle => 'Lyhennetäänkö lukukautta?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'Lukukausi päättyy viikolla $weeks. Kursseja, joilla on myöhempiä tunteja: $count. Kurssit ja valitut viikot säilyvät. Palauta viikkojen määrä nähdäksesi ne uudelleen.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Oma kalenteri';
+
+  @override
+  String get icsImportReportTitle => 'Tuontiraportti';
+
+  @override
+  String get icsImportReportAction => 'Näytä raportti';
+
+  @override
+  String get icsExportFailureTitle => 'ICS-vienti ei onnistu';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Kopioi tiedot';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'Tämä ICS sisältää nimettyjä aikavyöhykkeitä, joita Sked ei voi tulkita turvallisesti. Mitään ei tuotu. Vie lähdekalenterista UTC-ajat tai paikalliset ajat ilman aikavyöhykettä ja yritä uudelleen.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Tätä kuukausittaista tapahtumaa ei voida esittää tarkasti ICS-muodossa. Vie JSON säilyttääksesi päivämäärät.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'Tällä toistuvalla tapahtumalla ei ole kelvollisia esiintymiä ICS-vientiä varten. Vie JSON säilyttääksesi tietueen.';
+
+  @override
+  String get icsImportedCalendarName => 'Tuotu kalenteri';
+
+  @override
+  String get icsUntitledEventName => 'Nimetön tapahtuma';
 }

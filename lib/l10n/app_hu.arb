@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Illessze ide a BEGIN:VCALENDAR tartalmat",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "Az ICS-export nem tartalmaz emlékeztetőket",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Az exportált ICS nem tartalmazza az emlékeztetőket. Az emlékeztetők beállításainak megőrzéséhez válaszd a JSON-t.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "JSON exportálása",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Folytatás ICS-sel",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Az ICS-ből importált események emlékeztetői ki lesznek kapcsolva. Az emlékeztetők beállításainak visszaállításához használj JSON-t.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Lecseréled az eseményeket és emlékeztetőket?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Ha a(z) „{calendar}” kategóriát ICS-eseményekkel cseréled le, a kategória eseményei felülíródnak, és az emlékeztetőik kikapcsolnak. Válaszd a megszakítást, és előbb exportálj egy JSON biztonsági másolatot, vagy lépj vissza, és adj hozzá új kategóriát.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "{count} esemény található. Új kategóriaként adja hozzá őket, vagy lecserél egy meglévőt?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Egy esemény befejezési ideje módosult, mert nem volt későbbi a kezdésnél.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "A nem támogatott ICS-mezők a jegyzetekbe kerültek: {fields}",
+  "importWarningUnsupportedFields": "A nem támogatott ICS-mezők figyelmen kívül maradtak: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Adja meg a bejelentkezési URL-t.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Nincs egyező nyelv",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Havi nézet szövege",
+  "themeGeneralFestivalTextColor": "Ünnepek és munkaszüneti napok",
+  "themeGeneralSolarTermTextColor": "Napévszakaszok",
+  "themeGeneralLunarTextColor": "Holdnaptári dátumok",
+  "courseTextLowContrastHint": "Ez a szövegszín egyes kurzuskártyákon nehezen olvasható lehet (4.5:1 alatti kontraszt). Megtarthatja, vagy választhat másik színt.",
+  "shortenSemesterTitle": "Lerövidíti a félévet?",
+  "shortenSemesterMessage": "A félév a(z) {weeks}. héten ér véget. Későbbi órákkal rendelkező kurzusok: {count}. A kurzusok és a kiválasztott hetek megmaradnak. Állítsa vissza a hetek számát az újbóli megjelenítéshez.",
+  "defaultGeneralCalendarName": "Saját naptár",
+  "icsImportReportTitle": "Importálási jelentés",
+  "icsImportReportAction": "Jelentés megtekintése",
+  "icsExportFailureTitle": "Nem exportálható ICS-ként",
+  "icsCopyDiagnosticsAction": "Részletek másolása",
+  "icsUnsupportedTimeZoneMessage": "Ez az ICS olyan névvel ellátott időzónákat tartalmaz, amelyeket a Sked nem tud biztonságosan értelmezni. Semmi sem lett importálva. Exportáljon UTC vagy időzóna nélküli helyi időpontokat a forrásnaptárból, és próbálja újra.",
+  "icsExportMonthlyAnchorMismatchMessage": "Ez a havi esemény nem ábrázolható pontosan ICS-ben. A dátumok megőrzéséhez exportáljon JSON-t.",
+  "icsExportEmptyRecurrenceMessage": "Ennek az ismétlődő eseménynek nincs érvényes előfordulása az ICS-exporthoz. A bejegyzés megőrzéséhez exportáljon JSON-t.",
+  "icsImportedCalendarName": "Importált naptár",
+  "icsUntitledEventName": "Névtelen esemény",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Sem vložte obsah začínající BEGIN:VCALENDAR",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "Export do ICS neobsahuje připomenutí",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Připomenutí nejsou součástí exportovaného ICS. Chcete-li zachovat nastavení připomenutí, zvolte JSON.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Exportovat JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Pokračovat s ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "U událostí importovaných z ICS budou připomenutí vypnutá. K obnovení nastavení připomenutí použijte JSON.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Nahradit události a připomenutí?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Nahrazením kategorie „{calendar}“ událostmi z ICS přepíšete její události a vypnete jejich připomenutí. Zrušte akci a nejprve exportujte zálohu do JSON, nebo se vraťte a přidejte novou kategorii.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Nalezené události: {count}. Přidat jako novou kategorii, nebo nahradit existující?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Čas konce, který nebyl po začátku, byl upraven.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Nepodporovaná pole ICS byla přidána do poznámek: {fields}",
+  "importWarningUnsupportedFields": "Nepodporovaná pole ICS byla ignorována: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Zadejte adresu přihlašovací stránky.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Žádné odpovídající jazyky",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Text měsíčního zobrazení",
+  "themeGeneralFestivalTextColor": "Svátky a prázdniny",
+  "themeGeneralSolarTermTextColor": "Sluneční období",
+  "themeGeneralLunarTextColor": "Lunární data",
+  "courseTextLowContrastHint": "Tato barva textu může být na některých kartách kurzů špatně čitelná (kontrast pod 4.5:1). Můžete ji ponechat nebo vybrat jinou.",
+  "shortenSemesterTitle": "Zkrátit semestr?",
+  "shortenSemesterMessage": "Semestr skončí v týdnu {weeks}. Kurzy s pozdější výukou: {count}. Kurzy i vybrané týdny zůstanou zachovány. Obnovte počet týdnů a zobrazí se znovu.",
+  "defaultGeneralCalendarName": "Můj kalendář",
+  "icsImportReportTitle": "Zpráva o importu",
+  "icsImportReportAction": "Zobrazit zprávu",
+  "icsExportFailureTitle": "Nelze exportovat do ICS",
+  "icsCopyDiagnosticsAction": "Kopírovat podrobnosti",
+  "icsUnsupportedTimeZoneMessage": "Tento ICS obsahuje pojmenovaná časová pásma, která Sked nedokáže bezpečně zpracovat. Nic nebylo importováno. Ze zdrojového kalendáře exportujte UTC nebo místní časy bez časového pásma a zkuste to znovu.",
+  "icsExportMonthlyAnchorMismatchMessage": "Tuto měsíční událost nelze přesně vyjádřit v ICS. Pro zachování dat exportujte JSON.",
+  "icsExportEmptyRecurrenceMessage": "Tato opakovaná událost nemá platné výskyty pro export do ICS. Pro zachování záznamu exportujte JSON.",
+  "icsImportedCalendarName": "Importovaný kalendář",
+  "icsUntitledEventName": "Událost bez názvu",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

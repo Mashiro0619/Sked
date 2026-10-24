@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Cole aqui o conteúdo que começa com BEGIN:VCALENDAR",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "A exportação ICS não inclui lembretes",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Os lembretes não são incluídos no ICS exportado. Escolha JSON para manter as configurações dos lembretes.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Exportar JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Continuar com ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Os eventos importados de ICS terão os lembretes desativados. Use JSON para restaurar as configurações dos lembretes.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Substituir eventos e lembretes?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Substituir “{calendar}” por eventos ICS sobrescreverá os eventos da categoria e desativará seus lembretes. Cancele para exportar primeiro um backup JSON ou volte e adicione uma nova categoria.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "{count} eventos encontrados. Adicioná-los como nova categoria ou substituir uma existente?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Foi ajustado um evento cuja hora de término não era posterior à de início.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Os campos ICS não compatíveis foram adicionados às notas: {fields}",
+  "importWarningUnsupportedFields": "Os campos ICS não suportados foram ignorados: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Introduza um URL de início de sessão.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Nenhum idioma correspondente",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Texto da vista mensal",
+  "themeGeneralFestivalTextColor": "Festas e feriados",
+  "themeGeneralSolarTermTextColor": "Períodos solares",
+  "themeGeneralLunarTextColor": "Datas lunares",
+  "courseTextLowContrastHint": "Esta cor de texto pode ser difícil de ler em alguns cartões de cursos (contraste inferior a 4.5:1). Pode mantê-la ou escolher outra.",
+  "shortenSemesterTitle": "Encurtar o semestre?",
+  "shortenSemesterMessage": "O semestre terminará na semana {weeks}. Cursos com aulas posteriores: {count}. Os cursos e as semanas selecionadas serão mantidos. Restaure o número de semanas para voltar a vê-los.",
+  "defaultGeneralCalendarName": "O meu calendário",
+  "icsImportReportTitle": "Relatório de importação",
+  "icsImportReportAction": "Ver relatório",
+  "icsExportFailureTitle": "Não é possível exportar como ICS",
+  "icsCopyDiagnosticsAction": "Copiar detalhes",
+  "icsUnsupportedTimeZoneMessage": "Este ICS contém fusos horários com nome que o Sked não consegue interpretar com segurança. Nada foi importado. Exporte UTC ou horas locais sem fuso horário do calendário de origem e tente novamente.",
+  "icsExportMonthlyAnchorMismatchMessage": "Este evento mensal não pode ser representado com precisão em ICS. Exporte JSON para preservar as datas.",
+  "icsExportEmptyRecurrenceMessage": "Este evento recorrente não tem ocorrências válidas para exportação em ICS. Exporte JSON para preservar o registo.",
+  "icsImportedCalendarName": "Calendário importado",
+  "icsUntitledEventName": "Evento sem título",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

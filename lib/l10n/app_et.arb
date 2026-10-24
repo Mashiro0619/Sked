@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Kleebi siia BEGIN:VCALENDAR sisu",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS-eksport ei sisalda meeldetuletusi",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Eksporditud ICS ei sisalda meeldetuletusi. Meeldetuletuste seadete säilitamiseks vali JSON.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Ekspordi JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Jätka ICS-iga",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "ICS-ist imporditud sündmuste meeldetuletused on välja lülitatud. Meeldetuletuste seadete taastamiseks kasuta JSON-i.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Kas asendada sündmused ja meeldetuletused?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Kategooria „{calendar}“ asendamine ICS-i sündmustega kirjutab selle sündmused üle ja lülitab nende meeldetuletused välja. Tühista, et eksportida esmalt JSON-varukoopia, või mine tagasi ja lisa uus kategooria.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Leiti {count} sündmust. Kas lisada need uue kategooriana või asendada olemasolev kategooria?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Kohandati sündmust, mille lõppaeg ei olnud algusajast hilisem.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Toetamata ICS-väljad lisati märkmetesse: {fields}",
+  "importWarningUnsupportedFields": "Toetamata ICS-välju eirati: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Sisesta sisselogimise URL.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Sobivaid keeli ei leitud",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Kuuvaate tekst",
+  "themeGeneralFestivalTextColor": "Tähtpäevad ja pühad",
+  "themeGeneralSolarTermTextColor": "Päikeseperioodid",
+  "themeGeneralLunarTextColor": "Kuukalendri kuupäevad",
+  "courseTextLowContrastHint": "Seda tekstivärvi võib mõnel kursusekaardil olla raske lugeda (kontrast alla 4.5:1). Võid selle alles jätta või valida teise värvi.",
+  "shortenSemesterTitle": "Kas lühendada semestrit?",
+  "shortenSemesterMessage": "Semester lõpeb nädalal {weeks}. Hilisemate tundidega kursusi: {count}. Kursused ja valitud nädalad säilivad. Nende uuesti nägemiseks taasta nädalate arv.",
+  "defaultGeneralCalendarName": "Minu kalender",
+  "icsImportReportTitle": "Impordiaruanne",
+  "icsImportReportAction": "Vaata aruannet",
+  "icsExportFailureTitle": "ICS-ina ei saa eksportida",
+  "icsCopyDiagnosticsAction": "Kopeeri üksikasjad",
+  "icsUnsupportedTimeZoneMessage": "See ICS sisaldab nimega ajavööndeid, mida Sked ei saa ohutult tõlgendada. Midagi ei imporditud. Ekspordi lähtekalendrist UTC või ajavööndita kohalikud kellaajad ja proovi uuesti.",
+  "icsExportMonthlyAnchorMismatchMessage": "Seda igakuist sündmust ei saa ICS-is täpselt esitada. Kuupäevade säilitamiseks ekspordi JSON.",
+  "icsExportEmptyRecurrenceMessage": "Sellel korduval sündmusel pole kehtivaid kordusi ICS-i eksportimiseks. Kirje säilitamiseks ekspordi JSON.",
+  "icsImportedCalendarName": "Imporditud kalender",
+  "icsUntitledEventName": "Pealkirjata sündmus",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

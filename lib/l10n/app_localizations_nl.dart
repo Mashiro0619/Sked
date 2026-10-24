@@ -1837,6 +1837,32 @@ class AppLocalizationsNl extends AppLocalizations {
       'Plak hier de inhoud die begint met BEGIN:VCALENDAR';
 
   @override
+  String get icsReminderExportTitle => 'ICS-export bevat geen herinneringen';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Herinneringen worden niet opgenomen in de geëxporteerde ICS. Kies JSON om de herinneringsinstellingen te behouden.';
+
+  @override
+  String get icsReminderExportJsonAction => 'JSON exporteren';
+
+  @override
+  String get icsReminderExportContinueAction => 'Doorgaan met ICS';
+
+  @override
+  String get icsReminderImportNotice =>
+      'Herinneringen staan uit voor gebeurtenissen die uit ICS worden geïmporteerd. Gebruik JSON om de herinneringsinstellingen te herstellen.';
+
+  @override
+  String get icsReminderReplaceTitle =>
+      'Gebeurtenissen en herinneringen vervangen?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Als je ‘$calendar’ vervangt door ICS-gebeurtenissen, worden de gebeurtenissen in deze categorie overschreven en hun herinneringen uitgezet. Annuleer om eerst een JSON-back-up te exporteren, of ga terug en voeg een nieuwe categorie toe.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return '$count afspraken gevonden. Toevoegen als nieuwe categorie of een bestaande categorie vervangen?';
   }
@@ -1860,7 +1886,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Niet-ondersteunde ICS-velden zijn aan de notities toegevoegd: $fields';
+    return 'Niet-ondersteunde ICS-velden zijn genegeerd: $fields';
   }
 
   @override
@@ -3058,4 +3084,61 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Geen overeenkomende talen';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Tekst in maandweergave';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Feesten en feestdagen';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Zonneperioden';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Maandata';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'Deze tekstkleur is mogelijk moeilijk leesbaar op sommige cursuskaarten (contrast lager dan 4.5:1). Je kunt de kleur behouden of een andere kiezen.';
+
+  @override
+  String get shortenSemesterTitle => 'Semester inkorten?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'Het semester eindigt in week $weeks. Cursussen met latere lessen: $count. Cursussen en geselecteerde weken blijven behouden. Herstel het aantal weken om ze weer te zien.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Mijn agenda';
+
+  @override
+  String get icsImportReportTitle => 'Importrapport';
+
+  @override
+  String get icsImportReportAction => 'Rapport bekijken';
+
+  @override
+  String get icsExportFailureTitle => 'Exporteren als ICS niet mogelijk';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Details kopiëren';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'Deze ICS bevat benoemde tijdzones die Sked niet veilig kan interpreteren. Er is niets geïmporteerd. Exporteer UTC of lokale tijden zonder tijdzone uit de bronagenda en probeer het opnieuw.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Deze maandelijkse afspraak kan niet nauwkeurig worden weergegeven in ICS. Exporteer JSON om de datums te behouden.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'Deze herhalende afspraak heeft geen geldige voorkomens voor ICS-export. Exporteer JSON om de registratie te behouden.';
+
+  @override
+  String get icsImportedCalendarName => 'Geïmporteerde agenda';
+
+  @override
+  String get icsUntitledEventName => 'Afspraak zonder titel';
 }

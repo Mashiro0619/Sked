@@ -1766,6 +1766,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pasteIcsContentHint => '여기에 BEGIN:VCALENDAR로 시작하는 내용을 붙여넣으세요';
 
   @override
+  String get icsReminderExportTitle => 'ICS 내보내기에는 알림이 포함되지 않습니다';
+
+  @override
+  String get icsReminderExportMessage =>
+      '내보낸 ICS에는 알림이 포함되지 않습니다. 알림 설정을 유지하려면 JSON을 선택하세요.';
+
+  @override
+  String get icsReminderExportJsonAction => 'JSON 내보내기';
+
+  @override
+  String get icsReminderExportContinueAction => 'ICS로 계속';
+
+  @override
+  String get icsReminderImportNotice =>
+      'ICS에서 가져온 일정의 알림은 꺼집니다. 알림 설정을 복원하려면 JSON을 사용하세요.';
+
+  @override
+  String get icsReminderReplaceTitle => '일정과 알림을 바꿀까요?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return '“$calendar”을(를) ICS 일정으로 바꾸면 이 카테고리의 일정을 덮어쓰고 해당 알림을 끕니다. 먼저 JSON 백업을 내보내려면 취소하세요. 또는 뒤로 돌아가 새 카테고리로 추가하세요.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return '일정 $count개를 찾았습니다. 새 카테고리로 추가할까요, 아니면 기존 카테고리를 바꿀까요?';
   }
@@ -1787,7 +1812,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return '지원하지 않는 ICS 필드를 메모에 추가했습니다: $fields';
+    return '지원하지 않는 ICS 필드를 무시했습니다: $fields';
   }
 
   @override
@@ -2926,4 +2951,61 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get languageNoResults => '일치하는 언어가 없습니다';
+
+  @override
+  String get themeGeneralMonthTextColors => '월 보기 텍스트';
+
+  @override
+  String get themeGeneralFestivalTextColor => '기념일 및 공휴일';
+
+  @override
+  String get themeGeneralSolarTermTextColor => '절기';
+
+  @override
+  String get themeGeneralLunarTextColor => '음력 날짜';
+
+  @override
+  String get courseTextLowContrastHint =>
+      '이 글자색은 일부 수업 카드에서 읽기 어려울 수 있습니다(명암비 4.5:1 미만). 그대로 유지하거나 다른 색을 선택할 수 있습니다.';
+
+  @override
+  String get shortenSemesterTitle => '학기를 줄일까요?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return '학기가 $weeks주에 끝납니다. 이후 수업이 있는 과목: $count개. 과목과 선택한 주차는 유지됩니다. 주 수를 복원하면 다시 볼 수 있습니다.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => '내 캘린더';
+
+  @override
+  String get icsImportReportTitle => '가져오기 보고서';
+
+  @override
+  String get icsImportReportAction => '보고서 보기';
+
+  @override
+  String get icsExportFailureTitle => 'ICS로 내보낼 수 없음';
+
+  @override
+  String get icsCopyDiagnosticsAction => '세부 정보 복사';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      '이 ICS에는 Sked가 안전하게 해석할 수 없는 이름이 지정된 시간대가 있습니다. 아무것도 가져오지 않았습니다. 원본 캘린더에서 UTC 또는 시간대 없는 현지 시간으로 내보낸 후 다시 시도하세요.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      '이 월간 일정은 ICS로 정확하게 표현할 수 없습니다. 날짜를 보존하려면 JSON으로 내보내세요.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      '이 반복 일정에는 ICS로 내보낼 유효한 일정이 없습니다. 기록을 보존하려면 JSON으로 내보내세요.';
+
+  @override
+  String get icsImportedCalendarName => '가져온 캘린더';
+
+  @override
+  String get icsUntitledEventName => '제목 없는 일정';
 }

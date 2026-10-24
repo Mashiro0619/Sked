@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "BEGIN:VCALENDAR から始まる内容を貼り付けてください",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS へのエクスポートにはリマインダーは含まれません",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "エクスポートした ICS にリマインダーは含まれません。リマインダーの設定を保持するには、JSON を選んでください。",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "JSON をエクスポート",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "ICS で続行",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "ICS からインポートした予定のリマインダーはオフになります。リマインダーの設定を復元するには、JSON を使用してください。",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "予定とリマインダーを置き換えますか？",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "「{calendar}」を ICS の予定で置き換えると、このカテゴリの予定が上書きされ、リマインダーがオフになります。先に JSON のバックアップをエクスポートする場合はキャンセルしてください。または、戻って新しいカテゴリとして追加できます。",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "{count} 件の予定が見つかりました。新しいカテゴリとして追加しますか？それとも既存のカテゴリを置き換えますか？",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "開始時刻より後になっていない終了時刻を調整しました。",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "未対応の ICS フィールドをメモに追加しました：{fields}",
+  "importWarningUnsupportedFields": "未対応の ICS フィールドを無視しました：{fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "ログインページのURLを入力してください。",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "一致する言語がありません",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "月表示のテキスト",
+  "themeGeneralFestivalTextColor": "祭日・祝日",
+  "themeGeneralSolarTermTextColor": "二十四節気",
+  "themeGeneralLunarTextColor": "旧暦の日付",
+  "courseTextLowContrastHint": "この文字色は一部の授業カードで読みにくくなる場合があります（コントラスト比 4.5:1 未満）。そのまま保存するか、別の色を選べます。",
+  "shortenSemesterTitle": "学期を短縮しますか？",
+  "shortenSemesterMessage": "学期を {weeks} 週に短縮します。それ以降の授業がある科目は {count} 件です。科目と週の選択は保持されます。週数を戻すと再び表示されます。",
+  "defaultGeneralCalendarName": "マイカレンダー",
+  "icsImportReportTitle": "インポートレポート",
+  "icsImportReportAction": "レポートを表示",
+  "icsExportFailureTitle": "ICS にエクスポートできません",
+  "icsCopyDiagnosticsAction": "詳細をコピー",
+  "icsUnsupportedTimeZoneMessage": "この ICS には Sked が安全に解釈できない名前付きタイムゾーンが含まれています。何もインポートされませんでした。元のカレンダーから UTC またはタイムゾーンのない現地時刻でエクスポートし、再試行してください。",
+  "icsExportMonthlyAnchorMismatchMessage": "この毎月の予定は ICS で正確に表現できません。日付を保持するには JSON でエクスポートしてください。",
+  "icsExportEmptyRecurrenceMessage": "この繰り返し予定には ICS にエクスポートできる有効な予定がありません。記録を保持するには JSON でエクスポートしてください。",
+  "icsImportedCalendarName": "インポートしたカレンダー",
+  "icsUntitledEventName": "無題の予定",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

@@ -157,7 +157,10 @@ class _ImportExportServiceCore {
         ),
       ),
       localeCode: app_locale.normalizeLocaleCode(data.localeCode),
-      generalMode: _normalizeGeneralScheduleData(data.generalMode),
+      generalMode: _normalizeGeneralScheduleData(
+        data.generalMode,
+        localeCode: localeCode,
+      ),
     );
   }
 

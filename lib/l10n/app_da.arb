@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Indsæt indhold, der begynder med BEGIN:VCALENDAR, her",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS-eksport medtager ikke påmindelser",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Påmindelser medtages ikke i den eksporterede ICS-fil. Vælg JSON for at bevare indstillingerne for påmindelser.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Eksportér JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Fortsæt med ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Påmindelser vil være slået fra for begivenheder, der importeres fra ICS. Brug JSON til at gendanne indstillingerne for påmindelser.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Erstat begivenheder og påmindelser?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Hvis du erstatter “{calendar}” med begivenheder fra ICS, overskrives kategoriens begivenheder, og deres påmindelser slås fra. Annullér for først at eksportere en JSON-sikkerhedskopi, eller gå tilbage og tilføj en ny kategori i stedet.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Fandt {count} begivenheder. Tilføj dem som en ny kategori, eller erstat en eksisterende?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Justerede en sluttid, der ikke lå efter starttiden.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Ikke-understøttede ICS-felter blev føjet til noter: {fields}",
+  "importWarningUnsupportedFields": "Ikke-understøttede ICS-felter blev ignoreret: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Indtast en loginadresse.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Ingen matchende sprog",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Tekst i månedsvisning",
+  "themeGeneralFestivalTextColor": "Højtider og helligdage",
+  "themeGeneralSolarTermTextColor": "Solperioder",
+  "themeGeneralLunarTextColor": "Månedatoer",
+  "courseTextLowContrastHint": "Denne tekstfarve kan være svær at læse på nogle kursuskort (kontrast under 4.5:1). Du kan beholde den eller vælge en anden.",
+  "shortenSemesterTitle": "Forkort semesteret?",
+  "shortenSemesterMessage": "Semesteret slutter i uge {weeks}. Kurser med senere undervisning: {count}. Kurser og valgte uger bevares. Gendan antallet af uger for at se dem igen.",
+  "defaultGeneralCalendarName": "Min kalender",
+  "icsImportReportTitle": "Importrapport",
+  "icsImportReportAction": "Vis rapport",
+  "icsExportFailureTitle": "Kan ikke eksportere som ICS",
+  "icsCopyDiagnosticsAction": "Kopiér detaljer",
+  "icsUnsupportedTimeZoneMessage": "Denne ICS indeholder navngivne tidszoner, som Sked ikke kan fortolke sikkert. Intet blev importeret. Eksportér UTC eller lokale tider uden tidszone fra kildekalenderen, og prøv igen.",
+  "icsExportMonthlyAnchorMismatchMessage": "Denne månedlige begivenhed kan ikke gengives præcist i ICS. Eksportér JSON for at bevare datoerne.",
+  "icsExportEmptyRecurrenceMessage": "Denne gentagne begivenhed har ingen gyldige forekomster til ICS-eksport. Eksportér JSON for at bevare posten.",
+  "icsImportedCalendarName": "Importeret kalender",
+  "icsUntitledEventName": "Begivenhed uden titel",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "วางเนื้อหา BEGIN:VCALENDAR ที่นี่",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "การส่งออก ICS ไม่รวมการแจ้งเตือน",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "การแจ้งเตือนจะไม่รวมอยู่ใน ICS ที่ส่งออก เลือก JSON เพื่อเก็บการตั้งค่าการแจ้งเตือนไว้",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "ส่งออก JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "ดำเนินการต่อด้วย ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "การแจ้งเตือนของกิจกรรมที่นำเข้าจาก ICS จะถูกปิด ใช้ JSON เพื่อคืนค่าการตั้งค่าการแจ้งเตือน",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "แทนที่กิจกรรมและการแจ้งเตือนหรือไม่?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "การแทนที่ “{calendar}” ด้วยกิจกรรมจาก ICS จะเขียนทับกิจกรรมในหมวดหมู่นี้และปิดการแจ้งเตือนของกิจกรรมเหล่านั้น ยกเลิกเพื่อส่งออกข้อมูลสำรองเป็น JSON ก่อน หรือย้อนกลับไปเพิ่มหมวดหมู่ใหม่แทน",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "พบ {count} กิจกรรม ต้องการเพิ่มเป็นหมวดหมู่ใหม่หรือแทนที่หมวดหมู่ที่มีอยู่?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "ปรับกิจกรรมที่เวลาสิ้นสุดไม่อยู่หลังเวลาเริ่มแล้ว",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "เพิ่มฟิลด์ ICS ที่ไม่รองรับไว้ในบันทึกย่อแล้ว: {fields}",
+  "importWarningUnsupportedFields": "ละเว้นฟิลด์ ICS ที่ไม่รองรับแล้ว: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2094,5 +2114,23 @@
   "schoolSitesLoginUrlRequired": "กรุณากรอก URL สำหรับเข้าสู่ระบบ",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "ไม่พบภาษาที่ตรงกัน",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "ข้อความในมุมมองเดือน",
+  "themeGeneralFestivalTextColor": "เทศกาลและวันหยุด",
+  "themeGeneralSolarTermTextColor": "สารทสุริยคติ",
+  "themeGeneralLunarTextColor": "วันที่ตามจันทรคติ",
+  "courseTextLowContrastHint": "สีข้อความนี้อาจอ่านยากบนการ์ดวิชาบางใบ (อัตราส่วนความต่างสีต่ำกว่า 4.5:1) คุณสามารถใช้สีเดิมหรือเลือกสีอื่นได้",
+  "shortenSemesterTitle": "ลดระยะเวลาภาคเรียนหรือไม่?",
+  "shortenSemesterMessage": "ภาคเรียนจะสิ้นสุดในสัปดาห์ที่ {weeks} วิชาที่มีคาบเรียนหลังจากนั้น: {count} วิชา ข้อมูลวิชาและสัปดาห์ที่เลือกจะยังคงอยู่ คืนค่าจำนวนสัปดาห์เพื่อดูอีกครั้ง",
+  "defaultGeneralCalendarName": "ปฏิทินของฉัน",
+  "icsImportReportTitle": "รายงานการนำเข้า",
+  "icsImportReportAction": "ดูรายงาน",
+  "icsExportFailureTitle": "ไม่สามารถส่งออกเป็น ICS",
+  "icsCopyDiagnosticsAction": "คัดลอกรายละเอียด",
+  "icsUnsupportedTimeZoneMessage": "ICS นี้มีเขตเวลาแบบระบุชื่อที่ Sked ไม่สามารถตีความได้อย่างปลอดภัย ยังไม่มีการนำเข้าข้อมูล โปรดส่งออกเวลา UTC หรือเวลาท้องถิ่นที่ไม่ระบุเขตเวลาจากปฏิทินต้นทางแล้วลองอีกครั้ง",
+  "icsExportMonthlyAnchorMismatchMessage": "ไม่สามารถแสดงกิจกรรมรายเดือนนี้ใน ICS ได้อย่างถูกต้อง โปรดส่งออก JSON เพื่อเก็บวันที่ไว้",
+  "icsExportEmptyRecurrenceMessage": "กิจกรรมที่เกิดซ้ำนี้ไม่มีรายการที่ใช้ส่งออกเป็น ICS ได้ โปรดส่งออก JSON เพื่อเก็บข้อมูลไว้",
+  "icsImportedCalendarName": "ปฏิทินที่นำเข้า",
+  "icsUntitledEventName": "กิจกรรมไม่มีชื่อ",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

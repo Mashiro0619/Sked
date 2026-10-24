@@ -219,7 +219,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         oldWidget.activeCalendarId == widget.activeCalendarId) {
       return;
     }
-    _calendarOptions = _buildCalendarOptions();
+    _calendarOptions = _buildCalendarOptions(
+      localeCode: AppLocalizations.of(context).localeName,
+    );
     if (!_calendarOptions.any((calendar) => calendar.id == _calendarId)) {
       _calendarId = _resolveCalendarId(widget.initialEvent?.calendarId);
     }
@@ -228,6 +230,12 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.calendars.isEmpty) {
+      final name = AppLocalizations.of(context).defaultGeneralCalendarName;
+      _calendarOptions = [
+        for (final calendar in _calendarOptions) calendar.copyWith(name: name),
+      ];
+    }
     _editorSession ??= SkedTaskSessionScope.maybeOf(context)?.session;
     if (_sectionsInitialized) return;
     final mediaQuery = MediaQuery.of(context);
@@ -254,13 +262,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     super.dispose();
   }
 
-  List<GeneralSchedule> _buildCalendarOptions() {
+  List<GeneralSchedule> _buildCalendarOptions({String? localeCode}) {
     if (widget.calendars.isNotEmpty) {
       return List<GeneralSchedule>.unmodifiable(widget.calendars);
     }
     return [
       createDefaultGeneralSchedule(
-        name: 'My calendar',
+        localeCode: localeCode ?? 'en',
         colorValue: defaultGeneralCalendarColorValue,
       ),
     ];

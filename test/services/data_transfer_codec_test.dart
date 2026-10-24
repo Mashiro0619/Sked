@@ -213,6 +213,26 @@ void main() {
     },
   );
 
+  test('JSON worker uses the import locale only for missing names', () async {
+    final source = ImportExportEnvelope(
+      schema: generalScheduleDataSchema,
+      version: importExportVersion,
+      data: const {
+        'schedules': [
+          {'id': 'missing', 'events': []},
+          {'id': 'empty', 'name': ' ', 'events': []},
+          {'id': 'saved', 'name': 'My calendar', 'events': []},
+        ],
+      },
+    ).encode();
+    final imported = await codec.decodeSchedules(source, localeCode: 'zh');
+    expect(imported.schedules.map((item) => item.name), [
+      '我的日历',
+      '我的日历',
+      'My calendar',
+    ]);
+  });
+
   test(
     'backup worker retains legacy shape and excludes runtime secrets',
     () async {

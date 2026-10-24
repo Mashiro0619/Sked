@@ -29,6 +29,12 @@ abstract class AppStrings {
   String get noSchedulesInImportMessage;
   String get replaceActiveRequiresSingleScheduleMessage;
   String get noActiveScheduleToReplaceMessage;
+  String get defaultGeneralCalendarName;
+  String get icsUnsupportedTimeZoneMessage;
+  String get icsExportMonthlyAnchorMismatchMessage;
+  String get icsExportEmptyRecurrenceMessage;
+  String get icsImportedCalendarName;
+  String get icsUntitledEventName;
   String get dataRestoredFromBackupNotice;
   String get dataBackupRestoreFailedNotice;
   String periodTimeSetInUseMessage(int count);
@@ -116,6 +122,27 @@ class _GeneratedAppStrings implements AppStrings {
   @override
   String get noActiveScheduleToReplaceMessage =>
       _l10n.noActiveScheduleToReplaceMessage;
+
+  @override
+  String get defaultGeneralCalendarName => _l10n.defaultGeneralCalendarName;
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      _l10n.icsUnsupportedTimeZoneMessage;
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      _l10n.icsExportMonthlyAnchorMismatchMessage;
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      _l10n.icsExportEmptyRecurrenceMessage;
+
+  @override
+  String get icsImportedCalendarName => _l10n.icsImportedCalendarName;
+
+  @override
+  String get icsUntitledEventName => _l10n.icsUntitledEventName;
 
   @override
   String get dataRestoredFromBackupNotice => _l10n.dataRestoredFromBackupNotice;

@@ -1826,6 +1826,31 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pasteIcsContentHint => 'Dán nội dung BEGIN:VCALENDAR vào đây';
 
   @override
+  String get icsReminderExportTitle => 'Xuất ICS không bao gồm lời nhắc';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Lời nhắc không được đưa vào ICS đã xuất. Chọn JSON để giữ cài đặt lời nhắc.';
+
+  @override
+  String get icsReminderExportJsonAction => 'Xuất JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'Tiếp tục với ICS';
+
+  @override
+  String get icsReminderImportNotice =>
+      'Lời nhắc của các sự kiện nhập từ ICS sẽ bị tắt. Dùng JSON để khôi phục cài đặt lời nhắc.';
+
+  @override
+  String get icsReminderReplaceTitle => 'Thay thế sự kiện và lời nhắc?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Thay thế “$calendar” bằng các sự kiện ICS sẽ ghi đè sự kiện trong danh mục và tắt lời nhắc của chúng. Hủy để xuất bản sao lưu JSON trước, hoặc quay lại và thêm danh mục mới.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'Tìm thấy $count sự kiện. Thêm thành danh mục mới hay thay thế danh mục hiện có?';
   }
@@ -1849,7 +1874,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Các trường ICS không được hỗ trợ đã được thêm vào ghi chú: $fields';
+    return 'Đã bỏ qua các trường ICS không được hỗ trợ: $fields';
   }
 
   @override
@@ -3033,4 +3058,61 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get languageNoResults => 'Không tìm thấy ngôn ngữ phù hợp';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Văn bản chế độ xem tháng';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Lễ hội và ngày nghỉ';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Tiết khí';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Ngày âm lịch';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'Màu chữ này có thể khó đọc trên một số thẻ môn học (độ tương phản dưới 4.5:1). Bạn có thể giữ màu này hoặc chọn màu khác.';
+
+  @override
+  String get shortenSemesterTitle => 'Rút ngắn học kỳ?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'Học kỳ sẽ kết thúc ở tuần $weeks. Số môn có buổi học sau đó: $count. Môn học và các tuần đã chọn sẽ được giữ lại. Khôi phục số tuần để xem lại.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'Lịch của tôi';
+
+  @override
+  String get icsImportReportTitle => 'Báo cáo nhập';
+
+  @override
+  String get icsImportReportAction => 'Xem báo cáo';
+
+  @override
+  String get icsExportFailureTitle => 'Không thể xuất dạng ICS';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Sao chép chi tiết';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'ICS này chứa múi giờ có tên mà Sked không thể diễn giải an toàn. Chưa nhập nội dung nào. Hãy xuất giờ UTC hoặc giờ địa phương không gắn múi giờ từ lịch nguồn rồi thử lại.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'Không thể biểu diễn chính xác sự kiện hằng tháng này trong ICS. Hãy xuất JSON để giữ nguyên ngày.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'Sự kiện lặp lại này không có lần diễn ra hợp lệ để xuất ICS. Hãy xuất JSON để giữ bản ghi.';
+
+  @override
+  String get icsImportedCalendarName => 'Lịch đã nhập';
+
+  @override
+  String get icsUntitledEventName => 'Sự kiện không có tiêu đề';
 }

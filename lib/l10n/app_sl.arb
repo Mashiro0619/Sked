@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Sem prilepite vsebino BEGIN:VCALENDAR",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "Izvoz ICS ne vključuje opomnikov",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Opomniki niso vključeni v izvoženi ICS. Izberite JSON, da ohranite nastavitve opomnikov.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Izvozi JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Nadaljuj z ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Dogodki, uvoženi iz ICS, bodo imeli izklopljene opomnike. Za obnovitev nastavitev opomnikov uporabite JSON.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Zamenjaj dogodke in opomnike?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Če kategorijo »{calendar}« zamenjate z dogodki iz ICS, bodo njeni dogodki prepisani, njihovi opomniki pa izklopljeni. Prekličite, da najprej izvozite varnostno kopijo JSON, ali se vrnite in dodajte novo kategorijo.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Najdeni dogodki: {count}. Jih želite dodati kot novo kategorijo ali zamenjati obstoječo kategorijo?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Čas dogodka je bil popravljen, ker konec ni bil poznejši od začetka.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Nepodprta polja ICS so bila dodana v opombe: {fields}",
+  "importWarningUnsupportedFields": "Nepodprta polja ICS so bila prezrta: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2094,5 +2114,23 @@
   "schoolSitesLoginUrlRequired": "Vnesite URL za prijavo.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Ni ujemajočih se jezikov",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Besedilo mesečnega pogleda",
+  "themeGeneralFestivalTextColor": "Prazniki in prosti dnevi",
+  "themeGeneralSolarTermTextColor": "Sončna obdobja",
+  "themeGeneralLunarTextColor": "Lunini datumi",
+  "courseTextLowContrastHint": "To barvo besedila je na nekaterih karticah predmetov morda težko brati (kontrast pod 4.5:1). Lahko jo ohranite ali izberete drugo.",
+  "shortenSemesterTitle": "Skrajšam semester?",
+  "shortenSemesterMessage": "Semester se bo končal v tednu {weeks}. Predmeti s poznejšimi urami: {count}. Predmeti in izbrani tedni bodo ohranjeni. Obnovite število tednov za ponovni prikaz.",
+  "defaultGeneralCalendarName": "Moj koledar",
+  "icsImportReportTitle": "Poročilo o uvozu",
+  "icsImportReportAction": "Prikaži poročilo",
+  "icsExportFailureTitle": "Izvoz v ICS ni mogoč",
+  "icsCopyDiagnosticsAction": "Kopiraj podrobnosti",
+  "icsUnsupportedTimeZoneMessage": "Ta ICS vsebuje poimenovane časovne pasove, ki jih Sked ne more varno razbrati. Nič ni bilo uvoženo. Iz izvornega koledarja izvozite UTC ali krajevne čase brez časovnega pasu in poskusite znova.",
+  "icsExportMonthlyAnchorMismatchMessage": "Tega mesečnega dogodka ni mogoče natančno predstaviti v ICS. Izvozite JSON, da ohranite datume.",
+  "icsExportEmptyRecurrenceMessage": "Ta ponavljajoči se dogodek nima veljavnih pojavitev za izvoz v ICS. Izvozite JSON, da ohranite zapis.",
+  "icsImportedCalendarName": "Uvožen koledar",
+  "icsUntitledEventName": "Dogodek brez naslova",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

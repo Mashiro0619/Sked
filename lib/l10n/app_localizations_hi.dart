@@ -1825,6 +1825,32 @@ class AppLocalizationsHi extends AppLocalizations {
   String get pasteIcsContentHint => 'BEGIN:VCALENDAR सामग्री यहाँ चिपकाएँ';
 
   @override
+  String get icsReminderExportTitle =>
+      'ICS एक्सपोर्ट में रिमाइंडर शामिल नहीं हैं';
+
+  @override
+  String get icsReminderExportMessage =>
+      'एक्सपोर्ट किए गए ICS में रिमाइंडर शामिल नहीं होते। रिमाइंडर सेटिंग बनाए रखने के लिए JSON चुनें।';
+
+  @override
+  String get icsReminderExportJsonAction => 'JSON एक्सपोर्ट करें';
+
+  @override
+  String get icsReminderExportContinueAction => 'ICS के साथ जारी रखें';
+
+  @override
+  String get icsReminderImportNotice =>
+      'ICS से इंपोर्ट किए गए इवेंट के रिमाइंडर बंद रहेंगे। रिमाइंडर सेटिंग बहाल करने के लिए JSON का उपयोग करें।';
+
+  @override
+  String get icsReminderReplaceTitle => 'इवेंट और रिमाइंडर बदलें?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return '“$calendar” को ICS इवेंट से बदलने पर इस श्रेणी के इवेंट ओवरराइट हो जाएंगे और उनके रिमाइंडर बंद हो जाएंगे। पहले JSON बैकअप एक्सपोर्ट करने के लिए रद्द करें, या वापस जाकर नई श्रेणी जोड़ें।';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return '$count इवेंट मिले। उन्हें नई श्रेणी में जोड़ें या मौजूदा श्रेणी बदलें?';
   }
@@ -1848,7 +1874,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'असमर्थित ICS फ़ील्ड नोट्स में जोड़े गए: $fields';
+    return 'असमर्थित ICS फ़ील्ड अनदेखे किए गए: $fields';
   }
 
   @override
@@ -3025,4 +3051,61 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get languageNoResults => 'कोई मेल खाती भाषा नहीं मिली';
+
+  @override
+  String get themeGeneralMonthTextColors => 'महीने के दृश्य का पाठ';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'त्योहार और छुट्टियाँ';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'सौर अवधियाँ';
+
+  @override
+  String get themeGeneralLunarTextColor => 'चंद्र तिथियाँ';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'कुछ पाठ्यक्रम कार्ड पर यह पाठ रंग पढ़ना कठिन हो सकता है (कंट्रास्ट 4.5:1 से कम)। आप इसे रख सकते हैं या दूसरा रंग चुन सकते हैं।';
+
+  @override
+  String get shortenSemesterTitle => 'सेमेस्टर छोटा करें?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'सेमेस्टर सप्ताह $weeks में समाप्त होगा। बाद की कक्षाओं वाले पाठ्यक्रम: $count। पाठ्यक्रम और चुने गए सप्ताह सुरक्षित रहेंगे। उन्हें फिर देखने के लिए सप्ताहों की संख्या बहाल करें।';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'मेरा कैलेंडर';
+
+  @override
+  String get icsImportReportTitle => 'आयात रिपोर्ट';
+
+  @override
+  String get icsImportReportAction => 'रिपोर्ट देखें';
+
+  @override
+  String get icsExportFailureTitle => 'ICS में निर्यात नहीं हो सकता';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'विवरण कॉपी करें';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'इस ICS में नामित समय क्षेत्र हैं जिन्हें Sked सुरक्षित रूप से समझ नहीं सकता। कुछ भी आयात नहीं हुआ। स्रोत कैलेंडर से UTC या समय क्षेत्र के बिना स्थानीय समय निर्यात करके फिर प्रयास करें।';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'इस मासिक इवेंट को ICS में सही रूप से नहीं दर्शाया जा सकता। तिथियाँ सुरक्षित रखने के लिए JSON निर्यात करें।';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'इस दोहराए जाने वाले इवेंट में ICS निर्यात के लिए कोई मान्य आवृत्ति नहीं है। रिकॉर्ड सुरक्षित रखने के लिए JSON निर्यात करें।';
+
+  @override
+  String get icsImportedCalendarName => 'आयातित कैलेंडर';
+
+  @override
+  String get icsUntitledEventName => 'बिना शीर्षक का इवेंट';
 }

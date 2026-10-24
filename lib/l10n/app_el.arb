@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Επικολλήστε εδώ περιεχόμενο που αρχίζει με BEGIN:VCALENDAR",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "Η εξαγωγή ICS δεν περιλαμβάνει υπενθυμίσεις",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Οι υπενθυμίσεις δεν περιλαμβάνονται στο εξαγόμενο αρχείο ICS. Επιλέξτε JSON για να διατηρήσετε τις ρυθμίσεις υπενθυμίσεων.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Εξαγωγή JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Συνέχεια με ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Οι υπενθυμίσεις των συμβάντων που εισάγονται από ICS θα είναι απενεργοποιημένες. Χρησιμοποιήστε JSON για να επαναφέρετε τις ρυθμίσεις υπενθυμίσεων.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Αντικατάσταση συμβάντων και υπενθυμίσεων;",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Η αντικατάσταση της κατηγορίας «{calendar}» με συμβάντα από ICS θα αντικαταστήσει τα συμβάντα της και θα απενεργοποιήσει τις υπενθυμίσεις τους. Ακυρώστε για να εξαγάγετε πρώτα ένα αντίγραφο ασφαλείας JSON ή επιστρέψτε και προσθέστε μια νέα κατηγορία.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Βρέθηκαν {count} συμβάντα. Προσθήκη σε νέα κατηγορία ή αντικατάσταση υπάρχουσας;",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Προσαρμόστηκε ώρα λήξης που δεν ήταν μετά την έναρξη.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Μη υποστηριζόμενα πεδία ICS προστέθηκαν στις σημειώσεις: {fields}",
+  "importWarningUnsupportedFields": "Αγνοήθηκαν μη υποστηριζόμενα πεδία ICS: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Εισαγάγετε τη διεύθυνση URL σύνδεσης.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Δεν βρέθηκαν αντίστοιχες γλώσσες",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Κείμενο μηνιαίας προβολής",
+  "themeGeneralFestivalTextColor": "Γιορτές και αργίες",
+  "themeGeneralSolarTermTextColor": "Ηλιακές περίοδοι",
+  "themeGeneralLunarTextColor": "Σεληνιακές ημερομηνίες",
+  "courseTextLowContrastHint": "Αυτό το χρώμα κειμένου μπορεί να δυσκολεύει την ανάγνωση σε ορισμένες κάρτες μαθημάτων (αντίθεση κάτω από 4.5:1). Μπορείτε να το κρατήσετε ή να επιλέξετε άλλο.",
+  "shortenSemesterTitle": "Συντόμευση εξαμήνου;",
+  "shortenSemesterMessage": "Το εξάμηνο θα τελειώσει την εβδομάδα {weeks}. Μαθήματα με μεταγενέστερες συναντήσεις: {count}. Τα μαθήματα και οι επιλεγμένες εβδομάδες διατηρούνται. Επαναφέρετε τον αριθμό εβδομάδων για να τα δείτε ξανά.",
+  "defaultGeneralCalendarName": "Το ημερολόγιό μου",
+  "icsImportReportTitle": "Αναφορά εισαγωγής",
+  "icsImportReportAction": "Προβολή αναφοράς",
+  "icsExportFailureTitle": "Αδύνατη η εξαγωγή σε ICS",
+  "icsCopyDiagnosticsAction": "Αντιγραφή λεπτομερειών",
+  "icsUnsupportedTimeZoneMessage": "Αυτό το ICS περιέχει ονομαστικές ζώνες ώρας που το Sked δεν μπορεί να ερμηνεύσει με ασφάλεια. Δεν εισήχθη τίποτα. Εξαγάγετε UTC ή τοπικές ώρες χωρίς ζώνη ώρας από το αρχικό ημερολόγιο και δοκιμάστε ξανά.",
+  "icsExportMonthlyAnchorMismatchMessage": "Αυτό το μηνιαίο συμβάν δεν μπορεί να αναπαρασταθεί με ακρίβεια σε ICS. Εξαγάγετε JSON για να διατηρήσετε τις ημερομηνίες.",
+  "icsExportEmptyRecurrenceMessage": "Αυτό το επαναλαμβανόμενο συμβάν δεν έχει έγκυρες εμφανίσεις για εξαγωγή σε ICS. Εξαγάγετε JSON για να διατηρήσετε την εγγραφή.",
+  "icsImportedCalendarName": "Εισαγόμενο ημερολόγιο",
+  "icsUntitledEventName": "Συμβάν χωρίς τίτλο",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

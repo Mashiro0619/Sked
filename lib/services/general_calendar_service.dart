@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../l10n/app_locale.dart';
+
 import '../models/general_event.dart';
 import '../models/general_event_edit_scope.dart';
 import '../models/general_event_occurrence.dart';
@@ -36,11 +38,11 @@ class GeneralCalendarService {
     GeneralScheduleData data, {
     String? name,
     int? colorValue,
+    String localeCode = defaultLocaleCode,
   }) {
     final schedule = createDefaultGeneralSchedule(
-      name: (name != null && name.trim().isNotEmpty)
-          ? name.trim()
-          : 'My calendar',
+      name: name?.trim(),
+      localeCode: localeCode,
       colorValue: colorValue ?? defaultGeneralCalendarColorValue,
     ).copyWith(sortOrder: data.schedules.length);
     return data.copyWith(
@@ -112,15 +114,16 @@ class GeneralCalendarService {
 
   GeneralScheduleData deleteSchedule(
     GeneralScheduleData data,
-    String scheduleId,
-  ) {
+    String scheduleId, {
+    String localeCode = defaultLocaleCode,
+  }) {
     final deletedSchedule = _scheduleById(data, scheduleId);
     if (deletedSchedule == null) {
       return data;
     }
     var remaining = data.schedules.where((s) => s.id != scheduleId).toList();
     if (remaining.isEmpty) {
-      remaining = [createDefaultGeneralSchedule()];
+      remaining = [createDefaultGeneralSchedule(localeCode: localeCode)];
     }
     final nextActiveId = _preferredActiveScheduleId(
       remaining,

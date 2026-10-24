@@ -1299,6 +1299,39 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Paste BEGIN:VCALENDAR content here",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS export does not include reminders",
+  "@icsReminderExportTitle": {
+    "description": "Title explaining that Sked currently omits reminders when exporting ICS."
+  },
+  "icsReminderExportMessage": "Reminders are not included in the exported ICS. Choose JSON to keep reminder settings.",
+  "@icsReminderExportMessage": {
+    "description": "Explains reminder loss before ICS export and offers JSON, which preserves Sked reminder settings."
+  },
+  "icsReminderExportJsonAction": "Export JSON",
+  "@icsReminderExportJsonAction": {
+    "description": "Action choosing JSON for the already selected categories instead of ICS."
+  },
+  "icsReminderExportContinueAction": "Continue with ICS",
+  "@icsReminderExportContinueAction": {
+    "description": "Explicit action continuing the requested ICS export after the format warning."
+  },
+  "icsReminderImportNotice": "Events imported from ICS will have reminders turned off. Use JSON to restore reminder settings.",
+  "@icsReminderImportNotice": {
+    "description": "Explains that Sked currently imports ICS events with reminders disabled. ICS as a standard can contain alarms."
+  },
+  "icsReminderReplaceTitle": "Replace events and reminders?",
+  "@icsReminderReplaceTitle": {
+    "description": "Title asking for explicit confirmation before replacing category events and reminders with imported ICS data."
+  },
+  "icsReminderReplaceMessage": "Replacing “{calendar}” with ICS events will overwrite its events and turn off their reminders. Cancel to export a JSON backup first, or go back and add a new category instead.",
+  "@icsReminderReplaceMessage": {
+    "description": "Reminder-loss warning after choosing a category to replace. calendar is the user-provided category name.",
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Found {count} events. Add them as a new category or replace an existing category?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1324,7 +1357,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Adjusted an event whose end time was not after its start.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Unsupported ICS fields were added to notes: {fields}",
+  "importWarningUnsupportedFields": "Unsupported ICS fields were ignored: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2032,7 +2065,7 @@
   "@backupRestoreInProgressMessage": {},
   "managePeriodTimeSets": "Manage period time sets",
   "@managePeriodTimeSets": {},
-  "periodTimeSetUsageSummary": "{periodCount} periods · Used by {timetableCount} timetables",
+  "periodTimeSetUsageSummary": "{periodCount, plural, =1{1 period} other{{periodCount} periods}} · {timetableCount, plural, =1{Used by 1 timetable} other{Used by {timetableCount} timetables}}",
   "@periodTimeSetUsageSummary": {
     "placeholders": {
       "periodCount": {
@@ -2088,5 +2121,23 @@
   "schoolSitesLoginUrlRequired": "Enter a login URL.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "No matching languages",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Month view text",
+  "themeGeneralFestivalTextColor": "Festivals and holidays",
+  "themeGeneralSolarTermTextColor": "Solar terms",
+  "themeGeneralLunarTextColor": "Lunar dates",
+  "courseTextLowContrastHint": "This text color may be hard to read on some course cards (contrast below 4.5:1). You can keep it or choose another color.",
+  "shortenSemesterTitle": "Shorten semester?",
+  "shortenSemesterMessage": "The semester will end at week {weeks}. Courses with later sessions: {count}. Courses and week selections will be kept. Restore the week count to view them again.",
+  "defaultGeneralCalendarName": "My calendar",
+  "icsImportReportTitle": "Import report",
+  "icsImportReportAction": "View report",
+  "icsExportFailureTitle": "Cannot export as ICS",
+  "icsCopyDiagnosticsAction": "Copy details",
+  "icsUnsupportedTimeZoneMessage": "This ICS contains named time zones that Sked cannot interpret safely. Nothing was imported. Export UTC or floating local times from the source calendar and try again.",
+  "icsExportMonthlyAnchorMismatchMessage": "This monthly event cannot be represented accurately in ICS. Export JSON to keep its dates.",
+  "icsExportEmptyRecurrenceMessage": "This recurring event has no valid occurrences to export as ICS. Export JSON to keep the record.",
+  "icsImportedCalendarName": "Imported calendar",
+  "icsUntitledEventName": "Untitled event",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

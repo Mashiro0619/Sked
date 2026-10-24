@@ -1817,6 +1817,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pasteIcsContentHint => 'Paste BEGIN:VCALENDAR content here';
 
   @override
+  String get icsReminderExportTitle => 'ICS export does not include reminders';
+
+  @override
+  String get icsReminderExportMessage =>
+      'Reminders are not included in the exported ICS. Choose JSON to keep reminder settings.';
+
+  @override
+  String get icsReminderExportJsonAction => 'Export JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'Continue with ICS';
+
+  @override
+  String get icsReminderImportNotice =>
+      'Events imported from ICS will have reminders turned off. Use JSON to restore reminder settings.';
+
+  @override
+  String get icsReminderReplaceTitle => 'Replace events and reminders?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'Replacing “$calendar” with ICS events will overwrite its events and turn off their reminders. Cancel to export a JSON backup first, or go back and add a new category instead.';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'Found $count events. Add them as a new category or replace an existing category?';
   }
@@ -1840,7 +1865,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'Unsupported ICS fields were added to notes: $fields';
+    return 'Unsupported ICS fields were ignored: $fields';
   }
 
   @override
@@ -2953,7 +2978,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String periodTimeSetUsageSummary(int periodCount, int timetableCount) {
-    return '$periodCount periods · Used by $timetableCount timetables';
+    String _temp0 = intl.Intl.pluralLogic(
+      periodCount,
+      locale: localeName,
+      other: '$periodCount periods',
+      one: '1 period',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      timetableCount,
+      locale: localeName,
+      other: 'Used by $timetableCount timetables',
+      one: 'Used by 1 timetable',
+    );
+    return '$_temp0 · $_temp1';
   }
 
   @override
@@ -3014,4 +3051,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageNoResults => 'No matching languages';
+
+  @override
+  String get themeGeneralMonthTextColors => 'Month view text';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'Festivals and holidays';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'Solar terms';
+
+  @override
+  String get themeGeneralLunarTextColor => 'Lunar dates';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'This text color may be hard to read on some course cards (contrast below 4.5:1). You can keep it or choose another color.';
+
+  @override
+  String get shortenSemesterTitle => 'Shorten semester?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'The semester will end at week $weeks. Courses with later sessions: $count. Courses and week selections will be kept. Restore the week count to view them again.';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'My calendar';
+
+  @override
+  String get icsImportReportTitle => 'Import report';
+
+  @override
+  String get icsImportReportAction => 'View report';
+
+  @override
+  String get icsExportFailureTitle => 'Cannot export as ICS';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'Copy details';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'This ICS contains named time zones that Sked cannot interpret safely. Nothing was imported. Export UTC or floating local times from the source calendar and try again.';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'This monthly event cannot be represented accurately in ICS. Export JSON to keep its dates.';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'This recurring event has no valid occurrences to export as ICS. Export JSON to keep the record.';
+
+  @override
+  String get icsImportedCalendarName => 'Imported calendar';
+
+  @override
+  String get icsUntitledEventName => 'Untitled event';
 }

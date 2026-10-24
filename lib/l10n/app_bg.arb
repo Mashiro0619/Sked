@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Поставете тук съдържанието, започващо с BEGIN:VCALENDAR",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "Износът в ICS не включва напомняния",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Напомнянията не се включват в изнесения ICS файл. Изберете JSON, за да запазите настройките за напомняния.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "Износ в JSON",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Продължаване с ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "За събитията, внесени от ICS, напомнянията ще бъдат изключени. Използвайте JSON, за да възстановите настройките за напомняния.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Замяна на събитията и напомнянията?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Замяната на „{calendar}“ със събития от ICS ще презапише събитията в категорията и ще изключи напомнянията им. Откажете, за да изнесете първо резервно копие в JSON, или се върнете и добавете нова категория.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "Намерени събития: {count}. Да се добавят ли като нова категория, или да заменят съществуваща?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "Коригиран е краен час, който не е след началния.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Неподдържаните ICS полета са добавени в бележките: {fields}",
+  "importWarningUnsupportedFields": "Неподдържаните ICS полета са игнорирани: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Въведете URL адрес за вход.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Няма намерени езици",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Текст в месечния изглед",
+  "themeGeneralFestivalTextColor": "Празници и почивни дни",
+  "themeGeneralSolarTermTextColor": "Слънчеви периоди",
+  "themeGeneralLunarTextColor": "Лунни дати",
+  "courseTextLowContrastHint": "Този цвят на текста може да се чете трудно върху някои карти на курсове (контраст под 4.5:1). Можете да го запазите или да изберете друг.",
+  "shortenSemesterTitle": "Съкращаване на семестъра?",
+  "shortenSemesterMessage": "Семестърът ще завърши в седмица {weeks}. Курсове с по-късни занятия: {count}. Курсовете и избраните седмици ще се запазят. Възстановете броя седмици, за да ги видите отново.",
+  "defaultGeneralCalendarName": "Моят календар",
+  "icsImportReportTitle": "Отчет за импортирането",
+  "icsImportReportAction": "Преглед на отчета",
+  "icsExportFailureTitle": "Не може да се експортира като ICS",
+  "icsCopyDiagnosticsAction": "Копиране на подробностите",
+  "icsUnsupportedTimeZoneMessage": "Този ICS съдържа именувани часови зони, които Sked не може да разчете безопасно. Нищо не е импортирано. Експортирайте UTC или местни часове без часова зона от изходния календар и опитайте отново.",
+  "icsExportMonthlyAnchorMismatchMessage": "Това месечно събитие не може да бъде представено точно в ICS. Експортирайте JSON, за да запазите датите.",
+  "icsExportEmptyRecurrenceMessage": "Това повтарящо се събитие няма валидни повторения за експортиране в ICS. Експортирайте JSON, за да запазите записа.",
+  "icsImportedCalendarName": "Импортиран календар",
+  "icsUntitledEventName": "Събитие без заглавие",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

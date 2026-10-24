@@ -37,7 +37,14 @@ class GeneralCommands {
 
   Future<void> addSchedule({String? name, int? colorValue}) async {
     _requireEnabled();
-    _replace(_service.addSchedule(_data, name: name, colorValue: colorValue));
+    _replace(
+      _service.addSchedule(
+        _data,
+        name: name,
+        colorValue: colorValue,
+        localeCode: _session.data.localeCode,
+      ),
+    );
     await _persist();
   }
 
@@ -73,7 +80,9 @@ class GeneralCommands {
 
   Future<void> deleteSchedule(String id) async {
     _requireEnabled();
-    _replace(_service.deleteSchedule(_data, id));
+    _replace(
+      _service.deleteSchedule(_data, id, localeCode: _session.data.localeCode),
+    );
     await _persist();
   }
 

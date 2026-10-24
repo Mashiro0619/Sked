@@ -1115,6 +1115,26 @@
   "@icsContent": {},
   "pasteIcsContentHint": "Plak hier de inhoud die begint met BEGIN:VCALENDAR",
   "@pasteIcsContentHint": {},
+  "icsReminderExportTitle": "ICS-export bevat geen herinneringen",
+  "@icsReminderExportTitle": {},
+  "icsReminderExportMessage": "Herinneringen worden niet opgenomen in de geëxporteerde ICS. Kies JSON om de herinneringsinstellingen te behouden.",
+  "@icsReminderExportMessage": {},
+  "icsReminderExportJsonAction": "JSON exporteren",
+  "@icsReminderExportJsonAction": {},
+  "icsReminderExportContinueAction": "Doorgaan met ICS",
+  "@icsReminderExportContinueAction": {},
+  "icsReminderImportNotice": "Herinneringen staan uit voor gebeurtenissen die uit ICS worden geïmporteerd. Gebruik JSON om de herinneringsinstellingen te herstellen.",
+  "@icsReminderImportNotice": {},
+  "icsReminderReplaceTitle": "Gebeurtenissen en herinneringen vervangen?",
+  "@icsReminderReplaceTitle": {},
+  "icsReminderReplaceMessage": "Als je ‘{calendar}’ vervangt door ICS-gebeurtenissen, worden de gebeurtenissen in deze categorie overschreven en hun herinneringen uitgezet. Annuleer om eerst een JSON-back-up te exporteren, of ga terug en voeg een nieuwe categorie toe.",
+  "@icsReminderReplaceMessage": {
+    "placeholders": {
+      "calendar": {
+        "type": "String"
+      }
+    }
+  },
   "importIcsPreviewPrompt": "{count} afspraken gevonden. Toevoegen als nieuwe categorie of een bestaande categorie vervangen?",
   "@importIcsPreviewPrompt": {
     "placeholders": {
@@ -1278,7 +1298,7 @@
   "@importWarningSkippedUnsupportedStart": {},
   "importWarningAdjustedEnd": "De eindtijd van een afspraak is aangepast omdat deze niet na de begintijd lag.",
   "@importWarningAdjustedEnd": {},
-  "importWarningUnsupportedFields": "Niet-ondersteunde ICS-velden zijn aan de notities toegevoegd: {fields}",
+  "importWarningUnsupportedFields": "Niet-ondersteunde ICS-velden zijn genegeerd: {fields}",
   "@importWarningUnsupportedFields": {
     "placeholders": {
       "fields": {}
@@ -2079,5 +2099,23 @@
   "schoolSitesLoginUrlRequired": "Voer een inlog-URL in.",
   "@schoolSitesLoginUrlRequired": {},
   "languageNoResults": "Geen overeenkomende talen",
-  "@languageNoResults": {}
+  "@languageNoResults": {},
+  "themeGeneralMonthTextColors": "Tekst in maandweergave",
+  "themeGeneralFestivalTextColor": "Feesten en feestdagen",
+  "themeGeneralSolarTermTextColor": "Zonneperioden",
+  "themeGeneralLunarTextColor": "Maandata",
+  "courseTextLowContrastHint": "Deze tekstkleur is mogelijk moeilijk leesbaar op sommige cursuskaarten (contrast lager dan 4.5:1). Je kunt de kleur behouden of een andere kiezen.",
+  "shortenSemesterTitle": "Semester inkorten?",
+  "shortenSemesterMessage": "Het semester eindigt in week {weeks}. Cursussen met latere lessen: {count}. Cursussen en geselecteerde weken blijven behouden. Herstel het aantal weken om ze weer te zien.",
+  "defaultGeneralCalendarName": "Mijn agenda",
+  "icsImportReportTitle": "Importrapport",
+  "icsImportReportAction": "Rapport bekijken",
+  "icsExportFailureTitle": "Exporteren als ICS niet mogelijk",
+  "icsCopyDiagnosticsAction": "Details kopiëren",
+  "icsUnsupportedTimeZoneMessage": "Deze ICS bevat benoemde tijdzones die Sked niet veilig kan interpreteren. Er is niets geïmporteerd. Exporteer UTC of lokale tijden zonder tijdzone uit de bronagenda en probeer het opnieuw.",
+  "icsExportMonthlyAnchorMismatchMessage": "Deze maandelijkse afspraak kan niet nauwkeurig worden weergegeven in ICS. Exporteer JSON om de datums te behouden.",
+  "icsExportEmptyRecurrenceMessage": "Deze herhalende afspraak heeft geen geldige voorkomens voor ICS-export. Exporteer JSON om de registratie te behouden.",
+  "icsImportedCalendarName": "Geïmporteerde agenda",
+  "icsUntitledEventName": "Afspraak zonder titel",
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
 }

@@ -1812,6 +1812,31 @@ class AppLocalizationsTh extends AppLocalizations {
   String get pasteIcsContentHint => 'วางเนื้อหา BEGIN:VCALENDAR ที่นี่';
 
   @override
+  String get icsReminderExportTitle => 'การส่งออก ICS ไม่รวมการแจ้งเตือน';
+
+  @override
+  String get icsReminderExportMessage =>
+      'การแจ้งเตือนจะไม่รวมอยู่ใน ICS ที่ส่งออก เลือก JSON เพื่อเก็บการตั้งค่าการแจ้งเตือนไว้';
+
+  @override
+  String get icsReminderExportJsonAction => 'ส่งออก JSON';
+
+  @override
+  String get icsReminderExportContinueAction => 'ดำเนินการต่อด้วย ICS';
+
+  @override
+  String get icsReminderImportNotice =>
+      'การแจ้งเตือนของกิจกรรมที่นำเข้าจาก ICS จะถูกปิด ใช้ JSON เพื่อคืนค่าการตั้งค่าการแจ้งเตือน';
+
+  @override
+  String get icsReminderReplaceTitle => 'แทนที่กิจกรรมและการแจ้งเตือนหรือไม่?';
+
+  @override
+  String icsReminderReplaceMessage(String calendar) {
+    return 'การแทนที่ “$calendar” ด้วยกิจกรรมจาก ICS จะเขียนทับกิจกรรมในหมวดหมู่นี้และปิดการแจ้งเตือนของกิจกรรมเหล่านั้น ยกเลิกเพื่อส่งออกข้อมูลสำรองเป็น JSON ก่อน หรือย้อนกลับไปเพิ่มหมวดหมู่ใหม่แทน';
+  }
+
+  @override
   String importIcsPreviewPrompt(int count) {
     return 'พบ $count กิจกรรม ต้องการเพิ่มเป็นหมวดหมู่ใหม่หรือแทนที่หมวดหมู่ที่มีอยู่?';
   }
@@ -1835,7 +1860,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String importWarningUnsupportedFields(Object fields) {
-    return 'เพิ่มฟิลด์ ICS ที่ไม่รองรับไว้ในบันทึกย่อแล้ว: $fields';
+    return 'ละเว้นฟิลด์ ICS ที่ไม่รองรับแล้ว: $fields';
   }
 
   @override
@@ -3010,4 +3035,61 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get languageNoResults => 'ไม่พบภาษาที่ตรงกัน';
+
+  @override
+  String get themeGeneralMonthTextColors => 'ข้อความในมุมมองเดือน';
+
+  @override
+  String get themeGeneralFestivalTextColor => 'เทศกาลและวันหยุด';
+
+  @override
+  String get themeGeneralSolarTermTextColor => 'สารทสุริยคติ';
+
+  @override
+  String get themeGeneralLunarTextColor => 'วันที่ตามจันทรคติ';
+
+  @override
+  String get courseTextLowContrastHint =>
+      'สีข้อความนี้อาจอ่านยากบนการ์ดวิชาบางใบ (อัตราส่วนความต่างสีต่ำกว่า 4.5:1) คุณสามารถใช้สีเดิมหรือเลือกสีอื่นได้';
+
+  @override
+  String get shortenSemesterTitle => 'ลดระยะเวลาภาคเรียนหรือไม่?';
+
+  @override
+  String shortenSemesterMessage(int weeks, int count) {
+    return 'ภาคเรียนจะสิ้นสุดในสัปดาห์ที่ $weeks วิชาที่มีคาบเรียนหลังจากนั้น: $count วิชา ข้อมูลวิชาและสัปดาห์ที่เลือกจะยังคงอยู่ คืนค่าจำนวนสัปดาห์เพื่อดูอีกครั้ง';
+  }
+
+  @override
+  String get defaultGeneralCalendarName => 'ปฏิทินของฉัน';
+
+  @override
+  String get icsImportReportTitle => 'รายงานการนำเข้า';
+
+  @override
+  String get icsImportReportAction => 'ดูรายงาน';
+
+  @override
+  String get icsExportFailureTitle => 'ไม่สามารถส่งออกเป็น ICS';
+
+  @override
+  String get icsCopyDiagnosticsAction => 'คัดลอกรายละเอียด';
+
+  @override
+  String get icsUnsupportedTimeZoneMessage =>
+      'ICS นี้มีเขตเวลาแบบระบุชื่อที่ Sked ไม่สามารถตีความได้อย่างปลอดภัย ยังไม่มีการนำเข้าข้อมูล โปรดส่งออกเวลา UTC หรือเวลาท้องถิ่นที่ไม่ระบุเขตเวลาจากปฏิทินต้นทางแล้วลองอีกครั้ง';
+
+  @override
+  String get icsExportMonthlyAnchorMismatchMessage =>
+      'ไม่สามารถแสดงกิจกรรมรายเดือนนี้ใน ICS ได้อย่างถูกต้อง โปรดส่งออก JSON เพื่อเก็บวันที่ไว้';
+
+  @override
+  String get icsExportEmptyRecurrenceMessage =>
+      'กิจกรรมที่เกิดซ้ำนี้ไม่มีรายการที่ใช้ส่งออกเป็น ICS ได้ โปรดส่งออก JSON เพื่อเก็บข้อมูลไว้';
+
+  @override
+  String get icsImportedCalendarName => 'ปฏิทินที่นำเข้า';
+
+  @override
+  String get icsUntitledEventName => 'กิจกรรมไม่มีชื่อ';
 }
