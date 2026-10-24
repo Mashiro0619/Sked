@@ -1,6 +1,10 @@
 import '../utils/time_utils.dart';
+
+import 'dart:collection';
+
 import 'general_event.dart';
 import 'general_schedule.dart';
+import 'local_date_transition_candidates.dart';
 
 final _lastSupportedGeneralDate = DateTime.utc(9999, 12, 31);
 
@@ -402,6 +406,352 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
     index += 1;
   }
   return results;
+}
+
+/// An immutable occurrence list backed by recurrence ordinals, not event rows.
+/// Counting, slicing and reaching a distant row do not expand earlier rows.
+class GeneralEventOccurrenceRange extends ListBase<GeneralEventOccurrence> {
+  factory GeneralEventOccurrenceRange({
+    required GeneralSchedule calendar,
+    required GeneralEvent event,
+    required DateTime startInclusive,
+    required DateTime endExclusive,
+    Iterable<String> excludedStartDateTimeIso = const [],
+  }) {
+    final start = tryParseStrictIsoDateTime(event.startDateTimeIso);
+    final rawEnd = tryParseStrictIsoDateTime(event.endDateTimeIso);
+    if (start == null ||
+        rawEnd == null ||
+        !endExclusive.isAfter(startInclusive)) {
+      return GeneralEventOccurrenceRange._(null, 0, 0);
+    }
+    final end = rawEnd.isAfter(start)
+        ? rawEnd
+        : event.isAllDay
+        ? _safeAddCalendarDays(start, 1)
+        : _safeAddDuration(start, const Duration(hours: 1));
+    if (end == null) return GeneralEventOccurrenceRange._(null, 0, 0);
+    final duration = end.difference(start);
+    final rawSpan = calendarDaysBetween(start, end);
+    final allDaySpan = rawSpan < 1 ? 1 : rawSpan;
+    final rule = event.recurrenceRule;
+    final source = _GeneralEventOccurrenceRangeSource(
+      calendar: calendar,
+      event: event,
+      start: start,
+      duration: duration,
+      allDaySpan: allDaySpan,
+    );
+    if (!rule.isRepeating) {
+      if (!_overlaps(start, end, startInclusive, endExclusive) ||
+          excludedStartDateTimeIso.contains(start.toIso8601String())) {
+        return GeneralEventOccurrenceRange._(null, 0, 0);
+      }
+      source.firstSequence = 0;
+      source.endSequence = 1;
+      return GeneralEventOccurrenceRange._(source, 0, 1);
+    }
+
+    final rangeStart = event.isAllDay
+        ? _safeAddCalendarDays(startInclusive, -allDaySpan) ?? startInclusive
+        : _safeSubtractDuration(startInclusive, duration) ?? startInclusive;
+    final firstCandidate = _firstCandidateIndex(
+      eventStart: start,
+      rangeStart: rangeStart,
+      rule: rule,
+    );
+    final maximumDays = calendarDaysBetween(start, _lastSupportedGeneralDate);
+    final interval = rule.normalizedInterval;
+    var upper = switch (_effectiveUnit(rule)) {
+      GeneralEventRecurrenceUnit.day => maximumDays ~/ interval + 1,
+      GeneralEventRecurrenceUnit.week => maximumDays ~/ (7 * interval) + 1,
+      GeneralEventRecurrenceUnit.month =>
+        ((9999 - start.year) * 12 + 12 - start.month) ~/ interval + 1,
+    };
+    final count = rule.count;
+    if (count != null && count > 0 && count < upper) upper = count;
+    if (firstCandidate >= upper) {
+      return GeneralEventOccurrenceRange._(null, 0, 0);
+    }
+    final until = _parseUntil(rule.untilDateIso);
+    upper = _firstRangeOrdinal(firstCandidate, upper, (sequence) {
+      final candidate = source.startAt(sequence);
+      return candidate == null ||
+          (until != null && calendarDaysBetween(until, candidate) > 0) ||
+          !candidate.isBefore(endExclusive) ||
+          source.endAt(candidate) == null;
+    });
+    if (firstCandidate >= upper) {
+      return GeneralEventOccurrenceRange._(null, 0, 0);
+    }
+
+    upper = _firstNonIncreasingRangeOrdinal(source, firstCandidate, upper);
+    final first = _firstRangeOrdinal(firstCandidate, upper, (sequence) {
+      final candidate = source.startAt(sequence)!;
+      final candidateEnd = source.endAt(candidate);
+      return candidateEnd != null && candidateEnd.isAfter(startInclusive);
+    });
+    if (first >= upper) return GeneralEventOccurrenceRange._(null, 0, 0);
+    source.firstSequence = first;
+    source.endSequence = upper;
+    final excluded = <int>{};
+    for (final value in event.recurrenceExceptionDateIso) {
+      final date = tryParseStrictIsoDate(value);
+      if (date == null) continue;
+      for (final sequence in source.sequencesOnDate(date)) {
+        if (sequence < first || sequence >= upper) continue;
+        if (_dateIso(source.startAt(sequence)!) == value) {
+          excluded.add(sequence);
+        }
+      }
+    }
+    for (final value in excludedStartDateTimeIso) {
+      final date = tryParseStrictIsoDateTime(value);
+      if (date == null) continue;
+      for (final sequence in source.sequencesOnDate(date)) {
+        if (sequence < first || sequence >= upper) continue;
+        if (source.startAt(sequence)!.toIso8601String() == value) {
+          excluded.add(sequence);
+        }
+      }
+    }
+    source.excludedSequences = excluded.toList()..sort();
+    return GeneralEventOccurrenceRange._(
+      source,
+      0,
+      upper - first - excluded.length,
+    );
+  }
+
+  GeneralEventOccurrenceRange._(this._source, this._offset, this._length);
+
+  final _GeneralEventOccurrenceRangeSource? _source;
+  final int _offset;
+  final int _length;
+
+  @override
+  int get length => _length;
+
+  @override
+  set length(int value) =>
+      throw UnsupportedError('Occurrence range is immutable.');
+
+  @override
+  GeneralEventOccurrence operator [](int index) {
+    RangeError.checkValidIndex(index, this);
+    final source = _source!;
+    final sequence = source.sequenceAt(_offset + index);
+    final start = source.startAt(sequence)!;
+    return GeneralEventOccurrence(
+      event: source.event,
+      calendar: source.calendar,
+      start: start,
+      end: source.endAt(start)!,
+      sequence: sequence,
+    );
+  }
+
+  @override
+  void operator []=(int index, GeneralEventOccurrence value) =>
+      throw UnsupportedError('Occurrence range is immutable.');
+
+  /// Resolve a stable recurrence identity without visiting preceding rows.
+  int? indexOfSequence(int sequence) {
+    final source = _source;
+    if (source == null ||
+        sequence < source.firstSequence ||
+        sequence >= source.endSequence) {
+      return null;
+    }
+    final excludedBefore = _lowerRangeOrdinal(
+      source.excludedSequences,
+      sequence,
+    );
+    if (excludedBefore < source.excludedSequences.length &&
+        source.excludedSequences[excludedBefore] == sequence) {
+      return null;
+    }
+    final index = sequence - source.firstSequence - excludedBefore - _offset;
+    return index < 0 || index >= length ? null : index;
+  }
+
+  /// A view sharing the same recurrence arithmetic and sparse exclusions.
+  GeneralEventOccurrenceRange slice(int start, [int? end]) {
+    final checkedEnd = RangeError.checkValidRange(start, end, length);
+    return GeneralEventOccurrenceRange._(
+      _source,
+      _offset + start,
+      checkedEnd - start,
+    );
+  }
+}
+
+class _GeneralEventOccurrenceRangeSource {
+  _GeneralEventOccurrenceRangeSource({
+    required this.calendar,
+    required this.event,
+    required this.start,
+    required this.duration,
+    required this.allDaySpan,
+  });
+
+  final GeneralSchedule calendar;
+  final GeneralEvent event;
+  final DateTime start;
+  final Duration duration;
+  final int allDaySpan;
+  late int firstSequence;
+  late int endSequence;
+  List<int> excludedSequences = const [];
+
+  DateTime? startAt(int sequence) => event.recurrenceRule.isRepeating
+      ? _addRecurrenceSteps(start, event.recurrenceRule, sequence)
+      : sequence == 0
+      ? start
+      : null;
+
+  DateTime? endAt(DateTime value) => event.isAllDay
+      ? _safeAddCalendarDays(value, allDaySpan)
+      : _safeAddDuration(value, duration);
+
+  Iterable<int> sequencesOnDate(DateTime date) sync* {
+    final boundary = dateTimeOnCalendarDate(date, start);
+    final sequence = _firstCandidateIndex(
+      eventStart: start,
+      rangeStart: boundary,
+      rule: event.recurrenceRule,
+    );
+    // A whole skipped civil date can normalize the previous ordinal onto this
+    // same day; the expander applies EXDATE to both before its stop guard.
+    for (
+      var candidateSequence = sequence - 1;
+      candidateSequence <= sequence + 1;
+      candidateSequence++
+    ) {
+      if (candidateSequence < 0) continue;
+      final candidate = startAt(candidateSequence);
+      if (candidate != null && calendarDaysBetween(candidate, boundary) == 0) {
+        yield candidateSequence;
+      }
+    }
+  }
+
+  int sequenceAt(int index) {
+    if (excludedSequences.isEmpty) return firstSequence + index;
+    return _firstRangeOrdinal(firstSequence, endSequence, (sequence) {
+      final excludedBefore = _lowerRangeOrdinal(
+        excludedSequences,
+        sequence + 1,
+      );
+      return sequence - firstSequence + 1 - excludedBefore > index;
+    });
+  }
+}
+
+int _firstRangeOrdinal(int low, int high, bool Function(int) matches) {
+  while (low < high) {
+    final middle = low + (high - low) ~/ 2;
+    if (matches(middle)) {
+      high = middle;
+    } else {
+      low = middle + 1;
+    }
+  }
+  return low;
+}
+
+int _lowerRangeOrdinal(List<int> values, int target) =>
+    _firstRangeOrdinal(0, values.length, (index) => values[index] >= target);
+
+int _firstNonIncreasingRangeOrdinal(
+  _GeneralEventOccurrenceRangeSource source,
+  int first,
+  int end,
+) {
+  final rule = source.event.recurrenceRule;
+  if (source.start.isUtc ||
+      _effectiveUnit(rule) != GeneralEventRecurrenceUnit.day ||
+      rule.normalizedInterval != 1 ||
+      end - first <= 1) {
+    return end;
+  }
+
+  int inspect(int from, int to) {
+    var previous = from == first ? null : source.startAt(from - 1);
+    for (var sequence = from; sequence < to; sequence++) {
+      final candidate = source.startAt(sequence);
+      if (candidate == null ||
+          (previous != null && !candidate.isAfter(previous))) {
+        return sequence;
+      }
+      previous = candidate;
+    }
+    return end;
+  }
+
+  if (end - first <= 366) return inspect(first, end);
+  final firstStart = source.startAt(first)!;
+  final lastStart = source.startAt(end - 1)!;
+  int inspectWindow(DateTime boundary, DateTime next) {
+    final firstInWindow = _firstCandidateIndex(
+      eventStart: source.start,
+      rangeStart: boundary,
+      rule: rule,
+    );
+    final endInWindow = _firstCandidateIndex(
+      eventStart: source.start,
+      rangeStart: next,
+      rule: rule,
+    );
+    return inspect(
+      (firstInWindow - 2).clamp(first, end),
+      (endInWindow + 2).clamp(first, end),
+    );
+  }
+
+  // Some pre-1901 date-line changes have no timestamp in the dependency's
+  // serialized initial zone. Preserve native probing only for that old era;
+  // ordinary present/future ranges never scan years or months toward 9999.
+  if (localDateTransitionUnlocatedHistoryEndMilliseconds != 0) {
+    final historyEnd = DateTime.fromMillisecondsSinceEpoch(
+      localDateTransitionUnlocatedHistoryEndMilliseconds,
+      isUtc: true,
+    ).add(const Duration(days: 2)).toLocal();
+    if (firstStart.isBefore(historyEnd)) {
+      var month = firstStart.year * 12 + firstStart.month - 1;
+      final lastMonth = lastStart.isBefore(historyEnd)
+          ? lastStart.year * 12 + lastStart.month - 1
+          : historyEnd.year * 12 + historyEnd.month - 1;
+      for (; month <= lastMonth; month++) {
+        final year = month ~/ 12;
+        final monthOfYear = month % 12 + 1;
+        final boundary = DateTime(year, monthOfYear);
+        final next = DateTime(year, monthOfYear + 1);
+        if ((next.timeZoneOffset - boundary.timeZoneOffset).abs() <
+            const Duration(hours: 12)) {
+          continue;
+        }
+        final stopped = inspectWindow(boundary, next);
+        if (stopped < end) return stopped;
+      }
+    }
+  }
+  // This generated search index locates rare whole-day shifts. Recheck actual
+  // native candidates around each instant instead of substituting IANA rules
+  // for the device's DateTime behavior. A dependency-coverage test requires
+  // regeneration when the bundled timezone database gains another candidate.
+  for (final instant in localDateTransitionCandidateMilliseconds) {
+    final transition = DateTime.fromMillisecondsSinceEpoch(
+      instant,
+      isUtc: true,
+    );
+    final before = transition.subtract(const Duration(days: 3));
+    final after = transition.add(const Duration(days: 3));
+    if (lastStart.isBefore(before) || firstStart.isAfter(after)) continue;
+    final stopped = inspectWindow(before, after);
+    if (stopped < end) return stopped;
+  }
+  return end;
 }
 
 /// A candidate's position is counted before applying exception dates.
