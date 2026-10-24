@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
+import 'ui_command.dart';
 
 /// One presentation contract for decisions. It deliberately owns no mutation,
 /// route, consent policy or default answer; those belong to the caller.
@@ -58,34 +59,59 @@ class SkedConfirmationDialog extends StatelessWidget {
   final bool scrollable;
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    icon: icon,
-    iconPadding: iconPadding,
-    iconColor: iconColor,
-    title: title,
-    titlePadding: titlePadding,
-    titleTextStyle: titleTextStyle,
-    content: content,
-    contentPadding: contentPadding,
-    contentTextStyle: contentTextStyle,
-    actions: actions,
-    actionsPadding: actionsPadding,
-    actionsAlignment: actionsAlignment,
-    actionsOverflowAlignment: actionsOverflowAlignment,
-    actionsOverflowDirection: actionsOverflowDirection,
-    actionsOverflowButtonSpacing: actionsOverflowButtonSpacing,
-    buttonPadding: buttonPadding,
-    backgroundColor: backgroundColor,
-    elevation: elevation,
-    shadowColor: shadowColor,
-    surfaceTintColor: surfaceTintColor,
-    semanticLabel: semanticLabel,
-    insetPadding: insetPadding,
-    clipBehavior: clipBehavior,
-    shape: shape,
-    alignment: alignment,
-    constraints: constraints,
-    scrollable: scrollable,
+  Widget build(BuildContext context) => UiCommandInlineFeedback(
+    builder: (context, notice) => AlertDialog(
+      icon: icon,
+      iconPadding: iconPadding,
+      iconColor: iconColor,
+      title: title,
+      titlePadding: titlePadding,
+      titleTextStyle: titleTextStyle,
+      content: content == null && notice == null
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (content != null)
+                  if (scrollable)
+                    content!
+                  else
+                    Flexible(fit: FlexFit.loose, child: content!),
+                if (notice != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: 560,
+                        maxHeight: MediaQuery.sizeOf(context).height * .3,
+                      ),
+                      child: notice,
+                    ),
+                  ),
+              ],
+            ),
+      contentPadding: contentPadding,
+      contentTextStyle: contentTextStyle,
+      actions: actions,
+      actionsPadding: actionsPadding,
+      actionsAlignment: actionsAlignment,
+      actionsOverflowAlignment: actionsOverflowAlignment,
+      actionsOverflowDirection: actionsOverflowDirection,
+      actionsOverflowButtonSpacing: actionsOverflowButtonSpacing,
+      buttonPadding: buttonPadding,
+      backgroundColor: backgroundColor,
+      elevation: elevation,
+      shadowColor: shadowColor,
+      surfaceTintColor: surfaceTintColor,
+      semanticLabel: semanticLabel,
+      insetPadding: insetPadding,
+      clipBehavior: clipBehavior,
+      shape: shape,
+      alignment: alignment,
+      constraints: constraints,
+      scrollable: scrollable,
+    ),
   );
 }
 

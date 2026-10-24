@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart';
 
 import '../l10n/app_localizations.dart';
 import '../controllers/app_data_maintenance.dart';
+import 'workspace_view_panel.dart';
 
 Future<bool> runUiCommandWithFeedback({
   required BuildContext context,
@@ -67,8 +69,34 @@ class UiCommandFeedbackHost extends StatefulWidget {
 }
 
 class _UiCommandFeedbackHostState extends State<UiCommandFeedbackHost> {
+  final _contentKey = GlobalKey(debugLabel: 'ui-command-feedback-content');
+  Object? _inlineOwner;
   String? _failureMessage;
   var _feedbackGeneration = 0;
+
+  bool _attachInline(Object owner) {
+    if (_inlineOwner != null && !identical(_inlineOwner, owner)) return false;
+    _inlineOwner = owner;
+    return true;
+  }
+
+  void _detachInline(Object owner) {
+    if (!identical(_inlineOwner, owner)) return;
+    _inlineOwner = null;
+    if (_failureMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _inlineOwner == null) setState(() {});
+      });
+    }
+  }
+
+  Widget? _notice() => _failureMessage == null
+      ? null
+      : _UiCommandFailureNotice(
+          message: _failureMessage!,
+          generation: _feedbackGeneration,
+          onDismiss: _clearFailure,
+        );
 
   void _clearFailure() {
     if (_failureMessage == null || !mounted) return;
@@ -85,30 +113,229 @@ class _UiCommandFeedbackHostState extends State<UiCommandFeedbackHost> {
 
   @override
   Widget build(BuildContext context) {
-    final failureMessage = _failureMessage;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Builder(builder: widget.builder),
-        if (failureMessage != null)
-          PositionedDirectional(
-            top: 12,
-            start: 12,
-            end: 12,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: _UiCommandFailureNotice(
-                  message: failureMessage,
-                  generation: _feedbackGeneration,
-                  onDismiss: _clearFailure,
-                ),
-              ),
+    final failureMessage = _inlineOwner == null ? _failureMessage : null;
+    final view = WorkspaceViewTaskScope.maybeOf(context);
+    return _UiCommandFeedbackScope(
+      host: this,
+      generation: _feedbackGeneration,
+      failureMessage: _failureMessage,
+      child: Align(
+        alignment: Alignment.topCenter,
+        heightFactor: 1,
+        child: _FeedbackContentSize(
+          // A route keeps full viewport constraints even for a short view. The
+          // loose child measures its content and notice, not that route height.
+          // Keep reporting after dismissal so the floating surface shrinks back.
+          onHeight: view?.enabled == true ? view!.onContentHeight : null,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Error visibility never changes the parent or identity of a draft.
+                // Put feedback after content so floating editors retain their anchor
+                // and existing controls do not jump beneath a newly inserted banner.
+                if (constraints.hasBoundedHeight)
+                  Flexible(
+                    key: const ValueKey('ui-command-feedback-content-flex'),
+                    fit: FlexFit.loose,
+                    child: KeyedSubtree(
+                      key: _contentKey,
+                      child: Builder(builder: widget.builder),
+                    ),
+                  )
+                else
+                  KeyedSubtree(
+                    key: _contentKey,
+                    child: Builder(builder: widget.builder),
+                  ),
+                if (failureMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 560,
+                          maxHeight: constraints.hasBoundedHeight
+                              ? constraints.maxHeight * .4
+                              : double.infinity,
+                        ),
+                        child: _notice(),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-      ],
+        ),
+      ),
     );
+  }
+}
+
+class _UiCommandFeedbackScope extends InheritedWidget {
+  const _UiCommandFeedbackScope({
+    required this.host,
+    required this.generation,
+    required this.failureMessage,
+    required super.child,
+  });
+  final _UiCommandFeedbackHostState host;
+  final int generation;
+  final String? failureMessage;
+
+  @override
+  bool updateShouldNotify(_UiCommandFeedbackScope oldWidget) =>
+      host != oldWidget.host ||
+      generation != oldWidget.generation ||
+      failureMessage != oldWidget.failureMessage;
+}
+
+/// Short dialogs own their feedback area inside their actual surface. The
+/// surrounding route can occupy the viewport, so an external sibling would
+/// otherwise place its notice outside the dialog or change its floating anchor.
+class UiCommandInlineFeedback extends StatefulWidget {
+  const UiCommandInlineFeedback({
+    super.key,
+    required this.builder,
+    this.preserveHeight = false,
+    this.enabled = true,
+  });
+  final Widget Function(BuildContext context, Widget? notice) builder;
+  final bool preserveHeight;
+  final bool enabled;
+
+  @override
+  State<UiCommandInlineFeedback> createState() =>
+      _UiCommandInlineFeedbackState();
+}
+
+class _UiCommandInlineFeedbackState extends State<UiCommandInlineFeedback> {
+  _UiCommandFeedbackHostState? _host;
+  bool _ownsNotice = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<_UiCommandFeedbackScope>();
+    final host = scope?.host;
+    if (!identical(host, _host)) {
+      _host?._detachInline(this);
+      _host = host;
+      _ownsNotice = widget.enabled && (host?._attachInline(this) ?? false);
+    }
+  }
+
+  @override
+  void didUpdateWidget(UiCommandInlineFeedback oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled == widget.enabled) return;
+    if (widget.enabled) {
+      _ownsNotice = _host?._attachInline(this) ?? false;
+    } else {
+      _host?._detachInline(this);
+      _ownsNotice = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notice = _ownsNotice ? _host?._notice() : null;
+    return _InlineFeedbackHeight(
+      preserve: widget.preserveHeight && notice != null,
+      child: widget.builder(context, notice),
+    );
+  }
+
+  @override
+  void dispose() {
+    _host?._detachInline(this);
+    super.dispose();
+  }
+}
+
+class _InlineFeedbackHeight extends SingleChildRenderObjectWidget {
+  const _InlineFeedbackHeight({required this.preserve, required super.child});
+  final bool preserve;
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderInlineFeedbackHeight(preserve);
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderInlineFeedbackHeight renderObject,
+  ) {
+    renderObject.preserve = preserve;
+  }
+}
+
+class _RenderInlineFeedbackHeight extends RenderProxyBox {
+  _RenderInlineFeedbackHeight(this._preserve);
+  bool _preserve;
+  double? _naturalHeight;
+  set preserve(bool value) {
+    if (_preserve == value) return;
+    _preserve = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    final height = _preserve ? _naturalHeight : null;
+    final childConstraints = height == null
+        ? constraints
+        : constraints.copyWith(
+            minHeight: constraints.constrainHeight(height),
+            maxHeight: constraints.constrainHeight(height),
+          );
+    child!.layout(childConstraints, parentUsesSize: true);
+    size = constraints.constrain(child!.size);
+    if (!_preserve) _naturalHeight = size.height;
+  }
+}
+
+/// Viewing tasks report their content size from inside the editor. Include the
+/// additional inline notice so the outer paint/hit-test viewport stays aligned.
+class _FeedbackContentSize extends SingleChildRenderObjectWidget {
+  const _FeedbackContentSize({required this.onHeight, required super.child});
+  final ValueChanged<double>? onHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderFeedbackContentSize(onHeight);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderFeedbackContentSize renderObject,
+  ) {
+    renderObject.onHeight = onHeight;
+  }
+}
+
+class _RenderFeedbackContentSize extends RenderProxyBox {
+  _RenderFeedbackContentSize(this._onHeight);
+  ValueChanged<double>? _onHeight;
+  set onHeight(ValueChanged<double>? value) {
+    if (_onHeight == value) return;
+    _onHeight = value;
+    _reportedHeight = null;
+    markNeedsLayout();
+  }
+
+  double? _reportedHeight;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (_reportedHeight == size.height) return;
+    _reportedHeight = size.height;
+    final height = size.height;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (attached && _reportedHeight == height) _onHeight?.call(height);
+    });
   }
 }
 
@@ -141,12 +368,15 @@ class _UiCommandFailureNotice extends StatelessWidget {
               Icon(Icons.error_outline, color: colors.onErrorContainer),
               const SizedBox(width: 12),
               Expanded(
-                child: Semantics(
-                  key: ValueKey('ui-command-failure-live-region-$generation'),
-                  liveRegion: true,
-                  child: Text(
-                    message,
-                    style: TextStyle(color: colors.onErrorContainer),
+                child: SingleChildScrollView(
+                  key: const ValueKey('ui-command-failure-message-scroll'),
+                  child: Semantics(
+                    key: ValueKey('ui-command-failure-live-region-$generation'),
+                    liveRegion: true,
+                    child: Text(
+                      message,
+                      style: TextStyle(color: colors.onErrorContainer),
+                    ),
                   ),
                 ),
               ),

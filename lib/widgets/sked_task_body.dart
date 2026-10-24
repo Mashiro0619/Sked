@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'ui_command.dart';
+
 /// A single header, scrollable content and fixed command area. Hosts supply
 /// geometry and surfaces; business widgets supply only their task contents.
 class SkedTaskBody extends StatelessWidget {
@@ -36,109 +38,128 @@ class SkedTaskBody extends StatelessWidget {
   final EdgeInsetsGeometry headerPadding, contentPadding, footerPadding;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final shortViewport = constraints.maxHeight < 240;
-      final padding = footerPadding.resolve(Directionality.of(context));
-      final compactFooterPadding = constraints.maxHeight < 160
-          ? EdgeInsets.fromLTRB(
-              padding.left,
-              constraints.maxHeight < 80 ? 0 : 4,
-              padding.right,
-              constraints.maxHeight < 80 ? 0 : 4,
-            )
-          : padding;
-      final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-      final minimumFooter =
-          math.max(48.0, 20 * textScale + 16) + compactFooterPadding.vertical;
-      final footerBudget = math.min(
-        math.max(constraints.maxHeight * .35, minimumFooter),
-        math.max(
-          0.0,
-          constraints.maxHeight - (constraints.maxHeight >= 80 ? 24 : 0),
-        ),
-      );
-      return Column(
-        mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (!shortViewport) ...[
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: constraints.maxHeight * headerHeightFraction,
+  Widget build(BuildContext context) => UiCommandInlineFeedback(
+    // Viewing lists can grow their surface to include a separate notice. A
+    // form's fixed command area instead needs feedback inside its measured body.
+    enabled: footer != null,
+    preserveHeight: true,
+    builder: (context, notice) => LayoutBuilder(
+      builder: (context, constraints) {
+        final shortViewport = constraints.maxHeight < 240;
+        final padding = footerPadding.resolve(Directionality.of(context));
+        final compactFooterPadding = constraints.maxHeight < 160
+            ? EdgeInsets.fromLTRB(
+                padding.left,
+                constraints.maxHeight < 80 ? 0 : 4,
+                padding.right,
+                constraints.maxHeight < 80 ? 0 : 4,
+              )
+            : padding;
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final minimumFooter =
+            math.max(48.0, 20 * textScale + 16) + compactFooterPadding.vertical;
+        final footerBudget = math.min(
+          math.max(constraints.maxHeight * .35, minimumFooter),
+          math.max(
+            0.0,
+            constraints.maxHeight - (constraints.maxHeight >= 80 ? 24 : 0),
+          ),
+        );
+        return Column(
+          mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!shortViewport) ...[
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * headerHeightFraction,
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(padding: headerPadding, child: header),
+                ),
               ),
-              child: SingleChildScrollView(
-                child: Padding(padding: headerPadding, child: header),
-              ),
-            ),
-            if (headerDivider) const Divider(height: 1),
-          ],
-          ?status,
-          Flexible(
-            key: const ValueKey('sked-task-body-slot'),
-            fit: fillHeight ? FlexFit.tight : FlexFit.loose,
-            child: SizedBox(
-              key: viewportKey,
-              child: bodyIsSliver
-                  ? CustomScrollView(
-                      key: bodyKey,
-                      // Flexible gives this viewport a finite height budget.
-                      // Shrink short lists without measuring offscreen rows.
-                      shrinkWrap: !fillHeight,
-                      semanticChildCount: semanticChildCount,
-                      slivers: [
-                        if (shortViewport)
-                          SliverToBoxAdapter(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Padding(padding: headerPadding, child: header),
-                                if (headerDivider) const Divider(height: 1),
-                              ],
+              if (headerDivider) const Divider(height: 1),
+            ],
+            ?status,
+            Flexible(
+              key: const ValueKey('sked-task-body-slot'),
+              fit: fillHeight ? FlexFit.tight : FlexFit.loose,
+              child: SizedBox(
+                key: viewportKey,
+                child: bodyIsSliver
+                    ? CustomScrollView(
+                        key: bodyKey,
+                        // Flexible gives this viewport a finite height budget.
+                        // Shrink short lists without measuring offscreen rows.
+                        shrinkWrap: !fillHeight,
+                        semanticChildCount: semanticChildCount,
+                        slivers: [
+                          if (shortViewport)
+                            SliverToBoxAdapter(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Padding(
+                                    padding: headerPadding,
+                                    child: header,
+                                  ),
+                                  if (headerDivider) const Divider(height: 1),
+                                ],
+                              ),
                             ),
-                          ),
-                        SliverPadding(
-                          key: const ValueKey('sked-task-content'),
-                          padding: contentPadding,
-                          sliver: child,
-                        ),
-                      ],
-                    )
-                  : _FocusedTaskViewport(
-                      scrollKey: bodyKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (shortViewport) ...[
-                            Padding(padding: headerPadding, child: header),
-                            if (headerDivider) const Divider(height: 1),
-                          ],
-                          // A stable slot keeps field state when the short-window
-                          // fallback moves the title into this same scroll viewport.
-                          Padding(
+                          SliverPadding(
                             key: const ValueKey('sked-task-content'),
                             padding: contentPadding,
-                            child: child,
+                            sliver: child,
                           ),
                         ],
+                      )
+                    : _FocusedTaskViewport(
+                        scrollKey: bodyKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (shortViewport) ...[
+                              Padding(padding: headerPadding, child: header),
+                              if (headerDivider) const Divider(height: 1),
+                            ],
+                            // A stable slot keeps field state when the short-window
+                            // fallback moves the title into this same scroll viewport.
+                            Padding(
+                              key: const ValueKey('sked-task-content'),
+                              padding: contentPadding,
+                              child: child,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-            ),
-          ),
-          if (footer != null) ...[
-            if (divider) const Divider(height: 1),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: footerBudget),
-              child: SingleChildScrollView(
-                child: Padding(padding: compactFooterPadding, child: footer),
               ),
             ),
+            if (notice != null)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * .3,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: notice,
+                ),
+              ),
+            if (footer != null) ...[
+              if (divider) const Divider(height: 1),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: footerBudget),
+                child: SingleChildScrollView(
+                  child: Padding(padding: compactFooterPadding, child: footer),
+                ),
+              ),
+            ],
           ],
-        ],
-      );
-    },
+        );
+      },
+    ),
   );
 }
 

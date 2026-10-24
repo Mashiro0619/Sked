@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'sked_floating_surface.dart';
 import 'sked_confirmation_dialog.dart';
 import 'sked_task_actions.dart';
+import 'ui_command.dart';
 
 /// Dialog builders sometimes hold transactional state outside StatefulBuilder.
 /// Keep that closure alive across host/viewport rebuilds, just like a route page.
@@ -114,71 +115,85 @@ class SkedTaskDialog extends StatelessWidget {
         titleTextStyle: titleTextStyle,
       );
     }
-    return LayoutBuilder(
-      builder: (context, bounds) => Column(
-        mainAxisSize: scope.explicitHeight
-            ? MainAxisSize.max
-            : MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              // A wrapped title action is essential chrome, not list content.
-              // Let the header take its measured height before compressing the
-              // body. Reserve the footer, body padding and a small viewport.
-              maxHeight: titleBottom == null
-                  ? bounds.maxHeight * .35
-                  : (bounds.maxHeight -
-                            (actions?.isNotEmpty == true
-                                ? bounds.maxHeight * .3
-                                : 0) -
-                            (content != null ? 32 : 0) -
-                            1)
-                        .clamp(0.0, double.infinity),
-            ),
-            child: Padding(
-              padding: skedPanelHeaderPadding,
-              child: SkedPanelHeader(
-                scrollableTitle: true,
-                title: title ?? const SizedBox.shrink(),
-                action: titleAction,
-                bottom: titleBottom,
-                bottomGap: 6,
-                onDrag:
-                    scope.onDragUpdate ??
-                    SkedFloatingDragScope.maybeOf(context)?.onDrag,
-                dragKey: scope.onDragUpdate != null
-                    ? const ValueKey('floating-form-drag-handle')
-                    : const ValueKey('sked-picker-drag-handle'),
-                showClose: scope.onClose != null,
-                closeEnabled: closeEnabled,
-                onClose: scope.onClose,
-                closeKey: const ValueKey('floating-form-close'),
-              ),
-            ),
-          ),
-          const Divider(height: 1),
-          if (content != null)
-            Flexible(
-              fit: scope.explicitHeight ? FlexFit.tight : FlexFit.loose,
-              child: contentOwnsScroll
-                  ? Padding(padding: const EdgeInsets.all(12), child: content!)
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(12),
-                      child: content!,
-                    ),
-            ),
-          if (actions?.isNotEmpty == true)
+    return UiCommandInlineFeedback(
+      preserveHeight: true,
+      builder: (context, notice) => LayoutBuilder(
+        builder: (context, bounds) => Column(
+          mainAxisSize: scope.explicitHeight
+              ? MainAxisSize.max
+              : MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: bounds.maxHeight * .3),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  child: SkedActionArea(runSpacing: 4, actions: actions!),
+              constraints: BoxConstraints(
+                // A wrapped title action is essential chrome, not list content.
+                // Let the header take its measured height before compressing the
+                // body. Reserve the footer, body padding and a small viewport.
+                maxHeight: titleBottom == null
+                    ? bounds.maxHeight * .35
+                    : (bounds.maxHeight -
+                              (actions?.isNotEmpty == true
+                                  ? bounds.maxHeight * .3
+                                  : 0) -
+                              (content != null ? 32 : 0) -
+                              1)
+                          .clamp(0.0, double.infinity),
+              ),
+              child: Padding(
+                padding: skedPanelHeaderPadding,
+                child: SkedPanelHeader(
+                  scrollableTitle: true,
+                  title: title ?? const SizedBox.shrink(),
+                  action: titleAction,
+                  bottom: titleBottom,
+                  bottomGap: 6,
+                  onDrag:
+                      scope.onDragUpdate ??
+                      SkedFloatingDragScope.maybeOf(context)?.onDrag,
+                  dragKey: scope.onDragUpdate != null
+                      ? const ValueKey('floating-form-drag-handle')
+                      : const ValueKey('sked-picker-drag-handle'),
+                  showClose: scope.onClose != null,
+                  closeEnabled: closeEnabled,
+                  onClose: scope.onClose,
+                  closeKey: const ValueKey('floating-form-close'),
                 ),
               ),
             ),
-        ],
+            const Divider(height: 1),
+            if (content != null)
+              Flexible(
+                fit: scope.explicitHeight ? FlexFit.tight : FlexFit.loose,
+                child: contentOwnsScroll
+                    ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: content!,
+                      )
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(12),
+                        child: content!,
+                      ),
+              ),
+            if (notice != null)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: bounds.maxHeight * .3),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: notice,
+                ),
+              ),
+            if (actions?.isNotEmpty == true)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: bounds.maxHeight * .3),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    child: SkedActionArea(runSpacing: 4, actions: actions!),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
