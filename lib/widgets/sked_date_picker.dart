@@ -247,6 +247,12 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   final _gridFocus = FocusNode(debugLabel: 'Date calendar grid');
   final _inputFocus = FocusNode(debugLabel: 'Date input');
   final _endInputFocus = FocusNode(debugLabel: 'Range end input');
+  final _dayHorizontalController = ScrollController();
+  final _dayFocusAnchor = GlobalKey();
+  bool _dayFocusRevealScheduled = false;
+  bool _dayKeyboardNavigation = false;
+  (DateTime, Size, double, TextDirection)? _dayFocusLayout;
+  ({Object inputs, Size size})? _dayCellMeasurement;
   final _input = TextEditingController();
   final _endInput = TextEditingController();
   bool get _rangeMode => widget.rangeInteraction == DateRangeInteraction.full;
@@ -309,6 +315,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   }
 
   void _usePointerInput(PointerDownEvent event) {
+    _dayKeyboardNavigation = false;
     if (_choiceKeyboardFocus) setState(() => _choiceKeyboardFocus = false);
   }
 
@@ -359,6 +366,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     _gridFocus.dispose();
     _inputFocus.dispose();
     _endInputFocus.dispose();
+    _dayHorizontalController.dispose();
     widget.rangeController?.removeListener(_rangeChanged);
     _input.dispose();
     _endInput.dispose();
@@ -541,6 +549,8 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   }
 
   Widget _interactiveDayGrid(BuildContext context, double height) {
+    final minimum = _minimumDayCellSize(context, height);
+    height = minimum.height;
     _gridCellHeight = height;
     _gridWeekdayHeight = _compactCalendar
         ? math.max(28, 14 * WorkbenchChromeMetrics.of(context).textScale + 8)
@@ -555,7 +565,167 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                   6) ~/
               7
         : 6;
-    final grid = SizedBox(key: _dayGridKey, child: _dayGrid(context, height));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : minimum.width * 7;
+        final width = math.max(viewportWidth, minimum.width * 7);
+        final overflows = width > viewportWidth + .5;
+        if (_hasFocus) {
+          final focusLayout = (
+            _focused,
+            minimum,
+            viewportWidth,
+            Directionality.of(context),
+          );
+          if (_dayFocusLayout != focusLayout) {
+            _dayFocusLayout = focusLayout;
+            _revealDayFocus();
+          }
+        } else {
+          _dayFocusLayout = null;
+        }
+        return SingleChildScrollView(
+          key: const ValueKey('sked-date-grid-horizontal-scroll'),
+          controller: _dayHorizontalController,
+          scrollDirection: Axis.horizontal,
+          physics: overflows
+              ? const ClampingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          child: _dayRangeInteractions(
+            SizedBox(
+              key: _dayGridKey,
+              width: width,
+              child: _dayGrid(context, height),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Size _minimumDayCellSize(BuildContext context, double height) {
+    final theme = Theme.of(context);
+    final compact = _compactCalendar;
+    final dayStyle = _calendarMeasurementStyle(
+      context,
+      _dayLabelStyle(context)?.copyWith(fontWeight: FontWeight.w600),
+    );
+    final textScaler = MediaQuery.textScalerOf(context);
+    final l = AppLocalizations.of(context);
+    final material = MaterialLocalizations.of(context);
+    final weekdayStyle = _calendarMeasurementStyle(
+      context,
+      compact
+          ? theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              height: 1.2,
+            )
+          : theme.textTheme.labelSmall,
+    );
+    final inputs = (
+      dayStyle,
+      weekdayStyle,
+      textScaler,
+      Directionality.of(context),
+      Localizations.maybeLocaleOf(context),
+      l.localeName,
+      height,
+      widget.embedded,
+      compact,
+      WorkbenchChromeMetrics.of(context).desktop,
+    );
+    final previous = _dayCellMeasurement;
+    if (previous != null && previous.inputs == inputs) return previous.size;
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: textScaler,
+      locale: Localizations.maybeLocaleOf(context),
+      maxLines: 1,
+    );
+    var width = 0.0;
+    var lineHeight = 0.0;
+    for (var day = 1; day <= 31; day++) {
+      painter.text = TextSpan(text: '$day', style: dayStyle);
+      painter.layout();
+      width = math.max(width, painter.width);
+      lineHeight = math.max(lineHeight, painter.height);
+    }
+    var weekdayWidth = 0.0;
+    for (var i = 0; i < 7; i++) {
+      painter.text = TextSpan(
+        text: l.localeName.startsWith('zh')
+            ? const ['一', '二', '三', '四', '五', '六', '日'][i]
+            : material.narrowWeekdays[(i + 1) % 7],
+        style: weekdayStyle,
+      );
+      painter.layout();
+      weekdayWidth = math.max(weekdayWidth, painter.width);
+    }
+    painter.dispose();
+    final size = Size(
+      math.max(width + (compact ? 12 : 4), weekdayWidth + 4).ceilToDouble(),
+      math.max(height, lineHeight + 12).ceilToDouble(),
+    );
+    _dayCellMeasurement = (inputs: inputs, size: size);
+    return size;
+  }
+
+  TextStyle? _dayLabelStyle(BuildContext context) =>
+      (_compactCalendar
+              ? Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18)
+              : Theme.of(context).textTheme.labelMedium)
+          ?.copyWith(height: 1.2);
+
+  void _revealDayFocus() {
+    if (_dayFocusRevealScheduled) return;
+    _dayFocusRevealScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _dayFocusRevealScheduled = false;
+      if (!mounted ||
+          !_gridFocus.hasFocus ||
+          _page != _CalendarPage.days ||
+          widget.isSessionCurrent?.call() == false) {
+        return;
+      }
+      final anchor = _dayFocusAnchor.currentContext;
+      if (anchor == null) return;
+      final target = anchor.findRenderObject();
+      if (target == null || !_dayHorizontalController.hasClients || _ownsDrag) {
+        return;
+      }
+      final position = _dayHorizontalController.position;
+      unawaited(
+        position
+            .ensureVisible(
+              target,
+              alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+            )
+            .then<void>((_) {
+              if (mounted &&
+                  anchor.mounted &&
+                  identical(anchor, _dayFocusAnchor.currentContext)) {
+                return position.ensureVisible(
+                  target,
+                  alignmentPolicy:
+                      ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+                );
+              }
+            })
+            .then<void>((_) {
+              if (mounted &&
+                  anchor.mounted &&
+                  _dayKeyboardNavigation &&
+                  !_ownsDrag) {
+                return Scrollable.ensureVisible(anchor);
+              }
+            }),
+      );
+    });
+  }
+
+  Widget _dayRangeInteractions(Widget grid) {
     if (!_rangeGestures) return grid;
     return MouseRegion(
       onHover: (event) {
@@ -760,6 +930,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       return KeyEventResult.ignored;
     }
     final key = event.logicalKey;
+    _dayKeyboardNavigation = true;
     if (_compactCalendar &&
         _page != _CalendarPage.days &&
         const [
@@ -796,6 +967,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
         : key == LogicalKeyboardKey.arrowRight
         ? 1
         : 0;
+    if (Directionality.of(context) == TextDirection.rtl) step = -step;
     final columns = _page == _CalendarPage.days
         ? 7
         : _compactCalendar
@@ -854,7 +1026,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       18 * metrics.textScale + (widget.embedded ? 4 : 12),
     );
     return Listener(
-      onPointerDown: _compactCalendar ? _usePointerInput : null,
+      onPointerDown: _usePointerInput,
       child: PopScope(
         canPop: !_savingRange,
         child: Shortcuts(
@@ -1599,6 +1771,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                       .format(DateTime(2024, 1, i + 1)),
                   excludeSemantics: true,
                   child: SizedBox(
+                    key: ValueKey('sked-date-weekday-$i'),
                     height: _gridWeekdayHeight,
                     child: Center(
                       child: Text(
@@ -1674,6 +1847,9 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                                 material.dateRangeEndLabel,
                             ].join(', ');
                             return Semantics(
+                              key: DateUtils.isSameDay(day, _focused)
+                                  ? _dayFocusAnchor
+                                  : null,
                               button: true,
                               enabled: allowed,
                               selected: inRange,
@@ -1773,25 +1949,19 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
               textAlign: TextAlign.center,
               maxLines: 1,
               softWrap: false,
-              style:
-                  (compact
-                          ? theme.textTheme.titleMedium?.copyWith(fontSize: 18)
-                          : theme.textTheme.labelMedium)
-                      ?.copyWith(
-                        height: 1.2,
-                        color: endpoint
-                            ? colors.onPrimary
-                            : !allowed
-                            ? colors.onSurface.withValues(alpha: 0.38)
-                            : day.month == _month.month
-                            ? colors.onSurface
-                            : colors.onSurfaceVariant.withValues(
-                                alpha: compact ? 0.65 : 1,
-                              ),
-                        fontWeight: endpoint
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+              style: _dayLabelStyle(context)?.copyWith(
+                height: 1.2,
+                color: endpoint
+                    ? colors.onPrimary
+                    : !allowed
+                    ? colors.onSurface.withValues(alpha: 0.38)
+                    : day.month == _month.month
+                    ? colors.onSurface
+                    : colors.onSurfaceVariant.withValues(
+                        alpha: compact ? 0.65 : 1,
                       ),
+                fontWeight: endpoint ? FontWeight.w600 : FontWeight.w500,
+              ),
             ),
             if (today)
               Positioned(

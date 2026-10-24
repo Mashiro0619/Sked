@@ -38,6 +38,8 @@ Future<void> _open(
   FocusNode? focus,
   Alignment alignment = Alignment.topLeft,
   ThemeData? theme,
+  bool boldText = false,
+  TextDirection? textDirection,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -47,8 +49,10 @@ Future<void> _open(
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
-            .copyWith(textScaler: TextScaler.linear(scale)),
-        child: child!,
+            .copyWith(textScaler: TextScaler.linear(scale), boldText: boldText),
+        child: textDirection == null
+            ? child!
+            : Directionality(textDirection: textDirection, child: child!),
       ),
       home: Scaffold(
         body: Align(
@@ -144,6 +148,178 @@ void _expectReadableChoice(
 }
 
 void main() {
+  testWidgets(
+    'normal tablet dates fit a narrow panel without horizontal scrolling',
+    (tester) async {
+      _size(tester, const Size(800, 1000));
+      final results = <DateTime>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(platform: TargetPlatform.android),
+          locale: const Locale('en'),
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 320,
+                height: 760,
+                child: SkedDatePicker(
+                  initialDate: DateTime(2026, 9, 10),
+                  currentDate: DateTime(2026, 9, 10),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2035),
+                  commitMode: DatePickerCommitMode.immediate,
+                  onSelected: results.add,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final horizontal = _key('sked-date-grid-horizontal-scroll');
+      final scrollable = tester.state<ScrollableState>(
+        find
+            .descendant(of: horizontal, matching: find.byType(Scrollable))
+            .first,
+      );
+      expect(scrollable.position.maxScrollExtent, closeTo(0, .01));
+      final viewport = tester.getRect(horizontal);
+      for (final day in [7, 8, 9, 10, 11, 12, 13]) {
+        final cell = _key(
+          'sked-date-2026-09-${day.toString().padLeft(2, '0')}',
+        );
+        final rect = tester.getRect(cell);
+        expect(rect.left, greaterThanOrEqualTo(viewport.left - .01));
+        expect(rect.right, lessThanOrEqualTo(viewport.right + .01));
+        expect(cell.hitTestable(), findsOneWidget);
+      }
+      await tester.tap(_key('sked-date-2026-09-13'));
+      await tester.pumpAndSettle();
+      expect(results, [DateTime(2026, 9, 13)]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final width in [320.0, 360.0, 393.0]) {
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        '$width dp $brightness large date digits retain spacing and adjacent selection',
+        (tester) async {
+          _size(tester, Size(width, 1000));
+          final results = <DateTime?>[];
+          await _open(
+            tester,
+            results,
+            scale: 2,
+            boldText: true,
+            locale: const Locale('zh'),
+            theme: ThemeData(
+              platform: TargetPlatform.android,
+              brightness: brightness,
+            ),
+          );
+          final scroll = _key('sked-date-grid-horizontal-scroll');
+          final viewport = tester.getRect(scroll);
+          final scrollable = tester.state<ScrollableState>(
+            find
+                .descendant(of: scroll, matching: find.byType(Scrollable))
+                .first,
+          );
+          expect(scrollable.position.maxScrollExtent, greaterThan(0));
+          for (final day in [10, 11, 12, 21, 22, 23, 30]) {
+            final dayKey = 'sked-date-2026-09-$day';
+            final paragraph = tester.renderObject<RenderParagraph>(
+              _choiceText(dayKey),
+            );
+            final cell = tester.getSize(_key(dayKey));
+            expect(
+              paragraph.getMaxIntrinsicWidth(double.infinity),
+              lessThanOrEqualTo(cell.width - 10),
+              reason: 'Two-digit date $day has its own padded cell',
+            );
+            expect(paragraph.textScaler.scale(18), 36);
+            expect(paragraph.didExceedMaxLines, isFalse);
+          }
+          expect(
+            tester.getCenter(_key('sked-date-weekday-0')).dx,
+            closeTo(tester.getCenter(_key('sked-date-2026-09-07')).dx, .5),
+          );
+          final headerBefore = tester.getTopLeft(_key('sked-date-weekday-0'));
+          final dayBefore = tester.getTopLeft(_key('sked-date-2026-09-07'));
+          await tester.drag(scroll, const Offset(-100, 0));
+          await tester.pumpAndSettle();
+          expect(
+            tester.getTopLeft(_key('sked-date-weekday-0')).dx - headerBefore.dx,
+            closeTo(
+              tester.getTopLeft(_key('sked-date-2026-09-07')).dx - dayBefore.dx,
+              .5,
+            ),
+          );
+          await tester.ensureVisible(_key('sked-date-2026-09-10'));
+          await tester.tap(_key('sked-date-2026-09-10'));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(_key('sked-date-2026-09-11'));
+          await tester.tap(_key('sked-date-2026-09-11'));
+          await tester.pumpAndSettle();
+          expect(results, isEmpty);
+          expect(tester.getRect(scroll), viewport);
+          await tester.ensureVisible(_key('sked-date-confirm'));
+          await tester.tap(_key('sked-date-confirm'));
+          await tester.pumpAndSettle();
+          expect(results, [DateTime(2026, 9, 11)]);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  for (final rtl in [false, true]) {
+    testWidgets('large date keyboard focus is revealed with RTL=$rtl', (
+      tester,
+    ) async {
+      _size(tester, const Size(320, 1000));
+      final results = <DateTime?>[];
+      await _open(
+        tester,
+        results,
+        initial: DateTime(2026, 9, 7),
+        scale: 2,
+        locale: const Locale('en'),
+        textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+        theme: ThemeData(platform: TargetPlatform.android),
+      );
+      tester
+          .widget<Focus>(_key('sked-date-grid-focus'))
+          .focusNode!
+          .requestFocus();
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 6; i++) {
+        await tester.sendKeyEvent(
+          rtl ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight,
+        );
+        await tester.pumpAndSettle();
+      }
+      final viewport = tester.getRect(_key('sked-date-grid-horizontal-scroll'));
+      final sunday = tester.getRect(_key('sked-date-2026-09-13'));
+      expect(sunday.left, greaterThanOrEqualTo(viewport.left - .5));
+      expect(sunday.right, lessThanOrEqualTo(viewport.right + .5));
+      for (var i = 0; i < 6; i++) {
+        await tester.sendKeyEvent(
+          rtl ? LogicalKeyboardKey.arrowRight : LogicalKeyboardKey.arrowLeft,
+        );
+        await tester.pumpAndSettle();
+      }
+      final monday = tester.getRect(_key('sked-date-2026-09-07'));
+      expect(monday.left, greaterThanOrEqualTo(viewport.left - .5));
+      expect(monday.right, lessThanOrEqualTo(viewport.right + .5));
+      expect(results, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'system bold month headings fit both full and abbreviated width boundaries',
     (tester) async {
@@ -418,6 +594,8 @@ void main() {
         await tester.tap(_key('sked-date-month-2026-10'));
         await tester.pumpAndSettle();
         expect(results, isEmpty);
+        await tester.ensureVisible(_key('sked-date-2026-10-20'));
+        await tester.pumpAndSettle();
         await tester.tap(_key('sked-date-2026-10-20'));
         await tester.pumpAndSettle();
         expect(results, [DateTime(2026, 10, 20)]);

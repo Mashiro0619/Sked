@@ -160,6 +160,10 @@ void main() {
       addTearDown(p.dispose);
       await home(t, p, scale: 1.3);
       await openWeek(t);
+      // The readable calendar can scroll horizontally. Put the five-date
+      // drag span inside its viewport before checking stationary feedback.
+      await Scrollable.ensureVisible(t.element(day(22)), alignment: 0);
+      await t.pumpAndSettle();
       final before = t.getRect(day(22));
       final invalid = await drag(t, 1, 16);
       await invalid.up();

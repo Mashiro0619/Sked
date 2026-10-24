@@ -133,7 +133,8 @@ void main() {
             if (kind == 'week') {
               expect(rect.top, t.getRect(_key('open-picker')).bottom + 6);
             } else {
-              expect(rect.center, Offset(width / 2, 450));
+              expect(rect.center.dx, closeTo(width / 2, .001));
+              expect(rect.center.dy, closeTo(450, .001));
             }
             final barrier = t.widget<ModalBarrier>(
               find.byType(ModalBarrier).last,

@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageByteFormat, PointerDeviceKind, Tristate;
 
-import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
+import 'package:flutter/rendering.dart'
+    show RenderParagraph, RenderRepaintBoundary;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -187,37 +188,62 @@ void main() {
     }
   }
 
-  testWidgets('date ink bounds stay live after a narrower layout', (t) async {
-    await pumpCalendar(
-      t,
-      embedded: false,
-      width: 400,
-      scale: 2,
-      showRange: false,
-      initialDate: DateTime(2026, 9, 23),
+  for (final resize in [
+    (width: 400.0, scale: 2.0, name: 'same large text'),
+    (width: 600.0, scale: 1.0, name: 'newly enlarged text'),
+  ]) {
+    testWidgets(
+      'date ink bounds stay live after narrowing with ${resize.name}',
+      (t) async {
+        await pumpCalendar(
+          t,
+          embedded: false,
+          width: resize.width,
+          scale: resize.scale,
+          showRange: false,
+          initialDate: DateTime(2026, 9, 23),
+        );
+        final target = day('2026-09-24');
+        final box = t.renderObject<RenderBox>(target);
+        final callback =
+            t.widget<InkWell>(target).getRectCallback(box) ??
+            () => Offset.zero & box.size;
+        final viewport = k('sked-date-grid-horizontal-scroll');
+        final originalViewportWidth = t.getSize(viewport).width;
+        expect(
+          callback().shift(box.localToGlobal(Offset.zero)),
+          t.getRect(marker('2026-09-24')),
+        );
+        await pumpCalendar(
+          t,
+          embedded: false,
+          width: 320,
+          scale: 2,
+          showRange: false,
+          initialDate: DateTime(2026, 9, 23),
+        );
+        expect(t.renderObject<RenderBox>(target), same(box));
+        expect(t.getSize(viewport).width, lessThan(originalViewportWidth));
+        final markerRect = t.getRect(marker('2026-09-24'));
+        final cellRect = t.getRect(target);
+        expect(markerRect.width, greaterThan(0));
+        expect(markerRect.height, greaterThan(0));
+        expect(markerRect.left, greaterThanOrEqualTo(cellRect.left));
+        expect(markerRect.right, lessThanOrEqualTo(cellRect.right));
+        expect(markerRect.top, greaterThanOrEqualTo(cellRect.top));
+        expect(markerRect.bottom, lessThanOrEqualTo(cellRect.bottom));
+        expect(callback().shift(box.localToGlobal(Offset.zero)), markerRect);
+        final paragraph = t.renderObject<RenderParagraph>(
+          find.descendant(
+            of: number('2026-09-24'),
+            matching: find.byType(RichText),
+          ),
+        );
+        expect(paragraph.textScaler.scale(1), 2);
+        expect(t.takeException(), isNull);
+      },
     );
-    final target = day('2026-09-24');
-    final box = t.renderObject<RenderBox>(target);
-    final callback =
-        t.widget<InkWell>(target).getRectCallback(box) ??
-        () => Offset.zero & box.size;
-    final originalMarker = t.getSize(marker('2026-09-24'));
-    await pumpCalendar(
-      t,
-      embedded: false,
-      width: 320,
-      scale: 2,
-      showRange: false,
-      initialDate: DateTime(2026, 9, 23),
-    );
-    expect(t.renderObject<RenderBox>(target), same(box));
-    expect(t.getSize(marker('2026-09-24')), isNot(originalMarker));
-    expect(
-      callback().shift(box.localToGlobal(Offset.zero)),
-      t.getRect(marker('2026-09-24')),
-    );
-    expect(t.takeException(), isNull);
-  });
+  }
 
   for (final embedded in [true, false]) {
     for (final brightness in Brightness.values) {
