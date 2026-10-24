@@ -559,7 +559,7 @@ class _SettingsPageState extends State<SettingsPage>
           headerSliver: headerSliver,
           children: [
             SettingsConnectedGroup(
-              title: title,
+              title: destination == SettingsDestination.about ? null : title,
               tonal: true,
               children: children
                   .where(

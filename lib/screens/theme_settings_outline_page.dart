@@ -94,6 +94,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final motion = SkedMotionPolicy.of(context);
     final effectiveColorValue = _followTheme
         ? _derivedThemeColorValue
         : _customColorValue;
@@ -288,15 +289,20 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                         ),
                                       ),
                                       SkedAnimatedSize(
-                                        duration: const Duration(
-                                          milliseconds: 220,
-                                        ),
+                                        duration:
+                                            motion.spatialAnimationsEnabled
+                                            ? const Duration(milliseconds: 220)
+                                            : Duration.zero,
                                         curve: Curves.easeInOut,
                                         alignment: Alignment.topCenter,
                                         child: AnimatedSwitcher(
-                                          duration: const Duration(
-                                            milliseconds: 180,
-                                          ),
+                                          duration:
+                                              motion.animationsEnabled &&
+                                                  !motion.reduceMotion
+                                              ? const Duration(
+                                                  milliseconds: 180,
+                                                )
+                                              : Duration.zero,
                                           switchInCurve: Curves.easeOut,
                                           switchOutCurve: Curves.easeIn,
                                           child: _followTheme

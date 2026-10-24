@@ -21,6 +21,8 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/theme/app_theme.dart';
 import 'package:sked/theme/color_contrast.dart';
+import 'package:sked/theme/sked_expressive_theme.dart';
+import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -86,6 +88,8 @@ class _ThemeSettingsHost extends StatelessWidget {
     this.textScaler = TextScaler.noScaling,
     this.viewPadding = EdgeInsets.zero,
     this.brightness = Brightness.light,
+    this.disableAnimations = false,
+    this.reduceMotion = false,
   });
 
   final AppRuntime provider;
@@ -93,6 +97,8 @@ class _ThemeSettingsHost extends StatelessWidget {
   final TextScaler textScaler;
   final EdgeInsets viewPadding;
   final Brightness brightness;
+  final bool disableAnimations;
+  final bool reduceMotion;
 
   @override
   Widget build(BuildContext context) {
@@ -109,8 +115,13 @@ class _ThemeSettingsHost extends StatelessWidget {
                 textScaler: textScaler,
                 padding: viewPadding,
                 viewPadding: viewPadding,
+                disableAnimations: disableAnimations,
               ),
-              child: child!,
+              child: SkedMotionPolicyScope(
+                disableAnimations: disableAnimations,
+                reduceMotion: reduceMotion,
+                child: child!,
+              ),
             ),
             theme: buildAppTheme(
               seedColor: Color(settings.themeSeedColorValue),
@@ -205,6 +216,65 @@ Future<void> _chooseAppearance(
 }
 
 void main() {
+  for (final reduceMotion in [false, true]) {
+    testWidgets(
+      'outline expansion respects ${reduceMotion ? 'reduced motion' : 'disabled animations'}',
+      (tester) async {
+        _setTestViewport(tester, const Size(900, 1100));
+        addTearDown(() => _resetTestViewport(tester));
+        final storage = _BlockingTimetableStorage(
+          buildInitialAppData(buildDefaultPeriodTimes()),
+        );
+        final provider = await _createProvider(storage);
+        addTearDown(provider.dispose);
+        await tester.pumpWidget(
+          _ThemeSettingsHost(
+            provider: provider,
+            disableAnimations: !reduceMotion,
+            reduceMotion: reduceMotion,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _openOutlineSettingsPage(tester);
+        final page = find.byKey(const ValueKey('theme-outline-settings-page'));
+        final animated = find.descendant(
+          of: page,
+          matching: find.byType(SkedAnimatedSize),
+        );
+        final switcher = find.descendant(
+          of: page,
+          matching: find.byType(AnimatedSwitcher),
+        );
+        expect(
+          tester.widget<SkedAnimatedSize>(animated).duration,
+          Duration.zero,
+        );
+        expect(
+          tester.widget<AnimatedSwitcher>(switcher).duration,
+          Duration.zero,
+        );
+        final follow = find.byKey(
+          const ValueKey('live-course-outline-follow-theme-row'),
+        );
+        await tester.ensureVisible(follow);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(of: follow, matching: find.byType(Switch)),
+        );
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('outline-custom-picker')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('outline-custom-hidden')),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'custom low contrast text warns and still saves the chosen color',
     (tester) async {

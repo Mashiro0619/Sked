@@ -564,6 +564,34 @@ Future<void> _openIcsReplacementWarning(
 }
 
 void main() {
+  testWidgets('about page has one page heading and keeps its links reachable', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(360, 900));
+    addTearDown(() => _resetTestViewport(tester));
+    final provider = await _createProvider(_buildStudentData());
+    addTearDown(provider.dispose);
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      destination: SettingsDestination.about,
+    );
+    final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SettingsConnectedGroup &&
+            widget.title == l.settingsSectionAbout,
+      ),
+      findsNothing,
+    );
+    expect(find.text(l.settingsSectionAbout), findsWidgets);
+    await tester.ensureVisible(find.text(l.githubRepository));
+    await tester.pumpAndSettle();
+    expect(find.text(l.githubRepository).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'late version metadata cannot clear a replacement session badge',
     (tester) async {
