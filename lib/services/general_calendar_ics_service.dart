@@ -11,21 +11,96 @@ enum GeneralCalendarIcsWarningCode {
   unsupportedRRuleFrequency,
 }
 
-enum GeneralCalendarIcsImportErrorCode { noEvents, noImportableEvents }
+enum GeneralCalendarIcsImportErrorCode {
+  noEvents,
+  noImportableEvents,
+  unsupportedTimeZone,
+}
+
+enum GeneralCalendarIcsExportErrorCode {
+  monthlyAnchorMismatch,
+  emptyRecurrence,
+}
+
+class GeneralCalendarIcsTimeZoneDiagnostic {
+  const GeneralCalendarIcsTimeZoneDiagnostic({
+    required this.property,
+    required this.timeZoneId,
+    this.eventUid,
+    this.eventTitle,
+  });
+
+  final String property;
+  final String timeZoneId;
+  final String? eventUid;
+  final String? eventTitle;
+
+  String get describe => [
+    if (eventUid != null) 'UID: $eventUid',
+    if (eventTitle != null) 'SUMMARY: $eventTitle',
+    'PROPERTY: $property',
+    'TZID: $timeZoneId',
+  ].join('\n');
+}
 
 class GeneralCalendarIcsImportException implements FormatException {
-  const GeneralCalendarIcsImportException(this.code);
+  const GeneralCalendarIcsImportException(
+    this.code, {
+    this._message,
+    this.diagnostics = const [],
+    this.warnings = const [],
+  });
 
   final GeneralCalendarIcsImportErrorCode code;
+  final String? _message;
+  final List<GeneralCalendarIcsTimeZoneDiagnostic> diagnostics;
+  final List<GeneralCalendarIcsImportWarning> warnings;
 
   @override
   String get message {
-    return switch (code) {
-      GeneralCalendarIcsImportErrorCode.noEvents => 'No VEVENT entries found.',
-      GeneralCalendarIcsImportErrorCode.noImportableEvents =>
-        'No importable events found.',
-    };
+    return _message ??
+        switch (code) {
+          GeneralCalendarIcsImportErrorCode.noEvents =>
+            'No VEVENT entries found.',
+          GeneralCalendarIcsImportErrorCode.noImportableEvents =>
+            'No importable events found.',
+          GeneralCalendarIcsImportErrorCode.unsupportedTimeZone =>
+            'Named time zones are not supported. Nothing was imported.',
+        };
   }
+
+  @override
+  int? get offset => null;
+
+  @override
+  Object? get source => null;
+
+  @override
+  String toString() => 'FormatException: $message';
+}
+
+class GeneralCalendarIcsExportException implements FormatException {
+  const GeneralCalendarIcsExportException(
+    this.code, {
+    this._message,
+    this.eventId,
+    this.eventTitle,
+  });
+
+  final GeneralCalendarIcsExportErrorCode code;
+  final String? _message;
+  final String? eventId;
+  final String? eventTitle;
+
+  @override
+  String get message =>
+      _message ??
+      switch (code) {
+        GeneralCalendarIcsExportErrorCode.monthlyAnchorMismatch =>
+          'This monthly start does not match its anchor; export JSON instead.',
+        GeneralCalendarIcsExportErrorCode.emptyRecurrence =>
+          'Cannot export an empty recurring record.',
+      };
 
   @override
   int? get offset => null;
@@ -41,10 +116,14 @@ class GeneralCalendarIcsImportWarning {
   const GeneralCalendarIcsImportWarning({
     required this.code,
     this.values = const [],
+    this.eventUid,
+    this.eventTitle,
   });
 
   final GeneralCalendarIcsWarningCode code;
   final List<String> values;
+  final String? eventUid;
+  final String? eventTitle;
 
   String get fallbackMessage {
     return switch (code) {
@@ -102,6 +181,7 @@ class GeneralCalendarIcsService {
   GeneralCalendarIcsImportResult importSchedules(
     String source, {
     String? calendarName,
+    String fallbackEventTitle = 'Untitled event',
     int colorValue = defaultGeneralCalendarColorValue,
   }) {
     final unfolded = _unfoldLines(source);
@@ -133,6 +213,20 @@ class GeneralCalendarIcsService {
       );
     }
 
+    // Validate every direct VEVENT property before producing a candidate. This
+    // includes overwritten duplicate properties and every EXDATE line, so a
+    // later field or a different event cannot hide unsupported time semantics.
+    final parsedBlocks = blocks.map(_parseEventFields).toList();
+    final timeZoneDiagnostics = <GeneralCalendarIcsTimeZoneDiagnostic>[
+      for (final block in parsedBlocks) ...block.timeZoneDiagnostics,
+    ];
+    if (timeZoneDiagnostics.isNotEmpty) {
+      throw GeneralCalendarIcsImportException(
+        GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+        diagnostics: List.unmodifiable(timeZoneDiagnostics),
+      );
+    }
+
     final schedule = createDefaultGeneralSchedule(
       name: calendarName?.trim().isNotEmpty == true
           ? calendarName!.trim()
@@ -141,15 +235,32 @@ class GeneralCalendarIcsService {
     );
     final warnings = <GeneralCalendarIcsImportWarning>[];
     final events = <GeneralEvent>[];
-    for (final block in blocks) {
-      final event = _importEvent(block, schedule.id, warnings);
+    for (final block in parsedBlocks) {
+      final eventWarnings = <GeneralCalendarIcsImportWarning>[];
+      final event = _importEvent(
+        block,
+        schedule.id,
+        eventWarnings,
+        fallbackEventTitle: fallbackEventTitle,
+      );
+      warnings.addAll(
+        eventWarnings.map(
+          (warning) => GeneralCalendarIcsImportWarning(
+            code: warning.code,
+            values: warning.values,
+            eventUid: block.fields['UID']?.value.trim(),
+            eventTitle: block.fields['SUMMARY']?.value.trim(),
+          ),
+        ),
+      );
       if (event != null) {
         events.add(event);
       }
     }
     if (events.isEmpty) {
-      throw const GeneralCalendarIcsImportException(
+      throw GeneralCalendarIcsImportException(
         GeneralCalendarIcsImportErrorCode.noImportableEvents,
+        warnings: List.unmodifiable(warnings),
       );
     }
     events.sort((a, b) => a.startDateTimeIso.compareTo(b.startDateTimeIso));
@@ -213,49 +324,13 @@ class GeneralCalendarIcsService {
   }
 
   GeneralEvent? _importEvent(
-    List<String> lines,
+    _IcsEventFields parsed,
     String calendarId,
-    List<GeneralCalendarIcsImportWarning> warnings,
-  ) {
-    final fields = <String, _IcsField>{};
-    final duplicateFields = <String>{};
-    final unsupportedComponents = <String>{};
-    final exceptionFields = <_IcsField>[];
-    var nestedComponentDepth = 0;
-    for (final line in lines) {
-      final separator = _findIcsValueSeparator(line);
-      if (separator <= 0) {
-        continue;
-      }
-      final rawName = line.substring(0, separator);
-      final value = _unescapeText(line.substring(separator + 1));
-      final field = _IcsField.parse(rawName, value);
-      if (field.name == 'BEGIN') {
-        final component = field.value.trim().toUpperCase();
-        if (component.isNotEmpty && component != 'VEVENT') {
-          unsupportedComponents.add(component);
-          nestedComponentDepth += 1;
-        }
-        continue;
-      }
-      if (nestedComponentDepth > 0) {
-        if (field.name == 'END') {
-          nestedComponentDepth -= 1;
-        }
-        continue;
-      }
-      if (field.name == 'END') {
-        continue;
-      }
-      if (field.name == 'EXDATE') {
-        exceptionFields.add(field);
-        continue;
-      }
-      if (fields.containsKey(field.name)) {
-        duplicateFields.add(field.name);
-      }
-      fields[field.name] = field;
-    }
+    List<GeneralCalendarIcsImportWarning> warnings, {
+    required String fallbackEventTitle,
+  }) {
+    final fields = parsed.fields;
+    final exceptionFields = parsed.exceptionFields;
     final startField = fields['DTSTART'];
     if (startField == null) {
       warnings.add(
@@ -328,10 +403,10 @@ class GeneralCalendarIcsService {
     final unsupportedFields = [
       ..._unsupportedFields(fields.keys),
       ..._unsupportedFieldParameters([...fields.values, ...exceptionFields]),
-      ...unsupportedComponents,
+      ...parsed.unsupportedComponents,
       ...ignoredSupportedFields,
     ]..sort();
-    final duplicateFieldNames = duplicateFields.toList()..sort();
+    final duplicateFieldNames = parsed.duplicateFields.toList()..sort();
     final unsupportedRRuleParts = <String>[];
     final duplicateRRuleParts = <String>[];
     final recurrenceRule = _parseRRule(
@@ -348,17 +423,6 @@ class GeneralCalendarIcsService {
       allDay: isAllDay,
       unsupportedFields: unsupportedFields,
     );
-    final notes = [
-      if (description.isNotEmpty) description,
-      if (unsupportedFields.isNotEmpty)
-        'Unsupported ICS fields ignored: ${unsupportedFields.join(', ')}',
-      if (duplicateFieldNames.isNotEmpty)
-        'Duplicate ICS fields overwritten: ${duplicateFieldNames.join(', ')}',
-      if (duplicateRRuleParts.isNotEmpty)
-        'Duplicate RRULE parts overwritten: ${duplicateRRuleParts.join(', ')}',
-      if (unsupportedRRuleParts.isNotEmpty)
-        'Unsupported RRULE parts disabled recurrence: ${unsupportedRRuleParts.join(', ')}',
-    ].join('\n\n');
     final unsupported = [
       ...unsupportedFields,
       for (final field in duplicateFieldNames) 'DUPLICATE:$field',
@@ -377,18 +441,99 @@ class GeneralCalendarIcsService {
     return GeneralEvent(
       id: _importedEventIdFromUid(uid),
       calendarId: calendarId,
-      title: title == null || title.isEmpty ? 'Untitled event' : title,
+      title: title == null || title.isEmpty ? fallbackEventTitle : title,
       startDateTimeIso: start.toIso8601String(),
       endDateTimeIso: end.toIso8601String(),
       isAllDay: isAllDay,
       recurrenceRule: recurrenceRule,
       recurrenceExceptionDateIso: exceptionDates,
       location: fields['LOCATION']?.value.trim() ?? '',
-      notes: notes,
+      notes: description,
       createdAtIso: now,
       updatedAtIso: now,
     ).normalized(fallbackCalendarId: calendarId);
   }
+}
+
+class _IcsEventFields {
+  const _IcsEventFields({
+    required this.fields,
+    required this.duplicateFields,
+    required this.unsupportedComponents,
+    required this.exceptionFields,
+    required this.timeZoneDiagnostics,
+  });
+
+  final Map<String, _IcsField> fields;
+  final Set<String> duplicateFields;
+  final Set<String> unsupportedComponents;
+  final List<_IcsField> exceptionFields;
+  final List<GeneralCalendarIcsTimeZoneDiagnostic> timeZoneDiagnostics;
+}
+
+_IcsEventFields _parseEventFields(List<String> lines) {
+  const timeProperties = {
+    'DTSTART',
+    'DTEND',
+    'EXDATE',
+    'RDATE',
+    'DTSTAMP',
+    'CREATED',
+    'LAST-MODIFIED',
+    'RECURRENCE-ID',
+  };
+  final fields = <String, _IcsField>{};
+  final duplicateFields = <String>{};
+  final unsupportedComponents = <String>{};
+  final exceptionFields = <_IcsField>[];
+  final timeZoneFields = <_IcsField>[];
+  var nestedComponentDepth = 0;
+  for (final line in lines) {
+    final separator = _findIcsValueSeparator(line);
+    if (separator <= 0) continue;
+    final field = _IcsField.parse(
+      line.substring(0, separator),
+      _unescapeText(line.substring(separator + 1)),
+    );
+    if (field.name == 'BEGIN') {
+      final component = field.value.trim().toUpperCase();
+      if (component.isNotEmpty && component != 'VEVENT') {
+        unsupportedComponents.add(component);
+        nestedComponentDepth += 1;
+      }
+      continue;
+    }
+    if (nestedComponentDepth > 0) {
+      if (field.name == 'END') nestedComponentDepth -= 1;
+      continue;
+    }
+    if (field.name == 'END') continue;
+    if (timeProperties.contains(field.name) && field.timeZoneIds.isNotEmpty) {
+      timeZoneFields.add(field);
+    }
+    if (field.name == 'EXDATE') {
+      exceptionFields.add(field);
+      continue;
+    }
+    if (fields.containsKey(field.name)) duplicateFields.add(field.name);
+    fields[field.name] = field;
+  }
+  return _IcsEventFields(
+    fields: fields,
+    duplicateFields: duplicateFields,
+    unsupportedComponents: unsupportedComponents,
+    exceptionFields: exceptionFields,
+    timeZoneDiagnostics: [
+      for (final field in timeZoneFields)
+        for (final timeZoneId in field.timeZoneIds)
+          GeneralCalendarIcsTimeZoneDiagnostic(
+            eventUid: fields['UID']?.value.trim(),
+            eventTitle: fields['SUMMARY']?.value.trim(),
+            property: field.name,
+            timeZoneId: timeZoneId,
+          ),
+    ],
+  );
 }
 
 class _IcsField {
@@ -396,28 +541,59 @@ class _IcsField {
     required this.name,
     required this.params,
     required this.value,
+    this.timeZoneIds = const [],
   });
 
   final String name;
   final Map<String, String> params;
   final String value;
+  final List<String> timeZoneIds;
 
   static _IcsField parse(String rawName, String value) {
-    final parts = rawName.split(';');
+    final parts = _splitIcsParameters(rawName);
     final params = <String, String>{};
+    final timeZoneIds = <String>[];
     for (final part in parts.skip(1)) {
       final separator = part.indexOf('=');
-      if (separator <= 0) continue;
-      params[part.substring(0, separator).toUpperCase()] = part.substring(
-        separator + 1,
-      );
+      if (separator <= 0) {
+        if (part.trim().toUpperCase() == 'TZID') timeZoneIds.add('');
+        continue;
+      }
+      final name = part.substring(0, separator).trim().toUpperCase();
+      final value = part.substring(separator + 1).trim();
+      params[name] = value;
+      if (name == 'TZID') {
+        timeZoneIds.add(
+          value.startsWith('"') && value.endsWith('"') && value.length >= 2
+              ? value.substring(1, value.length - 1)
+              : value,
+        );
+      }
     }
     return _IcsField(
       name: parts.first.toUpperCase(),
       params: params,
       value: value,
+      timeZoneIds: timeZoneIds,
     );
   }
+}
+
+List<String> _splitIcsParameters(String rawName) {
+  final parts = <String>[];
+  var start = 0;
+  var inQuotedParam = false;
+  for (var index = 0; index < rawName.length; index++) {
+    final char = rawName[index];
+    if (char == '"') {
+      inQuotedParam = !inQuotedParam;
+    } else if (char == ';' && !inQuotedParam) {
+      parts.add(rawName.substring(start, index));
+      start = index + 1;
+    }
+  }
+  parts.add(rawName.substring(start));
+  return parts;
 }
 
 int _findIcsValueSeparator(String line) {
@@ -882,8 +1058,10 @@ String? _exportRRule(GeneralEvent event, DateTime start) {
     final anchor = rule.monthlyAnchorDay ?? start.day;
     final lastDay = DateTime.utc(start.year, start.month + 1, 0).day;
     if (start.day != (anchor < lastDay ? anchor : lastDay)) {
-      throw const FormatException(
-        'This monthly start does not match its anchor; export JSON instead.',
+      throw GeneralCalendarIcsExportException(
+        GeneralCalendarIcsExportErrorCode.monthlyAnchorMismatch,
+        eventId: event.id,
+        eventTitle: event.title,
       );
     }
     // Choosing the earlier of the nominal day and month end exactly matches
@@ -894,7 +1072,11 @@ String? _exportRRule(GeneralEvent event, DateTime start) {
   final count = boundedGeneralRecurrenceCount(start, rule);
   if (count != null) {
     if (count < 1) {
-      throw const FormatException('Cannot export an empty recurring record.');
+      throw GeneralCalendarIcsExportException(
+        GeneralCalendarIcsExportErrorCode.emptyRecurrence,
+        eventId: event.id,
+        eventTitle: event.title,
+      );
     }
     // RFC 5545 forbids COUNT and UNTIL together. Bound candidates before
     // EXDATE so a shortened prefix never regains its removed suffix.

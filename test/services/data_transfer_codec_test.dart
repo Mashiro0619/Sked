@@ -213,6 +213,57 @@ void main() {
     },
   );
 
+  test(
+    'ICS worker preserves all skipped-event warnings on rejection',
+    () async {
+      const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:worker-missing-start
+SUMMARY:Missing worker event
+END:VEVENT
+BEGIN:VEVENT
+UID:worker-bad-start
+SUMMARY:Invalid worker event
+DTSTART:not-a-date
+END:VEVENT
+END:VCALENDAR''';
+      await expectLater(
+        codec.decodeSchedules(source, localeCode: 'zh', ics: true),
+        throwsA(
+          isA<GeneralCalendarIcsImportException>()
+              .having(
+                (error) => error.code,
+                'code',
+                GeneralCalendarIcsImportErrorCode.noImportableEvents,
+              )
+              .having(
+                (error) => error.message,
+                'localized message',
+                contains('分类'),
+              )
+              .having(
+                (error) => error.warnings.map((warning) => warning.code),
+                'warning codes',
+                [
+                  GeneralCalendarIcsWarningCode.missingDtStart,
+                  GeneralCalendarIcsWarningCode.unsupportedDtStart,
+                ],
+              )
+              .having(
+                (error) => error.warnings.map((warning) => warning.eventUid),
+                'event identities',
+                ['worker-missing-start', 'worker-bad-start'],
+              )
+              .having(
+                (error) => error.warnings.map((warning) => warning.eventTitle),
+                'event titles',
+                ['Missing worker event', 'Invalid worker event'],
+              ),
+        ),
+      );
+    },
+  );
+
   test('JSON worker uses the import locale only for missing names', () async {
     final source = ImportExportEnvelope(
       schema: generalScheduleDataSchema,
@@ -231,6 +282,77 @@ void main() {
       '我的日历',
       'My calendar',
     ]);
+  });
+
+  test('ICS worker preserves typed, localized time-zone rejection', () async {
+    const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:worker-time-zone
+SUMMARY:Worker event
+DTSTART:20261023T090000Z
+EXDATE;TZID=Europe/London:20261024T090000
+END:VEVENT
+END:VCALENDAR''';
+    await expectLater(
+      codec.decodeSchedules(source, localeCode: 'zh', ics: true),
+      throwsA(
+        isA<GeneralCalendarIcsImportException>()
+            .having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+            )
+            .having((error) => error.message, 'message', contains('未导入任何内容'))
+            .having(
+              (error) => error.diagnostics.single.describe,
+              'diagnostic',
+              'UID: worker-time-zone\nSUMMARY: Worker event\nPROPERTY: EXDATE\nTZID: Europe/London',
+            ),
+      ),
+    );
+  });
+
+  test('ICS worker preserves typed, localized export failure', () async {
+    final data = GeneralScheduleData(
+      activeScheduleId: 'calendar',
+      schedules: [
+        GeneralSchedule(
+          id: 'calendar',
+          name: 'Calendar',
+          events: [
+            GeneralEvent(
+              id: 'worker-anchor',
+              calendarId: 'calendar',
+              title: 'Monthly event',
+              startDateTimeIso: '2026-10-23T09:00:00.000',
+              endDateTimeIso: '2026-10-23T10:00:00.000',
+              recurrenceRule: const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.monthly,
+                monthlyAnchorDay: 31,
+                count: 3,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    await expectLater(
+      codec.encodeSchedules(data, ['calendar'], localeCode: 'zh', ics: true),
+      throwsA(
+        isA<GeneralCalendarIcsExportException>()
+            .having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsExportErrorCode.monthlyAnchorMismatch,
+            )
+            .having((error) => error.eventId, 'event id', 'worker-anchor')
+            .having(
+              (error) => error.message,
+              'localized message',
+              contains('导出 JSON'),
+            ),
+      ),
+    );
   });
 
   test(

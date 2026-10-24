@@ -41,13 +41,13 @@ import '../services/desktop_layout_preferences.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
-import '../services/import_export_service.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
 import '../services/update_distribution.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/export_save_flow.dart';
+import '../widgets/general_ics_transfer_dialogs.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/ui_command.dart';
@@ -2028,7 +2028,7 @@ class _SettingsPageState extends State<SettingsPage>
               title: Text(ics ? l10n.importIcs : l10n.dataImportExport),
               content: Text(
                 ics
-                    ? l10n.importIcsPreviewPrompt(preview.first.events.length)
+                    ? '${l10n.importIcsPreviewPrompt(preview.first.events.length)}\n\n${l10n.icsReminderImportNotice}'
                     : l10n.replaceActiveSchedulePrompt,
               ),
               actions: [
@@ -2049,7 +2049,23 @@ class _SettingsPageState extends State<SettingsPage>
           replacementScheduleId = await _pickGeneralScheduleReplacementId(
             schedules: general.schedules,
           );
-          if (replacementScheduleId == null || !isCurrent()) return false;
+          if (replacementScheduleId == null ||
+              !feedbackContext.mounted ||
+              !isCurrent()) {
+            return false;
+          }
+          if (ics) {
+            final target = general.schedules
+                .where((schedule) => schedule.id == replacementScheduleId)
+                .firstOrNull;
+            if (target == null) return false;
+            final confirmed = await confirmGeneralIcsScheduleReplacement(
+              feedbackContext,
+              scheduleName: target.name,
+              session: task,
+            );
+            if (!confirmed || !isCurrent()) return false;
+          }
           mode = GeneralScheduleImportMode.replaceActive;
         }
       }
@@ -2061,10 +2077,45 @@ class _SettingsPageState extends State<SettingsPage>
         replacementScheduleId: replacementScheduleId,
       );
       if (!feedbackContext.mounted || !isCurrent()) return false;
-      ScaffoldMessenger.of(feedbackContext).showSnackBar(
-        SnackBar(content: Text(_formatGeneralImportResult(result, l10n))),
-      );
+      if (result.hasWarnings) {
+        await showGeneralIcsImportReport(
+          feedbackContext,
+          session: task,
+          summary: l10n.importedSchedulesWithWarnings(
+            result.importedCount,
+            result.icsWarnings.length,
+          ),
+          details: result.icsWarnings
+              .map((warning) => _formatIcsWarning(warning, l10n))
+              .toList(),
+        );
+      } else {
+        ScaffoldMessenger.of(feedbackContext).showSnackBar(
+          SnackBar(
+            content: Text(l10n.importedSchedulesCount(result.importedCount)),
+          ),
+        );
+      }
       return true;
+    } on GeneralCalendarIcsImportException catch (error) {
+      if (feedbackContext.mounted && isCurrent()) {
+        await showGeneralIcsImportReport(
+          feedbackContext,
+          session: task,
+          summary: [
+            error.message,
+            if (error.warnings.isNotEmpty)
+              l10n.importedSchedulesWithWarnings(0, error.warnings.length),
+          ].join('\n\n'),
+          details: [
+            ...error.diagnostics.map((item) => item.describe),
+            ...error.warnings.map(
+              (warning) => _formatIcsWarning(warning, l10n),
+            ),
+          ],
+        );
+      }
+      return false;
     } on FormatException catch (error) {
       if (feedbackContext.mounted && isCurrent()) {
         ScaffoldMessenger.of(feedbackContext)
@@ -2123,14 +2174,36 @@ class _SettingsPageState extends State<SettingsPage>
           general.schedules,
         ),
       );
-      if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
-      final content = await transfers.exportSchedules(selectedIds, ics: ics);
+      if (!mounted ||
+          selectedIds == null ||
+          selectedIds.isEmpty ||
+          !task.isCurrent) {
+        return;
+      }
+      var exportIcs = ics;
+      if (ics) {
+        final selectedFormat = await showGeneralIcsExportFormat(
+          context,
+          session: task,
+        );
+        if (selectedFormat == null || !isCurrent()) return;
+        exportIcs = selectedFormat == GeneralIcsExportFormat.ics;
+      }
+      final exported = await _encodeGeneralSchedules(
+        transfers,
+        selectedIds,
+        ics: exportIcs,
+        task: task,
+      );
+      if (exported == null) return;
+      final (content, actualIcs) = exported;
+      exportIcs = actualIcs;
       if (!mounted || !task.isCurrent) return;
       final payload = ExportPayload(
-        fileName: 'Sked_general_schedules.${ics ? 'ics' : 'json'}',
+        fileName: 'Sked_general_schedules.${exportIcs ? 'ics' : 'json'}',
         content: content,
-        mimeType: ics ? 'text/calendar' : 'application/json',
-        allowedExtensions: [ics ? 'ics' : 'json'],
+        mimeType: exportIcs ? 'text/calendar' : 'application/json',
+        allowedExtensions: [exportIcs ? 'ics' : 'json'],
       );
       if (share) {
         await _shareFile(payload);
@@ -2166,12 +2239,34 @@ class _SettingsPageState extends State<SettingsPage>
           general.schedules,
         ),
       );
-      if (selectedIds == null || selectedIds.isEmpty || !isCurrent()) return;
-      final content = await transfers.exportSchedules(selectedIds, ics: ics);
+      if (!mounted ||
+          selectedIds == null ||
+          selectedIds.isEmpty ||
+          !task.isCurrent) {
+        return;
+      }
+      var exportIcs = ics;
+      if (ics) {
+        final selectedFormat = await showGeneralIcsExportFormat(
+          context,
+          session: task,
+        );
+        if (selectedFormat == null || !isCurrent()) return;
+        exportIcs = selectedFormat == GeneralIcsExportFormat.ics;
+      }
+      final exported = await _encodeGeneralSchedules(
+        transfers,
+        selectedIds,
+        ics: exportIcs,
+        task: task,
+      );
+      if (exported == null) return;
+      final (content, actualIcs) = exported;
+      exportIcs = actualIcs;
       if (!mounted || !task.isCurrent) return;
       await showTextExportDialog(
         context,
-        title: ics ? l10n.exportIcsText : l10n.exportJsonText,
+        title: exportIcs ? l10n.exportIcsText : l10n.exportJsonText,
         content: content,
       );
     } on FormatException catch (error) {
@@ -2183,25 +2278,36 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  String _formatGeneralImportResult(
-    GeneralScheduleImportResult result,
-    AppLocalizations l10n,
-  ) {
-    if (!result.hasWarnings) {
-      return l10n.importedSchedulesCount(result.importedCount);
+  Future<(String, bool)?> _encodeGeneralSchedules(
+    DataTransferController transfers,
+    List<String> selectedIds, {
+    required bool ics,
+    required SkedTaskSession task,
+  }) async {
+    try {
+      return (await transfers.exportSchedules(selectedIds, ics: ics), ics);
+    } on GeneralCalendarIcsExportException catch (error) {
+      if (!mounted || !task.isCurrent) return null;
+      final json = await showGeneralIcsExportFailure(
+        context,
+        session: task,
+        message: error.message,
+        diagnostics: [
+          error.code.name,
+          if (error.eventId != null) 'UID: ${error.eventId}',
+          if (error.eventTitle != null) 'SUMMARY: ${error.eventTitle}',
+        ].join('\n'),
+      );
+      if (!json || !mounted || !task.isCurrent) return null;
+      return (await transfers.exportSchedules(selectedIds), false);
     }
-    final warningText = result.icsWarnings
-        .map((warning) => _formatIcsWarning(warning, l10n))
-        .take(2)
-        .join(' ');
-    return '${l10n.importedSchedulesWithWarnings(result.importedCount, result.icsWarnings.length)} $warningText';
   }
 
   String _formatIcsWarning(
     GeneralCalendarIcsImportWarning warning,
     AppLocalizations l10n,
   ) {
-    return switch (warning.code) {
+    final message = switch (warning.code) {
       GeneralCalendarIcsWarningCode.missingDtStart =>
         l10n.importWarningSkippedMissingStart,
       GeneralCalendarIcsWarningCode.unsupportedDtStart =>
@@ -2215,6 +2321,11 @@ class _SettingsPageState extends State<SettingsPage>
           warning.values.isEmpty ? '' : warning.values.first,
         ),
     };
+    final identity = [
+      if (warning.eventTitle?.isNotEmpty == true) warning.eventTitle!,
+      if (warning.eventUid?.isNotEmpty == true) 'UID: ${warning.eventUid}',
+    ].join(' · ');
+    return identity.isEmpty ? message : '$identity\n$message';
   }
 }
 

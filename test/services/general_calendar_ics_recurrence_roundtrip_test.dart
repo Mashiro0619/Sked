@@ -272,7 +272,36 @@ END:VCALENDAR''';
     );
     expect(
       () => _ics.exportSchedules([_schedule(event)]),
-      throwsFormatException,
+      throwsA(
+        isA<GeneralCalendarIcsExportException>()
+            .having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsExportErrorCode.monthlyAnchorMismatch,
+            )
+            .having((error) => error.eventId, 'event id', 'series'),
+      ),
+    );
+  });
+
+  test('an empty recurrence has its own export error code', () {
+    final event = _event(
+      rule: const GeneralEventRecurrenceRule(
+        type: GeneralEventRecurrence.daily,
+        untilDateIso: '2026-05-19',
+      ),
+    );
+    expect(
+      () => _ics.exportSchedules([_schedule(event)]),
+      throwsA(
+        isA<GeneralCalendarIcsExportException>()
+            .having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsExportErrorCode.emptyRecurrence,
+            )
+            .having((error) => error.eventTitle, 'event title', 'Event'),
+      ),
     );
   });
 }

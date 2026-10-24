@@ -87,8 +87,10 @@ END:VCALENDAR
     expect(event.endDateTimeIso, startsWith('2026-05-26'));
   });
 
-  test('imports Google-style TZID and RRULE fixture', () {
-    const source = '''
+  test(
+    'rejects a Google-style named time zone with structured diagnostics',
+    () {
+      const source = '''
 BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Google Inc//Google Calendar 70.9054//EN
@@ -104,25 +106,220 @@ END:VEVENT
 END:VCALENDAR
 ''';
 
-    final imported = service.importSchedules(source);
-    final event = imported.schedules.single.events.single;
+      expect(
+        () => service.importSchedules(source),
+        throwsA(
+          isA<GeneralCalendarIcsImportException>()
+              .having(
+                (error) => error.code,
+                'code',
+                GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+              )
+              .having(
+                (error) => error.diagnostics.map((item) => item.property),
+                'properties',
+                ['DTSTART', 'DTEND'],
+              )
+              .having(
+                (error) => error.diagnostics.first.describe,
+                'diagnostic',
+                'UID: google-style\nSUMMARY: Team sync\nPROPERTY: DTSTART\nTZID: Asia/Shanghai',
+              ),
+        ),
+      );
+    },
+  );
 
-    expect(event.title, 'Team sync');
-    expect(event.startDateTimeIso, startsWith('2026-05-25T09:00:00'));
-    expect(event.endDateTimeIso, startsWith('2026-05-25T10:00:00'));
-    expect(event.location, 'Room G');
-    expect(event.recurrenceRule.type, GeneralEventRecurrence.weekly);
-    expect(event.recurrenceRule.untilDateIso, '2026-06-15');
-    expect(
-      imported.warningItems
-          .singleWhere(
-            (item) =>
-                item.code == GeneralCalendarIcsWarningCode.unsupportedFields,
-          )
-          .values,
-      ['DTEND;TZID=Asia/Shanghai', 'DTSTART;TZID=Asia/Shanghai'],
+  group('named time-zone rejection', () {
+    for (final property in [
+      'DTSTART',
+      'DTEND',
+      'EXDATE',
+      'RDATE',
+      'DTSTAMP',
+      'CREATED',
+      'LAST-MODIFIED',
+      'RECURRENCE-ID',
+    ]) {
+      test('rejects direct $property even alongside importable events', () {
+        final source =
+            '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:safe
+DTSTART:20261023T090000Z
+DTEND:20261023T100000Z
+END:VEVENT
+BEGIN:VEVENT
+UID:unsafe
+SUMMARY:London summer time
+DTSTART:20260701T090000
+DTEND:20260701T100000
+$property;TZID="Europe/London":20260701T090000
+END:VEVENT
+END:VCALENDAR''';
+        expect(
+          () => service.importSchedules(source),
+          throwsA(
+            isA<GeneralCalendarIcsImportException>()
+                .having(
+                  (error) => error.code,
+                  'code',
+                  GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+                )
+                .having(
+                  (error) => error.diagnostics.single.eventUid,
+                  'uid',
+                  'unsafe',
+                )
+                .having(
+                  (error) => error.diagnostics.single.property,
+                  'property',
+                  property,
+                )
+                .having(
+                  (error) => error.diagnostics.single.timeZoneId,
+                  'time zone',
+                  'Europe/London',
+                ),
+          ),
+        );
+      });
+    }
+
+    test(
+      'later duplicate fields and EXDATE lines cannot hide a named zone',
+      () {
+        const source = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:duplicates
+DTSTART;TZID=Asia/Shanghai:20261023T090000
+DTSTART:20261023T090000Z
+DTEND:20261023T100000Z
+EXDATE:20261024T090000Z
+EXDATE;TZID=Europe/London:20261025T090000
+EXDATE:20261026T090000Z
+END:VEVENT
+END:VCALENDAR''';
+        expect(
+          () => service.importSchedules(source),
+          throwsA(
+            isA<GeneralCalendarIcsImportException>().having(
+              (error) => error.diagnostics.map(
+                (item) => (item.property, item.timeZoneId),
+              ),
+              'all unsupported time properties',
+              [('DTSTART', 'Asia/Shanghai'), ('EXDATE', 'Europe/London')],
+            ),
+          ),
+        );
+      },
     );
-    expect(event.notes, contains('DTSTART;TZID=Asia/Shanghai'));
+
+    test('duplicate TZID parameters cannot overwrite the original zone', () {
+      const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:parameter-duplicates
+DTSTART;TZID=Asia/Shanghai;TZID=:20261023T090000
+END:VEVENT
+END:VCALENDAR''';
+      expect(
+        () => service.importSchedules(source),
+        throwsA(
+          isA<GeneralCalendarIcsImportException>().having(
+            (error) => error.diagnostics.map((item) => item.timeZoneId),
+            'all TZID parameters',
+            ['Asia/Shanghai', ''],
+          ),
+        ),
+      );
+    });
+
+    test('folded mixed-case and malformed empty time zones stay blocked', () {
+      for (final property in [
+        'dtstart;tzi\r\n d=Europe/London:20261023T090000',
+        'DTSTART;TZID:20261023T090000',
+        'DTSTART;TZID="":20261023T090000',
+      ]) {
+        final source =
+            '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:folded-or-empty
+$property
+END:VEVENT
+END:VCALENDAR''';
+        expect(
+          () => service.importSchedules(source),
+          throwsA(
+            isA<GeneralCalendarIcsImportException>().having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+            ),
+          ),
+        );
+      }
+    });
+
+    test('nested alarm time fields do not reject an otherwise safe event', () {
+      const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:safe-alarm
+DTSTART:20261023T090000Z
+DTEND:20261023T100000Z
+BEGIN:VALARM
+DTSTART;TZID=Europe/London:20261023T080000
+TRIGGER:-PT10M
+END:VALARM
+END:VEVENT
+END:VCALENDAR''';
+      final result = service.importSchedules(source);
+      expect(
+        result.schedules.single.events.single.startDateTimeIso,
+        '2026-10-23T09:00:00.000Z',
+      );
+      expect(result.warningItems.single.values, ['VALARM']);
+    });
+
+    test('retains the full quoted TZID, including parameter separators', () {
+      const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:quoted-zone
+DTSTART;X-LABEL="value;not-a-parameter";TZID="Custom;Zone:One";TZID="Second/Zone":20261023T090000
+END:VEVENT
+END:VCALENDAR''';
+      expect(
+        () => service.importSchedules(source),
+        throwsA(
+          isA<GeneralCalendarIcsImportException>().having(
+            (error) => error.diagnostics.map((item) => item.timeZoneId),
+            'complete named zones',
+            ['Custom;Zone:One', 'Second/Zone'],
+          ),
+        ),
+      );
+    });
+
+    test(
+      'text inside a quoted parameter is not mistaken for a TZID parameter',
+      () {
+        const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:quoted-label
+DTSTART;X-LABEL="text;TZID=Europe/London":20261023T090000Z
+DTEND:20261023T100000Z
+DESCRIPTION:User note
+END:VEVENT
+END:VCALENDAR''';
+        final imported = service.importSchedules(source);
+        expect(
+          imported.schedules.single.events.single.startDateTimeIso,
+          '2026-10-23T09:00:00.000Z',
+        );
+        expect(imported.schedules.single.events.single.notes, 'User note');
+      },
+    );
   });
 
   test('imports basic date-times with numeric offsets', () {
@@ -219,7 +416,7 @@ END:VCALENDAR
 
     expect(event.endDateTimeIso, startsWith('2026-05-25T10:00:00'));
     expect(warning.values, ['DURATION']);
-    expect(event.notes, contains('Unsupported ICS fields ignored: DURATION'));
+    expect(event.notes, isEmpty);
   });
 
   test('warns when invalid ICS DURATION is replaced with default end', () {
@@ -417,7 +614,7 @@ END:VCALENDAR
     expect(event.notes, contains('Event note'));
     expect(event.notes, isNot(contains('Alarm reminder text')));
     expect(warning.values, ['VALARM']);
-    expect(event.notes, contains('Unsupported ICS fields ignored: VALARM'));
+    expect(event.notes, 'Event note');
   });
 
   test('imports Apple-style UTC timed fixture', () {
@@ -548,7 +745,7 @@ END:VCALENDAR
     );
   });
 
-  test('VEVENT entries without DTSTART fail as no importable events', () {
+  test('an entirely skipped ICS retains every warning and event identity', () {
     const source = '''
 BEGIN:VCALENDAR
 VERSION:2.0
@@ -556,23 +753,49 @@ BEGIN:VEVENT
 UID:no-start
 SUMMARY:No start
 END:VEVENT
+BEGIN:VEVENT
+UID:bad-start
+SUMMARY:Bad start
+DTSTART:not-a-date
+END:VEVENT
 END:VCALENDAR
 ''';
 
     expect(
       () => service.importSchedules(source),
       throwsA(
-        isA<GeneralCalendarIcsImportException>().having(
-          (error) => error.code,
-          'code',
-          GeneralCalendarIcsImportErrorCode.noImportableEvents,
-        ),
+        isA<GeneralCalendarIcsImportException>()
+            .having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsImportErrorCode.noImportableEvents,
+            )
+            .having(
+              (error) => error.warnings.map((warning) => warning.code),
+              'warning codes',
+              [
+                GeneralCalendarIcsWarningCode.missingDtStart,
+                GeneralCalendarIcsWarningCode.unsupportedDtStart,
+              ],
+            )
+            .having(
+              (error) => error.warnings.map((warning) => warning.eventUid),
+              'event identities',
+              ['no-start', 'bad-start'],
+            )
+            .having(
+              (error) => error.warnings.map((warning) => warning.eventTitle),
+              'event titles',
+              ['No start', 'Bad start'],
+            ),
       ),
     );
   });
 
-  test('reports unsupported ICS fields as warnings and notes', () {
-    const source = '''
+  test(
+    'keeps unsupported-field diagnostics out of user notes and re-export',
+    () {
+      const source = '''
 BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
@@ -581,21 +804,29 @@ SUMMARY:Busy
 DTSTART:20260524T090000
 DTEND:20260524T100000
 STATUS:CONFIRMED
+DESCRIPTION:Bring a notebook
 END:VEVENT
 END:VCALENDAR
 ''';
 
-    final imported = service.importSchedules(source);
-    final event = imported.schedules.single.events.single;
+      final imported = service.importSchedules(source);
+      final event = imported.schedules.single.events.single;
 
-    expect(
-      imported.warningItems.single.code,
-      GeneralCalendarIcsWarningCode.unsupportedFields,
-    );
-    expect(imported.warningItems.single.values, ['STATUS']);
-    expect(imported.warnings.single, contains('STATUS'));
-    expect(event.notes, contains('Unsupported ICS fields ignored: STATUS'));
-  });
+      expect(
+        imported.warningItems.single.code,
+        GeneralCalendarIcsWarningCode.unsupportedFields,
+      );
+      expect(imported.warningItems.single.values, ['STATUS']);
+      expect(imported.warnings.single, contains('STATUS'));
+      expect(imported.warningItems.single.eventUid, 'unsupported-1');
+      expect(imported.warningItems.single.eventTitle, 'Busy');
+      expect(event.notes, 'Bring a notebook');
+      final exported = service.exportSchedules(imported.schedules);
+      expect(exported, contains('Bring a notebook'));
+      expect(exported, isNot(contains('Unsupported ICS')));
+      expect(exported, isNot(contains('STATUS')));
+    },
+  );
 
   test('reports duplicate ICS fields instead of silently overwriting them', () {
     const source = '''
@@ -619,7 +850,7 @@ END:VCALENDAR
 
     expect(event.title, 'Second title');
     expect(warning.values, ['DUPLICATE:SUMMARY']);
-    expect(event.notes, contains('Duplicate ICS fields overwritten: SUMMARY'));
+    expect(event.notes, isEmpty);
   });
 
   test('reports unsupported RRULE parts instead of silently mapping them', () {
@@ -644,10 +875,7 @@ END:VCALENDAR
 
     expect(event.recurrenceRule.isRepeating, false);
     expect(warning.values, contains('RRULE:BYDAY=MO,WE'));
-    expect(
-      event.notes,
-      contains('Unsupported RRULE parts disabled recurrence: BYDAY=MO,WE'),
-    );
+    expect(event.notes, isEmpty);
   });
 
   test(
@@ -675,7 +903,7 @@ END:VCALENDAR
       expect(event.recurrenceRule.type, GeneralEventRecurrence.weekly);
       expect(event.recurrenceRule.count, 5);
       expect(warning.values, ['RRULE:DUPLICATE:COUNT']);
-      expect(event.notes, contains('Duplicate RRULE parts overwritten: COUNT'));
+      expect(event.notes, isEmpty);
     },
   );
 
@@ -755,10 +983,7 @@ END:VCALENDAR
 
     expect(event.recurrenceRule.isRepeating, false);
     expect(warning.values, contains('RRULE:UNTIL=20260231'));
-    expect(
-      event.notes,
-      contains('Unsupported RRULE parts disabled recurrence'),
-    );
+    expect(event.notes, isEmpty);
   });
 
   test('rejects invalid RRULE UNTIL date-times', () {
@@ -783,10 +1008,7 @@ END:VCALENDAR
 
     expect(event.recurrenceRule.isRepeating, false);
     expect(warning.values, contains('RRULE:UNTIL=20260615T999999Z'));
-    expect(
-      event.notes,
-      contains('Unsupported RRULE parts disabled recurrence'),
-    );
+    expect(event.notes, isEmpty);
   });
 
   test('deduplicates repeated imported UIDs inside one calendar', () {

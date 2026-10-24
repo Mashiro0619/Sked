@@ -4,6 +4,8 @@ import 'package:sked/services/update_distribution.dart';
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -23,6 +25,7 @@ import 'package:sked/services/microsoft_store_update_service.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/data_transfer_codec.dart';
+import 'package:sked/services/general_calendar_ics_service.dart';
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/settings_list.dart';
 import 'package:sked/widgets/settings_page_header.dart';
@@ -98,12 +101,15 @@ class _NoopPrivacyService extends PrivacyService {
 }
 
 class _ScheduleCodec extends DataTransferCodec {
-  _ScheduleCodec({this.delayed = false}) : super(run: runDataTransferInline);
+  _ScheduleCodec({this.delayed = false, this.failIcs = false})
+    : super(run: runDataTransferInline);
 
   final bool delayed;
+  final bool failIcs;
   final started = Completer<void>();
   final release = Completer<void>();
   var decodeCalls = 0;
+  final exportCalls = <({List<String> ids, bool ics})>[];
 
   @override
   Future<GeneralImportCandidate> decodeSchedules(
@@ -115,6 +121,27 @@ class _ScheduleCodec extends DataTransferCodec {
     if (!started.isCompleted) started.complete();
     if (delayed) await release.future;
     return super.decodeSchedules(source, localeCode: localeCode, ics: ics);
+  }
+
+  @override
+  Future<String> encodeSchedules(
+    GeneralScheduleData data,
+    List<String> ids, {
+    required String localeCode,
+    bool ics = false,
+  }) {
+    exportCalls.add((ids: List<String>.of(ids), ics: ics));
+    if (ics && failIcs) {
+      return Future.error(
+        const GeneralCalendarIcsExportException(
+          GeneralCalendarIcsExportErrorCode.monthlyAnchorMismatch,
+          message: 'This monthly schedule cannot be exported safely. Use JSON.',
+          eventId: 'audit-export-event',
+          eventTitle: 'Monthly reminder',
+        ),
+      );
+    }
+    return super.encodeSchedules(data, ids, localeCode: localeCode, ics: ics);
   }
 }
 
@@ -230,6 +257,38 @@ String _buildGeneralImportSource() {
   );
 }
 
+const _generalIcsImportSource =
+    'BEGIN:VCALENDAR\r\n'
+    'VERSION:2.0\r\n'
+    'PRODID:-//Sked//Test//EN\r\n'
+    'BEGIN:VEVENT\r\n'
+    'UID:settings-import-test@sked.local\r\n'
+    'DTSTAMP:20260616T000000Z\r\n'
+    'DTSTART:20260616T090000\r\n'
+    'DTEND:20260616T100000\r\n'
+    'SUMMARY:Imported event\r\n'
+    'END:VEVENT\r\n'
+    'END:VCALENDAR';
+
+AppData _buildGeneralDataWithReminders() => _buildGeneralDataWithSchedules([
+  _generalSchedule(id: 'existing-a', name: 'Existing Alpha'),
+  _generalSchedule(
+    id: 'existing-b',
+    name: 'Existing Beta',
+    sortOrder: 1,
+    events: [
+      GeneralEvent(
+        id: 'existing-reminder-event',
+        calendarId: 'existing-b',
+        title: 'Reminder event',
+        startDateTimeIso: '2026-06-16T09:00:00.000',
+        endDateTimeIso: '2026-06-16T10:00:00.000',
+        reminders: const [GeneralEventReminder(minutesBefore: 25)],
+      ),
+    ],
+  ),
+], activeScheduleId: 'existing-a');
+
 Future<AppRuntime> _createProvider(
   AppData? data, {
   RecoveryStatus recoveryStatus = RecoveryStatus.none,
@@ -241,6 +300,7 @@ Future<AppRuntime> _createProvider(
 }) async {
   final provider = AppRuntime(
     dataTransferCodec: codec,
+    workspaceMutationLock: (action) => action(),
     storage:
         storage ??
         _MemoryTimetableStorage(
@@ -385,6 +445,19 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
 }
 
+Future<void> _pumpTransferUntil(
+  WidgetTester tester,
+  bool Function() ready, {
+  required String reason,
+}) async {
+  // Chained dialogs await route removal before their next asynchronous step.
+  // Advance frames until the observable result, with a finite failure bound.
+  for (var frame = 0; frame < 180 && !ready(); frame++) {
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  expect(ready(), isTrue, reason: reason);
+}
+
 Future<void> _openGeneralDataActions(
   WidgetTester tester,
   AppRuntime provider,
@@ -402,6 +475,91 @@ Finder _generalSelectionTile(String name) {
   return find.ancestor(
     of: find.text(name),
     matching: find.byType(ExpressiveDialogOption),
+  );
+}
+
+Future<void> _openIcsExportWarning(
+  WidgetTester tester,
+  AppRuntime provider, {
+  bool onlyBeta = false,
+}) async {
+  await _openGeneralDataActions(tester, provider);
+  final copyIcs = find.byKey(
+    ValueKey(
+      'transfer-action-${SettingsGeneralDataAction.exportSchedulesIcsText}',
+    ),
+  );
+  await tester.ensureVisible(copyIcs);
+  await tester.pumpAndSettle();
+  await tester.tap(copyIcs);
+  await _pumpTransferUntil(
+    tester,
+    () => find.text('Select calendars to copy as ICS').evaluate().isNotEmpty,
+    reason: 'Copy ICS should open category selection',
+  );
+  expect(find.text('Select calendars to copy as ICS'), findsOneWidget);
+  if (onlyBeta) {
+    await tester.tap(_generalSelectionTile('Existing Alpha'));
+    await tester.pump();
+  }
+  await tester.tap(find.widgetWithText(FilledButton, 'Copy'));
+  await _pumpTransferUntil(
+    tester,
+    () => find
+        .byKey(const ValueKey('general-ics-export-continue'))
+        .hitTestable()
+        .evaluate()
+        .isNotEmpty,
+    reason: 'Category selection should finish before the format warning opens',
+  );
+  expect(
+    find.byKey(const ValueKey('general-ics-export-warning')),
+    findsOneWidget,
+  );
+}
+
+Future<void> _openIcsReplacementWarning(
+  WidgetTester tester,
+  AppRuntime provider,
+) async {
+  await _openGeneralDataActions(tester, provider);
+  await tester.tap(find.text('Paste ICS'));
+  await _pumpRouteTransition(tester);
+  await tester.enterText(find.byType(TextField), _generalIcsImportSource);
+  await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+  await _pumpTransferUntil(
+    tester,
+    () => find
+        .widgetWithText(FilledButton, 'Replace category')
+        .hitTestable()
+        .evaluate()
+        .isNotEmpty,
+    reason: 'The decoded ICS should offer an import destination',
+  );
+  final l10n = AppLocalizations.of(tester.element(find.byType(TextImportPage)));
+  expect(find.textContaining(l10n.icsReminderImportNotice), findsOneWidget);
+  await tester.tap(find.widgetWithText(FilledButton, 'Replace category'));
+  await _pumpTransferUntil(
+    tester,
+    () => find.text('Choose category to replace').evaluate().isNotEmpty,
+    reason: 'Replacement should request an explicit target category',
+  );
+  expect(find.text('Choose category to replace'), findsOneWidget);
+  await tester.tap(_generalSelectionTile('Existing Beta'));
+  await tester.pump();
+  await tester.tap(find.widgetWithText(FilledButton, 'Replace category'));
+  await _pumpTransferUntil(
+    tester,
+    () => find
+        .byKey(const ValueKey('general-ics-replacement-confirm'))
+        .hitTestable()
+        .evaluate()
+        .isNotEmpty,
+    reason: 'The selected replacement target should require final confirmation',
+  );
+  expect(
+    find.byKey(const ValueKey('general-ics-replacement-warning')),
+    findsOneWidget,
   );
 }
 
@@ -1802,6 +1960,601 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+    'an unsafe ICS export offers complete JSON for the same selection',
+    (tester) async {
+      final codec = _ScheduleCodec(failIcs: true);
+      final provider = await _createProvider(
+        _buildGeneralDataWithReminders(),
+        codec: codec,
+      );
+      addTearDown(provider.dispose);
+      await _openIcsExportWarning(tester, provider, onlyBeta: true);
+      await tester.tap(
+        find.byKey(const ValueKey('general-ics-export-continue')),
+      );
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .byKey(const ValueKey('general-ics-failure-json'))
+            .hitTestable()
+            .evaluate()
+            .isNotEmpty,
+        reason: 'An unrepresentable ICS should offer JSON without another selection',
+      );
+      expect(
+        find.text('This monthly schedule cannot be exported safely. Use JSON.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('general-ics-failure-json')));
+      await _pumpTransferUntil(
+        tester,
+        () => find.text('Export JSON text').evaluate().isNotEmpty,
+        reason: 'The alternative should produce a JSON payload',
+      );
+      expect(codec.exportCalls.map((call) => call.ics), [true, false]);
+      expect(
+        codec.exportCalls.every((call) => listEquals(call.ids, ['existing-b'])),
+        isTrue,
+      );
+      final json = tester
+          .widget<SelectableText>(find.byType(SelectableText))
+          .data!;
+      final event = decodeGeneralScheduleDataEnvelope(json)
+          .schedules
+          .single
+          .events
+          .single;
+      expect(event.reminderBehavior, GeneralEventReminderBehavior.custom);
+      expect(event.reminders.single.minutesBefore, 25);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a complete ICS import report includes and copies every warning',
+    (tester) async {
+      final provider = await _createProvider(_buildGeneralData());
+      addTearDown(provider.dispose);
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await _openGeneralDataActions(tester, provider);
+      await tester.tap(find.text('Paste ICS'));
+      await _pumpRouteTransition(tester);
+      const source = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:missing-start
+SUMMARY:Skipped missing start
+END:VEVENT
+BEGIN:VEVENT
+UID:invalid-start
+SUMMARY:Skipped invalid start
+DTSTART:not-a-date
+END:VEVENT
+BEGIN:VEVENT
+UID:adjusted-end
+SUMMARY:Imported event
+DTSTART:20261023T090000
+DTEND:20261023T080000
+END:VEVENT
+END:VCALENDAR''';
+      await tester.enterText(find.byType(TextField), source);
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .text('Add as new category')
+            .hitTestable()
+            .evaluate()
+            .isNotEmpty,
+        reason: 'The valid event should reach the import preview',
+      );
+      await tester.tap(find.text('Add as new category'));
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .byKey(const ValueKey('general-ics-import-report'))
+            .evaluate()
+            .isNotEmpty,
+        reason: 'All import warnings should remain in a complete report',
+      );
+      final l = AppLocalizations.of(
+        tester.element(find.byType(TextImportPage)),
+      );
+      final report = tester
+          .widget<SelectableText>(find.byType(SelectableText))
+          .data!;
+      for (final text in [
+        l.importWarningSkippedMissingStart,
+        l.importWarningSkippedUnsupportedStart,
+        l.importWarningAdjustedEnd,
+      ]) {
+        expect(report, contains(text));
+      }
+      expect(report, contains(l.importedSchedulesWithWarnings(1, 3)));
+      await tester.tap(find.byKey(const ValueKey('general-ics-report-copy')));
+      await tester.pump();
+      expect(copied, contains(l.importWarningAdjustedEnd));
+      expect(copied, contains(l.importWarningSkippedUnsupportedStart));
+      await tester.tap(find.byKey(const ValueKey('general-ics-report-close')));
+      await _pumpTransferUntil(
+        tester,
+        () => find.byType(TextImportPage).evaluate().isEmpty,
+        reason:
+            'Closing the report should complete the original text import route',
+      );
+      expect(find.byType(TextImportPage), findsNothing);
+      expect(
+        provider.generalView.schedules
+            .expand((s) => s.events)
+            .where((e) => e.title == 'Imported event'),
+        hasLength(1),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'an entirely skipped ICS reports and copies every reason without saving',
+    (tester) async {
+      final data = _buildGeneralDataWithReminders();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(provider.dispose);
+      final original = provider.generalView.schedules;
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await _openGeneralDataActions(tester, provider);
+      await tester.tap(find.text('Paste ICS'));
+      await _pumpRouteTransition(tester);
+      const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:missing-first
+SUMMARY:First skipped event
+END:VEVENT
+BEGIN:VEVENT
+UID:invalid-start
+SUMMARY:Second skipped event
+DTSTART:not-a-date
+END:VEVENT
+BEGIN:VEVENT
+UID:missing-last
+SUMMARY:Third skipped event
+END:VEVENT
+END:VCALENDAR''';
+      await tester.enterText(find.byType(TextField), source);
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .byKey(const ValueKey('general-ics-import-report'))
+            .evaluate()
+            .isNotEmpty,
+        reason: 'A rejected import must retain its per-event reasons',
+      );
+      final l = AppLocalizations.of(
+        tester.element(find.byType(TextImportPage)),
+      );
+      final report = tester
+          .widget<SelectableText>(find.byType(SelectableText))
+          .data!;
+      for (final text in [
+        l.importedSchedulesWithWarnings(0, 3),
+        l.importWarningSkippedMissingStart,
+        l.importWarningSkippedUnsupportedStart,
+        'missing-first',
+        'First skipped event',
+        'invalid-start',
+        'Second skipped event',
+        'missing-last',
+        'Third skipped event',
+      ]) {
+        expect(report, contains(text));
+      }
+      await tester.tap(find.byKey(const ValueKey('general-ics-report-copy')));
+      await tester.pump();
+      expect(copied, contains(l.importedSchedulesWithWarnings(0, 3)));
+      expect(copied, contains(l.importWarningSkippedUnsupportedStart));
+      expect(copied, contains('missing-first'));
+      expect(copied, contains('missing-last'));
+      expect(storage.saveCount, 0);
+      expect(provider.generalView.schedules, same(original));
+      await tester.tap(find.byKey(const ValueKey('general-ics-report-close')));
+      await _pumpRouteTransition(tester);
+      expect(find.byType(TextImportPage), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        source,
+      );
+      expect(storage.saveCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'named time zones cannot reach append or replacement and retain the draft',
+    (tester) async {
+      final data = _buildGeneralDataWithReminders();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(provider.dispose);
+      final original = provider.generalView.schedules;
+      await _openGeneralDataActions(tester, provider);
+      await tester.tap(find.text('Paste ICS'));
+      await _pumpRouteTransition(tester);
+      const source = '''BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:unsafe-london
+SUMMARY:London meeting
+DTSTART;TZID=Europe/London:20260329T090000
+DTEND;TZID=Europe/London:20260329T100000
+END:VEVENT
+END:VCALENDAR''';
+      await tester.enterText(find.byType(TextField), source);
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .byKey(const ValueKey('general-ics-import-report'))
+            .evaluate()
+            .isNotEmpty,
+        reason: 'Unsupported time zones must stop at a report before mutations',
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Replace category'),
+        findsNothing,
+      );
+      expect(find.text('Add as new category'), findsNothing);
+      final report = tester
+          .widget<SelectableText>(find.byType(SelectableText))
+          .data!;
+      expect(report, contains('Europe/London'));
+      expect(report, contains('unsafe-london'));
+      expect(storage.saveCount, 0);
+      expect(provider.generalView.schedules, same(original));
+      await tester.tap(find.byKey(const ValueKey('general-ics-report-close')));
+      await _pumpRouteTransition(tester);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        source,
+      );
+      expect(storage.saveCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('canceling the ICS export warning does not encode or save', (
+    tester,
+  ) async {
+    final data = _buildGeneralDataWithReminders();
+    final storage = _MemoryTimetableStorage(data);
+    final codec = _ScheduleCodec();
+    final provider = await _createProvider(
+      data,
+      storage: storage,
+      codec: codec,
+    );
+    addTearDown(provider.dispose);
+    final original = provider.generalView.schedules;
+
+    await _openIcsExportWarning(tester, provider);
+    expect(codec.exportCalls, isEmpty);
+    await tester.tap(find.byKey(const ValueKey('general-ics-export-cancel')));
+    await _pumpRouteTransition(tester);
+
+    expect(codec.exportCalls, isEmpty);
+    expect(find.byType(SelectableText), findsNothing);
+    expect(storage.saveCount, 0);
+    expect(provider.generalView.schedules, same(original));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ICS export can switch to JSON without changing selected IDs', (
+    tester,
+  ) async {
+    final codec = _ScheduleCodec();
+    final provider = await _createProvider(
+      _buildGeneralDataWithReminders(),
+      codec: codec,
+    );
+    addTearDown(provider.dispose);
+
+    await _openIcsExportWarning(tester, provider, onlyBeta: true);
+    expect(codec.exportCalls, isEmpty);
+    await tester.tap(find.byKey(const ValueKey('general-ics-export-json')));
+    await _pumpTransferUntil(
+      tester,
+      () => find.text('Export JSON text').evaluate().isNotEmpty,
+      reason: 'Choosing JSON should finish the warning and open its payload',
+    );
+
+    expect(codec.exportCalls, hasLength(1));
+    expect(codec.exportCalls.single.ids, ['existing-b']);
+    expect(codec.exportCalls.single.ics, isFalse);
+    expect(find.text('Export JSON text'), findsOneWidget);
+    final content = tester
+        .widget<SelectableText>(find.byType(SelectableText))
+        .data!;
+    final exported = decodeGeneralScheduleDataEnvelope(content);
+    expect(exported.schedules, hasLength(1));
+    expect(exported.schedules.single.id, 'existing-b');
+    final event = exported.schedules.single.events.single;
+    expect(event.title, 'Reminder event');
+    expect(event.reminderBehavior, GeneralEventReminderBehavior.custom);
+    expect(event.reminders.single.minutesBefore, 25);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ICS export proceeds only after explicit format confirmation', (
+    tester,
+  ) async {
+    final codec = _ScheduleCodec();
+    final provider = await _createProvider(
+      _buildGeneralDataWithReminders(),
+      codec: codec,
+    );
+    addTearDown(provider.dispose);
+
+    await _openIcsExportWarning(tester, provider, onlyBeta: true);
+    expect(codec.exportCalls, isEmpty);
+    await tester.tap(find.byKey(const ValueKey('general-ics-export-continue')));
+    await _pumpTransferUntil(
+      tester,
+      () => find.text('Export ICS text').evaluate().isNotEmpty,
+      reason: 'Continuing with ICS should open the generated payload',
+    );
+
+    expect(codec.exportCalls, hasLength(1));
+    expect(codec.exportCalls.single.ids, ['existing-b']);
+    expect(codec.exportCalls.single.ics, isTrue);
+    expect(find.text('Export ICS text'), findsOneWidget);
+    final content = tester
+        .widget<SelectableText>(find.byType(SelectableText))
+        .data!;
+    expect(content, contains('BEGIN:VCALENDAR'));
+    expect(content, contains('SUMMARY:Reminder event'));
+    expect(content, isNot(contains('VALARM')));
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final retirement in ['newer task', 'workspace disable']) {
+    testWidgets(
+      'stale ICS export action preserves a new page after $retirement',
+      (tester) async {
+        final data = _buildGeneralDataWithReminders();
+        final storage = _MemoryTimetableStorage(data);
+        final codec = _ScheduleCodec();
+        final provider = await _createProvider(
+          data,
+          storage: storage,
+          codec: codec,
+        );
+        addTearDown(provider.dispose);
+        final draft = TextEditingController(text: 'Newer unsaved draft');
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          draft.dispose();
+        });
+
+        await _openIcsExportWarning(tester, provider);
+        final warning = find.byKey(
+          const ValueKey('general-ics-export-warning'),
+        );
+        final route = ModalRoute.of(tester.element(warning))!;
+        final staleContinue = tester
+            .widget<TextButton>(
+              find.byKey(const ValueKey('general-ics-export-continue')),
+            )
+            .onPressed!;
+        unawaited(
+          route.navigator!.push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                body: TextField(
+                  key: const ValueKey('newer-ics-export-task'),
+                  controller: draft,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final newer = find.byKey(const ValueKey('newer-ics-export-task'));
+        final newerElement = tester.element(newer);
+        if (retirement == 'workspace disable') {
+          var disableCompleted = false;
+          final disable = provider.workspaces.setEnabled(
+            AppMode.general,
+            false,
+          );
+          unawaited(
+            disable.then<void>(
+              (_) {
+                disableCompleted = true;
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                disableCompleted = true;
+              },
+            ),
+          );
+          await _pumpTransferUntil(
+            tester,
+            () => disableCompleted,
+            reason: 'Disabling the workspace should finish its durable command',
+          );
+          await disable;
+          await tester.pumpAndSettle();
+          expect(provider.workspaceView.isEnabled(AppMode.general), isFalse);
+        }
+        final savesBeforeStaleAction = storage.saveCount;
+
+        staleContinue();
+        await tester.pumpAndSettle();
+
+        expect(codec.exportCalls, isEmpty);
+        expect(storage.saveCount, savesBeforeStaleAction);
+        expect(tester.element(newer), same(newerElement));
+        expect(draft.text, 'Newer unsaved draft');
+        expect(find.byType(SelectableText), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final confirm in [false, true]) {
+    testWidgets(
+      'ICS replacement requires reminder-loss confirmation: $confirm',
+      (tester) async {
+        final data = _buildGeneralDataWithReminders();
+        final storage = _MemoryTimetableStorage(data);
+        final codec = _ScheduleCodec();
+        final provider = await _createProvider(
+          data,
+          storage: storage,
+          codec: codec,
+        );
+        addTearDown(provider.dispose);
+        final original = provider.generalView.schedules;
+
+        await _openIcsReplacementWarning(tester, provider);
+        expect(codec.decodeCalls, 1);
+        expect(storage.saveCount, 0);
+        expect(provider.generalView.schedules, same(original));
+        await tester.tap(
+          find.byKey(
+            ValueKey(
+              confirm
+                  ? 'general-ics-replacement-confirm'
+                  : 'general-ics-replacement-cancel',
+            ),
+          ),
+        );
+        await _pumpTransferUntil(
+          tester,
+          () {
+            if (confirm) {
+              return storage.saveCount == 1 &&
+                  find.byType(TextImportPage).evaluate().isEmpty;
+            }
+            final importButton = find.widgetWithText(FilledButton, 'Import');
+            return importButton.evaluate().length == 1 &&
+                tester.widget<FilledButton>(importButton).onPressed != null;
+          },
+          reason: confirm
+              ? 'Confirmed replacement should save and finish its import page'
+              : 'Canceled replacement should return to an enabled import form',
+        );
+
+        expect(codec.decodeCalls, 1);
+        expect(
+          find.byKey(const ValueKey('general-ics-replacement-warning')),
+          findsNothing,
+        );
+        if (confirm) {
+          expect(find.byType(TextImportPage), findsNothing);
+          expect(storage.saveCount, 1);
+          final alpha = provider.generalView.schedules.singleWhere(
+            (schedule) => schedule.id == 'existing-a',
+          );
+          final beta = provider.generalView.schedules.singleWhere(
+            (schedule) => schedule.id == 'existing-b',
+          );
+          expect(alpha.name, 'Existing Alpha');
+          expect(alpha.events, isEmpty);
+          expect(beta.events.single.title, 'Imported event');
+          expect(beta.events.single.reminders, isEmpty);
+          expect(
+            storage.data!.generalMode.schedules
+                .singleWhere((schedule) => schedule.id == 'existing-b')
+                .events
+                .single
+                .title,
+            'Imported event',
+          );
+        } else {
+          expect(find.byType(TextImportPage), findsOneWidget);
+          expect(storage.saveCount, 0);
+          expect(provider.generalView.schedules, same(original));
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            _generalIcsImportSource,
+          );
+          expect(
+            tester
+                .widget<FilledButton>(
+                  find.widgetWithText(FilledButton, 'Import'),
+                )
+                .onPressed,
+            isNotNull,
+          );
+          final existing = provider.generalView.schedules.singleWhere(
+            (schedule) => schedule.id == 'existing-b',
+          );
+          expect(existing.events.single.reminders.single.minutesBefore, 25);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('ICS replacement cannot apply after its data session retires', (
+    tester,
+  ) async {
+    final data = _buildGeneralDataWithReminders();
+    final storage = _MemoryTimetableStorage(data);
+    final provider = await _createProvider(data, storage: storage);
+    addTearDown(provider.dispose);
+    final original = provider.generalView.schedules;
+
+    await _openIcsReplacementWarning(tester, provider);
+    final staleConfirm = tester
+        .widget<FilledButton>(
+          find.byKey(const ValueKey('general-ics-replacement-confirm')),
+        )
+        .onPressed!;
+    final reservation = provider.maintenance.reserve();
+    provider.maintenance.release(reservation);
+    await tester.pumpAndSettle();
+    staleConfirm();
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 0);
+    expect(provider.generalView.schedules, same(original));
+    expect(find.byType(TextImportPage), findsNothing);
+    expect(find.text('Save failed. Please try again later.'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   for (final ics in [false, true]) {

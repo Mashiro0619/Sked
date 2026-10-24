@@ -28,7 +28,16 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
         selectAtLeastOneScheduleMessage(localeCode: localeCode),
       );
     }
-    return _icsService.exportSchedules(selected);
+    try {
+      return _icsService.exportSchedules(selected);
+    } on GeneralCalendarIcsExportException catch (error) {
+      throw GeneralCalendarIcsExportException(
+        error.code,
+        message: _generalIcsExportErrorMessage(error.code, localeCode),
+        eventId: error.eventId,
+        eventTitle: error.eventTitle,
+      );
+    }
   }
 
   List<GeneralSchedule> previewImportGeneralSchedules(
@@ -50,10 +59,17 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
     required String localeCode,
   }) {
     try {
-      return _icsService.importSchedules(source);
+      return _icsService.importSchedules(
+        source,
+        calendarName: icsImportedCalendarName(localeCode: localeCode),
+        fallbackEventTitle: icsUntitledEventName(localeCode: localeCode),
+      );
     } on GeneralCalendarIcsImportException catch (error) {
-      throw FormatException(
-        _generalIcsImportErrorMessage(error.code, localeCode),
+      throw GeneralCalendarIcsImportException(
+        error.code,
+        message: _generalIcsImportErrorMessage(error.code, localeCode),
+        diagnostics: error.diagnostics,
+        warnings: error.warnings,
       );
     }
   }
@@ -466,5 +482,17 @@ String _generalIcsImportErrorMessage(
     GeneralCalendarIcsImportErrorCode.noEvents ||
     GeneralCalendarIcsImportErrorCode.noImportableEvents =>
       noSchedulesInImportMessage(localeCode: localeCode),
+    GeneralCalendarIcsImportErrorCode.unsupportedTimeZone =>
+      icsUnsupportedTimeZoneMessage(localeCode: localeCode),
   };
 }
+
+String _generalIcsExportErrorMessage(
+  GeneralCalendarIcsExportErrorCode code,
+  String localeCode,
+) => switch (code) {
+  GeneralCalendarIcsExportErrorCode.monthlyAnchorMismatch =>
+    icsExportMonthlyAnchorMismatchMessage(localeCode: localeCode),
+  GeneralCalendarIcsExportErrorCode.emptyRecurrence =>
+    icsExportEmptyRecurrenceMessage(localeCode: localeCode),
+};

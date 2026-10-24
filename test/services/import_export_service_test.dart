@@ -980,14 +980,155 @@ END:VCALENDAR
           localeCode: 'zh',
         ),
         throwsA(
-          isA<FormatException>().having(
-            (error) => error.message,
-            'message',
-            '导入文件中没有分类。',
-          ),
+          isA<GeneralCalendarIcsImportException>()
+              .having(
+                (error) => error.code,
+                'code',
+                GeneralCalendarIcsImportErrorCode.noEvents,
+              )
+              .having((error) => error.message, 'message', '导入文件中没有分类。'),
         ),
       );
     });
+
+    test(
+      'localizes missing calendar and event names without renaming content',
+      () {
+        const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:unnamed
+DTSTART:20261023T090000
+DTEND:20261023T100000
+END:VEVENT
+END:VCALENDAR''';
+        final chinese = service.previewImportGeneralSchedulesIcs(
+          source,
+          localeCode: 'zh',
+        );
+        expect(chinese.schedules.single.name, '导入的日历');
+        expect(chinese.schedules.single.events.single.title, '无标题日程');
+        final english = service.previewImportGeneralSchedulesIcs(
+          source,
+          localeCode: 'en',
+        );
+        expect(english.schedules.single.name, 'Imported calendar');
+        expect(english.schedules.single.events.single.title, 'Untitled event');
+        final named = service.previewImportGeneralSchedulesIcs(
+          source.replaceFirst('UID:unnamed', 'UID:unnamed\nSUMMARY:User title'),
+          localeCode: 'zh',
+        );
+        expect(named.schedules.single.events.single.title, 'User title');
+      },
+    );
+
+    test(
+      'named zones reject the entire append or replacement without mutation',
+      () {
+        final current = data();
+        final before = jsonEncode(current.toJson());
+        const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:safe
+DTSTART:20261023T090000Z
+DTEND:20261023T100000Z
+END:VEVENT
+BEGIN:VEVENT
+UID:unsafe-zone
+SUMMARY:London event
+DTSTART:20261023T090000Z
+DTEND;TZID=Europe/London:20261023T100000
+END:VEVENT
+END:VCALENDAR''';
+        for (final locale in ['en', 'zh']) {
+          for (final mode in GeneralScheduleImportMode.values) {
+            expect(
+              () => service.importGeneralSchedulesIcs(
+                current,
+                source,
+                mode: mode,
+                replacementScheduleId: current.schedules.first.id,
+                localeCode: locale,
+              ),
+              throwsA(
+                isA<GeneralCalendarIcsImportException>()
+                    .having(
+                      (error) => error.code,
+                      'code',
+                      GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+                    )
+                    .having(
+                      (error) => error.diagnostics.single.eventUid,
+                      'event UID',
+                      'unsafe-zone',
+                    )
+                    .having(
+                      (error) => error.message,
+                      'localized message',
+                      contains(
+                        locale == 'zh' ? '未导入任何内容' : 'Nothing was imported',
+                      ),
+                    ),
+              ),
+            );
+            expect(jsonEncode(current.toJson()), before);
+          }
+        }
+      },
+    );
+
+    test(
+      'localizes export failures while preserving codes and event identity',
+      () {
+        for (final locale in ['en', 'zh']) {
+          for (final (code, rule) in [
+            (
+              GeneralCalendarIcsExportErrorCode.monthlyAnchorMismatch,
+              const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.monthly,
+                monthlyAnchorDay: 31,
+                count: 3,
+              ),
+            ),
+            (
+              GeneralCalendarIcsExportErrorCode.emptyRecurrence,
+              const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.daily,
+                untilDateIso: '2026-05-24',
+              ),
+            ),
+          ]) {
+            final source = data(
+              schedules: [
+                schedule(events: [event().copyWith(recurrenceRule: rule)]),
+              ],
+            );
+            expect(
+              () => service.exportSelectedGeneralSchedulesIcs(source, [
+                'cal',
+              ], localeCode: locale),
+              throwsA(
+                isA<GeneralCalendarIcsExportException>()
+                    .having((error) => error.code, 'code', code)
+                    .having((error) => error.eventId, 'event id', 'event')
+                    .having((error) => error.eventTitle, 'event title', 'Event')
+                    .having(
+                      (error) => error.message,
+                      'localized JSON alternative',
+                      contains(locale == 'zh' ? '导出 JSON' : 'Export JSON'),
+                    ),
+              ),
+            );
+            // The supported alternative always retains the original record.
+            expect(
+              service.exportSelectedGeneralSchedulesJson(source, [
+                'cal',
+              ], localeCode: locale),
+              contains('Event'),
+            );
+          }
+        }
+      },
+    );
   });
 
   group('student JSON export', () {
