@@ -4216,7 +4216,7 @@ void main() {
       )!.withValues(alpha: 0.92);
       expect(
         tester.widget<Card>(singleModeCourseCard).color,
-        expectedSingleModeColor,
+        Color.alphaBlend(expectedSingleModeColor, colorScheme.surface),
       );
 
       await pumpGrid(
@@ -4228,7 +4228,10 @@ void main() {
       expect(courseCard, findsOneWidget);
       expect(
         tester.widget<Card>(courseCard).color,
-        const Color(0xFFAA3344).withValues(alpha: 0.92),
+        Color.alphaBlend(
+          const Color(0xFFAA3344).withValues(alpha: 0.92),
+          colorScheme.surface,
+        ),
       );
     });
 
@@ -4492,7 +4495,7 @@ void main() {
       expect(find.byIcon(Icons.notifications_active_outlined), findsNothing);
     });
 
-    testWidgets('五彩缤纷模式会为所有课程块使用统一自动文字颜色', (tester) async {
+    testWidgets('五彩缤纷模式按各课程最终填色选择可读自动文字颜色', (tester) async {
       final periodTimes = buildDefaultPeriodTimes().take(4).toList();
       final timetable = TimetableData(
         id: 'table_text_color',
@@ -4583,9 +4586,23 @@ void main() {
       final darkColor = darkCourseText.style!.color!;
       final lightColor = lightCourseText.style!.color!;
 
-      expect(darkColor, lightColor);
-      final luminance = darkColor.computeLuminance();
-      expect(luminance < 0.2 || luminance > 0.8, isTrue);
+      expect(darkColor, isNot(lightColor));
+      for (final (text, foreground) in [
+        ('深色课', darkColor),
+        ('浅色课', lightColor),
+      ]) {
+        final card = tester.widget<Card>(
+          find.ancestor(of: find.text(text), matching: find.byType(Card)),
+        );
+        final background = card.color!;
+        final rendered = Color.alphaBlend(foreground, background);
+        final a = rendered.computeLuminance(),
+            b = background.computeLuminance();
+        expect(
+          (a > b ? (a + .05) / (b + .05) : (b + .05) / (a + .05)),
+          greaterThanOrEqualTo(4.5),
+        );
+      }
     });
 
     testWidgets('MyApp 在五彩缤纷模式下会覆盖 primary secondary tertiary', (tester) async {

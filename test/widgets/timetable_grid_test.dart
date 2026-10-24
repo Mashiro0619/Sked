@@ -7,7 +7,9 @@ import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/theme/timetable_contrast.dart';
 import 'package:sked/widgets/timetable_grid.dart';
+import 'package:sked/widgets/workspace_frame.dart';
 
 Widget _gridApp({required double textScale}) {
   final timetable = TimetableData(
@@ -63,6 +65,7 @@ CourseItem _course({
   String location = '',
   String teacher = '',
   List<int> periods = const [1],
+  List<int> semesterWeeks = const [1],
 }) {
   return CourseItem(
     id: id,
@@ -70,7 +73,7 @@ CourseItem _course({
     teacher: teacher,
     location: location,
     dayOfWeek: weekday,
-    semesterWeeks: const [1],
+    semesterWeeks: semesterWeeks,
     periods: periods,
     startMinutes: startMinutes,
     endMinutes: endMinutes,
@@ -116,6 +119,10 @@ Widget _gridHarness({
   String? Function(String)? displayedCourseIdForConflict,
   TimetableLiveCourseTarget? liveCourseTarget,
   bool liveCourseOutlineEnabled = false,
+  int liveCourseOutlineColorValue = 0xFF6750A4,
+  int selectedWeek = 1,
+  int realCurrentWeek = 1,
+  String? selectedCourseId,
 }) {
   return MaterialApp(
     theme: ThemeData(
@@ -129,36 +136,43 @@ Widget _gridHarness({
       child: Directionality(textDirection: textDirection, child: child!),
     ),
     home: Scaffold(
-      body: SizedBox.expand(
-        child: TimetableGrid(
-          timetable: timetable,
-          periodTimes: periodTimes,
-          weekDateStart: DateTime(2026, 1, 5),
-          selectedWeek: 1,
-          realCurrentWeek: 1,
-          localeCode: 'en',
-          preserveGaps: preserveGaps,
-          showPastEndedCourses: true,
-          showFutureCourses: true,
-          showGridLines: true,
-          onCourseTap: onCourseTap ?? (_) {},
-          onEmptySlotTap: enableLongPressAdd ? onEmptySlotTap ?? (_) {} : null,
-          themeColorMode: themeColorMode,
-          courseNameColorValues: courseColors,
-          colorfulCourseTextColorMode: textColor == null
-              ? colorfulCourseTextColorModeAuto
-              : colorfulCourseTextColorModeCustom,
-          colorfulCourseTextColorValue: textColor,
-          displayedCourseIdForConflict: displayedCourseIdForConflict,
-          liveCourseTarget: liveCourseTarget,
-          liveCourseOutlineEnabled: liveCourseOutlineEnabled,
-          liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
-          liveCourseOutlineColorValue: 0xFF6750A4,
-          liveCourseOutlineWidth: 2,
-          visibleWeekdays: visibleWeekdays,
-          showDayHeader: showDayHeader,
-          bottomContentInset: bottomContentInset,
-          fitVisibleDaysToWidth: fitVisibleDaysToWidth,
+      body: WorkspaceSelectionScope(
+        selectedId: selectedCourseId == null
+            ? null
+            : 'course:$selectedCourseId',
+        child: SizedBox.expand(
+          child: TimetableGrid(
+            timetable: timetable,
+            periodTimes: periodTimes,
+            weekDateStart: DateTime(2026, 1, 5),
+            selectedWeek: selectedWeek,
+            realCurrentWeek: realCurrentWeek,
+            localeCode: 'en',
+            preserveGaps: preserveGaps,
+            showPastEndedCourses: true,
+            showFutureCourses: true,
+            showGridLines: true,
+            onCourseTap: onCourseTap ?? (_) {},
+            onEmptySlotTap: enableLongPressAdd
+                ? onEmptySlotTap ?? (_) {}
+                : null,
+            themeColorMode: themeColorMode,
+            courseNameColorValues: courseColors,
+            colorfulCourseTextColorMode: textColor == null
+                ? colorfulCourseTextColorModeAuto
+                : colorfulCourseTextColorModeCustom,
+            colorfulCourseTextColorValue: textColor,
+            displayedCourseIdForConflict: displayedCourseIdForConflict,
+            liveCourseTarget: liveCourseTarget,
+            liveCourseOutlineEnabled: liveCourseOutlineEnabled,
+            liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
+            liveCourseOutlineColorValue: liveCourseOutlineColorValue,
+            liveCourseOutlineWidth: 2,
+            visibleWeekdays: visibleWeekdays,
+            showDayHeader: showDayHeader,
+            bottomContentInset: bottomContentInset,
+            fitVisibleDaysToWidth: fitVisibleDaysToWidth,
+          ),
         ),
       ),
     ),
@@ -179,6 +193,313 @@ ScrollableState _horizontalScrollState(WidgetTester tester, Key ownerKey) {
 }
 
 void main() {
+  for (final customColor in const [0xff767676, 0xf5767676]) {
+    testWidgets('custom text keeps its exact alpha at $customColor', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _gridHarness(
+          timetable: _timetableWithCourses([
+            _course(
+              id: 'custom-alpha',
+              weekday: 1,
+              startMinutes: 480,
+              endMinutes: 600,
+              teacher: 'Teacher',
+            ),
+          ]),
+          periodTimes: const [
+            CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 600),
+          ],
+          visibleWeekdays: const [1],
+          platform: TargetPlatform.android,
+          themeColorMode: themeColorModeColorful,
+          courseColors: const {'custom-alpha': 0xffffffff},
+          textColor: customColor,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue)
+              .copyWith(surface: Colors.white),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final visual = find.byKey(
+        const ValueKey('timetable-course-visual-custom-alpha'),
+      );
+      final title = find.descendant(
+        of: visual,
+        matching: find.text('custom-alpha'),
+      );
+      final text = tester.widget<Text>(title).style!.color!;
+      final background = tester.widget<Card>(visual).color!;
+      expect(text, Color(customColor));
+      final actualRatio = renderedTimetableContrast(text, background);
+      expect(
+        hasLowContrastCourseText(
+          textColor: text,
+          courseColorValues: const [0xffffffff],
+          surfaceColor: Colors.white,
+        ),
+        actualRatio < 4.5,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final brightness in Brightness.values) {
+    testWidgets(
+      'colorful course text and outlines use each final fill in $brightness',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1200, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final table = _timetableWithCourses([
+          _course(
+            id: 'dark',
+            weekday: 1,
+            startMinutes: 480,
+            endMinutes: 600,
+            semesterWeeks: const [2],
+          ),
+          _course(
+            id: 'light',
+            weekday: 2,
+            startMinutes: 480,
+            endMinutes: 600,
+            semesterWeeks: const [2],
+          ),
+          _course(
+            id: 'future',
+            weekday: 3,
+            startMinutes: 480,
+            endMinutes: 600,
+            semesterWeeks: const [3],
+          ),
+          _course(id: 'past', weekday: 4, startMinutes: 480, endMinutes: 600),
+          _course(
+            id: 'overlap-a',
+            periods: const [],
+            weekday: 5,
+            startMinutes: 480,
+            endMinutes: 600,
+            semesterWeeks: const [2],
+          ),
+          _course(
+            id: 'overlap-b',
+            periods: const [],
+            weekday: 5,
+            startMinutes: 510,
+            endMinutes: 630,
+            semesterWeeks: const [2],
+          ),
+        ]);
+        await tester.pumpWidget(
+          _gridHarness(
+            timetable: table,
+            periodTimes: const [
+              CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 600),
+            ],
+            platform: TargetPlatform.android,
+            brightness: brightness,
+            themeColorMode: themeColorModeColorful,
+            selectedWeek: 2,
+            realCurrentWeek: 2,
+            selectedCourseId: 'dark',
+            courseColors: const {
+              'dark': 0xff111111,
+              'light': 0xffffd54f,
+              'future': 0xff003366,
+              'past': 0xff770022,
+              'overlap-a': 0xffcccccc,
+              'overlap-b': 0xff220022,
+            },
+            liveCourseOutlineEnabled: true,
+            liveCourseOutlineColorValue: 0xffffd54f,
+            liveCourseTarget: const TimetableLiveCourseTarget(
+              week: 2,
+              weekday: 2,
+              courseId: 'light',
+              isCurrentCourse: true,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final foregrounds = <String, Color>{};
+        for (final id in const [
+          'dark',
+          'light',
+          'future',
+          'past',
+          'overlap-a',
+          'overlap-b',
+        ]) {
+          final visual = find.byKey(ValueKey('timetable-course-visual-$id'));
+          expect(visual, findsOneWidget, reason: 'Rendered state $id');
+          final card = tester.widget<Card>(visual);
+          expect(card.color!.a, 1);
+          final fill = Color.alphaBlend(
+            card.color!,
+            Theme.of(tester.element(visual)).colorScheme.surface,
+          );
+          final title = find.descendant(of: visual, matching: find.text(id));
+          final color = tester.widget<Text>(title).style!.color!;
+          foregrounds[id] = color;
+          expect(
+            renderedTimetableContrast(color, fill),
+            greaterThanOrEqualTo(4.5),
+            reason: '$id text on $fill',
+          );
+          final side = (card.shape! as RoundedRectangleBorder).side;
+          if (id == 'dark' || id == 'light') {
+            expect(side.width, greaterThan(0));
+            expect(
+              renderedTimetableContrast(
+                side.color,
+                Theme.of(tester.element(visual)).colorScheme.surface,
+              ),
+              greaterThanOrEqualTo(3),
+              reason: '$id outline outside on surrounding canvas',
+            );
+            final guard = find.byKey(
+              ValueKey('timetable-course-outline-guard-$id'),
+            );
+            final inside = guard.evaluate().isEmpty
+                ? side.color
+                : ((tester.widget<DecoratedBox>(guard).decoration
+                                  as ShapeDecoration)
+                              .shape
+                          as RoundedRectangleBorder)
+                      .side
+                      .color;
+            expect(
+              renderedTimetableContrast(inside, fill),
+              greaterThanOrEqualTo(3),
+              reason: '$id outline inside on $fill',
+            );
+          }
+        }
+        expect(foregrounds['dark'], isNot(foregrounds['light']));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final width in [320.0, 360.0, 393.0]) {
+    for (final scale in [1.0, 2.0]) {
+      for (final direction in TextDirection.values) {
+        for (final dayCount in [5, 7]) {
+          testWidgets(
+            'fitted $width dp $dayCount-day week at ${scale}x $direction fits every selected column',
+            (tester) async {
+              await tester.binding.setSurfaceSize(Size(width, 800));
+              addTearDown(() => tester.binding.setSurfaceSize(null));
+              final semantics = tester.ensureSemantics();
+              final weekdays = List.generate(dayCount, (index) => index + 1);
+              TimetableCourseTapInfo? opened;
+              Widget grid({required bool fit}) => _gridHarness(
+                timetable: _timetableWithCourses([
+                  _course(
+                    id: 'last-day',
+                    title: 'Last selected day with full details',
+                    location: 'Building B201',
+                    teacher: 'Teacher',
+                    weekday: weekdays.last,
+                    startMinutes: 480,
+                    endMinutes: 600,
+                  ),
+                ]),
+                periodTimes: const [
+                  CoursePeriodTime(
+                    index: 1,
+                    startMinutes: 480,
+                    endMinutes: 600,
+                  ),
+                ],
+                platform: TargetPlatform.android,
+                visibleWeekdays: weekdays,
+                fitVisibleDaysToWidth: fit,
+                textScale: scale,
+                textDirection: direction,
+                onCourseTap: (info) => opened = info,
+              );
+              await tester.pumpWidget(grid(fit: true));
+              await tester.pumpAndSettle();
+              final body = find.byKey(
+                const ValueKey('timetable-grid-horizontal-scroll'),
+              );
+              final viewport = tester.getRect(body);
+              final content = tester.getRect(
+                find.byKey(const ValueKey('timetable-grid-horizontal-content')),
+              );
+              expect(content.width, closeTo(viewport.width, .01));
+              for (final weekday in weekdays) {
+                final column = tester.getRect(
+                  find.byKey(ValueKey('timetable-day-column-$weekday')),
+                );
+                expect(column.width, closeTo(viewport.width / dayCount, .01));
+                expect(column.left, greaterThanOrEqualTo(viewport.left - .01));
+                expect(column.right, lessThanOrEqualTo(viewport.right + .01));
+                final header = tester.getRect(
+                  find.byKey(ValueKey('timetable-day-header-$weekday')),
+                );
+                expect(header.center.dx, closeTo(column.center.dx, .01));
+                expect(header.left, greaterThanOrEqualTo(viewport.left - .01));
+                expect(header.right, lessThanOrEqualTo(viewport.right + .01));
+              }
+              for (final key in [
+                const ValueKey('timetable-day-header-horizontal-scroll'),
+                const ValueKey('timetable-grid-horizontal-scroll'),
+              ]) {
+                final position = _horizontalScrollState(tester, key).position;
+                expect(position.maxScrollExtent, closeTo(0, .01));
+                expect(position.pixels, closeTo(0, .01));
+              }
+              expect(
+                MediaQuery.textScalerOf(
+                  tester.element(find.byType(TimetableGrid)),
+                ).scale(14),
+                closeTo(scale * 14, .01),
+              );
+              final lastCourse = find.byKey(
+                const ValueKey('timetable-course-hit-last-day'),
+              );
+              expect(lastCourse.hitTestable(), findsOneWidget);
+              await tester.tap(lastCourse);
+              expect(
+                opened?.course.name,
+                'Last selected day with full details',
+              );
+              expect(opened?.course.location, 'Building B201');
+              expect(opened?.course.teacher, 'Teacher');
+              expect(
+                tester.getSemantics(lastCourse).label,
+                contains('Building B201'),
+              );
+              semantics.dispose();
+              expect(tester.takeException(), isNull);
+
+              await tester.pumpWidget(grid(fit: false));
+              await tester.pumpAndSettle();
+              expect(
+                tester
+                    .getSize(
+                      find.byKey(const ValueKey('timetable-day-column-1')),
+                    )
+                    .width,
+                greaterThanOrEqualTo(scale == 2 ? 156 : 112),
+              );
+              expect(
+                _horizontalScrollState(
+                  tester,
+                  const ValueKey('timetable-grid-horizontal-scroll'),
+                ).position.maxScrollExtent,
+                greaterThan(0),
+              );
+              expect(tester.takeException(), isNull);
+            },
+          );
+        }
+      }
+    }
+  }
+
   testWidgets('reused week updates live outlines and conflict choices', (
     tester,
   ) async {
@@ -247,61 +568,65 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('day view keeps the full-week palette and observes color edits', (
-    tester,
-  ) async {
-    final timetable = _timetableWithCourses([
-      _course(
-        id: 'monday',
-        title: 'Monday',
-        weekday: 1,
-        startMinutes: 480,
-        endMinutes: 600,
-      ),
-      _course(
-        id: 'tuesday',
-        title: 'Tuesday',
-        weekday: 2,
-        startMinutes: 480,
-        endMinutes: 600,
-      ),
-    ]);
-    final colors = {'Monday': 0xffffffff, 'Tuesday': 0xff000000};
-    Future<void> pump(List<int> days) async {
-      await tester.pumpWidget(
-        _gridHarness(
-          timetable: timetable,
-          periodTimes: const [
-            CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 600),
-          ],
-          visibleWeekdays: days,
-          showDayHeader: false,
-          platform: TargetPlatform.windows,
-          themeColorMode: themeColorModeColorful,
-          courseColors: colors,
+  testWidgets(
+    'day view keeps its per-card text and observes only its own fill edits',
+    (tester) async {
+      final timetable = _timetableWithCourses([
+        _course(
+          id: 'monday',
+          title: 'Monday',
+          weekday: 1,
+          startMinutes: 480,
+          endMinutes: 600,
         ),
-      );
-      await tester.pumpAndSettle();
-    }
+        _course(
+          id: 'tuesday',
+          title: 'Tuesday',
+          weekday: 2,
+          startMinutes: 480,
+          endMinutes: 600,
+        ),
+      ]);
+      final colors = {'Monday': 0xffffffff, 'Tuesday': 0xff000000};
+      Future<void> pump(List<int> days) async {
+        await tester.pumpWidget(
+          _gridHarness(
+            timetable: timetable,
+            periodTimes: const [
+              CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 600),
+            ],
+            visibleWeekdays: days,
+            showDayHeader: false,
+            platform: TargetPlatform.windows,
+            themeColorMode: themeColorModeColorful,
+            courseColors: colors,
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
 
-    Color titleColor() =>
-        tester.widget<Text>(find.text('Monday')).style!.color!;
-    await pump(const [1, 2]);
-    final wholeWeekColor = titleColor();
-    await pump(const [1]);
-    expect(titleColor(), wholeWeekColor);
-    colors['Tuesday'] = 0xffffffff;
-    await pump(const [1]);
-    expect(titleColor(), isNot(wholeWeekColor));
-    final editedDayColor = titleColor();
-    await pump(const [1, 2]);
-    expect(titleColor(), editedDayColor);
-    expect(
-      tester.widget<Text>(find.text('Tuesday')).style!.color,
-      editedDayColor,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      Color titleColor() =>
+          tester.widget<Text>(find.text('Monday')).style!.color!;
+      await pump(const [1, 2]);
+      final wholeWeekColor = titleColor();
+      await pump(const [1]);
+      expect(titleColor(), wholeWeekColor);
+      colors['Tuesday'] = 0xffffffff;
+      await pump(const [1]);
+      expect(titleColor(), wholeWeekColor);
+      colors['Monday'] = 0xff000000;
+      await pump(const [1]);
+      expect(titleColor(), isNot(wholeWeekColor));
+      final editedDayColor = titleColor();
+      await pump(const [1, 2]);
+      expect(titleColor(), editedDayColor);
+      expect(
+        tester.widget<Text>(find.text('Tuesday')).style!.color,
+        isNot(editedDayColor),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final platform in [
     TargetPlatform.windows,
@@ -1174,10 +1499,10 @@ void main() {
     );
   });
 
-  testWidgets('fit mode divides all visible columns across the viewport', (
+  testWidgets('fit mode divides readable columns across a wide viewport', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(360, 640));
+    await tester.binding.setSurfaceSize(const Size(1000, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
@@ -1287,94 +1612,103 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('switching fit mode clamps synchronized scroll offsets', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(360, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    var fitVisibleDaysToWidth = false;
-    late void Function(void Function()) updateGrid;
-    final timetable = _timetableWithCourses([
-      _course(
-        id: 'fit-toggle-course',
-        weekday: DateTime.monday,
-        startMinutes: 480,
-        endMinutes: 525,
-      ),
-    ]);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: StatefulBuilder(
-          builder: (context, setState) {
-            updateGrid = setState;
-            return Scaffold(
-              body: SizedBox.expand(
-                child: TimetableGrid(
-                  timetable: timetable,
-                  periodTimes: buildDefaultPeriodTimes().take(4).toList(),
-                  weekDateStart: DateTime(2026, 1, 5),
-                  selectedWeek: 1,
-                  realCurrentWeek: 1,
-                  localeCode: 'en',
-                  preserveGaps: true,
-                  showPastEndedCourses: true,
-                  showFutureCourses: true,
-                  showGridLines: true,
-                  onCourseTap: (_) {},
-                  onEmptySlotTap: (_) {},
-                  themeColorMode: themeColorModeSingle,
-                  courseNameColorValues: const {},
-                  colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
-                  liveCourseOutlineEnabled: false,
-                  liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
-                  liveCourseOutlineColorValue: 0xFF6750A4,
-                  liveCourseOutlineWidth: 2,
-                  fitVisibleDaysToWidth: fitVisibleDaysToWidth,
-                ),
-              ),
-            );
-          },
+  testWidgets(
+    'turning on fit mode clears horizontal offsets at the current width',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var fitVisibleDaysToWidth = false;
+      late void Function(void Function()) updateGrid;
+      final timetable = _timetableWithCourses([
+        _course(
+          id: 'fit-toggle-course',
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 525,
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      ]);
 
-    const bodyKey = ValueKey('timetable-grid-horizontal-scroll');
-    final bodyFinder = find.byKey(bodyKey);
-    await tester.drag(bodyFinder, const Offset(-180, 0));
-    await tester.pumpAndSettle();
-    final bodyBeforeToggle = _horizontalScrollState(
-      tester,
-      bodyKey,
-    ).position.pixels;
-    expect(bodyBeforeToggle, greaterThan(0));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              updateGrid = setState;
+              return Scaffold(
+                body: SizedBox.expand(
+                  child: TimetableGrid(
+                    timetable: timetable,
+                    periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+                    weekDateStart: DateTime(2026, 1, 5),
+                    selectedWeek: 1,
+                    realCurrentWeek: 1,
+                    localeCode: 'en',
+                    preserveGaps: true,
+                    showPastEndedCourses: true,
+                    showFutureCourses: true,
+                    showGridLines: true,
+                    onCourseTap: (_) {},
+                    onEmptySlotTap: (_) {},
+                    themeColorMode: themeColorModeSingle,
+                    courseNameColorValues: const {},
+                    colorfulCourseTextColorMode:
+                        colorfulCourseTextColorModeAuto,
+                    liveCourseOutlineEnabled: false,
+                    liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
+                    liveCourseOutlineColorValue: 0xFF6750A4,
+                    liveCourseOutlineWidth: 2,
+                    fitVisibleDaysToWidth: fitVisibleDaysToWidth,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    updateGrid(() => fitVisibleDaysToWidth = true);
-    await tester.pumpAndSettle();
-    final fitBody = _horizontalScrollState(tester, bodyKey);
-    final fitHeader = _horizontalScrollState(
-      tester,
-      const ValueKey('timetable-day-header-horizontal-scroll'),
-    );
-    expect(fitBody.position.maxScrollExtent, closeTo(0, 0.01));
-    expect(fitHeader.position.maxScrollExtent, closeTo(0, 0.01));
-    expect(fitBody.position.pixels, closeTo(0, 0.01));
-    expect(fitHeader.position.pixels, closeTo(0, 0.01));
+      const bodyKey = ValueKey('timetable-grid-horizontal-scroll');
+      final bodyFinder = find.byKey(bodyKey);
+      await tester.drag(bodyFinder, const Offset(-180, 0));
+      await tester.pumpAndSettle();
+      final bodyBeforeToggle = _horizontalScrollState(
+        tester,
+        bodyKey,
+      ).position.pixels;
+      expect(bodyBeforeToggle, greaterThan(0));
 
-    updateGrid(() => fitVisibleDaysToWidth = false);
-    await tester.pumpAndSettle();
-    final restoredBody = _horizontalScrollState(tester, bodyKey);
-    final restoredHeader = _horizontalScrollState(
-      tester,
-      const ValueKey('timetable-day-header-horizontal-scroll'),
-    );
-    expect(restoredBody.position.maxScrollExtent, greaterThan(0));
-    expect(restoredHeader.position.maxScrollExtent, greaterThan(0));
-    expect(restoredBody.position.pixels, closeTo(0, 0.01));
-    expect(restoredHeader.position.pixels, closeTo(0, 0.01));
-    expect(tester.takeException(), isNull);
-  });
+      updateGrid(() => fitVisibleDaysToWidth = true);
+      await tester.pumpAndSettle();
+      final fitBody = _horizontalScrollState(tester, bodyKey);
+      final fitHeader = _horizontalScrollState(
+        tester,
+        const ValueKey('timetable-day-header-horizontal-scroll'),
+      );
+      expect(fitBody.position.maxScrollExtent, closeTo(0, .01));
+      expect(fitHeader.position.maxScrollExtent, closeTo(0, .01));
+      expect(fitBody.position.pixels, closeTo(0, .01));
+      expect(fitHeader.position.pixels, closeTo(0, .01));
+      await tester.binding.setSurfaceSize(const Size(1000, 640));
+      await tester.pumpAndSettle();
+      expect(fitBody.position.maxScrollExtent, closeTo(0, 0.01));
+      expect(fitHeader.position.maxScrollExtent, closeTo(0, 0.01));
+      expect(fitBody.position.pixels, closeTo(0, 0.01));
+      expect(fitHeader.position.pixels, closeTo(0, 0.01));
+
+      updateGrid(() => fitVisibleDaysToWidth = false);
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      await tester.pumpAndSettle();
+      final restoredBody = _horizontalScrollState(tester, bodyKey);
+      final restoredHeader = _horizontalScrollState(
+        tester,
+        const ValueKey('timetable-day-header-horizontal-scroll'),
+      );
+      expect(restoredBody.position.maxScrollExtent, greaterThan(0));
+      expect(restoredHeader.position.maxScrollExtent, greaterThan(0));
+      expect(restoredBody.position.pixels, closeTo(0, 0.01));
+      expect(restoredHeader.position.pixels, closeTo(0, 0.01));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('fit mode remains bounded on a narrow large-text viewport', (
     tester,
@@ -1401,8 +1735,28 @@ void main() {
       tester,
       const ValueKey('timetable-grid-horizontal-scroll'),
     );
-    expect(headerScroll.position.maxScrollExtent, closeTo(0, 0.01));
-    expect(bodyScroll.position.maxScrollExtent, closeTo(0, 0.01));
+    expect(headerScroll.position.maxScrollExtent, closeTo(0, .01));
+    expect(bodyScroll.position.maxScrollExtent, closeTo(0, .01));
+    expect(
+      headerScroll.position.pixels,
+      closeTo(bodyScroll.position.pixels, .5),
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('timetable-day-column-1')))
+          .width,
+      closeTo(
+        tester
+                .getSize(
+                  find.byKey(
+                    const ValueKey('timetable-grid-horizontal-scroll'),
+                  ),
+                )
+                .width /
+            7,
+        .01,
+      ),
+    );
     expect(tester.takeException(), isNull);
   });
 

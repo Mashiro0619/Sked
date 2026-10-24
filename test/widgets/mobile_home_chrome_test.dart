@@ -155,6 +155,7 @@ void main() {
           await p.workspaces.switchMode(AppMode.student);
           await t.pumpAndSettle();
           expectReadableDates(t);
+          expect(p.settingsView.fitWeekColumnsToWidth, isTrue);
           final toolbar = find.byType(SkedWorkspaceToolbar).hitTestable().first;
           final toolbarRect = t.getRect(toolbar);
           expect(toolbarRect.top, 28);

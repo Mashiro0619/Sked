@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals, mapEquals;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/semantics.dart' show SemanticsProperties;
 import 'package:material_ui/material_ui.dart';
 
 import '../models/timetable_models.dart';
 import '../theme/color_contrast.dart';
 import '../theme/sked_expressive_theme.dart';
+import '../theme/timetable_contrast.dart';
 import 'timetable_entry.dart';
 import 'timetable_week_projection.dart';
 import 'sked_calendar_day_label.dart';
@@ -184,14 +185,6 @@ class _TimetableGridState extends State<TimetableGrid> {
           List<_CourseGeometry> geometries,
         })
       >{};
-  ({
-    Map<int, List<CourseLayout>> layouts,
-    Map<String, int> courseColors,
-    Color surface,
-    Color fallback,
-    Color result,
-  })?
-  _colorfulTextCache;
 
   @override
   void initState() {
@@ -269,38 +262,14 @@ class _TimetableGridState extends State<TimetableGrid> {
     return geometries;
   }
 
-  Color? _colorfulTextFor(
-    Map<int, List<CourseLayout>> layouts,
-    ColorScheme colors,
-  ) {
+  Color? _customColorfulText() {
     if (widget.themeColorMode != themeColorModeColorful) return null;
     if (widget.colorfulCourseTextColorMode ==
             colorfulCourseTextColorModeCustom &&
         widget.colorfulCourseTextColorValue != null) {
       return Color(widget.colorfulCourseTextColorValue!);
     }
-    final previous = _colorfulTextCache;
-    if (previous != null &&
-        identical(previous.layouts, layouts) &&
-        mapEquals(previous.courseColors, widget.courseNameColorValues) &&
-        previous.surface == colors.surface &&
-        previous.fallback == colors.onSecondaryContainer) {
-      return previous.result;
-    }
-    final result = resolveSharedColorfulTextColor(
-      layouts: layouts.values.expand((items) => items),
-      courseNameColorValues: widget.courseNameColorValues,
-      surfaceColor: colors.surface,
-      fallbackColor: colors.onSecondaryContainer,
-    );
-    _colorfulTextCache = (
-      layouts: layouts,
-      courseColors: Map.of(widget.courseNameColorValues),
-      surface: colors.surface,
-      fallback: colors.onSecondaryContainer,
-      result: result,
-    );
-    return result;
+    return null;
   }
 
   @override
@@ -405,12 +374,10 @@ class _TimetableGridState extends State<TimetableGrid> {
       widget.entries == null || widget.onEntryTap != null,
       'onEntryTap must be provided when entries is provided',
     );
-    // Resolve automatic colorful text against the complete week so switching
-    // the day view cannot make the same course palette change text color.
     final dayLayoutsByWeekday = _weekProjection.resolveLayouts(
       widget.displayedCourseIdForConflict,
     );
-    final colorfulTextColor = _colorfulTextFor(dayLayoutsByWeekday, colors);
+    final colorfulTextColor = _customColorfulText();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1642,11 +1609,17 @@ class _CourseCard extends StatelessWidget {
       context,
       'course:${layout.course?.id}',
     );
+    final renderedBackground = Color.alphaBlend(color, colorScheme.surface);
+    final outline = resolveTimetableOutlineColors(
+      selected ? colorScheme.primary : outlineColor,
+      cardBackground: renderedBackground,
+      surroundingSurface: colorScheme.surface,
+    );
     final side = selected
-        ? BorderSide(color: colorScheme.primary, width: 2)
+        ? BorderSide(color: outline.outer, width: 2)
         : _isLiveHighlighted
         ? BorderSide(
-            color: outlineColor,
+            color: outline.outer,
             width: _isPrimaryLiveTarget
                 ? effectivePrimaryOutlineWidth
                 : effectiveOutlineWidth,
@@ -1660,6 +1633,33 @@ class _CourseCard extends StatelessWidget {
     );
     final itemId = layout.entry?.id ?? layout.course?.id ?? _title;
 
+    Widget withOutlineGuard(Widget child) {
+      final guard = outline.inner;
+      if (side == BorderSide.none || guard == null) return child;
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          child,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Padding(
+                padding: EdgeInsets.all(side.width),
+                child: DecoratedBox(
+                  key: ValueKey('timetable-course-outline-guard-$itemId'),
+                  decoration: ShapeDecoration(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(desktop ? 3 : 5),
+                      side: BorderSide(color: guard, width: 1),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return PositionedDirectional(
       top: geometry.visualTop,
       start: metrics.courseGap,
@@ -1669,188 +1669,196 @@ class _CourseCard extends StatelessWidget {
         child: Card.filled(
           key: ValueKey('timetable-course-visual-$itemId'),
           margin: EdgeInsets.zero,
-          color: color,
+          // Precompose once so a translucent overlap never mixes a lower
+          // card's glyphs into the fill used for contrast selection.
+          color: renderedBackground,
           clipBehavior: Clip.antiAlias,
           elevation: 0,
           shape: shape,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: metrics.cardPadding,
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final textColor =
-                    (themeColorMode == themeColorModeColorful
-                            ? (colorfulTextColor ??
-                                  colorScheme.onSecondaryContainer)
-                            : (_isInactiveForCurrentWeek
-                                  ? colorScheme.onSurfaceVariant
-                                  : colorScheme.onSecondaryContainer))
-                        .withValues(
-                          alpha: _isInactiveForCurrentWeek
-                              ? 0.9
-                              : layout.priorityDepth == 0
-                              ? 0.96
-                              : 0.92,
-                        );
-                final desktopCourse =
-                    desktop &&
-                    layout.entry?.kind != TimetableEntryKind.generalEvent;
-                // Colorful mode keeps its shared automatic/custom text color.
-                // Theme-derived monochrome cards can use a stronger hierarchy.
-                final foregrounds =
-                    desktopCourse && themeColorMode != themeColorModeColorful
-                    ? _desktopCourseForegrounds(
-                        _isInactiveForCurrentWeek
-                            ? colorScheme.onSurfaceVariant
-                            : colorScheme.onSurface,
-                        Color.alphaBlend(color, colorScheme.surface),
-                      )
-                    : (title: textColor, metadata: textColor);
-                final titleStyle =
-                    (compact ? textTheme.titleSmall : textTheme.titleMedium)
-                        ?.copyWith(
-                          fontWeight: desktopCourse
-                              ? FontWeight.w600
-                              : FontWeight.w700,
-                          height: desktopCourse ? 1.2 : 1.1,
-                          color: foregrounds.title,
-                        );
-                final bodyStyle = desktopCourse
-                    ? textTheme.bodySmall?.copyWith(
-                        fontSize: compact ? 12 : 13,
-                        height: 1.3,
-                        color: foregrounds.metadata,
-                        fontWeight: FontWeight.w400,
-                      )
-                    : (compact ? textTheme.bodySmall : textTheme.bodyMedium)
-                          ?.copyWith(height: 1.1, color: textColor);
-                final teacherStyle = desktopCourse
-                    ? bodyStyle
-                    : (compact ? textTheme.labelSmall : textTheme.labelMedium)
+          child: withOutlineGuard(
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: metrics.cardPadding,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final textColor = themeColorMode == themeColorModeColorful
+                      ? colorfulTextColor ??
+                            resolveAutomaticTimetableTextColor(
+                              renderedBackground,
+                              preferred: colorScheme.onSecondaryContainer,
+                            )
+                      : (_isInactiveForCurrentWeek
+                                ? colorScheme.onSurfaceVariant
+                                : colorScheme.onSecondaryContainer)
+                            .withValues(
+                              alpha: _isInactiveForCurrentWeek
+                                  ? 0.9
+                                  : layout.priorityDepth == 0
+                                  ? 0.96
+                                  : 0.92,
+                            );
+                  final desktopCourse =
+                      desktop &&
+                      layout.entry?.kind != TimetableEntryKind.generalEvent;
+                  // Colorful automatic text is resolved against this card's
+                  // final fill; explicit user colors remain unchanged.
+                  // Theme-derived monochrome cards can use a stronger hierarchy.
+                  final foregrounds =
+                      desktopCourse && themeColorMode != themeColorModeColorful
+                      ? _desktopCourseForegrounds(
+                          _isInactiveForCurrentWeek
+                              ? colorScheme.onSurfaceVariant
+                              : colorScheme.onSurface,
+                          Color.alphaBlend(color, colorScheme.surface),
+                        )
+                      : (title: textColor, metadata: textColor);
+                  final titleStyle =
+                      (compact ? textTheme.titleSmall : textTheme.titleMedium)
                           ?.copyWith(
-                            height: 1.1,
-                            color: textColor,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: desktopCourse
+                                ? FontWeight.w600
+                                : FontWeight.w700,
+                            height: desktopCourse ? 1.2 : 1.1,
+                            color: foregrounds.title,
                           );
-                final showConflict =
-                    layout.isFullConflict &&
-                    cardHeight >= 24 &&
-                    (desktop ? width >= 32 : constraints.maxWidth >= 18);
-                final conflictBadge = showConflict
-                    ? Container(
-                        key: ValueKey('timetable-course-conflict-$itemId'),
-                        padding: EdgeInsets.all(compact ? 2 : 3),
-                        decoration: ShapeDecoration(
-                          color: colorScheme.primary.withValues(alpha: 0.18),
-                          shape: skedShapeSchemeOf(context).selectionIndicator,
-                        ),
-                        child: Icon(
-                          Icons.layers_outlined,
-                          size: compact ? 14 : 16,
-                          color: textColor,
-                        ),
-                      )
-                    : null;
-                return Stack(
-                  children: [
-                    if (desktopCourse)
-                      Positioned.fill(
-                        child: _DesktopCourseTypography(
-                          title: _title,
-                          location: _location,
-                          teacher: _teacher,
-                          titleStyle: titleStyle,
-                          metadataStyle: bodyStyle,
-                          reserveConflict:
-                              layout.isFullConflict &&
-                              cardHeight >= 24 &&
-                              width >= 32,
-                        ),
-                      )
-                    else if (!desktop)
-                      Positioned.fill(
-                        child: _TouchCourseTypography(
-                          title: _title,
-                          location: _location,
-                          teacher: _teacher,
-                          titleStyle: titleStyle,
-                          locationStyle: bodyStyle,
-                          teacherStyle: teacherStyle,
-                          conflictBadge: conflictBadge,
-                          badgeExtent: compact ? 18 : 22,
-                        ),
-                      )
-                    else
-                      Positioned.fill(
-                        child: ClipRect(
-                          child: Padding(
-                            padding: EdgeInsetsDirectional.only(
-                              end: layout.isFullConflict && cardHeight >= 24
-                                  ? 22
-                                  : 0,
-                            ),
-                            child: OverflowBox(
-                              alignment: AlignmentDirectional.topStart,
-                              minWidth: constraints.maxWidth,
-                              maxWidth: constraints.maxWidth,
-                              minHeight: 0,
-                              maxHeight: double.infinity,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (_title.isNotEmpty)
-                                    Text(
-                                      _title,
-                                      softWrap: true,
-                                      overflow:
-                                          WorkbenchChromeMetrics.of(context)
-                                              .desktop
-                                          ? TextOverflow.ellipsis
-                                          : TextOverflow.visible,
-                                      maxLines:
-                                          WorkbenchChromeMetrics.of(context)
-                                              .desktop
-                                          ? (constraints.maxHeight >
-                                                    MediaQuery.textScalerOf(
-                                                      context,
-                                                    ).scale(44)
-                                                ? 2
-                                                : 1)
-                                          : null,
-                                      style: titleStyle,
-                                    ),
-                                  if (_location.isNotEmpty)
-                                    Text(
-                                      _location,
-                                      softWrap: true,
-                                      overflow: TextOverflow.visible,
-                                      style: bodyStyle,
-                                    ),
-                                  if (_teacher.isNotEmpty)
-                                    Text(
-                                      _teacher,
-                                      softWrap: true,
-                                      overflow: TextOverflow.visible,
-                                      style: teacherStyle,
-                                    ),
-                                ],
+                  final bodyStyle = desktopCourse
+                      ? textTheme.bodySmall?.copyWith(
+                          fontSize: compact ? 12 : 13,
+                          height: 1.3,
+                          color: foregrounds.metadata,
+                          fontWeight: FontWeight.w400,
+                        )
+                      : (compact ? textTheme.bodySmall : textTheme.bodyMedium)
+                            ?.copyWith(height: 1.1, color: textColor);
+                  final teacherStyle = desktopCourse
+                      ? bodyStyle
+                      : (compact ? textTheme.labelSmall : textTheme.labelMedium)
+                            ?.copyWith(
+                              height: 1.1,
+                              color: textColor,
+                              fontWeight: FontWeight.w600,
+                            );
+                  final showConflict =
+                      layout.isFullConflict &&
+                      cardHeight >= 24 &&
+                      (desktop ? width >= 32 : constraints.maxWidth >= 18);
+                  final conflictBadge = showConflict
+                      ? Container(
+                          key: ValueKey('timetable-course-conflict-$itemId'),
+                          padding: EdgeInsets.all(compact ? 2 : 3),
+                          decoration: ShapeDecoration(
+                            color: colorScheme.primary.withValues(alpha: 0.18),
+                            shape: skedShapeSchemeOf(context)
+                                .selectionIndicator,
+                          ),
+                          child: Icon(
+                            Icons.layers_outlined,
+                            size: compact ? 14 : 16,
+                            color: textColor,
+                          ),
+                        )
+                      : null;
+                  return Stack(
+                    children: [
+                      if (desktopCourse)
+                        Positioned.fill(
+                          child: _DesktopCourseTypography(
+                            title: _title,
+                            location: _location,
+                            teacher: _teacher,
+                            titleStyle: titleStyle,
+                            metadataStyle: bodyStyle,
+                            reserveConflict:
+                                layout.isFullConflict &&
+                                cardHeight >= 24 &&
+                                width >= 32,
+                          ),
+                        )
+                      else if (!desktop)
+                        Positioned.fill(
+                          child: _TouchCourseTypography(
+                            title: _title,
+                            location: _location,
+                            teacher: _teacher,
+                            titleStyle: titleStyle,
+                            locationStyle: bodyStyle,
+                            teacherStyle: teacherStyle,
+                            conflictBadge: conflictBadge,
+                            badgeExtent: compact ? 18 : 22,
+                          ),
+                        )
+                      else
+                        Positioned.fill(
+                          child: ClipRect(
+                            child: Padding(
+                              padding: EdgeInsetsDirectional.only(
+                                end: layout.isFullConflict && cardHeight >= 24
+                                    ? 22
+                                    : 0,
+                              ),
+                              child: OverflowBox(
+                                alignment: AlignmentDirectional.topStart,
+                                minWidth: constraints.maxWidth,
+                                maxWidth: constraints.maxWidth,
+                                minHeight: 0,
+                                maxHeight: double.infinity,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_title.isNotEmpty)
+                                      Text(
+                                        _title,
+                                        softWrap: true,
+                                        overflow:
+                                            WorkbenchChromeMetrics.of(context)
+                                                .desktop
+                                            ? TextOverflow.ellipsis
+                                            : TextOverflow.visible,
+                                        maxLines:
+                                            WorkbenchChromeMetrics.of(context)
+                                                .desktop
+                                            ? (constraints.maxHeight >
+                                                      MediaQuery.textScalerOf(
+                                                        context,
+                                                      ).scale(44)
+                                                  ? 2
+                                                  : 1)
+                                            : null,
+                                        style: titleStyle,
+                                      ),
+                                    if (_location.isNotEmpty)
+                                      Text(
+                                        _location,
+                                        softWrap: true,
+                                        overflow: TextOverflow.visible,
+                                        style: bodyStyle,
+                                      ),
+                                    if (_teacher.isNotEmpty)
+                                      Text(
+                                        _teacher,
+                                        softWrap: true,
+                                        overflow: TextOverflow.visible,
+                                        style: teacherStyle,
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    if (desktop && conflictBadge != null)
-                      PositionedDirectional(
-                        end: 0,
-                        bottom: 0,
-                        child: conflictBadge,
-                      ),
-                  ],
-                );
-              },
+                      if (desktop && conflictBadge != null)
+                        PositionedDirectional(
+                          end: 0,
+                          bottom: 0,
+                          child: conflictBadge,
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -2593,64 +2601,4 @@ String _semanticLabelForGeometry(_CourseGeometry geometry) {
     if (teacher.isNotEmpty) teacher,
     '${formatMinutes(geometry.startMinutes)}–${formatMinutes(geometry.endMinutes)}',
   ].join(', ');
-}
-
-Color resolveSharedColorfulTextColor({
-  required Iterable<CourseLayout> layouts,
-  required Map<String, int> courseNameColorValues,
-  required Color surfaceColor,
-  required Color fallbackColor,
-}) {
-  var minLuminance = 1.0;
-  var foundColor = false;
-
-  for (final layout in layouts) {
-    final normalizedColorName =
-        layout.entry?.colorName ??
-        (layout.course != null
-            ? normalizeCourseColorName(layout.course!.name)
-            : '');
-    if (normalizedColorName.isEmpty) {
-      continue;
-    }
-    final courseColorValue = courseNameColorValues[normalizedColorName];
-    if (courseColorValue == null) {
-      continue;
-    }
-    foundColor = true;
-    final activeBaseColor = Color(courseColorValue);
-    final inactiveColor =
-        Color.lerp(activeBaseColor, surfaceColor, 0.74) ?? surfaceColor;
-    final baseColor = switch (layout.displayState) {
-      CourseDisplayState.active => activeBaseColor,
-      CourseDisplayState.futureInactive =>
-        Color.lerp(activeBaseColor, surfaceColor, 0.58) ?? surfaceColor,
-      CourseDisplayState.pastEnded => inactiveColor,
-    };
-    final blendedColor = Color.alphaBlend(
-      baseColor.withValues(
-        alpha: layout.displayState != CourseDisplayState.active
-            ? (layout.displayState == CourseDisplayState.pastEnded
-                  ? 0.92
-                  : 0.96)
-            : layout.isFullConflict
-            ? 0.94
-            : layout.priorityDepth == 0
-            ? 0.92
-            : math.max(0.48, 0.82 - (layout.priorityDepth * 0.10)),
-      ),
-      surfaceColor,
-    );
-    minLuminance = math.min(minLuminance, blendedColor.computeLuminance());
-  }
-
-  if (!foundColor) {
-    return fallbackColor;
-  }
-
-  final colorfulTextProgress = minLuminance < 0.5
-      ? minLuminance * 0.4
-      : 0.8 + ((minLuminance - 0.5) * 0.4);
-  return Color.lerp(Colors.white, Colors.black, colorfulTextProgress) ??
-      fallbackColor;
 }

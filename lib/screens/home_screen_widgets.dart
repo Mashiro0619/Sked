@@ -1902,8 +1902,10 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
         focusNode: _shortcutFocusNode,
         autofocus: widget.shortcutFocusNode == null && shortcutsEnabled,
         canRequestFocus: shortcutsEnabled,
-        descendantsAreFocusable: shortcutsEnabled,
-        descendantsAreTraversable: shortcutsEnabled,
+        // Inner scrolling only disables the outer week shortcuts. Courses
+        // must retain their own keyboard activation on narrow viewports.
+        descendantsAreFocusable: _shortcutsEnabled && widget.interactive,
+        descendantsAreTraversable: _shortcutsEnabled && widget.interactive,
         child: pageView,
       ),
     );

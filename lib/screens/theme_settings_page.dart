@@ -27,6 +27,7 @@ import '../controllers/workspace_commands.dart';
 import '../controllers/workspace_view_state.dart';
 import '../providers/workspace_theme_target.dart';
 import '../theme/app_theme.dart';
+import '../theme/timetable_contrast.dart';
 import '../widgets/settings_preview_layout.dart';
 import '../widgets/settings_page_header.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -1166,6 +1167,31 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                         ),
                                 ),
                               ),
+                              if (mode == colorfulCourseTextColorModeCustom &&
+                                  draft.validHex &&
+                                  hasLowContrastCourseText(
+                                    textColor: Color(colorValue),
+                                    courseColorValues:
+                                        provider.courseNameColorValues.values,
+                                    surfaceColor: SkedSurface.colorOf(context),
+                                  ))
+                                Padding(
+                                  key: const ValueKey(
+                                    'course-text-low-contrast-hint',
+                                  ),
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Text(
+                                    l10n.courseTextLowContrastHint,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),

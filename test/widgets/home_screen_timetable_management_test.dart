@@ -30,6 +30,7 @@ import 'package:sked/services/export_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
+import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 import 'package:sked/widgets/timetable_grid.dart';
@@ -3300,6 +3301,16 @@ void main() {
     await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
+    final horizontal = find.byKey(
+      const ValueKey('timetable-grid-horizontal-scroll'),
+    );
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(of: horizontal, matching: find.byType(Scrollable)),
+        )
+        .position;
+    expect(position.maxScrollExtent, 0);
+
     await tester.drag(
       find.byKey(const ValueKey('timetable-grid-horizontal-scroll')),
       const Offset(-180, 0),
@@ -3307,6 +3318,78 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.studentView.selectedWeek, 6);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'fitted narrow week changes week directly without column scrolling',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 776));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      await provider.studentCommands.setSelectedWeek(5);
+      expect(provider.settingsView.fitWeekColumnsToWidth, isTrue);
+      await _pumpHomeScreenWithProvider(tester, provider);
+      final horizontal = find.byKey(
+        const ValueKey('timetable-grid-horizontal-scroll'),
+      );
+      ScrollPosition currentPosition() => tester
+          .state<ScrollableState>(
+            find.descendant(of: horizontal, matching: find.byType(Scrollable)),
+          )
+          .position;
+      expect(currentPosition().maxScrollExtent, closeTo(0, .01));
+      await tester.drag(horizontal, const Offset(-180, 0));
+      await tester.pumpAndSettle();
+      expect(provider.studentView.selectedWeek, 6);
+      expect(provider.settingsView.fitWeekColumnsToWidth, isTrue);
+      expect(currentPosition().maxScrollExtent, closeTo(0, .01));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('fitted narrow week retains keyboard course details', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.studentCommands.setSelectedWeek(5);
+    await provider.studentCommands.saveCourse(
+      CourseItem(
+        id: 'keyboard-course',
+        name: 'Keyboard course',
+        teacher: 'Teacher',
+        location: 'Room B201',
+        dayOfWeek: 1,
+        semesterWeeks: const [5],
+        periods: const [1, 2],
+        startMinutes: 480,
+        endMinutes: 580,
+        timeRange: buildTimeRange(480, 580),
+        credit: 0,
+        remarks: '',
+        customFields: const {},
+      ),
+    );
+    await _pumpHomeScreenWithProvider(tester, provider);
+    final hit = find.byKey(
+      const ValueKey('timetable-course-hit-keyboard-course'),
+    );
+    final focus = Focus.of(
+      find
+          .descendant(of: hit, matching: find.byType(MouseRegion))
+          .evaluate()
+          .first,
+    );
+    expect(focus.canRequestFocus, isTrue);
+    focus.requestFocus();
+    await tester.pump();
+    expect(focus.hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.byType(CourseDetailsSheet), findsOneWidget);
+    expect(provider.studentView.selectedWeek, 5);
     expect(tester.takeException(), isNull);
   });
 

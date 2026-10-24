@@ -24,6 +24,7 @@ import 'package:sked/theme/color_contrast.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 import '../support/data_transfer_codec.dart';
+import '../support/mobile_layout_data.dart';
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -204,6 +205,62 @@ Future<void> _chooseAppearance(
 }
 
 void main() {
+  testWidgets(
+    'custom low contrast text warns and still saves the chosen color',
+    (tester) async {
+      _setTestViewport(tester, const Size(900, 1200));
+      addTearDown(() => _resetTestViewport(tester));
+      final initial = mobileLayoutData(locale: 'en');
+      final storage = _BlockingTimetableStorage(
+        initial.copyWith(
+          activeMode: AppMode.student,
+          themeColorMode: themeColorModeColorful,
+          studentMode: initial.studentMode.copyWith(
+            themeColorMode: themeColorModeColorful,
+            courseNameColorValues: {
+              for (final table in initial.studentMode.timetables)
+                for (final course in table.courses) course.name: 0xffe57373,
+            },
+            colorfulCourseTextColorMode: colorfulCourseTextColorModeCustom,
+            colorfulUiColorValues: const {
+              colorfulCourseTextColorKey: 0xffe57373,
+            },
+          ),
+        ),
+      );
+      final provider = await _createProvider(storage);
+      addTearDown(provider.dispose);
+      await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+      await tester.pumpAndSettle();
+      final tile = find.byKey(
+        const ValueKey('theme-ui-color-$colorfulCourseTextColorKey'),
+      );
+      await _revealThemeSetting(tester, tile);
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('course-text-low-contrast-hint')),
+        findsOneWidget,
+      );
+      final field = find.byKey(
+        const ValueKey('compact-color-picker-hex-field'),
+      );
+      await tester.enterText(field, '#E47373');
+      await tester.pumpAndSettle();
+      final apply = find.widgetWithText(FilledButton, 'Apply settings');
+      expect(tester.widget<FilledButton>(apply).onPressed, isNotNull);
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+      expect(
+        provider.settingsView.colorfulUiColorValues[colorfulCourseTextColorKey],
+        0xffe47373,
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final previewBrightness in Brightness.values) {
     testWidgets(
       '$previewBrightness preview icons contrast with their own surface',
