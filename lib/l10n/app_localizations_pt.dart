@@ -3151,4 +3151,18 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Evento sem título';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'O Windows só agenda lembretes para os próximos $days dias, até $capacity de cada vez. Volte a abrir a aplicação regularmente para atualizar o plano.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Lembretes agendados: $count. A última verificação abrange o período até $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'O limite de lembretes foi atingido. Alguns ainda não estão agendados. Volte a abrir a aplicação depois de os próximos lembretes serem apresentados para atualizar o plano.';
 }

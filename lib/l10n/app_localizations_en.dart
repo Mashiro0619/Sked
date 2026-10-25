@@ -3108,4 +3108,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Untitled event';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows only schedules reminders for the next $days days, up to $capacity at a time. Reopen the app regularly to refresh the plan.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reminders scheduled.',
+      one: '1 reminder scheduled.',
+      zero: 'No reminders scheduled.',
+    );
+    return '$_temp0 Last plan checked through $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.';
 }

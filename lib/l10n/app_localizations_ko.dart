@@ -3008,4 +3008,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => '제목 없는 일정';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows는 앞으로 $days일 이내의 알림을 한 번에 최대 $capacity개까지 예약합니다. 정기적으로 앱을 다시 열어 계획을 갱신하세요.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return '예약된 알림: $count개. 마지막 확인 범위는 $date까지입니다.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      '알림 개수 제한에 도달해 일부 알림이 아직 예약되지 않았습니다. 예정된 알림이 실행된 후 앱을 다시 열어 계획을 갱신하세요.';
 }

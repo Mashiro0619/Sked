@@ -3115,4 +3115,18 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Pealkirjata sündmus';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows ajastab meeldetuletusi ainult järgmiseks $days päevaks, korraga kuni $capacity. Plaani uuendamiseks ava rakendus regulaarselt uuesti.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Ajastatud meeldetuletusi: $count. Viimane kontroll hõlmab aega kuni $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Meeldetuletuste piirang on saavutatud. Mõned pole veel ajastatud. Plaani uuendamiseks ava rakendus pärast lähimate meeldetuletuste käivitumist uuesti.';
 }

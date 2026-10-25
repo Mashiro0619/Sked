@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Tato opakovaná událost nemá platné výskyty pro export do ICS. Pro zachování záznamu exportujte JSON.",
   "icsImportedCalendarName": "Importovaný kalendář",
   "icsUntitledEventName": "Událost bez názvu",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows plánuje připomenutí pouze na příštích {days} dní, nejvýše {capacity} najednou. Pravidelně aplikaci znovu otevírejte a aktualizujte plán.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Naplánovaná připomenutí: {count}. Poslední kontrola zahrnuje období do {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Byl dosažen limit připomenutí. Některá ještě nejsou naplánována. Po spuštění nejbližších připomenutí aplikaci znovu otevřete a aktualizujte plán.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

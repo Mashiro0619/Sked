@@ -2132,5 +2132,29 @@
   "icsExportEmptyRecurrenceMessage": "Ta ponavljajoči se dogodek nima veljavnih pojavitev za izvoz v ICS. Izvozite JSON, da ohranite zapis.",
   "icsImportedCalendarName": "Uvožen koledar",
   "icsUntitledEventName": "Dogodek brez naslova",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows načrtuje opomnike le za naslednjih {days} dni, največ {capacity} hkrati. Aplikacijo redno znova odprite, da osvežite načrt.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Načrtovani opomniki: {count}. Zadnje preverjanje zajema obdobje do {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Dosežena je omejitev števila opomnikov. Nekateri še niso načrtovani. Ko se sprožijo bližnji opomniki, znova odprite aplikacijo in osvežite načrt.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

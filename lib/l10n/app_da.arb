@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Denne gentagne begivenhed har ingen gyldige forekomster til ICS-eksport. Eksportér JSON for at bevare posten.",
   "icsImportedCalendarName": "Importeret kalender",
   "icsUntitledEventName": "Begivenhed uden titel",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows planlægger kun påmindelser for de næste {days} dage, højst {capacity} ad gangen. Åbn appen igen jævnligt for at opdatere planen.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Planlagte påmindelser: {count}. Seneste kontrol omfatter perioden frem til {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Grænsen for påmindelser er nået. Nogle er endnu ikke planlagt. Åbn appen igen, efter at kommende påmindelser er udløst, for at opdatere planen.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

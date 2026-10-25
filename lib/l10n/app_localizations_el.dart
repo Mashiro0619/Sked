@@ -3172,4 +3172,18 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Συμβάν χωρίς τίτλο';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Τα Windows προγραμματίζουν υπενθυμίσεις μόνο για τις επόμενες $days ημέρες, έως $capacity κάθε φορά. Ανοίγετε ξανά την εφαρμογή τακτικά για ενημέρωση του προγράμματος.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Προγραμματισμένες υπενθυμίσεις: $count. Ο τελευταίος έλεγχος καλύπτει έως $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Συμπληρώθηκε το όριο υπενθυμίσεων. Ορισμένες δεν έχουν προγραμματιστεί ακόμη. Ανοίξτε ξανά την εφαρμογή αφού ενεργοποιηθούν οι προσεχείς υπενθυμίσεις για ενημέρωση του προγράμματος.';
 }

@@ -3115,4 +3115,18 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Sự kiện không có tiêu đề';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows chỉ lên lịch lời nhắc trong $days ngày tới, tối đa $capacity lời nhắc mỗi lần. Hãy thường xuyên mở lại ứng dụng để cập nhật kế hoạch.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Lời nhắc đã lên lịch: $count. Lần kiểm tra gần nhất bao gồm khoảng thời gian đến $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Đã đạt giới hạn lời nhắc. Một số lời nhắc chưa được lên lịch. Hãy mở lại ứng dụng sau khi các lời nhắc sắp tới đã được kích hoạt để cập nhật kế hoạch.';
 }

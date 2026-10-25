@@ -2911,6 +2911,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => '无标题日程';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows 每次最多安排未来 $days 天内的 $capacity 条提醒。请定期重新打开应用更新计划。';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return '本次查询截至 $date，已安排 $count 条提醒。';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      '已达到提醒数量上限，其余提醒尚未安排。近期提醒触发后，请重新打开应用更新计划。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5821,4 +5835,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get icsUntitledEventName => '無標題日程';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows 每次最多安排未來 $days 天內的 $capacity 則提醒。請定期重新開啟應用程式更新計畫。';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return '本次查詢截至 $date，已安排 $count 則提醒。';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      '已達到提醒數量上限，其餘提醒尚未安排。近期提醒觸發後，請重新開啟應用程式更新計畫。';
 }

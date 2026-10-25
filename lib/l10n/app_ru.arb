@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "У этого повторяющегося события нет допустимых экземпляров для экспорта в ICS. Экспортируйте JSON, чтобы сохранить запись.",
   "icsImportedCalendarName": "Импортированный календарь",
   "icsUntitledEventName": "Событие без названия",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows планирует напоминания только на следующие {days} дней, до {capacity} за раз. Регулярно открывайте приложение заново, чтобы обновлять план.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Запланировано напоминаний: {count}. Последняя проверка охватывает период до {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Достигнут лимит напоминаний. Некоторые ещё не запланированы. После срабатывания ближайших напоминаний откройте приложение заново, чтобы обновить план.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

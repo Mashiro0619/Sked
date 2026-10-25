@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Αυτό το επαναλαμβανόμενο συμβάν δεν έχει έγκυρες εμφανίσεις για εξαγωγή σε ICS. Εξαγάγετε JSON για να διατηρήσετε την εγγραφή.",
   "icsImportedCalendarName": "Εισαγόμενο ημερολόγιο",
   "icsUntitledEventName": "Συμβάν χωρίς τίτλο",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Τα Windows προγραμματίζουν υπενθυμίσεις μόνο για τις επόμενες {days} ημέρες, έως {capacity} κάθε φορά. Ανοίγετε ξανά την εφαρμογή τακτικά για ενημέρωση του προγράμματος.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Προγραμματισμένες υπενθυμίσεις: {count}. Ο τελευταίος έλεγχος καλύπτει έως {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Συμπληρώθηκε το όριο υπενθυμίσεων. Ορισμένες δεν έχουν προγραμματιστεί ακόμη. Ανοίξτε ξανά την εφαρμογή αφού ενεργοποιηθούν οι προσεχείς υπενθυμίσεις για ενημέρωση του προγράμματος.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

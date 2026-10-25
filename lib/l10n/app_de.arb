@@ -2115,5 +2115,29 @@
   "icsExportEmptyRecurrenceMessage": "Dieser wiederkehrende Termin hat keine gültigen Vorkommen für den ICS-Export. Exportiere JSON, um den Eintrag zu erhalten.",
   "icsImportedCalendarName": "Importierter Kalender",
   "icsUntitledEventName": "Termin ohne Titel",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows plant Erinnerungen nur für die nächsten {days} Tage, höchstens {capacity} gleichzeitig. Öffne die App regelmäßig erneut, um den Plan zu aktualisieren.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Geplante Erinnerungen: {count}. Die letzte Prüfung reicht bis {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Das Erinnerungslimit ist erreicht. Einige Erinnerungen sind noch nicht geplant. Öffne die App erneut, nachdem anstehende Erinnerungen ausgelöst wurden, um den Plan zu aktualisieren.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

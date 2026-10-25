@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Tällä toistuvalla tapahtumalla ei ole kelvollisia esiintymiä ICS-vientiä varten. Vie JSON säilyttääksesi tietueen.",
   "icsImportedCalendarName": "Tuotu kalenteri",
   "icsUntitledEventName": "Nimetön tapahtuma",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows ajoittaa muistutuksia vain seuraaville {days} päivälle, enintään {capacity} kerrallaan. Avaa sovellus säännöllisesti uudelleen päivittääksesi suunnitelman.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Ajastettuja muistutuksia: {count}. Viimeisin tarkistus ulottuu aikaan {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Muistutusten enimmäismäärä on saavutettu. Joitakin muistutuksia ei ole vielä ajoitettu. Avaa sovellus uudelleen lähimpien muistutusten lauettua päivittääksesi suunnitelman.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

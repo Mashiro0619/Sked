@@ -3161,4 +3161,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Evento sin título';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows solo programa recordatorios para los próximos $days días, hasta $capacity a la vez. Vuelve a abrir la aplicación periódicamente para actualizar el plan.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Recordatorios programados: $count. La última comprobación abarca hasta $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Se ha alcanzado el límite de recordatorios. Algunos aún no están programados. Vuelve a abrir la aplicación después de que se activen los próximos recordatorios para actualizar el plan.';
 }

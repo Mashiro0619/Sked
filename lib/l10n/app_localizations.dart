@@ -5561,6 +5561,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Untitled event'**
   String get icsUntitledEventName;
+
+  /// No description provided for @notificationWindowsCoverageLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows only schedules reminders for the next {days} days, up to {capacity} at a time. Reopen the app regularly to refresh the plan.'**
+  String notificationWindowsCoverageLimit(int days, int capacity);
+
+  /// No description provided for @notificationWindowsCoverageSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No reminders scheduled.} =1{1 reminder scheduled.} other{{count} reminders scheduled.}} Last plan checked through {date}.'**
+  String notificationWindowsCoverageSummary(int count, String date);
+
+  /// No description provided for @notificationWindowsCoverageCapacityLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.'**
+  String get notificationWindowsCoverageCapacityLimited;
 }
 
 class _AppLocalizationsDelegate

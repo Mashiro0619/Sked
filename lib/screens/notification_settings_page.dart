@@ -323,11 +323,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         final permissionSubtitle = _permissionSubtitle(l10n);
         final exactAlarmSubtitle = _exactAlarmSubtitle(l10n);
         final autostartSubtitle = _autostartSubtitle(l10n);
-        final coverage = _notificationService.status.coverage;
+        final notificationStatus = _notificationService.status;
+        final coverage = notificationStatus.coverage;
         final showCoverageNotice =
             settings.notificationsEnabled &&
-            !_isWindows &&
-            (coverage == AgendaNotificationCoverage.renewable ||
+            (_isWindows ||
+                coverage == AgendaNotificationCoverage.renewable ||
                 coverage == AgendaNotificationCoverage.capacityLimited);
         final children = <Widget>[
           SettingsSectionNote(l10n.notificationPrecisionLimitations),
@@ -349,11 +350,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               key: const ValueKey('notification-coverage-notice'),
               leading: const Icon(Icons.info_outline),
               title: l10n.notificationCoverage,
-              subtitle: coverage == AgendaNotificationCoverage.capacityLimited
-                  ? l10n.notificationCoverageCapacityLimited(
-                      _notificationService.status.directCapacity,
-                    )
-                  : l10n.notificationCoverageRenewable,
+              subtitle: _coverageSubtitle(context, l10n, notificationStatus),
             ),
           SettingsSectionHeader(title: l10n.notificationDefaultsSection),
           if (workspace.isEnabled(AppMode.student))
@@ -693,6 +690,51 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     return _notificationsPermissionGranted == true
         ? l10n.notificationPermissionGranted
         : l10n.notificationPermissionDenied;
+  }
+
+  String _coverageSubtitle(
+    BuildContext context,
+    AppLocalizations l10n,
+    AgendaNotificationStatus status,
+  ) {
+    if (!_isWindows) {
+      return status.coverage == AgendaNotificationCoverage.capacityLimited
+          ? l10n.notificationCoverageCapacityLimited(status.directCapacity)
+          : l10n.notificationCoverageRenewable;
+    }
+    final windowEnd = status.schedulingWindowEndExclusive;
+    final hasCurrentPlan =
+        windowEnd != null &&
+        status.healthy &&
+        status.notificationsEnabled &&
+        _notificationsPermissionGranted != false &&
+        !_permissionError &&
+        status.coverage != AgendaNotificationCoverage.blocked &&
+        status.coverage != AgendaNotificationCoverage.failed;
+    return [
+      l10n.notificationWindowsCoverageLimit(
+        _notificationService.schedulingWindowDays!,
+        _notificationService.planner.maxScheduledNotifications,
+      ),
+      if (hasCurrentPlan)
+        l10n.notificationWindowsCoverageSummary(
+          status.directScheduledCount,
+          _coverageWindowDate(context, windowEnd),
+        ),
+      if (hasCurrentPlan && status.hasCapacityOverflow)
+        l10n.notificationWindowsCoverageCapacityLimited,
+    ].join('\n');
+  }
+
+  String _coverageWindowDate(BuildContext context, DateTime endExclusive) {
+    final date = endExclusive.toLocal();
+    final material = MaterialLocalizations.of(context);
+    final day = material.formatCompactDate(date);
+    final time = material.formatTimeOfDay(
+      TimeOfDay.fromDateTime(date),
+      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+    );
+    return '$day $time';
   }
 
   String _exactAlarmSubtitle(AppLocalizations l10n) {

@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Ennek az ismétlődő eseménynek nincs érvényes előfordulása az ICS-exporthoz. A bejegyzés megőrzéséhez exportáljon JSON-t.",
   "icsImportedCalendarName": "Importált naptár",
   "icsUntitledEventName": "Névtelen esemény",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "A Windows csak a következő {days} napra ütemez emlékeztetőket, egyszerre legfeljebb {capacity} darabot. A terv frissítéséhez rendszeresen nyisd meg újra az alkalmazást.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Ütemezett emlékeztetők: {count}. A legutóbbi ellenőrzés eddig terjed: {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Az emlékeztetők száma elérte a korlátot. Néhány még nincs ütemezve. A terv frissítéséhez a közelgő emlékeztetők jelzése után nyisd meg újra az alkalmazást.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

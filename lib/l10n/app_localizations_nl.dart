@@ -3141,4 +3141,18 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Afspraak zonder titel';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows plant alleen herinneringen voor de komende $days dagen, maximaal $capacity tegelijk. Open de app regelmatig opnieuw om het plan bij te werken.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Geplande herinneringen: $count. De laatste controle loopt tot $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'De herinneringslimiet is bereikt. Sommige herinneringen zijn nog niet gepland. Open de app opnieuw nadat komende herinneringen zijn afgegaan om het plan bij te werken.';
 }

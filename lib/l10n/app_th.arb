@@ -2132,5 +2132,29 @@
   "icsExportEmptyRecurrenceMessage": "กิจกรรมที่เกิดซ้ำนี้ไม่มีรายการที่ใช้ส่งออกเป็น ICS ได้ โปรดส่งออก JSON เพื่อเก็บข้อมูลไว้",
   "icsImportedCalendarName": "ปฏิทินที่นำเข้า",
   "icsUntitledEventName": "กิจกรรมไม่มีชื่อ",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows จะตั้งเวลาเตือนเฉพาะใน {days} วันข้างหน้า สูงสุดครั้งละ {capacity} รายการ โปรดเปิดแอปอีกครั้งเป็นระยะเพื่ออัปเดตแผน",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "การเตือนที่ตั้งเวลาไว้: {count} รายการ การตรวจสอบล่าสุดครอบคลุมถึง {date}",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "ถึงขีดจำกัดจำนวนการเตือนแล้ว บางรายการยังไม่ได้ตั้งเวลา โปรดเปิดแอปอีกครั้งหลังจากการเตือนที่ใกล้ถึงกำหนดทำงานแล้วเพื่ออัปเดตแผน",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

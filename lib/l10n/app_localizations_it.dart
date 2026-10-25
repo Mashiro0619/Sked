@@ -3155,4 +3155,18 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Evento senza titolo';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows programma promemoria solo per i prossimi $days giorni, fino a $capacity alla volta. Riapri regolarmente l’app per aggiornare il piano.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Promemoria programmati: $count. L’ultima verifica copre il periodo fino al $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'È stato raggiunto il limite di promemoria. Alcuni non sono ancora programmati. Riapri l’app dopo l’attivazione dei prossimi promemoria per aggiornare il piano.';
 }

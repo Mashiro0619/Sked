@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Sellel korduval sündmusel pole kehtivaid kordusi ICS-i eksportimiseks. Kirje säilitamiseks ekspordi JSON.",
   "icsImportedCalendarName": "Imporditud kalender",
   "icsUntitledEventName": "Pealkirjata sündmus",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows ajastab meeldetuletusi ainult järgmiseks {days} päevaks, korraga kuni {capacity}. Plaani uuendamiseks ava rakendus regulaarselt uuesti.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Ajastatud meeldetuletusi: {count}. Viimane kontroll hõlmab aega kuni {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Meeldetuletuste piirang on saavutatud. Mõned pole veel ajastatud. Plaani uuendamiseks ava rakendus pärast lähimate meeldetuletuste käivitumist uuesti.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

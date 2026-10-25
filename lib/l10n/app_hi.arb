@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "इस दोहराए जाने वाले इवेंट में ICS निर्यात के लिए कोई मान्य आवृत्ति नहीं है। रिकॉर्ड सुरक्षित रखने के लिए JSON निर्यात करें।",
   "icsImportedCalendarName": "आयातित कैलेंडर",
   "icsUntitledEventName": "बिना शीर्षक का इवेंट",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows केवल अगले {days} दिनों के लिए, एक बार में अधिकतम {capacity} रिमाइंडर शेड्यूल करता है। योजना अपडेट करने के लिए ऐप नियमित रूप से दोबारा खोलें।",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "शेड्यूल किए गए रिमाइंडर: {count}। पिछली जाँच में {date} तक की अवधि शामिल है।",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "रिमाइंडर की सीमा पूरी हो गई है। कुछ रिमाइंडर अभी शेड्यूल नहीं हुए हैं। आगामी रिमाइंडर चलने के बाद ऐप दोबारा खोलकर योजना अपडेट करें।",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

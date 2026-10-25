@@ -2999,4 +2999,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => '無題の予定';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows は今後 $days 日以内の通知を、一度に最大 $capacity 件まで予約します。定期的にアプリを開き直して予定を更新してください。';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return '予約済みの通知：$count 件。今回確認した範囲は $date までです。';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      '通知件数の上限に達しているため、まだ予約されていない通知があります。直近の通知が表示された後にアプリを開き直して予定を更新してください。';
 }

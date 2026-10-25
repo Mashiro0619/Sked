@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Това повтарящо се събитие няма валидни повторения за експортиране в ICS. Експортирайте JSON, за да запазите записа.",
   "icsImportedCalendarName": "Импортиран календар",
   "icsUntitledEventName": "Събитие без заглавие",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows планира напомняния само за следващите {days} дни, до {capacity} наведнъж. Отваряйте приложението периодично, за да обновите плана.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Планирани напомняния: {count}. Последната проверка обхваща периода до {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Лимитът за напомняния е достигнат. Някои още не са планирани. След задействане на предстоящите напомняния отворете отново приложението, за да обновите плана.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

@@ -2104,5 +2104,29 @@
   "icsExportEmptyRecurrenceMessage": "此重複日程沒有可匯出為 ICS 的有效實例。請匯出 JSON 以保留記錄。",
   "icsImportedCalendarName": "匯入的日曆",
   "icsUntitledEventName": "無標題日程",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows 每次最多安排未來 {days} 天內的 {capacity} 則提醒。請定期重新開啟應用程式更新計畫。",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "本次查詢截至 {date}，已安排 {count} 則提醒。",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "已達到提醒數量上限，其餘提醒尚未安排。近期提醒觸發後，請重新開啟應用程式更新計畫。",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

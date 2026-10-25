@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Questo evento ricorrente non ha occorrenze valide da esportare in ICS. Esporta JSON per conservare la voce.",
   "icsImportedCalendarName": "Calendario importato",
   "icsUntitledEventName": "Evento senza titolo",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows programma promemoria solo per i prossimi {days} giorni, fino a {capacity} alla volta. Riapri regolarmente l’app per aggiornare il piano.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Promemoria programmati: {count}. L’ultima verifica copre il periodo fino al {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "È stato raggiunto il limite di promemoria. Alcuni non sono ancora programmati. Riapri l’app dopo l’attivazione dei prossimi promemoria per aggiornare il piano.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

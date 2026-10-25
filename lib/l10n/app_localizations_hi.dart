@@ -3108,4 +3108,18 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'बिना शीर्षक का इवेंट';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows केवल अगले $days दिनों के लिए, एक बार में अधिकतम $capacity रिमाइंडर शेड्यूल करता है। योजना अपडेट करने के लिए ऐप नियमित रूप से दोबारा खोलें।';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'शेड्यूल किए गए रिमाइंडर: $count। पिछली जाँच में $date तक की अवधि शामिल है।';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'रिमाइंडर की सीमा पूरी हो गई है। कुछ रिमाइंडर अभी शेड्यूल नहीं हुए हैं। आगामी रिमाइंडर चलने के बाद ऐप दोबारा खोलकर योजना अपडेट करें।';
 }

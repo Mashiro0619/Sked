@@ -3092,4 +3092,18 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'กิจกรรมไม่มีชื่อ';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows จะตั้งเวลาเตือนเฉพาะใน $days วันข้างหน้า สูงสุดครั้งละ $capacity รายการ โปรดเปิดแอปอีกครั้งเป็นระยะเพื่ออัปเดตแผน';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'การเตือนที่ตั้งเวลาไว้: $count รายการ การตรวจสอบล่าสุดครอบคลุมถึง $date';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'ถึงขีดจำกัดจำนวนการเตือนแล้ว บางรายการยังไม่ได้ตั้งเวลา โปรดเปิดแอปอีกครั้งหลังจากการเตือนที่ใกล้ถึงกำหนดทำงานแล้วเพื่ออัปเดตแผน';
 }

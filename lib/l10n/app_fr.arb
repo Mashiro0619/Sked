@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Cet événement récurrent n’a aucune occurrence valide à exporter en ICS. Exportez en JSON pour conserver l’enregistrement.",
   "icsImportedCalendarName": "Calendrier importé",
   "icsUntitledEventName": "Événement sans titre",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows ne programme des rappels que pour les {days} prochains jours, jusqu’à {capacity} à la fois. Rouvrez régulièrement l’application pour actualiser le planning.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Rappels programmés : {count}. La dernière vérification couvre la période jusqu’au {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "La limite de rappels est atteinte. Certains ne sont pas encore programmés. Rouvrez l’application après le déclenchement des prochains rappels pour actualiser le planning.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

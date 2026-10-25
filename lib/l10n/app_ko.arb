@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "이 반복 일정에는 ICS로 내보낼 유효한 일정이 없습니다. 기록을 보존하려면 JSON으로 내보내세요.",
   "icsImportedCalendarName": "가져온 캘린더",
   "icsUntitledEventName": "제목 없는 일정",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows는 앞으로 {days}일 이내의 알림을 한 번에 최대 {capacity}개까지 예약합니다. 정기적으로 앱을 다시 열어 계획을 갱신하세요.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "예약된 알림: {count}개. 마지막 확인 범위는 {date}까지입니다.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "알림 개수 제한에 도달해 일부 알림이 아직 예약되지 않았습니다. 예정된 알림이 실행된 후 앱을 다시 열어 계획을 갱신하세요.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

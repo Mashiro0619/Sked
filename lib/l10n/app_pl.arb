@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "To wydarzenie cykliczne nie ma prawidłowych wystąpień do eksportu do ICS. Wyeksportuj JSON, aby zachować wpis.",
   "icsImportedCalendarName": "Zaimportowany kalendarz",
   "icsUntitledEventName": "Wydarzenie bez tytułu",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows planuje przypomnienia tylko na najbliższe {days} dni, maksymalnie {capacity} naraz. Regularnie otwieraj aplikację ponownie, aby odświeżyć plan.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Zaplanowane przypomnienia: {count}. Ostatnie sprawdzenie obejmuje okres do {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Osiągnięto limit przypomnień. Niektóre nie są jeszcze zaplanowane. Po wyświetleniu najbliższych przypomnień otwórz aplikację ponownie, aby odświeżyć plan.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

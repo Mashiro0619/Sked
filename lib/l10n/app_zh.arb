@@ -2102,5 +2102,29 @@
   "icsExportEmptyRecurrenceMessage": "此重复日程没有可导出为 ICS 的有效实例。请导出 JSON 以保留记录。",
   "icsImportedCalendarName": "导入的日历",
   "icsUntitledEventName": "无标题日程",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows 每次最多安排未来 {days} 天内的 {capacity} 条提醒。请定期重新打开应用更新计划。",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "本次查询截至 {date}，已安排 {count} 条提醒。",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "已达到提醒数量上限，其余提醒尚未安排。近期提醒触发后，请重新打开应用更新计划。",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Este evento recorrente não tem ocorrências válidas para exportação em ICS. Exporte JSON para preservar o registo.",
   "icsImportedCalendarName": "Calendário importado",
   "icsUntitledEventName": "Evento sem título",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "O Windows só agenda lembretes para os próximos {days} dias, até {capacity} de cada vez. Volte a abrir a aplicação regularmente para atualizar o plano.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Lembretes agendados: {count}. A última verificação abrange o período até {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "O limite de lembretes foi atingido. Alguns ainda não estão agendados. Volte a abrir a aplicação depois de os próximos lembretes serem apresentados para atualizar o plano.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

@@ -3132,4 +3132,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Dogodek brez naslova';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows načrtuje opomnike le za naslednjih $days dni, največ $capacity hkrati. Aplikacijo redno znova odprite, da osvežite načrt.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Načrtovani opomniki: $count. Zadnje preverjanje zajema obdobje do $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Dosežena je omejitev števila opomnikov. Nekateri še niso načrtovani. Ko se sprožijo bližnji opomniki, znova odprite aplikacijo in osvežite načrt.';
 }

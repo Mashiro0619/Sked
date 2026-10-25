@@ -3156,4 +3156,18 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Eveniment fără titlu';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows programează mementouri doar pentru următoarele $days zile, cel mult $capacity odată. Redeschide periodic aplicația pentru a actualiza planul.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Mementouri programate: $count. Ultima verificare acoperă perioada până la $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'S-a atins limita de mementouri. Unele nu sunt încă programate. Redeschide aplicația după declanșarea mementourilor apropiate pentru a actualiza planul.';
 }

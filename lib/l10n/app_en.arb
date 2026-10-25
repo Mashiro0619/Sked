@@ -2139,5 +2139,29 @@
   "icsExportEmptyRecurrenceMessage": "This recurring event has no valid occurrences to export as ICS. Export JSON to keep the record.",
   "icsImportedCalendarName": "Imported calendar",
   "icsUntitledEventName": "Untitled event",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows only schedules reminders for the next {days} days, up to {capacity} at a time. Reopen the app regularly to refresh the plan.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "{count, plural, =0{No reminders scheduled.} =1{1 reminder scheduled.} other{{count} reminders scheduled.}} Last plan checked through {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

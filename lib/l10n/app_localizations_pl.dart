@@ -3132,4 +3132,18 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Wydarzenie bez tytułu';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows planuje przypomnienia tylko na najbliższe $days dni, maksymalnie $capacity naraz. Regularnie otwieraj aplikację ponownie, aby odświeżyć plan.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Zaplanowane przypomnienia: $count. Ostatnie sprawdzenie obejmuje okres do $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Osiągnięto limit przypomnień. Niektóre nie są jeszcze zaplanowane. Po wyświetleniu najbliższych przypomnień otwórz aplikację ponownie, aby odświeżyć plan.';
 }

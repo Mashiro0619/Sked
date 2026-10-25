@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Deze herhalende afspraak heeft geen geldige voorkomens voor ICS-export. Exporteer JSON om de registratie te behouden.",
   "icsImportedCalendarName": "Geïmporteerde agenda",
   "icsUntitledEventName": "Afspraak zonder titel",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows plant alleen herinneringen voor de komende {days} dagen, maximaal {capacity} tegelijk. Open de app regelmatig opnieuw om het plan bij te werken.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Geplande herinneringen: {count}. De laatste controle loopt tot {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "De herinneringslimiet is bereikt. Sommige herinneringen zijn nog niet gepland. Open de app opnieuw nadat komende herinneringen zijn afgegaan om het plan bij te werken.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

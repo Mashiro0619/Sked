@@ -3127,4 +3127,18 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Nimetön tapahtuma';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows ajoittaa muistutuksia vain seuraaville $days päivälle, enintään $capacity kerrallaan. Avaa sovellus säännöllisesti uudelleen päivittääksesi suunnitelman.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Ajastettuja muistutuksia: $count. Viimeisin tarkistus ulottuu aikaan $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Muistutusten enimmäismäärä on saavutettu. Joitakin muistutuksia ei ole vielä ajoitettu. Avaa sovellus uudelleen lähimpien muistutusten lauettua päivittääksesi suunnitelman.';
 }

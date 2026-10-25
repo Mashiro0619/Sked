@@ -3164,4 +3164,18 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Събитие без заглавие';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows планира напомняния само за следващите $days дни, до $capacity наведнъж. Отваряйте приложението периодично, за да обновите плана.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Планирани напомняния: $count. Последната проверка обхваща периода до $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Лимитът за напомняния е достигнат. Някои още не са планирани. След задействане на предстоящите напомняния отворете отново приложението, за да обновите плана.';
 }

@@ -2117,5 +2117,29 @@
   "icsExportEmptyRecurrenceMessage": "Acest eveniment recurent nu are apariții valide pentru exportul ICS. Exportă JSON pentru a păstra înregistrarea.",
   "icsImportedCalendarName": "Calendar importat",
   "icsUntitledEventName": "Eveniment fără titlu",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows programează mementouri doar pentru următoarele {days} zile, cel mult {capacity} odată. Redeschide periodic aplicația pentru a actualiza planul.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Mementouri programate: {count}. Ultima verificare acoperă perioada până la {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "S-a atins limita de mementouri. Unele nu sunt încă programate. Redeschide aplicația după declanșarea mementourilor apropiate pentru a actualiza planul.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

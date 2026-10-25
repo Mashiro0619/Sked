@@ -3142,4 +3142,18 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Névtelen esemény';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'A Windows csak a következő $days napra ütemez emlékeztetőket, egyszerre legfeljebb $capacity darabot. A terv frissítéséhez rendszeresen nyisd meg újra az alkalmazást.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Ütemezett emlékeztetők: $count. A legutóbbi ellenőrzés eddig terjed: $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Az emlékeztetők száma elérte a korlátot. Néhány még nincs ütemezve. A terv frissítéséhez a közelgő emlékeztetők jelzése után nyisd meg újra az alkalmazást.';
 }

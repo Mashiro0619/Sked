@@ -2132,5 +2132,29 @@
   "icsExportEmptyRecurrenceMessage": "Sự kiện lặp lại này không có lần diễn ra hợp lệ để xuất ICS. Hãy xuất JSON để giữ bản ghi.",
   "icsImportedCalendarName": "Lịch đã nhập",
   "icsUntitledEventName": "Sự kiện không có tiêu đề",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows chỉ lên lịch lời nhắc trong {days} ngày tới, tối đa {capacity} lời nhắc mỗi lần. Hãy thường xuyên mở lại ứng dụng để cập nhật kế hoạch.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Lời nhắc đã lên lịch: {count}. Lần kiểm tra gần nhất bao gồm khoảng thời gian đến {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Đã đạt giới hạn lời nhắc. Một số lời nhắc chưa được lên lịch. Hãy mở lại ứng dụng sau khi các lời nhắc sắp tới đã được kích hoạt để cập nhật kế hoạch.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }

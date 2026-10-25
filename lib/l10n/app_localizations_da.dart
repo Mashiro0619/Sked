@@ -3110,4 +3110,18 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get icsUntitledEventName => 'Begivenhed uden titel';
+
+  @override
+  String notificationWindowsCoverageLimit(int days, int capacity) {
+    return 'Windows planlægger kun påmindelser for de næste $days dage, højst $capacity ad gangen. Åbn appen igen jævnligt for at opdatere planen.';
+  }
+
+  @override
+  String notificationWindowsCoverageSummary(int count, String date) {
+    return 'Planlagte påmindelser: $count. Seneste kontrol omfatter perioden frem til $date.';
+  }
+
+  @override
+  String get notificationWindowsCoverageCapacityLimited =>
+      'Grænsen for påmindelser er nået. Nogle er endnu ikke planlagt. Åbn appen igen, efter at kommende påmindelser er udløst, for at opdatere planen.';
 }

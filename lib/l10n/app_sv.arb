@@ -2132,5 +2132,29 @@
   "icsExportEmptyRecurrenceMessage": "Den här återkommande händelsen har inga giltiga förekomster att exportera som ICS. Exportera JSON för att behålla posten.",
   "icsImportedCalendarName": "Importerad kalender",
   "icsUntitledEventName": "Händelse utan titel",
-  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}}
+  "@shortenSemesterMessage": {"placeholders": {"weeks": {"type": "int"}, "count": {"type": "int"}}},
+  "notificationWindowsCoverageLimit": "Windows schemalägger bara påminnelser för de kommande {days} dagarna, högst {capacity} åt gången. Öppna appen igen regelbundet för att uppdatera planen.",
+  "@notificationWindowsCoverageLimit": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationWindowsCoverageSummary": "Schemalagda påminnelser: {count}. Den senaste kontrollen omfattar tiden fram till {date}.",
+  "@notificationWindowsCoverageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationWindowsCoverageCapacityLimited": "Gränsen för påminnelser har nåtts. Vissa har ännu inte schemalagts. Öppna appen igen efter att kommande påminnelser har utlösts för att uppdatera planen.",
+  "@notificationWindowsCoverageCapacityLimited": {}
 }
