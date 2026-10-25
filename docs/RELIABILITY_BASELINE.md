@@ -44,7 +44,7 @@ git diff --check
 | 检查 | 当前配置及边界 |
 | --- | --- |
 | 通用 | 固定 Flutter 版本、双 lock 校验、本地化生成一致性、格式、分析、VM 测试；coverage 仅作为诊断附件。 |
-| 浏览器与日期 | Linux Chrome 验证实例 lease；纽约、柏林 DST、上海无 DST 对照及圣保罗午夜缺口单独执行。普通全量测试不能代替这些专门任务。 |
+| 浏览器与日期 | Linux Chrome 验证实例 lease；纽约、柏林 DST、上海无 DST 对照、圣保罗午夜缺口及 Apia 跳整日分别执行。命名时区步骤同时验证重复实例范围、新提醒索引、缓存与 Windows 提前提醒计划；原生偏移和缺失日期断言确保 TZ 实际生效。普通全量测试不能代替这些专门任务。 |
 | Android | Ubuntu / Java 17，以临时 CI 密钥构建 APK 和 Google Play 渠道 AAB；Debug JVM 单测与 Release 编译/混淆分别检查，再检查 merged manifest 与资源。 |
 | Web | Release 构建；构建成功不代表浏览器运行、视觉或 Wasm 已验收。 |
 | Linux | Debian 容器和 WPE WebKit 系统依赖下构建 Release。 |
@@ -55,11 +55,25 @@ Linux 上的专门检查命令：
 
 ```bash
 flutter test --platform chrome test/services/app_instance_lease_web_test.dart
-TZ=America/New_York SKED_DST_TEST_ZONE=america-new-york flutter test test/date_dst_regression_test.dart
-TZ=Europe/Berlin SKED_DST_TEST_ZONE=europe-berlin flutter test test/date_dst_regression_test.dart
-TZ=Asia/Shanghai SKED_DST_TEST_ZONE=asia-shanghai flutter test test/date_dst_regression_test.dart
-TZ=America/Sao_Paulo SKED_DST_TEST_ZONE=america-sao-paulo flutter test test/date_dst_regression_test.dart
+indexed_timezone_tests=(
+  test/named_timezone_indexed_reminder_test.dart
+  test/models/general_event_occurrence_range_test.dart
+  test/services/general_reminder_indexed_items_test.dart
+  test/services/general_occurrence_cache_test.dart
+  test/services/windows_agenda_notification_coverage_test.dart
+)
+TZ=America/New_York SKED_DST_TEST_ZONE=america-new-york flutter test test/date_dst_regression_test.dart "${indexed_timezone_tests[@]}"
+TZ=Europe/Berlin SKED_DST_TEST_ZONE=europe-berlin flutter test test/date_dst_regression_test.dart "${indexed_timezone_tests[@]}"
+TZ=Asia/Shanghai SKED_DST_TEST_ZONE=asia-shanghai flutter test test/date_dst_regression_test.dart "${indexed_timezone_tests[@]}"
+TZ=America/Sao_Paulo SKED_DST_TEST_ZONE=america-sao-paulo flutter test test/date_dst_regression_test.dart "${indexed_timezone_tests[@]}"
+TZ=Pacific/Apia SKED_DST_TEST_ZONE=pacific-apia flutter test "${indexed_timezone_tests[@]}"
 ```
+
+命名时区索引专项在未设置 `SKED_DST_TEST_ZONE` 时明确跳过；声明了时区但 `TZ`、原生历史偏移或缺失日期不符时失败，不将宿主默认时区结果计入该时区。500 天实例范围和 600 天提前量覆盖快速索引路径，并与完整展开器对照顺序、状态、排除和缓存失效。捆绑时区候选表的完整性检查不能代替这些原生 `DateTime` 检查。
+
+Windows 通知服务回归也在五个原生时区中执行，检查提前提醒候选、通知动作身份、稍后提醒及本地 9999 年边界；它使用内存网关，不替代 Windows 实际通知投递验收。
+
+Apia 跨跳日序列保留旧展开器遇到非递增候选即停止的行为，并明确核对数量与末项；另从跳日后建立长序列，确保大于 366 项的快速范围、600 天提前提醒及缓存访问确实执行，不以短序列通过代替长路径验收。
 
 Android 的直接 Gradle 调用应放在首次 Flutter Android 构建之后，因为 wrapper 文件由构建准备。Debug JVM 单测后构建 Release 时保持正常 `flutter build` 准备流程，避免 `--no-pub` 遗留开发插件注册器；不要手改生成文件或把测试插件移入运行时依赖。具体步骤以 CI 及 [workflow 契约测试](../test/tool/ci_workflow_test.dart) 为准。多个平台构建不要同时改写同一工作区的生成文件。
 

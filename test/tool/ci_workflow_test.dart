@@ -62,24 +62,43 @@ void main() {
     },
   );
 
-  test('named timezone checks include a control and a missing midnight', () {
-    const zones = {
-      'America/New_York': 'america-new-york',
-      'Europe/Berlin': 'europe-berlin',
-      'Asia/Shanghai': 'asia-shanghai',
-      'America/Sao_Paulo': 'america-sao-paulo',
-    };
-    final timezoneSteps = stepsFor('test').where(
-      (step) =>
-          step['run'] == 'flutter test test/date_dst_regression_test.dart',
-    );
-    for (final zone in zones.entries) {
-      final step = timezoneSteps.singleWhere(
-        (step) => (step['env'] as YamlMap)['TZ'] == zone.key,
+  test(
+    'named timezone checks cover indexed reminders and skipped civil dates',
+    () {
+      const zones = {
+        'America/New_York': 'america-new-york',
+        'Europe/Berlin': 'europe-berlin',
+        'Asia/Shanghai': 'asia-shanghai',
+        'America/Sao_Paulo': 'america-sao-paulo',
+        'Pacific/Apia': 'pacific-apia',
+      };
+      final timezoneSteps = stepsFor('test').where(
+        (step) => (step['env'] as YamlMap?)?['SKED_DST_TEST_ZONE'] != null,
       );
-      expect((step['env'] as YamlMap)['SKED_DST_TEST_ZONE'], zone.value);
-    }
-  });
+      for (final zone in zones.entries) {
+        final step = timezoneSteps.singleWhere(
+          (step) => (step['env'] as YamlMap)['TZ'] == zone.key,
+        );
+        expect((step['env'] as YamlMap)['SKED_DST_TEST_ZONE'], zone.value);
+        final command = (step['run'] as String).split(RegExp(r'\s+'));
+        expect(command.take(2), ['flutter', 'test']);
+        for (final path in [
+          'test/named_timezone_indexed_reminder_test.dart',
+          'test/models/general_event_occurrence_range_test.dart',
+          'test/services/general_reminder_indexed_items_test.dart',
+          'test/services/general_occurrence_cache_test.dart',
+          'test/services/windows_agenda_notification_coverage_test.dart',
+        ]) {
+          expect(command, contains(path), reason: zone.key);
+        }
+        expect(
+          command.contains('test/date_dst_regression_test.dart'),
+          zone.key != 'Pacific/Apia',
+          reason: 'The original suite supports the four original zones only.',
+        );
+      }
+    },
+  );
 
   test('release smoke builds use an isolated temporary CI signing key', () {
     final steps = stepsFor('android-build');

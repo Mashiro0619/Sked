@@ -61,25 +61,60 @@ jobs:
         env:
           TZ: America/New_York
           SKED_DST_TEST_ZONE: america-new-york
-        run: flutter test test/date_dst_regression_test.dart
+        run: >-
+          flutter test test/date_dst_regression_test.dart
+          test/named_timezone_indexed_reminder_test.dart
+          test/models/general_event_occurrence_range_test.dart
+          test/services/general_reminder_indexed_items_test.dart
+          test/services/general_occurrence_cache_test.dart
+          test/services/windows_agenda_notification_coverage_test.dart
 
       - name: Test DST regressions in Europe/Berlin
         env:
           TZ: Europe/Berlin
           SKED_DST_TEST_ZONE: europe-berlin
-        run: flutter test test/date_dst_regression_test.dart
+        run: >-
+          flutter test test/date_dst_regression_test.dart
+          test/named_timezone_indexed_reminder_test.dart
+          test/models/general_event_occurrence_range_test.dart
+          test/services/general_reminder_indexed_items_test.dart
+          test/services/general_occurrence_cache_test.dart
+          test/services/windows_agenda_notification_coverage_test.dart
 
       - name: Test calendar regressions in Asia/Shanghai (non-DST control)
         env:
           TZ: Asia/Shanghai
           SKED_DST_TEST_ZONE: asia-shanghai
-        run: flutter test test/date_dst_regression_test.dart
+        run: >-
+          flutter test test/date_dst_regression_test.dart
+          test/named_timezone_indexed_reminder_test.dart
+          test/models/general_event_occurrence_range_test.dart
+          test/services/general_reminder_indexed_items_test.dart
+          test/services/general_occurrence_cache_test.dart
+          test/services/windows_agenda_notification_coverage_test.dart
 
       - name: Test missing midnight in America/Sao_Paulo
         env:
           TZ: America/Sao_Paulo
           SKED_DST_TEST_ZONE: america-sao-paulo
-        run: flutter test test/date_dst_regression_test.dart
+        run: >-
+          flutter test test/date_dst_regression_test.dart
+          test/named_timezone_indexed_reminder_test.dart
+          test/models/general_event_occurrence_range_test.dart
+          test/services/general_reminder_indexed_items_test.dart
+          test/services/general_occurrence_cache_test.dart
+          test/services/windows_agenda_notification_coverage_test.dart
+
+      - name: Test skipped civil date in Pacific/Apia
+        env:
+          TZ: Pacific/Apia
+          SKED_DST_TEST_ZONE: pacific-apia
+        run: >-
+          flutter test test/named_timezone_indexed_reminder_test.dart
+          test/models/general_event_occurrence_range_test.dart
+          test/services/general_reminder_indexed_items_test.dart
+          test/services/general_occurrence_cache_test.dart
+          test/services/windows_agenda_notification_coverage_test.dart
 
       - name: Build web release
         run: flutter build web --release
