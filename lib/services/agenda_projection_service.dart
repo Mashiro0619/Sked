@@ -13,12 +13,28 @@ class AgendaProjectionQuery {
     required this.endExclusive,
     this.timetableId,
     this.includeHiddenGeneralSchedules = false,
+    this.includeReminderCandidates = false,
+    this.retainedOccurrenceIds = const {},
+    this.ownedOccurrenceIds = const {},
   });
 
   final DateTime startInclusive;
   final DateTime endExclusive;
   final String? timetableId;
   final bool includeHiddenGeneralSchedules;
+
+  /// For notification consumers the bounds describe reminder fire times.
+  /// Sources should also include later occurrences whose lead times enter
+  /// this window. Ordinary agenda/widget queries keep their existing bounds.
+  final bool includeReminderCandidates;
+
+  /// Explicit runtime identities (for example a still-active snooze) whose
+  /// starts may be outside the generated reminder window.
+  final Set<String> retainedOccurrenceIds;
+
+  /// Existing platform cards keep the original overlap/visibility policy.
+  /// Unlike an explicit active snooze, ownership does not extend that policy.
+  final Set<String> ownedOccurrenceIds;
 
   bool get isValid => endExclusive.isAfter(startInclusive);
 }
@@ -225,12 +241,18 @@ class AgendaProjectionService {
     required DateTime endExclusive,
     String? timetableId,
     bool includeHiddenGeneralSchedules = false,
+    bool includeReminderCandidates = false,
+    Set<String> retainedOccurrenceIds = const {},
+    Set<String> ownedOccurrenceIds = const {},
   }) {
     final query = AgendaProjectionQuery(
       startInclusive: startInclusive,
       endExclusive: endExclusive,
       timetableId: timetableId,
       includeHiddenGeneralSchedules: includeHiddenGeneralSchedules,
+      includeReminderCandidates: includeReminderCandidates,
+      retainedOccurrenceIds: retainedOccurrenceIds,
+      ownedOccurrenceIds: ownedOccurrenceIds,
     );
     if (!query.isValid) return const [];
 
@@ -238,6 +260,21 @@ class AgendaProjectionService {
     for (final source in registry.sources) {
       for (final occurrence in source.occurrences(data, query)) {
         if (!data.allowsAgendaSource(occurrence.sourceType)) continue;
+        if (query.includeReminderCandidates &&
+            !query.retainedOccurrenceIds.contains(occurrence.scopedStableId) &&
+            !(query.ownedOccurrenceIds.contains(occurrence.scopedStableId) &&
+                _overlaps(
+                  occurrence.start,
+                  occurrence.end,
+                  query.startInclusive,
+                  query.endExclusive,
+                )) &&
+            !occurrence.reminders.any(
+              (reminder) =>
+                  _reminderFiresInWindow(reminder, occurrence.start, query),
+            )) {
+          continue;
+        }
         final boundary =
             data.workspaceReminderNotBefore[workspaceForAgendaSource(
               occurrence.sourceType,
@@ -427,6 +464,68 @@ class StudentAgendaSource implements AgendaSource {
       query.timetableId ?? data.studentMode.activeTimetableId,
     );
     if (timetable == null) return;
+
+    if (query.includeReminderCandidates) {
+      // Resolve each course's actual policy before shifting. A global maximum
+      // would scan all intervening days, and can be arbitrarily large in JSON.
+      final byLead = <int, List<CourseItem>>{};
+      for (final course in timetable.courses) {
+        for (final reminder in _courseReminders(
+          course,
+          data.notificationSettings.courseDefaultMinutesBefore,
+        )) {
+          (byLead[reminder.normalized().minutesBefore] ??= []).add(course);
+        }
+      }
+      for (final entry in byLead.entries) {
+        final shifted = _shiftReminderQuery(query, entry.key);
+        if (shifted == null) continue;
+        final narrowed = timetable.copyWith(courses: entry.value);
+        yield* occurrences(
+          data.copyWith(
+            studentMode: data.studentMode.copyWith(timetables: [narrowed]),
+          ),
+          shifted,
+        );
+      }
+      for (final stableId in _retainedStableIds(query, id)) {
+        final parts = stableId.split('|');
+        if (parts.length != 4 || parts.first != AgendaSourceType.course) {
+          continue;
+        }
+        String tableId;
+        String courseId;
+        try {
+          tableId = Uri.decodeComponent(parts[1]);
+          courseId = Uri.decodeComponent(parts[2]);
+        } on FormatException {
+          continue;
+        }
+        if (tableId != timetable.id) continue;
+        final date = tryParseStrictIsoDateTime(parts[3]);
+        if (date == null) continue;
+        final courses = timetable.courses
+            .where((course) => course.id == courseId)
+            .toList();
+        if (courses.isEmpty) continue;
+        final day = normalizeDateOnly(date.toLocal());
+        for (final occurrence in occurrences(
+          data.copyWith(
+            studentMode: data.studentMode.copyWith(
+              timetables: [timetable.copyWith(courses: courses)],
+            ),
+          ),
+          AgendaProjectionQuery(
+            startInclusive: day,
+            endExclusive: addCalendarDays(day, 1),
+            timetableId: timetable.id,
+          ),
+        )) {
+          if (occurrence.stableId == stableId) yield occurrence;
+        }
+      }
+      return;
+    }
 
     final startDate = normalizeDateOnly(query.startInclusive.toLocal());
     final normalizedEnd = query.endExclusive.toLocal();
@@ -636,6 +735,67 @@ class GeneralAgendaSource implements AgendaSource {
     AgendaProjectionQuery query,
   ) sync* {
     if (!data.isWorkspaceEnabled(AppMode.general)) return;
+    if (query.includeReminderCandidates) {
+      final retained = _retainedStableIds(
+        query,
+        id,
+      ).map(parseGeneralOccurrenceKey).nonNulls.toList(growable: false);
+      for (final calendar in data.generalMode.schedules) {
+        if (!calendar.isVisible && !query.includeHiddenGeneralSchedules) {
+          continue;
+        }
+        for (final event in calendar.events) {
+          final projectedKeys = <String>{};
+          final leads = {
+            for (final reminder in event.resolveReminders(
+              data.notificationSettings.generalDefaultMinutesBefore,
+            ))
+              if (reminder.minutesBefore >= 0) reminder.minutesBefore,
+          };
+          for (final lead in leads) {
+            final shifted = _shiftReminderQuery(query, lead);
+            if (shifted == null) continue;
+            final range = GeneralEventOccurrenceRange(
+              calendar: calendar,
+              event: event,
+              startInclusive: shifted.startInclusive,
+              endExclusive: shifted.endExclusive,
+            );
+            // Occurrence ranges use overlap semantics. Notifications instead
+            // need starts inside the shifted fire-time window: skip an entire
+            // long-duration prefix by index, without visiting every old row.
+            for (final occurrence in _startsFrom(
+              range,
+              shifted.startInclusive,
+            )) {
+              if (projectedKeys.add(occurrence.occurrenceKey)) {
+                yield _projectOccurrence(data, occurrence);
+              }
+            }
+          }
+          for (final parts in retained) {
+            if (parts.calendarId != calendar.id || parts.eventId != event.id) {
+              continue;
+            }
+            final start = tryParseStrictIsoDateTime(parts.startDateTimeIso);
+            if (start == null) continue;
+            final range = GeneralEventOccurrenceRange(
+              calendar: calendar,
+              event: event,
+              startInclusive: start,
+              endExclusive: start.add(const Duration(microseconds: 1)),
+            );
+            for (final occurrence in _startsFrom(range, start)) {
+              if (occurrence.start.isAtSameMomentAs(start) &&
+                  projectedKeys.add(occurrence.occurrenceKey)) {
+                yield _projectOccurrence(data, occurrence);
+              }
+            }
+          }
+        }
+      }
+      return;
+    }
     final occurrences = _occurrenceService.occurrencesForRange(
       data.generalMode,
       startInclusive: query.startInclusive,
@@ -643,36 +803,132 @@ class GeneralAgendaSource implements AgendaSource {
       onlyVisibleCalendars: !query.includeHiddenGeneralSchedules,
     );
     for (final occurrence in occurrences) {
-      yield AgendaOccurrence(
-        stableId: occurrence.occurrenceKey,
-        sourceType: AgendaSourceType.generalEvent,
-        start: occurrence.start,
-        end: occurrence.end,
-        title: occurrence.event.title,
-        location: occurrence.event.location,
-        isAllDay: occurrence.isAllDay,
-        target: AgendaTarget(
-          sourceType: AgendaSourceType.generalEvent,
-          calendarId: occurrence.calendar.id,
-          eventId: occurrence.event.id,
-          occurrenceKey: occurrence.occurrenceKey,
-          dateIso: occurrence.exceptionDateIso,
-        ),
-        reminders: [
-          for (final reminder in occurrence.event.resolveReminders(
-            data.notificationSettings.generalDefaultMinutesBefore,
-          ))
-            if (reminder.minutesBefore >= 0)
-              AgendaReminder(minutesBefore: reminder.minutesBefore),
-        ],
-        metadata: {
-          if (occurrence.event.notes.isNotEmpty)
-            'notes': occurrence.event.notes,
-          'calendarId': occurrence.calendar.id,
-        },
-      );
+      yield _projectOccurrence(data, occurrence);
     }
   }
+
+  AgendaOccurrence _projectOccurrence(
+    AppData data,
+    GeneralEventOccurrence occurrence,
+  ) => AgendaOccurrence(
+    stableId: occurrence.occurrenceKey,
+    sourceType: AgendaSourceType.generalEvent,
+    start: occurrence.start,
+    end: occurrence.end,
+    title: occurrence.event.title,
+    location: occurrence.event.location,
+    isAllDay: occurrence.isAllDay,
+    target: AgendaTarget(
+      sourceType: AgendaSourceType.generalEvent,
+      calendarId: occurrence.calendar.id,
+      eventId: occurrence.event.id,
+      occurrenceKey: occurrence.occurrenceKey,
+      dateIso: occurrence.exceptionDateIso,
+    ),
+    reminders: [
+      for (final reminder in occurrence.event.resolveReminders(
+        data.notificationSettings.generalDefaultMinutesBefore,
+      ))
+        if (reminder.minutesBefore >= 0)
+          AgendaReminder(minutesBefore: reminder.minutesBefore),
+    ],
+    metadata: {
+      if (occurrence.event.notes.isNotEmpty) 'notes': occurrence.event.notes,
+      'calendarId': occurrence.calendar.id,
+    },
+  );
+}
+
+/// Moves a reminder-fire-time window to occurrence-start time, preserving
+/// elapsed-time (rather than civil-day) arithmetic across DST. Compare the
+/// unbounded imported lead before constructing Duration, which can overflow.
+AgendaProjectionQuery? _shiftReminderQuery(
+  AgendaProjectionQuery query,
+  int minutesBefore,
+) {
+  final lead = minutesBefore < 0 ? 0 : minutesBefore;
+  final utcLastExclusive = DateTime.utc(10000);
+  final localLastExclusive = DateTime(10000);
+  final lastExclusive = localLastExclusive.isAfter(utcLastExclusive)
+      ? localLastExclusive
+      : utcLastExclusive;
+  final availableMicros = lastExclusive
+      .difference(query.startInclusive)
+      .inMicroseconds;
+  if (availableMicros <= 0 ||
+      lead > availableMicros ~/ Duration.microsecondsPerMinute) {
+    return null;
+  }
+  final delta = Duration(minutes: lead);
+  final start = query.startInclusive.add(delta);
+  if (!start.isBefore(lastExclusive)) return null;
+  final remainingMicros = lastExclusive
+      .difference(query.endExclusive)
+      .inMicroseconds;
+  final end =
+      remainingMicros <= 0 ||
+          lead > remainingMicros ~/ Duration.microsecondsPerMinute
+      ? lastExclusive
+      : query.endExclusive.add(delta);
+  return AgendaProjectionQuery(
+    startInclusive: start,
+    endExclusive: end,
+    timetableId: query.timetableId,
+    includeHiddenGeneralSchedules: query.includeHiddenGeneralSchedules,
+  );
+}
+
+Iterable<GeneralEventOccurrence> _startsFrom(
+  GeneralEventOccurrenceRange range,
+  DateTime startInclusive,
+) sync* {
+  var first = 0;
+  var end = range.length;
+  while (first < end) {
+    final middle = first + ((end - first) ~/ 2);
+    if (range[middle].start.isBefore(startInclusive)) {
+      first = middle + 1;
+    } else {
+      end = middle;
+    }
+  }
+  yield* range.slice(first);
+}
+
+Iterable<String> _retainedStableIds(
+  AgendaProjectionQuery query,
+  String sourceType,
+) sync* {
+  for (final scoped in {
+    ...query.retainedOccurrenceIds,
+    ...query.ownedOccurrenceIds,
+  }) {
+    final parts = scoped.split('|');
+    if (parts.length != 2) continue;
+    try {
+      if (Uri.decodeComponent(parts[0]) == sourceType) {
+        yield Uri.decodeComponent(parts[1]);
+      }
+    } on FormatException {
+      continue;
+    }
+  }
+}
+
+bool _reminderFiresInWindow(
+  AgendaReminder reminder,
+  DateTime occurrenceStart,
+  AgendaProjectionQuery query,
+) {
+  final lead = reminder.normalized().minutesBefore;
+  final fromStart = occurrenceStart
+      .difference(query.startInclusive)
+      .inMicroseconds;
+  if (fromStart < 0 || lead > fromStart ~/ Duration.microsecondsPerMinute) {
+    return false;
+  }
+  final fromEnd = occurrenceStart.difference(query.endExclusive).inMicroseconds;
+  return fromEnd < 0 || lead > fromEnd ~/ Duration.microsecondsPerMinute;
 }
 
 TimetableData? _selectTimetable(

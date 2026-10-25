@@ -76,6 +76,7 @@ class AgendaNotificationStatus {
     this.retainedPendingCount = 0,
     this.mode = AgendaNotificationReconcileMode.authoritative,
     this.nextRenewalAt,
+    this.schedulingWindowEndExclusive,
     this.lateRecoveryCount = 0,
     this.lastError,
   });
@@ -91,6 +92,11 @@ class AgendaNotificationStatus {
   final int retainedPendingCount;
   final AgendaNotificationReconcileMode mode;
   final DateTime? nextRenewalAt;
+
+  /// The reminder-fire-time window checked by the last successful Windows
+  /// reconciliation. This is not a guarantee of native notification delivery.
+  /// Null means that no current successful window is available.
+  final DateTime? schedulingWindowEndExclusive;
   final int lateRecoveryCount;
   final Object? lastError;
 
@@ -184,6 +190,11 @@ class AgendaNotificationService extends ChangeNotifier {
 
   AgendaNotificationStatus get status => _status;
   bool get isSupported => _enabled;
+
+  /// Windows deliberately keeps a short direct-scheduling window. This policy
+  /// is available before the first reconciliation so settings can explain it.
+  int? get schedulingWindowDays =>
+      _isWindows ? _windowsReminderHorizon.inDays : null;
 
   void _publishStatus(AgendaNotificationStatus value) {
     _status = value;
@@ -747,7 +758,28 @@ class AgendaNotificationService extends ChangeNotifier {
       // A snooze may be tapped a few minutes after an occurrence has started.
       // Build one direct-delivery scope for all finite reminders, while
       // keeping unbounded recurrence inside its explicit best-effort window.
-      final coverageScope = _projectNotificationCoverage(data, current);
+      // Windows also needs identities of still-visible cards: generating
+      // only new fire times must not treat an unchanged ongoing card as stale.
+      // Resolve just those identities rather than materializing every old
+      // overlapping instance of a long-duration repeating event.
+      final windowsPending = _isWindows ? await gateway.pendingPlan() : null;
+      final windowsOwnedKeys = _isWindows
+          ? <String>{
+              ...windowsPending!.keys,
+              if (gateway is AgendaNotificationOwnershipGateway)
+                ...(await (gateway as AgendaNotificationOwnershipGateway)
+                    .ownedNotificationKeys()),
+              if (_runtimeStore is AgendaNotificationBackgroundRequestIndex)
+                ...(await (_runtimeStore
+                        as AgendaNotificationBackgroundRequestIndex)
+                    .backgroundRequestKeys()),
+            }
+          : const <String>{};
+      final coverageScope = _projectNotificationCoverage(
+        data,
+        current,
+        ownedOccurrenceIds: _occurrenceIdsForPlanKeys(windowsOwnedKeys),
+      );
       await _migrateLegacyRuntimeOverrides(coverageScope.occurrences);
       // General-event acknowledgements are part of the persisted schedule
       // model. Keep them out of the platform plan just like the in-app
@@ -767,7 +799,7 @@ class AgendaNotificationService extends ChangeNotifier {
         now: current,
         horizon: coverageScope.endExclusive.difference(current),
       );
-      final existing = await gateway.pendingPlan();
+      final existing = windowsPending ?? await gateway.pendingPlan();
       final metadata = gateway is AgendaNotificationMetadataGateway
           ? await (gateway as AgendaNotificationMetadataGateway)
                 .pendingMetadata()
@@ -801,10 +833,12 @@ class AgendaNotificationService extends ChangeNotifier {
       };
       final ownedKeys = <String>{
         ...existing.keys,
-        if (gateway is AgendaNotificationOwnershipGateway)
+        ...windowsOwnedKeys,
+        if (!_isWindows && gateway is AgendaNotificationOwnershipGateway)
           ...(await (gateway as AgendaNotificationOwnershipGateway)
               .ownedNotificationKeys()),
-        if (_runtimeStore is AgendaNotificationBackgroundRequestIndex)
+        if (!_isWindows &&
+            _runtimeStore is AgendaNotificationBackgroundRequestIndex)
           ...(await (_runtimeStore as AgendaNotificationBackgroundRequestIndex)
               .backgroundRequestKeys()),
       };
@@ -1135,6 +1169,10 @@ class AgendaNotificationService extends ChangeNotifier {
           retainedPendingCount: retainedPendingKeys.length,
           mode: mode,
           nextRenewalAt: nextRenewalAt,
+          schedulingWindowEndExclusive:
+              _isWindows && !channelBlocked && !_registrationUncertain
+              ? coverageScope.endExclusive
+              : null,
           lateRecoveryCount: lateRecoveryCount,
           lastError: _registrationUncertain
               ? 'Notification registration result is unknown; replay was suppressed.'
@@ -1244,8 +1282,9 @@ class AgendaNotificationService extends ChangeNotifier {
 
   _NotificationCoverageScope _projectNotificationCoverage(
     AppData data,
-    DateTime current,
-  ) {
+    DateTime current, {
+    Set<String> ownedOccurrenceIds = const {},
+  }) {
     final startInclusive = current.subtract(_snoozeLookback);
     if (_isWindows) {
       // Windows keeps its existing short-horizon toast scheduling policy.
@@ -1259,6 +1298,9 @@ class AgendaNotificationService extends ChangeNotifier {
           endExclusive: endExclusive,
           includeHiddenGeneralSchedules:
               data.notificationSettings.remindHiddenGeneralCalendars,
+          includeReminderCandidates: true,
+          retainedOccurrenceIds: _activeSnoozedOccurrenceIds(current),
+          ownedOccurrenceIds: ownedOccurrenceIds,
         ),
         hasUnboundedRecurrence: false,
         unboundedEndExclusive: endExclusive,
@@ -1399,6 +1441,30 @@ class AgendaNotificationService extends ChangeNotifier {
       ),
     );
   }
+
+  Set<String> _activeSnoozedOccurrenceIds(DateTime current) {
+    final result = <String>{};
+    for (final entry in _snoozedUntil.entries) {
+      if (!entry.value.isAfter(current)) continue;
+      if (isAgendaRuntimeOccurrenceId(entry.key)) {
+        result.add(entry.key.substring(0, entry.key.lastIndexOf('|')));
+      } else {
+        final legacy = parseNotificationPlanKey(entry.key);
+        if (legacy != null) {
+          result.add(
+            '${Uri.encodeComponent(legacy.sourceType)}|${Uri.encodeComponent(legacy.stableOccurrenceId)}',
+          );
+        }
+      }
+    }
+    return result;
+  }
+
+  Set<String> _occurrenceIdsForPlanKeys(Iterable<String> keys) => {
+    for (final key in keys)
+      if (parseNotificationPlanKey(key) case final parsed?)
+        '${Uri.encodeComponent(parsed.sourceType)}|${Uri.encodeComponent(parsed.stableOccurrenceId)}',
+  };
 
   Future<Set<String>> _blockedNotificationChannelIds(
     Iterable<NotificationPlanItem> items,
