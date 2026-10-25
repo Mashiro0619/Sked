@@ -19,13 +19,50 @@ class GeneralReminderRun {
   final GeneralReminderStatus status;
   int get length => range.length;
 
-  GeneralReminderItem operator [](int index) => GeneralReminderItem(
-    occurrence:
-        range[status == GeneralReminderStatus.overdue
-            ? length - index - 1
-            : index],
-    status: status,
-  );
+  GeneralReminderItem operator [](int index) {
+    var position = status == GeneralReminderStatus.overdue
+        ? length - index - 1
+        : index;
+    var occurrence = range[position];
+    if (status == GeneralReminderStatus.overdue &&
+        occurrence.isAllDay &&
+        length > 1) {
+      final ordered = _overdueTiedPosition(index, position, occurrence.end);
+      if (ordered != position) occurrence = range[ordered];
+    }
+    return GeneralReminderItem(occurrence: occurrence, status: status);
+  }
+
+  int _overdueTiedPosition(int index, int position, DateTime end) {
+    final sameBefore =
+        position > 0 && range[position - 1].end.isAtSameMomentAs(end);
+    final sameAfter =
+        position + 1 < length && range[position + 1].end.isAtSameMomentAs(end);
+    if (!sameBefore && !sameAfter) return position;
+
+    // A skipped civil date can give adjacent all-day instances the same end.
+    // Reverse end-time groups, while keeping each tied group in its canonical
+    // start/key order. Every row in a run has the same calendar, event and
+    // title, so this matches the shared comparator without storing row maps.
+    final first = _endLowerBound(end);
+    final after = _endLowerBound(end, inclusive: true);
+    return first + index - (length - after);
+  }
+
+  int _endLowerBound(DateTime end, {bool inclusive = false}) {
+    var low = 0;
+    var high = length;
+    while (low < high) {
+      final middle = low + ((high - low) ~/ 2);
+      final order = range[middle].end.compareTo(end);
+      if (order < 0 || (inclusive && order == 0)) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
 
   late final GeneralReminderItem first = this[0];
   late final GeneralReminderItem last = this[length - 1];
@@ -312,18 +349,12 @@ class _GeneralReminderGroup {
       );
       final requested = tryParseStrictIsoDateTime(parts.startDateTimeIso);
       if (eventStart == null || requested == null) continue;
-      final sequence = generalRecurrenceSequenceForDate(
-        eventStart,
-        source.event.recurrenceRule,
-        requested,
-      );
-      if (sequence == null) continue;
-      final ordinal = run.range.indexOfSequence(sequence);
+      final ordinal = _ordinalForStart(run, eventStart, requested);
       if (ordinal == null) continue;
-      final item =
-          run[run.status == GeneralReminderStatus.overdue
-              ? run.length - ordinal - 1
-              : ordinal];
+      final item = GeneralReminderItem(
+        occurrence: run.range[ordinal],
+        status: run.status,
+      );
       if (!generalOccurrenceKeyMatches(
         key,
         calendarId: item.occurrence.calendar.id,
@@ -339,5 +370,41 @@ class _GeneralReminderGroup {
       return rank;
     }
     return null;
+  }
+
+  int? _ordinalForStart(
+    GeneralReminderRun run,
+    DateTime eventStart,
+    DateTime requested,
+  ) {
+    final sequence = generalRecurrenceSequenceForDate(
+      eventStart,
+      run.first.occurrence.event.recurrenceRule,
+      requested,
+    );
+    final ordinal = sequence == null
+        ? null
+        : run.range.indexOfSequence(sequence);
+    if (ordinal != null &&
+        run.range[ordinal].start.isAtSameMomentAs(requested)) {
+      return ordinal;
+    }
+
+    // A skipped civil date may normalize a candidate onto a later date, so
+    // reversing calendar arithmetic need not recover its original sequence.
+    // The range keeps strictly increasing starts; use a bounded point lookup.
+    var low = 0;
+    var high = run.length;
+    while (low < high) {
+      final middle = low + ((high - low) ~/ 2);
+      if (run.range[middle].start.isBefore(requested)) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low < run.length && run.range[low].start.isAtSameMomentAs(requested)
+        ? low
+        : null;
   }
 }
