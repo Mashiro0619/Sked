@@ -99,7 +99,41 @@ class AgendaReminder {
   final int minutesBefore;
 
   DateTime fireAt(DateTime occurrenceStart) {
-    return occurrenceStart.subtract(Duration(minutes: minutesBefore));
+    // Imported offsets are not bounded to machine-Duration minutes. Avoid
+    // wrapping a very old trigger into the future when multiplication
+    // overflows; retain exact elapsed-time arithmetic for ordinary offsets.
+    const minMicros = -8640000000000000000;
+    const maxMicros = 8640000000000000000;
+    // floor(Int64.maxValue / microsecondsPerMinute), written as a precisely
+    // representable integer so this shared model also compiles for the web.
+    const maxDurationMinutes = 153722867280;
+    final start = occurrenceStart.microsecondsSinceEpoch;
+    if (minutesBefore >= 0 && minutesBefore <= maxDurationMinutes) {
+      final delta = Duration(minutes: minutesBefore);
+      final micros = delta.inMicroseconds;
+      final beforeMinimum = start <= 0
+          ? micros > start - minMicros
+          : micros > start && micros - start > -minMicros;
+      return beforeMinimum
+          ? DateTime.fromMicrosecondsSinceEpoch(
+              minMicros,
+              isUtc: occurrenceStart.isUtc,
+            )
+          : occurrenceStart.subtract(delta);
+    }
+    final exact =
+        BigInt.from(start) -
+        BigInt.from(minutesBefore) *
+            BigInt.from(Duration.microsecondsPerMinute);
+    final bounded = exact < BigInt.from(minMicros)
+        ? minMicros
+        : exact > BigInt.from(maxMicros)
+        ? maxMicros
+        : exact.toInt();
+    return DateTime.fromMicrosecondsSinceEpoch(
+      bounded,
+      isUtc: occurrenceStart.isUtc,
+    );
   }
 
   AgendaReminder normalized() {

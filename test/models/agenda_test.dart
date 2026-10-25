@@ -83,5 +83,40 @@ void main() {
         );
       },
     );
+
+    test('large lead times saturate without wrapping on native and web', () {
+      for (final isUtc in [false, true]) {
+        final start = isUtc
+            ? DateTime.utc(2026, 8, 3, 8)
+            : DateTime(2026, 8, 3, 8);
+        final earliest = DateTime.fromMillisecondsSinceEpoch(
+          -8640000000000000,
+          isUtc: isUtc,
+        );
+        final latest = DateTime.fromMillisecondsSinceEpoch(
+          8640000000000000,
+          isUtc: isUtc,
+        );
+        // All offsets are exactly representable on the web. The first two
+        // straddle the native Duration multiplication limit.
+        for (final minutes in [153722867280, 153722867281, 9007199254740991]) {
+          final fireAt = AgendaReminder(minutesBefore: minutes).fireAt(start);
+          expect(fireAt, earliest);
+          expect(fireAt.isUtc, isUtc);
+          final negative = AgendaReminder(minutesBefore: -minutes)
+              .fireAt(start);
+          expect(negative, latest);
+          expect(negative.isUtc, isUtc);
+        }
+      }
+    });
+
+    test('direct negative offsets keep elapsed-time arithmetic', () {
+      final start = DateTime.utc(2026, 8, 3, 8);
+      expect(
+        const AgendaReminder(minutesBefore: -5).fireAt(start),
+        start.add(const Duration(minutes: 5)),
+      );
+    });
   });
 }
