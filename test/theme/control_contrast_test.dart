@@ -120,7 +120,6 @@ void main() {
             final surface = role.resolve(colors);
             final editorField = workspaceEditorInputDecoration(
               tester.element(find.text('Title')),
-              'Notes',
             );
             expect(
               _contrast(

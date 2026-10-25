@@ -53,7 +53,6 @@ void main() {
                               style: workspaceEditorContentStyle(context),
                               decoration: workspaceEditorInputDecoration(
                                 context,
-                                'Teacher',
                               ),
                             ),
                           ),

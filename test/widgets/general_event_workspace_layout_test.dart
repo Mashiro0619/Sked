@@ -115,7 +115,7 @@ void main() {
                 )
                 .style!
                 .fontSize,
-            22,
+            18,
           );
           if (scale == 1) {
             expect(

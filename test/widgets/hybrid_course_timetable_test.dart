@@ -159,7 +159,7 @@ void main() {
           final editor = find.byType(CourseEditorSheet);
           final l = AppLocalizations.of(tester.element(editor));
           final title = _key('course-desktop-title');
-          expect(tester.widget<TextField>(title).style!.fontSize, 22);
+          expect(tester.widget<TextField>(title).style!.fontSize, 18);
           await tester.enterText(title, 'Course title draft');
 
           final more = find.widgetWithText(ExpansionTile, l.more);

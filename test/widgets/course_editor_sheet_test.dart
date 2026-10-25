@@ -335,7 +335,7 @@ void main() {
         },
       );
       await tester.enterText(
-        find.widgetWithText(TextField, 'Course name'),
+        find.byKey(const ValueKey('course-desktop-title')),
         'Cyclic course',
       );
       final start = find.byKey(const ValueKey('course-start-time-action'));

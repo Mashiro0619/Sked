@@ -13,7 +13,7 @@ void main() {
   for (final mode in AppMode.values) {
     for (final locale in ['zh', 'en']) {
       testWidgets(
-        'desktop $mode uses a headline and labeled controls: $locale',
+        'desktop $mode uses labeled name and metadata controls: $locale',
         (t) async {
           t.view.devicePixelRatio = 1;
           t.view.physicalSize = const Size(1600, 1100);
@@ -46,8 +46,11 @@ void main() {
           final input = t.widget<TextField>(title);
           expect(input.decoration!.prefixIcon, isNull);
           expect(input.decoration!.labelText, isNull);
-          expect(input.decoration!.enabledBorder!.borderSide, BorderSide.none);
-          expect(input.style!.fontSize, 22);
+          expect(
+            input.decoration!.enabledBorder!.borderSide.style,
+            BorderStyle.solid,
+          );
+          expect(input.style!.fontSize, 18);
           final sections = t
               .widgetList<WorkspaceEditorFormSection>(
                 find.descendant(

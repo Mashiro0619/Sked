@@ -102,11 +102,7 @@ class SkedEditorTextField extends StatelessWidget {
     final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final decoration =
         (desktop
-                ? workspaceEditorInputDecoration(
-                    context,
-                    label,
-                    headline: headline,
-                  )
+                ? workspaceEditorInputDecoration(context, headline: headline)
                 : InputDecoration(labelText: label))
             .copyWith(
               hintText: hintText,
@@ -182,9 +178,7 @@ class SkedEditorTextField extends StatelessWidget {
             onEditingComplete: onEditingComplete,
           );
     if (!desktop) return input;
-    return headline
-        ? Semantics(label: label, child: input)
-        : WorkspaceEditorField(label: label, child: input);
+    return WorkspaceEditorField(label: label, child: input);
   }
 }
 
@@ -968,48 +962,44 @@ class WorkspaceEditorFormSection extends StatelessWidget {
 }
 
 TextStyle workspaceEditorTitleStyle(BuildContext context) =>
-    skedPanelHeadlineStyle(context);
+    skedPanelHeadlineStyle(context)
+        .copyWith(fontSize: 18, fontWeight: FontWeight.w500, height: 1.3);
 
 InputDecoration workspaceEditorInputDecoration(
-  BuildContext context,
-  String label, {
+  BuildContext context, {
   bool headline = false,
   String? hintText,
 }) {
   final colors = Theme.of(context).colorScheme;
   final border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(WorkspaceEditorFormMetrics.radius),
-    borderSide: headline
-        ? BorderSide.none
-        : BorderSide(color: colors.outlineVariant),
+    borderSide: BorderSide(color: colors.outlineVariant),
   );
   return InputDecoration(
-    hintText: headline ? (hintText ?? label) : hintText,
+    hintText: hintText,
     hintStyle: headline
-        ? workspaceEditorTitleStyle(context)
+        ? workspaceEditorContentStyle(context)
               .copyWith(color: colors.onSurfaceVariant)
         : null,
     floatingLabelBehavior: FloatingLabelBehavior.never,
     constraints: const BoxConstraints(
       minHeight: WorkspaceEditorFormMetrics.controlHeight,
     ),
-    filled: !headline,
+    filled: true,
     fillColor: colors.surfaceContainerHighest.withValues(alpha: .35),
     isDense: true,
     visualDensity: VisualDensity.standard,
     contentPadding: EdgeInsets.symmetric(
-      horizontal: headline ? 0 : 10,
+      horizontal: 10,
       vertical: headline ? 8 : 10,
     ),
     border: border,
     enabledBorder: border,
-    disabledBorder: headline
-        ? border
-        : border.copyWith(
-            borderSide: BorderSide(
-              color: colors.outlineVariant.withValues(alpha: .38),
-            ),
-          ),
+    disabledBorder: border.copyWith(
+      borderSide: BorderSide(
+        color: colors.outlineVariant.withValues(alpha: .38),
+      ),
+    ),
     focusedBorder: border.copyWith(
       borderSide: BorderSide(
         color: skedReadableAccent(

@@ -169,9 +169,9 @@ void main() {
       expect(object.fontSize, 18);
       expect(object.fontWeight, FontWeight.w600);
       expect(object.height, 1.35);
-      expect(editable.fontSize, 22);
-      expect(editable.fontWeight, FontWeight.w600);
-      expect(editable.height, 1.25);
+      expect(editable.fontSize, 18);
+      expect(editable.fontWeight, FontWeight.w500);
+      expect(editable.height, 1.3);
       expect(editable.letterSpacing, 0);
       expect(subtitle.fontSize, 12);
       expect(subtitle.fontWeight, FontWeight.w400);

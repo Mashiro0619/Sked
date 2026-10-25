@@ -569,8 +569,8 @@ bool _isCloseButton(Widget widget) =>
 TextEditingController _expectEditorName(WidgetTester tester, Finder finder) {
   expect(finder, findsOneWidget);
   final field = tester.widget<TextField>(finder);
-  expect(field.style!.fontSize, 22);
-  expect(field.style!.fontWeight, FontWeight.w600);
+  expect(field.style!.fontSize, 18);
+  expect(field.style!.fontWeight, FontWeight.w500);
   expect(field.style!.fontFamily, isNot('Ahem'));
   return field.controller!;
 }

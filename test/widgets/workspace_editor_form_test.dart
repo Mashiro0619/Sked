@@ -94,7 +94,7 @@ void main() {
             ),
           ),
         );
-        final basic = workspaceEditorInputDecoration(formContext, 'Notes');
+        final basic = workspaceEditorInputDecoration(formContext);
         expect(basic.labelText, isNull);
         expect(basic.hintText, isNull);
         expect(
@@ -112,13 +112,13 @@ void main() {
         );
         final headline = workspaceEditorInputDecoration(
           formContext,
-          'Title',
           headline: true,
         );
-        expect(headline.hintText, 'Title');
-        expect(headline.hintStyle!.fontSize, 22);
-        expect(headline.filled, isFalse);
-        expect(headline.enabledBorder!.borderSide, BorderSide.none);
+        expect(headline.hintText, isNull);
+        expect(headline.hintStyle!.fontSize, 14);
+        expect(headline.filled, isTrue);
+        expect(headline.enabledBorder, basic.enabledBorder);
+        expect(headline.disabledBorder, basic.disabledBorder);
         expect(workspaceEditorLabelStyle(formContext).fontSize, 12);
         expect(workspaceEditorContentStyle(formContext).fontSize, 14);
         expect(
@@ -153,10 +153,7 @@ void main() {
                           label: 'Long localized field label',
                           child: TextField(
                             controller: input,
-                            decoration: workspaceEditorInputDecoration(
-                              context,
-                              'Long localized field label',
-                            ),
+                            decoration: workspaceEditorInputDecoration(context),
                           ),
                         ),
                       ),
@@ -212,10 +209,7 @@ void main() {
                   children: [
                     TextField(
                       style: workspaceEditorContentStyle(context),
-                      decoration: workspaceEditorInputDecoration(
-                        context,
-                        'Name',
-                      ),
+                      decoration: workspaceEditorInputDecoration(context),
                     ),
                     WorkspaceEditorValue(
                       label: 'Day',
