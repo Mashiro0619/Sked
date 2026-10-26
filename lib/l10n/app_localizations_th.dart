@@ -115,10 +115,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get noTimetableTitle => 'ยังไม่มีตารางเวลา';
 
   @override
-  String get noTimetableMessage => 'สร้างตารางเวลาหรือนําเข้าจากไฟล์ JSON';
+  String get noTimetableMessage => 'สร้างตารางเวลาหรือนำเข้าจากไฟล์ JSON';
 
   @override
-  String get importTimetable => 'ตารางเวลานําเข้า';
+  String get importTimetable => 'ตารางเวลานำเข้า';
 
   @override
   String get courseName => 'ชื่อหลักสูตร';
@@ -143,7 +143,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get linkedPeriodsUnmatched =>
-      'ไม่มีระยะเวลาที่ตรงกับสําหรับเวลาปัจจุบัน แตะเพื่อเลือกด้วยมือ';
+      'ไม่มีระยะเวลาที่ตรงกับสำหรับเวลาปัจจุบัน แตะเพื่อเลือกด้วยมือ';
 
   @override
   String periodRangeLabel(int start, int end) {
@@ -477,7 +477,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get openSourceLicensesDesc =>
-      'ดูใบอนุญาตสําหรับการพึ่งพา Flutter และทรัพย์สินไอคอนแอพที่รวม';
+      'ดูใบอนุญาตสำหรับการพึ่งพา Flutter และทรัพย์สินไอคอนแอพที่รวม';
 
   @override
   String get checkForUpdates => 'ตรวจสอบการอัพเดท';
@@ -542,7 +542,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get editPeriodTimeSet => 'แก้ไขช่วงเวลา';
 
   @override
-  String get importTimetableFiles => 'ตารางเวลานําเข้า';
+  String get importTimetableFiles => 'ตารางเวลานำเข้า';
 
   @override
   String get importTimetableFilesDesc => 'รองรับไฟล์ตารางเวลาหนึ่งหรือหลายไฟล์';
@@ -576,7 +576,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get jsonContent => 'เนื้อหา JSON';
 
   @override
-  String get pasteJsonContentHint => 'วางเนื้อหา JSON เพื่อนําเข้า';
+  String get pasteJsonContentHint => 'วางเนื้อหา JSON เพื่อนำเข้า';
 
   @override
   String get jsonContentEmpty => 'วางเนื้อหา JSON ก่อน';
@@ -608,7 +608,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get importAction => 'นำเข้า';
 
   @override
-  String get importTimetableDialogTitle => 'ตารางเวลานําเข้า';
+  String get importTimetableDialogTitle => 'ตารางเวลานำเข้า';
 
   @override
   String get chooseImportMethod => 'เลือกวิธีการนำเข้า';
@@ -620,7 +620,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get replaceCurrentTimetable => 'เปลี่ยนตารางเวลาปัจจุบัน';
 
   @override
-  String get importPeriodTimeSetDialogTitle => 'ชุดเวลาในระยะเวลานําเข้า';
+  String get importPeriodTimeSetDialogTitle => 'ชุดเวลาในระยะเวลานำเข้า';
 
   @override
   String get importPeriodTimeSetDialogBody =>
@@ -663,7 +663,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get browserDownloadRestrictedTitle =>
-      'การดาวน์โหลดเบราว์เซอร์ถูกจํากัด';
+      'การดาวน์โหลดเบราว์เซอร์ถูกจำกัด';
 
   @override
   String get browserDownloadRestrictedMessage =>
@@ -748,7 +748,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get importExport => 'นำเข้าและส่งออก';
 
   @override
-  String get importPeriodTemplate => 'แม่แบบระยะเวลานําเข้า';
+  String get importPeriodTemplate => 'แม่แบบระยะเวลานำเข้า';
 
   @override
   String get importPeriodTemplateText => 'นำเข้าเทมเพลตช่วงเวลาจากข้อความ';

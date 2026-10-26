@@ -37,6 +37,18 @@ Map<String, dynamic> _messages(String locale) =>
 void main() {
   setUpAll(initializeDateFormatting);
 
+  test('Thai messages use the precomposed sara am character', () {
+    for (final entry in _messages('th').entries) {
+      if (entry.value is String) {
+        expect(
+          entry.value as String,
+          isNot(contains('\u0e4d\u0e32')),
+          reason: entry.key,
+        );
+      }
+    }
+  });
+
   for (final locale in AppLocalizations.supportedLocales) {
     test('$locale cancel remains distinct from deleting data', () {
       final messages = _messages('$locale');
