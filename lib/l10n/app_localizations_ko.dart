@@ -478,7 +478,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get currentVersionLabel => '현재 버전';
 
   @override
-  String get newVersionAvailable => '업데이트 उपलब्ध';
+  String get newVersionAvailable => '새 버전이 있습니다';
 
   @override
   String get googlePlay => 'Google Play';
