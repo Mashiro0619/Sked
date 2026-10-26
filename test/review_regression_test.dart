@@ -765,38 +765,75 @@ END:VCALENDAR''',
     },
   );
 
-  for (final phase in ['before', 'rotated', 'promoted']) {
+  for (final (phase, blockRollback) in [
+    ('before', false),
+    ('rotated', false),
+    ('promoted', false),
+    ('promoted', true),
+  ]) {
     test(
-      'a handled $phase failure restores exactly the previous main',
+      blockRollback
+          ? 'a $phase failure preserves recovery evidence when rollback is blocked'
+          : 'a $phase failure validates the actual rollback outcome',
       () async {
         final directory = await storageDirectory();
         final original = baseData();
+        final updated = original.copyWith(localeCode: 'zh');
         final store = IoTimetableStorage(
           directoryProvider: () async => directory,
         );
         await store.save(original);
         final failure = StateError('injected $phase failure');
-        Future<void> fail() async => throw failure;
+        Future<void> fail() async {
+          if (blockRollback) {
+            // An external temporary must survive rollback verification. This
+            // forces the unknown-outcome assertions without a timing race.
+            await File('${await store.filePath()}.tmp')
+                .writeAsString('external rollback obstruction');
+          }
+          throw failure;
+        }
+
         final failing = IoTimetableStorage(
           directoryProvider: () async => directory,
           beforeMainReplace: phase == 'before' ? fail : null,
           afterMainRotation: phase == 'rotated' ? fail : null,
           afterMainReplace: phase == 'promoted' ? fail : null,
         );
-        await expectLater(
-          failing.save(original.copyWith(localeCode: 'zh')),
-          throwsA(
-            isA<StorageWriteException>().having(
-              (e) => e.cause,
-              'cause',
-              same(failure),
-            ),
+        StorageWriteException? writeFailure;
+        try {
+          await failing.save(updated);
+        } on StorageWriteException catch (error) {
+          writeFailure = error;
+        }
+        expect(
+          writeFailure,
+          isA<StorageWriteException>().having(
+            (e) => e.cause,
+            'cause',
+            same(failure),
           ),
         );
+        if (blockRollback) {
+          expect(writeFailure, isA<StorageWriteStateUnknownException>());
+        }
         final mainPath = await store.filePath();
-        expect(await File(mainPath).readAsString(), original.encode());
-        expect(await File('$mainPath.tmp').exists(), isFalse);
-        expect((await store.load()).data!.toJson(), original.toJson());
+        final mainSource = await File(mainPath).readAsString();
+        if (writeFailure case final StorageWriteStateUnknownException unknown) {
+          expect(unknown.recoveryArtifacts, isNotEmpty);
+          final recoverySources = <String>[];
+          for (final artifact in unknown.recoveryArtifacts) {
+            final bytes = await store.readRecoveryArtifact(artifact);
+            expect(bytes, isNotNull, reason: 'Recovery evidence: $artifact');
+            recoverySources.add(utf8.decode(bytes!));
+          }
+          expect(recoverySources, contains(original.encode()));
+          expect(mainSource, isIn([original.encode(), updated.encode()]));
+        } else {
+          expect(mainSource, original.encode());
+          expect(await File('$mainPath.tmp').exists(), isFalse);
+          expect((await store.load()).data!.toJson(), original.toJson());
+        }
       },
     );
   }
