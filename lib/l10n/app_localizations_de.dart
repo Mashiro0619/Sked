@@ -610,6 +610,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zu importierende Stundenpläne auswählen';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count Kurse';
   }

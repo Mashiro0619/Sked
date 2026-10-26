@@ -612,6 +612,9 @@ class AppLocalizationsHu extends AppLocalizations {
       'Válassza ki az importáló menetrendeket';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count tanfolyamok';
   }

@@ -602,6 +602,9 @@ class AppLocalizationsFi extends AppLocalizations {
   String get selectTimetablesToImport => 'Valitse aikataulut tuoda';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count kursseja';
   }

@@ -598,6 +598,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get selectTimetablesToImport => 'आयात करने के लिए टाइमटेबल चुनें';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count कोर्स';
   }

@@ -805,7 +805,9 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final motion = SkedMotionPolicy.of(context);
-    final shape = skedShapeSchemeOf(context).selectionIndicator;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    );
     final today = DateTime.now();
     final textScaler = MediaQuery.textScalerOf(context);
     final textDirection = Directionality.of(context);
@@ -860,12 +862,13 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
         .map((size) => size.width)
         .reduce(math.max);
     final dateWidth = dateSizes.map((size) => size.width).reduce(math.max);
-    // Include both selection weights, horizontal padding and the two borders.
+    // Include both selection weights and horizontal padding.
     // Fitting all seven days is a preference, subject to readable labels.
-    final minimumItemWidth = (math.max(weekdayWidth, dateWidth) + 10)
+    final minimumItemWidth = math
+        .max(36.0, math.max(weekdayWidth, dateWidth) + 12)
         .ceilToDouble();
     final stripHeight = math
-        .max(60.0, weekdayHeight + dateHeight + 12)
+        .max(60.0, weekdayHeight + dateHeight + 18)
         .ceilToDouble();
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -927,6 +930,7 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
                       : colors.onSurface;
                   return Semantics(
                     button: true,
+                    enabled: widget.enabled,
                     selected: selected,
                     label: MaterialLocalizations.of(context)
                         .formatFullDate(date),
@@ -935,18 +939,6 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
                       duration: motion.effects(SkedMotionSpeed.fast),
                       curve: motion.scheme.standardCurve,
                       width: metrics.itemWidth,
-                      decoration: ShapeDecoration(
-                        shape: shape.copyWith(
-                          side: BorderSide(
-                            color: selected || isToday
-                                ? colors.primary
-                                : colors.outlineVariant,
-                          ),
-                        ),
-                        color: selected
-                            ? colors.primaryContainer
-                            : colors.surfaceContainerLow,
-                      ),
                       child: Material(
                         color: Colors.transparent,
                         shape: shape,
@@ -956,39 +948,72 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
                           onTap: widget.enabled
                               ? () => widget.onSelected(weekday)
                               : null,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 3,
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  weekdayLabels[index],
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: foreground,
-                                    fontWeight: selected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
+                          child: Center(
+                            child: AnimatedContainer(
+                              key: ValueKey('student-day-indicator-$weekday'),
+                              duration: motion.effects(SkedMotionSpeed.fast),
+                              curve: motion.scheme.standardCurve,
+                              width: minimumItemWidth,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
+                              decoration: ShapeDecoration(
+                                shape: shape,
+                                color: selected
+                                    ? colors.primaryContainer
+                                    : Colors.transparent,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    weekdayLabels[index],
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: foreground,
+                                          fontWeight: selected
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                        ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.fade,
+                                    softWrap: false,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.fade,
-                                  softWrap: false,
-                                ),
-                                Text(
-                                  dateLabels[index],
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: foreground,
-                                    fontWeight: selected
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
+                                  Text(
+                                    dateLabels[index],
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          color: foreground,
+                                          fontWeight: selected
+                                              ? FontWeight.w800
+                                              : FontWeight.w600,
+                                        ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.fade,
+                                    softWrap: false,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.fade,
-                                  softWrap: false,
-                                ),
-                              ],
+                                  const SizedBox(height: 2),
+                                  SizedBox(
+                                    height: 4,
+                                    width: 4,
+                                    child: isToday
+                                        ? DecoratedBox(
+                                            key: const ValueKey(
+                                              'student-day-today-dot',
+                                            ),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: selected
+                                                  ? colors.onPrimaryContainer
+                                                  : colors.primary,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1366,11 +1391,13 @@ class _TimetableWeekPager extends StatefulWidget {
     required this.fitWeekColumnsToWidth,
     this.shortcutFocusNode,
     required this.bottomContentInset,
+    required this.dayHorizontalInset,
     required this.onPageScrollStateChanged,
     required this.onWeekSettled,
     required this.onWeekdaySelected,
     required this.onJumpWeekBy,
     required this.onCourseTap,
+    required this.onAddCourse,
     required this.onEmptySlotTap,
   });
 
@@ -1388,11 +1415,13 @@ class _TimetableWeekPager extends StatefulWidget {
   final bool fitWeekColumnsToWidth;
   final FocusNode? shortcutFocusNode;
   final double bottomContentInset;
+  final double dayHorizontalInset;
   final ValueChanged<bool> onPageScrollStateChanged;
   final Future<void> Function(int week) onWeekSettled;
   final ValueChanged<int> onWeekdaySelected;
   final Future<void> Function(int offset) onJumpWeekBy;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
+  final ValueChanged<BuildContext>? onAddCourse;
   final ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap;
 
   @override
@@ -1754,29 +1783,89 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
     final currentPageInteractive =
         widget.interactive && pageWeek == widget.committedWeek;
 
+    if (widget.viewMode == _StudentTimetableView.day) {
+      return KeyedSubtree(
+        key: ValueKey('student-week-page-$pageWeek'),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: widget.dayHorizontalInset),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 880),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _StudentDayStrip(
+                    weekStart: weekStart,
+                    selectedWeekday: widget.selectedWeekday,
+                    enabled: currentPageInteractive && widget.active,
+                    fitToWidth: widget.fitDaySelectorToWidth,
+                    horizontalScrollLocked:
+                        _manualEdgeDrag || _manualSettleInProgress,
+                    onHorizontalPointerDown: horizontalHandoffEnabled
+                        ? _markInnerHorizontalPointer
+                        : null,
+                    onHorizontalEdgeDrag: horizontalHandoffEnabled
+                        ? _beginManualEdgeDrag
+                        : null,
+                    onSelected: widget.onWeekdaySelected,
+                  ),
+                  Expanded(
+                    child: RepaintBoundary(
+                      child: TimetableDayAgenda(
+                        key: ValueKey('student-day-agenda-$pageWeek'),
+                        timetable: widget.timetable,
+                        periodTimes: widget.snapshot.periodTimes,
+                        weekDateStart: weekStart,
+                        selectedWeek: pageWeek,
+                        realCurrentWeek: realCurrentWeek,
+                        localeCode: widget.snapshot.localeCode,
+                        selectedWeekday: widget.selectedWeekday,
+                        showPastEndedCourses:
+                            widget.snapshot.showPastEndedCourses,
+                        showFutureCourses: widget.snapshot.showFutureCourses,
+                        themeColorMode: widget.snapshot.themeColorMode,
+                        courseNameColorValues:
+                            widget.snapshot.courseNameColorValues,
+                        colorfulCourseTextColorMode:
+                            widget.snapshot.colorfulCourseTextColorMode,
+                        colorfulCourseTextColorValue: widget
+                            .snapshot
+                            .colorfulUiColorValues[colorfulCourseTextColorKey],
+                        displayedCourseIdForConflict:
+                            widget.snapshot.displayedCourseIdForConflict,
+                        liveCourseTarget: liveCourseTarget,
+                        liveCourseOutlineEnabled:
+                            widget.snapshot.liveCourseOutlineEnabled,
+                        liveCourseOutlineMode:
+                            widget.snapshot.liveCourseOutlineMode,
+                        liveCourseOutlineColorValue:
+                            liveCourseOutlineColorValue,
+                        liveCourseOutlineWidth:
+                            widget.snapshot.liveCourseOutlineWidth,
+                        bottomContentInset: widget.bottomContentInset,
+                        onCourseTap: currentPageInteractive && widget.active
+                            ? widget.onCourseTap
+                            : null,
+                        onAddCourse: currentPageInteractive && widget.active
+                            ? widget.onAddCourse
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return KeyedSubtree(
       key: ValueKey('student-week-page-$pageWeek'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.viewMode == _StudentTimetableView.day) ...[
-            _StudentDayStrip(
-              weekStart: weekStart,
-              selectedWeekday: widget.selectedWeekday,
-              enabled: currentPageInteractive,
-              fitToWidth: widget.fitDaySelectorToWidth,
-              horizontalScrollLocked:
-                  _manualEdgeDrag || _manualSettleInProgress,
-              onHorizontalPointerDown: horizontalHandoffEnabled
-                  ? _markInnerHorizontalPointer
-                  : null,
-              onHorizontalEdgeDrag: horizontalHandoffEnabled
-                  ? _beginManualEdgeDrag
-                  : null,
-              onSelected: widget.onWeekdaySelected,
-            ),
-            const SizedBox(height: 4),
-          ],
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(
@@ -1811,13 +1900,7 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
                   liveCourseOutlineColorValue: liveCourseOutlineColorValue,
                   liveCourseOutlineWidth:
                       widget.snapshot.liveCourseOutlineWidth,
-                  visibleWeekdays: widget.viewMode == _StudentTimetableView.day
-                      ? [widget.selectedWeekday]
-                      : const <int>[1, 2, 3, 4, 5, 6, 7],
-                  fitVisibleDaysToWidth:
-                      widget.viewMode == _StudentTimetableView.week &&
-                      widget.fitWeekColumnsToWidth,
-                  showDayHeader: widget.viewMode != _StudentTimetableView.day,
+                  fitVisibleDaysToWidth: widget.fitWeekColumnsToWidth,
                   bottomContentInset: widget.bottomContentInset,
                   horizontalScrollLocked:
                       _manualEdgeDrag || _manualSettleInProgress,

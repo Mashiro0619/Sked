@@ -580,6 +580,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get selectTimetablesToImport => 'インポートする時間割を選択';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count件の授業';
   }

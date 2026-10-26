@@ -36,6 +36,7 @@ Windows 渲染必须标为模拟布局，不能称为 Android 真机验收。
 | `date-navigation` | 日期导航、区间拖动及日期时间表单；可选原生指针 | [date_navigation.dart](capture_scenarios/date_navigation.dart) |
 | `date-range-highlights` | 日期区间端点、跨月、键盘焦点与 RTL | [date_range_highlights.dart](capture_scenarios/date_range_highlights.dart) |
 | `day-agenda` | 当天安排及详情 | [day_agenda.dart](capture_scenarios/day_agenda.dart) |
+| `student-day-agenda` | 课程日视图：1362×768／1920 桌面、320／430 手机模拟、1／2 倍字体及浅深色；真实节次时间、完整与部分冲突、长名称、缺少元信息、空态 | [student_day_agenda.dart](capture_scenarios/student_day_agenda.dart) |
 | `desktop-resize` | 桌面布局随窗口变化 | [desktop_resize.dart](capture_scenarios/desktop_resize.dart) |
 | `desktop-panels` | 桌面视图面板 | [desktop_panels.dart](capture_scenarios/desktop_panels.dart) |
 | `dropdown-focus` | 下拉选择与焦点 | [dropdown_focus.dart](capture_scenarios/dropdown_focus.dart) |

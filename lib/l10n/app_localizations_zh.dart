@@ -571,6 +571,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get selectTimetablesToImport => '选择要导入的课表';
 
   @override
+  String get studentDayEmpty => '当天暂无课程';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count 门课程';
   }
@@ -3491,6 +3494,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get selectTimetablesToImport => '選擇要匯入的課表';
+
+  @override
+  String get studentDayEmpty => '當天暫無課程';
 
   @override
   String timetableCourseCount(int count) {

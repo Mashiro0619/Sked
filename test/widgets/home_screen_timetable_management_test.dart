@@ -2981,11 +2981,17 @@ void main() {
     final tuesdayRect = tester.getRect(
       find.byKey(const ValueKey('student-day-2')),
     );
+    final mondayIndicatorRect = tester.getRect(
+      find.byKey(const ValueKey('student-day-indicator-1')),
+    );
 
     expect(selectorRect.size, const Size.square(48));
     expect(stripRect.height, closeTo(60, 0.01));
     expect(mondayRect.width, closeTo((stripRect.width - 12) / 7, 0.01));
     expect(tuesdayRect.left - mondayRect.right, closeTo(2, 0.01));
+    expect(mondayIndicatorRect.width, greaterThanOrEqualTo(36));
+    expect(mondayIndicatorRect.width, lessThan(mondayRect.width));
+    expect(mondayIndicatorRect.center.dx, closeTo(mondayRect.center.dx, 0.01));
     expect(
       find.byKey(const ValueKey('student-display-settings-button')),
       findsNothing,
@@ -3289,7 +3295,10 @@ void main() {
 
       final gesture = await tester.startGesture(
         tester.getCenter(
-          find.byKey(const ValueKey('timetable-grid-vertical-scroll')),
+          find.descendant(
+            of: find.byKey(const ValueKey('student-week-page-5')),
+            matching: find.byKey(const ValueKey('student-day-agenda-scroll')),
+          ),
         ),
       );
       await gesture.moveBy(const Offset(-180, 0));
@@ -3732,11 +3741,27 @@ void main() {
     await switchStudentToDayView(tester);
 
     expect(find.byType(HomeScreen), findsOneWidget);
-    final monday = find.byKey(const ValueKey('student-day-1'));
+    final strip = find.descendant(
+      of: find.byKey(
+        ValueKey('student-week-page-${provider.studentView.selectedWeek}'),
+      ),
+      matching: find.byKey(const ValueKey('student-day-strip')),
+    );
+    final stripPosition = tester
+        .state<ScrollableState>(
+          find.descendant(of: strip, matching: find.byType(Scrollable)),
+        )
+        .position;
+    // The lazily built strip can start near today's weekday. Scroll its own
+    // viewport back before finding Monday, without moving the outer week pager.
+    stripPosition.jumpTo(0);
+    await tester.pumpAndSettle();
+    final monday = find.descendant(
+      of: strip,
+      matching: find.byKey(const ValueKey('student-day-1')),
+    );
     expect(monday, findsOneWidget);
-    // The current day can scroll Monday outside the narrow viewport while
-    // keeping its widget mounted. Reveal it before sending a real pointer tap.
-    await tester.ensureVisible(monday);
+    await stripPosition.ensureVisible(tester.renderObject(monday));
     await tester.pumpAndSettle();
     expect(monday.hitTestable(), findsOneWidget);
     await tester.tap(monday);

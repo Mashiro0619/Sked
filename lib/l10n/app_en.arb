@@ -408,6 +408,7 @@
   "@selectTimetablesToExport": {},
   "selectTimetablesToImport": "Choose timetables to import",
   "@selectTimetablesToImport": {},
+  "studentDayEmpty": "No courses for this day",
   "timetableCourseCount": "{count} courses",
   "@timetableCourseCount": {
     "placeholders": {

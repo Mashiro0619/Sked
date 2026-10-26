@@ -614,6 +614,9 @@ class AppLocalizationsEl extends AppLocalizations {
   String get selectTimetablesToImport => 'Επιλέξτε χρονοδιάγραμμα για εισαγωγή';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count μαθήματα';
   }

@@ -69,6 +69,7 @@ import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/timetable_information_form.dart';
 import '../widgets/timetable_grid.dart';
+import '../widgets/timetable_day_agenda.dart';
 import '../widgets/ui_command.dart';
 import 'settings_page.dart';
 import 'timetable_import_flow.dart';
@@ -442,6 +443,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         onAddCourse: inlineAdd && addVisible
                             ? (anchor) => _openEditor(
                                 context,
+                                weekday: viewMode == _StudentTimetableView.day
+                                    ? selectedWeekday
+                                    : null,
                                 editor: WorkspaceEditorConfiguration(
                                   anchorContext: anchor,
                                 ),
@@ -514,6 +518,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   snapshot.fitWeekColumnsToWidth,
                               shortcutFocusNode: widget.weekShortcutFocusNode,
                               bottomContentInset: fabContentInset,
+                              dayHorizontalInset: desktop
+                                  ? 24
+                                  : 16 - horizontalInset,
                               onPageScrollStateChanged: (scrolling) {
                                 _weekPageScrolling = scrolling;
                               },
@@ -526,6 +533,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               onJumpWeekBy: (offset) => _jumpWeekBy(offset),
                               onCourseTap: (info) =>
                                   _openDetails(context, info),
+                              onAddCourse: addVisible
+                                  ? (anchor) => _openEditor(
+                                      context,
+                                      weekday: selectedWeekday,
+                                      editor: WorkspaceEditorConfiguration(
+                                        anchorContext: anchor,
+                                      ),
+                                    )
+                                  : null,
                               onEmptySlotTap: longPressAddEnabled
                                   ? (slotInfo) => _openEditor(
                                       context,
@@ -549,6 +565,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           tooltip: l10n.addCourse,
                           onPressed: () => _openEditor(
                             context,
+                            weekday: viewMode == _StudentTimetableView.day
+                                ? selectedWeekday
+                                : null,
                             editor: WorkspaceEditorConfiguration(
                               anchorContext: anchor,
                             ),

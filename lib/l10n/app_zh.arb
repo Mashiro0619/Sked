@@ -406,6 +406,7 @@
   "@selectTimetablesToExport": {},
   "selectTimetablesToImport": "选择要导入的课表",
   "@selectTimetablesToImport": {},
+  "studentDayEmpty": "当天暂无课程",
   "timetableCourseCount": "{count} 门课程",
   "@timetableCourseCount": {
     "placeholders": {

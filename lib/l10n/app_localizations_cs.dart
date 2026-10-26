@@ -599,6 +599,9 @@ class AppLocalizationsCs extends AppLocalizations {
   String get selectTimetablesToImport => 'Vyberte plány pro import';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count kurzy';
   }

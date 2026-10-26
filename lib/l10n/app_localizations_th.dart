@@ -597,6 +597,9 @@ class AppLocalizationsTh extends AppLocalizations {
   String get selectTimetablesToImport => 'เลือกตารางเวลาที่จะนำเข้า';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count หลักสูตร';
   }

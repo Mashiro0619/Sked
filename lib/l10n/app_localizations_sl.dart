@@ -603,6 +603,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get selectTimetablesToImport => 'Izberite časovne razporede za uvoz';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return '$count tečaji';
   }

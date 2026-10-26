@@ -1231,6 +1231,12 @@ abstract class AppLocalizations {
   /// **'Choose timetables to import'**
   String get selectTimetablesToImport;
 
+  /// No description provided for @studentDayEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No courses for this day'**
+  String get studentDayEmpty;
+
   /// No description provided for @timetableCourseCount.
   ///
   /// In en, this message translates to:

@@ -600,6 +600,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get selectTimetablesToImport => 'Chọn lịch trình để nhập';
 
   @override
+  String get studentDayEmpty => 'No courses for this day';
+
+  @override
   String timetableCourseCount(int count) {
     return ' $count các khóa học';
   }

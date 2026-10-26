@@ -35,9 +35,15 @@ AppData _studentData({required String locale, required bool fitToWidth}) {
   );
 }
 
-Finder _strip() => find.byKey(const ValueKey('student-day-strip'));
+Finder _strip() => find.descendant(
+  of: find.byKey(const ValueKey('student-week-page-5')),
+  matching: find.byKey(const ValueKey('student-day-strip')),
+);
 
-Finder _day(int weekday) => find.byKey(ValueKey('student-day-$weekday'));
+Finder _day(int weekday) => find.descendant(
+  of: _strip(),
+  matching: find.byKey(ValueKey('student-day-$weekday')),
+);
 
 ScrollPosition _stripPosition(WidgetTester tester) => tester
     .state<ScrollableState>(
@@ -121,7 +127,10 @@ void main() {
           final position = _stripPosition(tester);
           position.jumpTo(position.maxScrollExtent * (weekday - 1) / 6);
           await tester.pump();
-          await tester.ensureVisible(_day(weekday));
+          // Reveal only within the day strip. The outer PageView also has a
+          // horizontal Scrollable and must remain on the committed week.
+          await _stripPosition(tester)
+              .ensureVisible(tester.renderObject(_day(weekday)));
           await tester.pumpAndSettle();
           _expectDayTextFits(tester, weekday);
           await tester.tap(_day(weekday));
@@ -136,6 +145,7 @@ void main() {
             ui.Tristate.isTrue,
           );
         }
+        expect(app.studentView.selectedWeek, 5);
 
         // Resizing must preserve the saved preference and the selected day.
         tester.view.physicalSize = const Size(1200, 900);
