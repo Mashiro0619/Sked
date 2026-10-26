@@ -28,6 +28,8 @@ import 'dart:async';
 
 import '../services/desktop_layout_preferences.dart';
 import '../services/general_reminder_items.dart';
+import '../services/agenda_notification_service.dart';
+import '../services/agenda_notification_runtime_contract.dart';
 import '../widgets/sked_resizable.dart';
 
 import 'dart:math' as math;

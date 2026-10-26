@@ -320,6 +320,35 @@ class _ReminderStripState extends State<_ReminderStrip>
     final pagination = paged
         ? _pageControls(page, pageCount, items.length)
         : null;
+    final notificationService = context.watch<AgendaNotificationService?>();
+    final coverage = notificationService?.status.coverage;
+    final deliveryNotice =
+        context.watch<SettingsViewState>().notificationsEnabled &&
+            notificationService?.isSupported == true &&
+            (coverage == AgendaNotificationCoverage.blocked ||
+                coverage == AgendaNotificationCoverage.failed)
+        ? Semantics(
+            liveRegion: true,
+            child: Padding(
+              key: const ValueKey('general-reminder-delivery-notice'),
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      coverage == AgendaNotificationCoverage.blocked
+                          ? l.notificationCoverageBlocked
+                          : l.notificationCoverageFailed,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : null;
     if (WorkbenchChromeMetrics.of(context).desktop) {
       final colors = Theme.of(context).colorScheme;
       final groups = [
@@ -356,6 +385,7 @@ class _ReminderStripState extends State<_ReminderStrip>
             key: const ValueKey('general-reminders-list'),
             title: Text('${l.reminder} · ${items.length}'),
             toolbar: pagination,
+            status: deliveryNotice,
             subtitle: automatic ? Text(l.reminderAutoCloseHint) : null,
             contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             bodyIsSliver: true,
@@ -458,6 +488,7 @@ class _ReminderStripState extends State<_ReminderStrip>
       bodyIsSliver: true,
       semanticChildCount: items.length,
       footer: pagination,
+      subtitle: deliveryNotice,
       child: SliverMainAxisGroup(
         slivers: [
           if (items.isEmpty)

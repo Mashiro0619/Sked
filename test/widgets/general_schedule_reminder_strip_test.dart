@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
+import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
 
 import '../support/data_transfer_codec.dart';
 import '../support/timetable_storage_fakes.dart';
@@ -98,18 +101,22 @@ Future<void> _pumpReminderScreen(
   required AppRuntime provider,
   required _MutableClock clock,
   required _TrackingTimerFactory timers,
+  AgendaNotificationService? notificationService,
 }) async {
   await tester.pumpWidget(
-    AppScope(
-      app: provider,
-      child: MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: GeneralReminderTimeScope(
-          now: clock.now,
-          createTimer: timers.create,
-          child: const GeneralScheduleHomeScreen(),
+    ChangeNotifierProvider<AgendaNotificationService?>.value(
+      value: notificationService,
+      child: AppScope(
+        app: provider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: GeneralReminderTimeScope(
+            now: clock.now,
+            createTimer: timers.create,
+            child: const GeneralScheduleHomeScreen(),
+          ),
         ),
       ),
     ),
@@ -120,6 +127,64 @@ Future<void> _pumpReminderScreen(
 }
 
 void main() {
+  testWidgets(
+    'reminder panel reports blocked delivery and clears after repair',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final clock = _MutableClock(DateTime(2026, 6, 16, 9, 55));
+      final gateway = MemoryAgendaNotificationGateway()
+        ..exactAlarmGranted = false;
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+        now: clock.now,
+      );
+      addTearDown(service.dispose);
+      await tester.runAsync(() async {
+        await provider.settingsCommands.updateNotificationsEnabled(true);
+        await service.reconcile(
+          provider.session.committedData,
+          anchor: clock.now(),
+        );
+      });
+      await _pumpReminderScreen(
+        tester,
+        provider: provider,
+        clock: clock,
+        timers: _TrackingTimerFactory(),
+        notificationService: service,
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.notificationCoverageBlocked), findsOneWidget);
+
+      gateway.exactAlarmGranted = true;
+      await tester.runAsync(
+        () => service.reconcile(
+          provider.session.committedData,
+          anchor: clock.now(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('general-reminder-delivery-notice')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('general-reminders-list')),
+          matching: find.text('Exam'),
+        ),
+        findsOneWidget,
+      );
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
+  );
+
   testWidgets('refreshes reminder status at the next minute boundary', (
     tester,
   ) async {
