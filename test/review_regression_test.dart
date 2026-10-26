@@ -237,9 +237,8 @@ Future<void> waitFor(bool Function() predicate) async {
 }
 
 Future<Directory> storageDirectory() async {
-  final parent = Directory('.scratch/review-regression-storage').absolute;
-  await parent.create(recursive: true);
-  final directory = await parent.createTemp('case-');
+  final parent = Directory.systemTemp;
+  final directory = await parent.createTemp('sked-review-regression-');
   addTearDown(() async {
     final parentPath = await parent.resolveSymbolicLinks();
     final childPath = await directory.resolveSymbolicLinks();
