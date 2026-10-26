@@ -1318,25 +1318,25 @@ class AppLocalizationsHu extends AppLocalizations {
   String get weekdaySunday => 'Vasárnap';
 
   @override
-  String get weekdayShortMonday => 'hétfő';
+  String get weekdayShortMonday => 'H';
 
   @override
-  String get weekdayShortTuesday => 'kedd';
+  String get weekdayShortTuesday => 'K';
 
   @override
-  String get weekdayShortWednesday => 'szerda';
+  String get weekdayShortWednesday => 'Sze';
 
   @override
-  String get weekdayShortThursday => 'csütörtök';
+  String get weekdayShortThursday => 'Cs';
 
   @override
-  String get weekdayShortFriday => 'péntek';
+  String get weekdayShortFriday => 'P';
 
   @override
-  String get weekdayShortSaturday => 'szombat';
+  String get weekdayShortSaturday => 'Szo';
 
   @override
-  String get weekdayShortSunday => 'Nap';
+  String get weekdayShortSunday => 'V';
 
   @override
   String get monthJanuary => 'január';
@@ -1372,7 +1372,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get monthNovember => 'nov';
 
   @override
-  String get monthDecember => 'decemberben';
+  String get monthDecember => 'december';
 
   @override
   String get semesterWeeksWholeTerm => 'Minden félévben';

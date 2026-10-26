@@ -1316,25 +1316,25 @@ class AppLocalizationsRo extends AppLocalizations {
   String get weekdaySunday => 'Duminică';
 
   @override
-  String get weekdayShortMonday => 'luni';
+  String get weekdayShortMonday => 'lun.';
 
   @override
-  String get weekdayShortTuesday => 'Marți';
+  String get weekdayShortTuesday => 'mar.';
 
   @override
-  String get weekdayShortWednesday => 'Miercuri';
+  String get weekdayShortWednesday => 'mie.';
 
   @override
   String get weekdayShortThursday => 'joi';
 
   @override
-  String get weekdayShortFriday => 'vineri';
+  String get weekdayShortFriday => 'vin.';
 
   @override
-  String get weekdayShortSaturday => 'sâmbătă';
+  String get weekdayShortSaturday => 'sâm.';
 
   @override
-  String get weekdayShortSunday => 'Soarele';
+  String get weekdayShortSunday => 'dum.';
 
   @override
   String get monthJanuary => 'ianuarie';
@@ -1358,7 +1358,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get monthJuly => 'iulie';
 
   @override
-  String get monthAugust => 'octombrie';
+  String get monthAugust => 'august';
 
   @override
   String get monthSeptember => 'Septembrie';

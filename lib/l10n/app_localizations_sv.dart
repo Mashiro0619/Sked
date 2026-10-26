@@ -1301,25 +1301,25 @@ class AppLocalizationsSv extends AppLocalizations {
   String get weekdaySunday => 'söndag';
 
   @override
-  String get weekdayShortMonday => 'måndag';
+  String get weekdayShortMonday => 'mån';
 
   @override
-  String get weekdayShortTuesday => 'tisdag';
+  String get weekdayShortTuesday => 'tis';
 
   @override
-  String get weekdayShortWednesday => 'Onsdag';
+  String get weekdayShortWednesday => 'ons';
 
   @override
-  String get weekdayShortThursday => 'torsdag';
+  String get weekdayShortThursday => 'tors';
 
   @override
-  String get weekdayShortFriday => 'Fr';
+  String get weekdayShortFriday => 'fre';
 
   @override
-  String get weekdayShortSaturday => 'lördag';
+  String get weekdayShortSaturday => 'lör';
 
   @override
-  String get weekdayShortSunday => 'Solen';
+  String get weekdayShortSunday => 'sön';
 
   @override
   String get monthJanuary => 'jan';
@@ -1355,7 +1355,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get monthNovember => 'nov';
 
   @override
-  String get monthDecember => 'maj';
+  String get monthDecember => 'dec.';
 
   @override
   String get semesterWeeksWholeTerm => 'Hela terminen';

@@ -1299,25 +1299,25 @@ class AppLocalizationsEt extends AppLocalizations {
   String get weekdaySunday => 'Pühapäev';
 
   @override
-  String get weekdayShortMonday => 'esmaspäev';
+  String get weekdayShortMonday => 'E';
 
   @override
-  String get weekdayShortTuesday => 'Teisipäev';
+  String get weekdayShortTuesday => 'T';
 
   @override
-  String get weekdayShortWednesday => 'Kolmapäev';
+  String get weekdayShortWednesday => 'K';
 
   @override
-  String get weekdayShortThursday => 'neljapäev';
+  String get weekdayShortThursday => 'N';
 
   @override
-  String get weekdayShortFriday => 'reede';
+  String get weekdayShortFriday => 'R';
 
   @override
-  String get weekdayShortSaturday => 'laupäev';
+  String get weekdayShortSaturday => 'L';
 
   @override
-  String get weekdayShortSunday => 'Päike';
+  String get weekdayShortSunday => 'P';
 
   @override
   String get monthJanuary => 'jaanuar';

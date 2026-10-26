@@ -1326,25 +1326,25 @@ class AppLocalizationsEl extends AppLocalizations {
   String get weekdaySunday => 'Κυριακή';
 
   @override
-  String get weekdayShortMonday => 'Δευτέρα';
+  String get weekdayShortMonday => 'Δευ';
 
   @override
-  String get weekdayShortTuesday => 'Τρίτη';
+  String get weekdayShortTuesday => 'Τρί';
 
   @override
-  String get weekdayShortWednesday => 'Τετάρτη';
+  String get weekdayShortWednesday => 'Τετ';
 
   @override
-  String get weekdayShortThursday => 'Πέμπτη';
+  String get weekdayShortThursday => 'Πέμ';
 
   @override
-  String get weekdayShortFriday => 'Παρασκευή';
+  String get weekdayShortFriday => 'Παρ';
 
   @override
-  String get weekdayShortSaturday => 'Σάββατο';
+  String get weekdayShortSaturday => 'Σάβ';
 
   @override
-  String get weekdayShortSunday => 'Ήλιος';
+  String get weekdayShortSunday => 'Κυρ';
 
   @override
   String get monthJanuary => 'Ιαν';

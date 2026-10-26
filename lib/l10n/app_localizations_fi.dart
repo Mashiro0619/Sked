@@ -1305,25 +1305,25 @@ class AppLocalizationsFi extends AppLocalizations {
   String get weekdaySunday => 'Sunnuntai';
 
   @override
-  String get weekdayShortMonday => 'maanantaina';
+  String get weekdayShortMonday => 'ma';
 
   @override
-  String get weekdayShortTuesday => 'tiistai';
+  String get weekdayShortTuesday => 'ti';
 
   @override
-  String get weekdayShortWednesday => 'Keskiviikko';
+  String get weekdayShortWednesday => 'ke';
 
   @override
-  String get weekdayShortThursday => 'torstaina';
+  String get weekdayShortThursday => 'to';
 
   @override
-  String get weekdayShortFriday => 'perjantai';
+  String get weekdayShortFriday => 'pe';
 
   @override
-  String get weekdayShortSaturday => 'Lauantaina';
+  String get weekdayShortSaturday => 'la';
 
   @override
-  String get weekdayShortSunday => 'Aurinko';
+  String get weekdayShortSunday => 'su';
 
   @override
   String get monthJanuary => 'tammikuu';

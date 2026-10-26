@@ -1300,25 +1300,25 @@ class AppLocalizationsCs extends AppLocalizations {
   String get weekdaySunday => 'Neděle';
 
   @override
-  String get weekdayShortMonday => 'pondělí';
+  String get weekdayShortMonday => 'po';
 
   @override
-  String get weekdayShortTuesday => 'úterý';
+  String get weekdayShortTuesday => 'út';
 
   @override
-  String get weekdayShortWednesday => 'Středa';
+  String get weekdayShortWednesday => 'st';
 
   @override
-  String get weekdayShortThursday => 'Čtvrtek';
+  String get weekdayShortThursday => 'čt';
 
   @override
-  String get weekdayShortFriday => 'pátek';
+  String get weekdayShortFriday => 'pá';
 
   @override
-  String get weekdayShortSaturday => 'sobotu';
+  String get weekdayShortSaturday => 'so';
 
   @override
-  String get weekdayShortSunday => 'Slunce';
+  String get weekdayShortSunday => 'ne';
 
   @override
   String get monthJanuary => 'leden';

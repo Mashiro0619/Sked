@@ -1293,25 +1293,25 @@ class AppLocalizationsDa extends AppLocalizations {
   String get weekdaySunday => 'Søndag';
 
   @override
-  String get weekdayShortMonday => 'mandag';
+  String get weekdayShortMonday => 'man.';
 
   @override
-  String get weekdayShortTuesday => 'tirsdag';
+  String get weekdayShortTuesday => 'tirs.';
 
   @override
-  String get weekdayShortWednesday => 'Onsdag';
+  String get weekdayShortWednesday => 'ons.';
 
   @override
-  String get weekdayShortThursday => 'torsdag';
+  String get weekdayShortThursday => 'tors.';
 
   @override
-  String get weekdayShortFriday => 'fredag';
+  String get weekdayShortFriday => 'fre.';
 
   @override
-  String get weekdayShortSaturday => 'Lørdag';
+  String get weekdayShortSaturday => 'lør.';
 
   @override
-  String get weekdayShortSunday => 'Solen';
+  String get weekdayShortSunday => 'søn.';
 
   @override
   String get monthJanuary => 'januar';

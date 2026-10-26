@@ -1305,25 +1305,25 @@ class AppLocalizationsSl extends AppLocalizations {
   String get weekdaySunday => 'Nedelja';
 
   @override
-  String get weekdayShortMonday => 'Naslednji mesec';
+  String get weekdayShortMonday => 'pon.';
 
   @override
-  String get weekdayShortTuesday => 'Tor';
+  String get weekdayShortTuesday => 'tor.';
 
   @override
-  String get weekdayShortWednesday => 'sreda';
+  String get weekdayShortWednesday => 'sre.';
 
   @override
-  String get weekdayShortThursday => 'četrt';
+  String get weekdayShortThursday => 'čet.';
 
   @override
-  String get weekdayShortFriday => 'pet';
+  String get weekdayShortFriday => 'pet.';
 
   @override
-  String get weekdayShortSaturday => 'sob';
+  String get weekdayShortSaturday => 'sob.';
 
   @override
-  String get weekdayShortSunday => 'Sonce';
+  String get weekdayShortSunday => 'ned.';
 
   @override
   String get monthJanuary => 'jan';

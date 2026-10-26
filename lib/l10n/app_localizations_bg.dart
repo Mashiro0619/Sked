@@ -1322,25 +1322,25 @@ class AppLocalizationsBg extends AppLocalizations {
   String get weekdaySunday => 'Неделя';
 
   @override
-  String get weekdayShortMonday => 'понеделник';
+  String get weekdayShortMonday => 'пн';
 
   @override
-  String get weekdayShortTuesday => 'Вторник';
+  String get weekdayShortTuesday => 'вт';
 
   @override
-  String get weekdayShortWednesday => 'сряда';
+  String get weekdayShortWednesday => 'ср';
 
   @override
-  String get weekdayShortThursday => 'Четвъртък';
+  String get weekdayShortThursday => 'чт';
 
   @override
-  String get weekdayShortFriday => 'Петък';
+  String get weekdayShortFriday => 'пт';
 
   @override
-  String get weekdayShortSaturday => 'събота';
+  String get weekdayShortSaturday => 'сб';
 
   @override
-  String get weekdayShortSunday => 'Слънцето';
+  String get weekdayShortSunday => 'нд';
 
   @override
   String get monthJanuary => 'януари';

@@ -1305,25 +1305,25 @@ class AppLocalizationsPl extends AppLocalizations {
   String get weekdaySunday => 'Niedziela';
 
   @override
-  String get weekdayShortMonday => 'poniedziałek';
+  String get weekdayShortMonday => 'pon.';
 
   @override
-  String get weekdayShortTuesday => 'wtorek';
+  String get weekdayShortTuesday => 'wt.';
 
   @override
-  String get weekdayShortWednesday => 'Środa';
+  String get weekdayShortWednesday => 'śr.';
 
   @override
-  String get weekdayShortThursday => 'Czwartek';
+  String get weekdayShortThursday => 'czw.';
 
   @override
-  String get weekdayShortFriday => 'Piątek';
+  String get weekdayShortFriday => 'pt.';
 
   @override
-  String get weekdayShortSaturday => 'sobota';
+  String get weekdayShortSaturday => 'sob.';
 
   @override
-  String get weekdayShortSunday => 'Słońce';
+  String get weekdayShortSunday => 'niedz.';
 
   @override
   String get monthJanuary => 'stycznia';
