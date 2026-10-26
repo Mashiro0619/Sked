@@ -48,7 +48,7 @@
   "@schoolImportExpandWarnings": {},
   "schoolImportCollapseWarnings": "收起匯入提示",
   "@schoolImportCollapseWarnings": {},
-  "schoolImportTotalWeeksTooShort": "解析結果包含第 {week} 週的課程",
+  "schoolImportTotalWeeksTooShort": "總週數至少為 {week} 週",
   "@schoolImportTotalWeeksTooShort": {
     "placeholders": {
       "week": {
@@ -62,7 +62,7 @@
   "@replaceCurrentTimetableConfirmMessage": {},
   "createTimetable": "新增課表",
   "@createTimetable": {},
-  "jumpToWeek": "快捷跳轉週數",
+  "jumpToWeek": "跳轉至指定週",
   "@jumpToWeek": {},
   "timetable": "課表",
   "@timetable": {},
@@ -165,7 +165,7 @@
   "@conflictCourses": {},
   "locationNotFilled": "未填寫地點",
   "@locationNotFilled": {},
-  "setAsDisplayed": "設為外部顯示",
+  "setAsDisplayed": "顯示此課程",
   "@setAsDisplayed": {},
   "editThisCourse": "編輯這門課",
   "@editThisCourse": {},
@@ -260,7 +260,7 @@
   "@themeDark": {},
   "themeColor": "主題色",
   "@themeColor": {},
-  "themeColorModeSingle": "單調主題色",
+  "themeColorModeSingle": "單一主題色",
   "@themeColorModeSingle": {},
   "themeColorModeColorful": "五彩繽紛",
   "@themeColorModeColorful": {},

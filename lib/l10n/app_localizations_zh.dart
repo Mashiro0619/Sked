@@ -62,7 +62,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return '解析结果包含第 $week 周的课程';
+    return '总周数至少为 $week 周';
   }
 
   @override
@@ -75,7 +75,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTimetable => '新建课表';
 
   @override
-  String get jumpToWeek => '快捷跳转周数';
+  String get jumpToWeek => '跳转到指定周';
 
   @override
   String get timetable => '课表';
@@ -214,7 +214,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get locationNotFilled => '未填写地点';
 
   @override
-  String get setAsDisplayed => '设为外部显示';
+  String get setAsDisplayed => '显示此课程';
 
   @override
   String get editThisCourse => '编辑这门课';
@@ -349,7 +349,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeColor => '主题色';
 
   @override
-  String get themeColorModeSingle => '单调主题色';
+  String get themeColorModeSingle => '单一主题色';
 
   @override
   String get themeColorModeColorful => '五彩缤纷';
@@ -2993,7 +2993,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String schoolImportTotalWeeksTooShort(int week) {
-    return '解析結果包含第 $week 週的課程';
+    return '總週數至少為 $week 週';
   }
 
   @override
@@ -3006,7 +3006,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTimetable => '新增課表';
 
   @override
-  String get jumpToWeek => '快捷跳轉週數';
+  String get jumpToWeek => '跳轉至指定週';
 
   @override
   String get timetable => '課表';
@@ -3145,7 +3145,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get locationNotFilled => '未填寫地點';
 
   @override
-  String get setAsDisplayed => '設為外部顯示';
+  String get setAsDisplayed => '顯示此課程';
 
   @override
   String get editThisCourse => '編輯這門課';
@@ -3280,7 +3280,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get themeColor => '主題色';
 
   @override
-  String get themeColorModeSingle => '單調主題色';
+  String get themeColorModeSingle => '單一主題色';
 
   @override
   String get themeColorModeColorful => '五彩繽紛';

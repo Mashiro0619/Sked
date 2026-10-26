@@ -48,7 +48,7 @@
   "@schoolImportExpandWarnings": {},
   "schoolImportCollapseWarnings": "收起导入提示",
   "@schoolImportCollapseWarnings": {},
-  "schoolImportTotalWeeksTooShort": "解析结果包含第 {week} 周的课程",
+  "schoolImportTotalWeeksTooShort": "总周数至少为 {week} 周",
   "@schoolImportTotalWeeksTooShort": {
     "placeholders": {
       "week": {
@@ -62,7 +62,7 @@
   "@replaceCurrentTimetableConfirmMessage": {},
   "createTimetable": "新建课表",
   "@createTimetable": {},
-  "jumpToWeek": "快捷跳转周数",
+  "jumpToWeek": "跳转到指定周",
   "@jumpToWeek": {},
   "timetable": "课表",
   "@timetable": {},
@@ -165,7 +165,7 @@
   "@conflictCourses": {},
   "locationNotFilled": "未填写地点",
   "@locationNotFilled": {},
-  "setAsDisplayed": "设为外部显示",
+  "setAsDisplayed": "显示此课程",
   "@setAsDisplayed": {},
   "editThisCourse": "编辑这门课",
   "@editThisCourse": {},
@@ -260,7 +260,7 @@
   "@themeDark": {},
   "themeColor": "主题色",
   "@themeColor": {},
-  "themeColorModeSingle": "单调主题色",
+  "themeColorModeSingle": "单一主题色",
   "@themeColorModeSingle": {},
   "themeColorModeColorful": "五彩缤纷",
   "@themeColorModeColorful": {},
