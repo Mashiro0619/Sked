@@ -82,7 +82,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get jumpToWeek => 'Μετάβαση στην εβδομάδα';
 
   @override
-  String get timetable => 'Χρονολόγιο';
+  String get timetable => 'Ωρολόγιο πρόγραμμα';
 
   @override
   String get themeWorkspaceSchedule => 'Πρόγραμμα';

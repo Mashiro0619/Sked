@@ -74,13 +74,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thời khóa biểu được nhập sẽ thay thế thời khóa biểu hiện tại.';
 
   @override
-  String get createTimetable => 'Thời gian mới';
+  String get createTimetable => 'Tạo thời khóa biểu';
 
   @override
   String get jumpToWeek => 'Nhảy đến tuần';
 
   @override
-  String get timetable => 'Thời gian';
+  String get timetable => 'Thời khóa biểu';
 
   @override
   String get themeWorkspaceSchedule => 'Lịch';
@@ -1236,7 +1236,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get untitledTimetableName => 'Thời gian biểu không có tiêu đề';
 
   @override
-  String get newTimetableName => 'Thời gian mới';
+  String get newTimetableName => 'Tên thời khóa biểu mới';
 
   @override
   String get newPeriodTimeSetName => 'Thiết lập thời gian giai đoạn mới';

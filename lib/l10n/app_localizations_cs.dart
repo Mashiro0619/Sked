@@ -28,7 +28,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String currentTimetableWeeks(int weeks) {
-    return 'Aktuální jízdní řád · $weeks týdny';
+    return 'Aktuální rozvrh · $weeks týdnů';
   }
 
   @override
@@ -85,7 +85,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get themeWorkspaceSchedule => 'Plán';
 
   @override
-  String get timetableName => 'Název jízdního řádu';
+  String get timetableName => 'Název rozvrhu';
 
   @override
   String get timetableNameRequired => 'Zadejte název rozvrhu';

@@ -83,7 +83,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get jumpToWeek => 'Ugrás a hétre';
 
   @override
-  String get timetable => 'Naptár';
+  String get timetable => 'Órarend';
 
   @override
   String get themeWorkspaceSchedule => 'Naptár';

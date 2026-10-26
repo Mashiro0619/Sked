@@ -80,7 +80,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get jumpToWeek => 'Skocz do tygodnia';
 
   @override
-  String get timetable => 'Rozkład pracy';
+  String get timetable => 'Plan zajęć';
 
   @override
   String get themeWorkspaceSchedule => 'Kalendarz';

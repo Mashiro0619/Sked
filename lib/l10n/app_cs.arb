@@ -16,7 +16,7 @@
   "@settings": {},
   "multiTimetableSwitch": "Přepnout rozvrhy",
   "@multiTimetableSwitch": {},
-  "currentTimetableWeeks": "Aktuální jízdní řád · {weeks} týdny",
+  "currentTimetableWeeks": "Aktuální rozvrh · {weeks} týdnů",
   "@currentTimetableWeeks": {
     "placeholders": {
       "weeks": {
@@ -66,7 +66,7 @@
   "@jumpToWeek": {},
   "timetable": "Rozvrh",
   "@timetable": {},
-  "timetableName": "Název jízdního řádu",
+  "timetableName": "Název rozvrhu",
   "@timetableName": {},
   "totalWeeks": "Celkem týdny",
   "@totalWeeks": {},
