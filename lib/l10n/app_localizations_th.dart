@@ -2466,6 +2466,14 @@ class AppLocalizationsTh extends AppLocalizations {
   String get notificationCoverage => 'ความครอบคลุมของการเตือน';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'กิจกรรมที่เกิดซ้ำโดยไม่มีวันที่สิ้นสุดจะใช้การต่ออายุเบื้องหลังเพื่อให้ครอบคลุมระยะยาว';
 

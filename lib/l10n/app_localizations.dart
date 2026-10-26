@@ -4482,6 +4482,18 @@ abstract class AppLocalizations {
   /// **'Reminder coverage'**
   String get notificationCoverage;
 
+  /// No description provided for @notificationCoverageBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are blocked and will not fire. Review the system requirements below.'**
+  String get notificationCoverageBlocked;
+
+  /// No description provided for @notificationCoverageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders could not be synced. Open notification settings and try again.'**
+  String get notificationCoverageFailed;
+
   /// No description provided for @notificationCoverageRenewable.
   ///
   /// In en, this message translates to:

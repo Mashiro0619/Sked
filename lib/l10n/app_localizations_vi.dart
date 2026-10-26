@@ -2484,6 +2484,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get notificationCoverage => 'Phạm vi bao phủ lời nhắc';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'Sự kiện lặp lại không có ngày kết thúc dùng cơ chế gia hạn nền để duy trì lời nhắc lâu dài.';
 

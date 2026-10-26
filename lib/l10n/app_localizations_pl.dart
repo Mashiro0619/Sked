@@ -2497,6 +2497,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get notificationCoverage => 'Zakres przypomnień';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'Wydarzenia cykliczne bez daty zakończenia korzystają z odnawiania w tle, aby utrzymać przypomnienia na dłuższy czas.';
 

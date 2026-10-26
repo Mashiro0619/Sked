@@ -2524,6 +2524,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get notificationCoverage => 'Покритие на напомнянията';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'Повтарящите се графици без крайна дата се подновяват във фонов режим за дългосрочно покритие.';
 

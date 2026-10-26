@@ -14,9 +14,17 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 
 import '../support/data_transfer_codec.dart';
+
+class _FailingNotificationSettingsGateway
+    extends MemoryAgendaNotificationGateway {
+  @override
+  Future<Map<String, DateTime>> pendingPlan() async =>
+      throw StateError('Platform plan unavailable');
+}
 
 class _NotificationSettingsStorage implements TimetableStorage {
   _NotificationSettingsStorage(this.data);
@@ -47,6 +55,109 @@ Future<AppRuntime> _provider() async {
 }
 
 void main() {
+  for (final blocked in ['notifications', 'exact alarms', 'battery']) {
+    testWidgets('reports blocked $blocked and opens repair settings', (
+      tester,
+    ) async {
+      final provider = await _provider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway()
+        ..permissionGranted = blocked != 'notifications'
+        ..exactAlarmGranted = blocked != 'exact alarms'
+        ..batteryOptimizationGranted = blocked != 'battery';
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+      );
+      addTearDown(service.dispose);
+      await tester.runAsync(() async {
+        await provider.settingsCommands.updateNotificationsEnabled(true);
+        await service.reconcile(
+          provider.session.committedData,
+          anchor: DateTime(2026, 10, 26, 9),
+        );
+      });
+      var repairOpened = false;
+      await tester.pumpWidget(
+        AppScope(
+          app: provider,
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: NotificationSettingsPage(
+              notificationService: service,
+              productivityBridge: AndroidProductivityBridge(enabled: false),
+              onOpenTroubleshooting: () => repairOpened = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final reason = switch (blocked) {
+        'notifications' =>
+          '${l10n.notificationPermission}: ${l10n.notificationPermissionDenied}',
+        'exact alarms' =>
+          '${l10n.notificationExactAlarm}: ${l10n.notificationExactAlarmRequired}',
+        _ =>
+          '${l10n.notificationBatteryOptimization}: ${l10n.notificationBatteryOptimizationRequired}',
+      };
+      final notice = find.byKey(const ValueKey('notification-coverage-notice'));
+      expect(
+        find.descendant(of: notice, matching: find.textContaining(reason)),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(l10n.notificationCoverageBlocked),
+        findsOneWidget,
+      );
+      await tester.tap(notice);
+      await tester.pumpAndSettle();
+      expect(repairOpened, isTrue);
+      expect(gateway.scheduled, isEmpty);
+    }, variant: TargetPlatformVariant({TargetPlatform.android}));
+  }
+
+  testWidgets('reports a failed reminder sync without renewal claims', (
+    tester,
+  ) async {
+    final provider = await _provider();
+    addTearDown(provider.dispose);
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: _FailingNotificationSettingsGateway(),
+      runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+    );
+    addTearDown(service.dispose);
+    await tester.runAsync(() async {
+      await provider.settingsCommands.updateNotificationsEnabled(true);
+      await expectLater(
+        service.reconcile(provider.session.committedData),
+        throwsStateError,
+      );
+    });
+    await tester.pumpWidget(
+      AppScope(
+        app: provider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: NotificationSettingsPage(
+            notificationService: service,
+            productivityBridge: AndroidProductivityBridge(enabled: false),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    expect(find.text(l10n.notificationCoverageFailed), findsOneWidget);
+    expect(find.text(l10n.notificationCoverageRenewable), findsNothing);
+  });
+
   testWidgets(
     'hidden calendar reminder switch persists independently of defaults',
     (tester) async {

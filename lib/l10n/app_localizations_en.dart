@@ -2469,6 +2469,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationCoverage => 'Reminder coverage';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'Repeating schedules without an end date use background renewal for long-term coverage.';
 

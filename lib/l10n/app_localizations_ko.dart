@@ -2400,6 +2400,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get notificationCoverage => '알림 예약 현황';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       '종료일이 없는 반복 일정은 백그라운드에서 재예약하여 장기적으로 알림을 유지합니다.';
 

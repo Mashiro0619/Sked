@@ -2486,6 +2486,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get notificationCoverage => 'रिमाइंडर कवरेज';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'बिना समाप्ति तारीख वाले दोहराए जाने वाले शेड्यूल लंबे समय की कवरेज के लिए पृष्ठभूमि में फिर तय किए जाते हैं।';
 

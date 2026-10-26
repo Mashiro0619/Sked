@@ -14,12 +14,16 @@ void main() {
 
   for (final locale in AppLocalizations.supportedLocales) {
     test('$locale supplies every offered interface message', () {
-      // The day agenda adds English and Chinese copy first. Other languages
-      // intentionally use the generator's English fallback for this message.
+      // New messages supply English and Chinese first; these explicit entries
+      // track the remaining translations until they are supplied.
       final allowedFallbacks =
           locale.languageCode == 'en' || locale.languageCode == 'zh'
           ? const <String>{}
-          : const {'studentDayEmpty'};
+          : const {
+              'studentDayEmpty',
+              'notificationCoverageBlocked',
+              'notificationCoverageFailed',
+            };
       final file = File('lib/l10n/app_$locale.arb');
       expect(file.existsSync(), isTrue, reason: 'Missing locale source: $file');
       final messages =

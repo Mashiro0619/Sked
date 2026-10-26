@@ -2486,6 +2486,14 @@ class AppLocalizationsEt extends AppLocalizations {
   String get notificationCoverage => 'Meeldetuletuste kaetus';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'Lõppkuupäevata korduvate sündmuste meeldetuletuste ajastust uuendatakse taustal, et säilitada pikaajaline kaetus.';
 

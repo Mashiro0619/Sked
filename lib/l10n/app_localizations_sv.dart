@@ -2490,6 +2490,14 @@ class AppLocalizationsSv extends AppLocalizations {
   String get notificationCoverage => 'Påminnelsernas täckning';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'Återkommande händelser utan slutdatum förnyas i bakgrunden för att täcka en längre tid.';
 

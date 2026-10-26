@@ -2337,6 +2337,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationCoverage => '提醒覆盖状态';
 
   @override
+  String get notificationCoverageBlocked => '提醒受阻，暂时不会触发。请检查下列系统条件。';
+
+  @override
+  String get notificationCoverageFailed => '提醒同步失败。请打开提醒设置后重试。';
+
+  @override
   String get notificationCoverageRenewable => '没有结束条件的重复日程会通过后台续排维持长期覆盖。';
 
   @override
@@ -5260,6 +5266,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationCoverage => '提醒覆蓋狀態';
+
+  @override
+  String get notificationCoverageBlocked => '提醒受阻，暫時不會觸發。請檢查下列系統條件。';
+
+  @override
+  String get notificationCoverageFailed => '提醒同步失敗。請開啟提醒設定後重試。';
 
   @override
   String get notificationCoverageRenewable => '沒有結束條件的重複日程會透過背景續排維持長期覆蓋。';

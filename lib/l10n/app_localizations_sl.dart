@@ -2500,6 +2500,14 @@ class AppLocalizationsSl extends AppLocalizations {
   String get notificationCoverage => 'Pokritost z opomniki';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       'Ponavljajoči se dogodki brez končnega datuma uporabljajo obnavljanje v ozadju za dolgoročno pokritost.';
 

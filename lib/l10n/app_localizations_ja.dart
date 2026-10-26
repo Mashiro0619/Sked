@@ -2393,6 +2393,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationCoverage => 'リマインダーの予約状況';
 
   @override
+  String get notificationCoverageBlocked =>
+      'Reminders are blocked and will not fire. Review the system requirements below.';
+
+  @override
+  String get notificationCoverageFailed =>
+      'Reminders could not be synced. Open notification settings and try again.';
+
+  @override
   String get notificationCoverageRenewable =>
       '終了日を指定していない繰り返し予定は、バックグラウンドで再予約して長期的な通知を維持します。';
 

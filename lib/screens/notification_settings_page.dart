@@ -311,6 +311,28 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     await _refreshPermissionState();
   }
 
+  void _openTroubleshooting() {
+    if (widget.onOpenTroubleshooting case final open?) {
+      open();
+      return;
+    }
+    final scope = AppScope.capture(context)!;
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => scope.wrap(
+            NotificationSettingsPage(
+              troubleshooting: true,
+              notificationService: _notificationService,
+              agendaCoordinator: _agendaCoordinator,
+              productivityBridge: _productivityBridge,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -325,9 +347,18 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         final autostartSubtitle = _autostartSubtitle(l10n);
         final notificationStatus = _notificationService.status;
         final coverage = notificationStatus.coverage;
+        final deliveryBlocked =
+            coverage == AgendaNotificationCoverage.blocked ||
+            _notificationsPermissionGranted == false ||
+            (!_isWindows &&
+                (_exactAlarmAllowed == false ||
+                    _batteryOptimizationIgnored == false));
+        final deliveryFailed = coverage == AgendaNotificationCoverage.failed;
         final showCoverageNotice =
             settings.notificationsEnabled &&
-            (_isWindows ||
+            (deliveryBlocked ||
+                deliveryFailed ||
+                _isWindows ||
                 coverage == AgendaNotificationCoverage.renewable ||
                 coverage == AgendaNotificationCoverage.capacityLimited);
         final children = <Widget>[
@@ -348,9 +379,23 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
           if (showCoverageNotice)
             SettingsConnectedTile(
               key: const ValueKey('notification-coverage-notice'),
-              leading: const Icon(Icons.info_outline),
+              leading: Icon(
+                deliveryBlocked || deliveryFailed
+                    ? Icons.warning_amber_rounded
+                    : Icons.info_outline,
+              ),
               title: l10n.notificationCoverage,
               subtitle: _coverageSubtitle(context, l10n, notificationStatus),
+              trailing:
+                  !widget.troubleshooting && (deliveryBlocked || deliveryFailed)
+                  ? const Icon(Icons.chevron_right)
+                  : null,
+              onTap:
+                  !widget.troubleshooting &&
+                      (deliveryBlocked || deliveryFailed) &&
+                      !uiCommandBusy
+                  ? _openTroubleshooting
+                  : null,
             ),
           SettingsSectionHeader(title: l10n.notificationDefaultsSection),
           if (workspace.isEnabled(AppMode.student))
@@ -524,7 +569,15 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               child.title == l10n.notificationPermission,
         );
         final pageChildren = widget.troubleshooting
-            ? children.sublist(permissionStart)
+            ? <Widget>[
+                if (showCoverageNotice)
+                  children.firstWhere(
+                    (child) =>
+                        child.key ==
+                        const ValueKey('notification-coverage-notice'),
+                  ),
+                ...children.sublist(permissionStart),
+              ]
             : <Widget>[
                 ...children.take(permissionStart),
                 children.last,
@@ -540,27 +593,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   ].join('\n'),
                   leading: const Icon(Icons.health_and_safety_outlined),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: uiCommandBusy
-                      ? null
-                      : widget.onOpenTroubleshooting ??
-                            () {
-                              final scope = AppScope.capture(context)!;
-                              unawaited(
-                                Navigator.of(context).push<void>(
-                                  MaterialPageRoute(
-                                    builder: (_) => scope.wrap(
-                                      NotificationSettingsPage(
-                                        troubleshooting: true,
-                                        notificationService:
-                                            _notificationService,
-                                        agendaCoordinator: _agendaCoordinator,
-                                        productivityBridge: _productivityBridge,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                  onTap: uiCommandBusy ? null : _openTroubleshooting,
                 ),
               ];
         if (widget.embedded) {
@@ -697,7 +730,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     AppLocalizations l10n,
     AgendaNotificationStatus status,
   ) {
+    final notificationsAllowed =
+        _notificationsPermissionGranted ?? status.notificationsEnabled;
+    final exactAlarmsAllowed = _exactAlarmAllowed ?? status.exactAlarmsAllowed;
+    final batteryAllowed =
+        _batteryOptimizationIgnored ?? status.batteryOptimizationIgnored;
+    String? warning;
+    if (status.coverage == AgendaNotificationCoverage.blocked ||
+        !notificationsAllowed ||
+        (!_isWindows && (!exactAlarmsAllowed || !batteryAllowed))) {
+      warning = [
+        l10n.notificationCoverageBlocked,
+        if (!notificationsAllowed)
+          '${l10n.notificationPermission}: ${l10n.notificationPermissionDenied}',
+        if (!_isWindows && !exactAlarmsAllowed)
+          '${l10n.notificationExactAlarm}: ${l10n.notificationExactAlarmRequired}',
+        if (!_isWindows && !batteryAllowed)
+          '${l10n.notificationBatteryOptimization}: ${l10n.notificationBatteryOptimizationRequired}',
+      ].join('\n');
+    } else if (status.coverage == AgendaNotificationCoverage.failed) {
+      warning = l10n.notificationCoverageFailed;
+    }
     if (!_isWindows) {
+      if (warning != null) return warning;
       return status.coverage == AgendaNotificationCoverage.capacityLimited
           ? l10n.notificationCoverageCapacityLimited(status.directCapacity)
           : l10n.notificationCoverageRenewable;
@@ -712,6 +767,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         status.coverage != AgendaNotificationCoverage.blocked &&
         status.coverage != AgendaNotificationCoverage.failed;
     return [
+      ?warning,
       l10n.notificationWindowsCoverageLimit(
         _notificationService.schedulingWindowDays!,
         _notificationService.planner.maxScheduledNotifications,
