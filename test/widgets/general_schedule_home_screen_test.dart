@@ -3489,6 +3489,7 @@ void main() {
   testWidgets('week view empty slots open editor only on long press', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await tester.binding.setSurfaceSize(const Size(900, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -3517,6 +3518,13 @@ void main() {
     final slot = find.byKey(
       const ValueKey('general-timeline-empty-slot-2026-06-17T00:00:00.000'),
     );
+    final slotSemantics = tester.getSemantics(slot).getSemanticsData();
+    final slotContext = tester.element(slot);
+    expect(
+      slotSemantics.label,
+      '${MaterialLocalizations.of(slotContext).formatFullDate(DateTime(2026, 6, 17))}, ${AppLocalizations.of(slotContext).addEvent}',
+    );
+    expect(slotSemantics.hasAction(ui.SemanticsAction.longPress), isTrue);
     final slotRect = tester.getRect(slot);
     final slotPoint = Offset(slotRect.center.dx, slotRect.top + 160);
 
@@ -3529,6 +3537,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets(
@@ -3704,6 +3713,7 @@ void main() {
   testWidgets('day view empty slots open editor only on long press', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await tester.binding.setSurfaceSize(const Size(900, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -3732,6 +3742,13 @@ void main() {
     final slot = find.byKey(
       const ValueKey('general-timeline-empty-slot-2026-06-16T00:00:00.000'),
     );
+    final slotSemantics = tester.getSemantics(slot).getSemanticsData();
+    final slotContext = tester.element(slot);
+    expect(
+      slotSemantics.label,
+      '${MaterialLocalizations.of(slotContext).formatFullDate(DateTime(2026, 6, 16))}, ${AppLocalizations.of(slotContext).addEvent}',
+    );
+    expect(slotSemantics.hasAction(ui.SemanticsAction.longPress), isTrue);
     final slotRect = tester.getRect(slot);
     final slotPoint = Offset(slotRect.center.dx, slotRect.top + 160);
 
@@ -3744,6 +3761,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('day view swipes the week strip to change week', (tester) async {

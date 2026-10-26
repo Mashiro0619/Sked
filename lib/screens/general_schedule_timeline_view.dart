@@ -1387,94 +1387,112 @@ class _CalendarTimeline extends StatelessWidget {
                                     top: labelPadding,
                                     width: metrics.dayWidth,
                                     height: gridHeight,
-                                    child: GestureDetector(
-                                      key: ValueKey(
-                                        'general-timeline-empty-slot-${_dateKey(days[index])}',
+                                    child: Semantics(
+                                      container: true,
+                                      label:
+                                          onEmptySlotTap != null &&
+                                              enableLongPressAddEvent
+                                          ? '${MaterialLocalizations.of(context).formatFullDate(days[index])}, ${l10n.addEvent}'
+                                          : null,
+                                      child: GestureDetector(
+                                        key: ValueKey(
+                                          'general-timeline-empty-slot-${_dateKey(days[index])}',
+                                        ),
+                                        behavior: HitTestBehavior.translucent,
+                                        onDoubleTapDown:
+                                            !WorkbenchLayoutPolicy.pointerLayout(
+                                                  context,
+                                                ) ||
+                                                onEmptySlotTap == null
+                                            ? null
+                                            : (details) {
+                                                final minutes =
+                                                    _snapMinutes(
+                                                          startMinutes +
+                                                              (details
+                                                                          .localPosition
+                                                                          .dy /
+                                                                      minuteHeight)
+                                                                  .round(),
+                                                          gridMinutes,
+                                                        )
+                                                        .clamp(
+                                                          startMinutes,
+                                                          endMinutes - 15,
+                                                        )
+                                                        .toInt();
+                                                onEmptySlotTap!(
+                                                  DateTime(
+                                                    days[index].year,
+                                                    days[index].month,
+                                                    days[index].day,
+                                                    minutes ~/ 60,
+                                                    minutes % 60,
+                                                  ),
+                                                  Rect.fromLTWH(
+                                                    details.globalPosition.dx -
+                                                        details
+                                                            .localPosition
+                                                            .dx,
+                                                    details.globalPosition.dy -
+                                                        details
+                                                            .localPosition
+                                                            .dy +
+                                                        (minutes -
+                                                                startMinutes) *
+                                                            minuteHeight,
+                                                    metrics.dayWidth,
+                                                    gridMinutes * minuteHeight,
+                                                  ),
+                                                );
+                                              },
+                                        onLongPressStart:
+                                            onEmptySlotTap == null ||
+                                                !enableLongPressAddEvent
+                                            ? null
+                                            : (details) {
+                                                final minutes =
+                                                    _snapMinutes(
+                                                          startMinutes +
+                                                              (details
+                                                                          .localPosition
+                                                                          .dy /
+                                                                      minuteHeight)
+                                                                  .round(),
+                                                          gridMinutes,
+                                                        )
+                                                        .clamp(
+                                                          startMinutes,
+                                                          endMinutes - 15,
+                                                        )
+                                                        .toInt();
+                                                final day = days[index];
+                                                onEmptySlotTap!(
+                                                  DateTime(
+                                                    day.year,
+                                                    day.month,
+                                                    day.day,
+                                                    minutes ~/ 60,
+                                                    minutes % 60,
+                                                  ),
+                                                  Rect.fromLTWH(
+                                                    details.globalPosition.dx -
+                                                        details
+                                                            .localPosition
+                                                            .dx,
+                                                    details.globalPosition.dy -
+                                                        details
+                                                            .localPosition
+                                                            .dy +
+                                                        (minutes -
+                                                                startMinutes) *
+                                                            minuteHeight,
+                                                    metrics.dayWidth,
+                                                    gridMinutes * minuteHeight,
+                                                  ),
+                                                );
+                                              },
                                       ),
-                                      behavior: HitTestBehavior.translucent,
-                                      onDoubleTapDown:
-                                          !WorkbenchLayoutPolicy.pointerLayout(
-                                                context,
-                                              ) ||
-                                              onEmptySlotTap == null
-                                          ? null
-                                          : (details) {
-                                              final minutes =
-                                                  _snapMinutes(
-                                                        startMinutes +
-                                                            (details
-                                                                        .localPosition
-                                                                        .dy /
-                                                                    minuteHeight)
-                                                                .round(),
-                                                        gridMinutes,
-                                                      )
-                                                      .clamp(
-                                                        startMinutes,
-                                                        endMinutes - 15,
-                                                      )
-                                                      .toInt();
-                                              onEmptySlotTap!(
-                                                DateTime(
-                                                  days[index].year,
-                                                  days[index].month,
-                                                  days[index].day,
-                                                  minutes ~/ 60,
-                                                  minutes % 60,
-                                                ),
-                                                Rect.fromLTWH(
-                                                  details.globalPosition.dx -
-                                                      details.localPosition.dx,
-                                                  details.globalPosition.dy -
-                                                      details.localPosition.dy +
-                                                      (minutes - startMinutes) *
-                                                          minuteHeight,
-                                                  metrics.dayWidth,
-                                                  gridMinutes * minuteHeight,
-                                                ),
-                                              );
-                                            },
-                                      onLongPressStart:
-                                          onEmptySlotTap == null ||
-                                              !enableLongPressAddEvent
-                                          ? null
-                                          : (details) {
-                                              final minutes =
-                                                  _snapMinutes(
-                                                        startMinutes +
-                                                            (details
-                                                                        .localPosition
-                                                                        .dy /
-                                                                    minuteHeight)
-                                                                .round(),
-                                                        gridMinutes,
-                                                      )
-                                                      .clamp(
-                                                        startMinutes,
-                                                        endMinutes - 15,
-                                                      )
-                                                      .toInt();
-                                              final day = days[index];
-                                              onEmptySlotTap!(
-                                                DateTime(
-                                                  day.year,
-                                                  day.month,
-                                                  day.day,
-                                                  minutes ~/ 60,
-                                                  minutes % 60,
-                                                ),
-                                                Rect.fromLTWH(
-                                                  details.globalPosition.dx -
-                                                      details.localPosition.dx,
-                                                  details.globalPosition.dy -
-                                                      details.localPosition.dy +
-                                                      (minutes - startMinutes) *
-                                                          minuteHeight,
-                                                  metrics.dayWidth,
-                                                  gridMinutes * minuteHeight,
-                                                ),
-                                              );
-                                            },
                                     ),
                                   ),
                                 for (
