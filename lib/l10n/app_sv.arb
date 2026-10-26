@@ -424,7 +424,7 @@
       "path": {}
     }
   },
-  "saveCancelled": "Spara inställd",
+  "saveCancelled": "Sparandet avbröts",
   "@saveCancelled": {},
   "fileSaveRestrictedTitle": "Filsparning begränsad",
   "@fileSaveRestrictedTitle": {},
@@ -488,7 +488,7 @@
   "@importPeriodTemplate": {},
   "importPeriodTemplateText": "Importera periodmall från text",
   "@importPeriodTemplateText": {},
-  "sharePeriodTemplate": "Mall för aktieperiod",
+  "sharePeriodTemplate": "Dela mall för lektionstider",
   "@sharePeriodTemplate": {},
   "saveTemplateToFile": "Spara mall till fil",
   "@saveTemplateToFile": {},

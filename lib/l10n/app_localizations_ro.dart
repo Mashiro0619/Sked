@@ -184,7 +184,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get selectAll => 'Selectați toate';
 
   @override
-  String get clear => 'Curge';
+  String get clear => 'Golește';
 
   @override
   String get confirm => 'Confirmă';

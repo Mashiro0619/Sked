@@ -101,7 +101,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get delete => 'Törlés';
 
   @override
-  String get cancel => 'törlés';
+  String get cancel => 'Mégse';
 
   @override
   String get save => 'Mentés';

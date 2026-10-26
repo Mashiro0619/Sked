@@ -38,6 +38,13 @@ void main() {
   setUpAll(initializeDateFormatting);
 
   for (final locale in AppLocalizations.supportedLocales) {
+    test('$locale cancel remains distinct from deleting data', () {
+      final messages = _messages('$locale');
+      expect(
+        (messages['cancel'] as String).trim().toLowerCase(),
+        isNot((messages['delete'] as String).trim().toLowerCase()),
+      );
+    });
     test('$locale calendar labels are distinct and compact', () {
       final messages = _messages('$locale');
       final months = [for (final month in _months) messages['month$month']];

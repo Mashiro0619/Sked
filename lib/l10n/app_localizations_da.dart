@@ -755,7 +755,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get importPeriodTemplateText => 'Importer periodeskabelon fra tekst';
 
   @override
-  String get sharePeriodTemplate => 'Skabelon til andelsperiode';
+  String get sharePeriodTemplate => 'Del skabelon til lektionstider';
 
   @override
   String get saveTemplateToFile => 'Gem skabelon til fil';
@@ -1210,7 +1210,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get privacyAgreeAndContinue => 'Enig og fortsæt';
 
   @override
-  String get privacyDecline => 'Afsæt';
+  String get privacyDecline => 'Afvis';
 
   @override
   String get privacyDeclineWebHint =>

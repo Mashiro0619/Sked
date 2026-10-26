@@ -649,7 +649,7 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get saveCancelled => 'Spara inställd';
+  String get saveCancelled => 'Sparandet avbröts';
 
   @override
   String get fileSaveRestrictedTitle => 'Filsparning begränsad';
@@ -762,7 +762,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get importPeriodTemplateText => 'Importera periodmall från text';
 
   @override
-  String get sharePeriodTemplate => 'Mall för aktieperiod';
+  String get sharePeriodTemplate => 'Dela mall för lektionstider';
 
   @override
   String get saveTemplateToFile => 'Spara mall till fil';
