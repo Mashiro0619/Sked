@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/semantics.dart' show SemanticsProperties;
 import 'package:material_ui/material_ui.dart';
 
+import '../l10n/app_locale.dart';
+import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../theme/color_contrast.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -564,6 +566,8 @@ class _TimetableGridState extends State<TimetableGrid> {
                                             in widget.visibleWeekdays)
                                           _DayColumn(
                                             weekday: weekday,
+                                            emptySlotSemanticLabel:
+                                                '${formatDayOfWeekLabel(weekday, localeCode: widget.localeCode)}, ${lookupAppLocalizations(appLocaleFromCode(widget.localeCode)).addCourse}',
                                             width: metrics.dayColumnWidth,
                                             borderColor: widget.showGridLines
                                                 ? colors.outlineVariant
@@ -703,6 +707,7 @@ void _validateVisibleWeekdays(List<int> weekdays) {
 class _DayColumn extends StatelessWidget {
   const _DayColumn({
     required this.weekday,
+    required this.emptySlotSemanticLabel,
     required this.width,
     required this.borderColor,
     required this.showGridLines,
@@ -724,6 +729,7 @@ class _DayColumn extends StatelessWidget {
   });
 
   final int weekday;
+  final String emptySlotSemanticLabel;
   final double width;
   final Color borderColor;
   final bool showGridLines;
@@ -856,7 +862,14 @@ class _DayColumn extends StatelessWidget {
     );
     // Keep animation listeners local to this day when many cards are replaced.
     // A disabled ancestor still mutes the whole column, including ink effects.
-    return TickerMode(enabled: true, child: content);
+    return TickerMode(
+      enabled: true,
+      child: Semantics(
+        container: true,
+        label: onLongPressAt == null ? null : emptySlotSemanticLabel,
+        child: content,
+      ),
+    );
   }
 }
 

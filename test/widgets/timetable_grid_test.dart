@@ -2350,6 +2350,66 @@ void main() {
     },
   );
 
+  testWidgets('empty-slot long press has a weekday and add-course label', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final emptySlots = <TimetableEmptySlotTapInfo>[];
+    final timetable = _timetableWithCourses([
+      _course(
+        id: 'separate-course',
+        weekday: DateTime.monday,
+        startMinutes: 550,
+        endMinutes: 610,
+      ),
+    ]);
+    const periods = [
+      CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),
+      CoursePeriodTime(index: 2, startMinutes: 550, endMinutes: 610),
+    ];
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: timetable,
+        periodTimes: periods,
+        visibleWeekdays: const [DateTime.monday],
+        onEmptySlotTap: emptySlots.add,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final node = tester.getSemantics(
+      find.bySemanticsLabel('Monday, Add course'),
+    );
+    expect(
+      node.getSemanticsData().hasAction(ui.SemanticsAction.longPress),
+      isTrue,
+    );
+    expect(
+      find.bySemanticsLabel('separate-course, 09:10–10:10'),
+      findsOneWidget,
+    );
+    node.owner!.performAction(node.id, ui.SemanticsAction.longPress);
+    await tester.pump();
+    expect(emptySlots.single.weekday, DateTime.monday);
+    expect(emptySlots.single.periods, isNotEmpty);
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: timetable,
+        periodTimes: periods,
+        visibleWeekdays: const [DateTime.monday],
+        enableLongPressAdd: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Monday, Add course'), findsNothing);
+    expect(
+      find.bySemanticsLabel('separate-course, 09:10–10:10'),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
   testWidgets('primary mouse long press can add from an empty slot', (
     tester,
   ) async {
