@@ -19,11 +19,7 @@ void main() {
       final allowedFallbacks =
           locale.languageCode == 'en' || locale.languageCode == 'zh'
           ? const <String>{}
-          : const {
-              'studentDayEmpty',
-              'notificationCoverageBlocked',
-              'notificationCoverageFailed',
-            };
+          : const {'notificationCoverageBlocked', 'notificationCoverageFailed'};
       final file = File('lib/l10n/app_$locale.arb');
       expect(file.existsSync(), isTrue, reason: 'Missing locale source: $file');
       final messages =
@@ -49,12 +45,6 @@ void main() {
       expect(messages['appTitle'], 'Sked');
       expect(messages['googlePlay'], 'Google Play');
       expect(messages['outlineWidthUnit'], 'px');
-      if (allowedFallbacks.contains('studentDayEmpty')) {
-        expect(
-          lookupAppLocalizations(locale).studentDayEmpty,
-          template['studentDayEmpty'],
-        );
-      }
     });
   }
 }

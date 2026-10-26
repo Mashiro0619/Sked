@@ -2141,5 +2141,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "O limite de lembretes foi atingido. Alguns ainda não estão agendados. Volte a abrir a aplicação depois de os próximos lembretes serem apresentados para atualizar o plano.",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "studentDayEmpty": "Não há aulas neste dia"
 }

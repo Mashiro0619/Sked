@@ -2141,5 +2141,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "Достигнут лимит напоминаний. Некоторые ещё не запланированы. После срабатывания ближайших напоминаний откройте приложение заново, чтобы обновить план.",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "studentDayEmpty": "В этот день нет занятий"
 }

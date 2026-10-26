@@ -580,7 +580,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get selectTimetablesToImport => '가져올 시간표 선택';
 
   @override
-  String get studentDayEmpty => 'No courses for this day';
+  String get studentDayEmpty => '이 날은 수업이 없습니다';
 
   @override
   String timetableCourseCount(int count) {

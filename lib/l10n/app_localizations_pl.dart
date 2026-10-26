@@ -604,7 +604,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get selectTimetablesToImport => 'Wybierz harmonogram do importu';
 
   @override
-  String get studentDayEmpty => 'No courses for this day';
+  String get studentDayEmpty => 'Brak zajęć w tym dniu';
 
   @override
   String timetableCourseCount(int count) {

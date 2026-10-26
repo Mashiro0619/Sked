@@ -602,7 +602,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get selectTimetablesToImport => 'Valitse aikataulut tuoda';
 
   @override
-  String get studentDayEmpty => 'No courses for this day';
+  String get studentDayEmpty => 'Ei oppitunteja tälle päivälle';
 
   @override
   String timetableCourseCount(int count) {

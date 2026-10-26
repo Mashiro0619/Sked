@@ -600,7 +600,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get selectTimetablesToImport => 'Chọn lịch trình để nhập';
 
   @override
-  String get studentDayEmpty => 'No courses for this day';
+  String get studentDayEmpty => 'Không có môn học trong ngày này';
 
   @override
   String timetableCourseCount(int count) {

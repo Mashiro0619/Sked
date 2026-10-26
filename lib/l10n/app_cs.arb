@@ -2141,5 +2141,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "Byl dosažen limit připomenutí. Některá ještě nejsou naplánována. Po spuštění nejbližších připomenutí aplikaci znovu otevřete a aktualizujte plán.",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "studentDayEmpty": "Na tento den nejsou žádné hodiny"
 }

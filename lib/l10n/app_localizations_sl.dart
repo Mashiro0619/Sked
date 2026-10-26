@@ -603,7 +603,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get selectTimetablesToImport => 'Izberite časovne razporede za uvoz';
 
   @override
-  String get studentDayEmpty => 'No courses for this day';
+  String get studentDayEmpty => 'Ta dan ni pouka';
 
   @override
   String timetableCourseCount(int count) {

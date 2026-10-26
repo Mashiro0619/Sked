@@ -2141,5 +2141,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "通知件数の上限に達しているため、まだ予約されていない通知があります。直近の通知が表示された後にアプリを開き直して予定を更新してください。",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "studentDayEmpty": "この日の授業はありません"
 }

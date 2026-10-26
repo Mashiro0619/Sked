@@ -2141,5 +2141,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "Osiągnięto limit przypomnień. Niektóre nie są jeszcze zaplanowane. Po wyświetleniu najbliższych przypomnień otwórz aplikację ponownie, aby odświeżyć plan.",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "studentDayEmpty": "Brak zajęć w tym dniu"
 }

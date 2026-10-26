@@ -606,7 +606,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get selectTimetablesToImport => 'Выберите расписания для импорта';
 
   @override
-  String get studentDayEmpty => 'No courses for this day';
+  String get studentDayEmpty => 'В этот день нет занятий';
 
   @override
   String timetableCourseCount(int count) {

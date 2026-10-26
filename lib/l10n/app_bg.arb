@@ -2141,5 +2141,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "Лимитът за напомняния е достигнат. Някои още не са планирани. След задействане на предстоящите напомняния отворете отново приложението, за да обновите плана.",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "studentDayEmpty": "Няма занятия за този ден"
 }

@@ -599,7 +599,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get selectTimetablesToImport => 'Vyberte plány pro import';
 
   @override
-  String get studentDayEmpty => 'No courses for this day';
+  String get studentDayEmpty => 'Na tento den nejsou žádné hodiny';
 
   @override
   String timetableCourseCount(int count) {

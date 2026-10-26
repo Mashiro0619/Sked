@@ -2141,5 +2141,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "Az emlékeztetők száma elérte a korlátot. Néhány még nincs ütemezve. A terv frissítéséhez a közelgő emlékeztetők jelzése után nyisd meg újra az alkalmazást.",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "studentDayEmpty": "Ezen a napon nincsenek órák"
 }
