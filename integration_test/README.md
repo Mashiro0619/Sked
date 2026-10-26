@@ -115,6 +115,31 @@ flutter test integration_test/audit_native_gate_test.dart -d windows --no-pub `
   --reporter expanded
 ```
 
-Gate 的锁竞争来自真实 Windows 子进程。测试的鼠标和键盘事件均由 Flutter
-测试绑定分发，不属于 OS SendInput 或物理键鼠验收。结果 JSON 写入本次
-gate 输出目录；结合进程退出码检查结果，不复用旧目录中的证据。
+`audit_native_workflows_test.dart` 验证课程和日程表单、悬浮与工作区切换，
+再通过第二次独立原生进程读取同一隔离目录，检查持久化结果。先运行
+`exercise`；确认退出码为 0 后，再运行 `read`：
+
+课程和日程各执行 10 轮创建，再分别编辑一次；`read` 核对完整工作区
+快照和保存实体数量。样例以运行当天生成，日志记录关键步骤，结果
+JSON 记录进程 ID 和生命周期状态。帧等待、加载和工作区切换均设置
+限时，异常清理保留最初的错误。
+
+```powershell
+$auditWorkflowData = Join-Path $auditOutput 'workflows'
+flutter test integration_test/audit_native_workflows_test.dart -d windows --no-pub `
+  "--dart-define=SKED_AUDIT_NATIVE_DATA=$auditWorkflowData" `
+  --dart-define=SKED_AUDIT_NATIVE_PHASE=exercise `
+  --reporter expanded
+```
+
+```powershell
+flutter test integration_test/audit_native_workflows_test.dart -d windows --no-pub `
+  "--dart-define=SKED_AUDIT_NATIVE_DATA=$auditWorkflowData" `
+  --dart-define=SKED_AUDIT_NATIVE_PHASE=read `
+  --reporter expanded
+```
+
+Gate 的锁竞争来自真实 Windows 子进程，workflows 使用实际隔离文件存储。
+两项测试的鼠标、键盘和悬浮事件均由 Flutter 测试绑定分发，不属于
+OS SendInput 或物理键鼠验收。结果 JSON 写入上述本次输出目录；结合
+各次进程退出码检查结果，不复用旧目录中的证据。
