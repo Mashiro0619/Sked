@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 
 import '../support/semantics_update_audit.dart';
@@ -54,7 +56,14 @@ void main() {
         await app.generalCommands.updateDisplaySettings(
           closeEventPopupOnOutsideTap: outsideDismiss,
         );
-        await tester.pumpWidget(WorkspaceHarness(provider: app));
+        await tester.pumpWidget(
+          GeneralReminderTimeScope(
+            // Keep the sample's startup reminder state independent of today.
+            now: () => DateTime(2026, 9, 8, 9),
+            createTimer: (delay, callback) => Timer(delay, callback),
+            child: WorkspaceHarness(provider: app),
+          ),
+        );
         await tester.pumpAndSettle();
         final originalDate = app.generalView.selectedDate;
         final originalEventCount = app

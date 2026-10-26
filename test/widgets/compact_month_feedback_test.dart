@@ -288,8 +288,13 @@ void main() {
         expect(surface().color!.a, 0);
 
         final before = await _raster(t);
+        // Keep the full-cell press outside the marker and away from the
+        // calendar panel's clipped corner when today is in the final row.
+        final pressPoint =
+            t.getRect(todayCell).bottomCenter + const Offset(0, -3);
+        expect(t.getRect(marker).contains(pressPoint), isFalse);
         final touch = await t.startGesture(
-          t.getRect(todayCell).bottomLeft + const Offset(3, -3),
+          pressPoint,
           kind: ui.PointerDeviceKind.touch,
         );
         await t.pump(const Duration(milliseconds: 150));
