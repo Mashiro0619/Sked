@@ -89,3 +89,32 @@ Windows 渲染必须标为模拟布局，不能称为 Android 真机验收。
 性能数据使用 [UI Profile 基准](../benchmark/UI_PERFORMANCE.md) 与
 [纯数据基准](../benchmark/README.md)。调试截图、模拟设备布局及行为
 通过数都不是 Profile 帧耗时或真机性能证据。
+
+## Windows 原生行为审计
+
+以下入口使用隔离数据目录。每次运行先在仓库根目录执行公共准备，
+为本次结果创建新的 `.scratch` 子目录：
+
+```powershell
+$auditProjectRoot = (Resolve-Path .).Path
+$auditFlutterCommand = Get-Command flutter -ErrorAction Stop
+$auditFlutterRoot = Split-Path (Split-Path $auditFlutterCommand.Source -Parent) -Parent
+$auditOutput = Join-Path $auditProjectRoot ('.scratch/native-audit-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $auditOutput | Out-Null
+```
+
+`audit_native_gate_test.dart` 使用真实子进程持有 Windows 文件锁，验证
+锁占用时重试仍被阻止，以及释放后通过一次鼠标或键盘重试完成启动：
+
+```powershell
+$auditGateData = Join-Path $auditOutput 'gate'
+flutter test integration_test/audit_native_gate_test.dart -d windows --no-pub `
+  "--dart-define=SKED_AUDIT_NATIVE_GATE_DATA=$auditGateData" `
+  "--dart-define=SKED_AUDIT_FLUTTER_ROOT=$auditFlutterRoot" `
+  "--dart-define=SKED_AUDIT_PROJECT_ROOT=$auditProjectRoot" `
+  --reporter expanded
+```
+
+Gate 的锁竞争来自真实 Windows 子进程。测试的鼠标和键盘事件均由 Flutter
+测试绑定分发，不属于 OS SendInput 或物理键鼠验收。结果 JSON 写入本次
+gate 输出目录；结合进程退出码检查结果，不复用旧目录中的证据。
