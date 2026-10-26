@@ -235,11 +235,20 @@ void registerCaptureScenarios() {
               'workspace-resource-open',
               'workspace-resource-settings',
             ];
+            Finder resourceAnchor(String id) {
+              final action = k(id).hitTestable();
+              if (id == 'workspace-resource-open' &&
+                  action.evaluate().isEmpty) {
+                return k('workspace-resource-heading-icon').hitTestable();
+              }
+              return action;
+            }
+
             final anchors = {
               for (final id in ids)
                 id: t.getCenter(
                   find.descendant(
-                    of: k(id).hitTestable(),
+                    of: resourceAnchor(id),
                     matching: find.byType(Icon),
                   ),
                 ),
@@ -249,7 +258,7 @@ void registerCaptureScenarios() {
                 expect(
                   t.getCenter(
                     find.descendant(
-                      of: k(id).hitTestable(),
+                      of: resourceAnchor(id),
                       matching: find.byType(Icon),
                     ),
                   ),

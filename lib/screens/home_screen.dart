@@ -634,11 +634,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 builder: (context, resources, _) {
                   final l10n = AppLocalizations.of(context);
+                  final resourcesExpanded =
+                      WorkspaceResourceScope.maybeOf(context)?.drawerOpen ==
+                          true ||
+                      WorkspaceCanvasScope.maybeOf(context)
+                              ?.resourcePresentation ==
+                          WorkspaceResourcePresentation.expanded;
                   return WorkspaceResourcePanel(
                     title: l10n.timetable,
-                    // The editor owns its source timetable; background navigation
-                    // must remain available without retargeting that draft.
-                    onOpenResourcesAt: widget.interactive
+                    onOpenResourcesAt: widget.interactive && !resourcesExpanded
                         ? (anchor) => _showTimetablePicker(
                             context,
                             availableWidth: 560,

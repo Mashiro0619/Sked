@@ -18,6 +18,16 @@ void _viewport(WidgetTester tester, Size size) {
 }
 
 Future<void> _openTimetablePicker(WidgetTester tester) async {
+  if (find
+      .byKey(const ValueKey('workspace-resource-heading-icon'))
+      .hitTestable()
+      .evaluate()
+      .isNotEmpty) {
+    await tester.tap(
+      find.byKey(const ValueKey('workspace-resource-collapse')).hitTestable(),
+    );
+    await tester.pumpAndSettle();
+  }
   final resource = find
       .byKey(const ValueKey('workspace-resource-open'))
       .hitTestable();

@@ -430,26 +430,46 @@ class WorkspaceResourcePanel extends StatelessWidget {
                       width: compactWidth,
                       child: Center(
                         child: Builder(
-                          builder: (anchor) => IconButton(
-                            key: const ValueKey('workspace-resource-open'),
-                            style: m.iconStyle,
-                            tooltip: title,
-                            onPressed: enabled
-                                ? () {
-                                    resourceScope?.close();
-                                    if (onOpenResourcesAt != null) {
-                                      onOpenResourcesAt!(anchor);
-                                    } else {
-                                      (onOpenResources ?? toggle)();
+                          builder: (anchor) {
+                            final icon = workspace.activeMode == AppMode.student
+                                ? Icons.view_week_outlined
+                                : Icons.category_outlined;
+                            if (!collapsed &&
+                                onOpenResourcesAt == null &&
+                                onOpenResources == null) {
+                              return ExcludeSemantics(
+                                child: SizedBox.square(
+                                  key: const ValueKey(
+                                    'workspace-resource-heading-icon',
+                                  ),
+                                  dimension: m.iconTarget,
+                                  child: Center(
+                                    child: Icon(
+                                      icon,
+                                      size: m.desktop ? 18 : 22,
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return IconButton(
+                              key: const ValueKey('workspace-resource-open'),
+                              style: m.iconStyle,
+                              tooltip: title,
+                              onPressed: enabled
+                                  ? () {
+                                      resourceScope?.close();
+                                      if (onOpenResourcesAt != null) {
+                                        onOpenResourcesAt!(anchor);
+                                      } else {
+                                        (onOpenResources ?? toggle)();
+                                      }
                                     }
-                                  }
-                                : null,
-                            icon: Icon(
-                              workspace.activeMode == AppMode.student
-                                  ? Icons.view_week_outlined
-                                  : Icons.category_outlined,
-                            ),
-                          ),
+                                  : null,
+                              icon: Icon(icon),
+                            );
+                          },
                         ),
                       ),
                     ),

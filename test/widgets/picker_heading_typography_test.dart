@@ -221,6 +221,13 @@ void main() {
           locale: scenario.locale.languageCode,
         );
         addTearDown(provider.dispose);
+        await provider.settingsCommands.updateHomeWorkspaceNavigationCollapsed(
+          true,
+        );
+        // Open from the compact rail before checking the narrow-window layout.
+        if (scenario.size.width < 1000) {
+          tester.view.physicalSize = Size(1000, scenario.size.height);
+        }
         await tester.pumpWidget(
           WorkspaceHarness(
             provider: provider,
@@ -231,17 +238,9 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        if (_key('workspace-resource-open').hitTestable().evaluate().isEmpty) {
-          final picker = _key('student-timetable-picker-button');
-          if (picker.evaluate().isEmpty) {
-            await tester.tap(_key('student-desktop-toolbar-more'));
-            await tester.pumpAndSettle();
-          }
-          await tester.ensureVisible(picker);
-          await tester.tap(picker);
-          await tester.pumpAndSettle();
-        }
         await tester.tap(_key('workspace-resource-open').hitTestable());
+        await tester.pumpAndSettle();
+        tester.view.physicalSize = scenario.size;
         await tester.pumpAndSettle();
         final heading = _key('timetable-picker-heading');
         _expectHeader(

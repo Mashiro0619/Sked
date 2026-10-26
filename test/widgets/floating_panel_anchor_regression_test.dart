@@ -373,6 +373,8 @@ void _registerPickerHandoffTests() {
       (tester) async {
         final provider = await _studentProvider(timetableCount: 6);
         await _mount(tester, provider, size: const Size(1366, 1000));
+        await tester.tap(_key('workspace-resource-collapse'));
+        await tester.pumpAndSettle();
         final l10n = AppLocalizations.of(
           tester.element(find.byType(WorkspaceFrame)),
         );
