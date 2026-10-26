@@ -865,7 +865,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked es una herramienta de horarios que prioriza el almacenamiento local. Los horarios, conjuntos de periodos y configuración de sitios escolares se almacenan solo en tu dispositivo o navegador y nunca se suben automáticamente. La app solo procesa datos cuando activas explícitamente acciones como importar, analizar páginas web, compartir o abrir enlaces externos. La política de privacidad completa está disponible en línea.';
+      'Sked es una herramienta de horarios que prioriza el almacenamiento local. Los horarios de clases, las agendas generales, los conjuntos de horas de clase y la configuración de sitios escolares se guardan solo en tu dispositivo o navegador y nunca se suben automáticamente. La aplicación solo procesa datos cuando activas expresamente acciones como importar, analizar texto / HTML de horarios, importar páginas web escolares, compartir o abrir enlaces externos. La política de privacidad completa está disponible en línea.';
 
   @override
   String get privacyGateTitle =>
@@ -873,11 +873,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Los horarios, los conjuntos de horarios de periodos y la configuración de sitios escolares solo se almacenan localmente y no se suben automáticamente a un servidor del desarrollador.';
+      'Los horarios de clases, las agendas generales, los conjuntos de horas de clase y la configuración de sitios escolares solo se guardan localmente y no se suben automáticamente a un servidor del desarrollador.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'La importación, exportación y el uso compartido solo ocurren cuando los inicias explícitamente; el análisis de páginas web envía solo el contenido comprimido que envías al endpoint de análisis configurado, y puedes revisar el horario analizado antes de guardarlo.';
+      'La importación, la exportación, las copias de seguridad completas y el uso compartido solo se realizan cuando los inicias expresamente. Las copias completas de la aplicación excluyen las claves API personalizadas, y el análisis de texto / HTML de horarios solo envía el contenido presentado al punto de acceso del analizador que has configurado.';
 
   @override
   String get privacyGateSummaryUpdates =>

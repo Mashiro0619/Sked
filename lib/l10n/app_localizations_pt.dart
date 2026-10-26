@@ -860,7 +860,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'O Sked é uma ferramenta de horários com foco local. Os horários, conjuntos de períodos e configurações de sites escolares são armazenados apenas no seu dispositivo ou navegador e nunca são enviados automaticamente. O app só processa dados quando você aciona explicitamente ações como importar, analisar páginas web, compartilhar ou abrir links externos. A política de privacidade completa está disponível online.';
+      'O Sked é uma ferramenta de horários que dá prioridade ao armazenamento local. Os horários de aulas, as agendas gerais, os conjuntos de horas das aulas e a configuração dos sites das escolas são guardados apenas no seu dispositivo ou navegador e nunca são enviados automaticamente. A aplicação só processa dados quando inicia explicitamente ações como importar, analisar texto / HTML de horários, importar páginas web de escolas, partilhar ou abrir ligações externas. A política de privacidade completa está disponível online.';
 
   @override
   String get privacyGateTitle =>
@@ -868,11 +868,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Horários, conjuntos de horários dos períodos e configurações de sites escolares são armazenados apenas localmente e não são enviados automaticamente para um servidor do desenvolvedor.';
+      'Os horários de aulas, as agendas gerais, os conjuntos de horas das aulas e a configuração dos sites das escolas são guardados apenas localmente e não são enviados automaticamente para um servidor do programador.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Importação, exportação e compartilhamento só acontecem quando você os inicia explicitamente; a análise de página web envia apenas o conteúdo compactado que você enviar ao endpoint configurado, e você pode revisar o horário analisado antes de salvar.';
+      'A importação, a exportação, as cópias de segurança completas e a partilha só acontecem quando as inicia explicitamente. As cópias de segurança completas da aplicação não incluem chaves API personalizadas, e a análise de texto / HTML de horários envia apenas o conteúdo submetido para o ponto de acesso de análise configurado.';
 
   @override
   String get privacyGateSummaryUpdates =>

@@ -849,7 +849,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked je rozvrhový nástroj upřednostňující lokální ukládání. Rozvrhy, časové sady a konfigurace školních stránek jsou uloženy pouze ve vašem zařízení nebo prohlížeči a nikdy nejsou automaticky nahrávány. Aplikace zpracovává data pouze tehdy, když výslovně spustíte akce jako import, analýzu webových stránek, sdílení nebo otevírání externích odkazů. Úplné zásady ochrany osobních údajů jsou k dispozici online.';
+      'Sked je nástroj pro rozvrhy, který upřednostňuje místní ukládání. Rozvrhy, obecné plány, sady časů vyučovacích hodin a nastavení školních webů jsou uloženy pouze ve vašem zařízení nebo prohlížeči a nikdy se automaticky neodesílají. Aplikace zpracovává data pouze tehdy, když výslovně spustíte akci, například import, analýzu textu / HTML rozvrhu, import ze školní webové stránky, sdílení nebo otevření externího odkazu. Úplné zásady ochrany soukromí jsou dostupné online.';
 
   @override
   String get privacyGateTitle =>
@@ -857,11 +857,11 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Plány, časové sady a konfigurace školy jsou uloženy pouze lokálně a nejsou automaticky nahrány na server vývojářů.';
+      'Rozvrhy, obecné plány, sady časů vyučovacích hodin a nastavení školních webů se ukládají pouze místně a automaticky se neodesílají na server vývojáře.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, export a sdílení se odehrávají pouze tehdy, když je explicitně spustíte; Analýza webových stránek odesílá pouze komprimovaný obsah, který odešlete do nakonfigurovaného koncového bodu analýzy, a před uložením můžete zkontrolovat analyzovaný časový rozvrh.';
+      'Import, export, úplné zálohy a sdílení se provádějí pouze tehdy, když je výslovně spustíte. Úplné zálohy aplikace neobsahují vlastní klíče API a analýza textu / HTML rozvrhu odesílá pouze vámi zadaný obsah na nastavený koncový bod pro analýzu.';
 
   @override
   String get privacyGateSummaryUpdates =>

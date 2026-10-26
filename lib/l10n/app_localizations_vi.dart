@@ -852,7 +852,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked là công cụ thời khóa biểu ưu tiên lưu trữ cục bộ. Thời khóa biểu, bộ thời gian và cấu hình trang web trường học chỉ được lưu trên thiết bị hoặc trình duyệt của bạn và không bao giờ được tự động tải lên. Ứng dụng chỉ xử lý dữ liệu khi bạn chủ động kích hoạt các thao tác như nhập, phân tích trang web, chia sẻ hoặc mở liên kết bên ngoài. Chính sách bảo mật đầy đủ có sẵn trực tuyến.';
+      'Sked là công cụ thời khóa biểu ưu tiên lưu trữ cục bộ. Thời khóa biểu, lịch trình chung, các bộ thời gian tiết học và cấu hình trang web trường chỉ được lưu trên thiết bị hoặc trong trình duyệt của bạn, không bao giờ tự động tải lên. Ứng dụng chỉ xử lý dữ liệu khi bạn chủ động thực hiện các thao tác như nhập, phân tích văn bản / HTML thời khóa biểu, nhập từ trang web trường, chia sẻ hoặc mở liên kết bên ngoài. Chính sách quyền riêng tư đầy đủ có sẵn trực tuyến.';
 
   @override
   String get privacyGateTitle =>
@@ -860,11 +860,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Lịch trình, các bộ thời gian và cấu hình trang web trường chỉ được lưu trữ tại địa phương và không được tự động tải lên máy chủ nhà phát triển.';
+      'Thời khóa biểu, lịch trình chung, các bộ thời gian tiết học và cấu hình trang web trường chỉ được lưu cục bộ và không tự động tải lên máy chủ của nhà phát triển.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Nhập, xuất và chia sẻ chỉ xảy ra khi bạn bắt đầu chúng một cách rõ ràng; Phân tích trang web chỉ gửi nội dung nén mà bạn gửi đến điểm cuối phân tích được cấu hình của bạn, và bạn có thể xem xét lịch trình phân tích trước khi lưu.';
+      'Việc nhập, xuất, sao lưu đầy đủ và chia sẻ chỉ diễn ra khi bạn chủ động bắt đầu. Bản sao lưu đầy đủ của ứng dụng không chứa khóa API tùy chỉnh; việc phân tích văn bản / HTML thời khóa biểu chỉ gửi nội dung bạn cung cấp đến điểm cuối phân tích mà bạn đã cấu hình.';
 
   @override
   String get privacyGateSummaryUpdates =>

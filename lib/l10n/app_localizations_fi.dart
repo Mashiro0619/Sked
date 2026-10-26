@@ -854,7 +854,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked on paikalliskäyttöön keskittyvä lukujärjestystyökalu. Lukujärjestykset, ajanjaksot ja koulusivuston asetukset tallennetaan vain laitteellesi tai selaimeesi, eikä niitä koskaan ladata automaattisesti. Sovellus käsittelee tietoja vain, kun käynnistät nimenomaisesti toimintoja kuten tuonnin, verkkosivujen analysoinnin, jakamisen tai ulkoisten linkkien avaamisen. Täydellinen tietosuojakäytäntö on saatavilla verkossa.';
+      'Sked on lukujärjestystyökalu, joka suosii paikallista tallennusta. Lukujärjestykset, yleiset aikataulut, oppituntien aikajoukot ja koulusivustojen asetukset tallennetaan vain laitteellesi tai selaimeesi eikä niitä koskaan lähetetä automaattisesti. Sovellus käsittelee tietoja vain, kun käynnistät nimenomaisesti toimintoja, kuten tuonnin, lukujärjestyksen tekstin / HTML:n jäsennyksen, koulun verkkosivun tuonnin, jakamisen tai ulkoisten linkkien avaamisen. Koko tietosuojakäytäntö on saatavilla verkossa.';
 
   @override
   String get privacyGateTitle =>
@@ -862,11 +862,11 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Aikataulut, ajanjaksot ja koulun sivuston konfiguraatio tallennetaan vain paikallisesti eikä niitä ladata automaattisesti kehittäjän palvelimelle.';
+      'Lukujärjestykset, yleiset aikataulut, oppituntien aikajoukot ja koulusivustojen asetukset tallennetaan vain paikallisesti eikä niitä lähetetä automaattisesti kehittäjän palvelimelle.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Tuo, vienti ja jakaminen tapahtuu vain, kun käynnistät ne nimenomaisesti; verkkosivujen analysointi lähettää vain toimittamasi pakkautetun sisällön määritettyyn analysointipäätepisteeseen, ja voit tarkistaa analysoidun aikataulun ennen tallennusta.';
+      'Tuonti, vienti, täydelliset varmuuskopiot ja jakaminen tapahtuvat vain, kun käynnistät ne nimenomaisesti. Sovelluksen täydelliset varmuuskopiot eivät sisällä omia API-avaimia. Lukujärjestyksen tekstin / HTML:n jäsennys lähettää vain lähettämäsi sisällön määrittämääsi jäsennyspalvelun osoitteeseen.';
 
   @override
   String get privacyGateSummaryUpdates =>

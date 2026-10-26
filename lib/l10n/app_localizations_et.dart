@@ -851,7 +851,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked on lokaalselt töötav tunniplaani tööriist. Tunniplaanid, perioodide komplektid ja kooli saidi konfiguratsioon salvestatakse ainult teie seadmes või brauseris ning neid ei laadita kunagi automaatselt üles. Rakendus töötleb andmeid ainult siis, kui käivitate selgesõnaliselt selliseid toiminguid nagu importimine, veebilehe analüüs, jagamine või väliste linkide avamine. Täielik privaatsuspoliitika on saadaval veebis.';
+      'Sked on tunniplaanirakendus, mis eelistab kohalikku salvestamist. Tunniplaanid, üldised ajakavad, tundide ajakomplektid ja kooliveebide seadistused salvestatakse ainult teie seadmesse või brauserisse ning neid ei laadita kunagi automaatselt üles. Rakendus töötleb andmeid ainult siis, kui käivitate ise tegevusi, näiteks impordi, tunniplaani teksti / HTML-i analüüsi, kooli veebilehe impordi, jagamise või välise lingi avamise. Täielik privaatsuspoliitika on saadaval veebis.';
 
   @override
   String get privacyGateTitle =>
@@ -859,11 +859,11 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Ajaplaanid, ajavahemikud ja kooli saidi konfiguratsioon salvestatakse ainult kohalikult ning neid ei laadita automaatselt üles arendaja serverisse.';
+      'Tunniplaanid, üldised ajakavad, tundide ajakomplektid ja kooliveebide seadistused salvestatakse ainult kohalikult ning neid ei laadita automaatselt arendaja serverisse.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, eksport ja jagamine toimuvad ainult siis, kui neid selgesõnaliselt käivitate; Veebilehe analüüsimine saadab ainult teie konfigureeritud analüüsimise lõpppunktile esitatud surutud sisu ja enne salvestamist saate analüüsitud ajakava vaadata.';
+      'Import, eksport, täielikud varukoopiad ja jagamine toimuvad ainult siis, kui need ise käivitate. Rakenduse täielikud varukoopiad ei sisalda kohandatud API-võtmeid ning tunniplaani teksti / HTML-i analüüs saadab ainult esitatud sisu teie seadistatud analüüsi lõpp-punkti.';
 
   @override
   String get privacyGateSummaryUpdates =>

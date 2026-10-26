@@ -846,7 +846,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked er et lokalt-først skemaværktøj. Skemaer, tidssæt og skolewebstedskonfiguration gemmes kun på din enhed eller i din browser og uploades aldrig automatisk. Appen behandler kun data, når du udtrykkeligt starter handlinger som import, websideanalyse, deling eller åbning af eksterne links. Den fulde fortrolighedspolitik er tilgængelig online.';
+      'Sked er et skemaværktøj, der prioriterer lokal lagring. Skemaer, generelle planer, sæt med lektionstider og indstillinger for skolers websteder gemmes kun på din enhed eller i din browser og uploades aldrig automatisk. Appen behandler kun data, når du udtrykkeligt starter handlinger som import, analyse af skematekst / HTML, import fra skolers websider, deling eller åbning af eksterne links. Den fulde privatlivspolitik er tilgængelig online.';
 
   @override
   String get privacyGateTitle =>
@@ -854,11 +854,11 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Tidsplaner, tidssæt og konfiguration af skolens websted gemmes kun lokalt og uploades ikke automatisk til en udviklerserver.';
+      'Skemaer, generelle planer, sæt med lektionstider og indstillinger for skolers websteder gemmes kun lokalt og uploades ikke automatisk til udviklerens server.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, eksport og deling sker kun, når du udtrykkeligt starter dem. Websideanalysering sender kun det komprimerede indhold, du sender til dit konfigurerede analyseringsendepunkt, og du kan gennemgå den analyserede tidsplan, før du gemmer den.';
+      'Import, eksport, fulde sikkerhedskopier og deling udføres kun, når du udtrykkeligt starter dem. Fulde sikkerhedskopier af appen indeholder ikke brugerdefinerede API-nøgler, og analyse af skematekst / HTML sender kun det indsendte indhold til det analyseendepunkt, du har konfigureret.';
 
   @override
   String get privacyGateSummaryUpdates =>

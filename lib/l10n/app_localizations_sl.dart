@@ -854,7 +854,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked je orodje za urnike, ki daje prednost lokalni hrambi. Urniki, nabori obdobij in konfiguracija šolskega mesta so shranjeni samo v vaši napravi ali brskalniku in se nikoli ne naložijo samodejno. Aplikacija obdeluje podatke samo, ko izrecno sprožite dejanja, kot so uvoz, razčlenjevanje spletnih strani, deljenje ali odpiranje zunanjih povezav. Celotna politika zasebnosti je na voljo na spletu.';
+      'Sked je orodje za urnike, ki daje prednost lokalnemu shranjevanju. Urniki, splošni načrti, nabori časov učnih ur in nastavitve šolskih spletnih mest so shranjeni samo v vaši napravi ali brskalniku in se nikoli ne nalagajo samodejno. Aplikacija obdeluje podatke samo, ko izrecno sprožite dejanja, kot so uvoz, razčlenjevanje besedila / HTML urnika, uvoz šolske spletne strani, deljenje ali odpiranje zunanjih povezav. Celotna politika zasebnosti je na voljo na spletu.';
 
   @override
   String get privacyGateTitle =>
@@ -862,11 +862,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Časovni razporedi, nabori obdobja in konfiguracija šolskega mesta so shranjeni le lokalno in se ne naložijo samodejno v strežnik razvijalcev.';
+      'Urniki, splošni načrti, nabori časov učnih ur in nastavitve šolskih spletnih mest se shranjujejo samo lokalno in se ne nalagajo samodejno na strežnik razvijalca.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Uvoz, izvoz in skupna raba se zgodijo le, ko jih izrecno zaženete; Razčlenjevanje spletne strani pošlje samo stisnjeno vsebino, ki jo pošljete na konfigurirano končno točko razčlenjanja, preden shranite, pa lahko pregledate razčlenjen časovni razpored.';
+      'Uvoz, izvoz, popolne varnostne kopije in deljenje se izvedejo le, ko jih izrecno zaženete. Popolne varnostne kopije aplikacije ne vključujejo prilagojenih ključev API, razčlenjevanje besedila / HTML urnika pa pošlje samo oddano vsebino na nastavljeno končno točko za razčlenjevanje.';
 
   @override
   String get privacyGateSummaryUpdates =>

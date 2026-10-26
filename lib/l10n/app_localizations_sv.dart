@@ -853,7 +853,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked är ett lokalt-först schemaverktyg. Scheman, periodtidsuppsättningar och skolwebbplatskonfiguration lagras endast på din enhet eller i din webbläsare och laddas aldrig upp automatiskt. Appen behandlar endast data när du uttryckligen startar åtgärder som import, webbsidoparsning, delning eller öppnande av externa länkar. Den fullständiga integritetspolicyn finns tillgänglig online.';
+      'Sked är ett schemaverktyg som prioriterar lokal lagring. Scheman, allmänna kalendrar, uppsättningar med lektionstider och inställningar för skolwebbplatser lagras bara på din enhet eller i din webbläsare och laddas aldrig upp automatiskt. Appen behandlar endast data när du uttryckligen startar åtgärder som import, analys av schematext / HTML, import av skolwebbsidor, delning eller öppnande av externa länkar. Den fullständiga integritetspolicyn finns online.';
 
   @override
   String get privacyGateTitle =>
@@ -861,11 +861,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Tidstabeller, tidsuppsättningar och konfiguration av skolan lagras endast lokalt och laddas inte upp automatiskt till en utvecklarserver.';
+      'Scheman, allmänna kalendrar, uppsättningar med lektionstider och inställningar för skolwebbplatser lagras endast lokalt och laddas inte automatiskt upp till utvecklarens server.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, export och delning sker endast när du uttryckligen startar dem. Webbsidoparsning skickar endast det komprimerade innehållet du skickar till din konfigurerade parseringsändpunkt, och du kan granska den parserade tidsplanen innan du sparar.';
+      'Import, export, fullständiga säkerhetskopior och delning sker bara när du uttryckligen startar dem. Fullständiga säkerhetskopior av appen innehåller inga anpassade API-nycklar, och analys av schematext / HTML skickar endast det inskickade innehållet till den analysadress du har konfigurerat.';
 
   @override
   String get privacyGateSummaryUpdates =>

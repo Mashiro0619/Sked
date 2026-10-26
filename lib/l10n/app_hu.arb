@@ -570,13 +570,13 @@
       "version": {}
     }
   },
-  "privacyPolicyIntro": "A Sked egy helyi alapú órarend eszköz. Az órarendek, az időtartam-készletek és az iskolahely konfigurációja csak az Ön eszközén vagy böngészőjében tárolódik, és soha nem kerül automatikusan feltöltésre. Az alkalmazás csak akkor dolgoz fel adatokat, amikor kifejezetten olyan műveleteket indít, mint az importálás, a weboldal-elemzés, a megosztás vagy a külső hivatkozások megnyitása. A teljes adatvédelmi szabályzat online érhető el.",
+  "privacyPolicyIntro": "A Sked helyi tárolást előnyben részesítő órarendeszköz. Az órarendek, az általános ütemtervek, a tanórák időpontkészletei és az iskolai webhelyek beállításai csak az Ön eszközén vagy böngészőjében tárolódnak, és soha nem töltődnek fel automatikusan. Az alkalmazás csak akkor dolgoz fel adatokat, ha kifejezetten elindít olyan műveleteket, mint az importálás, az órarend szövegének / HTML-tartalmának elemzése, az iskolai weboldal importálása, a megosztás vagy külső hivatkozások megnyitása. A teljes adatvédelmi szabályzat online érhető el.",
   "@privacyPolicyIntro": {},
   "privacyGateTitle": "Kérjük, elfogadja az adatvédelmi szabályzatot az alkalmazás használata előtt",
   "@privacyGateTitle": {},
-  "privacyGateSummaryStorage": "Az ütemtervek, az időtartam-készletek és az iskola-helyszín konfigurációja csak helyileg tárolódik, és nem tölthetők fel automatikusan a fejlesztői kiszolgálóra.",
+  "privacyGateSummaryStorage": "Az órarendek, az általános ütemtervek, a tanórák időpontkészletei és az iskolai webhelyek beállításai csak helyileg tárolódnak, és nem töltődnek fel automatikusan a fejlesztő szerverére.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Az import, az export és a megosztás csak akkor történik, ha kifejezetten elindítja őket; A weboldal elemzése csak az Ön által beküldött tömörített tartalmat küld a konfigurált elemzési végponthoz, és a mentés előtt felülvizsgálhatja a elemzett ütemtervet.",
+  "privacyGateSummaryImportExport": "Az importálás, az exportálás, a teljes biztonsági mentés és a megosztás csak akkor történik meg, ha kifejezetten elindítja. Az alkalmazás teljes biztonsági mentése nem tartalmaz egyéni API-kulcsokat, az órarend szövegének / HTML-tartalmának elemzése pedig csak a beküldött tartalmat küldi el az Ön által beállított elemzési végpontra.",
   "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Ha egy későbbi verzió megváltoztatja az adatok kezelésének módját, az alkalmazás megkérheti Önt, hogy újra ellenőrizze a frissített adatvédelmi szabályzatot.",
   "@privacyGateSummaryUpdates": {},

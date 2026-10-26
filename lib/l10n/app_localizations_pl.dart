@@ -857,7 +857,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked to narzędzie do planów lekcji działające lokalnie. Plany lekcji, zestawy okresów i konfiguracja strony szkoły są przechowywane tylko na Twoim urządzeniu lub w przeglądarce i nigdy nie są automatycznie przesyłane. Aplikacja przetwarza dane tylko wtedy, gdy jawnie uruchamiasz działania takie jak import, analiza stron internetowych, udostępnianie lub otwieranie zewnętrznych linków. Pełna polityka prywatności jest dostępna online.';
+      'Sked to narzędzie do planów zajęć, które stawia na lokalne przechowywanie danych. Plany zajęć, ogólne harmonogramy, zestawy godzin lekcyjnych i konfiguracja stron szkolnych są przechowywane tylko na urządzeniu lub w przeglądarce i nigdy nie są automatycznie przesyłane. Aplikacja przetwarza dane wyłącznie po wyraźnym uruchomieniu takich działań jak import, analiza tekstu / HTML planu zajęć, import szkolnej strony internetowej, udostępnianie lub otwarcie zewnętrznego linku. Pełna polityka prywatności jest dostępna online.';
 
   @override
   String get privacyGateTitle =>
@@ -865,11 +865,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Rozkłady, zestawy okresów i konfiguracja szkoły są przechowywane tylko lokalnie i nie są automatycznie przesyłane na serwer programistów.';
+      'Plany zajęć, ogólne harmonogramy, zestawy godzin lekcyjnych i konfiguracja stron szkolnych są przechowywane wyłącznie lokalnie i nie są automatycznie przesyłane na serwer dewelopera.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Importowanie, eksportowanie i udostępnianie następują tylko wtedy, gdy wyraźnie je uruchomisz; Analiza stron internetowych wysyła tylko skompresowaną zawartość, którą przesyłasz do skonfigurowanego punktu końcowego analizowania, a przed zapisaniem możesz sprawdzić analizowany harmonogram.';
+      'Import, eksport, pełne kopie zapasowe i udostępnianie odbywają się tylko po ich wyraźnym uruchomieniu. Pełne kopie zapasowe aplikacji nie zawierają niestandardowych kluczy API, a analiza tekstu / HTML planu zajęć wysyła wyłącznie przesłaną treść do skonfigurowanego punktu końcowego analizy.';
 
   @override
   String get privacyGateSummaryUpdates =>

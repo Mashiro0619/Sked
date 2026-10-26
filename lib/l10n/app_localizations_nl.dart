@@ -855,7 +855,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked is een lokaal-eerst roosterhulpmiddel. Roosters, periodetijdsets en schoolwebsiteconfiguratie worden alleen op je apparaat of in je browser opgeslagen en worden nooit automatisch geüpload. De app verwerkt alleen gegevens wanneer je expliciet acties start zoals importeren, webpagina-analyse, delen of het openen van externe links. Het volledige privacybeleid is online beschikbaar.';
+      'Sked is een roosterhulpmiddel dat lokale opslag vooropstelt. Lesroosters, algemene agenda’s, sets met lestijden en instellingen voor schoolwebsites worden alleen op je apparaat of in je browser opgeslagen en nooit automatisch geüpload. De app verwerkt gegevens alleen wanneer je uitdrukkelijk acties start, zoals importeren, roostertekst / HTML analyseren, schoolwebpagina’s importeren, delen of externe links openen. Het volledige privacybeleid is online beschikbaar.';
 
   @override
   String get privacyGateTitle =>
@@ -863,11 +863,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Timetables, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.';
+      'Lesroosters, algemene agenda’s, sets met lestijden en instellingen voor schoolwebsites worden alleen lokaal opgeslagen en niet automatisch naar een server van de ontwikkelaar geüpload.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, export, and sharing only happen when you explicitly start them; webpage parsing sends only the submitted content to your configured parsing endpoint, and you can review the parsed timetable before saving.';
+      'Importeren, exporteren, volledige back-ups en delen gebeuren alleen wanneer je ze uitdrukkelijk start. Volledige app-back-ups bevatten geen aangepaste API-sleutels. Het analyseren van roostertekst / HTML stuurt alleen de ingediende inhoud naar het analyse-eindpunt dat je hebt ingesteld.';
 
   @override
   String get privacyGateSummaryUpdates =>

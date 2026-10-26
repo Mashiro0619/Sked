@@ -862,7 +862,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked ist ein lokal ausgerichtetes Stundenplan-Werkzeug. Stundenpläne, Stundenzeiten-Sets und Schulwebsite-Konfigurationen werden nur auf Ihrem Gerät oder in Ihrem Browser gespeichert und niemals automatisch hochgeladen. Die App verarbeitet Daten nur, wenn Sie ausdrücklich Aktionen wie Import, Webseitenanalyse, Teilen oder das Öffnen externer Links starten. Die vollständige Datenschutzrichtlinie ist online verfügbar.';
+      'Sked ist ein Stundenplanwerkzeug mit vorrangig lokaler Speicherung. Stundenpläne, allgemeine Termine, Unterrichtszeitsätze und die Konfiguration von Schulwebseiten werden nur auf deinem Gerät oder in deinem Browser gespeichert und niemals automatisch hochgeladen. Die App verarbeitet Daten nur, wenn du ausdrücklich Aktionen wie Import, Analyse von Stundenplantext / HTML, Import von Schulwebseiten, Teilen oder Öffnen externer Links auslöst. Die vollständige Datenschutzerklärung ist online verfügbar.';
 
   @override
   String get privacyGateTitle =>
@@ -870,11 +870,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Stundenpläne, Stundenzeiten-Sets und Schulwebsite-Konfigurationen werden nur lokal gespeichert und nicht automatisch auf einen Entwickler-Server hochgeladen.';
+      'Stundenpläne, allgemeine Termine, Unterrichtszeitsätze und die Konfiguration von Schulwebseiten werden nur lokal gespeichert und nicht automatisch auf einen Entwicklerserver hochgeladen.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, Export und Teilen erfolgen nur, wenn Sie diese ausdrücklich starten; die Webseitenanalyse sendet nur den von Ihnen eingereichten komprimierten Inhalt an den konfigurierten Analyse-Endpunkt, und Sie können den analysierten Stundenplan vor dem Speichern überprüfen.';
+      'Import, Export, vollständige Sicherungen und Teilen erfolgen nur, wenn du sie ausdrücklich startest. Vollständige App-Sicherungen enthalten keine benutzerdefinierten API-Schlüssel. Die Analyse von Stundenplantext / HTML sendet nur die eingereichten Inhalte an den von dir konfigurierten Analyse-Endpunkt.';
 
   @override
   String get privacyGateSummaryUpdates =>

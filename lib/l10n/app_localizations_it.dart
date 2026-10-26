@@ -863,7 +863,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked è uno strumento di orari che privilegia l\'archiviazione locale. Orari, set di periodi e configurazione dei siti scolastici sono memorizzati solo sul tuo dispositivo o nel browser e non vengono mai caricati automaticamente. L\'app elabora i dati solo quando attivi esplicitamente azioni come importazione, parsing di pagine web, condivisione o apertura di link esterni. L\'informativa completa sulla privacy è disponibile online.';
+      'Sked è uno strumento per gli orari delle lezioni che privilegia l’archiviazione locale. Gli orari delle lezioni, le agende generali, i gruppi di orari delle lezioni e la configurazione dei siti scolastici sono memorizzati solo sul dispositivo o nel browser e non vengono mai caricati automaticamente. L’app elabora i dati solo quando avvii esplicitamente azioni come l’importazione, l’analisi di testo / HTML dell’orario, l’importazione di pagine web scolastiche, la condivisione o l’apertura di link esterni. L’informativa sulla privacy completa è disponibile online.';
 
   @override
   String get privacyGateTitle =>
@@ -871,11 +871,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Orari, set di orari dei periodi e configurazione dei siti scolastici sono memorizzati solo localmente e non vengono caricati automaticamente su un server dello sviluppatore.';
+      'Gli orari delle lezioni, le agende generali, i gruppi di orari delle lezioni e la configurazione dei siti scolastici sono memorizzati solo localmente e non vengono caricati automaticamente su un server dello sviluppatore.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Importazione, esportazione e condivisione avvengono solo quando le avvii esplicitamente; il parsing delle pagine web invia solo il contenuto compresso che hai inviato al tuo endpoint di parsing configurato e puoi controllare l\'orario analizzato prima di salvarlo.';
+      'L’importazione, l’esportazione, i backup completi e la condivisione avvengono solo quando li avvii esplicitamente. I backup completi dell’app escludono le chiavi API personalizzate e l’analisi di testo / HTML dell’orario invia solo il contenuto fornito all’endpoint di analisi configurato.';
 
   @override
   String get privacyGateSummaryUpdates =>

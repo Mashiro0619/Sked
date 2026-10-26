@@ -872,7 +872,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked est un outil d\'emploi du temps qui privilégie le stockage local. Les emplois du temps, les jeux d\'horaires des périodes et la configuration des sites scolaires sont stockés uniquement sur votre appareil ou dans votre navigateur et ne sont jamais téléversés automatiquement. L\'application ne traite les données que lorsque vous déclenchez explicitement des actions comme l\'importation, l\'analyse de pages web, le partage ou l\'ouverture de liens externes. La politique de confidentialité complète est disponible en ligne.';
+      'Sked est un outil d’emploi du temps qui privilégie le stockage local. Les emplois du temps, les agendas généraux, les ensembles d’horaires des cours et la configuration des sites scolaires sont stockés uniquement sur votre appareil ou dans votre navigateur, et ne sont jamais envoyés automatiquement. L’application ne traite les données que lorsque vous déclenchez explicitement des actions comme l’importation, l’analyse de texte / HTML d’emploi du temps, l’importation de pages web scolaires, le partage ou l’ouverture de liens externes. La politique de confidentialité complète est disponible en ligne.';
 
   @override
   String get privacyGateTitle =>
@@ -880,11 +880,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Les emplois du temps, les jeux d\'horaires des périodes et la configuration des sites scolaires sont stockés uniquement en local et ne sont pas automatiquement téléversés vers un serveur du développeur.';
+      'Les emplois du temps, les agendas généraux, les ensembles d’horaires des cours et la configuration des sites scolaires sont uniquement stockés localement et ne sont pas automatiquement envoyés à un serveur du développeur.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'L\'importation, l\'exportation et le partage ne se produisent que lorsque vous les lancez explicitement ; l\'analyse de pages web envoie uniquement le contenu compressé que vous soumettez au point de terminaison configuré, et vous pouvez vérifier l\'emploi du temps analysé avant de l\'enregistrer.';
+      'L’importation, l’exportation, les sauvegardes complètes et le partage n’ont lieu que lorsque vous les lancez explicitement. Les sauvegardes complètes de l’application excluent les clés API personnalisées, et l’analyse de texte / HTML d’emploi du temps n’envoie que le contenu soumis au point d’accès d’analyse que vous avez configuré.';
 
   @override
   String get privacyGateSummaryUpdates =>

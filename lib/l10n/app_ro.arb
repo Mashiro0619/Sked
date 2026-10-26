@@ -570,13 +570,13 @@
       "version": {}
     }
   },
-  "privacyPolicyIntro": "Sked este un instrument de orar care prioritizează stocarea locală. Orarele, seturile de perioade și configurația site-ului școlii sunt stocate numai pe dispozitivul dvs. sau în browser și nu sunt niciodată încărcate automat. Aplicația procesează datele numai atunci când declanșați explicit acțiuni precum importul, analizarea paginilor web, partajarea sau deschiderea linkurilor externe. Politica de confidențialitate completă este disponibilă online.",
+  "privacyPolicyIntro": "Sked este un instrument pentru orare care acordă prioritate stocării locale. Orarele, programele generale, seturile de ore ale cursurilor și configurarea site-urilor școlare sunt stocate numai pe dispozitiv sau în browser și nu sunt niciodată încărcate automat. Aplicația procesează date numai când porniți explicit acțiuni precum importul, analiza textului / HTML al orarului, importul paginilor web școlare, partajarea sau deschiderea linkurilor externe. Politica de confidențialitate completă este disponibilă online.",
   "@privacyPolicyIntro": {},
   "privacyGateTitle": "Vă rugăm să acceptați politica de confidențialitate înainte de a utiliza aplicația",
   "@privacyGateTitle": {},
-  "privacyGateSummaryStorage": "Orarele, seturile de perioade și configurația școlii-site sunt stocate doar local și nu sunt încărcate automat pe un server de dezvoltator.",
+  "privacyGateSummaryStorage": "Orarele, programele generale, seturile de ore ale cursurilor și configurarea site-urilor școlare sunt stocate numai local și nu sunt încărcate automat pe un server al dezvoltatorului.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Importul, exportul și partajarea se întâmplă numai atunci când le porniți în mod explicit; analizarea paginilor web trimite doar conținutul comprimat pe care îl trimiteți la punctul final de analizare configurat și puteți revizui programul analizat înainte de a salva.",
+  "privacyGateSummaryImportExport": "Importul, exportul, copiile de siguranță complete și partajarea au loc numai când le porniți explicit. Copiile complete ale aplicației nu includ cheile API personalizate, iar analiza textului / HTML al orarului trimite doar conținutul furnizat către punctul de analiză pe care l-ați configurat.",
   "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Dacă o versiune ulterioară modifică modul în care sunt manipulate datele, aplicația vă poate cere să revizuiți politica de confidențialitate actualizată din nou.",
   "@privacyGateSummaryUpdates": {},
