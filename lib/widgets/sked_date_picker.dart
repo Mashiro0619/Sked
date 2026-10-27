@@ -1666,36 +1666,41 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                             : _CalendarPage.days,
                       );
                     },
-              child: SkedTooltip(
-                message: retry
-                    ? l.retrySave
-                    : feedback ??
-                          (_page == _CalendarPage.days
-                              ? l.datePickerSelectMonth
-                              : _page == _CalendarPage.months
-                              ? material.selectYearSemanticsLabel
-                              : material.calendarModeButtonLabel),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _headerLabel(
-                        context,
-                        label,
-                        feedback: widget.embedded || compact,
-                        compact: compact,
-                        draggable: false,
-                        narrowLabel:
-                            widget.embedded && _page == _CalendarPage.days
-                            ? DateFormat.yMMM(l.localeName).format(_month)
-                            : null,
+              // Tooltip anchors isolate their descendants from this button's
+              // semantics, so give the action its own visible date label.
+              child: Semantics(
+                label: feedback ?? label,
+                child: SkedTooltip(
+                  message: retry
+                      ? l.retrySave
+                      : feedback ??
+                            (_page == _CalendarPage.days
+                                ? l.datePickerSelectMonth
+                                : _page == _CalendarPage.months
+                                ? material.selectYearSemanticsLabel
+                                : material.calendarModeButtonLabel),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _headerLabel(
+                          context,
+                          label,
+                          feedback: widget.embedded || compact,
+                          compact: compact,
+                          draggable: false,
+                          narrowLabel:
+                              widget.embedded && _page == _CalendarPage.days
+                              ? DateFormat.yMMM(l.localeName).format(_month)
+                              : null,
+                        ),
                       ),
-                    ),
-                    if (retry || !compact)
-                      Icon(
-                        retry ? Icons.refresh : Icons.arrow_drop_down,
-                        size: 18,
-                      ),
-                  ],
+                      if (retry || !compact)
+                        Icon(
+                          retry ? Icons.refresh : Icons.arrow_drop_down,
+                          size: 18,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

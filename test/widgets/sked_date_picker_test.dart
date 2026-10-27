@@ -148,6 +148,29 @@ void _expectReadableChoice(
 }
 
 void main() {
+  for (final locale in [const Locale('en'), const Locale('zh')]) {
+    testWidgets(
+      'month heading button announces its date in ${locale.languageCode}',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _open(tester, <DateTime?>[], locale: locale);
+        final heading = _key('sked-date-month-year');
+        for (var page = 0; page < 3; page++) {
+          final data = tester.getSemantics(heading).getSemanticsData();
+          expect(data.flagsCollection.isButton, isTrue);
+          expect(data.label, page < 2 ? contains('2026') : contains('–'));
+          await tester.tap(heading);
+          await tester.pumpAndSettle();
+        }
+        semantics.dispose();
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.windows,
+      }),
+    );
+  }
+
   testWidgets(
     'normal tablet dates fit a narrow panel without horizontal scrolling',
     (tester) async {
