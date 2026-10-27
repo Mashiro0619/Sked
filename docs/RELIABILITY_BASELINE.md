@@ -14,6 +14,7 @@
 | 学校网页会话清除 | 清除应用数据前先关闭学校浏览器的原生页面并清除 Cookie、站点存储及缓存；Android/iOS 使用对应 WebView 数据接口，Windows 使用同一默认 WebView2 profile 的 `ClearBrowsingDataAll`。清理失败时保留主存档和 API 密钥，不假报成功；页面重开使用新的文档，不复用旧登录上下文。见 [清除服务测试](../test/services/app_data_clear_service_io_test.dart) 与 [网页会话测试](../test/services/school_web_session_service_test.dart)。 |
 | HTTP Endpoint | 所有 HTTP Endpoint，包括 loopback、私网和公网，都需要发送前确认；同意按端点保留于当前进程，HTTPS 不触发该确认。确认和请求必须使用同一设置快照，并保留重定向防护。见 [导入流程测试](../test/services/school_import_workflow_test.dart)。 |
 | 原生安全 | Android 禁止普通系统备份，通知 receiver 不导出；允许可配置 HTTP Endpoint 的网络策略需与前述确认配合。Apple 权限与 Windows 通知身份也需检查。见 [平台测试](../test/platform) 和 [产物检查器](../tool/platform_artifact_check.dart)。 |
+| 日视图末卡 | 手机添加按钮的避让空间属于可滚动内容，不压缩日视图视口；末卡尾部可滚到真实按钮上方并打开正确课程详情，关闭按钮后释放避让空间。可容纳的卡片验证整卡可见，超过可用高度的大字卡片验证顶部和尾部能分别完整阅读。见 [真实主页日视图测试](../test/widgets/student_day_agenda_workflow_test.dart)。 |
 
 Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的原生回复，不能用一帧结束代替原生页面销毁。尚在创建的页面或销毁失败会阻止数据清理；失败后重试仍需完成销毁确认。清理期间新打开的学校页面保持挂起，新登记的浏览器必须纳入清理后才能报告成功。
 

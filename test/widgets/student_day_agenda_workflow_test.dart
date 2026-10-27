@@ -38,11 +38,13 @@ Future<AppRuntime> _mount(
   WidgetTester tester, {
   bool desktop = false,
   bool populated = true,
+  Size? viewportSize,
+  double textScale = 1,
+  bool compactCourseLabels = false,
 }) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = desktop
-      ? const Size(1362, 768)
-      : const Size(430, 850);
+  tester.view.physicalSize =
+      viewportSize ?? (desktop ? const Size(1362, 768) : const Size(430, 850));
   addTearDown(tester.view.reset);
   final initial = buildInitialAppData(
     buildDefaultPeriodTimes(),
@@ -59,7 +61,11 @@ Future<AppRuntime> _mount(
     courses: [
       if (populated) ...[
         for (var index = 0; index < 9; index++)
-          _course('monday-$index', DateTime.monday, 480 + index * 60),
+          _course('monday-$index', DateTime.monday, 480 + index * 60).copyWith(
+            name: compactCourseLabels ? 'Class ${index + 1}' : null,
+            teacher: compactCourseLabels ? 'Dr Lin' : null,
+            location: compactCourseLabels ? 'R108' : null,
+          ),
         _course('tuesday', DateTime.tuesday, 600),
       ],
     ],
@@ -84,7 +90,11 @@ Future<AppRuntime> _mount(
   });
   await app.studentCommands.setSelectedWeek(5);
   await tester.pumpWidget(
-    WorkspaceHarness(provider: app, home: const HomeScreen()),
+    WorkspaceHarness(
+      provider: app,
+      home: const HomeScreen(),
+      textScale: textScale,
+    ),
   );
   await tester.pumpAndSettle();
   if (desktop) {
@@ -112,6 +122,17 @@ ScrollPosition _position(WidgetTester tester) => tester
     .state<ScrollableState>(_inside(_agenda, find.byType(Scrollable)))
     .position;
 
+Future<void> _dragToEnd(WidgetTester tester) async {
+  expect(_position(tester).maxScrollExtent, greaterThan(0));
+  final drag = Offset(0, -tester.getSize(_agenda).height * .8);
+  for (var attempt = 0; attempt < 12; attempt++) {
+    if (_position(tester).extentAfter < .5) break;
+    await tester.drag(_agenda, drag);
+    await tester.pumpAndSettle();
+  }
+  expect(_position(tester).extentAfter, lessThan(.5));
+}
+
 Future<void> _closeEditor(WidgetTester tester) async {
   final strings = AppLocalizations.of(tester.element(_editor));
   await _tap(
@@ -124,6 +145,132 @@ Future<void> _closeEditor(WidgetTester tester) async {
 void main() {
   final phone = TargetPlatformVariant.only(TargetPlatform.android);
   final desktop = TargetPlatformVariant.only(TargetPlatform.windows);
+
+  for (final size in [const Size(320, 640), const Size(390, 844)]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'last HomeScreen day card clears the FAB and releases space when hidden: $size at $scale',
+        (tester) async {
+          tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+          tester.view.viewPadding = const FakeViewPadding(top: 24, bottom: 24);
+          final app = await _mount(
+            tester,
+            viewportSize: size,
+            textScale: scale,
+            compactCourseLabels: true,
+          );
+          final before = app.studentView.activeTimetable.toJson();
+          final lastCard = _key('student-day-course-card-monday-8');
+          final fab = find.byType(FloatingActionButton);
+          await _dragToEnd(tester);
+          final viewport = tester.getRect(_agenda);
+          final button = tester.getRect(fab);
+          final cardWithFab = tester.getRect(lastCard);
+
+          // These are painted HomeScreen bounds, not an assertion about the
+          // inset parameter. The whole last card must fit above the real FAB.
+          expect(cardWithFab.top, greaterThanOrEqualTo(viewport.top));
+          expect(cardWithFab.bottom, lessThanOrEqualTo(button.top - 8));
+          expect(cardWithFab.left, lessThan(button.right));
+          expect(cardWithFab.right, greaterThan(button.left));
+          expect(lastCard.hitTestable(), findsOneWidget);
+
+          await app.settingsCommands.updateShowAddCourseFab(false);
+          await tester.pumpAndSettle();
+          await _dragToEnd(tester);
+          expect(fab, findsNothing);
+          expect(tester.getRect(_agenda), viewport);
+          final cardWithoutFab = tester.getRect(lastCard);
+          expect(cardWithoutFab.top, greaterThanOrEqualTo(viewport.top));
+          expect(cardWithoutFab.bottom, lessThanOrEqualTo(viewport.bottom));
+          expect(
+            cardWithoutFab.bottom - cardWithFab.bottom,
+            greaterThan(button.height),
+          );
+          expect(lastCard.hitTestable(), findsOneWidget);
+
+          await app.settingsCommands.updateShowAddCourseFab(true);
+          await tester.pumpAndSettle();
+          await _dragToEnd(tester);
+          final restoredCard = tester.getRect(lastCard);
+          final restoredFab = tester.getRect(fab);
+          expect(tester.getRect(_agenda), viewport);
+          expect(restoredCard.top, greaterThanOrEqualTo(viewport.top));
+          expect(restoredCard.bottom, lessThanOrEqualTo(restoredFab.top - 8));
+          expect(app.studentView.activeTimetable.toJson(), before);
+
+          // Probe the card's lower-right area in the FAB's horizontal column.
+          // An obscured card would open the add editor or miss this tap.
+          final point = Offset(restoredFab.center.dx, restoredCard.bottom - 12);
+          expect(restoredCard.contains(point), isTrue);
+          await tester.tapAt(point);
+          await tester.pumpAndSettle();
+          expect(_details, findsOneWidget);
+          expect(
+            tester.widget<CourseDetailsSheet>(_details).courseId,
+            'monday-8',
+          );
+          expect(_editor, findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+        variant: TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
+    }
+  }
+
+  testWidgets(
+    'a tall final day card exposes its start and tail without FAB obstruction',
+    (tester) async {
+      tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+      tester.view.viewPadding = const FakeViewPadding(top: 24, bottom: 24);
+      final app = await _mount(
+        tester,
+        viewportSize: const Size(320, 640),
+        textScale: 2,
+      );
+      final before = app.studentView.activeTimetable.toJson();
+      final lastCard = _key('student-day-course-card-monday-8');
+      final time = _key('student-day-course-inline-time-monday-8');
+      final title = _inside(lastCard, find.text('Lecture monday-8'));
+      final teacher = _inside(lastCard, find.text('Teacher monday-8'));
+      await _dragToEnd(tester);
+      final viewport = tester.getRect(_agenda);
+      final fab = tester.getRect(find.byType(FloatingActionButton));
+      final card = tester.getRect(lastCard);
+      expect(card.height, greaterThan(fab.top - viewport.top));
+      expect(card.bottom, lessThanOrEqualTo(fab.top - 8));
+
+      // A card taller than the unobstructed viewport must be readable in
+      // sections. Reveal the clipped start, then return to its cleared tail.
+      expect(tester.getRect(time).top, lessThan(viewport.top));
+      await _position(tester).ensureVisible(tester.renderObject(time));
+      await tester.pumpAndSettle();
+      expect(_position(tester).extentAfter, greaterThan(0));
+      for (final content in [time, title]) {
+        final rect = tester.getRect(content);
+        expect(rect.top, greaterThanOrEqualTo(viewport.top));
+        expect(rect.bottom, lessThanOrEqualTo(fab.top));
+      }
+      await _dragToEnd(tester);
+      final tail = tester.getRect(teacher);
+      expect(tail.top, greaterThanOrEqualTo(viewport.top));
+      expect(tail.bottom, lessThanOrEqualTo(fab.top));
+      final finalCard = tester.getRect(lastCard);
+      await tester.tapAt(Offset(fab.center.dx, finalCard.bottom - 12));
+      await tester.pumpAndSettle();
+      expect(tester.widget<CourseDetailsSheet>(_details).courseId, 'monday-8');
+      expect(_editor, findsNothing);
+      expect(app.studentView.activeTimetable.toJson(), before);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
 
   testWidgets('day changes reset the agenda and retain week swipe navigation', (
     tester,
