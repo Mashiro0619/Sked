@@ -64,7 +64,9 @@ class _TrackingTimer implements Timer {
   }
 }
 
-Future<AppRuntime> _createProvider() async {
+Future<AppRuntime> _createProvider({
+  List<CourseItem> courses = const [],
+}) async {
   final timetable = TimetableData(
     id: 'live-refresh-table',
     config: TimetableConfig(
@@ -73,7 +75,7 @@ Future<AppRuntime> _createProvider() async {
       totalWeeks: 18,
       periodTimeSetId: defaultPeriodTimeSetId,
     ),
-    courses: const [],
+    courses: courses,
   );
   final base = buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en');
   final initial = base.copyWith(
@@ -130,6 +132,55 @@ Future<void> _pumpTimetableScreen(
 }
 
 void main() {
+  for (final (now, inside) in [
+    (DateTime(2026, 6, 9, 10), false),
+    (DateTime(2026, 6, 16, 10), true),
+    (DateTime(2026, 10, 20, 10), false),
+  ]) {
+    testWidgets(
+      'grid uses one injected clock and no out-of-term target: $now',
+      (tester) async {
+        final provider = await _createProvider(
+          courses: [
+            CourseItem.fromJson({
+              'id': 'weekly',
+              'name': 'Every Tuesday',
+              'dayOfWeek': 2,
+              'semesterWeeks': <int>[],
+              'startMinutes': 570,
+              'endMinutes': 630,
+            }),
+          ],
+        );
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox());
+          provider.dispose();
+        });
+        final week = currentWeekFor(
+          provider.studentView.activeTimetable.config,
+          now: now,
+        );
+        await provider.studentCommands.setSelectedWeek(week);
+        await provider.settingsCommands.updateLiveCourseOutlineEnabled(true);
+        await _pumpTimetableScreen(
+          tester,
+          provider: provider,
+          clock: _MutableClock(now),
+          timers: _TrackingTimerFactory(),
+        );
+        final grid = tester.widget<TimetableGrid>(
+          find.byWidgetPredicate(
+            (widget) => widget is TimetableGrid && widget.selectedWeek == week,
+          ),
+        );
+        expect(grid.realCurrentWeek, week);
+        expect(grid.liveCourseTarget?.courseId, inside ? 'weekly' : null);
+        if (inside) expect(grid.liveCourseTarget!.isCurrentCourse, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'unrelated domains and unused period sets keep the timetable grid',
     (tester) async {

@@ -181,6 +181,7 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
   String? Function(String conflictKey)? displayedCourseIdForConflict,
 }) {
   final today = normalizeDateOnly(now);
+  if (!_isDateWithinTimetableRange(timetable.config, today)) return null;
   final weekday = normalizeDayOfWeek(today.weekday);
   final nowMinutes = (now.hour * 60) + now.minute;
   final todayTarget = _courseTargetForDay(
@@ -333,9 +334,11 @@ TimetableLiveCourseTarget? _courseTargetForDay({
 
 bool _isDateWithinTimetableRange(TimetableConfig config, DateTime date) {
   final normalizedDate = normalizeDateOnly(date);
+  final firstWeekStart = startOfWeekFor(config, 1);
   final lastWeekStart = startOfWeekFor(config, config.totalWeeks);
   final lastWeekEnd = addCalendarDays(lastWeekStart, 6);
-  return !normalizedDate.isAfter(lastWeekEnd);
+  return !normalizedDate.isBefore(firstWeekStart) &&
+      !normalizedDate.isAfter(lastWeekEnd);
 }
 
 String _resolveDisplayedCourseId(List<CourseItem> courses) {
