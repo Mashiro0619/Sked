@@ -5721,7 +5721,7 @@ abstract class AppLocalizations {
   /// No description provided for @importWarningRecurrenceDateClamped.
   ///
   /// In en, this message translates to:
-  /// **'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.'**
+  /// **'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates. These moved dates count toward the repeat limit.'**
   String get importWarningRecurrenceDateClamped;
 
   /// No description provided for @importWarningSkippedRecurrenceOverride.

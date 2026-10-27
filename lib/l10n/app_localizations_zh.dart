@@ -3005,7 +3005,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importWarningRecurrenceDateClamped =>
-      '已保留重复规则，但不存在的日期会移至当月最后一天；源日历的规则会跳过这些日期。';
+      '已保留重复规则，但不存在的日期会移至当月最后一天；源日历的规则会跳过这些日期。这些移至月底的实例仍计入次数。';
 
   @override
   String importWarningSkippedRecurrenceOverride(Object fields) {
@@ -6039,7 +6039,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get importWarningRecurrenceDateClamped =>
-      '已保留重複規則，但不存在的日期會移至當月最後一天；來源日曆的規則會略過這些日期。';
+      '已保留重複規則，但不存在的日期會移至當月最後一天；來源日曆的規則會略過這些日期。這些移至月底的實例仍計入次數。';
 
   @override
   String importWarningSkippedRecurrenceOverride(Object fields) {

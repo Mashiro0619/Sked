@@ -2157,7 +2157,7 @@
   "restoreBackupParserSettingsSummary": "保留本机解析接口、模型和提示词，并清除本机 API 密钥。\n\n保留的接口：{current}\n备份中的接口（不采用）：{backup}",
   "backupParserEndpointUnset": "未配置",
   "periodTimesDayFull": "当天已没有足够时间添加下一节，请先调整已有节次时间。",
-  "importWarningRecurrenceDateClamped": "已保留重复规则，但不存在的日期会移至当月最后一天；源日历的规则会跳过这些日期。",
+  "importWarningRecurrenceDateClamped": "已保留重复规则，但不存在的日期会移至当月最后一天；源日历的规则会跳过这些日期。这些移至月底的实例仍计入次数。",
   "importWarningSkippedRecurrenceOverride": "已跳过无法安全定位原实例的改期或取消记录：{fields}。",
   "importWarningSkippedCancelledEvent": "已跳过已取消的日程。",
   "importWarningSkippedEmptyRecurrence": "已跳过截止时刻早于首个实例的重复日程。",

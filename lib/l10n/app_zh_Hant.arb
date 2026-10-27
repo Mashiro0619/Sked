@@ -2159,7 +2159,7 @@
   "restoreBackupParserSettingsSummary": "保留本機解析端點、模型和提示詞，並清除本機 API 金鑰。\n\n保留的端點：{current}\n備份中的端點（不採用）：{backup}",
   "backupParserEndpointUnset": "未設定",
   "periodTimesDayFull": "當天已沒有足夠時間新增下一節，請先調整現有節次時間。",
-  "importWarningRecurrenceDateClamped": "已保留重複規則，但不存在的日期會移至當月最後一天；來源日曆的規則會略過這些日期。",
+  "importWarningRecurrenceDateClamped": "已保留重複規則，但不存在的日期會移至當月最後一天；來源日曆的規則會略過這些日期。這些移至月底的實例仍計入次數。",
   "importWarningSkippedRecurrenceOverride": "已略過無法安全定位原實例的改期或取消記錄：{fields}。",
   "importWarningSkippedCancelledEvent": "已略過已取消的日程。",
   "importWarningSkippedEmptyRecurrence": "已略過截止時刻早於首個實例的重複日程。",

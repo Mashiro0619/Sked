@@ -3234,7 +3234,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get importWarningRecurrenceDateClamped =>
-      'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.';
+      'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates. These moved dates count toward the repeat limit.';
 
   @override
   String importWarningSkippedRecurrenceOverride(Object fields) {

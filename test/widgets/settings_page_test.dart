@@ -2100,6 +2100,12 @@ SUMMARY:Single imported event
 DTSTART:20261023T120000
 RRULE:FREQ=WEEKLY;BYDAY=MO,WE
 END:VEVENT
+BEGIN:VEVENT
+UID:clamped-rule
+SUMMARY:Retained monthly event
+DTSTART:20260131T090000
+RRULE:FREQ=MONTHLY;COUNT=3
+END:VEVENT
 END:VCALENDAR''';
       await tester.enterText(find.byType(TextField), source);
       await tester.tap(find.widgetWithText(FilledButton, 'Import'));
@@ -2122,10 +2128,11 @@ END:VCALENDAR''';
         l.importWarningSkippedUnsupportedStart,
         l.importWarningAdjustedEnd,
         l.importWarningRecurrenceRuleDowngraded('RRULE:BYDAY=MO,WE'),
+        l.importWarningRecurrenceDateClamped,
       ]) {
         expect(report, contains(text));
       }
-      expect(report, contains(l.icsImportReviewNotice(2, 4)));
+      expect(report, contains(l.icsImportReviewNotice(3, 5)));
       expect(storage.saveCount, 0);
       expect(provider.generalView.schedules, same(original));
       expect(find.text('Add as new category'), findsNothing);
@@ -2135,6 +2142,7 @@ END:VCALENDAR''';
       await tester.pump();
       expect(copied, contains(l.importWarningAdjustedEnd));
       expect(copied, contains(l.importWarningSkippedUnsupportedStart));
+      expect(copied, contains(l.importWarningRecurrenceDateClamped));
       expect(
         copied,
         contains(l.importWarningRecurrenceRuleDowngraded('RRULE:BYDAY=MO,WE')),
@@ -2188,6 +2196,11 @@ END:VCALENDAR''';
         findsNothing,
       );
       expect(storage.saveCount, 1);
+      final monthly = provider.generalView.schedules
+          .expand((schedule) => schedule.events)
+          .singleWhere((event) => event.title == 'Retained monthly event');
+      expect(monthly.recurrenceRule.type, GeneralEventRecurrence.monthly);
+      expect(monthly.recurrenceRule.count, 3);
       expect(
         provider.generalView.schedules
             .expand((schedule) => schedule.events)

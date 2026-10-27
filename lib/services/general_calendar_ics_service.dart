@@ -144,7 +144,7 @@ class GeneralCalendarIcsImportWarning {
         'This event will be imported as a single event. Unsupported fields or rule parts: ${values.join(', ')}.',
       GeneralCalendarIcsWarningCode.unsupportedRRuleFrequency =>
         'Unsupported RRULE frequency "${values.isEmpty ? '' : values.first}" was ignored.',
-      GeneralCalendarIcsWarningCode.recurrenceDateClamped => 'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.',
+      GeneralCalendarIcsWarningCode.recurrenceDateClamped => 'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates. These moved dates count toward the repeat limit.',
       GeneralCalendarIcsWarningCode.skippedRecurrenceOverride =>
         'Skipped a recurrence override whose original occurrence could not be identified safely: ${values.join(', ')}.',
       GeneralCalendarIcsWarningCode.skippedCancelledEvent =>
@@ -1552,7 +1552,11 @@ GeneralEventRecurrenceRule? _parseRRule(
       );
     }
   }
-  if (freq == 'YEARLY' && eventStart.month == 2 && eventStart.day == 29) {
+  if ((freq == 'YEARLY' && eventStart.month == 2 && eventStart.day == 29) ||
+      (freq == 'MONTHLY' &&
+          monthDays == null &&
+          setPosition == null &&
+          _hasClampedMonthlyCandidate(eventStart, rule))) {
     warnings.add(
       const GeneralCalendarIcsImportWarning(
         code: GeneralCalendarIcsWarningCode.recurrenceDateClamped,
@@ -1560,6 +1564,45 @@ GeneralEventRecurrenceRule? _parseRRule(
     );
   }
   return rule;
+}
+
+bool _hasClampedMonthlyCandidate(
+  DateTime start,
+  GeneralEventRecurrenceRule rule,
+) {
+  if (start.day <= 28) return false;
+  final step = rule.normalizedInterval;
+  final visitedMonths = <int>{};
+  var reachesShortMonth = false;
+  for (
+    var month = start.month;
+    visitedMonths.add(month);
+    month = (month - 1 + step) % 12 + 1
+  ) {
+    if (month == 2 ||
+        (start.day == 31 && const {4, 6, 9, 11}.contains(month))) {
+      reachesShortMonth = true;
+      break;
+    }
+  }
+  if (!reachesShortMonth) return false;
+
+  // Gregorian month lengths repeat every 400 years (4800 months). Inspect
+  // only this rule's reachable cycle, stopping earlier at COUNT or UNTIL.
+  var divisor = 4800;
+  var remainder = step;
+  while (remainder != 0) {
+    final next = divisor % remainder;
+    divisor = remainder;
+    remainder = next;
+  }
+  final cycleLength = 4800 ~/ divisor;
+  for (var sequence = 1; sequence < cycleLength; sequence++) {
+    final candidate = generalRecurrenceStartAt(start, rule, sequence);
+    if (candidate == null) return false;
+    if (candidate.day < start.day) return true;
+  }
+  return false;
 }
 
 DateTime? _parseRRuleUntil(String value, {required bool utcFloating}) {

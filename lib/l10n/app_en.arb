@@ -2208,7 +2208,7 @@
     }
   },
   "periodTimesDayFull": "No room remains for another period today. Adjust the existing times before adding more.",
-  "importWarningRecurrenceDateClamped": "The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.",
+  "importWarningRecurrenceDateClamped": "The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates. These moved dates count toward the repeat limit.",
   "importWarningSkippedRecurrenceOverride": "Skipped a recurrence override whose original occurrence could not be identified safely: {fields}.",
   "importWarningSkippedCancelledEvent": "Skipped a cancelled event.",
   "importWarningSkippedEmptyRecurrence": "Skipped a recurring event because UNTIL is before its first occurrence.",
