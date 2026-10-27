@@ -1260,6 +1260,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Denna importfilversion stöds ännu inte.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Inga periodtider hittades i importfilen.';
 

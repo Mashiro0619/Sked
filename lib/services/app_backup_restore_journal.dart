@@ -702,7 +702,10 @@ AppBackupRestoreJournalLoadResult decodeAppBackupRestoreJournalSource(
   }
 
   _ensureSupportedAppBackupRestoreEnvelope(backupEnvelope);
-  final backup = decodeAppBackup(backupSource, localeCode: localeCode);
+  final backup = decodeAppBackupForRecovery(
+    backupSource,
+    localeCode: localeCode,
+  );
   if (!backup.includesSchoolSites) {
     throw const FormatException(
       'Pending app-backup restore journal does not include school sites.',

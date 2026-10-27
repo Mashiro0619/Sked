@@ -1264,6 +1264,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Deze versie van het importbestand wordt nog niet ondersteund.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Geen lestijden gevonden in het importbestand.';
 

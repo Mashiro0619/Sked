@@ -80,12 +80,22 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
       );
     }
     if (isImportExportSchema(envelope.schema, timetableDataSchema)) {
+      validateImportCounts(
+        envelope.data,
+        kind: ImportCountKind.timetables,
+        localeCode: localeCode,
+      );
       return normalizeTimetableExportData(
         TimetableExportData.fromJson(envelope.data, localeCode: localeCode),
         localeCode: localeCode,
       );
     }
     if (isImportExportSchema(envelope.schema, appDataSchema)) {
+      validateImportCounts(
+        envelope.data,
+        kind: ImportCountKind.appData,
+        localeCode: localeCode,
+      );
       _ensureStudentImportAppDataShape(envelope.data);
       final appData = normalizeAppData(
         AppData.fromJson({...envelope.data, 'localeCode': localeCode}),

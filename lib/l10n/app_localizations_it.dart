@@ -1276,6 +1276,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Questa versione del file di importazione non è ancora supportata.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Nessun orario dei periodi trovato nel file importato.';
 

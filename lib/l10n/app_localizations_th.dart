@@ -1251,6 +1251,10 @@ class AppLocalizationsTh extends AppLocalizations {
       'รุ่นไฟล์นำเข้านี้ยังไม่ได้รับการสนับสนุน';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage => 'ไม่พบเวลาช่วงเวลาในไฟล์นำเข้า';
 
   @override

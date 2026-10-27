@@ -1264,6 +1264,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Različica uvozne datoteke še ni podprta.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'V uvozni datoteki ni bilo časa obdobja.';
 

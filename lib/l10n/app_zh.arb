@@ -872,6 +872,8 @@
   "@importFileTypeMismatchMessage": {},
   "importFileVersionUnsupportedMessage": "导入文件版本暂不支持",
   "@importFileVersionUnsupportedMessage": {},
+  "importEntryLimitExceededMessage": "导入内容的条目过多或嵌套层级过深，请减少导出内容后重试。",
+  "@importEntryLimitExceededMessage": {},
   "noPeriodTimesInImportMessage": "导入文件中没有节次时间",
   "@noPeriodTimesInImportMessage": {},
   "selectAtLeastOneTimetableMessage": "请选择至少一个课表",

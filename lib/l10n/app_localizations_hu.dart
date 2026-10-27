@@ -1276,6 +1276,10 @@ class AppLocalizationsHu extends AppLocalizations {
       'Ez a fájl importálási verziója még nem támogatott.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Az import fájlban nem találtak időszakot.';
 

@@ -17,6 +17,7 @@ abstract class AppStrings {
   String importedPeriodTimeSetName(String timetableName);
   String get importFileTypeMismatchMessage;
   String get importFileVersionUnsupportedMessage;
+  String get importEntryLimitExceededMessage;
   String get noPeriodTimesInImportMessage;
   String get noPeriodTimeAvailableMessage;
   String get noImportableTimetablesMessage;
@@ -80,6 +81,10 @@ class _GeneratedAppStrings implements AppStrings {
   @override
   String get importFileVersionUnsupportedMessage =>
       _l10n.importFileVersionUnsupportedMessage;
+
+  @override
+  String get importEntryLimitExceededMessage =>
+      _l10n.importEntryLimitExceededMessage;
 
   @override
   String get noPeriodTimesInImportMessage => _l10n.noPeriodTimesInImportMessage;

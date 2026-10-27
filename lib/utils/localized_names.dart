@@ -50,6 +50,10 @@ String noPeriodTimesInImportMessage({String localeCode = defaultLocaleCode}) {
   return _stringsForLocale(localeCode).noPeriodTimesInImportMessage;
 }
 
+String importEntryLimitExceededMessage({
+  String localeCode = defaultLocaleCode,
+}) => _stringsForLocale(localeCode).importEntryLimitExceededMessage;
+
 String noPeriodTimeAvailableMessage({String localeCode = defaultLocaleCode}) {
   return _stringsForLocale(localeCode).noPeriodTimeAvailableMessage;
 }

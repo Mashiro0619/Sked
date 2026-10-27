@@ -1264,6 +1264,10 @@ class AppLocalizationsFi extends AppLocalizations {
       'Tätä tuontitiedoston versiota ei vielä tueta.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Tuontitiedostossa ei löytynyt ajanjaksoja.';
 

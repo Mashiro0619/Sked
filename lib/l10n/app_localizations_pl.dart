@@ -1263,6 +1263,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ta wersja importu pliku nie jest jeszcze obsługiwana.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Nie znaleziono czasów okresowych w pliku importu.';
 

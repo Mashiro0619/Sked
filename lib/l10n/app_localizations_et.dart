@@ -1258,6 +1258,10 @@ class AppLocalizationsEt extends AppLocalizations {
       'Seda impordifaili versiooni ei toetata veel.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Impordifailis ei leitud perioodi aega.';
 

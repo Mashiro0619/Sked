@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'app_data_json_values.dart';
 import 'app_data_storage_validation.dart';
+import 'import_count_limits.dart';
 
 import '../data/migrations/app_data_migrations.dart';
 import '../l10n/app_locale.dart';
@@ -772,6 +773,11 @@ List<CoursePeriodTime> decodePeriodTimesEnvelope(
     expectedSchema: periodTimesSchema,
     localeCode: localeCode,
   );
+  validateImportCounts(
+    envelope.data,
+    kind: ImportCountKind.periodTimes,
+    localeCode: localeCode,
+  );
   final rawPeriodTimes = _listValue(envelope.data['periodTimes']);
   final periodTimes = rawPeriodTimes
       .map(appDataStringKeyedMap)
@@ -794,6 +800,11 @@ AppData decodeAppDataEnvelope(
     expectedSchema: appDataSchema,
     localeCode: localeCode,
   );
+  validateImportCounts(
+    envelope.data,
+    kind: ImportCountKind.appData,
+    localeCode: localeCode,
+  );
   return AppData.fromJson({...envelope.data, 'localeCode': localeCode});
 }
 
@@ -805,6 +816,11 @@ TimetableExportData decodeTimetableDataEnvelope(
   _ensureSupportedEnvelope(
     envelope,
     expectedSchema: timetableDataSchema,
+    localeCode: localeCode,
+  );
+  validateImportCounts(
+    envelope.data,
+    kind: ImportCountKind.timetables,
     localeCode: localeCode,
   );
   return TimetableExportData.fromJson(envelope.data, localeCode: localeCode);
@@ -917,6 +933,11 @@ GeneralScheduleExportData decodeGeneralScheduleDataEnvelope(
   _ensureSupportedEnvelope(
     envelope,
     expectedSchema: generalScheduleDataSchema,
+    localeCode: localeCode,
+  );
+  validateImportCounts(
+    envelope.data,
+    kind: ImportCountKind.schedules,
     localeCode: localeCode,
   );
   return GeneralScheduleExportData.fromJson(

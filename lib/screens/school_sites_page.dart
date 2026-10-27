@@ -597,7 +597,10 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     if (source == null || !mounted) return;
     late final SchoolSiteImportPreview preview;
     try {
-      preview = decodeSchoolSitesForImport(source);
+      preview = decodeSchoolSitesForImport(
+        source,
+        localeCode: AppLocalizations.of(context).localeName,
+      );
     } on FormatException catch (error) {
       _showMessage(error.message);
       return;
@@ -1032,7 +1035,10 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
         return;
       }
       try {
-        final preview = decodeSchoolSitesForImport(source);
+        final preview = decodeSchoolSitesForImport(
+          source,
+          localeCode: l10n.localeName,
+        );
         final action = await _showImportPreview(preview);
         if (!mounted || action == null) return;
         if (action == _SchoolSiteImportAction.replace) {

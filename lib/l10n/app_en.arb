@@ -874,6 +874,8 @@
   "@importFileTypeMismatchMessage": {},
   "importFileVersionUnsupportedMessage": "This import file version is not supported yet.",
   "@importFileVersionUnsupportedMessage": {},
+  "importEntryLimitExceededMessage": "This import contains too many entries or overly nested data. Reduce the exported content and try again.",
+  "@importEntryLimitExceededMessage": {},
   "noPeriodTimesInImportMessage": "No period times found in the import file.",
   "@noPeriodTimesInImportMessage": {},
   "selectAtLeastOneTimetableMessage": "Please select at least one timetable.",

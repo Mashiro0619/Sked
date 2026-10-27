@@ -1184,6 +1184,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importFileVersionUnsupportedMessage => '导入文件版本暂不支持';
 
   @override
+  String get importEntryLimitExceededMessage => '导入内容的条目过多或嵌套层级过深，请减少导出内容后重试。';
+
+  @override
   String get noPeriodTimesInImportMessage => '导入文件中没有节次时间';
 
   @override
@@ -4178,6 +4181,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get importFileVersionUnsupportedMessage => '匯入檔案版本暫不支援';
+
+  @override
+  String get importEntryLimitExceededMessage => '匯入內容的項目過多或巢狀層級過深，請減少匯出內容後重試。';
 
   @override
   String get noPeriodTimesInImportMessage => '匯入檔案中沒有節次時間';

@@ -1257,6 +1257,10 @@ class AppLocalizationsHi extends AppLocalizations {
       'यह आयात फ़ाइल संस्करण अभी समर्थित नहीं है।';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'आयात फ़ाइल में कोई अवधि समय नहीं मिला।';
 

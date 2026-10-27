@@ -1215,6 +1215,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '이 가져오기 파일 버전은 아직 지원되지 않습니다.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage => '가져오기 파일에서 교시 시간을 찾지 못했습니다.';
 
   @override

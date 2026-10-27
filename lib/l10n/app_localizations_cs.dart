@@ -1258,6 +1258,10 @@ class AppLocalizationsCs extends AppLocalizations {
       'Tato verze importového souboru zatím není podporována.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'V souboru importu nebyly nalezeny žádné časové období.';
 

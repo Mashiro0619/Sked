@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../l10n/app_locale.dart' as app_locale;
 import '../models/school_import_models.dart';
+import '../models/import_count_limits.dart';
 import '../models/timetable_models.dart';
 import '../utils/import_id_sanitizer.dart';
 import '../utils/unique_id.dart';

@@ -2338,6 +2338,12 @@ abstract class AppLocalizations {
   /// **'This import file version is not supported yet.'**
   String get importFileVersionUnsupportedMessage;
 
+  /// No description provided for @importEntryLimitExceededMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This import contains too many entries or overly nested data. Reduce the exported content and try again.'**
+  String get importEntryLimitExceededMessage;
+
   /// No description provided for @noPeriodTimesInImportMessage.
   ///
   /// In en, this message translates to:

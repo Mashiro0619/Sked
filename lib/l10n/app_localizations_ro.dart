@@ -1274,6 +1274,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Această versiune de fișier de import nu este încă suportată.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Nu s-au găsit vremuri de perioadă în fișierul de import.';
 

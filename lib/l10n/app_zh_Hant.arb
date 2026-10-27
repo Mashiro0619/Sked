@@ -874,6 +874,8 @@
   "@importFileTypeMismatchMessage": {},
   "importFileVersionUnsupportedMessage": "匯入檔案版本暫不支援",
   "@importFileVersionUnsupportedMessage": {},
+  "importEntryLimitExceededMessage": "匯入內容的項目過多或巢狀層級過深，請減少匯出內容後重試。",
+  "@importEntryLimitExceededMessage": {},
   "noPeriodTimesInImportMessage": "匯入檔案中沒有節次時間",
   "@noPeriodTimesInImportMessage": {},
   "selectAtLeastOneTimetableMessage": "請選擇至少一個課表",

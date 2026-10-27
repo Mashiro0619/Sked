@@ -1262,6 +1262,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Phiên bản tập tin nhập này chưa được hỗ trợ.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Không có thời gian được tìm thấy trong tệp nhập khẩu.';
 

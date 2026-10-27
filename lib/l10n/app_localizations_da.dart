@@ -1252,6 +1252,10 @@ class AppLocalizationsDa extends AppLocalizations {
       'Denne importfilversion understøttes endnu ikke.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Ingen periodetider fundet i importfilen.';
 

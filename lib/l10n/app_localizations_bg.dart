@@ -1281,6 +1281,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Тази версия на файла за импортиране все още не се поддържа.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'В файла за импортиране не са намерени периодични времена.';
 

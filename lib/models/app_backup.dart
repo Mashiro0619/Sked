@@ -4,6 +4,7 @@ import '../l10n/app_locale.dart';
 import '../utils/constants.dart';
 import '../utils/localized_names.dart';
 import 'app_data.dart';
+import 'import_count_limits.dart';
 import 'school_site_models.dart';
 
 class AppBackupData {
@@ -32,12 +33,32 @@ String encodeAppBackup(AppData appData, List<SchoolSite> schoolSites) {
 AppBackupData decodeAppBackup(
   String source, {
   String localeCode = defaultLocaleCode,
+}) => _decodeAppBackup(source, localeCode: localeCode, externalImport: true);
+
+/// Reads an already admitted local restore target. New external imports must
+/// use [decodeAppBackup], so an older or larger local journal remains readable.
+AppBackupData decodeAppBackupForRecovery(
+  String source, {
+  String localeCode = defaultLocaleCode,
+}) => _decodeAppBackup(source, localeCode: localeCode, externalImport: false);
+
+AppBackupData _decodeAppBackup(
+  String source, {
+  required String localeCode,
+  required bool externalImport,
 }) {
   final envelope = ImportExportEnvelope.decode(source);
   if (isImportExportSchema(envelope.schema, appBackupSchema)) {
     if (envelope.version > appBackupVersion) {
       throw FormatException(
         importFileVersionUnsupportedMessage(localeCode: localeCode),
+      );
+    }
+    if (externalImport) {
+      validateImportCounts(
+        envelope.data,
+        kind: ImportCountKind.backup,
+        localeCode: localeCode,
       );
     }
     final rawAppData = _stringKeyedMap(envelope.data['appData']);
@@ -56,6 +77,13 @@ AppBackupData decodeAppBackup(
     if (envelope.version > importExportVersion) {
       throw FormatException(
         importFileVersionUnsupportedMessage(localeCode: localeCode),
+      );
+    }
+    if (externalImport) {
+      validateImportCounts(
+        envelope.data,
+        kind: ImportCountKind.appData,
+        localeCode: localeCode,
       );
     }
     return AppBackupData(

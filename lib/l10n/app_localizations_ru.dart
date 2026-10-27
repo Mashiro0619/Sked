@@ -1274,6 +1274,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Эта версия импортируемого файла пока не поддерживается.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Во входном файле не найдено времени пар.';
 

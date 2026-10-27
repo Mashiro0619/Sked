@@ -1284,6 +1284,10 @@ class AppLocalizationsEl extends AppLocalizations {
       'Αυτή η έκδοση αρχείου εισαγωγής δεν υποστηρίζεται ακόμα.';
 
   @override
+  String get importEntryLimitExceededMessage =>
+      'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Δεν βρέθηκαν χρονικές περιόδους στο αρχείο εισαγωγής.';
 
