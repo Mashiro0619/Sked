@@ -1013,9 +1013,9 @@
       }
     }
   },
-  "noMatchingEvents": "無匹配事件",
+  "noMatchingEvents": "無匹配日程",
   "@noMatchingEvents": {},
-  "noUpcomingEvents": "無即將開始事件",
+  "noUpcomingEvents": "無即將開始日程",
   "@noUpcomingEvents": {},
   "addCalendar": "新增分類",
   "@addCalendar": {},
@@ -1152,11 +1152,11 @@
   "@importGeneralSchedulesJsonTextDesc": {},
   "importIcsFile": "匯入 ICS 檔案",
   "@importIcsFile": {},
-  "importIcsFileDesc": "從 .ics 日曆檔案讀取事件",
+  "importIcsFileDesc": "從 .ics 日曆檔案讀取日程",
   "@importIcsFileDesc": {},
   "pasteIcs": "貼上 ICS",
   "@pasteIcs": {},
-  "pasteIcsDesc": "從複製的日曆文字匯入事件",
+  "pasteIcsDesc": "從複製的日曆文字匯入日程",
   "@pasteIcsDesc": {},
   "copyJson": "複製 JSON",
   "@copyJson": {},
@@ -1188,11 +1188,11 @@
   "@icsReminderExportJsonAction": {},
   "icsReminderExportContinueAction": "繼續使用 ICS",
   "@icsReminderExportContinueAction": {},
-  "icsReminderImportNotice": "從 ICS 匯入的事件將關閉提醒。若要還原提醒設定，請使用 JSON。",
+  "icsReminderImportNotice": "從 ICS 匯入的日程將關閉提醒。若要還原提醒設定，請使用 JSON。",
   "@icsReminderImportNotice": {},
-  "icsReminderReplaceTitle": "取代事件和提醒？",
+  "icsReminderReplaceTitle": "取代日程和提醒？",
   "@icsReminderReplaceTitle": {},
-  "icsReminderReplaceMessage": "用 ICS 事件取代「{calendar}」會覆寫此分類的事件，並關閉這些事件的提醒。可取消後先匯出 JSON 備份，或返回並改為新增分類。",
+  "icsReminderReplaceMessage": "用 ICS 日程取代「{calendar}」會覆寫此分類的日程，並關閉這些日程的提醒。可取消後先匯出 JSON 備份，或返回並改為新增分類。",
   "@icsReminderReplaceMessage": {
     "placeholders": {
       "calendar": {
@@ -1200,7 +1200,7 @@
       }
     }
   },
-  "importIcsPreviewPrompt": "發現 {count} 個事件。要新增為分類，還是取代現有分類？",
+  "importIcsPreviewPrompt": "發現 {count} 個日程。要新增為分類，還是取代現有分類？",
   "@importIcsPreviewPrompt": {
     "placeholders": {
       "count": {
@@ -1219,11 +1219,11 @@
       }
     }
   },
-  "importWarningSkippedMissingStart": "已跳過缺少開始時間的事件。",
+  "importWarningSkippedMissingStart": "已跳過缺少開始時間的日程。",
   "@importWarningSkippedMissingStart": {},
-  "importWarningSkippedUnsupportedStart": "已跳過開始時間格式不支援的事件。",
+  "importWarningSkippedUnsupportedStart": "已跳過開始時間格式不支援的日程。",
   "@importWarningSkippedUnsupportedStart": {},
-  "importWarningAdjustedEnd": "已修正結束時間不晚於開始時間的事件。",
+  "importWarningAdjustedEnd": "已修正結束時間不晚於開始時間的日程。",
   "@importWarningAdjustedEnd": {},
   "importWarningUnsupportedFields": "已忽略不支援的 ICS 欄位：{fields}",
   "@importWarningUnsupportedFields": {
@@ -1335,7 +1335,7 @@
   "@selectSchedulesToExport": {},
   "selectSchedulesToImport": "選擇要匯入的分類",
   "@selectSchedulesToImport": {},
-  "generalScheduleEventCount": "事件 {count}",
+  "generalScheduleEventCount": "日程 {count}",
   "@generalScheduleEventCount": {
     "placeholders": {
       "count": {
@@ -1413,7 +1413,7 @@
   "@deleteCourseMessage": {},
   "showLunarCalendar": "顯示農曆",
   "@showLunarCalendar": {},
-  "monthDayEvents": "{day}日，{count} 個事件",
+  "monthDayEvents": "{day}日，{count} 個日程",
   "@monthDayEvents": {
     "placeholders": {
       "day": {

@@ -1424,7 +1424,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String generalScheduleEventCount(int count) {
-    return '事件 $count';
+    return '日程 $count';
   }
 
   @override
@@ -1517,10 +1517,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get noMatchingEvents => '无匹配事件';
+  String get noMatchingEvents => '无匹配日程';
 
   @override
-  String get noUpcomingEvents => '无即将开始事件';
+  String get noUpcomingEvents => '无即将开始日程';
 
   @override
   String get addCalendar => '添加分类';
@@ -1693,13 +1693,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importIcsFile => '导入 ICS 文件';
 
   @override
-  String get importIcsFileDesc => '从 .ics 日历文件读取事件';
+  String get importIcsFileDesc => '从 .ics 日历文件读取日程';
 
   @override
   String get pasteIcs => '粘贴 ICS';
 
   @override
-  String get pasteIcsDesc => '从复制的日历文本导入事件';
+  String get pasteIcsDesc => '从复制的日历文本导入日程';
 
   @override
   String get copyJson => '复制 JSON';
@@ -1747,19 +1747,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get icsReminderExportContinueAction => '继续使用 ICS';
 
   @override
-  String get icsReminderImportNotice => '从 ICS 导入的事件将关闭提醒。要恢复提醒设置，请使用 JSON。';
+  String get icsReminderImportNotice => '从 ICS 导入的日程将关闭提醒。要恢复提醒设置，请使用 JSON。';
 
   @override
-  String get icsReminderReplaceTitle => '替换事件和提醒？';
+  String get icsReminderReplaceTitle => '替换日程和提醒？';
 
   @override
   String icsReminderReplaceMessage(String calendar) {
-    return '用 ICS 事件替换“$calendar”会覆盖此分类的事件，并关闭这些事件的提醒。可取消后先导出 JSON 备份，或返回并改为新增分类。';
+    return '用 ICS 日程替换“$calendar”会覆盖此分类的日程，并关闭这些日程的提醒。可取消后先导出 JSON 备份，或返回并改为新增分类。';
   }
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return '发现 $count 个事件。要新增为分类，还是替换已有分类？';
+    return '发现 $count 个日程。要新增为分类，还是替换已有分类？';
   }
 
   @override
@@ -1768,13 +1768,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get importWarningSkippedMissingStart => '已跳过缺少开始时间的事件。';
+  String get importWarningSkippedMissingStart => '已跳过缺少开始时间的日程。';
 
   @override
-  String get importWarningSkippedUnsupportedStart => '已跳过开始时间格式不支持的事件。';
+  String get importWarningSkippedUnsupportedStart => '已跳过开始时间格式不支持的日程。';
 
   @override
-  String get importWarningAdjustedEnd => '已修正结束时间不晚于开始时间的事件。';
+  String get importWarningAdjustedEnd => '已修正结束时间不晚于开始时间的日程。';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
@@ -1870,7 +1870,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day日，$count 个事件';
+    return '$day日，$count 个日程';
   }
 
   @override
@@ -4354,7 +4354,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String generalScheduleEventCount(int count) {
-    return '事件 $count';
+    return '日程 $count';
   }
 
   @override
@@ -4447,10 +4447,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get noMatchingEvents => '無匹配事件';
+  String get noMatchingEvents => '無匹配日程';
 
   @override
-  String get noUpcomingEvents => '無即將開始事件';
+  String get noUpcomingEvents => '無即將開始日程';
 
   @override
   String get addCalendar => '新增分類';
@@ -4623,13 +4623,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get importIcsFile => '匯入 ICS 檔案';
 
   @override
-  String get importIcsFileDesc => '從 .ics 日曆檔案讀取事件';
+  String get importIcsFileDesc => '從 .ics 日曆檔案讀取日程';
 
   @override
   String get pasteIcs => '貼上 ICS';
 
   @override
-  String get pasteIcsDesc => '從複製的日曆文字匯入事件';
+  String get pasteIcsDesc => '從複製的日曆文字匯入日程';
 
   @override
   String get copyJson => '複製 JSON';
@@ -4677,19 +4677,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get icsReminderExportContinueAction => '繼續使用 ICS';
 
   @override
-  String get icsReminderImportNotice => '從 ICS 匯入的事件將關閉提醒。若要還原提醒設定，請使用 JSON。';
+  String get icsReminderImportNotice => '從 ICS 匯入的日程將關閉提醒。若要還原提醒設定，請使用 JSON。';
 
   @override
-  String get icsReminderReplaceTitle => '取代事件和提醒？';
+  String get icsReminderReplaceTitle => '取代日程和提醒？';
 
   @override
   String icsReminderReplaceMessage(String calendar) {
-    return '用 ICS 事件取代「$calendar」會覆寫此分類的事件，並關閉這些事件的提醒。可取消後先匯出 JSON 備份，或返回並改為新增分類。';
+    return '用 ICS 日程取代「$calendar」會覆寫此分類的日程，並關閉這些日程的提醒。可取消後先匯出 JSON 備份，或返回並改為新增分類。';
   }
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return '發現 $count 個事件。要新增為分類，還是取代現有分類？';
+    return '發現 $count 個日程。要新增為分類，還是取代現有分類？';
   }
 
   @override
@@ -4698,13 +4698,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get importWarningSkippedMissingStart => '已跳過缺少開始時間的事件。';
+  String get importWarningSkippedMissingStart => '已跳過缺少開始時間的日程。';
 
   @override
-  String get importWarningSkippedUnsupportedStart => '已跳過開始時間格式不支援的事件。';
+  String get importWarningSkippedUnsupportedStart => '已跳過開始時間格式不支援的日程。';
 
   @override
-  String get importWarningAdjustedEnd => '已修正結束時間不晚於開始時間的事件。';
+  String get importWarningAdjustedEnd => '已修正結束時間不晚於開始時間的日程。';
 
   @override
   String importWarningUnsupportedFields(Object fields) {
@@ -4800,7 +4800,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String monthDayEvents(int day, int count) {
-    return '$day日，$count 個事件';
+    return '$day日，$count 個日程';
   }
 
   @override
