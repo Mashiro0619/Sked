@@ -2475,7 +2475,7 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
   }
 }
 
-class _CourseHitTarget extends StatelessWidget {
+class _CourseHitTarget extends StatefulWidget {
   const _CourseHitTarget({
     required this.geometry,
     required this.metrics,
@@ -2495,9 +2495,47 @@ class _CourseHitTarget extends StatelessWidget {
   final bool includeSemantics;
 
   @override
+  State<_CourseHitTarget> createState() => _CourseHitTargetState();
+}
+
+class _CourseHitTargetState extends State<_CourseHitTarget> {
+  var _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_highlightModeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_highlightModeChanged);
+    super.dispose();
+  }
+
+  void _highlightModeChanged(FocusHighlightMode mode) {
+    if (_focused) setState(() {});
+  }
+
+  void _focusChanged(bool focused) {
+    if (_focused != focused) setState(() => _focused = focused);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final geometry = widget.geometry;
+    final metrics = widget.metrics;
     final layout = geometry.layout;
     final itemId = layout.entry?.id ?? layout.course?.id ?? 'unknown';
+    final colors = Theme.of(context).colorScheme;
+    final shape = skedShapeSchemeOf(context).compact;
+    final showFocus =
+        _focused &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    // Black/white edges guarantee that at least one edge remains distinct
+    // from any custom course fill. Choose the outer edge for the canvas too.
+    final focusOuter = resolveAutomaticTimetableTextColor(colors.surface);
+    final focusInner = focusOuter == Colors.black ? Colors.white : Colors.black;
     final width = math.max(
       0.0,
       metrics.dayColumnWidth - (metrics.courseGap * 2),
@@ -2506,14 +2544,45 @@ class _CourseHitTarget extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         color: Colors.transparent,
-        child: InkWell(
-          key: ValueKey('timetable-course-hit-$itemId'),
-          onTap: () => onTap(context),
-          onLongPress: () => onLongPress(context),
-          customBorder: skedShapeSchemeOf(context).compact,
-          overlayColor: WidgetStatePropertyAll(
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            InkWell(
+              key: ValueKey('timetable-course-hit-$itemId'),
+              onTap: () => widget.onTap(context),
+              onLongPress: () => widget.onLongPress(context),
+              onFocusChange: _focusChanged,
+              customBorder: shape,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                return states.contains(WidgetState.hovered) ||
+                        states.contains(WidgetState.pressed)
+                    ? colors.primary.withValues(alpha: 0.08)
+                    : Colors.transparent;
+              }),
+            ),
+            if (showFocus)
+              IgnorePointer(
+                child: DecoratedBox(
+                  key: ValueKey('timetable-course-focus-$itemId'),
+                  decoration: ShapeDecoration(
+                    shape: shape.copyWith(
+                      side: BorderSide(color: focusOuter, width: 2),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: DecoratedBox(
+                      key: ValueKey('timetable-course-focus-inner-$itemId'),
+                      decoration: ShapeDecoration(
+                        shape: shape.copyWith(
+                          side: BorderSide(color: focusInner, width: 2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -2521,18 +2590,20 @@ class _CourseHitTarget extends StatelessWidget {
       // Dense courses keep physical hit regions on their exact visual
       // intervals. Their separate semantic targets still provide 48dp
       // accessibility actions without overlapping pointer targets.
-      top: useVisualBounds ? geometry.visualTop : geometry.hitTop,
+      top: widget.useVisualBounds ? geometry.visualTop : geometry.hitTop,
       start: metrics.courseGap,
       width: width,
-      height: useVisualBounds ? geometry.visualHeight : geometry.hitHeight,
-      child: includeSemantics
+      height: widget.useVisualBounds
+          ? geometry.visualHeight
+          : geometry.hitHeight,
+      child: widget.includeSemantics
           ? _CourseSemantics(
               selected: WorkspaceSelectionScope.isSelected(
                 context,
                 'course:${layout.course?.id}',
               ),
-              label: semanticLabel,
-              onTap: () => onTap(context),
+              label: widget.semanticLabel,
+              onTap: () => widget.onTap(context),
               child: visual,
             )
           : ExcludeSemantics(child: visual),

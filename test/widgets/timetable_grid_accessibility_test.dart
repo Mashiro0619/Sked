@@ -1,8 +1,10 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/theme/timetable_contrast.dart';
 import 'package:sked/widgets/timetable_entry.dart';
 import 'package:sked/widgets/timetable_grid.dart';
 
@@ -33,8 +35,11 @@ Widget _grid({
   List<TimetableEntry>? entries,
   ValueChanged<TimetableCourseTapInfo>? onCourseTap,
   ValueChanged<TimetableEntry>? onEntryTap,
+  TargetPlatform platform = TargetPlatform.android,
+  Brightness brightness = Brightness.light,
+  int? courseColor,
 }) => MaterialApp(
-  theme: ThemeData(platform: TargetPlatform.android),
+  theme: ThemeData(platform: platform, brightness: brightness),
   home: Scaffold(
     body: TimetableGrid(
       timetable: TimetableData(
@@ -66,8 +71,10 @@ Widget _grid({
       onCourseTap: onCourseTap ?? (_) {},
       onEntryTap: onEntryTap,
       onEmptySlotTap: (_) {},
-      themeColorMode: themeColorModeSingle,
-      courseNameColorValues: const {},
+      themeColorMode: courseColor == null
+          ? themeColorModeSingle
+          : themeColorModeColorful,
+      courseNameColorValues: {'Physics': ?courseColor},
       colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
       liveCourseOutlineEnabled: false,
       liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
@@ -78,6 +85,104 @@ Widget _grid({
 );
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final courseColor in [0xff000000, 0xff888888, 0xffffffff]) {
+      testWidgets(
+        'keyboard focus is distinct from hover on $brightness $courseColor',
+        (tester) async {
+          final previous = FocusManager.instance.highlightStrategy;
+          FocusManager.instance.highlightStrategy =
+              FocusHighlightStrategy.alwaysTraditional;
+          final mouse = await tester.createGesture(
+            kind: ui.PointerDeviceKind.mouse,
+          );
+          try {
+            var opened = 0;
+            await tester.pumpWidget(
+              _grid(
+                courses: [_course()],
+                locale: 'en',
+                platform: TargetPlatform.windows,
+                brightness: brightness,
+                courseColor: courseColor,
+                onCourseTap: (_) => opened++,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final hit = find.byKey(
+              const ValueKey('timetable-course-hit-course'),
+            );
+            final focusRing = find.byKey(
+              const ValueKey('timetable-course-focus-course'),
+            );
+            final bounds = tester.getRect(hit);
+            await mouse.addPointer(location: bounds.center);
+            await mouse.moveTo(bounds.center);
+            await tester.pumpAndSettle();
+            expect(focusRing, findsNothing);
+
+            final gesture = find
+                .descendant(of: hit, matching: find.byType(GestureDetector))
+                .last;
+            final focus = Focus.of(tester.element(gesture));
+            focus.requestFocus();
+            await tester.pumpAndSettle();
+            expect(focus.hasFocus, isTrue);
+            expect(focusRing, findsOneWidget);
+            final outer =
+                (tester.widget<DecoratedBox>(focusRing).decoration
+                            as ShapeDecoration)
+                        .shape
+                    as OutlinedBorder;
+            final inner =
+                (tester
+                                .widget<DecoratedBox>(
+                                  find.byKey(
+                                    const ValueKey(
+                                      'timetable-course-focus-inner-course',
+                                    ),
+                                  ),
+                                )
+                                .decoration
+                            as ShapeDecoration)
+                        .shape
+                    as OutlinedBorder;
+            final surface = Theme.of(tester.element(hit)).colorScheme.surface;
+            final fill = Color.alphaBlend(
+              Color(courseColor).withValues(alpha: .92),
+              surface,
+            );
+            expect(
+              renderedTimetableContrast(outer.side.color, surface),
+              greaterThanOrEqualTo(3),
+            );
+            expect(
+              [
+                outer.side.color,
+                inner.side.color,
+              ].any((color) => renderedTimetableContrast(color, fill) >= 3),
+              isTrue,
+            );
+            expect(
+              renderedTimetableContrast(outer.side.color, inner.side.color),
+              21,
+            );
+            expect(tester.getRect(hit), bounds);
+            await tester.sendKeyEvent(LogicalKeyboardKey.space);
+            await tester.pumpAndSettle();
+            expect(opened, 1);
+            focus.unfocus();
+            await tester.pumpAndSettle();
+            expect(focusRing, findsNothing);
+          } finally {
+            await mouse.removePointer();
+            FocusManager.instance.highlightStrategy = previous;
+          }
+        },
+      );
+    }
+  }
+
   for (final locale in ['en', 'zh']) {
     final prefix = locale == 'en'
         ? 'Physics, Monday, Week 1'
