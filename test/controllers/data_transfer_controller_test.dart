@@ -97,6 +97,135 @@ class _ControlledComputation {
 }
 
 void main() {
+  String missingDatesSource(_Fixture f) => ImportExportEnvelope(
+    schema: timetableDataSchema,
+    version: importExportVersion,
+    data: {
+      'timetables': [
+        f.timetable('dated').toJson(),
+        for (final id in ['missing-a', 'missing-b'])
+          {
+            ...f.timetable(id).toJson(),
+            'config': f.timetable(id).config.toJson()..remove('startDate'),
+          },
+      ],
+      'periodTimeSets': f.session.data.studentMode.periodTimeSets
+          .map((set) => set.toJson())
+          .toList(),
+    },
+  ).encode();
+
+  test(
+    'selected missing dates require all confirmations before any write',
+    () async {
+      var clockCalls = 0;
+      final f = await _Fixture.create(
+        codec: DataTransferCodec(
+          run: runDataTransferInline,
+          clock: () {
+            clockCalls += 1;
+            return DateTime(2026, 9, 10, 12);
+          },
+        ),
+      );
+      final before = f.session.data;
+      final prepared = await f.transfers.prepareTimetables(
+        missingDatesSource(f),
+      );
+      expect(clockCalls, 1);
+      expect(
+        prepared.value.timetablesNeedingStartDate.map(
+          (table) => table.config.startDate,
+        ),
+        everyElement(DateTime(2026, 9, 10)),
+      );
+      for (final confirmations in [
+        <String, DateTime>{},
+        {'missing-a': DateTime(2026, 8, 31)},
+        {'missing-a': DateTime(0), 'missing-b': DateTime(2026, 8, 31)},
+        {'missing-a': DateTime(10000), 'missing-b': DateTime(2026, 8, 31)},
+      ]) {
+        await expectLater(
+          f.transfers.applyTimetables(
+            prepared,
+            timetableIds: ['dated', 'missing-a', 'missing-b'],
+            mode: TimetableImportMode.addAsNew,
+            confirmedStartDates: confirmations,
+          ),
+          throwsFormatException,
+        );
+        expect(f.session.data, same(before));
+        expect(f.session.repository.persisted, same(before));
+      }
+      await f.transfers.applyTimetables(
+        prepared,
+        timetableIds: ['dated', 'missing-a', 'missing-b'],
+        mode: TimetableImportMode.addAsNew,
+        confirmedStartDates: {
+          'dated': DateTime(2030),
+          'missing-a': DateTime(2026, 8, 31),
+          'missing-b': DateTime(2026, 9, 7),
+        },
+      );
+      expect(
+        f.session.data.studentMode.timetables.map(
+          (table) => table.config.startDate,
+        ),
+        [DateTime(2026, 8, 3), DateTime(2026, 8, 31), DateTime(2026, 9, 7)],
+      );
+      expect(prepared.value.timetablesNeedingStartDate, hasLength(2));
+      expect(clockCalls, 1);
+      expect(
+        f.session.repository.persisted!.studentMode.timetables.every(
+          (table) => !table.config.startDateNeedsConfirmation,
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test('unselected missing dates do not block a dated timetable', () async {
+    final f = await _Fixture.create();
+    final prepared = await f.transfers.prepareTimetables(missingDatesSource(f));
+    final count = await f.transfers.applyTimetables(
+      prepared,
+      timetableIds: ['dated'],
+      mode: TimetableImportMode.addAsNew,
+    );
+    expect(count, 1);
+    expect(
+      f.session.data.studentMode.timetables.single.config.startDate,
+      DateTime(2026, 8, 3),
+    );
+  });
+
+  test('direct selected imports cannot bypass confirmation', () async {
+    final f = await _Fixture.create();
+    final before = f.session.data;
+    final source = missingDatesSource(f);
+    await expectLater(
+      f.transfers.importSelectedTimetablesJson(
+        source,
+        timetableIds: ['missing-a'],
+        mode: TimetableImportMode.addAsNew,
+      ),
+      throwsFormatException,
+    );
+    expect(f.session.data, same(before));
+    expect(f.session.repository.persisted, same(before));
+    final count = await f.transfers.importSelectedTimetablesJson(
+      source,
+      timetableIds: ['missing-a'],
+      mode: TimetableImportMode.addAsNew,
+      confirmedStartDates: {'missing-a': DateTime(2026, 8, 31)},
+    );
+    expect(count, 1);
+    expect(
+      f.session.data.studentMode.timetables.single.config.startDate,
+      DateTime(2026, 8, 31),
+    );
+  });
+
   test(
     'confirmation reuses its candidate and merges edits made after preview',
     () async {

@@ -1280,6 +1280,17 @@ class AppLocalizationsHu extends AppLocalizations {
       'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
 
   @override
+  String get confirmImportedStartDatesTitle => 'Confirm semester start dates';
+
+  @override
+  String get confirmImportedStartDatesMessage =>
+      'These timetables have no valid semester start date in the import. The dates below initially use today. Review them before importing.';
+
+  @override
+  String get importStartDateConfirmationRequiredMessage =>
+      'Confirm the missing semester start dates before importing.';
+
+  @override
   String get noPeriodTimesInImportMessage =>
       'Az import fájlban nem találtak időszakot.';
 

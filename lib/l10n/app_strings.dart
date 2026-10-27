@@ -18,6 +18,7 @@ abstract class AppStrings {
   String get importFileTypeMismatchMessage;
   String get importFileVersionUnsupportedMessage;
   String get importEntryLimitExceededMessage;
+  String get importStartDateConfirmationRequiredMessage;
   String get noPeriodTimesInImportMessage;
   String get noPeriodTimeAvailableMessage;
   String get noImportableTimetablesMessage;
@@ -85,6 +86,10 @@ class _GeneratedAppStrings implements AppStrings {
   @override
   String get importEntryLimitExceededMessage =>
       _l10n.importEntryLimitExceededMessage;
+
+  @override
+  String get importStartDateConfirmationRequiredMessage =>
+      _l10n.importStartDateConfirmationRequiredMessage;
 
   @override
   String get noPeriodTimesInImportMessage => _l10n.noPeriodTimesInImportMessage;

@@ -17,6 +17,7 @@ import '../services/data_transfer_codec.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/sked_floating_anchor.dart';
+import '../widgets/imported_start_dates_dialog.dart';
 import 'school_sites_page.dart';
 
 class _TimetableImportChoice {
@@ -219,9 +220,22 @@ class TimetableImportFlow {
       studentView,
       hasBundledPeriodTimeSets: preview.hasBundledPeriodTimeSets,
     );
-    if (importChoice == null || !isCurrent()) {
+    if (importChoice == null || !context.mounted || !isCurrent()) {
       return false;
     }
+
+    final selectedIdSet = selectedIds.toSet();
+    final missingStartDates = preview.timetablesNeedingStartDate
+        .where((item) => selectedIdSet.contains(item.id))
+        .toList();
+    final confirmedStartDates = missingStartDates.isEmpty
+        ? const <String, DateTime>{}
+        : await showImportedStartDatesConfirmation(
+            context: context,
+            timetables: missingStartDates,
+            isCurrent: isCurrent,
+          );
+    if (confirmedStartDates == null || !isCurrent()) return false;
 
     try {
       final count = await transfers.applyTimetables(
@@ -231,6 +245,7 @@ class TimetableImportFlow {
         importBundledPeriodTimeSets: importChoice.importBundledPeriodTimeSets,
         targetPeriodTimeSetId: importChoice.targetPeriodTimeSetId,
         replacementTimetableId: replacementTimetableId,
+        confirmedStartDates: confirmedStartDates,
       );
       if (context.mounted && isCurrent()) {
         _showMessage(context, l10n.importedTimetablesCount(count));

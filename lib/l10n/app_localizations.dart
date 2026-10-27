@@ -2344,6 +2344,24 @@ abstract class AppLocalizations {
   /// **'This import contains too many entries or overly nested data. Reduce the exported content and try again.'**
   String get importEntryLimitExceededMessage;
 
+  /// No description provided for @confirmImportedStartDatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm semester start dates'**
+  String get confirmImportedStartDatesTitle;
+
+  /// No description provided for @confirmImportedStartDatesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'These timetables have no valid semester start date in the import. The dates below initially use today. Review them before importing.'**
+  String get confirmImportedStartDatesMessage;
+
+  /// No description provided for @importStartDateConfirmationRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the missing semester start dates before importing.'**
+  String get importStartDateConfirmationRequiredMessage;
+
   /// No description provided for @noPeriodTimesInImportMessage.
   ///
   /// In en, this message translates to:

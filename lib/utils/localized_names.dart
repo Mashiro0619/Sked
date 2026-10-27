@@ -54,6 +54,10 @@ String importEntryLimitExceededMessage({
   String localeCode = defaultLocaleCode,
 }) => _stringsForLocale(localeCode).importEntryLimitExceededMessage;
 
+String importStartDateConfirmationRequiredMessage({
+  String localeCode = defaultLocaleCode,
+}) => _stringsForLocale(localeCode).importStartDateConfirmationRequiredMessage;
+
 String noPeriodTimeAvailableMessage({String localeCode = defaultLocaleCode}) {
   return _stringsForLocale(localeCode).noPeriodTimeAvailableMessage;
 }

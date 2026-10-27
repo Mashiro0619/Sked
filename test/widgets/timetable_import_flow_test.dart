@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 
@@ -17,6 +18,9 @@ import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/services/text_file_picker.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
+import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/text_transfer_widgets.dart';
+import 'package:sked/widgets/imported_start_dates_dialog.dart';
 
 import '../support/data_transfer_codec.dart';
 import '../support/timetable_storage_fakes.dart';
@@ -87,6 +91,8 @@ Future<void> _pumpImportButton(
   AppRuntime provider, {
   String? source,
   Locale locale = const Locale('en'),
+  bool textPage = false,
+  double scale = 1,
 }) async {
   await tester.pumpWidget(
     AppScope(
@@ -95,8 +101,20 @@ Future<void> _pumpImportButton(
         locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        ),
         home: Builder(
           builder: (context) {
+            if (textPage) {
+              return TextImportPage(
+                title: 'Import draft',
+                initialContent: source!,
+                onSubmit: TimetableImportFlow.importTimetablesFromSource,
+              );
+            }
             return Scaffold(
               body: Center(
                 child: FilledButton(
@@ -176,6 +194,319 @@ void main() {
       periodTimeSets: const [],
     ),
   );
+
+  String missingStartDateSource(AppRuntime provider, {bool multiple = false}) {
+    final raw =
+        jsonDecode(withoutPeriodTimes(provider)) as Map<String, dynamic>;
+    final data = raw['data'] as Map<String, dynamic>;
+    final original =
+        (data['timetables'] as List).single as Map<String, dynamic>;
+    Map<String, dynamic> timetable(String id, {bool dated = false}) => {
+      ...original,
+      'id': id,
+      'config': {...original['config'] as Map, 'name': id}
+        ..removeWhere((key, _) => key == 'startDate' && !dated),
+    };
+    data['timetables'] = [
+      timetable('undated-a'),
+      if (multiple) timetable('undated-b'),
+      if (multiple) timetable('dated', dated: true),
+    ];
+    return jsonEncode(raw);
+  }
+
+  Future<void> chooseExistingPeriods(
+    WidgetTester tester,
+    AppRuntime provider, {
+    bool pendingTextImport = false,
+  }) async {
+    tester
+        .widget<PeriodTimeSetPickerDialogView>(
+          find.byType(PeriodTimeSetPickerDialogView),
+        )
+        .onSelect(provider.studentView.periodTimeSets.single.id);
+    if (pendingTextImport) {
+      await tester.pump();
+      for (var frame = 0; frame < 4; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+    } else {
+      await tester.pumpAndSettle();
+    }
+  }
+
+  testWidgets(
+    'missing start date cancellation keeps the text draft and confirmed picker date applies',
+    (tester) async {
+      final provider = await _createProvider(
+        codec: DataTransferCodec(
+          run: runDataTransferInline,
+          clock: () => DateTime(2026, 9, 10, 14),
+        ),
+      );
+      addTearDown(provider.dispose);
+      final before = provider.workspaceView.data.toJson();
+      final source = missingStartDateSource(provider);
+      await _pumpImportButton(tester, provider, source: source, textPage: true);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(TextImportPage)),
+      );
+      // The text route stays busy until all confirmations finish. Wait for
+      // transitions while its progress indicator continues animating.
+      Future<void> pumpPendingImport() async {
+        await tester.pump();
+        for (var frame = 0; frame < 4; frame++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+      }
+
+      Future<void> openConfirmation() async {
+        final submit = find.widgetWithText(FilledButton, l10n.importAction);
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await pumpPendingImport();
+        await tester.tap(
+          find.widgetWithText(TextButton, l10n.importAsNewTimetable),
+        );
+        await pumpPendingImport();
+        await chooseExistingPeriods(tester, provider, pendingTextImport: true);
+        expect(
+          find.byKey(const ValueKey('import-start-dates-confirmation')),
+          findsOneWidget,
+        );
+      }
+
+      await openConfirmation();
+      expect(find.text(l10n.confirmImportedStartDatesMessage), findsOneWidget);
+      expect(provider.workspaceView.data.toJson(), before);
+      await tester.tap(find.widgetWithText(TextButton, l10n.cancel));
+      await pumpPendingImport();
+      expect(provider.workspaceView.data.toJson(), before);
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.text, source);
+      expect(field.enabled, isTrue);
+
+      await openConfirmation();
+      await tester.tap(
+        find.byKey(const ValueKey('import-start-date-undated-a')),
+      );
+      await pumpPendingImport();
+      expect(
+        tester.widget<SkedDatePicker>(find.byType(SkedDatePicker)).initialDate,
+        DateTime(2026, 9, 10),
+      );
+      await tester.tap(find.byKey(const ValueKey('sked-date-2026-09-15')));
+      await pumpPendingImport();
+      await tester.tap(find.byKey(const ValueKey('sked-date-cancel')));
+      await pumpPendingImport();
+      expect(provider.workspaceView.data.toJson(), before);
+      await tester.tap(
+        find.byKey(const ValueKey('import-start-date-undated-a')),
+      );
+      await pumpPendingImport();
+      expect(
+        tester.widget<SkedDatePicker>(find.byType(SkedDatePicker)).initialDate,
+        DateTime(2026, 9, 10),
+      );
+      await tester.tap(find.byKey(const ValueKey('sked-date-2026-09-15')));
+      await pumpPendingImport();
+      await tester.tap(find.byKey(const ValueKey('sked-date-confirm')));
+      await pumpPendingImport();
+      expect(provider.workspaceView.data.toJson(), before);
+      await tester.tap(
+        find.byKey(const ValueKey('confirm-import-start-dates')),
+      );
+      await pumpPendingImport();
+      expect(provider.studentView.timetables, hasLength(2));
+      expect(
+        provider.studentView.activeTimetable.config.startDate,
+        DateTime(2026, 9, 15),
+      );
+      expect(
+        provider.studentView.activeTimetable.config.startDateNeedsConfirmation,
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final locale in [const Locale('en'), const Locale('zh')]) {
+    testWidgets(
+      'multiple selected missing dates confirm together at 2x text: $locale',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(520, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final provider = await _createProvider(
+          codec: DataTransferCodec(
+            run: runDataTransferInline,
+            clock: () => DateTime(2026, 9, 10),
+          ),
+        );
+        addTearDown(provider.dispose);
+        final before = provider.workspaceView.data.toJson();
+        await _pumpImportButton(
+          tester,
+          provider,
+          source: missingStartDateSource(provider, multiple: true),
+          locale: locale,
+          scale: 2,
+        );
+        final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+        await tester.tap(find.text('Import'));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.widgetWithText(FilledButton, l10n.importAction).last,
+        );
+        await tester.pumpAndSettle();
+        await chooseExistingPeriods(tester, provider);
+        final dateList = find.descendant(
+          of: find.byKey(const ValueKey('import-start-dates-confirmation')),
+          matching: find.byType(Scrollable),
+        );
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('import-start-date-undated-a')),
+          120,
+          scrollable: dateList,
+        );
+        expect(
+          find.byKey(const ValueKey('import-start-date-undated-a')),
+          findsOneWidget,
+        );
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('import-start-date-undated-b')),
+          120,
+          scrollable: dateList,
+        );
+        expect(
+          find.byKey(const ValueKey('import-start-date-undated-b')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('import-start-date-dated')),
+          findsNothing,
+        );
+        expect(provider.workspaceView.data.toJson(), before);
+        final confirm = find.byKey(
+          const ValueKey('confirm-import-start-dates'),
+        );
+        await tester.ensureVisible(confirm);
+        await tester.tap(confirm);
+        await tester.pumpAndSettle();
+        final imported = provider.studentView.timetables.skip(1).toList();
+        expect(imported, hasLength(3));
+        expect(
+          imported.take(2).map((table) => table.config.startDate),
+          everyElement(DateTime(2026, 9, 10)),
+        );
+        expect(imported.last.config.startDate, DateTime(2026, 5, 25));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('a cleared session cannot apply a pending date confirmation', (
+    tester,
+  ) async {
+    final provider = await _createProvider(
+      codec: DataTransferCodec(
+        run: runDataTransferInline,
+        clock: () => DateTime(2026, 9, 10),
+      ),
+    );
+    addTearDown(provider.dispose);
+    final before = provider.workspaceView.data.toJson();
+    await _pumpImportButton(
+      tester,
+      provider,
+      source: missingStartDateSource(provider),
+    );
+    final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(TextButton, l10n.importAsNewTimetable),
+    );
+    await tester.pumpAndSettle();
+    await chooseExistingPeriods(tester, provider);
+    final reservation = provider.maintenance.reserve();
+    provider.maintenance.release(reservation);
+    await tester.tap(find.byKey(const ValueKey('confirm-import-start-dates')));
+    await tester.pumpAndSettle();
+    expect(provider.workspaceView.data.toJson(), before);
+    expect(
+      find.byKey(const ValueKey('import-start-dates-confirmation')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('recycling a date row cannot leave confirmation disabled', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final tables = [
+      for (var i = 0; i < 30; i++)
+        provider.studentView.activeTimetable.copyWith(
+          id: 'row-$i',
+          config: provider.studentView.activeTimetable.config.copyWith(
+            name: 'Row $i',
+            startDate: DateTime(2026, 9, 10),
+            startDateNeedsConfirmation: true,
+          ),
+        ),
+    ];
+    await tester.pumpWidget(
+      AppScope(
+        app: provider,
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => showImportedStartDatesConfirmation(
+                  context: context,
+                  timetables: tables,
+                  isCurrent: () => true,
+                ),
+                child: const Text('Review dates'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Review dates'));
+    await tester.pumpAndSettle();
+    final scrollable = find.descendant(
+      of: find.byKey(const ValueKey('import-start-dates-list')),
+      matching: find.byType(Scrollable),
+    );
+    final row = find.byKey(const ValueKey('import-start-date-row-20'));
+    await tester.scrollUntilVisible(row, 200, scrollable: scrollable);
+    final rowElement = tester.element(row);
+    await Scrollable.ensureVisible(rowElement, alignment: 0.5);
+    await tester.pumpAndSettle();
+    expect(row.hitTestable(), findsOneWidget);
+    final listState = tester.state<ScrollableState>(scrollable);
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.byType(SkedDatePicker), findsOneWidget);
+    listState.position.jumpTo(0);
+    await tester.pumpAndSettle();
+    expect(rowElement.mounted, isFalse);
+    await tester.tap(find.byKey(const ValueKey('sked-date-cancel')));
+    await tester.pumpAndSettle();
+    final confirm = find.byKey(const ValueKey('confirm-import-start-dates'));
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('import-start-dates-confirmation')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   for (final locale in [
     const Locale('en'),

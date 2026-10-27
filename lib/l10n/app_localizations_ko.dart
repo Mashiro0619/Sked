@@ -1219,6 +1219,17 @@ class AppLocalizationsKo extends AppLocalizations {
       'This import contains too many entries or overly nested data. Reduce the exported content and try again.';
 
   @override
+  String get confirmImportedStartDatesTitle => 'Confirm semester start dates';
+
+  @override
+  String get confirmImportedStartDatesMessage =>
+      'These timetables have no valid semester start date in the import. The dates below initially use today. Review them before importing.';
+
+  @override
+  String get importStartDateConfirmationRequiredMessage =>
+      'Confirm the missing semester start dates before importing.';
+
+  @override
   String get noPeriodTimesInImportMessage => '가져오기 파일에서 교시 시간을 찾지 못했습니다.';
 
   @override

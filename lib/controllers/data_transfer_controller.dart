@@ -128,6 +128,7 @@ class DataTransferController {
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
     String? replacementTimetableId,
+    Map<String, DateTime> confirmedStartDates = const {},
   }) async {
     _ensureCurrent(prepared);
     final mutation = _service.importPreparedTimetables(
@@ -139,6 +140,7 @@ class DataTransferController {
       importBundledPeriodTimeSets: importBundledPeriodTimeSets,
       targetPeriodTimeSetId: targetPeriodTimeSetId,
       replacementTimetableId: replacementTimetableId,
+      confirmedStartDates: confirmedStartDates,
     );
     _data = _data.copyWith(studentMode: mutation.data);
     if (mutation.selectedTimetable case final timetable?) {
@@ -322,25 +324,18 @@ class DataTransferController {
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
     String? replacementTimetableId,
+    Map<String, DateTime> confirmedStartDates = const {},
   }) async {
-    _requireEnabled(AppMode.student);
-    final mutation = _service.importSelectedTimetablesJson(
-      _data.studentMode,
-      source,
+    final prepared = await prepareTimetables(source);
+    return applyTimetables(
+      prepared,
       timetableIds: timetableIds,
       mode: mode,
-      localeCode: _data.localeCode,
       importBundledPeriodTimeSets: importBundledPeriodTimeSets,
       targetPeriodTimeSetId: targetPeriodTimeSetId,
       replacementTimetableId: replacementTimetableId,
+      confirmedStartDates: confirmedStartDates,
     );
-    _data = _data.copyWith(studentMode: mutation.data);
-    final selectedTimetable = mutation.selectedTimetable;
-    if (selectedTimetable != null) {
-      _student.selectedWeek = currentWeekFor(selectedTimetable.config);
-    }
-    await _persistence.saveAndNotify();
-    return mutation.importedCount;
   }
 
   Future<String> importTimetableJson(
@@ -349,25 +344,24 @@ class DataTransferController {
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
     String? replacementTimetableId,
+    DateTime? confirmedStartDate,
   }) async {
-    _requireEnabled(AppMode.student);
-    final imported = _service.decodeStudentImportCandidate(
-      source,
-      localeCode: _data.localeCode,
-    );
+    final prepared = await prepareTimetables(source);
+    final imported = prepared.value;
     if (imported.timetables.isEmpty) {
       throw FormatException(
         noImportableTimetablesMessage(localeCode: _data.localeCode),
       );
     }
     final selected = imported.timetables.first;
-    await importSelectedTimetablesJson(
-      source,
+    await applyTimetables(
+      prepared,
       timetableIds: [selected.id],
       mode: mode,
       importBundledPeriodTimeSets: importBundledPeriodTimeSets,
       targetPeriodTimeSetId: targetPeriodTimeSetId,
       replacementTimetableId: replacementTimetableId,
+      confirmedStartDates: {selected.id: ?confirmedStartDate},
     );
     return selected.config.name;
   }

@@ -28,6 +28,8 @@ class TimetableImportCandidate {
   final TimetableExportData data;
   final bool hasBundledPeriodTimeSets;
   List<TimetableData> get timetables => data.timetables;
+  Iterable<TimetableData> get timetablesNeedingStartDate =>
+      timetables.where((item) => item.config.startDateNeedsConfirmation);
 }
 
 class GeneralImportCandidate {
@@ -55,10 +57,12 @@ class DataTransferCodec {
   const DataTransferCodec({
     this._run = compute,
     this._localTimeZoneIdResolver = _platformLocalTimeZoneId,
+    this._clock = DateTime.now,
   });
 
   final DataTransferComputation _run;
   final LocalTimeZoneIdResolver _localTimeZoneIdResolver;
+  final DateTime Function() _clock;
 
   Future<TimetableImportCandidate> decodeTimetables(
     String source, {
@@ -66,6 +70,7 @@ class DataTransferCodec {
   }) => _run(_decodeTimetables, (
     source,
     localeCode,
+    normalizeDateOnly(_clock()),
   ), debugLabel: 'sked.import.timetables');
 
   Future<GeneralImportCandidate> decodeSchedules(
@@ -155,10 +160,28 @@ class DataTransferCodec {
 
 const _service = ImportExportService();
 
-TimetableImportCandidate _decodeTimetables((String, String) input) {
+TimetableImportCandidate _decodeTimetables((String, String, DateTime) input) {
   final envelope = ImportExportEnvelope.decode(input.$1);
+  final decoded = _service.decodeStudentImportEnvelope(
+    envelope,
+    localeCode: input.$2,
+  );
   return TimetableImportCandidate(
-    data: _service.decodeStudentImportEnvelope(envelope, localeCode: input.$2),
+    data: TimetableExportData(
+      timetables: [
+        for (final timetable in decoded.timetables)
+          if (timetable.config.startDateNeedsConfirmation)
+            timetable.copyWith(
+              config: timetable.config.copyWith(
+                startDate: input.$3,
+                startDateNeedsConfirmation: true,
+              ),
+            )
+          else
+            timetable,
+      ],
+      periodTimeSets: decoded.periodTimeSets,
+    ),
     hasBundledPeriodTimeSets: _hasBundledPeriodTimeSets(envelope),
   );
 }

@@ -120,6 +120,7 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
     String? replacementTimetableId,
+    Map<String, DateTime> confirmedStartDates = const {},
   }) {
     final imported = decodeStudentImportCandidate(
       source,
@@ -134,6 +135,7 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
       importBundledPeriodTimeSets: importBundledPeriodTimeSets,
       targetPeriodTimeSetId: targetPeriodTimeSetId,
       replacementTimetableId: replacementTimetableId,
+      confirmedStartDates: confirmedStartDates,
     );
   }
 
@@ -146,6 +148,7 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
     String? replacementTimetableId,
+    Map<String, DateTime> confirmedStartDates = const {},
   }) {
     final manualTargetSetId = targetPeriodTimeSetId?.trim() ?? '';
     if (!importBundledPeriodTimeSets) {
@@ -159,6 +162,24 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
     final selectedIdSet = timetableIds.toSet();
     final selectedTimetables = imported.timetables
         .where((item) => selectedIdSet.contains(item.id))
+        .map((item) {
+          if (!item.config.startDateNeedsConfirmation) return item;
+          final confirmed = confirmedStartDates[item.id];
+          if (confirmed == null ||
+              confirmed.year < 1 ||
+              confirmed.year > 9999) {
+            throw FormatException(
+              importStartDateConfirmationRequiredMessage(
+                localeCode: localeCode,
+              ),
+            );
+          }
+          return item.copyWith(
+            config: item.config.copyWith(
+              startDate: normalizeDateOnly(confirmed),
+            ),
+          );
+        })
         .toList();
     if (selectedTimetables.isEmpty) {
       throw FormatException(

@@ -46,12 +46,17 @@ class TimetableConfig {
     required this.startDate,
     required this.totalWeeks,
     required this.periodTimeSetId,
+    this.startDateNeedsConfirmation = false,
   });
 
   final String name;
   final DateTime startDate;
   final int totalWeeks;
   final String periodTimeSetId;
+
+  /// Import provenance only. Never persisted or accepted from JSON: local
+  /// legacy snapshots keep their existing fallback-date compatibility.
+  final bool startDateNeedsConfirmation;
 
   Map<String, dynamic> toJson() => {
     'name': name,
@@ -65,12 +70,14 @@ class TimetableConfig {
     String localeCode = defaultLocaleCode,
   }) {
     final startDateValue = _stringValue(json['startDate']);
+    final parsedStartDate = tryParseStrictIsoDateTime(startDateValue);
     return TimetableConfig(
       name: _stringValue(
         json['name'],
         untitledTimetableName(localeCode: localeCode),
       ),
-      startDate: tryParseStrictIsoDateTime(startDateValue) ?? DateTime.now(),
+      startDate: parsedStartDate ?? DateTime.now(),
+      startDateNeedsConfirmation: parsedStartDate == null,
       totalWeeks: normalizeTimetableWeeks(_intValue(json['totalWeeks'])),
       periodTimeSetId: _stringValue(json['periodTimeSetId']),
     );
@@ -81,12 +88,16 @@ class TimetableConfig {
     DateTime? startDate,
     int? totalWeeks,
     String? periodTimeSetId,
+    bool? startDateNeedsConfirmation,
   }) {
     return TimetableConfig(
       name: name ?? this.name,
       startDate: startDate ?? this.startDate,
       totalWeeks: normalizeTimetableWeeks(totalWeeks ?? this.totalWeeks),
       periodTimeSetId: periodTimeSetId ?? this.periodTimeSetId,
+      startDateNeedsConfirmation:
+          startDateNeedsConfirmation ??
+          (startDate == null ? this.startDateNeedsConfirmation : false),
     );
   }
 }

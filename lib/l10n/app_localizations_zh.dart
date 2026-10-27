@@ -1187,6 +1187,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importEntryLimitExceededMessage => '导入内容的条目过多或嵌套层级过深，请减少导出内容后重试。';
 
   @override
+  String get confirmImportedStartDatesTitle => '确认开学日期';
+
+  @override
+  String get confirmImportedStartDatesMessage =>
+      '导入内容中以下课表缺少有效的开学日期。下方暂以今天填写，请核对后再导入。';
+
+  @override
+  String get importStartDateConfirmationRequiredMessage => '请先确认缺失的开学日期，再导入课表。';
+
+  @override
   String get noPeriodTimesInImportMessage => '导入文件中没有节次时间';
 
   @override
@@ -4200,6 +4210,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get importEntryLimitExceededMessage => '匯入內容的項目過多或巢狀層級過深，請減少匯出內容後重試。';
+
+  @override
+  String get confirmImportedStartDatesTitle => '確認開學日期';
+
+  @override
+  String get confirmImportedStartDatesMessage =>
+      '匯入內容中以下課表缺少有效的開學日期。下方暫以今天填寫，請核對後再匯入。';
+
+  @override
+  String get importStartDateConfirmationRequiredMessage => '請先確認缺失的開學日期，再匯入課表。';
 
   @override
   String get noPeriodTimesInImportMessage => '匯入檔案中沒有節次時間';
