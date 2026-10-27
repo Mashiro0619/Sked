@@ -26,6 +26,24 @@ class _FailingNotificationSettingsGateway
       throw StateError('Platform plan unavailable');
 }
 
+class _PermissionSettingsGateway extends MemoryAgendaNotificationGateway {
+  var permissionRequests = 0;
+  var exactAlarmRequests = 0;
+  var grantExactAlarms = false;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return permissionGranted;
+  }
+
+  @override
+  Future<bool> requestExactAlarmPermission() async {
+    exactAlarmRequests++;
+    return exactAlarmGranted = grantExactAlarms;
+  }
+}
+
 class _NotificationSettingsStorage implements TimetableStorage {
   _NotificationSettingsStorage(this.data);
 
@@ -55,6 +73,80 @@ Future<AppRuntime> _provider() async {
 }
 
 void main() {
+  for (final permission in [
+    'already allowed',
+    'grant',
+    'deny',
+    'cancel',
+    'notifications denied',
+  ]) {
+    testWidgets('enabling reminders guides exact alarms: $permission', (
+      tester,
+    ) async {
+      final provider = await _provider();
+      addTearDown(provider.dispose);
+      final gateway = _PermissionSettingsGateway()
+        ..exactAlarmGranted = permission == 'already allowed'
+        ..permissionGranted = permission != 'notifications denied'
+        ..grantExactAlarms = permission == 'grant';
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+      );
+      addTearDown(service.dispose);
+      await tester.pumpWidget(
+        AppScope(
+          app: provider,
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: NotificationSettingsPage(
+              notificationService: service,
+              productivityBridge: AndroidProductivityBridge(enabled: false),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('notification-settings-enabled')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      final guide = find.byKey(
+        const ValueKey('notification-exact-alarm-guidance'),
+      );
+      final needsGuidance =
+          permission != 'already allowed' &&
+          permission != 'notifications denied';
+      expect(guide, needsGuidance ? findsOneWidget : findsNothing);
+      if (needsGuidance) {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.notificationExactAlarmRequired), findsOneWidget);
+        await tester.tap(
+          permission == 'cancel'
+              ? find.descendant(of: guide, matching: find.text(l10n.cancel))
+              : find.byKey(
+                  const ValueKey('notification-exact-alarm-guidance-open'),
+                ),
+        );
+      }
+      await tester.pumpAndSettle();
+      expect(gateway.permissionRequests, 1);
+      expect(
+        gateway.exactAlarmRequests,
+        permission == 'grant' || permission == 'deny' ? 1 : 0,
+      );
+      expect(provider.settingsView.notificationsEnabled, isTrue);
+      expect(
+        gateway.exactAlarmGranted,
+        permission == 'grant' || permission == 'already allowed',
+      );
+    }, variant: TargetPlatformVariant({TargetPlatform.android}));
+  }
+
   for (final blocked in ['notifications', 'exact alarms', 'battery']) {
     testWidgets('reports blocked $blocked and opens repair settings', (
       tester,

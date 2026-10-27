@@ -16,6 +16,7 @@ import '../services/agenda_coordinator.dart';
 import '../services/android_productivity_bridge.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
+import '../widgets/sked_confirmation_dialog.dart';
 import '../widgets/ui_command.dart';
 
 /// Application-wide notification and productivity integration settings.
@@ -212,7 +213,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         await commands.updateNotificationsEnabled(value);
         if (!value || !_notificationService.isSupported) return;
         try {
-          await _notificationService.gateway.requestPermission();
+          final gateway = _notificationService.gateway;
+          final granted = await gateway.requestPermission();
+          if (granted) await _guideExactAlarmPermission(gateway);
           await _agendaCoordinator?.reconcileNow();
         } catch (error, stackTrace) {
           // The setting itself is durable even when a platform permission
@@ -225,6 +228,36 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
       },
     );
     await _refreshPermissionState();
+  }
+
+  Future<void> _guideExactAlarmPermission(
+    AgendaNotificationGateway gateway,
+  ) async {
+    if (_isWindows || await gateway.exactAlarmsAllowed) return;
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    final openSettings = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => SkedConfirmationDialog(
+        key: const ValueKey('notification-exact-alarm-guidance'),
+        title: Text(l10n.notificationExactAlarm),
+        content: Text(l10n.notificationExactAlarmRequired),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('notification-exact-alarm-guidance-open'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.notificationExactAlarmRequest),
+          ),
+        ],
+      ),
+    );
+    if (openSettings == true && mounted) {
+      await gateway.requestExactAlarmPermission();
+    }
   }
 
   Future<void> _handleNotificationPermission() async {
