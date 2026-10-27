@@ -31,6 +31,7 @@ class _NotificationService extends ChangeNotifier
         AgendaNotificationReconcileMode.authoritative,
     AgendaNotificationReconcileOrigin origin =
         AgendaNotificationReconcileOrigin.foreground,
+    bool restoreFutureAlarms = false,
     AgendaNotificationProjectionFence? projectionFence,
     void Function(String?)? onPayload,
     FutureOr<void> Function(String?, String?)? onAction,

@@ -118,6 +118,7 @@ class AgendaBackgroundReconciler {
         anchor: anchor,
         mode: AgendaNotificationReconcileMode.recovery,
         origin: AgendaNotificationReconcileOrigin.background,
+        restoreFutureAlarms: true,
         projectionFence: fence,
       );
       // A clear may begin while a headless engine is initializing its
@@ -140,6 +141,7 @@ class AgendaBackgroundReconciler {
           anchor: _clock().toLocal(),
           mode: AgendaNotificationReconcileMode.recovery,
           origin: AgendaNotificationReconcileOrigin.background,
+          restoreFutureAlarms: true,
           projectionFence: fence,
         );
         if (!(await _notificationService.isProjectionFenceCurrent(fence))) {

@@ -498,6 +498,10 @@ class AgendaNotificationService extends ChangeNotifier {
     });
   }
 
+  /// [restoreFutureAlarms] repairs Android system recovery even when the
+  /// plugin's pending-request cache survived removal of the actual alarms.
+  /// It updates future reminders in place; due/past registration protection
+  /// still applies. Ordinary foreground reconciliation keeps its cheap diff.
   Future<AgendaNotificationStatus> reconcile(
     AppData data, {
     DateTime? anchor,
@@ -505,6 +509,7 @@ class AgendaNotificationService extends ChangeNotifier {
         AgendaNotificationReconcileMode.authoritative,
     AgendaNotificationReconcileOrigin origin =
         AgendaNotificationReconcileOrigin.foreground,
+    bool restoreFutureAlarms = false,
     AgendaNotificationProjectionFence? projectionFence,
     void Function(String? payload)? onPayload,
     FutureOr<void> Function(String? payload, String? actionId)? onAction,
@@ -549,6 +554,7 @@ class AgendaNotificationService extends ChangeNotifier {
           anchor: anchor,
           mode: mode,
           origin: origin,
+          restoreFutureAlarms: restoreFutureAlarms,
           projectionFence: projectionFence,
           onPayload: onPayload,
           onAction: onAction,
@@ -628,6 +634,7 @@ class AgendaNotificationService extends ChangeNotifier {
     DateTime? anchor,
     required AgendaNotificationReconcileMode mode,
     required AgendaNotificationReconcileOrigin origin,
+    required bool restoreFutureAlarms,
     required AgendaNotificationProjectionFence? projectionFence,
     void Function(String? payload)? onPayload,
     FutureOr<void> Function(String? payload, String? actionId)? onAction,
@@ -637,6 +644,7 @@ class AgendaNotificationService extends ChangeNotifier {
       anchor: anchor,
       mode: mode,
       origin: origin,
+      restoreFutureAlarms: restoreFutureAlarms,
       projectionFence: projectionFence,
       onPayload: onPayload,
       onAction: onAction,
@@ -648,6 +656,7 @@ class AgendaNotificationService extends ChangeNotifier {
     DateTime? anchor,
     required AgendaNotificationReconcileMode mode,
     required AgendaNotificationReconcileOrigin origin,
+    required bool restoreFutureAlarms,
     required AgendaNotificationProjectionFence? projectionFence,
     void Function(String? payload)? onPayload,
     FutureOr<void> Function(String? payload, String? actionId)? onAction,
@@ -1034,7 +1043,10 @@ class AgendaNotificationService extends ChangeNotifier {
         // such an item can race Android's delivery just as a fire-time change
         // can.  An authoritative foreground pass will replace it safely.
         if (retainedPendingKeys.contains(item.key)) continue;
-        if (!diff.toSchedule.any((candidate) => candidate.key == item.key) &&
+        final restoreFutureAlarm =
+            restoreFutureAlarms && item.fireAt.isAfter(current);
+        if (!restoreFutureAlarm &&
+            !diff.toSchedule.any((candidate) => candidate.key == item.key) &&
             !changedKeys.contains(item.key)) {
           continue;
         }
