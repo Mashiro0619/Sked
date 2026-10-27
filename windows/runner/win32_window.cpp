@@ -111,7 +111,8 @@ void WindowClassRegistrar::UnregisterWindowClass() {
   class_registered_ = false;
 }
 
-Win32Window::Win32Window() {
+Win32Window::Win32Window()
+    : placement_store_(DefaultWindowPlacementRegistryPath()) {
   ++g_active_window_count;
 }
 
@@ -123,6 +124,7 @@ Win32Window::~Win32Window() {
 bool Win32Window::Create(const std::wstring& title,
                          const Point& origin,
                          const Size& size) {
+  placement_ready_ = false;
   Destroy();
 
   const wchar_t* window_class =
@@ -145,12 +147,14 @@ bool Win32Window::Create(const std::wstring& title,
   }
 
   UpdateTheme(window);
-
-  return OnCreate();
+  first_show_command_ = placement_store_.RestoreHidden(window).value_or(SW_SHOWNORMAL);
+  const bool created = OnCreate();
+  placement_ready_ = created;
+  return created;
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  return ShowWindow(window_handle_, first_show_command_);
 }
 
 // static
@@ -167,6 +171,16 @@ LRESULT CALLBACK Win32Window::WndProc(HWND const window,
     EnableFullDpiSupportIfAvailable(window);
     that->window_handle_ = window;
   } else if (Win32Window* that = GetThisFromHandle(window)) {
+    if (that->placement_ready_) {
+      // Capture before Flutter/plugin handlers can consume the message. Write
+      // once after a move/resize, on state transitions, and before close.
+      bool save = message == WM_EXITSIZEMOVE || message == WM_CLOSE;
+      if (message == WM_SIZE) {
+        save = wparam != that->last_size_state_;
+        that->last_size_state_ = wparam;
+      }
+      if (save) that->placement_store_.Save(window);
+    }
     return that->MessageHandler(window, message, wparam, lparam);
   }
 

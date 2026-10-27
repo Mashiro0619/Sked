@@ -13,6 +13,7 @@ add_executable(${BINARY_NAME} WIN32
   "main.cpp"
   "utils.cpp"
   "win32_window.cpp"
+  "window_placement_store.cpp"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
   "Runner.rc"
   "runner.exe.manifest"
@@ -45,3 +46,26 @@ add_dependencies(${BINARY_NAME} flutter_assemble)
 add_dependencies(${BINARY_NAME} flutter_inappwebview_windows_DEPS)
 
 target_link_libraries(${BINARY_NAME} PRIVATE comctl32 dwmapi)
+
+# Acceptance binaries must not share the production registry or instance
+# namespace. This is a build-only setting, never a runtime environment override.
+set(SKED_WINDOWS_TEST_NAMESPACE "" CACHE STRING "Isolated native acceptance namespace")
+if(NOT SKED_WINDOWS_TEST_NAMESPACE STREQUAL "")
+  if(NOT SKED_WINDOWS_TEST_NAMESPACE MATCHES "^[A-Za-z0-9_.-]+$")
+    message(FATAL_ERROR "SKED_WINDOWS_TEST_NAMESPACE must contain only letters, digits, dots, dashes or underscores")
+  endif()
+  target_compile_definitions(${BINARY_NAME} PRIVATE
+    "SKED_WINDOWS_TEST_NAMESPACE=\"${SKED_WINDOWS_TEST_NAMESPACE}\"")
+endif()
+
+option(SKED_BUILD_WINDOWS_RUNNER_TESTS "Build isolated native runner tests" OFF)
+if(SKED_BUILD_WINDOWS_RUNNER_TESTS)
+  add_executable(sked_window_placement_tests
+    "tests/window_placement_store_test.cpp"
+    "window_placement_store.cpp")
+  apply_standard_settings(sked_window_placement_tests)
+  set_target_properties(sked_window_placement_tests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/native-tests")
+  target_include_directories(sked_window_placement_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(sked_window_placement_tests PRIVATE user32 advapi32)
+endif()

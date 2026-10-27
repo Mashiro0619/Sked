@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+#include "window_placement_store.h"
+
 // A class abstraction for a high DPI-aware Win32 Window. Intended to be
 // inherited from by classes that wish to specialize with custom
 // rendering and input handling
@@ -91,6 +93,10 @@ class Win32Window {
   static void UpdateTheme(HWND const window);
 
   bool quit_on_close_ = false;
+  WindowPlacementStore placement_store_;
+  bool placement_ready_ = false;
+  int first_show_command_ = SW_SHOWNORMAL;
+  WPARAM last_size_state_ = SIZE_RESTORED;
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;
