@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/semantics.dart' show SemanticsNode;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,12 +14,13 @@ CourseItem _course({
   int start = 480,
   int duration = 90,
   List<int> weeks = const [1],
+  int weekday = DateTime.monday,
 }) => CourseItem(
   id: id,
   name: 'Physics',
   location: 'Lab 3',
   teacher: 'Dr. Chen',
-  dayOfWeek: DateTime.monday,
+  dayOfWeek: weekday,
   semesterWeeks: weeks,
   periods: const [1],
   startMinutes: start,
@@ -38,8 +40,18 @@ Widget _grid({
   TargetPlatform platform = TargetPlatform.android,
   Brightness brightness = Brightness.light,
   int? courseColor,
+  bool showDayHeader = false,
+  List<int> visibleWeekdays = const [DateTime.monday],
+  bool fitVisibleDaysToWidth = true,
+  double textScale = 1,
+  TextDirection direction = TextDirection.ltr,
 }) => MaterialApp(
   theme: ThemeData(platform: platform, brightness: brightness),
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context)
+        .copyWith(textScaler: TextScaler.linear(textScale)),
+    child: Directionality(textDirection: direction, child: child!),
+  ),
   home: Scaffold(
     body: TimetableGrid(
       timetable: TimetableData(
@@ -64,9 +76,9 @@ Widget _grid({
       showPastEndedCourses: true,
       showFutureCourses: true,
       showGridLines: true,
-      showDayHeader: false,
-      fitVisibleDaysToWidth: true,
-      visibleWeekdays: const [DateTime.monday],
+      showDayHeader: showDayHeader,
+      fitVisibleDaysToWidth: fitVisibleDaysToWidth,
+      visibleWeekdays: visibleWeekdays,
       displayedCourseIdForConflict: (_) => courses.first.id,
       onCourseTap: onCourseTap ?? (_) {},
       onEntryTap: onEntryTap,
@@ -84,7 +96,365 @@ Widget _grid({
   ),
 );
 
+Finder _courseAnnotation(String label) => find.byWidgetPredicate(
+  (widget) => widget is Semantics && widget.properties.label == label,
+);
+
+// The annotation's nominal 48dp rect is insufficient: the old day-column
+// hardEdge Stack and scrolling ancestors can clip it down to a narrow strip.
+Rect _effectiveSemanticRect(WidgetTester tester, Finder annotation) {
+  final node = tester.getSemantics(annotation);
+  final render = tester.renderObject<RenderBox>(annotation);
+  var rect = node.rect;
+  for (final clip in [node.parentPaintClipRect, node.parentSemanticsClipRect]) {
+    if (clip != null) rect = rect.intersect(clip);
+  }
+  rect = MatrixUtils.transformRect(render.getTransformTo(null), rect);
+  RenderObject child = render;
+  while (child.parent != null) {
+    final parent = child.parent!;
+    final clip = parent.describeApproximatePaintClip(child);
+    if (clip != null) {
+      rect = rect.intersect(
+        MatrixUtils.transformRect(parent.getTransformTo(null), clip),
+      );
+    }
+    child = parent;
+  }
+  return rect;
+}
+
+void _expectAccessibleRect(
+  WidgetTester tester,
+  Finder annotation,
+  Rect viewport,
+) {
+  final node = tester.getSemantics(annotation);
+  expect(node.getSemanticsData().flagsCollection.isHidden, isFalse);
+  final effective = _effectiveSemanticRect(tester, annotation);
+  expect(effective.width, greaterThanOrEqualTo(48 - .001));
+  expect(effective.height, greaterThanOrEqualTo(48 - .001));
+  expect(effective.left, greaterThanOrEqualTo(viewport.left - .001));
+  expect(effective.top, greaterThanOrEqualTo(viewport.top - .001));
+  expect(effective.right, lessThanOrEqualTo(viewport.right + .001));
+  expect(effective.bottom, lessThanOrEqualTo(viewport.bottom + .001));
+}
+
+SemanticsNode _scrollAncestor(SemanticsNode node, ui.SemanticsAction action) {
+  var parent = node.parent;
+  while (parent != null) {
+    if (parent.getSemanticsData().hasAction(action)) return parent;
+    parent = parent.parent;
+  }
+  throw TestFailure('No scroll ancestor handles $action for ${node.label}');
+}
+
+Future<void> _semanticScrollToEdge(
+  WidgetTester tester,
+  SemanticsNode parent,
+  ui.SemanticsAction action,
+) async {
+  for (var page = 0; page < 10; page++) {
+    if (!parent.getSemanticsData().hasAction(action)) return;
+    parent.owner!.performAction(parent.id, action);
+    await tester.pumpAndSettle();
+  }
+  fail('Semantic scrolling did not reach the edge');
+}
+
 void main() {
+  for (final width in [320.0, 393.0]) {
+    for (final scale in [1.0, 2.0]) {
+      for (final direction in TextDirection.values) {
+        testWidgets(
+          'touch week semantics survive real clipping at $width ${scale}x $direction',
+          (tester) async {
+            await tester.binding.setSurfaceSize(Size(width, 800));
+            addTearDown(() => tester.binding.setSurfaceSize(null));
+            final handle = tester.ensureSemantics();
+            try {
+              final courses = [
+                for (var day = 1; day <= 7; day++)
+                  _course(id: 'day-$day', weekday: day, duration: 5),
+                _course(id: 'next', start: 485, duration: 5),
+              ];
+              final opened = <String>[];
+              await tester.pumpWidget(
+                _grid(
+                  courses: courses,
+                  locale: 'en',
+                  showDayHeader: true,
+                  visibleWeekdays: const [1, 2, 3, 4, 5, 6, 7],
+                  textScale: scale,
+                  direction: direction,
+                  onCourseTap: (info) => opened.add(info.course.id),
+                ),
+              );
+              await tester.pumpAndSettle();
+              final body = tester.getRect(
+                find.byKey(const ValueKey('timetable-grid-vertical-scroll')),
+              );
+              final header = tester.getRect(
+                find.byKey(
+                  const ValueKey('timetable-day-header-horizontal-scroll'),
+                ),
+              );
+              final week = Rect.fromLTRB(
+                header.left,
+                body.top,
+                header.right,
+                body.bottom,
+              );
+              final localizations = MaterialLocalizations.of(
+                tester.element(find.byType(TimetableGrid)),
+              );
+              for (var day = 1; day <= 7; day++) {
+                final column = tester.getRect(
+                  find.byKey(ValueKey('timetable-day-column-$day')),
+                );
+                expect(column.width, closeTo(week.width / 7, .001));
+                final dayLabel = localizations.formatFullDate(
+                  DateTime(2026, 1, 4 + day),
+                );
+                final annotation = _courseAnnotation(dayLabel);
+                expect(annotation, findsOneWidget);
+                _expectAccessibleRect(tester, annotation, header);
+                // Headers expose date information and do not invent a tap action.
+                expect(
+                  tester
+                      .getSemantics(annotation)
+                      .getSemanticsData()
+                      .hasAction(ui.SemanticsAction.tap),
+                  isFalse,
+                );
+              }
+              for (final course in courses) {
+                final weekday = const [
+                  'Monday',
+                  'Tuesday',
+                  'Wednesday',
+                  'Thursday',
+                  'Friday',
+                  'Saturday',
+                  'Sunday',
+                ][course.dayOfWeek - 1];
+                final label =
+                    'Physics, $weekday, Week 1, ${formatMinutes(course.startMinutes)}–${formatMinutes(course.endMinutes)}, Location: Lab 3, Teacher: Dr. Chen';
+                final annotation = _courseAnnotation(label);
+                expect(annotation, findsOneWidget);
+                _expectAccessibleRect(tester, annotation, week);
+                final node = tester.getSemantics(annotation);
+                node.owner!.performAction(node.id, ui.SemanticsAction.tap);
+                expect(opened.last, course.id);
+                final hit = find.byKey(
+                  ValueKey('timetable-course-hit-${course.id}'),
+                );
+                expect(tester.getSize(hit).width, lessThan(48));
+                await tester.tap(hit);
+                expect(opened.last, course.id);
+              }
+              final first = tester.getRect(
+                find.byKey(const ValueKey('timetable-course-hit-day-1')),
+              );
+              final next = tester.getRect(
+                find.byKey(const ValueKey('timetable-course-hit-next')),
+              );
+              expect(first.height, lessThan(48));
+              expect(first.bottom, lessThanOrEqualTo(next.top));
+              expect(opened.length, courses.length * 2);
+              expect(tester.takeException(), isNull);
+            } finally {
+              handle.dispose();
+            }
+          },
+        );
+      }
+    }
+  }
+
+  for (final direction in TextDirection.values) {
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      testWidgets(
+        'focused course reaches offscreen courses through semantic scrolling $direction $platform',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(320, 190));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final handle = tester.ensureSemantics();
+          try {
+            TimetableCourseTapInfo? opened;
+            await tester.pumpWidget(
+              _grid(
+                courses: [
+                  _course(id: 'top', duration: 5),
+                  _course(id: 'bottom', weekday: 7, start: 715, duration: 5),
+                ],
+                locale: 'en',
+                platform: platform,
+                showDayHeader: true,
+                visibleWeekdays: const [1, 2, 3, 4, 5, 6, 7],
+                fitVisibleDaysToWidth: false,
+                direction: direction,
+                onCourseTap: (value) => opened = value,
+              ),
+            );
+            await tester.pumpAndSettle();
+            const topLabel =
+                'Physics, Monday, Week 1, 08:00–08:05, Location: Lab 3, Teacher: Dr. Chen';
+            const bottomLabel =
+                'Physics, Sunday, Week 1, 11:55–12:00, Location: Lab 3, Teacher: Dr. Chen';
+            final forward = direction == TextDirection.ltr
+                ? ui.SemanticsAction.scrollLeft
+                : ui.SemanticsAction.scrollRight;
+            final backward = direction == TextDirection.ltr
+                ? ui.SemanticsAction.scrollRight
+                : ui.SemanticsAction.scrollLeft;
+            final top = tester.getSemantics(_courseAnnotation(topLabel));
+            final horizontal = _scrollAncestor(top, forward);
+            final vertical = _scrollAncestor(top, ui.SemanticsAction.scrollUp);
+            expect(horizontal.getSemanticsData().scrollPosition, 0);
+            expect(vertical.getSemanticsData().scrollPosition, 0);
+            await _semanticScrollToEdge(tester, horizontal, forward);
+            await _semanticScrollToEdge(
+              tester,
+              vertical,
+              ui.SemanticsAction.scrollUp,
+            );
+            expect(_courseAnnotation(topLabel), findsNothing);
+            final bottom = tester.getSemantics(_courseAnnotation(bottomLabel));
+            bottom.owner!.performAction(bottom.id, ui.SemanticsAction.tap);
+            expect(opened?.course.id, 'bottom');
+            expect(
+              horizontal.getSemanticsData().scrollPosition,
+              horizontal.getSemanticsData().scrollExtentMax,
+            );
+            expect(
+              vertical.getSemanticsData().scrollPosition,
+              vertical.getSemanticsData().scrollExtentMax,
+            );
+            await _semanticScrollToEdge(
+              tester,
+              _scrollAncestor(bottom, backward),
+              backward,
+            );
+            await _semanticScrollToEdge(
+              tester,
+              vertical,
+              ui.SemanticsAction.scrollDown,
+            );
+            expect(horizontal.getSemanticsData().scrollPosition, 0);
+            expect(vertical.getSemanticsData().scrollPosition, 0);
+            final restored = tester.getSemantics(_courseAnnotation(topLabel));
+            restored.owner!.performAction(restored.id, ui.SemanticsAction.tap);
+            expect(opened?.course.id, 'top');
+            expect(tester.takeException(), isNull);
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
+    }
+  }
+
+  for (final direction in TextDirection.values) {
+    testWidgets(
+      'touch targets stay inside the visible week while scrolling $direction',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 190));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final handle = tester.ensureSemantics();
+        try {
+          TimetableCourseTapInfo? opened;
+          await tester.pumpWidget(
+            _grid(
+              courses: [
+                _course(id: 'top', duration: 5),
+                _course(id: 'bottom', weekday: 7, start: 715, duration: 5),
+              ],
+              locale: 'en',
+              showDayHeader: true,
+              visibleWeekdays: const [1, 2, 3, 4, 5, 6, 7],
+              fitVisibleDaysToWidth: false,
+              direction: direction,
+              onCourseTap: (value) => opened = value,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final horizontal = tester
+              .state<ScrollableState>(
+                find.descendant(
+                  of: find.byKey(
+                    const ValueKey('timetable-grid-horizontal-scroll'),
+                  ),
+                  matching: find.byType(Scrollable),
+                ),
+              )
+              .position;
+          final vertical = tester
+              .state<ScrollableState>(
+                find.descendant(
+                  of: find.byKey(
+                    const ValueKey('timetable-grid-vertical-scroll'),
+                  ),
+                  matching: find.byWidgetPredicate(
+                    (widget) =>
+                        widget is Scrollable &&
+                        widget.axisDirection == AxisDirection.down,
+                  ),
+                ),
+              )
+              .position;
+          const topLabel =
+              'Physics, Monday, Week 1, 08:00–08:05, Location: Lab 3, Teacher: Dr. Chen';
+          const bottomLabel =
+              'Physics, Sunday, Week 1, 11:55–12:00, Location: Lab 3, Teacher: Dr. Chen';
+          expect(_courseAnnotation(bottomLabel), findsNothing);
+          // Leave only a small part of the first day and short course visible.
+          horizontal.jumpTo(20);
+          vertical.jumpTo(4);
+          await tester.pumpAndSettle();
+          final body = tester.getRect(
+            find.byKey(const ValueKey('timetable-grid-vertical-scroll')),
+          );
+          final header = tester.getRect(
+            find.byKey(
+              const ValueKey('timetable-day-header-horizontal-scroll'),
+            ),
+          );
+          final week = Rect.fromLTRB(
+            header.left,
+            body.top,
+            header.right,
+            body.bottom,
+          );
+          _expectAccessibleRect(tester, _courseAnnotation(topLabel), week);
+          final topNode = tester.getSemantics(_courseAnnotation(topLabel));
+          topNode.owner!.performAction(topNode.id, ui.SemanticsAction.tap);
+          expect(opened?.course.id, 'top');
+          horizontal.jumpTo(horizontal.maxScrollExtent);
+          vertical.jumpTo(vertical.maxScrollExtent);
+          await tester.pumpAndSettle();
+          expect(_courseAnnotation(topLabel), findsNothing);
+          _expectAccessibleRect(tester, _courseAnnotation(bottomLabel), week);
+          final bottomNode = tester.getSemantics(
+            _courseAnnotation(bottomLabel),
+          );
+          bottomNode.owner!.performAction(
+            bottomNode.id,
+            ui.SemanticsAction.tap,
+          );
+          expect(opened?.course.id, 'bottom');
+          final sunday = MaterialLocalizations.of(
+            tester.element(find.byType(TimetableGrid)),
+          ).formatFullDate(DateTime(2026, 1, 11));
+          _expectAccessibleRect(tester, _courseAnnotation(sunday), header);
+          expect(tester.takeException(), isNull);
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
+  }
+
   for (final brightness in Brightness.values) {
     for (final courseColor in [0xff000000, 0xff888888, 0xffffffff]) {
       testWidgets(

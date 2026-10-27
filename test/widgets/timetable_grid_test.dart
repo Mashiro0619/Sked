@@ -469,7 +469,13 @@ void main() {
               expect(opened?.course.location, 'Building B201');
               expect(opened?.course.teacher, 'Teacher');
               expect(
-                tester.getSemantics(lastCourse).label,
+                tester
+                    .getSemantics(
+                      find.bySemanticsLabel(
+                        RegExp('^Last selected day with full details, '),
+                      ),
+                    )
+                    .label,
                 contains('Building B201'),
               );
               semantics.dispose();
