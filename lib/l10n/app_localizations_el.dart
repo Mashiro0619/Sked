@@ -3264,4 +3264,8 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get periodTimesDayFull =>
       'No room remains for another period today. Adjust the existing times before adding more.';
+
+  @override
+  String get importWarningRecurrenceDateClamped =>
+      'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.';
 }

@@ -9,6 +9,7 @@ enum GeneralCalendarIcsWarningCode {
   adjustedEnd,
   unsupportedFields,
   unsupportedRRuleFrequency,
+  recurrenceDateClamped,
   unsupportedTimeZone,
 }
 
@@ -137,6 +138,7 @@ class GeneralCalendarIcsImportWarning {
         'Ignored unsupported fields: ${values.join(', ')}.',
       GeneralCalendarIcsWarningCode.unsupportedRRuleFrequency =>
         'Unsupported RRULE frequency "${values.isEmpty ? '' : values.first}" was ignored.',
+      GeneralCalendarIcsWarningCode.recurrenceDateClamped => 'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.',
       GeneralCalendarIcsWarningCode.unsupportedTimeZone =>
         'Skipped an event with unsupported time zones: ${values.join(', ')}.',
     };
@@ -1272,8 +1274,10 @@ GeneralEventRecurrenceRule _parseRRule(
   }
   final rawInterval = parts['INTERVAL'];
   final parsedInterval = rawInterval == null ? null : int.tryParse(rawInterval);
-  final interval = parsedInterval ?? 1;
-  if (rawInterval != null && (parsedInterval == null || interval < 1)) {
+  final sourceInterval = parsedInterval ?? 1;
+  final interval = freq == 'YEARLY' ? sourceInterval * 12 : sourceInterval;
+  if ((rawInterval != null && (parsedInterval == null || sourceInterval < 1)) ||
+      (freq == 'YEARLY' && sourceInterval > 83)) {
     unsupportedValues.add('INTERVAL=$rawInterval');
   }
   final rawCount = parts['COUNT'];
@@ -1289,7 +1293,7 @@ GeneralEventRecurrenceRule _parseRRule(
   final unit = switch (freq) {
     'DAILY' => GeneralEventRecurrenceUnit.day,
     'WEEKLY' => GeneralEventRecurrenceUnit.week,
-    'MONTHLY' => GeneralEventRecurrenceUnit.month,
+    'MONTHLY' || 'YEARLY' => GeneralEventRecurrenceUnit.month,
     _ => null,
   };
   if (unit == null) {
@@ -1314,6 +1318,13 @@ GeneralEventRecurrenceRule _parseRRule(
   }
   if (unit == null) {
     return const GeneralEventRecurrenceRule();
+  }
+  if (freq == 'YEARLY' && eventStart.month == 2 && eventStart.day == 29) {
+    warnings.add(
+      const GeneralCalendarIcsImportWarning(
+        code: GeneralCalendarIcsWarningCode.recurrenceDateClamped,
+      ),
+    );
   }
   final type = interval <= 1
       ? switch (unit) {

@@ -2362,6 +2362,8 @@ class _SettingsPageState extends State<SettingsPage>
         ),
       GeneralCalendarIcsWarningCode.unsupportedTimeZone =>
         l10n.importWarningSkippedUnsupportedTimeZone(warning.values.join(', ')),
+      GeneralCalendarIcsWarningCode.recurrenceDateClamped =>
+        l10n.importWarningRecurrenceDateClamped,
     };
     final identity = [
       if (warning.eventTitle?.isNotEmpty == true) warning.eventTitle!,

@@ -37,16 +37,90 @@ List<String> _dates(
 
 void _expectRoundtrip(
   GeneralCalendarIcsImportResult result,
-  List<String> dates,
-) {
+  List<String> dates, {
+  int endYear = 2027,
+}) {
   expect(result.warningItems, isEmpty);
-  expect(_dates(result), dates);
+  expect(_dates(result, endYear: endYear), dates);
   final restored = _ics.importSchedules(_ics.exportSchedules(result.schedules));
   expect(restored.warningItems, isEmpty);
-  expect(_dates(restored), dates);
+  expect(_dates(restored, endYear: endYear), dates);
 }
 
 void main() {
+  for (final interval in [1, 2, 83]) {
+    test('plain YEARLY interval $interval preserves actual annual dates', () {
+      final result = _import('FREQ=YEARLY;INTERVAL=$interval;WKST=SU;COUNT=3');
+      final rule = result.schedules.single.events.single.recurrenceRule;
+      expect(rule.type, GeneralEventRecurrence.custom);
+      expect(rule.unit, GeneralEventRecurrenceUnit.month);
+      expect(rule.interval, 12 * interval);
+      expect(rule.count, 3);
+      _expectRoundtrip(result, [
+        '2026-05-25',
+        '${2026 + interval}-05-25',
+        '${2026 + interval * 2}-05-25',
+      ], endYear: 2027 + interval * 2);
+    });
+  }
+
+  test('plain YEARLY keeps COUNT and UNTIL limits', () {
+    final result = _import('FREQ=YEARLY;COUNT=5;UNTIL=20270525');
+    final rule = result.schedules.single.events.single.recurrenceRule;
+    expect(rule.interval, 12);
+    expect(rule.count, 5);
+    expect(rule.untilDateIso, '2027-05-25');
+    _expectRoundtrip(result, ['2026-05-25', '2027-05-25'], endYear: 2030);
+  });
+
+  test(
+    'YEARLY leap day warns and recovers its anchor in the next leap year',
+    () {
+      final result = _import('FREQ=YEARLY;COUNT=5', day: '20240229');
+      expect(
+        result.warningItems.single.code,
+        GeneralCalendarIcsWarningCode.recurrenceDateClamped,
+      );
+      expect(result.warningItems.single.eventUid, 'equivalent-rule');
+      expect(
+        result.warningItems.single.fallbackMessage,
+        contains('rule was kept'),
+      );
+      final dates = [
+        '2024-02-29',
+        '2025-02-28',
+        '2026-02-28',
+        '2027-02-28',
+        '2028-02-29',
+      ];
+      expect(_dates(result, endYear: 2029), dates);
+      final restored = _ics.importSchedules(
+        _ics.exportSchedules(result.schedules),
+      );
+      expect(restored.warningItems, isEmpty);
+      expect(_dates(restored, endYear: 2029), dates);
+    },
+  );
+
+  for (final modifier in [
+    'INTERVAL=84',
+    'INTERVAL=0',
+    'BYMONTH=5',
+    'BYMONTHDAY=25',
+    'BYDAY=MO',
+    'BYSETPOS=1',
+  ]) {
+    test('YEARLY with unsupported $modifier remains reported', () {
+      final result = _import('FREQ=YEARLY;$modifier;COUNT=3');
+      expect(
+        result.schedules.single.events.single.recurrenceRule.isRepeating,
+        false,
+      );
+      expect(result.warningItems.single.values, contains('RRULE:$modifier'));
+      expect(_dates(result), ['2026-05-25']);
+    });
+  }
+
   const weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
   for (var weekday = 0; weekday < weekdays.length; weekday++) {
     test('single matching BYDAY preserves ${weekdays[weekday]} instances', () {

@@ -5705,6 +5705,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No room remains for another period today. Adjust the existing times before adding more.'**
   String get periodTimesDayFull;
+
+  /// No description provided for @importWarningRecurrenceDateClamped.
+  ///
+  /// In en, this message translates to:
+  /// **'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.'**
+  String get importWarningRecurrenceDateClamped;
 }
 
 class _AppLocalizationsDelegate

@@ -2996,6 +2996,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get periodTimesDayFull => '当天已没有足够时间添加下一节，请先调整已有节次时间。';
+
+  @override
+  String get importWarningRecurrenceDateClamped =>
+      '已保留重复规则，但不存在的日期会移至当月最后一天；源日历的规则会跳过这些日期。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5991,4 +5995,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get periodTimesDayFull => '當天已沒有足夠時間新增下一節，請先調整現有節次時間。';
+
+  @override
+  String get importWarningRecurrenceDateClamped =>
+      '已保留重複規則，但不存在的日期會移至當月最後一天；來源日曆的規則會略過這些日期。';
 }

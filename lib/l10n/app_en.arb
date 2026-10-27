@@ -2201,5 +2201,6 @@
       }
     }
   },
-  "periodTimesDayFull": "No room remains for another period today. Adjust the existing times before adding more."
+  "periodTimesDayFull": "No room remains for another period today. Adjust the existing times before adding more.",
+  "importWarningRecurrenceDateClamped": "The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates."
 }
