@@ -12,6 +12,7 @@ enum GeneralCalendarIcsWarningCode {
   recurrenceDateClamped,
   skippedRecurrenceOverride,
   skippedCancelledEvent,
+  skippedEmptyRecurrence,
   unsupportedTimeZone,
 }
 
@@ -145,6 +146,7 @@ class GeneralCalendarIcsImportWarning {
         'Skipped a recurrence override whose original occurrence could not be identified safely: ${values.join(', ')}.',
       GeneralCalendarIcsWarningCode.skippedCancelledEvent =>
         'Skipped a cancelled event.',
+      GeneralCalendarIcsWarningCode.skippedEmptyRecurrence => 'Skipped a recurring event because UNTIL is before its first occurrence.',
       GeneralCalendarIcsWarningCode.unsupportedTimeZone =>
         'Skipped an event with unsupported time zones: ${values.join(', ')}.',
     };
@@ -574,14 +576,16 @@ class GeneralCalendarIcsService {
       unsupportedParts: unsupportedRRuleParts,
       duplicateParts: duplicateRRuleParts,
     );
-    final exceptionDates = _importExceptionDates(
-      exceptionFields,
-      start: start,
-      rule: recurrenceRule,
-      allDay: isAllDay,
-      unsupportedFields: unsupportedFields,
-      localTimeZoneId: localTimeZoneId,
-    );
+    final exceptionDates = recurrenceRule == null
+        ? <String>[]
+        : _importExceptionDates(
+            exceptionFields,
+            start: start,
+            rule: recurrenceRule,
+            allDay: isAllDay,
+            unsupportedFields: unsupportedFields,
+            localTimeZoneId: localTimeZoneId,
+          );
     final unsupported = [
       ...unsupportedFields,
       for (final field in duplicateFieldNames) 'DUPLICATE:$field',
@@ -596,6 +600,8 @@ class GeneralCalendarIcsService {
         ),
       );
     }
+
+    if (recurrenceRule == null) return null;
 
     return GeneralEvent(
       id: _importedEventIdFromUid(uid),
@@ -1071,7 +1077,11 @@ bool _isIcsDateOnly(_IcsField field) {
       RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value);
 }
 
-DateTime? _parseDate(String value, {bool allowDateTime = false}) {
+DateTime? _parseDate(
+  String value, {
+  bool allowDateTime = false,
+  bool isUtc = false,
+}) {
   final trimmed = value.trim();
   final basicPattern = allowDateTime
       ? RegExp(r'^(\d{4})(\d{2})(\d{2})(?:T.*)?$')
@@ -1082,6 +1092,7 @@ DateTime? _parseDate(String value, {bool allowDateTime = false}) {
       year: int.parse(basicMatch.group(1)!),
       month: int.parse(basicMatch.group(2)!),
       day: int.parse(basicMatch.group(3)!),
+      isUtc: isUtc,
     );
   }
 
@@ -1096,6 +1107,7 @@ DateTime? _parseDate(String value, {bool allowDateTime = false}) {
     year: int.parse(isoMatch.group(1)!),
     month: int.parse(isoMatch.group(2)!),
     day: int.parse(isoMatch.group(3)!),
+    isUtc: isUtc,
   );
 }
 
@@ -1113,22 +1125,36 @@ DateTime? _parseIsoDateTime(String value) {
   final minute = int.parse(match.group(5) ?? '0');
   final second = int.parse(match.group(6) ?? '0');
   final offset = match.group(7);
-  final local = _strictDateTime(
+  if (offset == null || offset.isEmpty) {
+    return _strictDateTime(
+      year: year,
+      month: month,
+      day: day,
+      hour: hour,
+      minute: minute,
+      second: second,
+    );
+  }
+  if (offset == 'Z') {
+    return _strictDateTime(
+      year: year,
+      month: month,
+      day: day,
+      hour: hour,
+      minute: minute,
+      second: second,
+      isUtc: true,
+    );
+  }
+  return _strictDateTimeWithOffset(
     year: year,
     month: month,
     day: day,
     hour: hour,
     minute: minute,
     second: second,
+    offset: offset,
   );
-  if (local == null) {
-    return null;
-  }
-  if (offset == null || offset.isEmpty) {
-    return local;
-  }
-  final parsed = DateTime.tryParse(value);
-  return parsed;
 }
 
 _IcsDuration? _parseIcsDuration(String value) {
@@ -1218,7 +1244,7 @@ DateTime? _strictDateTime({
       second > 59) {
     return null;
   }
-  final maxDay = DateTime(year, month + 1, 0).day;
+  final maxDay = DateTime.utc(year, month + 1, 0).day;
   if (day < 1 || day > maxDay) {
     return null;
   }
@@ -1236,15 +1262,16 @@ DateTime? _strictDateTimeWithOffset({
   required int second,
   required String offset,
 }) {
-  final local = _strictDateTime(
+  final utcBase = _strictDateTime(
     year: year,
     month: month,
     day: day,
     hour: hour,
     minute: minute,
     second: second,
+    isUtc: true,
   );
-  if (local == null) {
+  if (utcBase == null) {
     return null;
   }
   final match = RegExp(r'^([+-])(\d{2}):?(\d{2})$').firstMatch(offset);
@@ -1257,10 +1284,10 @@ DateTime? _strictDateTimeWithOffset({
     return null;
   }
   final duration = Duration(hours: offsetHours, minutes: offsetMinutes);
-  final utcBase = DateTime.utc(year, month, day, hour, minute, second);
-  return match.group(1) == '+'
+  final result = match.group(1) == '+'
       ? utcBase.subtract(duration)
       : utcBase.add(duration);
+  return result.year >= 1 && result.year <= 9999 ? result : null;
 }
 
 String? _exportRRule(GeneralEvent event, DateTime start) {
@@ -1316,7 +1343,7 @@ String? _exportRRule(GeneralEvent event, DateTime start) {
   return parts.join(';');
 }
 
-GeneralEventRecurrenceRule _parseRRule(
+GeneralEventRecurrenceRule? _parseRRule(
   String? value,
   List<GeneralCalendarIcsImportWarning> warnings, {
   required DateTime eventStart,
@@ -1421,7 +1448,9 @@ GeneralEventRecurrenceRule _parseRRule(
     unsupportedValues.add('COUNT=$rawCount');
   }
   final rawUntil = parts['UNTIL'];
-  final until = rawUntil == null ? null : _parseRRuleUntil(rawUntil);
+  final until = rawUntil == null
+      ? null
+      : _parseRRuleUntil(rawUntil, utcFloating: eventStart.isUtc);
   if (rawUntil != null && until == null) {
     unsupportedValues.add('UNTIL=$rawUntil');
   }
@@ -1454,13 +1483,6 @@ GeneralEventRecurrenceRule _parseRRule(
   if (unit == null) {
     return const GeneralEventRecurrenceRule();
   }
-  if (freq == 'YEARLY' && eventStart.month == 2 && eventStart.day == 29) {
-    warnings.add(
-      const GeneralCalendarIcsImportWarning(
-        code: GeneralCalendarIcsWarningCode.recurrenceDateClamped,
-      ),
-    );
-  }
   final type = interval <= 1
       ? switch (unit) {
           GeneralEventRecurrenceUnit.day => GeneralEventRecurrence.daily,
@@ -1468,49 +1490,79 @@ GeneralEventRecurrenceRule _parseRRule(
           GeneralEventRecurrenceUnit.month => GeneralEventRecurrence.monthly,
         }
       : GeneralEventRecurrence.custom;
-  return GeneralEventRecurrenceRule(
+  var rule = GeneralEventRecurrenceRule(
     type: type,
     interval: interval.clamp(1, 999).toInt(),
     unit: unit,
-    untilDateIso: until?.toIso8601String().split('T').first,
     count: count == null || count < 1 ? null : count,
     monthlyAnchorDay: monthlyAnchorDay,
   );
+  if (until != null) {
+    final dateOnly = _parseDate(rawUntil!, isUtc: true) != null;
+    // Floating UNTIL uses DTSTART's clock basis; explicit offsets denote an
+    // instant and must be converted before choosing its calendar boundary.
+    final boundary = dateOnly || eventStart.isUtc ? until : until.toLocal();
+    if (boundary.year < 1 || boundary.year > 9999) {
+      unsupportedParts?.add('UNTIL=$rawUntil');
+      return const GeneralEventRecurrenceRule();
+    }
+    rule = rule.copyWith(
+      untilDateIso: boundary.toIso8601String().split('T').first,
+    );
+    final candidateCount = boundedGeneralRecurrenceCount(eventStart, rule) ?? 0;
+    var candidate = generalRecurrenceStartAt(
+      eventStart,
+      rule,
+      candidateCount - 1,
+    );
+    if (!dateOnly && candidate != null && candidate.isAfter(boundary)) {
+      candidate = generalRecurrenceStartAt(
+        eventStart,
+        rule,
+        candidateCount - 2,
+      );
+    }
+    if (candidate == null) {
+      warnings.add(
+        const GeneralCalendarIcsImportWarning(
+          code: GeneralCalendarIcsWarningCode.skippedEmptyRecurrence,
+        ),
+      );
+      return null;
+    }
+    if (!dateOnly && candidate.isAfter(boundary)) {
+      unsupportedParts?.add('UNTIL=$rawUntil');
+      return const GeneralEventRecurrenceRule();
+    }
+    if (!dateOnly) {
+      rule = rule.copyWith(
+        untilDateIso: candidate.toIso8601String().split('T').first,
+      );
+    }
+  }
+  if (freq == 'YEARLY' && eventStart.month == 2 && eventStart.day == 29) {
+    warnings.add(
+      const GeneralCalendarIcsImportWarning(
+        code: GeneralCalendarIcsWarningCode.recurrenceDateClamped,
+      ),
+    );
+  }
+  return rule;
 }
 
-DateTime? _parseRRuleUntil(String value) {
+DateTime? _parseRRuleUntil(String value, {required bool utcFloating}) {
   final trimmed = value.trim();
-  final date = _parseDate(trimmed);
+  final date = _parseDate(trimmed, isUtc: true);
   if (date != null) {
     return date;
   }
 
-  final basicMatch = RegExp(r'^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$')
-      .firstMatch(trimmed);
-  if (basicMatch != null) {
-    return _strictDateTime(
-      year: int.parse(basicMatch.group(1)!),
-      month: int.parse(basicMatch.group(2)!),
-      day: int.parse(basicMatch.group(3)!),
-      hour: int.parse(basicMatch.group(4)!),
-      minute: int.parse(basicMatch.group(5)!),
-      second: int.parse(basicMatch.group(6)!),
-    );
-  }
-
-  final isoMatch = RegExp(
-    r'^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-]\d{2}:?\d{2})?$',
-  ).firstMatch(trimmed);
-  if (isoMatch == null) {
-    return null;
-  }
-  return _strictDateTime(
-    year: int.parse(isoMatch.group(1)!),
-    month: int.parse(isoMatch.group(2)!),
-    day: int.parse(isoMatch.group(3)!),
-    hour: int.parse(isoMatch.group(4)!),
-    minute: int.parse(isoMatch.group(5)!),
-    second: int.parse(isoMatch.group(6) ?? '0'),
+  if (!trimmed.contains(RegExp('[T ]'))) return null;
+  final timeValue = utcFloating && _explicitIcsOffset(trimmed) == null
+      ? '${trimmed}Z'
+      : trimmed;
+  return _parseIcsDateTime(
+    _IcsField(name: 'UNTIL', params: const {}, value: timeValue),
   );
 }
 

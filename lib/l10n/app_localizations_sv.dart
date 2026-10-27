@@ -3229,4 +3229,8 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get importWarningSkippedCancelledEvent => 'Skipped a cancelled event.';
+
+  @override
+  String get importWarningSkippedEmptyRecurrence =>
+      'Skipped a recurring event because UNTIL is before its first occurrence.';
 }

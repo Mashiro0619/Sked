@@ -5729,6 +5729,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skipped a cancelled event.'**
   String get importWarningSkippedCancelledEvent;
+
+  /// No description provided for @importWarningSkippedEmptyRecurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped a recurring event because UNTIL is before its first occurrence.'**
+  String get importWarningSkippedEmptyRecurrence;
 }
 
 class _AppLocalizationsDelegate

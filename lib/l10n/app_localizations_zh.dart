@@ -3011,6 +3011,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importWarningSkippedCancelledEvent => '已跳过已取消的日程。';
+
+  @override
+  String get importWarningSkippedEmptyRecurrence => '已跳过截止时刻早于首个实例的重复日程。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6021,4 +6024,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get importWarningSkippedCancelledEvent => '已略過已取消的日程。';
+
+  @override
+  String get importWarningSkippedEmptyRecurrence => '已略過截止時刻早於首個實例的重複日程。';
 }

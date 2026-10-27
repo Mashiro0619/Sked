@@ -2368,6 +2368,8 @@ class _SettingsPageState extends State<SettingsPage>
         l10n.importWarningSkippedRecurrenceOverride(warning.values.join(', ')),
       GeneralCalendarIcsWarningCode.skippedCancelledEvent =>
         l10n.importWarningSkippedCancelledEvent,
+      GeneralCalendarIcsWarningCode.skippedEmptyRecurrence =>
+        l10n.importWarningSkippedEmptyRecurrence,
     };
     final identity = [
       if (warning.eventTitle?.isNotEmpty == true) warning.eventTitle!,
