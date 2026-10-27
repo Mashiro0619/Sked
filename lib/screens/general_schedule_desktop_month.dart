@@ -208,7 +208,7 @@ class _DesktopMonthDayCell extends StatelessWidget {
         : baseSurface;
     final dateColor = currentMonth
         ? colors.onSurface
-        : colors.onSurfaceVariant.withValues(alpha: .65);
+        : _outsideMonthDateColor(colors, surface);
     final badge = SizedBox.square(
       dimension: metrics.dateDiameter,
       child: DecoratedBox(

@@ -1210,6 +1210,16 @@ class _MonthWeekdayHeaderRow extends StatelessWidget {
   }
 }
 
+Color _outsideMonthDateColor(ColorScheme colors, Color background) {
+  bool readable(Color color) =>
+      colorContrastRatio(Color.alphaBlend(color, background), background) >=
+      4.5;
+  for (final color in [colors.onSurfaceVariant, colors.onSurface]) {
+    if (readable(color)) return color;
+  }
+  return readable(Colors.black) ? Colors.black : Colors.white;
+}
+
 class _MonthDayCell extends StatelessWidget {
   const _MonthDayCell({
     required this.date,
@@ -1244,7 +1254,15 @@ class _MonthDayCell extends StatelessWidget {
     final isCurrentMonth = date.month == month;
     final baseColor = isCurrentMonth
         ? colorScheme.onSurface
-        : colorScheme.onSurfaceVariant.withAlpha(130);
+        : _outsideMonthDateColor(
+            colorScheme,
+            Color.alphaBlend(
+              !compact && isSelected
+                  ? colorScheme.primary.withValues(alpha: 0.10)
+                  : Colors.transparent,
+              SkedSurface.colorOf(context),
+            ),
+          );
     final hasEventMarker = occurrences.isNotEmpty;
     final dayFillColor = isToday ? colorScheme.primary : Colors.transparent;
     final standardTextColor = isToday ? colorScheme.onPrimary : baseColor;
