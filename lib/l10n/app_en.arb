@@ -2172,5 +2172,10 @@
   "notificationWindowsCoverageCapacityLimited": "The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "courseInactiveThisWeek": "Not scheduled this week",
-  "@courseInactiveThisWeek": {"description": "Accessibility status of a course that does not run in the displayed week."}
+  "@courseInactiveThisWeek": {"description": "Accessibility status of a course that does not run in the displayed week."},
+  "schoolWebImportSignOut": "Sign out",
+  "schoolWebImportSignOutTitle": "Sign out of school websites?",
+  "schoolWebImportSignOutMessage": "This clears sign-in cookies and saved website data for school pages in Sked. Imported timetables and app settings are kept.",
+  "schoolWebImportSignOutSuccess": "School website sign-in data cleared.",
+  "schoolWebImportSignOutFailed": "Could not clear school sign-in data. Please try again."
 }

@@ -2940,6 +2940,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get courseInactiveThisWeek => '本周不上课';
+
+  @override
+  String get schoolWebImportSignOut => '退出登录';
+
+  @override
+  String get schoolWebImportSignOutTitle => '退出学校网页登录？';
+
+  @override
+  String get schoolWebImportSignOutMessage =>
+      '这会清除 Sked 内学校网页的登录 Cookie 和保存的网页数据。已导入的课表和应用设置会保留。';
+
+  @override
+  String get schoolWebImportSignOutSuccess => '已清除学校网页登录数据。';
+
+  @override
+  String get schoolWebImportSignOutFailed => '无法清除学校网页登录数据，请重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5879,4 +5895,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get courseInactiveThisWeek => '本週不上課';
+
+  @override
+  String get schoolWebImportSignOut => '登出';
+
+  @override
+  String get schoolWebImportSignOutTitle => '登出學校網站？';
+
+  @override
+  String get schoolWebImportSignOutMessage =>
+      '這會清除 Sked 內學校網頁的登入 Cookie 和儲存的網頁資料。已匯入的課表和應用程式設定會保留。';
+
+  @override
+  String get schoolWebImportSignOutSuccess => '已清除學校網站登入資料。';
+
+  @override
+  String get schoolWebImportSignOutFailed => '無法清除學校網站登入資料，請重試。';
 }

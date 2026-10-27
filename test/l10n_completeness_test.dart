@@ -19,7 +19,15 @@ void main() {
       final allowedFallbacks =
           locale.languageCode == 'en' || locale.languageCode == 'zh'
           ? const <String>{}
-          : const {'notificationCoverageBlocked', 'notificationCoverageFailed'};
+          : const {
+              'notificationCoverageBlocked',
+              'notificationCoverageFailed',
+              'schoolWebImportSignOut',
+              'schoolWebImportSignOutTitle',
+              'schoolWebImportSignOutMessage',
+              'schoolWebImportSignOutSuccess',
+              'schoolWebImportSignOutFailed',
+            };
       final file = File('lib/l10n/app_$locale.arb');
       expect(file.existsSync(), isTrue, reason: 'Missing locale source: $file');
       final messages =

@@ -526,6 +526,115 @@ void main() {
 
   group('school web import browser shell', () {
     testWidgets(
+      'sign-out confirmation preserves data on cancel and resets the browser on accept',
+      (tester) async {
+        final provider = await _createConfiguredProvider();
+        addTearDown(provider.dispose);
+        final browser = _WebViewHarness();
+        final controller = _FakeWebViewController();
+        final allowClear = Completer<void>();
+        var clears = 0;
+        final session = SchoolWebSessionService(
+          platform: TargetPlatform.windows,
+          disposeWindowsView: (_) async {},
+          clearWindowsProfile: () async {
+            clears++;
+            await allowClear.future;
+          },
+        );
+        await tester.pumpWidget(
+          _browserApp(
+            provider: provider,
+            webViewBuilder: browser.build,
+            supportsPopupWindows: true,
+            sessionService: session,
+            loadSites: () async => [_site],
+          ),
+        );
+        await tester.pumpAndSettle();
+        browser.pane().onWebViewCreated(controller);
+        await tester.pumpAndSettle();
+        final originalSettings =
+            provider.settingsView.customSchoolImportBaseUrl;
+        final signOut = find.byKey(
+          const ValueKey('school-web-import-sign-out'),
+        );
+        final oldAction = tester.widget<IconButton>(signOut).onPressed!;
+        oldAction();
+        oldAction();
+        await tester.pumpAndSettle();
+        expect(find.text('Sign out of school websites?'), findsOneWidget);
+        await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+        await tester.pumpAndSettle();
+        expect(clears, 0);
+        expect(find.text('pane-root'), findsOneWidget);
+
+        await tester.tap(signOut);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
+        await tester.pump();
+        await tester.pump();
+        expect(clears, 1);
+        expect(tester.widget<IconButton>(signOut).onPressed, isNull);
+        expect(find.text('pane-root'), findsNothing);
+        allowClear.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('pane-root'), findsOneWidget);
+        expect(
+          find.text('School website sign-in data cleared.'),
+          findsOneWidget,
+        );
+        expect(
+          provider.settingsView.customSchoolImportBaseUrl,
+          originalSettings,
+        );
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.windows,
+      }),
+    );
+
+    testWidgets('failed sign-out reports failure and leaves a retry entry', (
+      tester,
+    ) async {
+      final provider = await _createConfiguredProvider();
+      addTearDown(provider.dispose);
+      final browser = _WebViewHarness();
+      final session = SchoolWebSessionService(
+        platform: TargetPlatform.windows,
+        disposeWindowsView: (_) async {},
+        clearWindowsProfile: () async =>
+            throw StateError('synthetic clear failure'),
+      );
+      await tester.pumpWidget(
+        _browserApp(
+          provider: provider,
+          webViewBuilder: browser.build,
+          sessionService: session,
+          supportsPopupWindows: true,
+          loadSites: () async => [_site],
+        ),
+      );
+      await tester.pumpAndSettle();
+      browser.pane().onWebViewCreated(_FakeWebViewController());
+      await tester.pumpAndSettle();
+      final signOut = find.byKey(const ValueKey('school-web-import-sign-out'));
+      await tester.tap(signOut);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Could not clear school sign-in data. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.text('School website sign-in data cleared.'), findsNothing);
+      expect(tester.widget<IconButton>(signOut).onPressed, isNotNull);
+      expect(tester.takeException(), isNull);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+    testWidgets(
       'session clear closes native panes before cleanup and reopens a fresh login',
       (tester) async {
         final provider = await _createConfiguredProvider();

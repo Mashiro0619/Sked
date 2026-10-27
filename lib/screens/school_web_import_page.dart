@@ -171,6 +171,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   bool _hasStartedInitialLoad = false;
   bool _isHandlingSystemBack = false;
   bool _isExitConfirmationOpen = false;
+  bool _isSessionConfirmationOpen = false;
   bool _isAddressEditorOpen = false;
   bool _allowRouteExit = false;
   List<SchoolSite> _sites = const [];
@@ -187,7 +188,9 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   _SchoolWebPane get _activePane => _paneById(_activePaneId) ?? _rootPane;
 
   bool get _hasBlockingDialog =>
-      _isExitConfirmationOpen || _isAddressEditorOpen;
+      _isExitConfirmationOpen ||
+      _isAddressEditorOpen ||
+      _isSessionConfirmationOpen;
 
   @override
   void initState() {
@@ -316,6 +319,23 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
                     )
                   : const Icon(Icons.file_download_outlined),
               tooltip: l10n.schoolWebImportImportCurrentPage,
+              constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+              style: IconButton.styleFrom(
+                fixedSize: const Size.square(48),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            IconButton(
+              key: const ValueKey('school-web-import-sign-out'),
+              onPressed:
+                  _hasBlockingDialog ||
+                      _isParsing ||
+                      _sessionService.isClearing ||
+                      !_supportsWebView
+                  ? null
+                  : _signOutOfSchoolWebsites,
+              icon: const Icon(Icons.logout),
+              tooltip: l10n.schoolWebImportSignOut,
               constraints: const BoxConstraints.tightFor(width: 48, height: 48),
               style: IconButton.styleFrom(
                 fixedSize: const Size.square(48),
@@ -719,10 +739,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   }
 
   Future<void> _confirmExit() async {
-    if (!mounted ||
-        _isParsing ||
-        _isExitConfirmationOpen ||
-        _isAddressEditorOpen) {
+    if (!mounted || _isParsing || _hasBlockingDialog) {
       return;
     }
     setState(() => _isExitConfirmationOpen = true);
@@ -771,10 +788,58 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
     }
   }
 
+  Future<void> _signOutOfSchoolWebsites() async {
+    if (!mounted ||
+        _isParsing ||
+        _hasBlockingDialog ||
+        _sessionService.isClearing ||
+        !_supportsWebView) {
+      return;
+    }
+    setState(() => _isSessionConfirmationOpen = true);
+    final l10n = AppLocalizations.of(context);
+    try {
+      final confirmed = await showExpressiveDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          var popped = false;
+          void popWith(bool value) {
+            if (popped) return;
+            popped = true;
+            Navigator.of(dialogContext).pop(value);
+          }
+
+          return SkedConfirmationDialog(
+            title: Text(l10n.schoolWebImportSignOutTitle),
+            content: Text(l10n.schoolWebImportSignOutMessage),
+            actions: [
+              TextButton(
+                onPressed: () => popWith(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => popWith(true),
+                child: Text(l10n.schoolWebImportSignOut),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed != true || !mounted || !routeWorkspaceEnabled) return;
+      await _sessionService.clear();
+      if (!mounted || !routeWorkspaceEnabled) return;
+      _restartBrowserSession();
+      _showMessage(l10n.schoolWebImportSignOutSuccess);
+    } catch (_) {
+      if (mounted) _showMessage(l10n.schoolWebImportSignOutFailed);
+    } finally {
+      if (mounted) setState(() => _isSessionConfirmationOpen = false);
+    }
+  }
+
   Future<void> _editAddress(_SchoolWebPane pane) async {
     if (!mounted ||
-        _isAddressEditorOpen ||
-        _isExitConfirmationOpen ||
+        _hasBlockingDialog ||
         _isParsing ||
         pane.controller == null) {
       return;

@@ -3180,4 +3180,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get courseInactiveThisWeek => 'Не запланировано на эту неделю';
+
+  @override
+  String get schoolWebImportSignOut => 'Sign out';
+
+  @override
+  String get schoolWebImportSignOutTitle => 'Sign out of school websites?';
+
+  @override
+  String get schoolWebImportSignOutMessage =>
+      'This clears sign-in cookies and saved website data for school pages in Sked. Imported timetables and app settings are kept.';
+
+  @override
+  String get schoolWebImportSignOutSuccess =>
+      'School website sign-in data cleared.';
+
+  @override
+  String get schoolWebImportSignOutFailed =>
+      'Could not clear school sign-in data. Please try again.';
 }

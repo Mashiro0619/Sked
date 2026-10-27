@@ -5609,6 +5609,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not scheduled this week'**
   String get courseInactiveThisWeek;
+
+  /// No description provided for @schoolWebImportSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get schoolWebImportSignOut;
+
+  /// No description provided for @schoolWebImportSignOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of school websites?'**
+  String get schoolWebImportSignOutTitle;
+
+  /// No description provided for @schoolWebImportSignOutMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This clears sign-in cookies and saved website data for school pages in Sked. Imported timetables and app settings are kept.'**
+  String get schoolWebImportSignOutMessage;
+
+  /// No description provided for @schoolWebImportSignOutSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'School website sign-in data cleared.'**
+  String get schoolWebImportSignOutSuccess;
+
+  /// No description provided for @schoolWebImportSignOutFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not clear school sign-in data. Please try again.'**
+  String get schoolWebImportSignOutFailed;
 }
 
 class _AppLocalizationsDelegate
