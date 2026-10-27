@@ -1140,11 +1140,17 @@ END:VCALENDAR
     final imported = service.importSchedules(source);
     final event = imported.schedules.single.events.single;
     final warning = imported.warningItems.singleWhere(
-      (item) => item.code == GeneralCalendarIcsWarningCode.unsupportedFields,
+      (item) =>
+          item.code == GeneralCalendarIcsWarningCode.recurrenceRuleDowngraded,
     );
 
     expect(event.recurrenceRule.isRepeating, false);
     expect(warning.values, contains('RRULE:BYDAY=MO,WE'));
+    expect(
+      warning.code,
+      GeneralCalendarIcsWarningCode.recurrenceRuleDowngraded,
+    );
+    expect(warning.fallbackMessage, contains('imported as a single event'));
     expect(event.notes, isEmpty);
   });
 
@@ -1248,7 +1254,8 @@ END:VCALENDAR
     final imported = service.importSchedules(source);
     final event = imported.schedules.single.events.single;
     final warning = imported.warningItems.singleWhere(
-      (item) => item.code == GeneralCalendarIcsWarningCode.unsupportedFields,
+      (item) =>
+          item.code == GeneralCalendarIcsWarningCode.recurrenceRuleDowngraded,
     );
 
     expect(event.recurrenceRule.isRepeating, false);
@@ -1273,7 +1280,8 @@ END:VCALENDAR
     final imported = service.importSchedules(source);
     final event = imported.schedules.single.events.single;
     final warning = imported.warningItems.singleWhere(
-      (item) => item.code == GeneralCalendarIcsWarningCode.unsupportedFields,
+      (item) =>
+          item.code == GeneralCalendarIcsWarningCode.recurrenceRuleDowngraded,
     );
 
     expect(event.recurrenceRule.isRepeating, false);

@@ -2976,13 +2976,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get icsSkippedTimeZonesReview =>
-      '以下日程的时区无法安全解析，将跳过这些日程。请先核对详情，再决定是否继续导入其余日程。';
-
-  @override
-  String get icsImportRemainingAction => '继续导入其余日程';
-
-  @override
   String get expandTimelineEvents => '展开日程';
 
   @override
@@ -3028,6 +3021,19 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String importTextFileTooLarge(Object size) {
     return '文本文件不能超过 $size MB。';
+  }
+
+  @override
+  String icsImportReviewNotice(Object count, Object warningCount) {
+    return '准备导入 $count 个日程，共有 $warningCount 条提示。请核对下方所有跳过和调整的内容；目前尚未保存。';
+  }
+
+  @override
+  String get icsImportContinueAction => '继续导入';
+
+  @override
+  String importWarningRecurrenceRuleDowngraded(Object fields) {
+    return '此日程将按单次事件导入；不支持的字段或规则部分：$fields。';
   }
 }
 
@@ -6004,13 +6010,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get icsSkippedTimeZonesReview =>
-      '以下日程的時區無法安全解析，將略過這些日程。請先核對詳情，再決定是否繼續匯入其餘日程。';
-
-  @override
-  String get icsImportRemainingAction => '繼續匯入其餘日程';
-
-  @override
   String get expandTimelineEvents => '展開日程';
 
   @override
@@ -6056,5 +6055,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String importTextFileTooLarge(Object size) {
     return '文字檔案不能超過 $size MB。';
+  }
+
+  @override
+  String icsImportReviewNotice(Object count, Object warningCount) {
+    return '準備匯入 $count 個日程，共有 $warningCount 則提示。請核對下方所有略過和調整的內容；目前尚未儲存。';
+  }
+
+  @override
+  String get icsImportContinueAction => '繼續匯入';
+
+  @override
+  String importWarningRecurrenceRuleDowngraded(Object fields) {
+    return '此日程將以單次事件匯入；不支援的欄位或規則部分：$fields。';
   }
 }

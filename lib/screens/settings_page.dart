@@ -2018,18 +2018,16 @@ class _SettingsPageState extends State<SettingsPage>
       final prepared = await transfers.prepareSchedules(content, ics: ics);
       if (!feedbackContext.mounted || !isCurrent()) return false;
       final preview = prepared.value.schedules;
-      final skippedTimeZones = prepared.value.warnings
-          .where(
-            (warning) =>
-                warning.code ==
-                GeneralCalendarIcsWarningCode.unsupportedTimeZone,
-          )
-          .toList();
-      if (ics && skippedTimeZones.isNotEmpty) {
-        final confirmed = await confirmGeneralIcsSkippedEvents(
+      final importWarnings = prepared.value.warnings;
+      if (ics && importWarnings.isNotEmpty) {
+        final confirmed = await confirmGeneralIcsImportReview(
           feedbackContext,
           session: task,
-          details: skippedTimeZones
+          eventCount: preview.fold(
+            0,
+            (count, schedule) => count + schedule.events.length,
+          ),
+          details: importWarnings
               .map((warning) => _formatIcsWarning(warning, l10n))
               .toList(),
         );
@@ -2117,25 +2115,11 @@ class _SettingsPageState extends State<SettingsPage>
         replacementScheduleId: replacementScheduleId,
       );
       if (!feedbackContext.mounted || !isCurrent()) return false;
-      if (result.hasWarnings) {
-        await showGeneralIcsImportReport(
-          feedbackContext,
-          session: task,
-          summary: l10n.importedSchedulesWithWarnings(
-            result.importedCount,
-            result.icsWarnings.length,
-          ),
-          details: result.icsWarnings
-              .map((warning) => _formatIcsWarning(warning, l10n))
-              .toList(),
-        );
-      } else {
-        ScaffoldMessenger.of(feedbackContext).showSnackBar(
-          SnackBar(
-            content: Text(l10n.importedSchedulesCount(result.importedCount)),
-          ),
-        );
-      }
+      ScaffoldMessenger.of(feedbackContext).showSnackBar(
+        SnackBar(
+          content: Text(l10n.importedSchedulesCount(result.importedCount)),
+        ),
+      );
       return true;
     } on GeneralCalendarIcsImportException catch (error) {
       if (feedbackContext.mounted && isCurrent()) {
@@ -2361,6 +2345,8 @@ class _SettingsPageState extends State<SettingsPage>
         l10n.importWarningAdjustedEnd,
       GeneralCalendarIcsWarningCode.unsupportedFields =>
         l10n.importWarningUnsupportedFields(warning.values.join(', ')),
+      GeneralCalendarIcsWarningCode.recurrenceRuleDowngraded =>
+        l10n.importWarningRecurrenceRuleDowngraded(warning.values.join(', ')),
       GeneralCalendarIcsWarningCode.unsupportedRRuleFrequency =>
         l10n.importWarningUnsupportedRRuleFrequency(
           warning.values.isEmpty ? '' : warning.values.first,

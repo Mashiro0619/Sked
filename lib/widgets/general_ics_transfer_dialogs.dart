@@ -8,10 +8,11 @@ import 'sked_task_session.dart';
 
 enum GeneralIcsExportFormat { ics, json }
 
-/// A partial import is reviewed before either an append or a replacement.
-Future<bool> confirmGeneralIcsSkippedEvents(
+/// Every skipped or changed event is reviewed before an append or replacement.
+Future<bool> confirmGeneralIcsImportReview(
   BuildContext context, {
   required SkedTaskSession session,
+  required int eventCount,
   required List<String> details,
 }) async {
   var popped = false;
@@ -32,20 +33,23 @@ Future<bool> confirmGeneralIcsSkippedEvents(
         Navigator.of(dialogContext).pop(value);
       }
 
-      final report = [l10n.icsSkippedTimeZonesReview, ...details].join('\n\n');
+      final report = [
+        l10n.icsImportReviewNotice(eventCount, details.length),
+        ...details,
+      ].join('\n\n');
       return SkedConfirmationDialog(
-        key: const ValueKey('general-ics-skipped-events-warning'),
+        key: const ValueKey('general-ics-import-review'),
         scrollable: true,
         title: Text(l10n.icsImportReportTitle),
         content: SelectableText(report),
         actions: [
           TextButton(
-            key: const ValueKey('general-ics-skipped-events-cancel'),
+            key: const ValueKey('general-ics-import-review-cancel'),
             onPressed: () => finish(false),
             child: Text(l10n.cancel),
           ),
           TextButton(
-            key: const ValueKey('general-ics-skipped-events-copy'),
+            key: const ValueKey('general-ics-import-review-copy'),
             onPressed: () async {
               if (!canAct()) return;
               await Clipboard.setData(ClipboardData(text: report));
@@ -57,9 +61,9 @@ Future<bool> confirmGeneralIcsSkippedEvents(
             child: Text(l10n.copyText),
           ),
           FilledButton(
-            key: const ValueKey('general-ics-skipped-events-continue'),
+            key: const ValueKey('general-ics-import-review-continue'),
             onPressed: () => finish(true),
-            child: Text(l10n.icsImportRemainingAction),
+            child: Text(l10n.icsImportContinueAction),
           ),
         ],
       );

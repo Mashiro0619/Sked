@@ -5670,18 +5670,6 @@ abstract class AppLocalizations {
   /// **'Skipped an event whose time zone cannot be interpreted safely: {fields}.'**
   String importWarningSkippedUnsupportedTimeZone(Object fields);
 
-  /// No description provided for @icsSkippedTimeZonesReview.
-  ///
-  /// In en, this message translates to:
-  /// **'The following events will be skipped because their time zones cannot be interpreted safely. Review the details before importing the remaining events.'**
-  String get icsSkippedTimeZonesReview;
-
-  /// No description provided for @icsImportRemainingAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue with remaining events'**
-  String get icsImportRemainingAction;
-
   /// Action that opens an accessible list of the events in the current timeline.
   ///
   /// In en, this message translates to:
@@ -5759,6 +5747,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Text files must be {size} MB or smaller.'**
   String importTextFileTooLarge(Object size);
+
+  /// No description provided for @icsImportReviewNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to import {count} events with {warningCount} warnings. Review all skipped events and changes below. Nothing has been saved yet.'**
+  String icsImportReviewNotice(Object count, Object warningCount);
+
+  /// No description provided for @icsImportContinueAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue import'**
+  String get icsImportContinueAction;
+
+  /// No description provided for @importWarningRecurrenceRuleDowngraded.
+  ///
+  /// In en, this message translates to:
+  /// **'This event will be imported as a single event. Unsupported fields or rule parts: {fields}.'**
+  String importWarningRecurrenceRuleDowngraded(Object fields);
 }
 
 class _AppLocalizationsDelegate

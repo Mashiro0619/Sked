@@ -28,8 +28,6 @@ void main() {
               'schoolWebImportSignOutSuccess',
               'schoolWebImportSignOutFailed',
               'importWarningSkippedUnsupportedTimeZone',
-              'icsSkippedTimeZonesReview',
-              'icsImportRemainingAction',
               'expandTimelineEvents',
               'timelineEvents',
               'schoolImportEndpointChangeTitle',
@@ -38,6 +36,8 @@ void main() {
               'restoreBackupParserSettingsSummary',
               'backupParserEndpointUnset',
               'periodTimesDayFull',
+              'icsImportReviewNotice',
+              'icsImportContinueAction',
               'importWarningRecurrenceDateClamped',
               'importEntryLimitExceededMessage',
               'importWarningSkippedRecurrenceOverride',
@@ -47,6 +47,7 @@ void main() {
               'confirmImportedStartDatesTitle',
               'confirmImportedStartDatesMessage',
               'importStartDateConfirmationRequiredMessage',
+              'importWarningRecurrenceRuleDowngraded',
             };
       final file = File('lib/l10n/app_$locale.arb');
       expect(file.existsSync(), isTrue, reason: 'Missing locale source: $file');

@@ -13,6 +13,7 @@ enum GeneralCalendarIcsWarningCode {
   skippedRecurrenceOverride,
   skippedCancelledEvent,
   skippedEmptyRecurrence,
+  recurrenceRuleDowngraded,
   unsupportedTimeZone,
 }
 
@@ -139,6 +140,8 @@ class GeneralCalendarIcsImportWarning {
         'Adjusted an event whose end time was not after start.',
       GeneralCalendarIcsWarningCode.unsupportedFields =>
         'Ignored unsupported fields: ${values.join(', ')}.',
+      GeneralCalendarIcsWarningCode.recurrenceRuleDowngraded =>
+        'This event will be imported as a single event. Unsupported fields or rule parts: ${values.join(', ')}.',
       GeneralCalendarIcsWarningCode.unsupportedRRuleFrequency =>
         'Unsupported RRULE frequency "${values.isEmpty ? '' : values.first}" was ignored.',
       GeneralCalendarIcsWarningCode.recurrenceDateClamped => 'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.',
@@ -592,11 +595,20 @@ class GeneralCalendarIcsService {
       for (final part in duplicateRRuleParts) 'RRULE:DUPLICATE:$part',
       for (final part in unsupportedRRuleParts) 'RRULE:$part',
     ]..sort();
-    if (unsupported.isNotEmpty) {
+    final recurrenceDowngraded =
+        recurrenceRule != null &&
+        !recurrenceRule.isRepeating &&
+        !asOverride &&
+        fields['RRULE']?.value.trim().isNotEmpty == true;
+    if (unsupported.isNotEmpty || recurrenceDowngraded) {
       warnings.add(
         GeneralCalendarIcsImportWarning(
-          code: GeneralCalendarIcsWarningCode.unsupportedFields,
-          values: unsupported,
+          code: recurrenceDowngraded
+              ? GeneralCalendarIcsWarningCode.recurrenceRuleDowngraded
+              : GeneralCalendarIcsWarningCode.unsupportedFields,
+          values: unsupported.isNotEmpty
+              ? unsupported
+              : ['RRULE=${fields['RRULE']!.value}'],
         ),
       );
     }

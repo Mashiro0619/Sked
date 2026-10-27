@@ -2187,8 +2187,6 @@
   "schoolWebImportSignOutSuccess": "School website sign-in data cleared.",
   "schoolWebImportSignOutFailed": "Could not clear school sign-in data. Please try again.",
   "importWarningSkippedUnsupportedTimeZone": "Skipped an event whose time zone cannot be interpreted safely: {fields}.",
-  "icsSkippedTimeZonesReview": "The following events will be skipped because their time zones cannot be interpreted safely. Review the details before importing the remaining events.",
-  "icsImportRemainingAction": "Continue with remaining events",
   "expandTimelineEvents": "Expand events",
   "@expandTimelineEvents": {"description": "Action that opens an accessible list of the events in the current timeline."},
   "timelineEvents": "Events in this timeline",
@@ -2214,6 +2212,8 @@
   "importWarningSkippedRecurrenceOverride": "Skipped a recurrence override whose original occurrence could not be identified safely: {fields}.",
   "importWarningSkippedCancelledEvent": "Skipped a cancelled event.",
   "importWarningSkippedEmptyRecurrence": "Skipped a recurring event because UNTIL is before its first occurrence.",
-  "importTextFileTooLarge": "Text files must be {size} MB or smaller."
-
+  "importTextFileTooLarge": "Text files must be {size} MB or smaller.",
+  "icsImportReviewNotice": "Ready to import {count} events with {warningCount} warnings. Review all skipped events and changes below. Nothing has been saved yet.",
+  "icsImportContinueAction": "Continue import",
+  "importWarningRecurrenceRuleDowngraded": "This event will be imported as a single event. Unsupported fields or rule parts: {fields}."
 }

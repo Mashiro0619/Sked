@@ -121,30 +121,32 @@ void main() {
     );
 
     testWidgets(
-      'ICS skipped-event review remains cancellable ${scenario.locale} ${scenario.scale}',
+      'ICS full review remains cancellable ${scenario.locale} ${scenario.scale}',
       (tester) async {
         final context = await pumpPage(tester);
         final session = SkedTaskSession(ownerRoute: ModalRoute.of(context));
         addTearDown(session.dispose);
-        final confirmation = confirmGeneralIcsSkippedEvents(
+        final confirmation = confirmGeneralIcsImportReview(
           context,
           session: session,
+          eventCount: 1,
           details: [
             'A skipped event\nUID: unsupported\nDTSTART;TZID=Europe/London',
+            'A repeat rule will be imported as a single event.',
           ],
         );
         await tester.pumpAndSettle();
         expectActionsVisible(tester, [
-          'general-ics-skipped-events-cancel',
-          'general-ics-skipped-events-copy',
-          'general-ics-skipped-events-continue',
+          'general-ics-import-review-cancel',
+          'general-ics-import-review-copy',
+          'general-ics-import-review-continue',
         ]);
         expect(
           tester.widget<SelectableText>(find.byType(SelectableText)).data,
-          contains(AppLocalizations.of(context).icsSkippedTimeZonesReview),
+          contains(AppLocalizations.of(context).icsImportReviewNotice(1, 2)),
         );
         await tester.tap(
-          find.byKey(const ValueKey('general-ics-skipped-events-cancel')),
+          find.byKey(const ValueKey('general-ics-import-review-cancel')),
         );
         await tester.pumpAndSettle();
         expect(await confirmation, isFalse);

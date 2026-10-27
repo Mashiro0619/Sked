@@ -3245,13 +3245,6 @@ class AppLocalizationsEl extends AppLocalizations {
   }
 
   @override
-  String get icsSkippedTimeZonesReview =>
-      'The following events will be skipped because their time zones cannot be interpreted safely. Review the details before importing the remaining events.';
-
-  @override
-  String get icsImportRemainingAction => 'Continue with remaining events';
-
-  @override
   String get expandTimelineEvents => 'Expand events';
 
   @override
@@ -3299,5 +3292,18 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String importTextFileTooLarge(Object size) {
     return 'Text files must be $size MB or smaller.';
+  }
+
+  @override
+  String icsImportReviewNotice(Object count, Object warningCount) {
+    return 'Ready to import $count events with $warningCount warnings. Review all skipped events and changes below. Nothing has been saved yet.';
+  }
+
+  @override
+  String get icsImportContinueAction => 'Continue import';
+
+  @override
+  String importWarningRecurrenceRuleDowngraded(Object fields) {
+    return 'This event will be imported as a single event. Unsupported fields or rule parts: $fields.';
   }
 }

@@ -2149,8 +2149,6 @@
   "schoolWebImportSignOutSuccess": "已清除学校网页登录数据。",
   "schoolWebImportSignOutFailed": "无法清除学校网页登录数据，请重试。",
   "importWarningSkippedUnsupportedTimeZone": "已跳过无法安全解析时区的日程：{fields}。",
-  "icsSkippedTimeZonesReview": "以下日程的时区无法安全解析，将跳过这些日程。请先核对详情，再决定是否继续导入其余日程。",
-  "icsImportRemainingAction": "继续导入其余日程",
   "expandTimelineEvents": "展开日程",
   "timelineEvents": "当前时间轴日程",
   "schoolImportEndpointChangeTitle": "更换解析接口？",
@@ -2163,6 +2161,8 @@
   "importWarningSkippedRecurrenceOverride": "已跳过无法安全定位原实例的改期或取消记录：{fields}。",
   "importWarningSkippedCancelledEvent": "已跳过已取消的日程。",
   "importWarningSkippedEmptyRecurrence": "已跳过截止时刻早于首个实例的重复日程。",
-  "importTextFileTooLarge": "文本文件不能超过 {size} MB。"
-
+  "importTextFileTooLarge": "文本文件不能超过 {size} MB。",
+  "icsImportReviewNotice": "准备导入 {count} 个日程，共有 {warningCount} 条提示。请核对下方所有跳过和调整的内容；目前尚未保存。",
+  "icsImportContinueAction": "继续导入",
+  "importWarningRecurrenceRuleDowngraded": "此日程将按单次事件导入；不支持的字段或规则部分：{fields}。"
 }

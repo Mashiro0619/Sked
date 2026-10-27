@@ -2053,8 +2053,11 @@ void main() {
   testWidgets(
     'a complete ICS import report includes and copies every warning',
     (tester) async {
-      final provider = await _createProvider(_buildGeneralData());
+      final data = _buildGeneralData();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
       addTearDown(provider.dispose);
+      final original = provider.generalView.schedules;
       String? copied;
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         SystemChannels.platform,
@@ -2091,26 +2094,22 @@ SUMMARY:Imported event
 DTSTART:20261023T090000
 DTEND:20261023T080000
 END:VEVENT
+BEGIN:VEVENT
+UID:degraded-rule
+SUMMARY:Single imported event
+DTSTART:20261023T120000
+RRULE:FREQ=WEEKLY;BYDAY=MO,WE
+END:VEVENT
 END:VCALENDAR''';
       await tester.enterText(find.byType(TextField), source);
       await tester.tap(find.widgetWithText(FilledButton, 'Import'));
       await _pumpTransferUntil(
         tester,
         () => find
-            .text('Add as new category')
-            .hitTestable()
+            .byKey(const ValueKey('general-ics-import-review'))
             .evaluate()
             .isNotEmpty,
-        reason: 'The valid event should reach the import preview',
-      );
-      await tester.tap(find.text('Add as new category'));
-      await _pumpTransferUntil(
-        tester,
-        () => find
-            .byKey(const ValueKey('general-ics-import-report'))
-            .evaluate()
-            .isNotEmpty,
-        reason: 'All import warnings should remain in a complete report',
+        reason: 'All import warnings must appear before choosing a target',
       );
       final l = AppLocalizations.of(
         tester.element(find.byType(TextImportPage)),
@@ -2122,22 +2121,81 @@ END:VCALENDAR''';
         l.importWarningSkippedMissingStart,
         l.importWarningSkippedUnsupportedStart,
         l.importWarningAdjustedEnd,
+        l.importWarningRecurrenceRuleDowngraded('RRULE:BYDAY=MO,WE'),
       ]) {
         expect(report, contains(text));
       }
-      expect(report, contains(l.importedSchedulesWithWarnings(1, 3)));
-      await tester.tap(find.byKey(const ValueKey('general-ics-report-copy')));
+      expect(report, contains(l.icsImportReviewNotice(2, 4)));
+      expect(storage.saveCount, 0);
+      expect(provider.generalView.schedules, same(original));
+      expect(find.text('Add as new category'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey('general-ics-import-review-copy')),
+      );
       await tester.pump();
       expect(copied, contains(l.importWarningAdjustedEnd));
       expect(copied, contains(l.importWarningSkippedUnsupportedStart));
-      await tester.tap(find.byKey(const ValueKey('general-ics-report-close')));
+      expect(
+        copied,
+        contains(l.importWarningRecurrenceRuleDowngraded('RRULE:BYDAY=MO,WE')),
+      );
+      expect(storage.saveCount, 0);
+      await tester.tap(
+        find.byKey(const ValueKey('general-ics-import-review-cancel')),
+      );
+      await _pumpRouteTransition(tester);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        source,
+      );
+      expect(provider.generalView.schedules, same(original));
+      expect(storage.saveCount, 0);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Import'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .byKey(const ValueKey('general-ics-import-review-continue'))
+            .hitTestable()
+            .evaluate()
+            .isNotEmpty,
+        reason: 'The retained draft can be reviewed again',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('general-ics-import-review-continue')),
+      );
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .text('Add as new category')
+            .hitTestable()
+            .evaluate()
+            .isNotEmpty,
+        reason: 'Confirmed warnings precede the category choice',
+      );
+      expect(storage.saveCount, 0);
+      await tester.tap(find.text('Add as new category'));
       await _pumpTransferUntil(
         tester,
         () => find.byType(TextImportPage).evaluate().isEmpty,
-        reason:
-            'Closing the report should complete the original text import route',
+        reason: 'Saving should complete the text import without another report',
       );
       expect(find.byType(TextImportPage), findsNothing);
+      expect(
+        find.byKey(const ValueKey('general-ics-import-report')),
+        findsNothing,
+      );
+      expect(storage.saveCount, 1);
+      expect(
+        provider.generalView.schedules
+            .expand((schedule) => schedule.events)
+            .singleWhere((event) => event.title == 'Single imported event')
+            .recurrenceRule
+            .isRepeating,
+        false,
+      );
       expect(
         provider.generalView.schedules
             .expand((s) => s.events)
@@ -2338,7 +2396,7 @@ END:VCALENDAR''');
     );
     expect(calls, 1);
     expect(
-      find.byKey(const ValueKey('general-ics-skipped-events-warning')),
+      find.byKey(const ValueKey('general-ics-import-review')),
       findsNothing,
     );
     expect(storage.saveCount, 0);
@@ -2354,6 +2412,110 @@ END:VCALENDAR''');
     expect(event.startDateTimeIso, '2026-05-25T09:00:00.000');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('repeated ICS review confirmation leads to only one import', (
+    tester,
+  ) async {
+    final data = _buildGeneralData();
+    final storage = _MemoryTimetableStorage(data);
+    final provider = await _createProvider(data, storage: storage);
+    addTearDown(provider.dispose);
+    final original = provider.generalView.schedules;
+    await _openGeneralDataActions(tester, provider);
+    await tester.tap(find.text('Paste ICS'));
+    await _pumpRouteTransition(tester);
+    final source = _generalIcsImportSource.replaceFirst(
+      'END:VEVENT',
+      'RRULE:FREQ=WEEKLY;BYDAY=MO,WE\r\nEND:VEVENT',
+    );
+    await tester.enterText(find.byType(TextField), source);
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await _pumpTransferUntil(
+      tester,
+      () => find
+          .byKey(const ValueKey('general-ics-import-review-continue'))
+          .hitTestable()
+          .evaluate()
+          .isNotEmpty,
+      reason: 'Warnings precede the category choice',
+    );
+    expect(storage.saveCount, 0);
+    expect(provider.generalView.schedules, same(original));
+    final continueAction = tester
+        .widget<FilledButton>(
+          find.byKey(const ValueKey('general-ics-import-review-continue')),
+        )
+        .onPressed!;
+    continueAction();
+    continueAction();
+    await _pumpTransferUntil(
+      tester,
+      () =>
+          find.text('Add as new category').hitTestable().evaluate().isNotEmpty,
+      reason: 'Only one category choice opens',
+    );
+    await tester.tap(find.text('Add as new category'));
+    await _pumpTransferUntil(
+      tester,
+      () => find.byType(TextImportPage).evaluate().isEmpty,
+      reason: 'Confirmed import finishes once',
+    );
+    expect(storage.saveCount, 1);
+    expect(
+      provider.generalView.schedules
+          .expand((schedule) => schedule.events)
+          .single
+          .recurrenceRule
+          .isRepeating,
+      false,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'a stale ICS review confirmation cannot save after session retirement',
+    (tester) async {
+      final data = _buildGeneralDataWithReminders();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(provider.dispose);
+      final original = provider.generalView.schedules;
+      await _openGeneralDataActions(tester, provider);
+      await tester.tap(find.text('Paste ICS'));
+      await _pumpRouteTransition(tester);
+      await tester.enterText(
+        find.byType(TextField),
+        _generalIcsImportSource.replaceFirst(
+          'END:VEVENT',
+          'RRULE:FREQ=WEEKLY;BYDAY=MO,WE\r\nEND:VEVENT',
+        ),
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .byKey(const ValueKey('general-ics-import-review-continue'))
+            .hitTestable()
+            .evaluate()
+            .isNotEmpty,
+        reason: 'The import waits for review',
+      );
+      final continueAction = tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('general-ics-import-review-continue')),
+          )
+          .onPressed!;
+      final reservation = provider.maintenance.reserve();
+      provider.maintenance.release(reservation);
+      await tester.pumpAndSettle();
+      continueAction();
+      await tester.pumpAndSettle();
+      expect(storage.saveCount, 0);
+      expect(provider.generalView.schedules, same(original));
+      expect(find.text('Add as new category'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('mixed ICS time-zone warnings are reviewed before any save', (
     tester,
@@ -2386,7 +2548,7 @@ END:VCALENDAR''';
       await _pumpTransferUntil(
         tester,
         () => find
-            .byKey(const ValueKey('general-ics-skipped-events-warning'))
+            .byKey(const ValueKey('general-ics-import-review'))
             .evaluate()
             .isNotEmpty,
         reason: 'Skipped events must be disclosed before mutations',
@@ -2397,7 +2559,7 @@ END:VCALENDAR''';
       final report = tester
           .widget<SelectableText>(find.byType(SelectableText))
           .data!;
-      expect(report, contains(l10n.icsSkippedTimeZonesReview));
+      expect(report, contains(l10n.icsImportReviewNotice(1, 1)));
       expect(report, contains('unsafe-reviewed'));
       expect(report, contains('Europe/London'));
       expect(storage.saveCount, 0);
@@ -2406,8 +2568,8 @@ END:VCALENDAR''';
         find.byKey(
           ValueKey(
             continueImport
-                ? 'general-ics-skipped-events-continue'
-                : 'general-ics-skipped-events-cancel',
+                ? 'general-ics-import-review-continue'
+                : 'general-ics-import-review-cancel',
           ),
         ),
       );
@@ -2431,11 +2593,8 @@ END:VCALENDAR''';
     await tester.tap(find.text('Add as new category'));
     await _pumpTransferUntil(
       tester,
-      () => find
-          .byKey(const ValueKey('general-ics-import-report'))
-          .evaluate()
-          .isNotEmpty,
-      reason: 'The final report preserves the skipped-event warning',
+      () => find.byType(TextImportPage).evaluate().isEmpty,
+      reason: 'The reviewed import completes without a second warning modal',
     );
     final events = provider.generalView.schedules.expand(
       (schedule) => schedule.events,
