@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Falha na análise",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Não foi possível analisar o horário. Verifique o conteúdo, as definições do analisador e a ligação de rede e tente novamente.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Continuar",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Mostrar avisos da importação",

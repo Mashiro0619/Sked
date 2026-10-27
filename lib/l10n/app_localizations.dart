@@ -217,6 +217,12 @@ abstract class AppLocalizations {
   /// **'Parsing failed'**
   String get schoolImportParsePageFailed;
 
+  /// No description provided for @schoolImportParseErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to parse the timetable. Check the content, parser settings, and network connection, then try again.'**
+  String get schoolImportParseErrorMessage;
+
   /// No description provided for @schoolImportParsePageContinue.
   ///
   /// In en, this message translates to:

@@ -52,6 +52,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolImportParsePageFailed => '분석 실패';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      '시간표를 분석할 수 없습니다. 내용, 분석 설정 및 네트워크 연결을 확인한 후 다시 시도하세요.';
+
+  @override
   String get schoolImportParsePageContinue => '계속';
 
   @override

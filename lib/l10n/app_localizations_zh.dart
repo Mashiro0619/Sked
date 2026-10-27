@@ -52,6 +52,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolImportParsePageFailed => '解析失败';
 
   @override
+  String get schoolImportParseErrorMessage => '无法解析课表。请检查内容、解析设置和网络连接后重试。';
+
+  @override
   String get schoolImportParsePageContinue => '继续导入';
 
   @override
@@ -2981,6 +2984,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportParsePageFailed => '解析失敗';
+
+  @override
+  String get schoolImportParseErrorMessage => '無法解析課表。請檢查內容、解析設定和網路連線後重試。';
 
   @override
   String get schoolImportParsePageContinue => '繼續匯入';

@@ -52,6 +52,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analiza a eșuat';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Orarul nu a putut fi analizat. Verifică conținutul, setările analizorului și conexiunea la rețea, apoi încearcă din nou.';
+
+  @override
   String get schoolImportParsePageContinue => 'Continuă';
 
   @override

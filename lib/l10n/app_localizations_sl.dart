@@ -52,6 +52,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Razčlenjevanje ni uspelo';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Urnika ni bilo mogoče razčleniti. Preverite vsebino, nastavitve razčlenjevalnika in omrežno povezavo ter poskusite znova.';
+
+  @override
   String get schoolImportParsePageContinue => 'Nadaljuj';
 
   @override

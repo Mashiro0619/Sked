@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Η ανάλυση απέτυχε",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Δεν ήταν δυνατή η ανάλυση του ωρολογίου προγράμματος. Ελέγξτε το περιεχόμενο, τις ρυθμίσεις ανάλυσης και τη σύνδεση δικτύου και δοκιμάστε ξανά.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Συνέχεια",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Ανάπτυξη προειδοποιήσεων εισαγωγής",

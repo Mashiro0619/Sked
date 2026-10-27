@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Jäsennys epäonnistui",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Lukujärjestyksen jäsentäminen epäonnistui. Tarkista sisältö, jäsentimen asetukset ja verkkoyhteys ja yritä uudelleen.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Jatka",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Laajenna tuonnin varoitukset",

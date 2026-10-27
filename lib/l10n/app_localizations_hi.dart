@@ -53,6 +53,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolImportParsePageFailed => 'पार्सिंग विफल';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'समय सारिणी का विश्लेषण नहीं हो सका। सामग्री, पार्सर सेटिंग और नेटवर्क कनेक्शन जाँचें, फिर दोबारा कोशिश करें।';
+
+  @override
   String get schoolImportParsePageContinue => 'जारी रखें';
 
   @override

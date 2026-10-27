@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Analüüs nurjus",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Tunniplaani ei õnnestunud töödelda. Kontrolli sisu, parseri seadeid ja võrguühendust ning proovi uuesti.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Jätka",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Laienda impordi hoiatusi",

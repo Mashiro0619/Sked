@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Analyse mislukt",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Het lesrooster kon niet worden verwerkt. Controleer de inhoud, de parserinstellingen en de netwerkverbinding en probeer het opnieuw.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Doorgaan",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Importmeldingen uitvouwen",

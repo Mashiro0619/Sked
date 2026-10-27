@@ -128,10 +128,12 @@ SchoolImportResponse _responseWithMaxCourseWeek(
 
 Future<void> _pumpPage(
   WidgetTester tester,
-  StreamController<SchoolImportStreamEvent> controller,
-) async {
+  StreamController<SchoolImportStreamEvent> controller, {
+  Locale? locale,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: SchoolImportParsePage(stream: controller.stream),
@@ -193,6 +195,31 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
+  for (final streamError in [false, true]) {
+    testWidgets(
+      'parse failure uses localized copy for streamError=$streamError',
+      (tester) async {
+        final controller = StreamController<SchoolImportStreamEvent>();
+        addTearDown(controller.close);
+        await _pumpPage(tester, controller, locale: const Locale('zh'));
+        const rawError = 'Internal parser failure at https://private.example';
+        if (streamError) {
+          controller.addError(StateError(rawError), StackTrace.current);
+        } else {
+          controller.add(const ParseError(rawError));
+        }
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolImportParsePage)),
+        );
+        expect(find.text(l10n.schoolImportParsePageFailed), findsOneWidget);
+        expect(find.text(l10n.schoolImportParseErrorMessage), findsOneWidget);
+        expect(find.textContaining('private.example'), findsNothing);
+        expect(find.textContaining('StateError'), findsNothing);
+      },
+    );
+  }
+
   for (final textScale in [1.0, 2.0]) {
     testWidgets(
       'course preview and import draft survive responsive widths at ${textScale}x',
@@ -960,7 +987,8 @@ void main() {
       tester.element(find.byType(SchoolImportParsePage)),
     );
     expect(find.text(l10n.schoolImportParsePageFailed), findsOneWidget);
-    expect(find.text('Parser stopped unexpectedly.'), findsOneWidget);
+    expect(find.text(l10n.schoolImportParseErrorMessage), findsOneWidget);
+    expect(find.text('Parser stopped unexpectedly.'), findsNothing);
   });
 
   testWidgets(

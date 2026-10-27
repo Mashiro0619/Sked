@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Az elemzés sikertelen",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Az órarend feldolgozása nem sikerült. Ellenőrizze a tartalmat, az elemző beállításait és a hálózati kapcsolatot, majd próbálja újra.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Folytatás",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Importálási figyelmeztetések kibontása",

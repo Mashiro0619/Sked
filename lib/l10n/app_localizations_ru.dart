@@ -52,6 +52,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Ошибка разбора';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Не удалось обработать расписание. Проверьте содержимое, настройки анализатора и подключение к сети, затем повторите попытку.';
+
+  @override
   String get schoolImportParsePageContinue => 'Продолжить';
 
   @override

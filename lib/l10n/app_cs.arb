@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Analýza se nezdařila",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Rozvrh se nepodařilo zpracovat. Zkontrolujte obsah, nastavení analyzátoru a připojení k síti a zkuste to znovu.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Pokračovat",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Rozbalit upozornění k importu",

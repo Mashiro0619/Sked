@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Ошибка разбора",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Не удалось обработать расписание. Проверьте содержимое, настройки анализатора и подключение к сети, затем повторите попытку.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Продолжить",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Развернуть предупреждения импорта",

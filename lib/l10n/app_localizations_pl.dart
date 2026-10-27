@@ -52,6 +52,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analiza nie powiodła się';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Nie udało się przeanalizować planu zajęć. Sprawdź treść, ustawienia parsera i połączenie sieciowe, a następnie spróbuj ponownie.';
+
+  @override
   String get schoolImportParsePageContinue => 'Kontynuuj';
 
   @override

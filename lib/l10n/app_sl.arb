@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Razčlenjevanje ni uspelo",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Urnika ni bilo mogoče razčleniti. Preverite vsebino, nastavitve razčlenjevalnika in omrežno povezavo ter poskusite znova.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Nadaljuj",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Razširi opozorila o uvozu",

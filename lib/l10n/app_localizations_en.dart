@@ -52,6 +52,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Parsing failed';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Unable to parse the timetable. Check the content, parser settings, and network connection, then try again.';
+
+  @override
   String get schoolImportParsePageContinue => 'Continue import';
 
   @override

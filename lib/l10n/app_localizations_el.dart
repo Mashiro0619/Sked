@@ -53,6 +53,10 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Η ανάλυση απέτυχε';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Δεν ήταν δυνατή η ανάλυση του ωρολογίου προγράμματος. Ελέγξτε το περιεχόμενο, τις ρυθμίσεις ανάλυσης και τη σύνδεση δικτύου και δοκιμάστε ξανά.';
+
+  @override
   String get schoolImportParsePageContinue => 'Συνέχεια';
 
   @override

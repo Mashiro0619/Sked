@@ -52,6 +52,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analysen misslyckades';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Det gick inte att tolka schemat. Kontrollera innehållet, tolkinställningarna och nätverksanslutningen och försök igen.';
+
+  @override
   String get schoolImportParsePageContinue => 'Fortsätt';
 
   @override

@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "पार्सिंग विफल",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "समय सारिणी का विश्लेषण नहीं हो सका। सामग्री, पार्सर सेटिंग और नेटवर्क कनेक्शन जाँचें, फिर दोबारा कोशिश करें।",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "जारी रखें",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "आयात चेतावनियाँ खोलें",

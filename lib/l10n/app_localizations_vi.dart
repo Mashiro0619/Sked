@@ -52,6 +52,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Phân tích không thành công';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Không thể phân tích thời khóa biểu. Hãy kiểm tra nội dung, cài đặt trình phân tích và kết nối mạng, rồi thử lại.';
+
+  @override
   String get schoolImportParsePageContinue => 'Tiếp tục';
 
   @override

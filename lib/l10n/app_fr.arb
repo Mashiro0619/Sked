@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Échec de l’analyse",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Impossible d’analyser l’emploi du temps. Vérifiez le contenu, les paramètres de l’analyseur et la connexion réseau, puis réessayez.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Continuer",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Afficher les remarques d’importation",

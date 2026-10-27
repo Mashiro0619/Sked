@@ -53,6 +53,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Az elemzés sikertelen';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Az órarend feldolgozása nem sikerült. Ellenőrizze a tartalmat, az elemző beállításait és a hálózati kapcsolatot, majd próbálja újra.';
+
+  @override
   String get schoolImportParsePageContinue => 'Folytatás';
 
   @override

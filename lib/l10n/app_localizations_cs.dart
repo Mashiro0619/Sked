@@ -52,6 +52,10 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analýza se nezdařila';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Rozvrh se nepodařilo zpracovat. Zkontrolujte obsah, nastavení analyzátoru a připojení k síti a zkuste to znovu.';
+
+  @override
   String get schoolImportParsePageContinue => 'Pokračovat';
 
   @override

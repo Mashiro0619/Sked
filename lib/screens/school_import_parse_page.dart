@@ -134,7 +134,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   String _rawText = '';
   String _previewText = '';
   SchoolImportResponse? _response;
-  String? _error;
   Object? _applyError;
   bool _isApplying = false;
   bool _isDone = false;
@@ -224,9 +223,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       _handleEvent,
       onError: (Object error, StackTrace stackTrace) {
         if (!mounted || _hasPopped || _isDone || _hasFailed) return;
-        _hasFailed = true;
         unawaited(_cancelSubscription());
-        setState(() => _error = '$error');
+        setState(() => _hasFailed = true);
       },
       cancelOnError: false,
     );
@@ -308,16 +306,14 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       case ParseDone(:final response):
         _response = response;
         _rawText = _textBuffer.toString();
-        _error = null;
         _isDone = true;
         _initializeImportConfiguration(response);
         // There should be no more events after ParseDone. Cancelling here
         // prevents a late stream error from replacing the completed result.
         unawaited(_cancelSubscription());
-      case ParseError(:final message):
+      case ParseError():
         if (_isDone || _hasFailed) return;
         _hasFailed = true;
-        _error = message;
         unawaited(_cancelSubscription());
     }
     if (wasAtBottom) {
@@ -864,13 +860,13 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                         primary: ExpressiveSwitcher(
                           child: KeyedSubtree(
                             key: ValueKey(
-                              _error != null
+                              _hasFailed
                                   ? 'error'
                                   : _isDone
                                   ? 'done'
                                   : 'parsing',
                             ),
-                            child: _error != null
+                            child: _hasFailed
                                 ? _buildErrorState(context, l10n)
                                 : _isDone
                                 ? _buildDoneState(context, l10n)
@@ -879,7 +875,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                         ),
                         secondary: _isDone && _response != null
                             ? SchoolImportSummaryPreview(response: _response!)
-                            : (_error == null || _previewText.isNotEmpty)
+                            : (!_hasFailed || _previewText.isNotEmpty)
                             ? _buildRawPreview(context, l10n)
                             : null,
                       ),
@@ -961,7 +957,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                 ),
                 const SizedBox(height: 6),
                 SelectableText(
-                  _error!,
+                  l10n.schoolImportParseErrorMessage,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colors.onErrorContainer,
                   ),

@@ -52,6 +52,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolImportParsePageFailed => 'วิเคราะห์ไม่สำเร็จ';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'ไม่สามารถแยกข้อมูลตารางเรียนได้ โปรดตรวจสอบเนื้อหา การตั้งค่าตัวแยกข้อมูล และการเชื่อมต่อเครือข่าย แล้วลองอีกครั้ง';
+
+  @override
   String get schoolImportParsePageContinue => 'ดำเนินการต่อ';
 
   @override

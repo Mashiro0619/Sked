@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Parsing failed",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Unable to parse the timetable. Check the content, parser settings, and network connection, then try again.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Continue import",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Expand import warnings",

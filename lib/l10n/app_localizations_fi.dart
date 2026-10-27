@@ -52,6 +52,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Jäsennys epäonnistui';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Lukujärjestyksen jäsentäminen epäonnistui. Tarkista sisältö, jäsentimen asetukset ja verkkoyhteys ja yritä uudelleen.';
+
+  @override
   String get schoolImportParsePageContinue => 'Jatka';
 
   @override

@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "解析に失敗",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "時間割を解析できませんでした。内容、解析設定、ネットワーク接続を確認して、もう一度お試しください。",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "続行",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "インポートの警告を展開",

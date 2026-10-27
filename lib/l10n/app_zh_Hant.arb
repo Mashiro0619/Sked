@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "解析失敗",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "無法解析課表。請檢查內容、解析設定和網路連線後重試。",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "繼續匯入",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "展開匯入提示",

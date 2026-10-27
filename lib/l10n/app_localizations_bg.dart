@@ -53,6 +53,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Анализът е неуспешен';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Разписанието не може да бъде обработено. Проверете съдържанието, настройките на анализатора и мрежовата връзка, след което опитайте отново.';
+
+  @override
   String get schoolImportParsePageContinue => 'Продължи';
 
   @override

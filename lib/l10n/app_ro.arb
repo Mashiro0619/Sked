@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Analiza a eșuat",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Orarul nu a putut fi analizat. Verifică conținutul, setările analizorului și conexiunea la rețea, apoi încearcă din nou.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Continuă",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Extinde avertismentele de import",

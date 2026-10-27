@@ -52,6 +52,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolImportParsePageFailed => '解析に失敗';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      '時間割を解析できませんでした。内容、解析設定、ネットワーク接続を確認して、もう一度お試しください。';
+
+  @override
   String get schoolImportParsePageContinue => '続行';
 
   @override

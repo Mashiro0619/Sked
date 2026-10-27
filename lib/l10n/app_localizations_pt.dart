@@ -52,6 +52,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Falha na análise';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Não foi possível analisar o horário. Verifique o conteúdo, as definições do analisador e a ligação de rede e tente novamente.';
+
+  @override
   String get schoolImportParsePageContinue => 'Continuar';
 
   @override

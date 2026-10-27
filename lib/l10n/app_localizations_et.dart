@@ -52,6 +52,10 @@ class AppLocalizationsEt extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analüüs nurjus';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Tunniplaani ei õnnestunud töödelda. Kontrolli sisu, parseri seadeid ja võrguühendust ning proovi uuesti.';
+
+  @override
   String get schoolImportParsePageContinue => 'Jätka';
 
   @override

@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Analyse fehlgeschlagen",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Der Stundenplan konnte nicht verarbeitet werden. Prüfe den Inhalt, die Parser-Einstellungen und die Netzwerkverbindung und versuche es erneut.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Weiter",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Importhinweise ausklappen",

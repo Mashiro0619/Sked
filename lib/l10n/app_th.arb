@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "วิเคราะห์ไม่สำเร็จ",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "ไม่สามารถแยกข้อมูลตารางเรียนได้ โปรดตรวจสอบเนื้อหา การตั้งค่าตัวแยกข้อมูล และการเชื่อมต่อเครือข่าย แล้วลองอีกครั้ง",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "ดำเนินการต่อ",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "ขยายคำเตือนการนำเข้า",

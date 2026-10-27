@@ -52,6 +52,10 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analysen mislykkedes';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Skemaet kunne ikke fortolkes. Kontrollér indholdet, parserindstillingerne og netværksforbindelsen, og prøv igen.';
+
+  @override
   String get schoolImportParsePageContinue => 'Fortsæt';
 
   @override

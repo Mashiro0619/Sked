@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Analysen misslyckades",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Det gick inte att tolka schemat. Kontrollera innehållet, tolkinställningarna och nätverksanslutningen och försök igen.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Fortsätt",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Visa importvarningar",

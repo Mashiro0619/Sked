@@ -52,6 +52,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Échec de l’analyse';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Impossible d’analyser l’emploi du temps. Vérifiez le contenu, les paramètres de l’analyseur et la connexion réseau, puis réessayez.';
+
+  @override
   String get schoolImportParsePageContinue => 'Continuer';
 
   @override

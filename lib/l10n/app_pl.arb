@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Analiza nie powiodła się",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Nie udało się przeanalizować planu zajęć. Sprawdź treść, ustawienia parsera i połączenie sieciowe, a następnie spróbuj ponownie.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Kontynuuj",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Rozwiń ostrzeżenia importu",

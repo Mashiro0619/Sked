@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Анализът е неуспешен",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Разписанието не може да бъде обработено. Проверете съдържанието, настройките на анализатора и мрежовата връзка, след което опитайте отново.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Продължи",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Разгъване на предупрежденията при импортиране",

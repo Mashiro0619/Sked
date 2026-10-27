@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "분석 실패",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "시간표를 분석할 수 없습니다. 내용, 분석 설정 및 네트워크 연결을 확인한 후 다시 시도하세요.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "계속",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "가져오기 경고 펼치기",

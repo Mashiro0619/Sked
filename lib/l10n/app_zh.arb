@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "解析失败",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "无法解析课表。请检查内容、解析设置和网络连接后重试。",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "继续导入",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "展开导入提示",

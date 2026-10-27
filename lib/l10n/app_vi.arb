@@ -42,6 +42,8 @@
   "@schoolImportParsePageParsing": {},
   "schoolImportParsePageFailed": "Phân tích không thành công",
   "@schoolImportParsePageFailed": {},
+  "schoolImportParseErrorMessage": "Không thể phân tích thời khóa biểu. Hãy kiểm tra nội dung, cài đặt trình phân tích và kết nối mạng, rồi thử lại.",
+  "@schoolImportParseErrorMessage": {},
   "schoolImportParsePageContinue": "Tiếp tục",
   "@schoolImportParsePageContinue": {},
   "schoolImportExpandWarnings": "Mở rộng cảnh báo nhập",

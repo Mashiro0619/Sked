@@ -52,6 +52,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analyse mislukt';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Het lesrooster kon niet worden verwerkt. Controleer de inhoud, de parserinstellingen en de netwerkverbinding en probeer het opnieuw.';
+
+  @override
   String get schoolImportParsePageContinue => 'Doorgaan';
 
   @override

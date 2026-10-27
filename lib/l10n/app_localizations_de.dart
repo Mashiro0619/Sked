@@ -53,6 +53,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get schoolImportParsePageFailed => 'Analyse fehlgeschlagen';
 
   @override
+  String get schoolImportParseErrorMessage =>
+      'Der Stundenplan konnte nicht verarbeitet werden. Prüfe den Inhalt, die Parser-Einstellungen und die Netzwerkverbindung und versuche es erneut.';
+
+  @override
   String get schoolImportParsePageContinue => 'Weiter';
 
   @override
