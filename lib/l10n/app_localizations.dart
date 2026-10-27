@@ -5669,6 +5669,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Events in this timeline'**
   String get timelineEvents;
+
+  /// No description provided for @schoolImportEndpointChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the parsing endpoint?'**
+  String get schoolImportEndpointChangeTitle;
+
+  /// No description provided for @schoolImportEndpointChangeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The saved API key will be sent to the new endpoint when you parse a timetable or fetch models.\n\nCurrent: {previous}\nNew: {next}\n\nOnly continue if you trust the new endpoint.'**
+  String schoolImportEndpointChangeMessage(String previous, String next);
+
+  /// No description provided for @schoolImportEndpointChangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Change endpoint'**
+  String get schoolImportEndpointChangeConfirm;
 }
 
 class _AppLocalizationsDelegate

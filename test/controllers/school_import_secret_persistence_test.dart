@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/controllers/settings_commands.dart';
 import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -45,6 +46,22 @@ class _MemorySecretStore implements SecretStore {
   @override
   Future<void> writeCustomSchoolImportApiKey(String value) async {
     this.value = value.trim();
+  }
+}
+
+class _UnavailableSecretStore extends _MemorySecretStore {
+  _UnavailableSecretStore(super.value);
+  bool unavailable = false;
+  @override
+  Future<String> readCustomSchoolImportApiKey() async {
+    if (unavailable) throw StateError('secret storage unavailable');
+    return super.readCustomSchoolImportApiKey();
+  }
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    if (unavailable) throw StateError('secret storage unavailable');
+    return super.writeCustomSchoolImportApiKey(value);
   }
 }
 
@@ -148,6 +165,132 @@ Future<AppRuntime> _provider({
 }
 
 void main() {
+  test('ambiguous key deletion cannot authorize a new endpoint', () async {
+    final storage = _RecordingStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final secrets = _UnavailableSecretStore('sk-still-saved');
+    final provider = await _provider(storage: storage, secrets: secrets);
+    addTearDown(provider.dispose);
+    secrets.unavailable = true;
+    await expectLater(
+      provider.schoolImportSecrets.update(''),
+      throwsStateError,
+    );
+    expect(provider.schoolImportSecrets.value, isEmpty);
+    expect(provider.schoolImportSecrets.isPersistenceKnown, isFalse);
+    final before = provider.settingsView.customSchoolImportBaseUrl;
+    final savesBefore = storage.saveCount;
+    Future<void> update() =>
+        provider.settingsCommands.updateCustomSchoolImportTextSettings(
+          baseUrl: 'https://unapproved.example/v1',
+          model: '',
+          prompt: '',
+        );
+    await expectLater(update(), throwsStateError);
+    expect(storage.saveCount, savesBefore);
+    expect(provider.settingsView.customSchoolImportBaseUrl, before);
+    secrets.unavailable = false;
+    await expectLater(
+      update(),
+      throwsA(isA<SchoolImportEndpointChangeRequired>()),
+    );
+    expect(provider.schoolImportSecrets.value, 'sk-still-saved');
+    expect(provider.settingsView.customSchoolImportBaseUrl, before);
+    expect(storage.saveCount, savesBefore);
+  });
+
+  test(
+    'endpoint confirmation is bound to both the source and destination',
+    () async {
+      final initial = buildInitialAppData(buildDefaultPeriodTimes());
+      final storage = _RecordingStorage(
+        initial.copyWith(
+          aiApiSettings: initial.aiApiSettings.copyWith(
+            customBaseUrl: 'https://old.example/v1',
+          ),
+        ),
+      );
+      final provider = await _provider(
+        storage: storage,
+        secrets: _MemorySecretStore('sk-secret'),
+      );
+      addTearDown(provider.dispose);
+      final commands = provider.settingsCommands;
+      final savesBefore = storage.saveCount;
+      final approved = commands.customSchoolImportEndpointChange(
+        ' https://new.example/v1 ',
+      )!;
+      Future<void> update(
+        String url, [
+        SchoolImportEndpointChange? confirmation,
+      ]) => commands.updateCustomSchoolImportTextSettings(
+        baseUrl: url,
+        model: 'new-model',
+        prompt: 'new-prompt',
+        confirmedEndpointChange: confirmation,
+      );
+      await expectLater(
+        update(approved.nextBaseUrl),
+        throwsA(isA<SchoolImportEndpointChangeRequired>()),
+      );
+      await expectLater(
+        update('https://other.example/v1', approved),
+        throwsA(isA<SchoolImportEndpointChangeRequired>()),
+      );
+      expect(storage.saveCount, savesBefore);
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        approved.previousBaseUrl,
+      );
+      expect(
+        provider.settingsView.customSchoolImportModel,
+        initial.aiApiSettings.customModel,
+      );
+      expect(
+        const SchoolImportEndpointChangeRequired(
+          SchoolImportEndpointChange(
+            previousBaseUrl: 'secret',
+            nextBaseUrl: 'secret',
+          ),
+        ).toString(),
+        isNot(contains('secret')),
+      );
+      await update(approved.nextBaseUrl, approved);
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        approved.nextBaseUrl,
+      );
+      expect(storage.saveCount, savesBefore + 1);
+      final stale = commands.customSchoolImportEndpointChange(
+        'https://third.example/v1',
+      )!;
+      final intervening = commands.customSchoolImportEndpointChange(
+        'https://intervening.example/v1',
+      )!;
+      await update(intervening.nextBaseUrl, intervening);
+      await expectLater(
+        update(stale.nextBaseUrl, stale),
+        throwsA(isA<SchoolImportEndpointChangeRequired>()),
+      );
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        intervening.nextBaseUrl,
+      );
+      await update(intervening.nextBaseUrl);
+      await provider.schoolImportSecrets.update('');
+      expect(
+        commands.customSchoolImportEndpointChange(stale.nextBaseUrl),
+        isNull,
+      );
+      await update(stale.nextBaseUrl);
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        stale.nextBaseUrl,
+      );
+    },
+  );
+
   test('API key-only changes do not write or rotate AppData storage', () async {
     final storage = _RecordingStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
@@ -390,6 +533,8 @@ void main() {
       expect(secrets.value, 'sk-legacy');
       await provider.settingsCommands.updateCustomSchoolImportTextSettings(
         baseUrl: 'https://new.example.com/v1',
+        confirmedEndpointChange: provider.settingsCommands
+            .customSchoolImportEndpointChange('https://new.example.com/v1'),
         model: 'new-model',
         prompt: 'new prompt',
       );

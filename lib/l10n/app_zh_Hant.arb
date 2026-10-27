@@ -2146,5 +2146,8 @@
   "icsSkippedTimeZonesReview": "以下日程的時區無法安全解析，將略過這些日程。請先核對詳情，再決定是否繼續匯入其餘日程。",
   "icsImportRemainingAction": "繼續匯入其餘日程",
   "expandTimelineEvents": "展開日程",
-  "timelineEvents": "目前時間軸日程"
+  "timelineEvents": "目前時間軸日程",
+  "schoolImportEndpointChangeTitle": "變更解析端點？",
+  "schoolImportEndpointChangeMessage": "變更後，解析課表或取得模型清單時，已儲存的 API 金鑰會傳送至新端點。\n\n目前：{previous}\n新的：{next}\n\n僅在信任該端點時繼續。",
+  "schoolImportEndpointChangeConfirm": "變更端點"
 }

@@ -3210,4 +3210,15 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get timelineEvents => 'Events in this timeline';
+
+  @override
+  String get schoolImportEndpointChangeTitle => 'Change the parsing endpoint?';
+
+  @override
+  String schoolImportEndpointChangeMessage(String previous, String next) {
+    return 'The saved API key will be sent to the new endpoint when you parse a timetable or fetch models.\n\nCurrent: $previous\nNew: $next\n\nOnly continue if you trust the new endpoint.';
+  }
+
+  @override
+  String get schoolImportEndpointChangeConfirm => 'Change endpoint';
 }

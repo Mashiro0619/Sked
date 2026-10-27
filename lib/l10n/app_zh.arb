@@ -2144,5 +2144,8 @@
   "icsSkippedTimeZonesReview": "以下日程的时区无法安全解析，将跳过这些日程。请先核对详情，再决定是否继续导入其余日程。",
   "icsImportRemainingAction": "继续导入其余日程",
   "expandTimelineEvents": "展开日程",
-  "timelineEvents": "当前时间轴日程"
+  "timelineEvents": "当前时间轴日程",
+  "schoolImportEndpointChangeTitle": "更换解析接口？",
+  "schoolImportEndpointChangeMessage": "更换后，解析课表或获取模型列表时，已保存的 API 密钥会发送到新接口。\n\n当前：{previous}\n新的：{next}\n\n仅在信任该接口时继续。",
+  "schoolImportEndpointChangeConfirm": "更换接口"
 }

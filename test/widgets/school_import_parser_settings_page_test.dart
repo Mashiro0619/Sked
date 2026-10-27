@@ -349,7 +349,262 @@ Finder _modelDialog() {
   return find.byKey(const ValueKey('school-import-model-list-dialog'));
 }
 
+Finder _endpointConfirmation() => find.text('Change the parsing endpoint?');
+
+Future<void> _acceptEndpointChange(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+  expect(_endpointConfirmation(), findsOneWidget);
+  await tester.tap(find.widgetWithText(FilledButton, 'Change endpoint'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+}
+
 void main() {
+  testWidgets(
+    'endpoint edit defers confirmation until blur and cancellation keeps the saved destination',
+    (tester) async {
+      final provider = await _createProvider();
+      final api = _ImmediateSchoolImportApi();
+      await _pumpPage(tester, provider, api);
+      await tester.enterText(_baseUrlTextField(), 'https://new.example/v1');
+      await tester.pump(const Duration(seconds: 1));
+      expect(_endpointConfirmation(), findsNothing);
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://api.example.com/v1',
+      );
+      await tester.tap(_modelTextField());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_endpointConfirmation(), findsOneWidget);
+      expect(
+        find.textContaining('New: https://new.example/v1'),
+        findsOneWidget,
+      );
+      final cancel = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Cancel'))
+          .onPressed!;
+      cancel();
+      cancel();
+      await tester.pumpAndSettle();
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://api.example.com/v1',
+      );
+      expect(
+        tester.widget<TextField>(_baseUrlTextField()).controller!.text,
+        'https://api.example.com/v1',
+      );
+      expect(api.callCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'cancel remains final when back joins a debounce waiting for key storage',
+    (tester) async {
+      final secrets = _BlockingSecretStore('sk-old');
+      final provider = await _createProvider(secretStore: secrets);
+      await _pumpPageFromHost(tester, provider);
+      await tester.enterText(_apiKeyTextField(), 'sk-new');
+      await tester.enterText(_baseUrlTextField(), 'https://new.example/v1');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+      expect(secrets.writeStarted.isCompleted, isTrue);
+      await tester.tap(_modelTextField());
+      await tester.pageBack();
+      await tester.pump();
+      secrets.releaseWrite.complete();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_endpointConfirmation(), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://api.example.com/v1',
+      );
+      expect(provider.settingsView.customSchoolImportApiKey, 'sk-new');
+    },
+  );
+
+  testWidgets(
+    'endpoint confirmation rejects stale consent and redacts URL credentials',
+    (tester) async {
+      final provider = await _createProvider();
+      final api = _ImmediateSchoolImportApi();
+      await _pumpPage(tester, provider, api);
+      await tester.enterText(
+        _baseUrlTextField(),
+        'https://user:password@new.example/v1?token=sk-test#private',
+      );
+      await tester.tap(_fetchModelsButton());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      final message = tester
+          .widget<Text>(find.textContaining('The saved API key will be sent'))
+          .data!;
+      expect(message, contains('https://new.example/v1'));
+      for (final sensitive in ['password', 'sk-test', 'private', 'token=']) {
+        expect(message, isNot(contains(sensitive)));
+      }
+      final change = provider.settingsCommands.customSchoolImportEndpointChange(
+        'https://intervening.example/v1',
+      );
+      await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+        baseUrl: 'https://intervening.example/v1',
+        model: provider.settingsView.customSchoolImportModel,
+        prompt: provider.settingsView.customSchoolImportPrompt,
+        confirmedEndpointChange: change,
+      );
+      await _acceptEndpointChange(tester);
+      await tester.pumpAndSettle();
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://intervening.example/v1',
+      );
+      expect(api.callCount, 0);
+      expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    },
+  );
+
+  testWidgets('fetch sends a saved key only after destination approval', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    final api = _CapturingBlockingSchoolImportApi();
+    await _pumpPage(tester, provider, api);
+    await tester.enterText(_baseUrlTextField(), 'https://new.example/v1');
+    await tester.tap(_fetchModelsButton());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(api.baseUrl, isNull);
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://api.example.com/v1',
+    );
+    final accept = tester
+        .widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Change endpoint'),
+        )
+        .onPressed!;
+    accept();
+    accept();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(api.baseUrl, 'https://new.example/v1');
+    expect(api.apiKey, 'sk-test');
+    api.result.complete([]);
+    await tester.pumpAndSettle();
+    expect(_modelDialog(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'cancelled destination approval aborts fetching and back navigation',
+    (tester) async {
+      final provider = await _createProvider();
+      final api = _ImmediateSchoolImportApi();
+      await _pumpPage(tester, provider, api);
+      await tester.enterText(_baseUrlTextField(), 'https://new.example/v1');
+      await tester.tap(_fetchModelsButton());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(api.callCount, 0);
+      await _pumpPageFromHost(tester, provider);
+      await tester.enterText(_baseUrlTextField(), 'https://new.example/v1');
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_endpointConfirmation(), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://api.example.com/v1',
+      );
+      await tester.enterText(
+        _baseUrlTextField(),
+        'https://approved.example/v1',
+      );
+      await tester.pageBack();
+      await _acceptEndpointChange(tester);
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
+      expect(
+        provider.settingsView.customSchoolImportBaseUrl,
+        'https://approved.example/v1',
+      );
+    },
+  );
+
+  testWidgets('background and disposal never approve a pending endpoint', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    await _pumpPage(tester, provider, const SchoolImportApi());
+    await tester.enterText(
+      _baseUrlTextField(),
+      'https://unapproved.example/v1',
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    expect(_endpointConfirmation(), findsNothing);
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://api.example.com/v1',
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://api.example.com/v1',
+    );
+    expect(tester.takeException(), isNull);
+    provider.dispose();
+  });
+
+  testWidgets('key persistence cannot overwrite a newer endpoint draft', (
+    tester,
+  ) async {
+    final secrets = _BlockingSecretStore('');
+    final provider = await _createProvider(secretStore: secrets);
+    final api = _ImmediateSchoolImportApi();
+    await _pumpPage(tester, provider, api);
+    await tester.enterText(_apiKeyTextField(), 'sk-new');
+    await tester.enterText(_baseUrlTextField(), 'https://stale.example/v1');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    expect(secrets.writeStarted.isCompleted, isTrue);
+    await tester.enterText(_baseUrlTextField(), 'https://latest.example/v1');
+    secrets.releaseWrite.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(_endpointConfirmation(), findsNothing);
+    await tester.tap(_modelTextField());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.textContaining('New: https://latest.example/v1'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('https://stale.example/v1'), findsNothing);
+    await _acceptEndpointChange(tester);
+    await tester.pumpAndSettle();
+    expect(
+      provider.settingsView.customSchoolImportBaseUrl,
+      'https://latest.example/v1',
+    );
+    expect(provider.settingsView.customSchoolImportApiKey, 'sk-new');
+    expect(api.callCount, 0);
+  });
+
   testWidgets(
     'a stale model response retires its picker beneath a newer task',
     (tester) async {
@@ -391,6 +646,8 @@ void main() {
       final modelBeforeResponse = settings.customSchoolImportModel;
       await provider.settingsCommands.updateCustomSchoolImportTextSettings(
         baseUrl: 'https://changed.example.com/v1',
+        confirmedEndpointChange: provider.settingsCommands
+            .customSchoolImportEndpointChange('https://changed.example.com/v1'),
         model: modelBeforeResponse,
         prompt: settings.customSchoolImportPrompt,
       );
@@ -516,6 +773,7 @@ void main() {
       findsNothing,
     );
     await tester.tap(_fetchModelsButton());
+    await _acceptEndpointChange(tester);
     await tester.pump();
 
     expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
@@ -553,6 +811,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(_fetchModelsButton());
+    await _acceptEndpointChange(tester);
     await tester.pump();
     expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
 
@@ -664,6 +923,7 @@ void main() {
     await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v1');
     await tester.pumpAndSettle();
     await tester.tap(_fetchModelsButton());
+    await _acceptEndpointChange(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(api.callCount, 0);
@@ -691,6 +951,7 @@ void main() {
     await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v2');
     await tester.pumpAndSettle();
     await tester.tap(_fetchModelsButton());
+    await _acceptEndpointChange(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
@@ -722,7 +983,10 @@ void main() {
     tester,
   ) async {
     final storage = _MemoryTimetableStorage(_buildTestData());
-    final provider = await _createProvider(storage: storage);
+    final provider = await _createProvider(
+      storage: storage,
+      secretStore: _MemorySecretStore(),
+    );
     await _pumpPage(tester, provider, const SchoolImportApi());
     final savesBeforeEdit = storage.saveCount;
 
@@ -755,7 +1019,10 @@ void main() {
     tester,
   ) async {
     final storage = _BlockingOnceTimetableStorage(_buildTestData());
-    final provider = await _createProvider(storage: storage);
+    final provider = await _createProvider(
+      storage: storage,
+      secretStore: _MemorySecretStore(),
+    );
     await _pumpPage(tester, provider, const SchoolImportApi());
 
     await tester.enterText(_baseUrlTextField(), 'https://first.example.com/v1');
@@ -784,7 +1051,10 @@ void main() {
     tester,
   ) async {
     final storage = _BlockingOnceTimetableStorage(_buildTestData());
-    final provider = await _createProvider(storage: storage);
+    final provider = await _createProvider(
+      storage: storage,
+      secretStore: _MemorySecretStore(),
+    );
     await _pumpPageFromHost(tester, provider);
 
     await tester.enterText(
@@ -875,7 +1145,10 @@ void main() {
     tester,
   ) async {
     final storage = _FailingTimetableStorage(_buildTestData());
-    final provider = await _createProvider(storage: storage);
+    final provider = await _createProvider(
+      storage: storage,
+      secretStore: _MemorySecretStore(),
+    );
     await _pumpPageFromHost(tester, provider);
 
     const draft = 'https://draft.example.com/v1';

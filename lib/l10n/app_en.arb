@@ -2184,5 +2184,9 @@
   "expandTimelineEvents": "Expand events",
   "@expandTimelineEvents": {"description": "Action that opens an accessible list of the events in the current timeline."},
   "timelineEvents": "Events in this timeline",
-  "@timelineEvents": {"description": "Title of the accessible event picker for the displayed timeline range."}
+  "@timelineEvents": {"description": "Title of the accessible event picker for the displayed timeline range."},
+  "schoolImportEndpointChangeTitle": "Change the parsing endpoint?",
+  "schoolImportEndpointChangeMessage": "The saved API key will be sent to the new endpoint when you parse a timetable or fetch models.\n\nCurrent: {previous}\nNew: {next}\n\nOnly continue if you trust the new endpoint.",
+  "schoolImportEndpointChangeConfirm": "Change endpoint",
+  "@schoolImportEndpointChangeMessage": {"placeholders": {"previous": {"type": "String"}, "next": {"type": "String"}}}
 }

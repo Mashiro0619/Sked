@@ -135,6 +135,7 @@ final class AppRuntime {
     );
     settingsView = SettingsViewState(workspaceView);
     settingsCommands = SettingsCommands(
+      secrets: schoolImportSecrets,
       session: session,
       persist: persistence.saveAndNotify,
       service: settingsService ?? const SettingsService(),

@@ -15,12 +15,15 @@ import '../controllers/settings_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_http_consent.dart';
+import '../services/school_import_error_redactor.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/sked_task_route.dart';
 import '../widgets/ui_command.dart';
+
+enum _TextSettingsFlushResult { saved, confirmationDeferred, failed }
 
 class SchoolImportParserSettingsPage extends StatefulWidget {
   const SchoolImportParserSettingsPage({
@@ -78,7 +81,8 @@ class _SchoolImportParserSettingsPageState
   int _apiKeySaveToken = 0;
   bool _isSavingTextSettings = false;
   Timer? _textSettingsSaveDebounce;
-  Future<bool>? _textSettingsFlushOperation;
+  Future<_TextSettingsFlushResult>? _textSettingsFlushOperation;
+  bool _textSettingsFlushAllowsConfirmation = false;
   SettingsCommands? _pendingTextSettingsCommands;
   _ParserTextSettingsDraft? _pendingTextSettingsValue;
   int _textSettingsSaveToken = 0;
@@ -380,21 +384,38 @@ class _SchoolImportParserSettingsPageState
     _textSettingsSaveDebounce?.cancel();
     _textSettingsSaveDebounce = Timer(
       _textSettingsSaveDelay,
-      () => unawaited(_flushPendingTextSettingsSave()),
+      () => unawaited(
+        _flushPendingTextSettingsSave(allowEndpointConfirmation: false),
+      ),
     );
     if (mounted) {
       setState(() {});
     }
   }
 
-  Future<bool> _flushPendingTextSettingsSave() {
+  Future<bool> _flushPendingTextSettingsSave({
+    bool allowEndpointConfirmation = true,
+  }) {
     _textSettingsSaveDebounce?.cancel();
     _textSettingsSaveDebounce = null;
     final existing = _textSettingsFlushOperation;
     if (existing != null) {
-      return existing;
+      if (allowEndpointConfirmation && !_textSettingsFlushAllowsConfirmation) {
+        return existing.then((result) {
+          if (result != _TextSettingsFlushResult.confirmationDeferred) {
+            return result == _TextSettingsFlushResult.saved;
+          }
+          return _flushPendingTextSettingsSave();
+        });
+      }
+      return existing.then(
+        (result) => result == _TextSettingsFlushResult.saved,
+      );
     }
-    final operation = _drainPendingTextSettingsSaves();
+    _textSettingsFlushAllowsConfirmation = allowEndpointConfirmation;
+    final operation = _drainPendingTextSettingsSaves(
+      allowEndpointConfirmation: allowEndpointConfirmation,
+    );
     _textSettingsFlushOperation = operation;
     void finishOperation() {
       if (!identical(_textSettingsFlushOperation, operation)) {
@@ -418,15 +439,51 @@ class _SchoolImportParserSettingsPageState
         },
       ),
     );
-    return operation;
+    return operation.then((result) => result == _TextSettingsFlushResult.saved);
   }
 
-  Future<bool> _drainPendingTextSettingsSaves() async {
+  Future<_TextSettingsFlushResult> _drainPendingTextSettingsSaves({
+    required bool allowEndpointConfirmation,
+  }) async {
     while (true) {
       final commands = _pendingTextSettingsCommands;
       final value = _pendingTextSettingsValue;
       if (commands == null || value == null) {
-        return true;
+        return _TextSettingsFlushResult.saved;
+      }
+      // A key entered in the same edit must reach a known persisted state
+      // before deciding whether its destination needs confirmation.
+      if (!await _flushPendingApiKeySave()) {
+        return _TextSettingsFlushResult.failed;
+      }
+      if (!identical(value, _pendingTextSettingsValue)) continue;
+      SchoolImportEndpointChange? change;
+      try {
+        change = await commands.prepareCustomSchoolImportEndpointChange(
+          value.baseUrl,
+        );
+      } catch (error, stackTrace) {
+        debugPrint('Parser endpoint preparation failed: $error\n$stackTrace');
+        if (mounted && !_isDisposing) {
+          _showMessage(AppLocalizations.of(context).saveFailedRetry);
+        }
+        return _TextSettingsFlushResult.failed;
+      }
+      if (!identical(value, _pendingTextSettingsValue)) continue;
+      if (change != null) {
+        final lifecycle = WidgetsBinding.instance.lifecycleState;
+        if (!mounted ||
+            _isDisposing ||
+            !routeWorkspaceEnabled ||
+            (lifecycle != null && lifecycle != AppLifecycleState.resumed) ||
+            ModalRoute.of(context)?.isCurrent == false ||
+            !isValidCustomOpenAiBaseUrl(value.baseUrl)) {
+          // Keep the unapproved draft; background/dispose cannot authorize it.
+          return _TextSettingsFlushResult.failed;
+        }
+        if (!allowEndpointConfirmation) {
+          return _TextSettingsFlushResult.confirmationDeferred;
+        }
       }
       _pendingTextSettingsCommands = null;
       _pendingTextSettingsValue = null;
@@ -435,21 +492,41 @@ class _SchoolImportParserSettingsPageState
         setState(() => _isSavingTextSettings = true);
       }
       try {
+        if (change != null && !await _confirmEndpointChange(change)) {
+          if (!mounted || _isDisposing || !routeWorkspaceEnabled) {
+            return _TextSettingsFlushResult.failed;
+          }
+          if (_pendingTextSettingsValue == null) {
+            final previous = context
+                .read<SettingsViewState>()
+                .customSchoolImportBaseUrl;
+            _syncController(_baseUrlController, previous);
+            _pendingTextSettingsCommands = commands;
+            _pendingTextSettingsValue = _ParserTextSettingsDraft(
+              baseUrl: previous,
+              model: value.model,
+              prompt: value.prompt,
+            );
+          }
+          return _TextSettingsFlushResult.failed;
+        }
+        if (_pendingTextSettingsValue != null) continue;
         await commands.updateCustomSchoolImportTextSettings(
           baseUrl: value.baseUrl,
           model: value.model,
           prompt: value.prompt,
+          confirmedEndpointChange: change,
         );
       } catch (error, stackTrace) {
         debugPrint('Parser text settings save failed: $error\n$stackTrace');
         if (!mounted || _isDisposing || token != _textSettingsSaveToken) {
-          return false;
+          return _TextSettingsFlushResult.failed;
         }
         if (_pendingTextSettingsValue == null) {
           _pendingTextSettingsCommands = commands;
           _pendingTextSettingsValue = value;
           _showMessage(AppLocalizations.of(context).saveFailedRetry);
-          return false;
+          return _TextSettingsFlushResult.failed;
         }
       } finally {
         if (mounted && !_isDisposing && token == _textSettingsSaveToken) {
@@ -457,6 +534,49 @@ class _SchoolImportParserSettingsPageState
         }
       }
     }
+  }
+
+  Future<bool> _confirmEndpointChange(SchoolImportEndpointChange change) async {
+    if (!mounted || _isDisposing) return false;
+    final l10n = AppLocalizations.of(context);
+    final key = context.read<SchoolImportSecretController>().value;
+    var resolved = false;
+    void finish(BuildContext dialogContext, bool accepted) {
+      if (resolved || ModalRoute.of(dialogContext)?.isCurrent != true) return;
+      resolved = true;
+      Navigator.of(dialogContext).pop(accepted);
+    }
+
+    String destination(String value) =>
+        value.isEmpty ? '—' : redactSchoolImportError(value, apiKey: key);
+    final confirmed = await showExpressiveDialog<bool>(
+      context: context,
+      builder: (dialogContext) => SkedConfirmationDialog(
+        title: Text(l10n.schoolImportEndpointChangeTitle),
+        content: Text(
+          l10n.schoolImportEndpointChangeMessage(
+            destination(change.previousBaseUrl),
+            destination(change.nextBaseUrl),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => finish(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => finish(dialogContext, true),
+            child: Text(l10n.schoolImportEndpointChangeConfirm),
+          ),
+        ],
+      ),
+    );
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    return confirmed == true &&
+        mounted &&
+        !_isDisposing &&
+        routeWorkspaceEnabled &&
+        (lifecycle == null || lifecycle == AppLifecycleState.resumed);
   }
 
   Future<bool> _flushAllPendingSettings() async {

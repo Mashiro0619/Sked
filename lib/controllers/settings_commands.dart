@@ -1,6 +1,25 @@
 import '../models/timetable_models.dart';
 import '../services/settings_service.dart';
 import 'app_session.dart';
+import 'school_import_secret_controller.dart';
+
+class SchoolImportEndpointChange {
+  const SchoolImportEndpointChange({
+    required this.previousBaseUrl,
+    required this.nextBaseUrl,
+  });
+
+  final String previousBaseUrl;
+  final String nextBaseUrl;
+}
+
+class SchoolImportEndpointChangeRequired implements Exception {
+  const SchoolImportEndpointChangeRequired(this.change);
+  final SchoolImportEndpointChange change;
+
+  @override
+  String toString() => 'Changing the parsing endpoint requires confirmation.';
+}
 
 /// Validates settings targets and applies their domain-specific rules.
 /// Persistent application data continues to belong to the shared session.
@@ -8,11 +27,13 @@ class SettingsCommands {
   SettingsCommands({
     required this._session,
     required this._persist,
+    required this._secrets,
     this._service = const SettingsService(),
   });
 
   final AppSession _session;
   final Future<void> Function() _persist;
+  final SchoolImportSecretController _secrets;
   final SettingsService _service;
 
   AppData get _data => _session.data;
@@ -309,16 +330,55 @@ class SettingsCommands {
     await _persist();
   }
 
+  SchoolImportEndpointChange? customSchoolImportEndpointChange(String baseUrl) {
+    final current = _data.aiApiSettings;
+    final next = baseUrl.trim();
+    if (next.isEmpty ||
+        next == current.customBaseUrl ||
+        current.customApiKey.trim().isEmpty) {
+      return null;
+    }
+    return SchoolImportEndpointChange(
+      previousBaseUrl: current.customBaseUrl,
+      nextBaseUrl: next,
+    );
+  }
+
+  Future<SchoolImportEndpointChange?> prepareCustomSchoolImportEndpointChange(
+    String baseUrl,
+  ) async {
+    final next = baseUrl.trim();
+    if (next.isNotEmpty && next != _data.aiApiSettings.customBaseUrl) {
+      // An optimistic empty value may still have a saved key after an
+      // ambiguous deletion. Resolve the entire secret queue before deciding.
+      await _secrets.ensurePersistenceKnown();
+    }
+    return customSchoolImportEndpointChange(next);
+  }
+
   Future<void> updateCustomSchoolImportTextSettings({
     required String baseUrl,
     required String model,
     required String prompt,
+    SchoolImportEndpointChange? confirmedEndpointChange,
   }) async {
     _requireEnabled(AppMode.student);
     final normalizedBaseUrl = baseUrl.trim();
     final normalizedModel = model.trim();
     final normalizedPrompt = prompt.trim();
+    while (true) {
+      final secretEpoch = _secrets.mutationEpoch;
+      await prepareCustomSchoolImportEndpointChange(normalizedBaseUrl);
+      if (secretEpoch == _secrets.mutationEpoch) break;
+    }
+    _requireEnabled(AppMode.student);
     final current = _data.aiApiSettings;
+    final change = customSchoolImportEndpointChange(normalizedBaseUrl);
+    if (change != null &&
+        (confirmedEndpointChange?.previousBaseUrl != change.previousBaseUrl ||
+            confirmedEndpointChange?.nextBaseUrl != change.nextBaseUrl)) {
+      throw SchoolImportEndpointChangeRequired(change);
+    }
     if (current.customBaseUrl == normalizedBaseUrl &&
         current.customModel == normalizedModel &&
         current.customPrompt == normalizedPrompt) {

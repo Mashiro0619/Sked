@@ -2974,6 +2974,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get timelineEvents => '当前时间轴日程';
+
+  @override
+  String get schoolImportEndpointChangeTitle => '更换解析接口？';
+
+  @override
+  String schoolImportEndpointChangeMessage(String previous, String next) {
+    return '更换后，解析课表或获取模型列表时，已保存的 API 密钥会发送到新接口。\n\n当前：$previous\n新的：$next\n\n仅在信任该接口时继续。';
+  }
+
+  @override
+  String get schoolImportEndpointChangeConfirm => '更换接口';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5947,4 +5958,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get timelineEvents => '目前時間軸日程';
+
+  @override
+  String get schoolImportEndpointChangeTitle => '變更解析端點？';
+
+  @override
+  String schoolImportEndpointChangeMessage(String previous, String next) {
+    return '變更後，解析課表或取得模型清單時，已儲存的 API 金鑰會傳送至新端點。\n\n目前：$previous\n新的：$next\n\n僅在信任該端點時繼續。';
+  }
+
+  @override
+  String get schoolImportEndpointChangeConfirm => '變更端點';
 }
