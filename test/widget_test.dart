@@ -4236,7 +4236,7 @@ void main() {
     });
 
     testWidgets(
-      'TimetableGrid narrow course cards prioritize complete title lines',
+      'TimetableGrid narrow cards keep title lines before optional details',
       (tester) async {
         await tester.binding.setSurfaceSize(const Size(360, 640));
         addTearDown(() async {
@@ -4313,9 +4313,6 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text(title), findsOneWidget);
-        expect(find.text(location), findsNothing);
-        expect(find.text(teacher), findsNothing);
-
         final titleText = tester.widget<Text>(find.text(title));
         expect(titleText.maxLines, greaterThan(0));
         expect(titleText.overflow, TextOverflow.ellipsis);
@@ -4327,6 +4324,15 @@ void main() {
           ),
         );
         expect(titleRect.bottom, lessThanOrEqualTo(cardRect.bottom));
+        var precedingBottom = titleRect.bottom;
+        for (final detail in [location, teacher]) {
+          final visible = find.text(detail);
+          if (visible.evaluate().isEmpty) continue;
+          final detailRect = tester.getRect(visible);
+          expect(detailRect.top, greaterThanOrEqualTo(precedingBottom));
+          expect(detailRect.bottom, lessThanOrEqualTo(cardRect.bottom));
+          precedingBottom = detailRect.bottom;
+        }
         final painter = TextPainter(
           text: TextSpan(text: title, style: titleText.style),
           textDirection: TextDirection.ltr,
