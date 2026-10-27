@@ -666,6 +666,8 @@ String _foldLine(String line) {
 
 String _escapeText(String value) {
   return value
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
       .replaceAll('\\', r'\\')
       .replaceAll('\n', r'\n')
       .replaceAll(',', r'\,')

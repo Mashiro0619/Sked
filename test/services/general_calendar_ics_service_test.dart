@@ -544,6 +544,37 @@ END:VCALENDAR
     expect(event.notes, contains('backslash \\continued after folding'));
   });
 
+  for (final newline in ['\r\n', '\r', '\n']) {
+    test('normalizes exported text newlines ${jsonEncode(newline)}', () {
+      final note = 'Before${newline}SUMMARY:Injected${newline}After';
+      final schedule = GeneralSchedule(
+        id: 'newline-calendar',
+        name: 'Newlines',
+        events: [
+          GeneralEvent(
+            id: 'newline-event',
+            calendarId: 'newline-calendar',
+            title: 'Original title',
+            startDateTimeIso: '2026-10-27T09:00:00.000',
+            endDateTimeIso: '2026-10-27T10:00:00.000',
+            location: 'First${newline}Second',
+            notes: note,
+          ),
+        ],
+      );
+
+      final exported = service.exportSchedules([schedule]);
+      final imported = service.importSchedules(exported);
+      final event = imported.schedules.single.events.single;
+
+      expect(exported.replaceAll('\r\n', ''), isNot(contains('\r')));
+      expect(event.title, 'Original title');
+      expect(event.location, 'First\nSecond');
+      expect(event.notes, startsWith('Before\nSUMMARY:Injected\nAfter'));
+      expect(imported.warningItems, isEmpty);
+    });
+  }
+
   test('unfolds tab-prefixed ICS continuations', () {
     const source = '''
 BEGIN:VCALENDAR
