@@ -104,7 +104,11 @@ Future<void> _persistBackgroundNotificationAction(
           current,
         );
         if (fireAt == null || !fireAt.isAfter(current)) return;
-        await store.setSnoozeForRuntimeFence(runtimeKey, fireAt, runtimeFence);
+        await store.setSnoozeForRuntimeFence(
+          agendaSnoozeRuntimeKey(runtimeKey, decoded.key),
+          fireAt,
+          runtimeFence,
+        );
         if (request != null &&
             scheduledPayload != null &&
             await store.isRuntimeFenceCurrent(runtimeFence) &&

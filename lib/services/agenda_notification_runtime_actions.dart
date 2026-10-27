@@ -48,3 +48,15 @@ String? agendaRuntimeKeyForPayload(AgendaNotificationPayload payload) {
     revision: revision,
   );
 }
+
+/// Keep the occurrence revision and the clicked reminder's stable key together.
+/// Handled state still uses the occurrence alone to suppress every reminder.
+String agendaSnoozeRuntimeKey(String occurrenceKey, String reminderKey) =>
+    '$occurrenceKey|snooze|${Uri.encodeComponent(reminderKey)}';
+
+String? agendaSnoozeOccurrenceKey(String key) {
+  final separator = key.lastIndexOf('|snooze|');
+  if (separator < 0) return null;
+  final occurrenceKey = key.substring(0, separator);
+  return isAgendaRuntimeOccurrenceId(occurrenceKey) ? occurrenceKey : null;
+}

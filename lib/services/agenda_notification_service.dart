@@ -591,6 +591,7 @@ class AgendaNotificationService extends ChangeNotifier {
     }
     final current = (anchor ?? now()).toLocal();
     final scope = _projectNotificationCoverage(data, current);
+    await _migrateLegacyRuntimeOverrides(scope.occurrences);
     final projected = scope.occurrences.where(
       (occurrence) =>
           !_isPersistentlyHandled(data, occurrence) &&
@@ -1446,8 +1447,9 @@ class AgendaNotificationService extends ChangeNotifier {
     final result = <String>{};
     for (final entry in _snoozedUntil.entries) {
       if (!entry.value.isAfter(current)) continue;
-      if (isAgendaRuntimeOccurrenceId(entry.key)) {
-        result.add(entry.key.substring(0, entry.key.lastIndexOf('|')));
+      final occurrenceKey = agendaSnoozeOccurrenceKey(entry.key) ?? entry.key;
+      if (isAgendaRuntimeOccurrenceId(occurrenceKey)) {
+        result.add(occurrenceKey.substring(0, occurrenceKey.lastIndexOf('|')));
       } else {
         final legacy = parseNotificationPlanKey(entry.key);
         if (legacy != null) {
@@ -1759,7 +1761,8 @@ class AgendaNotificationService extends ChangeNotifier {
           occurrence.stableId,
           reminder.minutesBefore,
         );
-        final snoozedAt = _snoozedUntil[runtimeKey];
+        final snoozedAt =
+            _snoozedUntil[agendaSnoozeRuntimeKey(runtimeKey, key)];
         if (snoozedAt == null || !snoozedAt.isAfter(now)) continue;
         byKey.putIfAbsent(
           key,
@@ -1780,13 +1783,14 @@ class AgendaNotificationService extends ChangeNotifier {
       if (_handledOccurrenceIds.contains(runtimeKey)) {
         continue;
       }
-      final snoozedAt = _snoozedUntil[runtimeKey];
+      final snoozeKey = agendaSnoozeRuntimeKey(runtimeKey, item.key);
+      final snoozedAt = _snoozedUntil[snoozeKey];
       if (snoozedAt == null) {
         result.add(item);
         continue;
       }
       if (!snoozedAt.isAfter(now)) {
-        staleSnoozes.add(runtimeKey);
+        staleSnoozes.add(snoozeKey);
         result.add(item);
         continue;
       }
@@ -1824,6 +1828,10 @@ class AgendaNotificationService extends ChangeNotifier {
     final byScopedId = <String, AgendaOccurrence>{
       for (final occurrence in projected) occurrence.scopedStableId: occurrence,
     };
+    final byRuntimeKey = <String, AgendaOccurrence>{
+      for (final occurrence in projected)
+        _runtimeOccurrenceId(occurrence): occurrence,
+    };
     final byLegacySnoozeKey = <String, AgendaOccurrence>{
       for (final occurrence in projected)
         for (final rawReminder in occurrence.reminders)
@@ -1848,10 +1856,24 @@ class AgendaNotificationService extends ChangeNotifier {
 
     var snoozes = _snoozedUntil;
     for (final entry in _snoozedUntil.entries) {
-      if (isAgendaRuntimeOccurrenceId(entry.key)) continue;
-      final occurrence = byLegacySnoozeKey[entry.key];
+      if (agendaSnoozeOccurrenceKey(entry.key) != null) continue;
+      final occurrence =
+          byRuntimeKey[entry.key] ?? byLegacySnoozeKey[entry.key];
       if (occurrence == null) continue;
-      final runtimeKey = _runtimeOccurrenceId(occurrence);
+      if (occurrence.reminders.isEmpty) continue;
+      // Old occurrence-wide overrides did not retain the clicked reminder.
+      // Preserve one deterministic reminder rather than recreating every card.
+      final reminderKey = byLegacySnoozeKey.containsKey(entry.key)
+          ? entry.key
+          : buildNotificationPlanKey(
+              occurrence.sourceType,
+              occurrence.stableId,
+              occurrence.reminders.first.normalized().minutesBefore,
+            );
+      final runtimeKey = agendaSnoozeRuntimeKey(
+        _runtimeOccurrenceId(occurrence),
+        reminderKey,
+      );
       final existing = snoozes[runtimeKey];
       final fireAt = existing != null && existing.isAfter(entry.value)
           ? existing
@@ -1991,7 +2013,11 @@ class AgendaNotificationService extends ChangeNotifier {
           key,
           reminder.fireAt(occurrence.start),
         );
-        if (_snoozedUntil[_runtimeOccurrenceId(occurrence)]?.isAfter(current) ==
+        if (_snoozedUntil[agendaSnoozeRuntimeKey(
+                  _runtimeOccurrenceId(occurrence),
+                  key,
+                )]
+                ?.isAfter(current) ==
             true) {
           continue;
         }
@@ -2260,8 +2286,9 @@ class AgendaNotificationService extends ChangeNotifier {
     var accepted = true;
     switch (actionId) {
       case 'snooze_10m':
-        final runtimeKey = agendaRuntimeKeyForPayload(decoded);
-        if (runtimeKey == null) return false;
+        final occurrenceKey = agendaRuntimeKeyForPayload(decoded);
+        if (occurrenceKey == null) return false;
+        final runtimeKey = agendaSnoozeRuntimeKey(occurrenceKey, decoded.key);
         final current = now();
         if (_registrationStore == null &&
             _snoozedUntil[runtimeKey]?.isAfter(current) == true) {

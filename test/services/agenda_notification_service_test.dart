@@ -11,6 +11,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_background_data.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
+import 'package:sked/services/agenda_notification_runtime_actions.dart';
 import 'package:sked/services/agenda_notification_fingerprint.dart';
 import 'package:sked/services/agenda_projection_service.dart';
 import 'package:sked/services/agenda_notification_service.dart';
@@ -1752,6 +1753,83 @@ void main() {
   );
 
   test(
+    'snoozing one of two reminders preserves the other original fire time',
+    () async {
+      var current = DateTime(2026, 8, 3, 7, 30);
+      final occurrence = AgendaOccurrence(
+        stableId: 'two-reminders',
+        sourceType: 'test',
+        start: DateTime(2026, 8, 3, 8),
+        end: DateTime(2026, 8, 3, 9),
+        title: 'Meeting',
+        target: const AgendaTarget(sourceType: 'test'),
+        reminders: const [
+          AgendaReminder(minutesBefore: 10),
+          AgendaReminder(minutesBefore: 20),
+        ],
+      );
+      final projection = AgendaProjectionService(
+        registry: AgendaSourceRegistry(
+          sources: [
+            CallbackAgendaSource(id: 'test', builder: (_, _) => [occurrence]),
+          ],
+        ),
+      );
+      final runtime = MemoryAgendaNotificationRuntimeStore();
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        projection: projection,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => current,
+      );
+      addTearDown(service.dispose);
+      await service.reconcile(_data(), anchor: current);
+      final clicked = gateway.scheduled.values.singleWhere(
+        (request) => request.reminder.minutesBefore == 20,
+      );
+      current = DateTime(2026, 8, 3, 7, 41);
+      await service.handleAction(clicked.payload, 'snooze_10m');
+      final snoozedAt = DateTime(2026, 8, 3, 7, 51);
+      expect(gateway.scheduled[clicked.key]!.fireAt, snoozedAt);
+      expect(
+        gateway.scheduled.values.where(
+          (request) => request.fireAt == snoozedAt,
+        ),
+        hasLength(1),
+      );
+      expect(
+        gateway.scheduled.values
+            .singleWhere((request) => request.reminder.minutesBefore == 10)
+            .fireAt,
+        DateTime(2026, 8, 3, 7, 50),
+      );
+
+      final restartedGateway = MemoryAgendaNotificationGateway();
+      final restarted = AgendaNotificationService(
+        enabled: true,
+        projection: projection,
+        gateway: restartedGateway,
+        runtimeStore: runtime,
+        now: () => current,
+      );
+      addTearDown(restarted.dispose);
+      await restarted.reconcile(_data(), anchor: current);
+      expect(restartedGateway.scheduled, hasLength(2));
+      expect(restartedGateway.scheduled[clicked.key]!.fireAt, snoozedAt);
+      expect(
+        restartedGateway.scheduled.values.where(
+          (request) => request.fireAt == snoozedAt,
+        ),
+        hasLength(1),
+      );
+      await restarted.handleAction(clicked.payload, 'snooze_10m');
+      expect(restartedGateway.scheduled[clicked.key]!.fireAt, snoozedAt);
+    },
+  );
+
+  test(
     'reports whether a runtime action is waiting for foreground work',
     () async {
       final service = AgendaNotificationService(
@@ -1987,7 +2065,10 @@ void main() {
       revision: agendaOccurrenceRevision(occurrence),
     );
     expect(gateway.scheduled.values.single.fireAt, snoozedAt);
-    expect(runtime.snoozes, containsPair(revisionKey, snoozedAt));
+    expect(
+      runtime.snoozes,
+      containsPair(agendaSnoozeRuntimeKey(revisionKey, legacyKey), snoozedAt),
+    );
     expect(runtime.snoozes, isNot(contains(legacyKey)));
 
     final edited = data.copyWith(
@@ -4035,7 +4116,8 @@ void main() {
       occurrenceId: occurrenceId,
       revision: revision,
     );
-    final snoozedUntil = (await runtime.readSnoozes())[runtimeKey];
+    final snoozedUntil = (await runtime
+        .readSnoozes())[agendaSnoozeRuntimeKey(runtimeKey, key)];
     final pending = await runtime.readPendingActions();
     expect(snoozedUntil, isNotNull);
     expect(
