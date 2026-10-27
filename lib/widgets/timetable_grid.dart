@@ -373,7 +373,7 @@ class _TimetableGridState extends State<TimetableGrid> {
     final slots = _weekProjection.periodTimes;
     final textScaler = MediaQuery.textScalerOf(context);
     final textScale = textScaler.scale(1);
-    final layout = _layoutFor(_minuteHeight * textScale.clamp(1.0, 1.8));
+    final layout = _layoutFor(_minuteHeight * textScale.clamp(1.0, 2.0));
     final colors = Theme.of(context).colorScheme;
     final useEntries = widget.entries != null;
     assert(

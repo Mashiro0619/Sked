@@ -137,6 +137,54 @@ void _expectWholeVisibleLines(WidgetTester tester, String id, double scale) {
 }
 
 void main() {
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets(
+      '2x text doubles course duration and time offsets on $platform',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(700, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final courses = [
+          _course(),
+          _course(id: 'later').copyWith(
+            startMinutes: 540,
+            endMinutes: 585,
+            timeRange: buildTimeRange(540, 585),
+          ),
+        ];
+        TimetableCourseTapInfo? opened;
+        Widget grid(double scale) => _grid(
+          courses: courses,
+          days: const [1],
+          scale: scale,
+          theme: ThemeData(platform: platform),
+          onTap: (value) => opened = value,
+        );
+        await tester.pumpWidget(grid(1));
+        await tester.pumpAndSettle();
+        final regularHeight = tester.getSize(_visual()).height;
+        final regularOffset =
+            tester.getTopLeft(_visual('later')).dy -
+            tester.getTopLeft(_visual()).dy;
+        await tester.pumpWidget(grid(2));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(_visual()).height,
+          closeTo(regularHeight * 2, .01),
+        );
+        expect(
+          tester.getTopLeft(_visual('later')).dy -
+              tester.getTopLeft(_visual()).dy,
+          closeTo(regularOffset * 2, .01),
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('timetable-course-hit-later')),
+        );
+        expect(opened?.course.id, 'later');
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'retained typography keeps geometry and current conflict actions',
     (tester) async {
@@ -406,7 +454,7 @@ void main() {
           }
           expect(
             tester.getSize(_visual()).height,
-            closeTo(45 * 1.4 * scale.clamp(1, 1.8), .01),
+            closeTo(45 * 1.4 * scale, .01),
           );
           _expectWholeVisibleLines(tester, 'course', scale);
           await tester.tap(
@@ -517,7 +565,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(tester.getSize(_visual()).height, closeTo(5 * 1.4 * 1.8, .01));
+      expect(tester.getSize(_visual()).height, closeTo(5 * 1.4 * 2, .01));
       expect(
         find.descendant(of: _visual(), matching: find.byType(Text)),
         findsNothing,
