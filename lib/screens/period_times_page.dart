@@ -905,16 +905,11 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     final transfers = context.read<DataTransferController>();
     final settingsView = context.read<SettingsViewState>();
     final l10n = AppLocalizations.of(context);
-    final source = await widget.textFilePicker(
-      allowedExtensions: const ['json'],
-    );
-    if (!mounted) {
-      return;
-    }
-    if (source == null) {
-      return;
-    }
     try {
+      final source = await widget.textFilePicker(
+        allowedExtensions: const ['json'],
+      );
+      if (!mounted || source == null) return;
       final imported = transfers.importPeriodTimesJson(source);
       final count = imported.length;
       if (count == 0) {
@@ -928,10 +923,14 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       });
       _scheduleAutoSave();
       _showMessage(l10n.importedPeriodTimesCount(count));
+    } on TextFileTooLargeException {
+      if (mounted) {
+        _showMessage(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes));
+      }
     } on FormatException catch (error) {
-      _showMessage(error.message);
+      if (mounted) _showMessage(error.message);
     } catch (_) {
-      _showMessage(l10n.importFailedCheckContent);
+      if (mounted) _showMessage(l10n.importFailedCheckContent);
     }
   }
 

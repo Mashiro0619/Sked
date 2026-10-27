@@ -17,6 +17,7 @@ import 'package:sked/services/export_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
+import 'package:sked/services/text_file_picker.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:flutter/services.dart';
@@ -625,6 +626,71 @@ void main() {
     expect(find.text(artifact), findsOne);
     expect(find.text(l10n.copyText), findsOne);
   });
+
+  testWidgets(
+    'oversized school-site import reports the limit without changes',
+    (tester) async {
+      final provider = await _createProvider();
+      final store = _MemorySchoolSiteStore('[]');
+      await _pumpSchoolSitesPage(
+        tester,
+        provider,
+        siteService: SchoolSiteService(store: store),
+        pickJsonSource: () async => throw const TextFileTooLargeException(),
+      );
+      final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
+      await tester.tap(find.byTooltip(l10n.importExport));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.schoolSitesImportJson));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes)),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.schoolSitesImportPreviewTitle), findsNothing);
+      expect(store.source, '[]');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'oversized school-site recovery import is caught before replacement',
+    (tester) async {
+      final provider = await _createProvider();
+      final store = _RecoverySchoolSiteStore(
+        const SchoolSiteStoreLoadResult(
+          candidates: [SchoolSiteStoreCandidate(source: '{ broken json')],
+          hasArtifacts: true,
+        ),
+        isolatedArtifacts: const ['memory://recovery/Sked_school_sites.json'],
+      );
+      await _pumpSchoolSitesPage(
+        tester,
+        provider,
+        siteService: SchoolSiteService(store: store),
+        pickJsonSource: () async => throw const TextFileTooLargeException(),
+      );
+      final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
+      final importButton = find.byKey(
+        const ValueKey('school-sites-recovery-import'),
+      );
+      await tester.scrollUntilVisible(
+        importButton,
+        180,
+        scrollable: _recoveryScrollable(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(importButton);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes)),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.schoolSitesImportPreviewTitle), findsNothing);
+      expect(store.saveCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('JSON import previews invalid entries and merges exact uniques', (
     tester,

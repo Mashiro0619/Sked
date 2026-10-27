@@ -3014,6 +3014,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importWarningSkippedEmptyRecurrence => '已跳过截止时刻早于首个实例的重复日程。';
+
+  @override
+  String importTextFileTooLarge(Object size) {
+    return '文本文件不能超过 $size MB。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6027,4 +6032,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get importWarningSkippedEmptyRecurrence => '已略過截止時刻早於首個實例的重複日程。';
+
+  @override
+  String importTextFileTooLarge(Object size) {
+    return '文字檔案不能超過 $size MB。';
+  }
 }

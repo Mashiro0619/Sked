@@ -5735,6 +5735,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skipped a recurring event because UNTIL is before its first occurrence.'**
   String get importWarningSkippedEmptyRecurrence;
+
+  /// No description provided for @importTextFileTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Text files must be {size} MB or smaller.'**
+  String importTextFileTooLarge(Object size);
 }
 
 class _AppLocalizationsDelegate

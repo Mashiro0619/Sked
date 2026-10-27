@@ -593,7 +593,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
   Future<void> _importRecoveryJson() async {
     final result = _loadResult;
     if (result == null || !result.canReplaceAfterRecovery || !mounted) return;
-    final source = await widget.pickJsonSource();
+    final source = await _pickImportJsonSource();
     if (source == null || !mounted) return;
     late final SchoolSiteImportPreview preview;
     try {
@@ -1020,6 +1020,20 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     await _loadSites();
   }
 
+  Future<String?> _pickImportJsonSource() async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      return await widget.pickJsonSource();
+    } on TextFileTooLargeException {
+      if (mounted) {
+        _showMessage(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes));
+      }
+    } catch (_) {
+      if (mounted) _showMessage(l10n.importFailedCheckContent);
+    }
+    return null;
+  }
+
   Future<void> _importJson() async {
     if (_jsonImportInProgress || !mounted) {
       return;
@@ -1027,7 +1041,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     _setJsonImportInProgress(true);
     final l10n = AppLocalizations.of(context);
     try {
-      final source = await widget.pickJsonSource();
+      final source = await _pickImportJsonSource();
       if (!mounted) {
         return;
       }

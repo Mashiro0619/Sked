@@ -618,6 +618,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'oversized period template is caught before changing or saving periods',
+    (tester) async {
+      final storage = _MemoryTimetableStorage(_initialData());
+      final provider = await _createProvider(storage: storage);
+      await _pumpPeriodTimesPage(
+        tester,
+        provider,
+        textFilePicker: ({required allowedExtensions}) async =>
+            throw const TextFileTooLargeException(),
+      );
+      final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
+      await tester.tap(find.byTooltip(l10n.importExport));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.importPeriodTemplate));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes)),
+        findsOneWidget,
+      );
+      expect(storage.saveCount, 0);
+      expect(_storedDefaultPeriodTimeSet(storage).periodTimes, hasLength(12));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('text import is persisted after submitting valid content', (
     tester,
   ) async {

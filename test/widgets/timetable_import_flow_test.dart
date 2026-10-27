@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,11 +14,13 @@ import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/timetable_import_flow.dart';
 import 'package:sked/services/data_transfer_codec.dart';
+import 'package:sked/services/text_file_picker.dart';
 import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 
 import '../support/data_transfer_codec.dart';
 import '../support/timetable_storage_fakes.dart';
+import '../support/oversized_text_file_picker.dart';
 
 Future<AppRuntime> _createProvider({
   DataTransferCodec codec = inlineDataTransferCodec,
@@ -115,6 +119,29 @@ Future<void> _pumpImportButton(
 }
 
 void main() {
+  for (final language in ['en', 'zh']) {
+    testWidgets(
+      'oversized timetable file uses the selected $language message and keeps data',
+      (tester) async {
+        final previousPicker = FileSelectorPlatform.instance;
+        FileSelectorPlatform.instance = OversizedTextFilePicker();
+        addTearDown(() => FileSelectorPlatform.instance = previousPicker);
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final before = provider.workspaceView.data.toJson();
+        await _pumpImportButton(tester, provider, locale: Locale(language));
+        final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+        await tester.tap(find.text('Import'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes)),
+          findsOneWidget,
+        );
+        expect(provider.workspaceView.data.toJson(), before);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   testWidgets('invalid import content shows the selected UI language', (
     tester,
   ) async {

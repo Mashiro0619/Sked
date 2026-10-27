@@ -64,6 +64,14 @@ class TimetableImportFlow {
         maintenance: maintenance,
         workspaceView: workspaceView,
       );
+    } on TextFileTooLargeException {
+      if (context.mounted) {
+        _showMessage(
+          context,
+          AppLocalizations.of(context)
+              .importTextFileTooLarge(TextFilePicker.maxMegabytes),
+        );
+      }
     } catch (error, stackTrace) {
       debugPrint('Picking a timetable import file failed: $error\n$stackTrace');
       if (context.mounted) {

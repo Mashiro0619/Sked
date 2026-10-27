@@ -13,6 +13,7 @@ import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/controllers/app_data_maintenance.dart'
     show AppBackupRestoreInProgressException;
 import 'package:sked/services/data_transfer_codec.dart';
+import 'package:sked/services/text_file_picker.dart';
 import 'package:sked/screens/language_settings_page.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -24,6 +25,7 @@ import 'package:sked/widgets/text_transfer_widgets.dart';
 
 import '../support/workspace_harness.dart';
 import '../support/data_transfer_codec.dart';
+import '../support/oversized_text_file_picker.dart';
 
 class _Storage extends WorkspaceMemoryStorage {
   _Storage(super.data);
@@ -273,6 +275,38 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'oversized backup file reports its limit before restore preparation',
+    (tester) async {
+      _viewport(tester);
+      final (provider, storage) = await _fixture();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        provider.dispose();
+      });
+      final previousPicker = FileSelectorPlatform.instance;
+      FileSelectorPlatform.instance = OversizedTextFilePicker();
+      addTearDown(() => FileSelectorPlatform.instance = previousPicker);
+      await tester.pumpWidget(
+        WorkspaceHarness(provider: provider, home: const SettingsPage()),
+      );
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      );
+      await _open(tester, _key('settings-app-backup'));
+      await _open(tester, find.text(l10n.restoreBackupFileTitle));
+      expect(
+        find.text(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes)),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.restoreBackupConfirmTitle), findsNothing);
+      expect(storage.writes, 0);
+      expect(provider.maintenance.isReserved, false);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'text backup restore can retry after a recoverable failure',

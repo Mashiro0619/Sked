@@ -2207,6 +2207,7 @@
   "importWarningRecurrenceDateClamped": "The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.",
   "importWarningSkippedRecurrenceOverride": "Skipped a recurrence override whose original occurrence could not be identified safely: {fields}.",
   "importWarningSkippedCancelledEvent": "Skipped a cancelled event.",
-  "importWarningSkippedEmptyRecurrence": "Skipped a recurring event because UNTIL is before its first occurrence."
+  "importWarningSkippedEmptyRecurrence": "Skipped a recurring event because UNTIL is before its first occurrence.",
+  "importTextFileTooLarge": "Text files must be {size} MB or smaller."
 
 }

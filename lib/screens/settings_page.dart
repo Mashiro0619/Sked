@@ -2186,6 +2186,11 @@ class _SettingsPageState extends State<SettingsPage>
         return null;
       }
       return source;
+    } on TextFileTooLargeException {
+      if (mounted) {
+        _showMessage(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes));
+      }
+      return null;
     } catch (_) {
       if (mounted) {
         _showMessage(l10n.importFailedCheckContent);

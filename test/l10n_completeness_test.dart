@@ -43,6 +43,7 @@ void main() {
               'importWarningSkippedRecurrenceOverride',
               'importWarningSkippedCancelledEvent',
               'importWarningSkippedEmptyRecurrence',
+              'importTextFileTooLarge',
             };
       final file = File('lib/l10n/app_$locale.arb');
       expect(file.existsSync(), isTrue, reason: 'Missing locale source: $file');

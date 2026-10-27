@@ -3284,4 +3284,9 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get importWarningSkippedEmptyRecurrence =>
       'Skipped a recurring event because UNTIL is before its first occurrence.';
+
+  @override
+  String importTextFileTooLarge(Object size) {
+    return 'Text files must be $size MB or smaller.';
+  }
 }
