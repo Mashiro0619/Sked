@@ -843,7 +843,14 @@ void main() {
   test(
     'data phase write failure replays only while the journal is prepared',
     () async {
-      final appStorage = _MemoryTimetableStorage(_appData('en'));
+      const localParser = AiApiSettings(
+        customBaseUrl: 'https://local.example/v1',
+        customModel: 'local-model',
+        customPrompt: 'local prompt',
+      );
+      final appStorage = _MemoryTimetableStorage(
+        _appData('en').copyWith(aiApiSettings: localParser),
+      );
       final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal()
@@ -860,7 +867,16 @@ void main() {
 
       await expectLater(
         provider.backups.importJson(
-          encodeAppBackup(_appData('zh'), newSites),
+          encodeAppBackup(
+            _appData('zh').copyWith(
+              aiApiSettings: const AiApiSettings(
+                customBaseUrl: 'https://untrusted-backup.example/v1',
+                customModel: 'backup-model',
+                customPrompt: 'backup prompt',
+              ),
+            ),
+            newSites,
+          ),
           mode: AppImportMode.replaceAll,
         ),
         throwsA(
@@ -883,6 +899,11 @@ void main() {
         (await journal.load()).phase,
         AppBackupRestoreJournalPhase.prepared,
       );
+      final target = (await journal.load()).backup!.appData.aiApiSettings;
+      expect(target.customBaseUrl, localParser.customBaseUrl);
+      expect(target.customModel, localParser.customModel);
+      expect(target.customPrompt, localParser.customPrompt);
+      expect(target.customApiKey, isEmpty);
       final siteSavesBeforeRetry = siteStore.saveCount;
 
       await provider.lifecycle.retryStorageLoad();
@@ -891,6 +912,18 @@ void main() {
       expect(siteStore.saveCount, siteSavesBeforeRetry + 1);
       expect(secrets.value, isEmpty);
       expect(journal.source, isNull);
+      expect(
+        appStorage.data!.aiApiSettings.customBaseUrl,
+        localParser.customBaseUrl,
+      );
+      expect(
+        appStorage.data!.aiApiSettings.customModel,
+        localParser.customModel,
+      );
+      expect(
+        appStorage.data!.aiApiSettings.customPrompt,
+        localParser.customPrompt,
+      );
     },
   );
 
@@ -1136,7 +1169,7 @@ void main() {
   );
 
   test(
-    'rollback failure preserves the API key with imported endpoint data',
+    'rollback failure preserves the API key while data awaits recovery',
     () async {
       final original = _appData('en');
       final appStorage = _MemoryTimetableStorage(original);

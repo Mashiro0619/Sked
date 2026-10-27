@@ -32,6 +32,45 @@ class _BackupCodec extends DataTransferCodec {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  for (final localUrl in ['', 'https://local.example/v1']) {
+    test(
+      'restore retains local parser settings at apply time: $localUrl',
+      () async {
+        final app = await workspaceProvider();
+        addTearDown(app.dispose);
+        final backup = app.session.committedData.copyWith(
+          localeCode: 'de',
+          aiApiSettings: const AiApiSettings(
+            customBaseUrl: 'https://backup.example/v1',
+            customModel: 'backup-model',
+            customPrompt: 'backup prompt',
+          ),
+        );
+        final prepared = await app.backups.prepareJson(
+          encodeAppBackup(backup, []),
+        );
+        await app.settingsCommands.updateCustomSchoolImportTextSettings(
+          baseUrl: localUrl,
+          model: localUrl.isEmpty ? '' : 'local-model',
+          prompt: localUrl.isEmpty ? '' : 'local prompt',
+        );
+        await app.schoolImportSecrets.update('local-secret');
+        final local = app.session.committedData.aiApiSettings;
+        await app.backups.restorePrepared(prepared);
+        final restored = app.session.committedData;
+        expect(restored.localeCode, 'de');
+        expect(restored.aiApiSettings.customBaseUrl, local.customBaseUrl);
+        expect(restored.aiApiSettings.customModel, local.customModel);
+        expect(restored.aiApiSettings.customPrompt, local.customPrompt);
+        expect(app.schoolImportSecrets.value, isEmpty);
+        expect(
+          prepared.value.appData.aiApiSettings.customBaseUrl,
+          'https://backup.example/v1',
+        );
+      },
+    );
+  }
+
   test(
     'confirmation applies its decoded backup without parsing it again',
     () async {

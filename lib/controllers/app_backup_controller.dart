@@ -210,6 +210,14 @@ class AppBackupController {
     }
 
     final previousAppData = _data;
+    final localParser = previousAppData.aiApiSettings;
+    imported = imported.copyWith(
+      aiApiSettings: imported.aiApiSettings.copyWith(
+        customBaseUrl: localParser.customBaseUrl,
+        customModel: localParser.customModel,
+        customPrompt: localParser.customPrompt,
+      ),
+    );
     final newlyEnabled = imported.enabledWorkspaces.difference(
       previousAppData.enabledWorkspaces,
     );
