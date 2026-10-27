@@ -1699,6 +1699,82 @@ void main() {
       },
     );
 
+    for (final coldStart in [false, true]) {
+      test(
+        'Windows body activation reported as an action still navigates (cold=$coldStart)',
+        () async {
+          final payload = _platformPayload(
+            'windows-native-body',
+            fireAt: DateTime.utc(2030, 1, 2, 8),
+          );
+          final response = NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotificationAction,
+            payload: payload,
+            actionId: payload,
+          );
+          if (coldStart) {
+            platform.launchDetails = NotificationAppLaunchDetails(
+              true,
+              notificationResponse: response,
+            );
+          }
+          final gateway = FlutterAgendaNotificationGateway(
+            windowsBackend: platform,
+          );
+          final taps = <String?>[];
+          final actions = <String>[];
+          await gateway.initialize(
+            onTap: taps.add,
+            onAction: (payload, actionId) => actions.add('$actionId:$payload'),
+          );
+          if (!coldStart) platform.deliver(response);
+
+          expect(taps, [payload]);
+          expect(actions, isEmpty);
+        },
+      );
+    }
+
+    test('Windows action fallback accepts only valid body envelopes', () async {
+      final gateway = FlutterAgendaNotificationGateway(
+        windowsBackend: platform,
+      );
+      final taps = <String?>[];
+      final actions = <String>[];
+      await gateway.initialize(
+        onTap: taps.add,
+        onAction: (payload, actionId) => actions.add('$actionId:$payload'),
+      );
+      final payload = _platformPayload(
+        'windows-action-fallback',
+        fireAt: DateTime.utc(2030, 1, 2, 8),
+      );
+      platform.deliver(
+        NotificationResponse(
+          notificationResponseType:
+              NotificationResponseType.selectedNotificationAction,
+          actionId: payload,
+        ),
+      );
+      for (final invalid in [
+        'sked.agenda.v1:broken',
+        'sked.windows.action.v1:handled:broken',
+        'sked.windows.action.v2:$payload',
+        'unknown',
+      ]) {
+        platform.deliver(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotificationAction,
+            payload: invalid,
+          ),
+        );
+      }
+      expect(taps, [payload]);
+      expect(actions, isEmpty);
+    });
+
     test('routes Windows body taps and action envelopes separately', () async {
       final gateway = FlutterAgendaNotificationGateway(
         windowsBackend: platform,

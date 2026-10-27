@@ -380,11 +380,16 @@ class FlutterAgendaNotificationGateway
     if (_isWindows) {
       if (response.notificationResponseType ==
           NotificationResponseType.selectedNotificationAction) {
-        final action = decodeWindowsNotificationAction(
-          response.payload ?? response.actionId,
-        );
+        final arguments = response.payload ?? response.actionId;
+        final action = decodeWindowsNotificationAction(arguments);
         if (action != null) {
           _onAction?.call(action.payload, action.actionId);
+        } else if (AgendaNotificationPayload.tryDecode(arguments) != null) {
+          // Windows' COM callback reports any non-null activation arguments as
+          // an action, including the ordinary toast body's launch payload.
+          // Only a valid body envelope may fall back to navigation; malformed
+          // or unknown action envelopes must remain ignored.
+          _onTap?.call(arguments);
         }
         return;
       }
