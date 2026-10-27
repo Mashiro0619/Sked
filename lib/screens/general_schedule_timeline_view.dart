@@ -1205,7 +1205,7 @@ class _CalendarTimeline extends StatelessWidget {
     final hasAllDayOccurrences = allDayCount > 0;
     final canCollapseAllDay = allDayCount > 1;
     final isAllDayCollapsed = canCollapseAllDay && allDayTimelineCollapsed;
-    return DesktopResizableRegion(
+    final timeline = DesktopResizableRegion(
       layoutKey: DesktopLayoutRegion.allDayTimeline,
       axis: Axis.vertical,
       builder: (context, preferred, update, commit, reset) => LayoutBuilder(
@@ -1553,6 +1553,68 @@ class _CalendarTimeline extends StatelessWidget {
         },
       ),
     );
+    final hasOccurrences =
+        hasAllDayOccurrences ||
+        snapshot.timedByDate.values.any((groups) => groups.isNotEmpty);
+    if (!hasOccurrences) return timeline;
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+          child: Builder(
+            builder: (anchor) => OutlinedButton.icon(
+              key: const ValueKey('general-timeline-expand-events'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                visualDensity: VisualDensity.standard,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: const Icon(Icons.view_agenda_outlined),
+              label: Text(l10n.expandTimelineEvents),
+              onPressed: viewportActive
+                  ? () => onMoreOccurrencesTap(
+                      _expandedOccurrences(),
+                      anchor,
+                      timelineDays: days,
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        Expanded(child: timeline),
+      ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Keep the new entry in the same short-window escape path as the grid.
+        // Its real target must not shrink when landscape or an IME takes space.
+        final minimumHeight = 96 + 48 * textFactor + 4;
+        if (constraints.maxHeight >= minimumHeight) return content;
+        return SingleChildScrollView(
+          key: const ValueKey('general-timeline-entry-height-scroll'),
+          primary: false,
+          child: SizedBox(height: minimumHeight, child: content),
+        );
+      },
+    );
+  }
+
+  List<GeneralEventOccurrence> _expandedOccurrences() {
+    // Include every displayed overlap column and all-day lane, including those
+    // collapsed into a count chip. Distinct recurrence instances stay distinct.
+    final unique = <String, GeneralEventOccurrence>{};
+    for (final segment in snapshot.allDay.segments) {
+      unique[segment.occurrence.occurrenceKey] = segment.occurrence;
+    }
+    for (final groups in snapshot.timedByDate.values) {
+      for (final group in groups) {
+        for (final event in group.events) {
+          unique[event.span.value.occurrenceKey] = event.span.value;
+        }
+      }
+    }
+    return List.unmodifiable(unique.values);
   }
 
   Iterable<Widget> _timedOccurrenceCards({

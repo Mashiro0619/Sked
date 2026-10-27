@@ -2180,5 +2180,9 @@
   "schoolWebImportSignOutFailed": "Could not clear school sign-in data. Please try again.",
   "importWarningSkippedUnsupportedTimeZone": "Skipped an event whose time zone cannot be interpreted safely: {fields}.",
   "icsSkippedTimeZonesReview": "The following events will be skipped because their time zones cannot be interpreted safely. Review the details before importing the remaining events.",
-  "icsImportRemainingAction": "Continue with remaining events"
+  "icsImportRemainingAction": "Continue with remaining events",
+  "expandTimelineEvents": "Expand events",
+  "@expandTimelineEvents": {"description": "Action that opens an accessible list of the events in the current timeline."},
+  "timelineEvents": "Events in this timeline",
+  "@timelineEvents": {"description": "Title of the accessible event picker for the displayed timeline range."}
 }

@@ -3185,4 +3185,10 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get icsImportRemainingAction => 'Continue with remaining events';
+
+  @override
+  String get expandTimelineEvents => 'Expand events';
+
+  @override
+  String get timelineEvents => 'Events in this timeline';
 }

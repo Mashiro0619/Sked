@@ -2142,5 +2142,7 @@
   "schoolWebImportSignOutFailed": "无法清除学校网页登录数据，请重试。",
   "importWarningSkippedUnsupportedTimeZone": "已跳过无法安全解析时区的日程：{fields}。",
   "icsSkippedTimeZonesReview": "以下日程的时区无法安全解析，将跳过这些日程。请先核对详情，再决定是否继续导入其余日程。",
-  "icsImportRemainingAction": "继续导入其余日程"
+  "icsImportRemainingAction": "继续导入其余日程",
+  "expandTimelineEvents": "展开日程",
+  "timelineEvents": "当前时间轴日程"
 }

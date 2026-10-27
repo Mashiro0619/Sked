@@ -106,6 +106,7 @@ class _ListCalendarView extends StatelessWidget {
 class _GeneralListOccurrenceTile extends StatelessWidget {
   const _GeneralListOccurrenceTile({
     this.compactPanel = false,
+    this.minimumHitHeight = 0,
     required this.occurrence,
     required this.onTap,
   });
@@ -113,6 +114,7 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
   final GeneralEventOccurrence occurrence;
   final VoidCallback onTap;
   final bool compactPanel;
+  final double minimumHitHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +192,9 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
               child: InkWell(
                 onTap: onTap,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 44),
+                  constraints: BoxConstraints(
+                    minHeight: math.max(44, minimumHitHeight),
+                  ),
                   padding: EdgeInsets.symmetric(
                     vertical: compactPanel ? 6 : 8,
                     horizontal: 10,
@@ -297,51 +301,54 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(5),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minimumHitHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        occurrence.event.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w500,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          occurrence.event.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: colors.onSurface,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                if (repeatIcon != null) ...[
-                  const SizedBox(width: 8),
-                  repeatIcon,
+                  if (repeatIcon != null) ...[
+                    const SizedBox(width: 8),
+                    repeatIcon,
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

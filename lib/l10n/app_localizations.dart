@@ -5657,6 +5657,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue with remaining events'**
   String get icsImportRemainingAction;
+
+  /// Action that opens an accessible list of the events in the current timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand events'**
+  String get expandTimelineEvents;
+
+  /// Title of the accessible event picker for the displayed timeline range.
+  ///
+  /// In en, this message translates to:
+  /// **'Events in this timeline'**
+  String get timelineEvents;
 }
 
 class _AppLocalizationsDelegate

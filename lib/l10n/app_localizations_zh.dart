@@ -2968,6 +2968,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get icsImportRemainingAction => '继续导入其余日程';
+
+  @override
+  String get expandTimelineEvents => '展开日程';
+
+  @override
+  String get timelineEvents => '当前时间轴日程';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5935,4 +5941,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get icsImportRemainingAction => '繼續匯入其餘日程';
+
+  @override
+  String get expandTimelineEvents => '展開日程';
+
+  @override
+  String get timelineEvents => '目前時間軸日程';
 }

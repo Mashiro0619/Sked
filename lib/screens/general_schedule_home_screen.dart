@@ -110,8 +110,9 @@ typedef _GeneralOccurrenceTap = void Function(
 );
 typedef _GeneralOccurrencesTap = void Function(
   List<GeneralEventOccurrence> occurrences,
-  BuildContext anchor,
-);
+  BuildContext anchor, {
+  List<DateTime>? timelineDays,
+});
 typedef _GeneralViewChanged = void Function(String view, BuildContext anchor);
 
 class GeneralScheduleHomeScreen extends StatefulWidget {
@@ -590,13 +591,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                     occurrence,
                                     anchorContext: anchor,
                                   ),
-                              onMoreOccurrencesTap: (occurrences, anchor) =>
-                                  _openMoreOccurrences(
-                                    context,
-                                    general,
-                                    occurrences,
-                                    anchorContext: anchor,
-                                  ),
+                              onMoreOccurrencesTap:
+                                  (occurrences, anchor, {timelineDays}) =>
+                                      _openMoreOccurrences(
+                                        context,
+                                        general,
+                                        occurrences,
+                                        timelineDays: timelineDays,
+                                        anchorContext: anchor,
+                                      ),
                               onAllDayCollapsedGroupTap:
                                   (occurrences, day, anchor) =>
                                       _openMoreOccurrences(
@@ -680,13 +683,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                     occurrence,
                                     anchorContext: anchor,
                                   ),
-                              onMoreOccurrencesTap: (occurrences, anchor) =>
-                                  _openMoreOccurrences(
-                                    context,
-                                    general,
-                                    occurrences,
-                                    anchorContext: anchor,
-                                  ),
+                              onMoreOccurrencesTap:
+                                  (occurrences, anchor, {timelineDays}) =>
+                                      _openMoreOccurrences(
+                                        context,
+                                        general,
+                                        occurrences,
+                                        timelineDays: timelineDays,
+                                        anchorContext: anchor,
+                                      ),
                               onAllDayCollapsedGroupTap:
                                   (occurrences, day, anchor) =>
                                       _openMoreOccurrences(
@@ -2297,6 +2302,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     GeneralViewState general,
     List<GeneralEventOccurrence> occurrences, {
     DateTime? contextDate,
+    List<DateTime>? timelineDays,
     required BuildContext anchorContext,
   }) async {
     if (!mounted ||
@@ -2331,6 +2337,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         builder: (sheetContext) => _MoreGeneralOccurrencesSheet(
           occurrences: occurrences,
           contextDate: contextDate,
+          timelineDays: timelineDays,
           onOccurrenceTap: (occurrence, anchor) => unawaited(
             _openDetails(context, general, occurrence, anchorContext: anchor),
           ),
@@ -3744,45 +3751,56 @@ class _MoreGeneralOccurrencesSheet extends StatelessWidget {
   const _MoreGeneralOccurrencesSheet({
     required this.occurrences,
     this.contextDate,
+    this.timelineDays,
     required this.onOccurrenceTap,
   });
 
   final List<GeneralEventOccurrence> occurrences;
   final DateTime? contextDate;
+  final List<DateTime>? timelineDays;
   final _GeneralOccurrenceTap onOccurrenceTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final first = occurrences.first;
+    final expanded = timelineDays != null;
     final headingDate = contextDate ?? first.start;
     final title = Text(
-      l10n.monthDayEvents(headingDate.day, occurrences.length),
+      expanded
+          ? l10n.timelineEvents
+          : l10n.monthDayEvents(headingDate.day, occurrences.length),
     );
     final subtitle = Text(
-      contextDate == null
+      expanded
+          ? '${_formatDate(timelineDays!.first)} – ${_formatDate(timelineDays!.last)}'
+          : contextDate == null
           ? '${_formatDate(first.start)}  '
                 '${_formatOccurrenceTime(context, first)}'
           : '${_formatDate(headingDate)}  '
                 '${_weekdayLabel(context, headingDate)}',
     );
-    final entries = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final occurrence in occurrences)
-          Builder(
-            builder: (anchor) => _GeneralListOccurrenceTile(
-              occurrence: occurrence,
-              onTap: () => onOccurrenceTap(occurrence, anchor),
-            ),
-          ),
-      ],
-    );
+    final entries = expanded
+        ? _expandedEntries(context)
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final occurrence in occurrences)
+                Builder(
+                  builder: (anchor) => _GeneralListOccurrenceTile(
+                    occurrence: occurrence,
+                    onTap: () => onOccurrenceTap(occurrence, anchor),
+                  ),
+                ),
+            ],
+          );
     if (WorkspaceViewTaskScope.maybeOf(context)?.enabled == true) {
       return WorkspaceViewPanel(
         key: const ValueKey('general-more-occurrences-sheet'),
         title: title,
         subtitle: subtitle,
+        bodyIsSliver: expanded,
+        semanticChildCount: expanded ? occurrences.length : null,
         child: entries,
       );
     }
@@ -3790,14 +3808,112 @@ class _MoreGeneralOccurrencesSheet extends StatelessWidget {
       key: const ValueKey('general-more-occurrences-sheet'),
       title: title,
       subtitle: subtitle,
+      bodyIsSliver: expanded,
+      semanticChildCount: expanded ? occurrences.length : null,
       heightFactor: occurrences.length > 5 ? 0.72 : null,
       actions: [
         TextButton(
+          style: expanded
+              ? TextButton.styleFrom(minimumSize: const Size(48, 48))
+              : null,
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.cancel),
         ),
       ],
       child: entries,
+    );
+  }
+
+  Widget _expandedEntries(BuildContext context) {
+    DateTime civilTime(DateTime value) => DateTime(
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second,
+      value.millisecond,
+      value.microsecond,
+    );
+    final groups = <DateTime, List<GeneralEventOccurrence>>{
+      for (final day in timelineDays!) normalizeDateOnly(day): [],
+    };
+    for (final occurrence in occurrences) {
+      // Multi-day items appear once, under the first visible day they affect.
+      // Compare civil display fields so UTC all-day dates do not shift zones.
+      final civilStart = civilTime(occurrence.calendarDisplayStart);
+      final civilEnd = civilTime(occurrence.calendarDisplayEnd);
+      for (final day in groups.keys) {
+        if (civilStart.isBefore(addCalendarDays(day, 1)) &&
+            civilEnd.isAfter(day)) {
+          groups[day]!.add(occurrence);
+          break;
+        }
+      }
+    }
+    final rows =
+        <
+          ({
+            DateTime day,
+            GeneralEventOccurrence? occurrence,
+            int? semanticIndex,
+          })
+        >[];
+    var semanticIndex = 0;
+    for (final group in groups.entries) {
+      if (group.value.isEmpty) continue;
+      group.value.sort((left, right) {
+        final start = civilTime(left.calendarDisplayStart)
+            .compareTo(civilTime(right.calendarDisplayStart));
+        if (start != 0) return start;
+        final allDay = (right.isAllDay ? 1 : 0).compareTo(
+          left.isAllDay ? 1 : 0,
+        );
+        if (allDay != 0) return allDay;
+        return left.occurrenceKey.compareTo(right.occurrenceKey);
+      });
+      rows.add((day: group.key, occurrence: null, semanticIndex: null));
+      for (final occurrence in group.value) {
+        rows.add((
+          day: group.key,
+          occurrence: occurrence,
+          semanticIndex: semanticIndex++,
+        ));
+      }
+    }
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final row = rows[index];
+          final occurrence = row.occurrence;
+          if (occurrence == null) {
+            return Padding(
+              key: ValueKey('general-timeline-list-day-${_dateKey(row.day)}'),
+              padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  '${_formatDate(row.day)}  ${_weekdayLabel(context, row.day)}',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+            );
+          }
+          return IndexedSemantics(
+            key: ValueKey('general-timeline-list-${occurrence.occurrenceKey}'),
+            index: row.semanticIndex!,
+            child: Builder(
+              builder: (anchor) => _GeneralListOccurrenceTile(
+                occurrence: occurrence,
+                minimumHitHeight: 48,
+                onTap: () => onOccurrenceTap(occurrence, anchor),
+              ),
+            ),
+          );
+        },
+        childCount: rows.length,
+        addSemanticIndexes: false,
+      ),
     );
   }
 }
