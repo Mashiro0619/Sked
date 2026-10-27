@@ -38,12 +38,43 @@ void main() {
     expect(ics, contains('RRULE:FREQ=WEEKLY;COUNT=3'));
     expect(event.title, 'Planning, Review');
     expect(event.location, 'Room A');
-    expect(event.notes, contains(r'Path C:\Temp, keep; literal \n'));
-    expect(event.notes, contains('Calendar: Work'));
+    expect(event.notes, schedule.events.single.notes);
     expect(event.recurrenceRule.type, GeneralEventRecurrence.weekly);
     expect(event.recurrenceRule.count, 3);
     expect(event.isAllDay, false);
   });
+
+  for (final note in ['', 'Bring a notebook\nCalendar: handwritten note']) {
+    test('round trips preserve only authored notes ${jsonEncode(note)}', () {
+      var schedules = [
+        GeneralSchedule(
+          id: 'original',
+          name: 'Work',
+          events: [
+            GeneralEvent(
+              id: 'event',
+              calendarId: 'original',
+              title: 'Appointment',
+              startDateTimeIso: '2026-10-27T09:00:00.000',
+              endDateTimeIso: '2026-10-27T10:00:00.000',
+              notes: note,
+            ),
+          ],
+        ),
+      ];
+      for (var round = 0; round < 3; round++) {
+        final exported = service.exportSchedules(schedules);
+        final result = service.importSchedules(
+          exported,
+          calendarName: 'Imported $round',
+        );
+        schedules = result.schedules;
+        expect(schedules.single.events.single.notes, note);
+        expect(result.warningItems, isEmpty);
+        if (note.isEmpty) expect(exported, isNot(contains('DESCRIPTION:')));
+      }
+    });
+  }
 
   test('imports all-day date ranges as exclusive end dates', () {
     const source = '''

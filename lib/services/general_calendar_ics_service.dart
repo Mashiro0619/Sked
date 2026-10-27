@@ -287,10 +287,7 @@ class GeneralCalendarIcsService {
         ? 'sked-${start.microsecondsSinceEpoch}-$fallbackUidSequence@sked.local'
         : '${_escapeText(event.id)}@sked.local';
     final uid = _uniqueIcsUid(rawUid, usedUids);
-    final description = [
-      if (event.notes.trim().isNotEmpty) event.notes.trim(),
-      'Calendar: ${schedule.name}',
-    ].join('\n');
+    final description = event.notes.trim();
     final lines = <String>[
       'BEGIN:VEVENT',
       'UID:$uid',
