@@ -19,6 +19,25 @@ void main() {
     );
   });
 
+  test('rejects the unused direct battery-exemption request permission', () {
+    for (final tag in ['uses-permission', 'uses-permission-sdk-23']) {
+      expect(
+        androidMergedManifestIssues(
+          _androidManifest(
+            extraPermission:
+                '<$tag android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />',
+          ),
+          applicationId: _applicationId,
+          expectedTargetSdk: _expectedTargetSdk,
+        ),
+        contains(
+          'Unexpected Android permission: '
+          'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS.',
+        ),
+      );
+    }
+  });
+
   test('undeclared Android namespaces cannot satisfy security attributes', () {
     final manifest = _androidManifest().replaceFirst(
       'xmlns:android="$androidXmlNamespace"',
