@@ -8,6 +8,7 @@
 | --- | --- |
 | 快照恢复 | 普通候选按已刷新的 temporary → main → backup 处理，不按 mtime 猜测新旧。未来 schema 或 I/O 不确定状态阻止写入；已有隔离文件时不能误判为首次启动。见 [恢复矩阵](../test/data/timetable_storage_recovery_matrix_test.dart) 与 [存储测试](../test/data/timetable_storage_io_test.dart)。 |
 | 密钥清理事务 | `.secret-scrub.rollback` / `.secret-scrub.tmp` 属于迁移事务，先处理事务恢复，再选择普通快照；rollback 不是第四个普通候选。不删除唯一可恢复的旧原件。见 [密钥存储测试](../test/services/app_storage_secret_io_test.dart)。 |
+| 完整备份恢复 | 恢复必须保留本机解析 Base URL、模型和提示词，忽略备份中的这三项配置；它们取自恢复实际开始时的本机数据，并与目标快照一起写入恢复日志。备份密钥始终不导入，本机密钥仍在数据事务提交后按原策略清除。确认页说明保留的接口与清除密钥；取消不改变任何数据。恢复日志重放必须沿用已经确定的目标，不从外部备份重新取接口配置。见 [备份流程测试](../test/controllers/app_backup_workflow_test.dart)。 |
 | 保存与退出 | 显式退出入口等待 `quiesceForShutdown()`；暂停请求 flush，同步 `dispose()` 只能发起最佳努力保存。用明确开始/完成信号验证并发与最新快照，不用固定等待推测完成。见 [保存竞争测试](../test/controllers/app_persistence_race_test.dart)。 |
 | 敏感数据 | 普通 AppData 和备份不包含 API Key 值；错误展示需脱敏认证头、URL 凭据及已知密钥的编码/截断形式，同时保持正常认证、成功响应和取消语义。见 [密钥持久化](../test/controllers/school_import_secret_persistence_test.dart) 与 [错误脱敏测试](../test/services/school_import_error_redactor_test.dart)。 |
 | 学校网页会话清除 | 清除应用数据前先关闭学校浏览器的原生页面并清除 Cookie、站点存储及缓存；Android/iOS 使用对应 WebView 数据接口，Windows 使用同一默认 WebView2 profile 的 `ClearBrowsingDataAll`。清理失败时保留主存档和 API 密钥，不假报成功；页面重开使用新的文档，不复用旧登录上下文。见 [清除服务测试](../test/services/app_data_clear_service_io_test.dart) 与 [网页会话测试](../test/services/school_web_session_service_test.dart)。 |
