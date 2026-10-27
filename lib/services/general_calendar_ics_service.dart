@@ -614,13 +614,16 @@ List<String> _unfoldLines(String source) {
       .replaceAll('\r', '\n')
       .split('\n');
   final result = <String>[];
+  StringBuffer? current;
   for (final line in raw) {
-    if ((line.startsWith(' ') || line.startsWith('\t')) && result.isNotEmpty) {
-      result[result.length - 1] += line.substring(1);
+    if ((line.startsWith(' ') || line.startsWith('\t')) && current != null) {
+      current.write(line.substring(1));
     } else {
-      result.add(line);
+      if (current != null) result.add(current.toString());
+      current = StringBuffer(line);
     }
   }
+  if (current != null) result.add(current.toString());
   return result;
 }
 

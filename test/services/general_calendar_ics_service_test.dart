@@ -627,6 +627,30 @@ END:VCALENDAR
     expect(event.notes, contains('First partcontinued by tab'));
   });
 
+  test('unfolds a long content line without losing continuation order', () {
+    final fragments = List.generate(12000, (index) => 'piece-$index;');
+    final lines = [
+      'BEGIN:VCALENDAR',
+      'BEGIN:VEVENT',
+      'UID:long-folded-description',
+      'SUMMARY:Long note',
+      'DTSTART:20261027T090000Z',
+      'DTEND:20261027T100000Z',
+      'DESCRIPTION:${fragments.first}',
+      for (var index = 1; index < fragments.length; index++)
+        '${index.isEven ? ' ' : '\t'}${fragments[index]}',
+      'LOCATION:After folded note',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ];
+
+    final imported = service.importSchedules(lines.join('\r\n'));
+    final event = imported.schedules.single.events.single;
+    expect(event.notes, fragments.join());
+    expect(event.location, 'After folded note');
+    expect(imported.warningItems, isEmpty);
+  });
+
   test('keeps values after colons inside quoted ICS parameters', () {
     const source = '''
 BEGIN:VCALENDAR
