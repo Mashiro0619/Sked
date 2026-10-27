@@ -9,6 +9,7 @@ project(runner LANGUAGES CXX)
 add_executable(${BINARY_NAME} WIN32
   "flutter_window.cpp"
   "desktop_window_bridge.cpp"
+  "school_web_session_bridge.cpp"
   "main.cpp"
   "utils.cpp"
   "win32_window.cpp"
@@ -36,8 +37,11 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
+target_include_directories(${BINARY_NAME} PRIVATE
+  "${CMAKE_BINARY_DIR}/packages/Microsoft.Web.WebView2/build/native/include")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+add_dependencies(${BINARY_NAME} flutter_inappwebview_windows_DEPS)
 
 target_link_libraries(${BINARY_NAME} PRIVATE comctl32 dwmapi)

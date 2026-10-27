@@ -5,19 +5,27 @@ import 'package:path/path.dart' as path;
 import 'app_data_clear_service.dart';
 import 'app_storage_layout_io.dart';
 import 'secret_store.dart';
+import 'school_web_session_service.dart';
 
 class PlatformAppDataClearService implements AppDataClearService {
   PlatformAppDataClearService({
     AppStorageLayout? layout,
     SecretStore? secretStore,
+    SchoolWebSessionCleaner? schoolWebSessionCleaner,
   }) : _layout = layout ?? AppStorageLayout(),
-       _secretStore = secretStore ?? SecretStore();
+       _secretStore = secretStore ?? SecretStore(),
+       _schoolWebSessionCleaner =
+           schoolWebSessionCleaner ?? SchoolWebSessionService.instance;
 
   final AppStorageLayout _layout;
   final SecretStore _secretStore;
+  final SchoolWebSessionCleaner _schoolWebSessionCleaner;
 
   @override
   Future<void> clear() async {
+    // Website credentials live outside AppStorageLayout. Clear them first;
+    // failure must leave the durable AppData and API key available for retry.
+    await _schoolWebSessionCleaner.clear();
     final root = await _layout.directory();
     final mainDataPath = path.normalize(
       path.join(root.path, AppStorageLayout.appDataFileName),

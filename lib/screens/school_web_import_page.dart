@@ -22,6 +22,7 @@ import '../providers/app_scope.dart';
 import '../screens/school_html_import_page.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
+import '../services/school_web_session_service.dart';
 import '../utils/platform_capabilities.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
@@ -110,6 +111,7 @@ class SchoolWebImportPage extends StatefulWidget {
     @visibleForTesting this.loadSites,
     @visibleForTesting this.webViewBuilder,
     @visibleForTesting this.supportsPopupWindows,
+    @visibleForTesting this.sessionService,
   });
 
   final SchoolSite site;
@@ -125,6 +127,9 @@ class SchoolWebImportPage extends StatefulWidget {
   /// Test-only platform capability override for popup-pane coverage.
   @visibleForTesting
   final bool? supportsPopupWindows;
+
+  @visibleForTesting
+  final SchoolWebSessionService? sessionService;
 
   @override
   State<SchoolWebImportPage> createState() => _SchoolWebImportPageState();
@@ -152,6 +157,11 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
       const SchoolWebImportPageService();
   final List<_SchoolWebPane> _panes = <_SchoolWebPane>[];
   final Set<String> _navigationPaneIds = <String>{};
+  late final SchoolWebSessionService _sessionService;
+  late final VoidCallback _unregisterBrowser;
+  bool _webViewsSuspended = false;
+  final _pendingBrowserClosures = <InAppWebViewController>{};
+  final _creatingBrowserPanes = <_SchoolWebPane>{};
 
   late String _activePaneId;
   bool _isParsing = false;
@@ -182,6 +192,10 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   @override
   void initState() {
     super.initState();
+    _sessionService = widget.sessionService ?? SchoolWebSessionService.instance;
+    _webViewsSuspended = _sessionService.isClearing;
+    _sessionService.addListener(_refreshIfMounted);
+    _unregisterBrowser = _sessionService.registerBrowser(_suspendBrowsers);
     const rootPaneId = 'school-web-import-root';
     _panes.add(_SchoolWebPane(id: rootPaneId));
     _activePaneId = rootPaneId;
@@ -198,6 +212,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
 
   @override
   void dispose() {
+    _sessionService.removeListener(_refreshIfMounted);
+    _unregisterBrowser();
     for (final pane in List<_SchoolWebPane>.of(_panes)) {
       pane.dispose();
     }
@@ -330,6 +346,18 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
             ? const Center(child: CircularProgressIndicator())
             : _sites.isEmpty || _selectedSite == null
             ? _buildMessage(l10n.schoolWebImportNoSchools)
+            : _webViewsSuspended
+            ? _buildMessage(
+                l10n.schoolWebImportOpenPageHint,
+                actions: [
+                  FilledButton(
+                    onPressed: _sessionService.isClearing
+                        ? null
+                        : _restartBrowserSession,
+                    child: Text(l10n.schoolWebImportOpenAddress),
+                  ),
+                ],
+              )
             : _buildBrowserPanes(),
       ),
     );
@@ -345,7 +373,54 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
     );
   }
 
+  Future<void> _suspendBrowsers() async {
+    if (!mounted) return;
+    if (!_webViewsSuspended) {
+      _pendingBrowserClosures.addAll(
+        _panes.map((pane) => pane.controller).nonNulls,
+      );
+      setState(() {
+        _webViewsSuspended = true;
+        for (final pane in _panes) {
+          pane.dispose();
+          pane.controller = null;
+        }
+        _navigationPaneIds.clear();
+      });
+    }
+    // Widget disposal starts the Windows plugin's asynchronous native close.
+    // Await its acknowledgement as well; a frame boundary alone is not enough.
+    await WidgetsBinding.instance.endOfFrame;
+    if (_sessionService.requiresNativeClosureAcknowledgement &&
+        _creatingBrowserPanes.isNotEmpty) {
+      throw StateError(
+        'A school browser is still being created. Retry cleanup.',
+      );
+    }
+    for (final controller in _pendingBrowserClosures.toList()) {
+      await _sessionService.finishClosingBrowser(controller);
+      _pendingBrowserClosures.remove(controller);
+    }
+  }
+
+  void _restartBrowserSession() {
+    if (!mounted || _sessionService.isClearing) return;
+    setState(() {
+      for (final pane in _panes) {
+        pane.dispose();
+      }
+      const rootId = 'school-web-import-root';
+      _panes
+        ..clear()
+        ..add(_SchoolWebPane(id: rootId));
+      _activePaneId = rootId;
+      _hasStartedInitialLoad = false;
+      _webViewsSuspended = false;
+    });
+  }
+
   Widget _buildBrowserPane(_SchoolWebPane pane, {required bool isActive}) {
+    if (pane.controller == null) _creatingBrowserPanes.add(pane);
     // Do not unmount an inactive popup. In particular, WebView2 and Android
     // WebView need the child instance to stay alive for window.opener callbacks
     // issued while the parent pane is visible again.
@@ -363,6 +438,11 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
                 supportsPopups: _supportsPopupWindows,
               ),
               onWebViewCreated: (controller) {
+                _creatingBrowserPanes.remove(pane);
+                if (!_containsPane(pane)) {
+                  _pendingBrowserClosures.add(controller);
+                  return;
+                }
                 pane.controller = controller;
                 unawaited(_refreshPaneCanGoBack(pane, controller: controller));
                 if (pane == _rootPane) {
@@ -1454,7 +1534,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
     return null;
   }
 
-  bool _containsPane(_SchoolWebPane pane) => _panes.contains(pane);
+  bool _containsPane(_SchoolWebPane pane) =>
+      !_webViewsSuspended && _panes.contains(pane);
 
   void _refreshIfMounted() {
     if (mounted) {

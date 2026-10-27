@@ -15,6 +15,7 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/services/school_web_session_service.dart';
 import 'package:sked/widgets/expressive_empty_state.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -42,6 +43,7 @@ Widget _browserApp({
   SchoolWebImportWebViewBuilder? webViewBuilder,
   Future<List<SchoolSite>> Function()? loadSites,
   bool? supportsPopupWindows,
+  SchoolWebSessionService? sessionService,
 }) {
   final app = MaterialApp(
     locale: locale,
@@ -58,6 +60,7 @@ Widget _browserApp({
           webViewBuilder: webViewBuilder,
           loadSites: loadSites,
           supportsPopupWindows: supportsPopupWindows,
+          sessionService: sessionService,
         ),
   );
   if (provider == null) {
@@ -100,6 +103,8 @@ Future<AppRuntime> _createConfiguredProvider() async {
 }
 
 class _FakeWebViewController extends Fake implements InAppWebViewController {
+  @override
+  dynamic getViewId() => 42;
   WebUri? currentUrl;
   int? progress = 100;
   bool canGoBackResult = false;
@@ -520,6 +525,180 @@ void main() {
   });
 
   group('school web import browser shell', () {
+    testWidgets(
+      'session clear closes native panes before cleanup and reopens a fresh login',
+      (tester) async {
+        final provider = await _createConfiguredProvider();
+        addTearDown(provider.dispose);
+        final allowClear = Completer<void>();
+        final allowDispose = Completer<void>();
+        var clearStarted = false;
+        var viewsClosedBeforeClear = false;
+        final session = SchoolWebSessionService(
+          platform: TargetPlatform.windows,
+          disposeWindowsView: (_) => allowDispose.future,
+          clearWindowsProfile: () async {
+            viewsClosedBeforeClear = find.text('pane-root').evaluate().isEmpty;
+            clearStarted = true;
+            await allowClear.future;
+          },
+        );
+        final browser = _WebViewHarness();
+        final oldController = _FakeWebViewController();
+        await tester.pumpWidget(
+          _browserApp(
+            provider: provider,
+            webViewBuilder: browser.build,
+            supportsPopupWindows: true,
+            sessionService: session,
+            loadSites: () async => [_site],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final oldPane = browser.pane();
+        oldPane.onWebViewCreated(oldController);
+        await tester.pumpAndSettle();
+        expect(find.text('pane-root'), findsOneWidget);
+
+        final clearing = session.clear();
+        await tester.pump();
+        expect(clearStarted, isFalse);
+        expect(find.text('pane-root'), findsNothing);
+        allowDispose.complete();
+        await tester.pump();
+        expect(clearStarted, isTrue);
+        expect(viewsClosedBeforeClear, isTrue);
+        expect(oldController.stopLoadingCalls, greaterThan(0));
+        expect(find.text('pane-root'), findsNothing);
+        final open = find.widgetWithText(FilledButton, 'Open');
+        expect(tester.widget<FilledButton>(open).onPressed, isNull);
+
+        allowClear.complete();
+        await tester.pumpAndSettle();
+        await clearing;
+        await tester.tap(open);
+        await tester.pumpAndSettle();
+        final newController = _FakeWebViewController();
+        browser.pane().onWebViewCreated(newController);
+        await tester.pumpAndSettle();
+        expect(newController.loadedAddresses, [_site.loginUrl]);
+        oldPane.onLoadStart(oldController, WebUri('https://old.example.test/'));
+        await tester.pump();
+        expect(find.text('old.example.test'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
+    testWidgets('a browser opened during clear never starts its native view', (
+      tester,
+    ) async {
+      final provider = await _createConfiguredProvider();
+      addTearDown(provider.dispose);
+      final clearAllowed = Completer<void>();
+      final session = SchoolWebSessionService(
+        platform: TargetPlatform.windows,
+        clearWindowsProfile: () => clearAllowed.future,
+      );
+      final clearing = session.clear();
+      final browser = _WebViewHarness();
+      await tester.pumpWidget(
+        _browserApp(
+          provider: provider,
+          webViewBuilder: browser.build,
+          supportsPopupWindows: true,
+          sessionService: session,
+          loadSites: () async => [_site],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(browser.configurations, isEmpty);
+      clearAllowed.complete();
+      await tester.pumpAndSettle();
+      await clearing;
+      expect(browser.configurations, isEmpty);
+      await tester.tap(find.widgetWithText(FilledButton, 'Open'));
+      await tester.pumpAndSettle();
+      expect(browser.configurations, isNotEmpty);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+    testWidgets('native close failure must be acknowledged on retry', (
+      tester,
+    ) async {
+      final provider = await _createConfiguredProvider();
+      addTearDown(provider.dispose);
+      var closeAttempts = 0;
+      var clears = 0;
+      final session = SchoolWebSessionService(
+        platform: TargetPlatform.windows,
+        disposeWindowsView: (_) async {
+          closeAttempts++;
+          if (closeAttempts == 1) throw StateError('synthetic close failure');
+        },
+        clearWindowsProfile: () async => clears++,
+      );
+      final browser = _WebViewHarness();
+      await tester.pumpWidget(
+        _browserApp(
+          provider: provider,
+          webViewBuilder: browser.build,
+          supportsPopupWindows: true,
+          sessionService: session,
+          loadSites: () async => [_site],
+        ),
+      );
+      await tester.pumpAndSettle();
+      browser.pane().onWebViewCreated(_FakeWebViewController());
+      final first = expectLater(session.clear(), throwsStateError);
+      await tester.pumpAndSettle();
+      await first;
+      expect(clears, 0);
+      final retry = session.clear();
+      await tester.pumpAndSettle();
+      await retry;
+      expect(closeAttempts, 2);
+      expect(clears, 1);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+    testWidgets(
+      'pending native creation blocks clear until its view can be closed',
+      (tester) async {
+        final provider = await _createConfiguredProvider();
+        addTearDown(provider.dispose);
+        var closes = 0;
+        var clears = 0;
+        final session = SchoolWebSessionService(
+          platform: TargetPlatform.windows,
+          disposeWindowsView: (_) async => closes++,
+          clearWindowsProfile: () async => clears++,
+        );
+        final browser = _WebViewHarness();
+        await tester.pumpWidget(
+          _browserApp(
+            provider: provider,
+            webViewBuilder: browser.build,
+            supportsPopupWindows: true,
+            sessionService: session,
+            loadSites: () async => [_site],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final first = expectLater(session.clear(), throwsStateError);
+        await tester.pumpAndSettle();
+        await first;
+        expect(clears, 0);
+        final lateController = _FakeWebViewController();
+        browser.pane().onWebViewCreated(lateController);
+        expect(lateController.loadedAddresses, isEmpty);
+        final retry = session.clear();
+        await tester.pumpAndSettle();
+        await retry;
+        expect(closes, 1);
+        expect(clears, 1);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
     testWidgets(
       'school configuration retry is guarded and recovers after a second failure',
       (tester) async {

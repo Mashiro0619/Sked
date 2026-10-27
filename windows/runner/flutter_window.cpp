@@ -29,6 +29,8 @@ bool FlutterWindow::OnCreate() {
   window_bridge_ = std::make_unique<DesktopWindowBridge>(GetHandle(),
       flutter_controller_->view()->GetNativeWindow(),
       flutter_controller_->engine()->messenger());
+  school_web_session_bridge_ = std::make_unique<SchoolWebSessionBridge>(
+      GetHandle(), flutter_controller_->engine()->messenger());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
@@ -43,6 +45,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  school_web_session_bridge_.reset();
   window_bridge_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;

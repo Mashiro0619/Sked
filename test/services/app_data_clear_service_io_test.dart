@@ -10,6 +10,7 @@ import 'package:sked/services/app_storage_layout_io.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
+import 'package:sked/services/school_web_session_service.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
@@ -29,6 +30,17 @@ class _FakeSecretStore implements SecretStore {
   @override
   Future<void> writeCustomSchoolImportApiKey(String value) async {
     this.value = value;
+  }
+}
+
+class _FakeSchoolWebSessionCleaner implements SchoolWebSessionCleaner {
+  int calls = 0;
+  Future<void> Function()? onClear;
+
+  @override
+  Future<void> clear() async {
+    calls++;
+    await onClear?.call();
   }
 }
 
@@ -117,14 +129,17 @@ class _BlockingClearService implements AppDataClearService {
 void main() {
   late Directory root;
   late _FakeSecretStore secrets;
+  late _FakeSchoolWebSessionCleaner schoolSession;
   late PlatformAppDataClearService service;
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('sked-clear-test-');
     secrets = _FakeSecretStore();
+    schoolSession = _FakeSchoolWebSessionCleaner();
     service = PlatformAppDataClearService(
       layout: AppStorageLayout(directoryProvider: () async => root),
       secretStore: secrets,
+      schoolWebSessionCleaner: schoolSession,
     );
   });
 
@@ -156,6 +171,48 @@ void main() {
         AppStorageLayout.instanceLockFileName,
       ]);
       expect(secrets.value, isEmpty);
+      expect(schoolSession.calls, 1);
+    },
+  );
+
+  test(
+    'school session is cleared before any durable files or secrets',
+    () async {
+      final main = File(path.join(root.path, AppStorageLayout.appDataFileName));
+      final backup = File('${main.path}.bak');
+      await main.writeAsString('data');
+      await backup.writeAsString('backup');
+      schoolSession.onClear = () async {
+        expect(await main.readAsString(), 'data');
+        expect(await backup.readAsString(), 'backup');
+        expect(secrets.value, 'secret');
+      };
+
+      await service.clear();
+
+      expect(schoolSession.calls, 1);
+      expect(await main.exists(), isFalse);
+      expect(await backup.exists(), isFalse);
+      expect(secrets.value, isEmpty);
+    },
+  );
+
+  test(
+    'failed school session clear preserves data and key for retry',
+    () async {
+      final main = File(path.join(root.path, AppStorageLayout.appDataFileName));
+      await main.writeAsString('data');
+      schoolSession.onClear = () async =>
+          throw StateError('profile unavailable');
+
+      await expectLater(service.clear(), throwsStateError);
+
+      expect(await main.readAsString(), 'data');
+      expect(secrets.value, 'secret');
+      schoolSession.onClear = null;
+      await service.clear();
+      expect(schoolSession.calls, 2);
+      expect(await main.exists(), isFalse);
     },
   );
 
@@ -525,6 +582,7 @@ void main() {
     await File(path.join(target.path, 'Sked_data.json')).writeAsString('new');
     await File(path.join(legacy.path, 'Sked_data.json')).writeAsString('old');
     final windowsService = PlatformAppDataClearService(
+      schoolWebSessionCleaner: schoolSession,
       layout: AppStorageLayout(
         isWindows: true,
         windowsRoamingDirectoryProvider: () async => roaming,
@@ -552,6 +610,7 @@ void main() {
     await File(path.join(roaming.path, 'Mashiro', 'Sked'))
         .create(recursive: true);
     final windowsService = PlatformAppDataClearService(
+      schoolWebSessionCleaner: schoolSession,
       layout: AppStorageLayout(
         isWindows: true,
         windowsRoamingDirectoryProvider: () async => roaming,
