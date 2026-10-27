@@ -1208,6 +1208,8 @@ GeneralEventRecurrenceRule _parseRRule(
     'UNTIL',
     'BYMONTHDAY',
     'BYSETPOS',
+    'BYDAY',
+    'WKST',
   };
   final unsupported =
       parts.keys
@@ -1220,6 +1222,18 @@ GeneralEventRecurrenceRule _parseRRule(
   }
   final freq = parts['FREQ'];
   final unsupportedValues = <String>[];
+  const weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+  final byDay = parts['BYDAY'];
+  if (byDay != null &&
+      (freq != 'WEEKLY' || byDay != weekdays[eventStart.weekday - 1])) {
+    unsupportedValues.add('BYDAY=$byDay');
+  }
+  // With at most DTSTART's own weekday, the week boundary cannot change
+  // any weekly candidate, even for intervals longer than one week.
+  final weekStart = parts['WKST'];
+  if (weekStart != null && !weekdays.contains(weekStart)) {
+    unsupportedValues.add('WKST=$weekStart');
+  }
   int? monthlyAnchorDay;
   final monthDays = parts['BYMONTHDAY'];
   final setPosition = parts['BYSETPOS'];
@@ -1230,6 +1244,12 @@ GeneralEventRecurrenceRule _parseRRule(
         .where((day) => day > 0)
         .toList();
     if (freq == 'MONTHLY' &&
+        setPosition == null &&
+        days?.length == 1 &&
+        days!.single == eventStart.day &&
+        eventStart.day <= 28) {
+      monthlyAnchorDay = eventStart.day;
+    } else if (freq == 'MONTHLY' &&
         setPosition == '1' &&
         days?.length == 2 &&
         days!.contains(-1) &&
