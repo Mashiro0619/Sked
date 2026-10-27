@@ -651,7 +651,16 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
     Duration duration = _pageAnimationDuration,
   }) {
     _dragController.stop();
-    _dragController.duration = duration;
+    final motion = SkedMotionPolicy.of(context);
+    final effectiveDuration = motion.spatialAnimationsEnabled
+        ? duration
+        : Duration.zero;
+    _dragController.duration = effectiveDuration;
+    if (effectiveDuration == Duration.zero) {
+      _dragOffset = target;
+      onCompleted?.call();
+      return;
+    }
     _dragAnimation = Tween<double>(begin: _dragOffset, end: target).animate(
       CurvedAnimation(parent: _dragController, curve: Curves.easeOutCubic),
     );

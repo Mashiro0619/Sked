@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -162,6 +163,58 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  for (final (disableAnimations, reduceMotion) in [
+    (false, false),
+    (true, false),
+    (false, true),
+  ]) {
+    testWidgets(
+      'month paging follows motion policy: disabled=$disableAnimations reduced=$reduceMotion',
+      (t) async {
+        t.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures(
+              disableAnimations: disableAnimations,
+              reduceMotion: reduceMotion,
+            );
+        addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
+        final desktop = defaultTargetPlatform == TargetPlatform.windows;
+        final provider = await _mount(
+          t,
+          date: DateTime(2026, 8, 16),
+          size: desktop ? const Size(1440, 900) : const Size(393, 852),
+        );
+        final origin = t.getTopLeft(_key('general-month-date-grid-2026-8'));
+        await provider.generalNavigation.setSelectedDate(DateTime(2026, 9, 16));
+        await t.pump();
+        final nextGrid = _key('general-month-date-grid-2026-9');
+        if (disableAnimations || reduceMotion) {
+          expect(t.getTopLeft(nextGrid), origin);
+        } else {
+          expect(t.getTopLeft(nextGrid).dx, greaterThan(origin.dx));
+        }
+        await t.pumpAndSettle();
+        expect(t.getTopLeft(nextGrid), origin);
+
+        if (disableAnimations || reduceMotion) {
+          final gesture = await t.startGesture(t.getCenter(nextGrid));
+          await gesture.moveBy(const Offset(-30, 0));
+          await t.pump();
+          await gesture.moveBy(Offset(-t.getSize(nextGrid).width * .45, 0));
+          await t.pump();
+          await gesture.up();
+          await t.pump();
+          expect(provider.generalView.selectedDate, DateTime(2026, 10, 16));
+          expect(t.getTopLeft(_key('general-month-date-grid-2026-10')), origin);
+        }
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.windows,
+      }),
+    );
+  }
+
   for (final locale in ['en', 'zh']) {
     testWidgets('desktop month announces today in $locale', (t) async {
       final now = DateTime.now();
