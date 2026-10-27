@@ -389,6 +389,18 @@ void _validateNotificationManifest(
   requireReceiver(
     'com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver',
   );
+  requireReceiver(
+    '$applicationId.AgendaBackgroundReconcileReceiver',
+    actions: {
+      'android.intent.action.DATE_CHANGED',
+      'android.intent.action.TIME_SET',
+      'android.intent.action.TIMEZONE_CHANGED',
+      'android.intent.action.BOOT_COMPLETED',
+      'android.intent.action.MY_PACKAGE_REPLACED',
+      'android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED',
+      '$applicationId.action.AGENDA_RECONCILE',
+    },
+  );
 }
 
 List<String> androidReleaseResourceIssues(Map<String, String> resources) {

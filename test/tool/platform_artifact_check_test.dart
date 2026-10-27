@@ -108,6 +108,31 @@ void main() {
     expect(exportedActionReceiver, contains(contains('exported')));
   });
 
+  test(
+    'requires exact-alarm restoration broadcasts for background reconciliation',
+    () {
+      final manifest =
+          _androidManifest(
+            extraPermission: '''
+      <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+      <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+      <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />''',
+            notificationComponents: _notificationComponents(),
+          ).replaceFirst(
+            '<action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />',
+            '',
+          );
+      expect(
+        androidMergedManifestIssues(
+          manifest,
+          applicationId: _applicationId,
+          expectedTargetSdk: _expectedTargetSdk,
+        ),
+        contains(contains('SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED')),
+      );
+    },
+  );
+
   test('rejects Android permission, backup, and exported-component drift', () {
     final manifest = _androidManifest(
       extraPermission:
@@ -583,6 +608,19 @@ String _notificationComponents({
       <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED" />
         <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+    <receiver
+        android:name=".AgendaBackgroundReconcileReceiver"
+        android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.DATE_CHANGED" />
+        <action android:name="android.intent.action.TIME_SET" />
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+        <action android:name="com.mashiro.sked.action.AGENDA_RECONCILE" />
       </intent-filter>
     </receiver>
 $action''';

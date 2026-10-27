@@ -31,6 +31,14 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class AgendaBackgroundReconcileReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
+        val shouldEnqueue = AgendaBackgroundReconcilePolicy.shouldEnqueue(intent?.action) {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                context.getSystemService(AlarmManager::class.java)
+                    ?.canScheduleExactAlarms() == true
+        }
+        if (!shouldEnqueue) return
+        // A restored exact-alarm grant follows the same reconciliation path as
+        // boot/time changes. KEEP coalesces broadcasts with an active worker.
         AgendaBackgroundReconcileScheduler.enqueue(
             context,
             intent?.action ?: AndroidProductivityContract.ACTION_AGENDA_RECONCILE,
