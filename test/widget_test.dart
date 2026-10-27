@@ -3017,7 +3017,7 @@ void main() {
       );
       expect(
         choices.dropdownMenuEntries.map((item) => item.label),
-        containsAll(['单调主题色', '五彩缤纷']),
+        containsAll(['单一主题色', '五彩缤纷']),
       );
       expect(choices.initialSelection, themeColorModeColorful);
       expect(find.text('UI 配色'), findsOneWidget);
