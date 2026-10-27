@@ -9,6 +9,7 @@ import '../controllers/data_transfer_controller.dart';
 import '../controllers/student_view_state.dart';
 import '../controllers/workspace_view_state.dart';
 import '../models/school_import_models.dart';
+import '../models/import_count_limits.dart';
 import '../models/timetable_models.dart';
 import '../providers/app_scope.dart';
 import '../services/text_file_picker.dart';
@@ -120,9 +121,12 @@ class TimetableImportFlow {
       prepared = await transfers.prepareTimetables(source);
     } on FormatException catch (error) {
       if (!context.mounted || !isCurrent()) return false;
-      final message = error.message == 'Unsupported import file type.'
-          ? l10n.importFileTypeMismatchMessage
-          : l10n.importFailedCheckContent;
+      final message = switch (error) {
+        ImportCountLimitException() => l10n.importEntryLimitExceededMessage,
+        _ when error.message == 'Unsupported import file type.' =>
+          l10n.importFileTypeMismatchMessage,
+        _ => l10n.importFailedCheckContent,
+      };
       _showMessage(context, message);
       return false;
     } catch (_) {

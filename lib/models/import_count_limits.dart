@@ -25,6 +25,13 @@ enum ImportCountKind {
   schoolSites,
 }
 
+/// A trusted error category survives compute so the UI can localize it again
+/// without exposing arbitrary parser exception text or imported content.
+class ImportCountLimitException extends FormatException {
+  ImportCountLimitException({String localeCode = defaultLocaleCode})
+    : super(importEntryLimitExceededMessage(localeCode: localeCode));
+}
+
 /// Counts raw entries, including malformed entries and duplicates. Counting
 /// happens before filtering; splitting entries across containers cannot evade
 /// the shared budgets. Unknown/custom fields share the structural budget too.
@@ -49,9 +56,7 @@ class _ImportCountBudget {
 
   void _check(int count, int limit) {
     if (count > limit) {
-      throw FormatException(
-        importEntryLimitExceededMessage(localeCode: localeCode),
-      );
+      throw ImportCountLimitException(localeCode: localeCode);
     }
   }
 

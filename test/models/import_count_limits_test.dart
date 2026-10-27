@@ -21,7 +21,7 @@ String _source(String schema, Map<String, dynamic> data) =>
     ).encode();
 
 Matcher _limitError([String localeCode = 'en']) => throwsA(
-  isA<FormatException>().having(
+  isA<ImportCountLimitException>().having(
     (error) => error.message,
     'localized limit message',
     importEntryLimitExceededMessage(localeCode: localeCode),

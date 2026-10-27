@@ -7,6 +7,7 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/models/import_count_limits.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/timetable_import_flow.dart';
@@ -148,6 +149,46 @@ void main() {
       periodTimeSets: const [],
     ),
   );
+
+  for (final locale in [
+    const Locale('en'),
+    const Locale('zh'),
+    const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+  ]) {
+    testWidgets(
+      'oversized imports retain data and explain the limit: $locale',
+      (tester) async {
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final before = provider.workspaceView.data.toJson();
+        final source = ImportExportEnvelope(
+          schema: timetableDataSchema,
+          version: importExportVersion,
+          data: {
+            'timetables': List.filled(ImportCountLimits.timetables + 1, null),
+            'privateSource': 'do not display imported content',
+          },
+        ).encode();
+        await _pumpImportButton(
+          tester,
+          provider,
+          source: source,
+          locale: locale,
+        );
+        final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+        await tester.tap(find.text('Import'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.importEntryLimitExceededMessage), findsOneWidget);
+        expect(find.text(l10n.importFailedCheckContent), findsNothing);
+        expect(find.text(l10n.selectTimetablesToImport), findsNothing);
+        expect(
+          find.textContaining('do not display imported content'),
+          findsNothing,
+        );
+        expect(provider.workspaceView.data.toJson(), before);
+      },
+    );
+  }
 
   testWidgets(
     'late parsing cannot open choices in a replacement data session',
