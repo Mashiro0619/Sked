@@ -81,12 +81,13 @@ Future<void> _pumpImportButton(
   WidgetTester tester,
   AppRuntime provider, {
   String? source,
+  Locale locale = const Locale('en'),
 }) async {
   await tester.pumpWidget(
     AppScope(
       app: provider,
       child: MaterialApp(
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
@@ -113,6 +114,27 @@ Future<void> _pumpImportButton(
 }
 
 void main() {
+  testWidgets('invalid import content shows the selected UI language', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final before = provider.workspaceView.data.toJson();
+    await _pumpImportButton(
+      tester,
+      provider,
+      source: '{broken JSON containing internal details',
+      locale: const Locale('zh'),
+    );
+    final l10n = AppLocalizations.of(tester.element(find.text('Import')));
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.importFailedCheckContent), findsOneWidget);
+    expect(find.textContaining('FormatException'), findsNothing);
+    expect(find.textContaining('internal details'), findsNothing);
+    expect(provider.workspaceView.data.toJson(), before);
+  });
+
   String withoutPeriodTimes(AppRuntime provider) => encodeTimetableDataEnvelope(
     TimetableExportData(
       timetables: [
@@ -287,7 +309,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(provider.studentView.timetables.single.toJson(), other.toJson());
       expect(provider.studentView.periodTimeSets, hasLength(1));
-      expect(find.text(l10n.noActiveTimetableToReplaceMessage), findsOneWidget);
+      expect(find.text(l10n.importFailedCheckContent), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

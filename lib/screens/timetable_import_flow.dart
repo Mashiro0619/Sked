@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/data_transfer_controller.dart';
-import '../controllers/settings_view_state.dart';
 import '../controllers/student_view_state.dart';
 import '../controllers/workspace_view_state.dart';
 import '../models/school_import_models.dart';
@@ -40,7 +39,6 @@ class TimetableImportFlow {
     }
     final transfers = context.read<DataTransferController>();
     final studentView = context.read<StudentViewState>();
-    final settingsView = context.read<SettingsViewState>();
     final maintenance = context.read<AppDataMaintenance>();
     final workspaceView = context.read<WorkspaceViewState>();
     _importTimetablesInProgress = true;
@@ -62,7 +60,6 @@ class TimetableImportFlow {
         source,
         transfers: transfers,
         studentView: studentView,
-        settingsView: settingsView,
         maintenance: maintenance,
         workspaceView: workspaceView,
       );
@@ -85,7 +82,6 @@ class TimetableImportFlow {
   ) async {
     final transfers = context.read<DataTransferController>();
     final studentView = context.read<StudentViewState>();
-    final settingsView = context.read<SettingsViewState>();
     final maintenance = context.read<AppDataMaintenance>();
     final workspaceView = context.read<WorkspaceViewState>();
     return _importTimetablesFromSource(
@@ -93,7 +89,6 @@ class TimetableImportFlow {
       source,
       transfers: transfers,
       studentView: studentView,
-      settingsView: settingsView,
       maintenance: maintenance,
       workspaceView: workspaceView,
     );
@@ -106,7 +101,6 @@ class TimetableImportFlow {
     String source, {
     required DataTransferController transfers,
     required StudentViewState studentView,
-    required SettingsViewState settingsView,
     required AppDataMaintenance maintenance,
     required WorkspaceViewState workspaceView,
   }) async {
@@ -127,8 +121,8 @@ class TimetableImportFlow {
     } on FormatException catch (error) {
       if (!context.mounted || !isCurrent()) return false;
       final message = error.message == 'Unsupported import file type.'
-          ? importFileTypeMismatchMessage(localeCode: settingsView.localeCode)
-          : error.message;
+          ? l10n.importFileTypeMismatchMessage
+          : l10n.importFailedCheckContent;
       _showMessage(context, message);
       return false;
     } catch (_) {
@@ -230,9 +224,9 @@ class TimetableImportFlow {
         _showMessage(context, l10n.importedTimetablesCount(count));
       }
       return true;
-    } on FormatException catch (error) {
+    } on FormatException {
       if (context.mounted && isCurrent()) {
-        _showMessage(context, error.message);
+        _showMessage(context, l10n.importFailedCheckContent);
       }
       return false;
     } catch (_) {
