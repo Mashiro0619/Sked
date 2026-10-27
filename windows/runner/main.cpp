@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "flutter_window.h"
+#include "single_instance.h"
 #include "utils.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
@@ -11,6 +12,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
+  }
+
+  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
+  SingleInstance instance_guard(DefaultWindowsInstanceNamespace());
+  const auto instance_disposition = instance_guard.AcquireOrActivate(
+      IsNotificationComServerLaunch(command_line_arguments));
+  if (instance_disposition == InstanceDisposition::activated_existing ||
+      instance_disposition == InstanceDisposition::existing_not_ready) {
+    return EXIT_SUCCESS;
   }
 
   // Initialize COM, so that it is available for use in the library and/or
@@ -23,9 +33,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // unevenly. Remove this workaround after flutter/flutter#190391 is fixed.
   project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
 
-  std::vector<std::string> command_line_arguments =
-      GetCommandLineArguments();
-
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
@@ -34,6 +41,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!window.Create(L"sked", origin, size)) {
     return EXIT_FAILURE;
   }
+  instance_guard.RegisterWindow(window.GetHandle());
   window.SetQuitOnClose(true);
 
   ::MSG msg;

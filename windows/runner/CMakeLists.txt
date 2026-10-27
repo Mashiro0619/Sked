@@ -11,6 +11,7 @@ add_executable(${BINARY_NAME} WIN32
   "desktop_window_bridge.cpp"
   "school_web_session_bridge.cpp"
   "main.cpp"
+  "single_instance.cpp"
   "utils.cpp"
   "win32_window.cpp"
   "window_placement_store.cpp"
@@ -68,4 +69,12 @@ if(SKED_BUILD_WINDOWS_RUNNER_TESTS)
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/native-tests")
   target_include_directories(sked_window_placement_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(sked_window_placement_tests PRIVATE user32 advapi32)
+  add_executable(sked_single_instance_tests
+    "tests/single_instance_test.cpp"
+    "single_instance.cpp")
+  apply_standard_settings(sked_single_instance_tests)
+  set_target_properties(sked_single_instance_tests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/native-tests")
+  target_include_directories(sked_single_instance_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(sked_single_instance_tests PRIVATE user32 comctl32)
 endif()
