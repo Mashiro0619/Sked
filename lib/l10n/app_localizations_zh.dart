@@ -2985,6 +2985,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolImportEndpointChangeConfirm => '更换接口';
+
+  @override
+  String restoreBackupParserSettingsSummary(String current, String backup) {
+    return '保留本机解析接口、模型和提示词，并清除本机 API 密钥。\n\n保留的接口：$current\n备份中的接口（不采用）：$backup';
+  }
+
+  @override
+  String get backupParserEndpointUnset => '未配置';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5969,4 +5977,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportEndpointChangeConfirm => '變更端點';
+
+  @override
+  String restoreBackupParserSettingsSummary(String current, String backup) {
+    return '保留本機解析端點、模型和提示詞，並清除本機 API 金鑰。\n\n保留的端點：$current\n備份中的端點（不採用）：$backup';
+  }
+
+  @override
+  String get backupParserEndpointUnset => '未設定';
 }

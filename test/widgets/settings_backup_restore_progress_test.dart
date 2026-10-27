@@ -136,6 +136,144 @@ Switch _switchIn(WidgetTester tester, Finder row) => tester.widget<Switch>(
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  for (final scenario in [
+    (file: true, locale: const Locale('en'), empty: false),
+    (file: false, locale: const Locale('zh'), empty: false),
+    (file: true, locale: const Locale('en'), empty: true),
+  ]) {
+    testWidgets(
+      'restore describes retained parser settings before apply: $scenario',
+      (tester) async {
+        _viewport(tester);
+        final (provider, storage) = await _fixture();
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox());
+          provider.dispose();
+        });
+        var retainedUrl = scenario.empty
+            ? ''
+            : 'https://user:local-password@local.example/v1?token=local-token#local-fragment';
+        await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+          baseUrl: retainedUrl,
+          model: 'local-model',
+          prompt: 'local prompt',
+        );
+        await provider.schoolImportSecrets.update('local-key');
+        final source = encodeAppBackup(
+          provider.session.committedData.copyWith(
+            hideHomeWorkspaceNavigation: true,
+            aiApiSettings: const AiApiSettings(
+              customBaseUrl: 'https://other:backup-password@backup.example/v1?token=backup-token#backup-fragment',
+              customModel: 'backup-model',
+              customPrompt: 'backup prompt',
+            ),
+          ),
+          [],
+        );
+        if (scenario.file) _pickBackup(source);
+        await tester.pumpWidget(
+          WorkspaceHarness(
+            provider: provider,
+            home: const SettingsPage(),
+            locale: scenario.locale,
+            textScale: 2,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SettingsPage)),
+        );
+        final submit = find.widgetWithText(
+          FilledButton,
+          l10n.restoreBackupConfirmAction,
+        );
+        Future<void> openConfirmation({bool retry = false}) async {
+          if (!retry || scenario.file) {
+            await _open(tester, _key('settings-app-backup'));
+            await _open(
+              tester,
+              find.text(
+                scenario.file
+                    ? l10n.restoreBackupFileTitle
+                    : l10n.restoreBackupTextTitle,
+              ),
+            );
+            if (!scenario.file) {
+              await tester.enterText(find.byType(TextField), source);
+              await _pump(tester);
+            }
+          }
+          if (!scenario.file) await _open(tester, submit.last);
+          expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
+        }
+
+        await openConfirmation();
+        String summary() => tester
+            .widget<Text>(_key('restore-backup-parser-settings-summary'))
+            .data!;
+        expect(
+          summary(),
+          l10n.restoreBackupParserSettingsSummary(
+            scenario.empty
+                ? l10n.backupParserEndpointUnset
+                : 'https://local.example/v1',
+            'https://backup.example/v1',
+          ),
+        );
+        for (final secret in [
+          'local-password',
+          'backup-password',
+          'local-token',
+          'backup-token',
+          'local-fragment',
+          'backup-fragment',
+          'local-key',
+        ]) {
+          expect(summary(), isNot(contains(secret)));
+        }
+        if (scenario.file && !scenario.empty) {
+          retainedUrl = 'https://revised.example/v1';
+          await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+            baseUrl: retainedUrl,
+            model: 'local-model',
+            prompt: 'local prompt',
+            confirmedEndpointChange: provider.settingsCommands
+                .customSchoolImportEndpointChange(retainedUrl),
+          );
+          await tester.pump();
+          expect(
+            summary(),
+            l10n.restoreBackupParserSettingsSummary(
+              retainedUrl,
+              'https://backup.example/v1',
+            ),
+          );
+        }
+        final writesBeforeCancel = storage.writes;
+        await _open(tester, find.widgetWithText(TextButton, l10n.cancel).last);
+        await tester.pumpAndSettle();
+        expect(storage.writes, writesBeforeCancel);
+        expect(provider.schoolImportSecrets.value, 'local-key');
+        expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
+        if (!scenario.file) {
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            source,
+          );
+        }
+        await openConfirmation(retry: true);
+        await _open(tester, submit.last);
+        await tester.pumpAndSettle();
+        expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
+        expect(provider.settingsView.customSchoolImportBaseUrl, retainedUrl);
+        expect(provider.settingsView.customSchoolImportModel, 'local-model');
+        expect(provider.settingsView.customSchoolImportPrompt, 'local prompt');
+        expect(provider.schoolImportSecrets.value, isEmpty);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'text backup restore can retry after a recoverable failure',
     (tester) async {

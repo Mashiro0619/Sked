@@ -2188,5 +2188,18 @@
   "schoolImportEndpointChangeTitle": "Change the parsing endpoint?",
   "schoolImportEndpointChangeMessage": "The saved API key will be sent to the new endpoint when you parse a timetable or fetch models.\n\nCurrent: {previous}\nNew: {next}\n\nOnly continue if you trust the new endpoint.",
   "schoolImportEndpointChangeConfirm": "Change endpoint",
-  "@schoolImportEndpointChangeMessage": {"placeholders": {"previous": {"type": "String"}, "next": {"type": "String"}}}
+  "@schoolImportEndpointChangeMessage": {"placeholders": {"previous": {"type": "String"}, "next": {"type": "String"}}},
+  "restoreBackupParserSettingsSummary": "The parsing endpoint, model and prompt on this device are kept. The API key on this device will be cleared.\n\nKept endpoint: {current}\nBackup endpoint (ignored): {backup}",
+  "backupParserEndpointUnset": "Not configured",
+  "@restoreBackupParserSettingsSummary": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "backup": {
+        "type": "String"
+      }
+    }
+  }
+
 }

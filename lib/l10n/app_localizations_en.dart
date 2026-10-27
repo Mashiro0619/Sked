@@ -3194,4 +3194,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schoolImportEndpointChangeConfirm => 'Change endpoint';
+
+  @override
+  String restoreBackupParserSettingsSummary(String current, String backup) {
+    return 'The parsing endpoint, model and prompt on this device are kept. The API key on this device will be cleared.\n\nKept endpoint: $current\nBackup endpoint (ignored): $backup';
+  }
+
+  @override
+  String get backupParserEndpointUnset => 'Not configured';
 }

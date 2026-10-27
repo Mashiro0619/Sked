@@ -5687,6 +5687,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change endpoint'**
   String get schoolImportEndpointChangeConfirm;
+
+  /// No description provided for @restoreBackupParserSettingsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'The parsing endpoint, model and prompt on this device are kept. The API key on this device will be cleared.\n\nKept endpoint: {current}\nBackup endpoint (ignored): {backup}'**
+  String restoreBackupParserSettingsSummary(String current, String backup);
+
+  /// No description provided for @backupParserEndpointUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Not configured'**
+  String get backupParserEndpointUnset;
 }
 
 class _AppLocalizationsDelegate

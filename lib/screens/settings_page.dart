@@ -41,6 +41,7 @@ import '../services/desktop_layout_preferences.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
+import '../services/school_import_error_redactor.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
 import '../services/update_distribution.dart';
@@ -1330,6 +1331,26 @@ class _SettingsPageState extends State<SettingsPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(l10n.restoreBackupConfirmMessage),
+                  const SizedBox(height: 16),
+                  Consumer<SettingsViewState>(
+                    builder: (_, settings, _) {
+                      String endpoint(String value) => value.trim().isEmpty
+                          ? l10n.backupParserEndpointUnset
+                          : redactSchoolImportError(
+                              value,
+                              apiKey: settings.customSchoolImportApiKey,
+                            );
+                      return Text(
+                        l10n.restoreBackupParserSettingsSummary(
+                          endpoint(settings.customSchoolImportBaseUrl),
+                          endpoint(restored.aiApiSettings.customBaseUrl),
+                        ),
+                        key: const ValueKey(
+                          'restore-backup-parser-settings-summary',
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 16),
                   Text(l10n.backupWorkspaceSelection),
                   const SizedBox(height: 8),
