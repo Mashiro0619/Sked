@@ -27,6 +27,9 @@ String? _nullableStringValue(Object? value) {
 }
 
 int? _intValue(Object? value) {
+  if (value is num && !value.isFinite) {
+    throw const FormatException('General event number must be finite.');
+  }
   return value is num ? value.toInt() : null;
 }
 
