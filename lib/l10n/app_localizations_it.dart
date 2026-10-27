@@ -3254,4 +3254,12 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get importWarningRecurrenceDateClamped =>
       'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.';
+
+  @override
+  String importWarningSkippedRecurrenceOverride(Object fields) {
+    return 'Skipped a recurrence override whose original occurrence could not be identified safely: $fields.';
+  }
+
+  @override
+  String get importWarningSkippedCancelledEvent => 'Skipped a cancelled event.';
 }

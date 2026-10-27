@@ -5717,6 +5717,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.'**
   String get importWarningRecurrenceDateClamped;
+
+  /// No description provided for @importWarningSkippedRecurrenceOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped a recurrence override whose original occurrence could not be identified safely: {fields}.'**
+  String importWarningSkippedRecurrenceOverride(Object fields);
+
+  /// No description provided for @importWarningSkippedCancelledEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped a cancelled event.'**
+  String get importWarningSkippedCancelledEvent;
 }
 
 class _AppLocalizationsDelegate

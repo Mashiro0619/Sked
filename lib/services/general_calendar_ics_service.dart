@@ -10,6 +10,8 @@ enum GeneralCalendarIcsWarningCode {
   unsupportedFields,
   unsupportedRRuleFrequency,
   recurrenceDateClamped,
+  skippedRecurrenceOverride,
+  skippedCancelledEvent,
   unsupportedTimeZone,
 }
 
@@ -139,6 +141,10 @@ class GeneralCalendarIcsImportWarning {
       GeneralCalendarIcsWarningCode.unsupportedRRuleFrequency =>
         'Unsupported RRULE frequency "${values.isEmpty ? '' : values.first}" was ignored.',
       GeneralCalendarIcsWarningCode.recurrenceDateClamped => 'The repeat rule was kept. Dates missing from a month move to its last day; the source rule skips those dates.',
+      GeneralCalendarIcsWarningCode.skippedRecurrenceOverride =>
+        'Skipped a recurrence override whose original occurrence could not be identified safely: ${values.join(', ')}.',
+      GeneralCalendarIcsWarningCode.skippedCancelledEvent =>
+        'Skipped a cancelled event.',
       GeneralCalendarIcsWarningCode.unsupportedTimeZone =>
         'Skipped an event with unsupported time zones: ${values.join(', ')}.',
     };
@@ -236,7 +242,7 @@ class GeneralCalendarIcsService {
       colorValue: colorValue,
     );
     final warnings = <GeneralCalendarIcsImportWarning>[];
-    final events = <GeneralEvent>[];
+    final safeBlocks = <_IcsEventFields>[];
     for (final block in parsedBlocks) {
       if (block.timeZoneDiagnostics.isNotEmpty) {
         warnings.add(
@@ -252,6 +258,24 @@ class GeneralCalendarIcsService {
         );
         continue;
       }
+      safeBlocks.add(block);
+    }
+    void report(
+      _IcsEventFields block,
+      GeneralCalendarIcsWarningCode code, {
+      List<String> values = const [],
+    }) {
+      warnings.add(
+        GeneralCalendarIcsImportWarning(
+          code: code,
+          values: values,
+          eventUid: block.fields['UID']?.value.trim(),
+          eventTitle: block.fields['SUMMARY']?.value.trim(),
+        ),
+      );
+    }
+
+    GeneralEvent? readEvent(_IcsEventFields block, {bool asOverride = false}) {
       final eventWarnings = <GeneralCalendarIcsImportWarning>[];
       final event = _importEvent(
         block,
@@ -259,21 +283,123 @@ class GeneralCalendarIcsService {
         eventWarnings,
         fallbackEventTitle: fallbackEventTitle,
         localTimeZoneId: localTimeZoneId,
+        asOverride: asOverride,
       );
-      warnings.addAll(
-        eventWarnings.map(
-          (warning) => GeneralCalendarIcsImportWarning(
-            code: warning.code,
-            values: warning.values,
-            eventUid: block.fields['UID']?.value.trim(),
-            eventTitle: block.fields['SUMMARY']?.value.trim(),
-          ),
-        ),
-      );
-      if (event != null) {
-        events.add(event);
+      for (final warning in eventWarnings) {
+        report(block, warning.code, values: warning.values);
+      }
+      return event;
+    }
+
+    // Use original UIDs and all masters, even rejected ones, so an override
+    // cannot pick an arbitrary master or depend on VEVENT ordering.
+    final mastersByUid = <String, List<_IcsEventFields>>{};
+    for (final block in parsedBlocks) {
+      if (block.fields.containsKey('RECURRENCE-ID')) continue;
+      final uid = block.fields['UID']?.value.trim();
+      if (uid != null && uid.isNotEmpty) {
+        mastersByUid.putIfAbsent(uid, () => []).add(block);
       }
     }
+    final importedMasters = <_IcsEventFields, GeneralEvent>{};
+    for (final block in safeBlocks) {
+      if (block.fields.containsKey('RECURRENCE-ID')) continue;
+      if (_isCancelled(block)) {
+        report(block, GeneralCalendarIcsWarningCode.skippedCancelledEvent);
+        continue;
+      }
+      final event = readEvent(block);
+      if (event != null) {
+        importedMasters[block] = event;
+      }
+    }
+    final targets = <_IcsEventFields, (_IcsEventFields, String)>{};
+    final targetCounts = <(_IcsEventFields, String), int>{};
+    for (final block in parsedBlocks) {
+      final recurrenceId = block.fields['RECURRENCE-ID'];
+      if (recurrenceId == null) continue;
+      final uid = block.fields['UID']?.value.trim();
+      final masters = mastersByUid[uid];
+      final masterBlock = masters?.length == 1 ? masters!.single : null;
+      final master = importedMasters[masterBlock];
+      final unsupported = <String>[];
+      if (master == null ||
+          !master.recurrenceRule.isRepeating ||
+          masterBlock!.duplicateFields.contains('UID')) {
+        unsupported.add('UID=${uid ?? ''}');
+      }
+      if (block.duplicateFields.any(
+            const {'UID', 'RECURRENCE-ID', 'STATUS'}.contains,
+          ) ||
+          recurrenceId.params.keys.any(
+            (key) => key != 'VALUE' && key != 'TZID',
+          ) ||
+          recurrenceId.value.contains(',') ||
+          (recurrenceId.params['VALUE']?.toUpperCase() == 'DATE-TIME' &&
+              _isIcsDateOnly(recurrenceId)) ||
+          (recurrenceId.params['VALUE'] != null &&
+              !const {
+                'DATE',
+                'DATE-TIME',
+              }.contains(recurrenceId.params['VALUE']!.toUpperCase()))) {
+        unsupported.add('RECURRENCE-ID:PARAMETERS_OR_DUPLICATES');
+      }
+      final dates = unsupported.isEmpty
+          ? _importExceptionDates(
+              [recurrenceId],
+              start: DateTime.parse(master!.startDateTimeIso),
+              rule: master.recurrenceRule,
+              allDay: master.isAllDay,
+              unsupportedFields: unsupported,
+              localTimeZoneId: localTimeZoneId,
+            )
+          : const <String>[];
+      if (dates.length != 1 || unsupported.isNotEmpty) {
+        if (block.timeZoneDiagnostics.isEmpty) {
+          report(
+            block,
+            GeneralCalendarIcsWarningCode.skippedRecurrenceOverride,
+            values: ['RECURRENCE-ID=${recurrenceId.value}', ...unsupported],
+          );
+        }
+        continue;
+      }
+      final target = (masterBlock!, dates.single);
+      targets[block] = target;
+      targetCounts.update(target, (count) => count + 1, ifAbsent: () => 1);
+    }
+    final replacements = <GeneralEvent>[];
+    for (final entry in targets.entries) {
+      final block = entry.key;
+      if (block.timeZoneDiagnostics.isNotEmpty) continue;
+      final (masterBlock, date) = entry.value;
+      if (targetCounts[entry.value] != 1) {
+        report(
+          block,
+          GeneralCalendarIcsWarningCode.skippedRecurrenceOverride,
+          values: ['DUPLICATE:RECURRENCE-ID=$date'],
+        );
+        continue;
+      }
+      final master = importedMasters[masterBlock]!;
+      if (!_isCancelled(block)) {
+        final replacement = readEvent(block, asOverride: true);
+        // A broken replacement must never erase the safe original instance.
+        if (replacement == null) continue;
+        replacements.add(
+          replacement.copyWith(
+            id: '${master.id}_override_${date.replaceAll('-', '')}',
+          ),
+        );
+      }
+      importedMasters[masterBlock] = master.copyWith(
+        recurrenceExceptionDateIso: {
+          ...master.recurrenceExceptionDateIso,
+          date,
+        }.toList()..sort(),
+      );
+    }
+    final events = [...importedMasters.values, ...replacements];
     if (events.isEmpty) {
       throw GeneralCalendarIcsImportException(
         timeZoneDiagnostics.isEmpty
@@ -346,9 +472,12 @@ class GeneralCalendarIcsService {
     List<GeneralCalendarIcsImportWarning> warnings, {
     required String fallbackEventTitle,
     String? localTimeZoneId,
+    bool asOverride = false,
   }) {
     final fields = parsed.fields;
-    final exceptionFields = parsed.exceptionFields;
+    final exceptionFields = asOverride
+        ? const <_IcsField>[]
+        : parsed.exceptionFields;
     final startField = fields['DTSTART'];
     if (startField == null) {
       warnings.add(
@@ -373,7 +502,10 @@ class GeneralCalendarIcsService {
     final isAllDay = _isIcsDateOnly(startField);
     final endField = fields['DTEND'];
     final durationField = fields['DURATION'];
-    final ignoredSupportedFields = <String>[];
+    final ignoredSupportedFields = <String>[
+      if (asOverride && fields.containsKey('RRULE')) 'RRULE',
+      if (asOverride && parsed.exceptionFields.isNotEmpty) 'EXDATE',
+    ];
     var adjustedEnd = false;
     var end = endField == null
         ? null
@@ -436,7 +568,7 @@ class GeneralCalendarIcsService {
     final unsupportedRRuleParts = <String>[];
     final duplicateRRuleParts = <String>[];
     final recurrenceRule = _parseRRule(
-      fields['RRULE']?.value,
+      asOverride ? null : fields['RRULE']?.value,
       warnings,
       eventStart: start,
       unsupportedParts: unsupportedRRuleParts,
@@ -497,6 +629,9 @@ class _IcsEventFields {
   final List<_IcsField> exceptionFields;
   final List<GeneralCalendarIcsTimeZoneDiagnostic> timeZoneDiagnostics;
 }
+
+bool _isCancelled(_IcsEventFields block) =>
+    block.fields['STATUS']?.value.trim().toUpperCase() == 'CANCELLED';
 
 const _icsTimeProperties = {
   'DTSTART',
@@ -1390,6 +1525,7 @@ List<String> _unsupportedFields(Iterable<String> fields) {
     'LOCATION',
     'DESCRIPTION',
     'RRULE',
+    'RECURRENCE-ID',
   };
   return fields.where((field) => !supported.contains(field)).toList()..sort();
 }

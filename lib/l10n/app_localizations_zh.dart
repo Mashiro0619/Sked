@@ -3003,6 +3003,14 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get importWarningRecurrenceDateClamped =>
       '已保留重复规则，但不存在的日期会移至当月最后一天；源日历的规则会跳过这些日期。';
+
+  @override
+  String importWarningSkippedRecurrenceOverride(Object fields) {
+    return '已跳过无法安全定位原实例的改期或取消记录：$fields。';
+  }
+
+  @override
+  String get importWarningSkippedCancelledEvent => '已跳过已取消的日程。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6005,4 +6013,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get importWarningRecurrenceDateClamped =>
       '已保留重複規則，但不存在的日期會移至當月最後一天；來源日曆的規則會略過這些日期。';
+
+  @override
+  String importWarningSkippedRecurrenceOverride(Object fields) {
+    return '已略過無法安全定位原實例的改期或取消記錄：$fields。';
+  }
+
+  @override
+  String get importWarningSkippedCancelledEvent => '已略過已取消的日程。';
 }
