@@ -5603,6 +5603,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.'**
   String get notificationWindowsCoverageCapacityLimited;
+
+  /// Accessibility status of a course that does not run in the displayed week.
+  ///
+  /// In en, this message translates to:
+  /// **'Not scheduled this week'**
+  String get courseInactiveThisWeek;
 }
 
 class _AppLocalizationsDelegate

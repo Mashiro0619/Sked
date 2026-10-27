@@ -3177,4 +3177,7 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Достигнут лимит напоминаний. Некоторые ещё не запланированы. После срабатывания ближайших напоминаний откройте приложение заново, чтобы обновить план.';
+
+  @override
+  String get courseInactiveThisWeek => 'Не запланировано на эту неделю';
 }

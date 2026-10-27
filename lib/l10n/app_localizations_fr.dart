@@ -3211,4 +3211,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'La limite de rappels est atteinte. Certains ne sont pas encore programmés. Rouvrez l’application après le déclenchement des prochains rappels pour actualiser le planning.';
+
+  @override
+  String get courseInactiveThisWeek => 'Non prévu cette semaine';
 }

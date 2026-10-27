@@ -3183,4 +3183,7 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Das Erinnerungslimit ist erreicht. Einige Erinnerungen sind noch nicht geplant. Öffne die App erneut, nachdem anstehende Erinnerungen ausgelöst wurden, um den Plan zu aktualisieren.';
+
+  @override
+  String get courseInactiveThisWeek => 'Diese Woche nicht im Stundenplan';
 }

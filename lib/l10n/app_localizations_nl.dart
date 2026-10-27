@@ -3170,4 +3170,7 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'De herinneringslimiet is bereikt. Sommige herinneringen zijn nog niet gepland. Open de app opnieuw nadat komende herinneringen zijn afgegaan om het plan bij te werken.';
+
+  @override
+  String get courseInactiveThisWeek => 'Deze week niet ingepland';
 }

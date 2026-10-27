@@ -3185,4 +3185,7 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'S-a atins limita de mementouri. Unele nu sunt încă programate. Redeschide aplicația după declanșarea mementourilor apropiate pentru a actualiza planul.';
+
+  @override
+  String get courseInactiveThisWeek => 'Nu este programat în această săptămână';
 }

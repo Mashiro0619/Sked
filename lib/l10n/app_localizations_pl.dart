@@ -3161,4 +3161,7 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Osiągnięto limit przypomnień. Niektóre nie są jeszcze zaplanowane. Po wyświetleniu najbliższych przypomnień otwórz aplikację ponownie, aby odświeżyć plan.';
+
+  @override
+  String get courseInactiveThisWeek => 'Brak zajęć w tym tygodniu';
 }

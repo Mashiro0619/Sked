@@ -2170,5 +2170,7 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "courseInactiveThisWeek": "Not scheduled this week",
+  "@courseInactiveThisWeek": {"description": "Accessibility status of a course that does not run in the displayed week."}
 }

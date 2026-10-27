@@ -3190,4 +3190,7 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Se ha alcanzado el límite de recordatorios. Algunos aún no están programados. Vuelve a abrir la aplicación después de que se activen los próximos recordatorios para actualizar el plan.';
+
+  @override
+  String get courseInactiveThisWeek => 'No programado esta semana';
 }

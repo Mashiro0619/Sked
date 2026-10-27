@@ -3156,4 +3156,7 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Muistutusten enimmäismäärä on saavutettu. Joitakin muistutuksia ei ole vielä ajoitettu. Avaa sovellus uudelleen lähimpien muistutusten lauettua päivittääksesi suunnitelman.';
+
+  @override
+  String get courseInactiveThisWeek => 'Ei opetusta tällä viikolla';
 }

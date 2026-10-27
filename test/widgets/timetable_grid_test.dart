@@ -1355,7 +1355,10 @@ void main() {
       tester.getTopLeft(visual).dy - tester.getTopLeft(dayColumn).dy,
       closeTo(84, 0.01),
     );
-    expect(find.bySemanticsLabel('Legacy course, 09:00–09:45'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('Legacy course, Monday, Week 1, 09:00–09:45'),
+      findsOneWidget,
+    );
     semantics.dispose();
   });
 
@@ -1921,8 +1924,8 @@ void main() {
     await tester.pump();
     expect(tappedIds, const ['first-short', 'second-short']);
     for (final label in const [
-      'first-short, 08:00–08:10',
-      'second-short, 08:10–08:20',
+      'first-short, Monday, Week 1, 08:00–08:10',
+      'second-short, Monday, Week 1, 08:10–08:20',
     ]) {
       final node = tester.getSemantics(find.bySemanticsLabel(label));
       expect(node.rect.height, greaterThanOrEqualTo(48));
@@ -2069,7 +2072,7 @@ void main() {
         expect(tapped.every((info) => info.courses.length == 1), isTrue);
         expect(tapped.every((info) => info.conflictKey == null), isTrue);
         expect(
-          find.bySemanticsLabel('gap-custom, 09:20–09:40'),
+          find.bySemanticsLabel('gap-custom, Monday, Week 1, 09:20–09:40'),
           findsOneWidget,
         );
         expect(tester.takeException(), isNull);
@@ -2385,7 +2388,7 @@ void main() {
       isTrue,
     );
     expect(
-      find.bySemanticsLabel('separate-course, 09:10–10:10'),
+      find.bySemanticsLabel('separate-course, Monday, Week 1, 09:10–10:10'),
       findsOneWidget,
     );
     node.owner!.performAction(node.id, ui.SemanticsAction.longPress);
@@ -2404,7 +2407,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Monday, Add course'), findsNothing);
     expect(
-      find.bySemanticsLabel('separate-course, 09:10–10:10'),
+      find.bySemanticsLabel('separate-course, Monday, Week 1, 09:10–10:10'),
       findsOneWidget,
     );
     semantics.dispose();
@@ -2479,7 +2482,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.bySemanticsLabel('Advanced Physics, Lab 3, Dr. Chen, 08:00–08:10'),
+      find.bySemanticsLabel(
+        'Advanced Physics, Monday, Week 1, 08:00–08:10, Location: Lab 3, Teacher: Dr. Chen',
+      ),
       findsOneWidget,
     );
     semantics.dispose();

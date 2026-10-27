@@ -3144,4 +3144,7 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Đã đạt giới hạn lời nhắc. Một số lời nhắc chưa được lên lịch. Hãy mở lại ứng dụng sau khi các lời nhắc sắp tới đã được kích hoạt để cập nhật kế hoạch.';
+
+  @override
+  String get courseInactiveThisWeek => 'Không có lịch học trong tuần này';
 }

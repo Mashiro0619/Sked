@@ -3121,4 +3121,7 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'ถึงขีดจำกัดจำนวนการเตือนแล้ว บางรายการยังไม่ได้ตั้งเวลา โปรดเปิดแอปอีกครั้งหลังจากการเตือนที่ใกล้ถึงกำหนดทำงานแล้วเพื่ออัปเดตแผน';
+
+  @override
+  String get courseInactiveThisWeek => 'ไม่มีเรียนในสัปดาห์นี้';
 }

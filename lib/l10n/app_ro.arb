@@ -2144,5 +2144,6 @@
   },
   "notificationWindowsCoverageCapacityLimited": "S-a atins limita de mementouri. Unele nu sunt încă programate. Redeschide aplicația după declanșarea mementourilor apropiate pentru a actualiza planul.",
   "@notificationWindowsCoverageCapacityLimited": {},
-  "studentDayEmpty": "Nu sunt cursuri în această zi"
+  "studentDayEmpty": "Nu sunt cursuri în această zi",
+  "courseInactiveThisWeek": "Nu este programat în această săptămână"
 }

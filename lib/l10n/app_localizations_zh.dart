@@ -2937,6 +2937,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       '已达到提醒数量上限，其余提醒尚未安排。近期提醒触发后，请重新打开应用更新计划。';
+
+  @override
+  String get courseInactiveThisWeek => '本周不上课';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5873,4 +5876,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       '已達到提醒數量上限，其餘提醒尚未安排。近期提醒觸發後，請重新開啟應用程式更新計畫。';
+
+  @override
+  String get courseInactiveThisWeek => '本週不上課';
 }

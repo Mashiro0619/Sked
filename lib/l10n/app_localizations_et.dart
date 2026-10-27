@@ -3144,4 +3144,7 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Meeldetuletuste piirang on saavutatud. Mõned pole veel ajastatud. Plaani uuendamiseks ava rakendus pärast lähimate meeldetuletuste käivitumist uuesti.';
+
+  @override
+  String get courseInactiveThisWeek => 'Sel nädalal tunniplaanis puudub';
 }

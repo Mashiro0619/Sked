@@ -3028,4 +3028,7 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       '通知件数の上限に達しているため、まだ予約されていない通知があります。直近の通知が表示された後にアプリを開き直して予定を更新してください。';
+
+  @override
+  String get courseInactiveThisWeek => '今週は授業なし';
 }

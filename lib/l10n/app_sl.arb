@@ -2159,5 +2159,6 @@
   },
   "notificationWindowsCoverageCapacityLimited": "Dosežena je omejitev števila opomnikov. Nekateri še niso načrtovani. Ko se sprožijo bližnji opomniki, znova odprite aplikacijo in osvežite načrt.",
   "@notificationWindowsCoverageCapacityLimited": {},
-  "studentDayEmpty": "Ta dan ni pouka"
+  "studentDayEmpty": "Ta dan ni pouka",
+  "courseInactiveThisWeek": "Ta teden ni na urniku"
 }

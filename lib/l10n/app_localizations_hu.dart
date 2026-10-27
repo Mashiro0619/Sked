@@ -3171,4 +3171,7 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Az emlékeztetők száma elérte a korlátot. Néhány még nincs ütemezve. A terv frissítéséhez a közelgő emlékeztetők jelzése után nyisd meg újra az alkalmazást.';
+
+  @override
+  String get courseInactiveThisWeek => 'Ezen a héten nincs óra';
 }

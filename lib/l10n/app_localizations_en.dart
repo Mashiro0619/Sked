@@ -3144,4 +3144,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.';
+
+  @override
+  String get courseInactiveThisWeek => 'Not scheduled this week';
 }

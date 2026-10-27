@@ -3193,4 +3193,7 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Лимитът за напомняния е достигнат. Някои още не са планирани. След задействане на предстоящите напомняния отворете отново приложението, за да обновите плана.';
+
+  @override
+  String get courseInactiveThisWeek => 'Не е планирано за тази седмица';
 }

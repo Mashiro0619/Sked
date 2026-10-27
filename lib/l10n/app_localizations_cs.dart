@@ -3152,4 +3152,7 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Byl dosažen limit připomenutí. Některá ještě nejsou naplánována. Po spuštění nejbližších připomenutí aplikaci znovu otevřete a aktualizujte plán.';
+
+  @override
+  String get courseInactiveThisWeek => 'Tento týden není v rozvrhu';
 }

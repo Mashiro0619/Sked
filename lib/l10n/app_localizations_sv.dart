@@ -3151,4 +3151,7 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Gränsen för påminnelser har nåtts. Vissa har ännu inte schemalagts. Öppna appen igen efter att kommande påminnelser har utlösts för att uppdatera planen.';
+
+  @override
+  String get courseInactiveThisWeek => 'Inte schemalagt den här veckan';
 }

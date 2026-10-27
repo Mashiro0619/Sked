@@ -3161,4 +3161,7 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Dosežena je omejitev števila opomnikov. Nekateri še niso načrtovani. Ko se sprožijo bližnji opomniki, znova odprite aplikacijo in osvežite načrt.';
+
+  @override
+  String get courseInactiveThisWeek => 'Ta teden ni na urniku';
 }

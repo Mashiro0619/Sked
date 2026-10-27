@@ -3201,4 +3201,8 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Συμπληρώθηκε το όριο υπενθυμίσεων. Ορισμένες δεν έχουν προγραμματιστεί ακόμη. Ανοίξτε ξανά την εφαρμογή αφού ενεργοποιηθούν οι προσεχείς υπενθυμίσεις για ενημέρωση του προγράμματος.';
+
+  @override
+  String get courseInactiveThisWeek =>
+      'Δεν έχει προγραμματιστεί αυτή την εβδομάδα';
 }

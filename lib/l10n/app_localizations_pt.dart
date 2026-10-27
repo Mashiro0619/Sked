@@ -3180,4 +3180,7 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'O limite de lembretes foi atingido. Alguns ainda não estão agendados. Volte a abrir a aplicação depois de os próximos lembretes serem apresentados para atualizar o plano.';
+
+  @override
+  String get courseInactiveThisWeek => 'Não está agendado para esta semana';
 }

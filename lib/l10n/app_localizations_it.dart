@@ -3184,4 +3184,7 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'È stato raggiunto il limite di promemoria. Alcuni non sono ancora programmati. Riapri l’app dopo l’attivazione dei prossimi promemoria per aggiornare il piano.';
+
+  @override
+  String get courseInactiveThisWeek => 'Non in programma questa settimana';
 }

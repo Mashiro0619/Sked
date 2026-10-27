@@ -3137,4 +3137,7 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'रिमाइंडर की सीमा पूरी हो गई है। कुछ रिमाइंडर अभी शेड्यूल नहीं हुए हैं। आगामी रिमाइंडर चलने के बाद ऐप दोबारा खोलकर योजना अपडेट करें।';
+
+  @override
+  String get courseInactiveThisWeek => 'इस सप्ताह निर्धारित नहीं है';
 }

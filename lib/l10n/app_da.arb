@@ -2144,5 +2144,6 @@
   },
   "notificationWindowsCoverageCapacityLimited": "Grænsen for påmindelser er nået. Nogle er endnu ikke planlagt. Åbn appen igen, efter at kommende påmindelser er udløst, for at opdatere planen.",
   "@notificationWindowsCoverageCapacityLimited": {},
-  "studentDayEmpty": "Ingen undervisning denne dag"
+  "studentDayEmpty": "Ingen undervisning denne dag",
+  "courseInactiveThisWeek": "Ikke planlagt i denne uge"
 }

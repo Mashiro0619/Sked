@@ -82,9 +82,11 @@ Widget _grid({
 
 String _label(CourseItem course) => [
   course.name,
-  course.location,
-  course.teacher,
+  'Monday',
+  'Week 1',
   '${formatMinutes(course.startMinutes)}–${formatMinutes(course.endMinutes)}',
+  'Location: ${course.location}',
+  'Teacher: ${course.teacher}',
 ].join(', ');
 
 Finder _annotation(String label) => find.byWidgetPredicate(

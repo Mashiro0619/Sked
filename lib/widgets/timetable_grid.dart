@@ -566,6 +566,7 @@ class _TimetableGridState extends State<TimetableGrid> {
                                             in widget.visibleWeekdays)
                                           _DayColumn(
                                             weekday: weekday,
+                                            localeCode: widget.localeCode,
                                             emptySlotSemanticLabel:
                                                 '${formatDayOfWeekLabel(weekday, localeCode: widget.localeCode)}, ${lookupAppLocalizations(appLocaleFromCode(widget.localeCode)).addCourse}',
                                             width: metrics.dayColumnWidth,
@@ -707,6 +708,7 @@ void _validateVisibleWeekdays(List<int> weekdays) {
 class _DayColumn extends StatelessWidget {
   const _DayColumn({
     required this.weekday,
+    required this.localeCode,
     required this.emptySlotSemanticLabel,
     required this.width,
     required this.borderColor,
@@ -729,6 +731,7 @@ class _DayColumn extends StatelessWidget {
   });
 
   final int weekday;
+  final String localeCode;
   final String emptySlotSemanticLabel;
   final double width;
   final Color borderColor;
@@ -830,6 +833,12 @@ class _DayColumn extends StatelessWidget {
                   _CourseHitTarget(
                     geometry: geometry,
                     metrics: metrics,
+                    semanticLabel: _semanticLabelForGeometry(
+                      geometry,
+                      weekday: weekday,
+                      selectedWeek: selectedWeek,
+                      localeCode: localeCode,
+                    ),
                     onTap: (anchor) => onLayoutTap(
                       geometry.layout,
                       SkedFloatingAnchor.capture(anchor).globalRect,
@@ -849,6 +858,12 @@ class _DayColumn extends StatelessWidget {
                     _CourseSemanticTarget(
                       geometry: geometry,
                       totalHeight: verticalLayout.totalHeight,
+                      semanticLabel: _semanticLabelForGeometry(
+                        geometry,
+                        weekday: weekday,
+                        selectedWeek: selectedWeek,
+                        localeCode: localeCode,
+                      ),
                       onTap: (anchor) => onLayoutTap(
                         geometry.layout,
                         SkedFloatingAnchor.capture(anchor).globalRect,
@@ -2464,6 +2479,7 @@ class _CourseHitTarget extends StatelessWidget {
   const _CourseHitTarget({
     required this.geometry,
     required this.metrics,
+    required this.semanticLabel,
     required this.onTap,
     required this.onLongPress,
     this.useVisualBounds = false,
@@ -2472,6 +2488,7 @@ class _CourseHitTarget extends StatelessWidget {
 
   final _CourseGeometry geometry;
   final _TimetableMetrics metrics;
+  final String semanticLabel;
   final ValueChanged<BuildContext> onTap;
   final ValueChanged<BuildContext> onLongPress;
   final bool useVisualBounds;
@@ -2514,7 +2531,7 @@ class _CourseHitTarget extends StatelessWidget {
                 context,
                 'course:${layout.course?.id}',
               ),
-              label: _semanticLabelForGeometry(geometry),
+              label: semanticLabel,
               onTap: () => onTap(context),
               child: visual,
             )
@@ -2530,11 +2547,13 @@ class _CourseSemanticTarget extends StatelessWidget {
   const _CourseSemanticTarget({
     required this.geometry,
     required this.totalHeight,
+    required this.semanticLabel,
     required this.onTap,
   });
 
   final _CourseGeometry geometry;
   final double totalHeight;
+  final String semanticLabel;
   final ValueChanged<BuildContext> onTap;
 
   @override
@@ -2549,7 +2568,7 @@ class _CourseSemanticTarget extends StatelessWidget {
       end: 0,
       height: height,
       child: _CourseSemantics(
-        label: _semanticLabelForGeometry(geometry),
+        label: semanticLabel,
         onTap: () => onTap(context),
         child: IgnorePointer(child: const SizedBox.expand()),
       ),
@@ -2603,15 +2622,40 @@ class _CourseSemanticsState extends State<_CourseSemantics> {
   }
 }
 
-String _semanticLabelForGeometry(_CourseGeometry geometry) {
+String _semanticLabelForGeometry(
+  _CourseGeometry geometry, {
+  required int weekday,
+  required int selectedWeek,
+  required String localeCode,
+}) {
   final layout = geometry.layout;
+  final l = lookupAppLocalizations(appLocaleFromCode(localeCode));
+  final source = layout.entry?.source;
+  final course = layout.course ?? (source is CourseItem ? source : null);
+  final isCourse =
+      layout.course != null || layout.entry?.kind == TimetableEntryKind.course;
+  final inactive =
+      isCourse &&
+      (layout.entry?.isInactive ??
+          layout.displayState != CourseDisplayState.active);
   final title = layout.entry?.title ?? layout.course?.name ?? '';
-  final location = layout.entry?.location ?? layout.course?.location ?? '';
-  final teacher = layout.entry?.teacher ?? layout.course?.teacher ?? '';
+  final location = (layout.entry?.location ?? layout.course?.location ?? '')
+      .trim();
+  final teacher = (layout.entry?.teacher ?? layout.course?.teacher ?? '')
+      .trim();
   return <String>[
     title,
-    if (location.isNotEmpty) location,
-    if (teacher.isNotEmpty) teacher,
+    formatDayOfWeekLabel(weekday, localeCode: localeCode),
+    l.weekLabel(selectedWeek),
     '${formatMinutes(geometry.startMinutes)}–${formatMinutes(geometry.endMinutes)}',
+    if (location.isNotEmpty) '${l.location}: $location',
+    if (teacher.isNotEmpty) '${l.teacherName}: $teacher',
+    if (inactive) ...[
+      l.courseInactiveThisWeek,
+      if (course != null)
+        formatSemesterWeeksLabel(course.semesterWeeks, localeCode: localeCode),
+    ],
+    if (isCourse && layout.conflictCourses.length > 1)
+      '${l.conflictCourses}: ${layout.conflictCourses.length}',
   ].join(', ');
 }

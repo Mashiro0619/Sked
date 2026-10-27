@@ -2133,5 +2133,6 @@
     }
   },
   "notificationWindowsCoverageCapacityLimited": "已达到提醒数量上限，其余提醒尚未安排。近期提醒触发后，请重新打开应用更新计划。",
-  "@notificationWindowsCoverageCapacityLimited": {}
+  "@notificationWindowsCoverageCapacityLimited": {},
+  "courseInactiveThisWeek": "本周不上课"
 }

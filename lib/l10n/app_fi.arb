@@ -2144,5 +2144,6 @@
   },
   "notificationWindowsCoverageCapacityLimited": "Muistutusten enimmäismäärä on saavutettu. Joitakin muistutuksia ei ole vielä ajoitettu. Avaa sovellus uudelleen lähimpien muistutusten lauettua päivittääksesi suunnitelman.",
   "@notificationWindowsCoverageCapacityLimited": {},
-  "studentDayEmpty": "Ei oppitunteja tälle päivälle"
+  "studentDayEmpty": "Ei oppitunteja tälle päivälle",
+  "courseInactiveThisWeek": "Ei opetusta tällä viikolla"
 }

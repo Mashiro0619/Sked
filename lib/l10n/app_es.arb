@@ -2144,5 +2144,6 @@
   },
   "notificationWindowsCoverageCapacityLimited": "Se ha alcanzado el límite de recordatorios. Algunos aún no están programados. Vuelve a abrir la aplicación después de que se activen los próximos recordatorios para actualizar el plan.",
   "@notificationWindowsCoverageCapacityLimited": {},
-  "studentDayEmpty": "No hay clases este día"
+  "studentDayEmpty": "No hay clases este día",
+  "courseInactiveThisWeek": "No programado esta semana"
 }

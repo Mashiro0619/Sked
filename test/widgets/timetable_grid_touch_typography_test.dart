@@ -523,7 +523,9 @@ void main() {
         findsNothing,
       );
       expect(
-        find.bySemanticsLabel('学术写作, B201, 郑老师, 08:00–08:05'),
+        find.bySemanticsLabel(
+          '学术写作, 星期一, 第 1 周, 08:00–08:05, 上课地点: B201, 老师姓名: 郑老师',
+        ),
         findsOneWidget,
       );
       await tester.tap(

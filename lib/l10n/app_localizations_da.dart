@@ -3139,4 +3139,7 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get notificationWindowsCoverageCapacityLimited =>
       'Grænsen for påmindelser er nået. Nogle er endnu ikke planlagt. Åbn appen igen, efter at kommende påmindelser er udløst, for at opdatere planen.';
+
+  @override
+  String get courseInactiveThisWeek => 'Ikke planlagt i denne uge';
 }

@@ -2159,5 +2159,6 @@
   },
   "notificationWindowsCoverageCapacityLimited": "Gränsen för påminnelser har nåtts. Vissa har ännu inte schemalagts. Öppna appen igen efter att kommande påminnelser har utlösts för att uppdatera planen.",
   "@notificationWindowsCoverageCapacityLimited": {},
-  "studentDayEmpty": "Inga lektioner denna dag"
+  "studentDayEmpty": "Inga lektioner denna dag",
+  "courseInactiveThisWeek": "Inte schemalagt den här veckan"
 }

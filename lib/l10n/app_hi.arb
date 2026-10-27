@@ -2144,5 +2144,6 @@
   },
   "notificationWindowsCoverageCapacityLimited": "रिमाइंडर की सीमा पूरी हो गई है। कुछ रिमाइंडर अभी शेड्यूल नहीं हुए हैं। आगामी रिमाइंडर चलने के बाद ऐप दोबारा खोलकर योजना अपडेट करें।",
   "@notificationWindowsCoverageCapacityLimited": {},
-  "studentDayEmpty": "इस दिन कोई कक्षा नहीं है"
+  "studentDayEmpty": "इस दिन कोई कक्षा नहीं है",
+  "courseInactiveThisWeek": "इस सप्ताह निर्धारित नहीं है"
 }
