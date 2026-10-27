@@ -11,6 +11,7 @@ import '../widgets/sked_color_draft.dart';
 import '../widgets/sked_task_submission_controller.dart';
 import '../widgets/sked_task_session.dart';
 import '../utils/mobile_toolbar_layout.dart';
+import '../utils/latin_word_wrapping.dart';
 import '../theme/sked_surface.dart';
 import '../theme/color_contrast.dart';
 

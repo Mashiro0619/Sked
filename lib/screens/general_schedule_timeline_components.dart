@@ -696,6 +696,7 @@ class _OccurrenceCard extends StatelessWidget {
                         textScaler: MediaQuery.textScalerOf(context),
                         detailLines: occurrence.event.location.isEmpty ? 1 : 2,
                         textDirection: Directionality.of(context),
+                        locale: Localizations.maybeLocaleOf(context),
                         narrow: narrow,
                         narrowLineLimit:
                             WorkbenchChromeMetrics.compactTouch(context)
@@ -831,6 +832,7 @@ class _TimelineOccurrenceTitleLayout {
     required double maxHeight,
     required TextDirection textDirection,
     required bool narrow,
+    Locale? locale,
     TextScaler textScaler = TextScaler.noScaling,
     int detailLines = 1,
     int narrowLineLimit = 10,
@@ -849,19 +851,23 @@ class _TimelineOccurrenceTitleLayout {
       textScaler: textScaler,
       strutStyle: _timelineTitleStrutStyle(style, narrow),
       textDirection: textDirection,
+      locale: locale,
       maxLines: 8,
     )..layout(maxWidth: safeWidth);
+    limitOversizedLatinWords(painter, text, safeWidth);
     final neededLines = math.max(1, painter.computeLineMetrics().length);
-    final titleFits = neededLines <= cappedPossibleLines;
+    final titleFits =
+        !painter.didExceedMaxLines && neededLines <= cappedPossibleLines;
     final detailsHeight = lineHeight * detailLines + 4;
 
-    maxLines = titleFits ? neededLines : cappedPossibleLines;
+    maxLines = math.min(neededLines, cappedPossibleLines);
     showDetails =
         !narrow &&
         titleFits &&
         neededLines <= 2 &&
         safeWidth >= 64 &&
         safeHeight >= neededLines * lineHeight + detailsHeight;
+    painter.dispose();
   }
 
   late final int maxLines;
