@@ -22,7 +22,7 @@
 | Host11 | 3 | 11 项，每项 11 个计时批均值 | comparable，11 | 77061b4 → d328a17 |
 | 既有 Disk30 | 3 | 30 个真实磁盘动作 | comparable，复算保持原结果 | 77061b4 → 1205c6e，未重标 |
 
-三套新数据的 runtime / 输入 / 来源 / 进程条件已重新核对；UIedit 在 AX 拒绝之外，也额外完成了跨侧输入、目标、viewport 和进程独立性检查。[完整只读审计](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/audit-final-d328a17.json>) 记录汇总与逐进程原始分布的重算一致性，以及 12 个唯一原生编译快照的实际 SHA-256 和字节长度验证。
+三套新数据的 runtime / 输入 / 来源 / 进程条件已重新核对；UIedit 在 AX 拒绝之外，也额外完成了跨侧输入、目标、viewport 和进程独立性检查。[完整只读审计（来源记录）](LEGACY_EVIDENCE_INDEX.md#e015) 记录汇总与逐进程原始分布的重算一致性，以及 12 个唯一原生编译快照的实际 SHA-256 和字节长度验证。
 
 UI60 是新采集的工作区补充总体，未执行设置页开关及设置页关闭步骤；每轮结束会检查设置页未出现、月页已恢复。它的 warm 前史与完整 UI66 不同。旧 UI66、旧 pilot 和完整 UI66 当前版正确性运行均未混入本表。原四套 --suite all 仍是 UI66 + Disk30 + UIedit12 + Host11 的 119 项定义；本报告没有用 UI60 替换 UI66 并宣称原 119 项全部可比。
 
@@ -245,7 +245,7 @@ RSS 是整个进程的驻留内存。动作 RSS 增量先在各进程内计算�
 | warm | 学生日页打开/滚动 | 2467.210 → 686.116 | 19.449 → 15.502 | 10725.581 → 3996.124 | 503.266 → 521.676 | -32.004 → -32.051 |
 | warm | 打开通用工作区 | 3037.504 → 2132.814 | 15.739 → 11.425 | 7343.483 → 2906.863 | 531.391 → 563.211 | 21.480 → 35.984 |
 
-完整每轮 P50/P95/P99/max、min/max/MAD、最坏观测、写入计数与原始 JSON Pointer：[UI60 summary.json](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-ui60-final-d328a17/summary.json>)；[逐进程原始 frames](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-ui60-final-d328a17/distributions.json>)。
+完整每轮 P50/P95/P99/max、min/max/MAD、最坏观测、写入计数与原始 JSON Pointer：[UI60 summary.json（来源记录）](LEGACY_EVIDENCE_INDEX.md#e027)；[逐进程原始 frames（来源记录）](LEGACY_EVIDENCE_INDEX.md#e026)。
 
 ## 独立挂载与进程级观测
 
@@ -309,7 +309,7 @@ Host 是 Windows flutter-test-host-jit / debug 总体。每项每进程进行 5 
 
 11 项的三轮中位均下降，幅度约 2.36%–13.94%，但保留了高值和回退。例如 occurrence.5000_180d_cold 当前第一轮为 153136.250 µs/op，高于原版三轮中位 141482.500；app_backup.5000_decode 当前第一轮为 1186297.400 µs/op，高于原版中位 1104177.500。occurrence.1000_7d_cold、cache.1000_churn、sanitizer.table_240k、app_backup.5000_encode 的最坏批均值高于原版。表中的最坏值是三轮各自最大批均值的最大数，不是单次操作尾延迟或总体上限。
 
-Host 内存未记录，不能从耗时推断内存变化。[Host 完整汇总](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-host11-final-d328a17/summary.json>) 和 [每进程 11 个原始批均值](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-host11-final-d328a17/distributions.json>) 保留 min/max/MAD、checksum、服务调用计数、批大小以及原始路径。
+Host 内存未记录，不能从耗时推断内存变化。[Host 完整汇总（来源记录）](LEGACY_EVIDENCE_INDEX.md#e025) 和 [每进程 11 个原始批均值（来源记录）](LEGACY_EVIDENCE_INDEX.md#e024) 保留 min/max/MAD、checksum、服务调用计数、批大小以及原始路径。
 
 ## UIedit：六进程已执行，前后数值被拒绝
 
@@ -317,22 +317,22 @@ Host 内存未记录，不能从耗时推断内存变化。[Host 完整汇总](<
 
 | 进程 | 动作数 | 独立读回校验 | 报告验证 | AXTree 拒绝 | 证据 |
 | --- | --- | --- | --- | --- | --- |
-| 原版 r1 | 12 | 6 / passed | passed | 199 | [原始报告](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-before-final-d328a17/r1/ui-edit-before.json>) |
-| 原版 r2 | 12 | 6 / passed | passed | 204 | [原始报告](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-before-final-d328a17/r2/ui-edit-before.json>) |
-| 原版 r3 | 12 | 6 / passed | passed | 201 | [原始报告](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-before-final-d328a17/r3/ui-edit-before.json>) |
-| 当前 r1 | 12 | 6 / passed | passed | 0 | [原始报告](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-after-final-d328a17/r1/ui-edit-after.json>) |
-| 当前 r2 | 12 | 6 / passed | passed | 0 | [原始报告](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-after-final-d328a17/r2/ui-edit-after.json>) |
-| 当前 r3 | 12 | 6 / passed | passed | 0 | [原始报告](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-after-final-d328a17/r3/ui-edit-after.json>) |
+| 原版 r1 | 12 | 6 / passed | passed | 199 | [原始报告（来源记录）](LEGACY_EVIDENCE_INDEX.md#e105) |
+| 原版 r2 | 12 | 6 / passed | passed | 204 | [原始报告（来源记录）](LEGACY_EVIDENCE_INDEX.md#e106) |
+| 原版 r3 | 12 | 6 / passed | passed | 201 | [原始报告（来源记录）](LEGACY_EVIDENCE_INDEX.md#e107) |
+| 当前 r1 | 12 | 6 / passed | passed | 0 | [原始报告（来源记录）](LEGACY_EVIDENCE_INDEX.md#e101) |
+| 当前 r2 | 12 | 6 / passed | passed | 0 | [原始报告（来源记录）](LEGACY_EVIDENCE_INDEX.md#e102) |
+| 当前 r3 | 12 | 6 / passed | passed | 0 | [原始报告（来源记录）](LEGACY_EVIDENCE_INDEX.md#e103) |
 
-当前版三轮合计 36 个动作、18 次独立磁盘读回校验：从真实课程/事件卡片进入详情和编辑器，修改标题、确认输入阶段没有提前持久化，点击保存后等待实际保存完成并关闭编辑器。每次保存后使用独立存储实例读回，检查目标标题、另一领域数据不变、读回可写及合成 secret 未入档案。单独读回校验在动作计时窗之外。[已冻结的动作和读回断言](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/sources-uiedit12-final-d328a17/after/benchmark/src/ui_edit_scenarios.dart>) 保留实际实现。
+当前版三轮合计 36 个动作、18 次独立磁盘读回校验：从真实课程/事件卡片进入详情和编辑器，修改标题、确认输入阶段没有提前持久化，点击保存后等待实际保存完成并关闭编辑器。每次保存后使用独立存储实例读回，检查目标标题、另一领域数据不变、读回可写及合成 secret 未入档案。单独读回校验在动作计时窗之外。[已冻结的动作和读回断言（来源记录）](LEGACY_EVIDENCE_INDEX.md#e031) 保留实际实现。
 
 这为本次固定数据和路径提供当前版行为验收；前后性能表仍为 0 comparisons。没有把“无可比数字”写成“未运行”，也没有因当前版零 AX 而覆盖原版错误。输入是 Flutter 原生测试注入，未测 OS IME；零日志错误不单独构成完整 UIA/屏幕阅读器验收。
 
-[UIedit 拒绝原因及六进程索引](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-uiedit12-final-d328a17/summary.json>) · [保留的完整 frames 与原始报告](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-uiedit12-final-d328a17/distributions.json>)
+[UIedit 拒绝原因及六进程索引（来源记录）](LEGACY_EVIDENCE_INDEX.md#e029) · [保留的完整 frames 与原始报告（来源记录）](LEGACY_EVIDENCE_INDEX.md#e028)
 
 ## 来源、编译产物与追溯
 
-UI60 冻结 9 份、UIedit 冻结 12 份、Host 冻结 4 份来源，每份保留原版/当前原始 SHA-256 和快照。UI60 仅 harness 与 scenario、UIedit 仅同一 harness 与 runtime adapter 使用已复核的 API 适配理由；固定 fixture、frame metrics、真实 AppHomeScreen setup、native semantics helper 和 UI60 独立入口/driver 保持规范化后相同。完整三上下文 diff 与双方原始哈希均保留。[最终来源冻结记录](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/source-freeze-final-d328a17.json>) 可追溯这 50 个快照。
+UI60 冻结 9 份、UIedit 冻结 12 份、Host 冻结 4 份来源，每份保留原版/当前原始 SHA-256 和快照。UI60 仅 harness 与 scenario、UIedit 仅同一 harness 与 runtime adapter 使用已复核的 API 适配理由；固定 fixture、frame metrics、真实 AppHomeScreen setup、native semantics helper 和 UI60 独立入口/driver 保持规范化后相同。完整三上下文 diff 与双方原始哈希均保留。[最终来源冻结记录（来源记录）](LEGACY_EVIDENCE_INDEX.md#e030) 可追溯这 50 个快照。
 
 每个原生系列保留本系列 compiled/sked.exe、compiled/data/app.so、compiled/flutter_windows.dll。启动参数必须指向对应 checkout 的 Profile/sked.exe；回执生产 revision、源码哈希、productionMatchesRevision、快照路径/长度/哈希与六次相同 nativeLaunchMode 均经过核验。下表显示完整二进制 SHA-256，实际文件保留在相应回执的 compiled 目录。
 
@@ -353,9 +353,9 @@ UI60 冻结 9 份、UIedit 冻结 12 份、Host 冻结 4 份来源，每份保�
 
 | 总体 | 比较清单 | 原版回执 | 当前回执 | Manifest SHA-256 |
 | --- | --- | --- | --- | --- |
-| ui60 | [manifest](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/manifest.ui60.final-d328a17.json>) | [before receipt](<D:/Project/Flutter/sked/build/benchmarks/ui-workspace-before-final-d328a17/provenance.json>) | [after receipt](<D:/Project/Flutter/sked/build/benchmarks/ui-workspace-after-final-d328a17/provenance.json>) | `15e069980c33ad4ca6aacd4b26765d9b0c5617e252427ccb26dca62da33453f4` |
-| uiedit12 | [manifest](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/manifest.uiedit12.final-d328a17.json>) | [before receipt](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-before-final-d328a17/provenance.json>) | [after receipt](<D:/Project/Flutter/sked/build/benchmarks/ui-edit-after-final-d328a17/provenance.json>) | `9384636c5b616807137a1aa4472fc9de86a33c7dcd5a1c8c2d58bc1a14eade75` |
-| host11 | [manifest](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/manifest.host11.final-d328a17.json>) | [before receipt](<D:/Project/Flutter/sked/build/benchmarks/host-before-final-d328a17/provenance.json>) | [after receipt](<D:/Project/Flutter/sked/build/benchmarks/host-after-final-d328a17/provenance.json>) | `5aa05783897d59102d5cd256abbc7c2bd905b9b0dcaeca160009b8f8558e150d` |
+| ui60 | [manifest（来源记录）](LEGACY_EVIDENCE_INDEX.md#e019) | [before receipt（来源记录）](LEGACY_EVIDENCE_INDEX.md#e109) | [after receipt（来源记录）](LEGACY_EVIDENCE_INDEX.md#e108) | `15e069980c33ad4ca6aacd4b26765d9b0c5617e252427ccb26dca62da33453f4` |
+| uiedit12 | [manifest（来源记录）](LEGACY_EVIDENCE_INDEX.md#e020) | [before receipt（来源记录）](LEGACY_EVIDENCE_INDEX.md#e104) | [after receipt（来源记录）](LEGACY_EVIDENCE_INDEX.md#e100) | `9384636c5b616807137a1aa4472fc9de86a33c7dcd5a1c8c2d58bc1a14eade75` |
+| host11 | [manifest（来源记录）](LEGACY_EVIDENCE_INDEX.md#e018) | [before receipt（来源记录）](LEGACY_EVIDENCE_INDEX.md#e099) | [after receipt（来源记录）](LEGACY_EVIDENCE_INDEX.md#e098) | `5aa05783897d59102d5cd256abbc7c2bd905b9b0dcaeca160009b8f8558e150d` |
 
 本轮数值准入器 SHA-256：`2e1f1d2fe7a8c589e01742c739e944fdb66a3149e5700eafd248ebee23be8ba0`。比较器的 45 项 Python 标准库正反例在正式采样前已通过；本次审计仅重读保留证据，未再启动性能进程或重跑测试。所有现有 comparisons、mountComparisons、processMetrics 和逐进程 distributions 均逐项复现。
 

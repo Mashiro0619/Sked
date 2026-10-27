@@ -6,9 +6,9 @@
 
 下表为墙钟耗时和进程 RSS 等读写指标，没有采集 UI 帧或编辑输入延迟。变化率为（当前中位数 − 原始中位数）/ 原始中位数；有正负号的 RSS 差值不计算百分比。三次重复不构成统计显著性或因果证明。
 
-[完整数值、输入/源码和回执索引](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-disk30/summary.json>) · [逐进程原始分布](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-disk30/distributions.json>) · [比较清单](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/manifest.disk30.json>)
+[完整数值、输入/源码和回执索引（来源记录）](LEGACY_EVIDENCE_INDEX.md#e023) · [逐进程原始分布（来源记录）](LEGACY_EVIDENCE_INDEX.md#e022) · [比较清单（来源记录）](LEGACY_EVIDENCE_INDEX.md#e017)
 
-后续 [v2 校验器复核](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-disk30-v2validator/summary.json>) 仍为 30 项可比，逐项比较与进程指标同原汇总一致；[14 项历史规则检查](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/verification-v2.json>) 保留当时证据。最新 [最终采样审计](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/audit-final-d328a17.json>) 再次复现原磁盘数值与分布。这些复核不是新增磁盘进程；UI60/Host11 已另行完成正式比较，编辑 before 的 AX 错误导致数值比较无效，详见 [UI/Host 性能报告](PROJECT_REFACTOR_UI_PERFORMANCE.md)。
+后续 [v2 校验器复核（来源记录）](LEGACY_EVIDENCE_INDEX.md#e021) 仍为 30 项可比，逐项比较与进程指标同原汇总一致；[14 项历史规则检查（来源记录）](LEGACY_EVIDENCE_INDEX.md#e032) 保留当时证据。最新 [最终采样审计（来源记录）](LEGACY_EVIDENCE_INDEX.md#e015) 再次复现原磁盘数值与分布。这些复核不是新增磁盘进程；UI60/Host11 已另行完成正式比较，编辑 before 的 AX 错误导致数值比较无效，详见 [UI/Host 性能报告](PROJECT_REFACTOR_UI_PERFORMANCE.md)。
 
 这些执行工件保存在本地，不随产品源码分发。原始报告 SHA 和 JSON Pointer 用于追溯具体观测；启动回执中的 PID 是命令启动器 PID，不是 `sked.exe` 的 PID。完整协议和限制见 [磁盘基准说明](../../benchmark/DATA_OPERATIONS.md)，项目结果见 [实施报告](PROJECT_REFACTOR_REPORT.md)。
 
@@ -59,12 +59,12 @@ Output size/hash, import counts and timing diagnostics remain in summary.json an
 
 | Run | revision | raw report | SHA-256 | launcher PID | AXTree rejections |
 | --- | --- | --- | --- | --- | --- |
-| disk30/before/r1 | 77061b4172ef | [raw report](<D:/Project/Flutter/sked/build/benchmarks/data-before/r1/data-operations-before.json>) | e0d84119839ecb9c4afce4116156101c92a69e2e33e11d150998a087fb0a3b1b | 86900 | 0 |
-| disk30/before/r2 | 77061b4172ef | [raw report](<D:/Project/Flutter/sked/build/benchmarks/data-before/r2/data-operations-before.json>) | 7381e440255a3522ea7d6f30f95970ce6e0ac1bbdc76e4bc58cf8f1ef658b445 | 80884 | 0 |
-| disk30/before/r3 | 77061b4172ef | [raw report](<D:/Project/Flutter/sked/build/benchmarks/data-before/r3/data-operations-before.json>) | 6481cad2af7865d6bb8515ba20d8a533965544772b96aafaf2241b1f7287963d | 4332 | 0 |
-| disk30/after/r1 | 1205c6ed0816 | [raw report](<D:/Project/Flutter/sked/build/benchmarks/data-after/r1/data-operations-after.json>) | eb8bf8572d0b3a26b1e26bb45c8623bf791aeec1ebb2470d215dc067fa7b4cc4 | 45316 | 0 |
-| disk30/after/r2 | 1205c6ed0816 | [raw report](<D:/Project/Flutter/sked/build/benchmarks/data-after/r2/data-operations-after.json>) | 1e1ae4029ee39dc08b70476beca9c433d909db7628961e3625260762770397f0 | 104160 | 0 |
-| disk30/after/r3 | 1205c6ed0816 | [raw report](<D:/Project/Flutter/sked/build/benchmarks/data-after/r3/data-operations-after.json>) | 52148f72ff0d53a45a2bf0cb7dc927167e7cbfc3fb097a2f26084bc0a1120ad9 | 61716 | 0 |
+| disk30/before/r1 | 77061b4172ef | [raw report（来源记录）](LEGACY_EVIDENCE_INDEX.md#e095) | e0d84119839ecb9c4afce4116156101c92a69e2e33e11d150998a087fb0a3b1b | 86900 | 0 |
+| disk30/before/r2 | 77061b4172ef | [raw report（来源记录）](LEGACY_EVIDENCE_INDEX.md#e096) | 7381e440255a3522ea7d6f30f95970ce6e0ac1bbdc76e4bc58cf8f1ef658b445 | 80884 | 0 |
+| disk30/before/r3 | 77061b4172ef | [raw report（来源记录）](LEGACY_EVIDENCE_INDEX.md#e097) | 6481cad2af7865d6bb8515ba20d8a533965544772b96aafaf2241b1f7287963d | 4332 | 0 |
+| disk30/after/r1 | 1205c6ed0816 | [raw report（来源记录）](LEGACY_EVIDENCE_INDEX.md#e092) | eb8bf8572d0b3a26b1e26bb45c8623bf791aeec1ebb2470d215dc067fa7b4cc4 | 45316 | 0 |
+| disk30/after/r2 | 1205c6ed0816 | [raw report（来源记录）](LEGACY_EVIDENCE_INDEX.md#e093) | 1e1ae4029ee39dc08b70476beca9c433d909db7628961e3625260762770397f0 | 104160 | 0 |
+| disk30/after/r3 | 1205c6ed0816 | [raw report（来源记录）](LEGACY_EVIDENCE_INDEX.md#e094) | 52148f72ff0d53a45a2bf0cb7dc927167e7cbfc3fb097a2f26084bc0a1120ad9 | 61716 | 0 |
 
 Native accessibility acceptance is **not established by this comparison**. AXTree log rejections are retained per run; zero recorded errors alone is not an accessibility pass.
 

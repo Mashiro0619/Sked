@@ -6,7 +6,7 @@ Windows Profile 的独立进程启动时间与 RSS 结果另见 [启动结果](P
 
 本轮可支持的结论是：大数据量的月份往返和工作区切换，其构建尾帧与动作总耗时明显降低；仍存在数百毫秒长帧、部分课表与 raster 指标上升、个别进程离群，以及基本持平的进程峰值 RSS。不能写成全部 UI 已流畅、滚动零超帧、内存明显改善，或应用冷启动/Android 验收完成。
 
-完整来源：[summary.json](/D:/Project/Flutter/sked/.scratch/refactor-20261017/long-frames/comparison-canvas-v1/results/summary.json)、[sections.md](/D:/Project/Flutter/sked/.scratch/refactor-20261017/long-frames/comparison-canvas-v1/results/sections.md)、[distributions.json](/D:/Project/Flutter/sked/.scratch/refactor-20261017/long-frames/comparison-canvas-v1/results/distributions.json)。summary 状态为 comparable，60 个交互 case 与 3 个独立 mount case 全部纳入。两侧各 3 个进程，共 378 条原始测量记录、28,270 个帧样本；帧不跨进程合池。
+完整来源：[summary.json（来源记录）](LEGACY_EVIDENCE_INDEX.md#e003)、[sections.md（来源记录）](LEGACY_EVIDENCE_INDEX.md#e002)、[distributions.json（来源记录）](LEGACY_EVIDENCE_INDEX.md#e001)。summary 状态为 comparable，60 个交互 case 与 3 个独立 mount case 全部纳入。两侧各 3 个进程，共 378 条原始测量记录、28,270 个帧样本；帧不跨进程合池。
 
 ## 1. 可比较范围与解释口径
 
@@ -232,13 +232,13 @@ after 仍有 28/60 个交互以及 2/3 个 mount 至少出现一次 ≥100 ms bu
 
 本轮 FrameTiming 只能把成本定位在月份往返动作窗口，不能完成 CPU 归因。下一步需给相同动作的子阶段增加独立诊断，再决定具体改动；以下假设尚无新增 CPU 采样支持。
 
-1. 月份提交时新增边月的同步投影。[三月缓存](/D:/Project/Flutter/sked/lib/widgets/general_month_projection.dart:62)只保留当前及相邻三个月；A→A+1 会逐出 A−1、生成 A+2，返回 A 时 A−1 的日桶又需生成。[occurrence 查询](/D:/Project/Flutter/sked/lib/models/general_event_occurrence.dart:200)在 miss 时遍历可见日历事件并排序，[逐日分桶](/D:/Project/Flutter/sked/lib/widgets/general_month_projection.dart:218)再展开/排序日桶。先分别记录 occurrence/day-bucket cache hit、展开数与两处排序耗时，再评估有界已访问月份缓存或范围索引；两处排序语义不同，不能直接删除。
+1. 月份提交时新增边月的同步投影。[三月缓存](../../lib/widgets/general_month_projection.dart)只保留当前及相邻三个月；A→A+1 会逐出 A−1、生成 A+2，返回 A 时 A−1 的日桶又需生成。[occurrence 查询](../../lib/models/general_event_occurrence.dart)在 miss 时遍历可见日历事件并排序，[逐日分桶](../../lib/widgets/general_month_projection.dart)再展开/排序日桶。先分别记录 occurrence/day-bucket cache hit、展开数与两处排序耗时，再评估有界已访问月份缓存或范围索引；两处排序语义不同，不能直接删除。
 
-2. 邻页首次显示及提交后页面元素重挂载。[隐藏邻页](/D:/Project/Flutter/sked/lib/screens/general_schedule_month_view.dart:833)以 SizedBox 代替页面，首次显露仍需挂载；[previous/next/current 固定槽](/D:/Project/Flutter/sked/lib/screens/general_schedule_month_grid_geometry.dart:438)内部才放月份 key，相同月份在换槽时不能据此保证跨父节点复用。[全部日期格](/D:/Project/Flutter/sked/lib/screens/general_schedule_month_grid_geometry.dart:663)会随页建立。先统计首个非零位移帧与提交帧的实际 mount/build，再考虑保留按月份识别的页元素。已有位移动画 ValueNotifier、几何与文字缓存，不重复撤销这些边界。
+2. 邻页首次显示及提交后页面元素重挂载。[隐藏邻页](../../lib/screens/general_schedule_month_view.dart)以 SizedBox 代替页面，首次显露仍需挂载；[previous/next/current 固定槽](../../lib/screens/general_schedule_month_grid_geometry.dart)内部才放月份 key，相同月份在换槽时不能据此保证跨父节点复用。[全部日期格](../../lib/screens/general_schedule_month_grid_geometry.dart)会随页建立。先统计首个非零位移帧与提交帧的实际 mount/build，再考虑保留按月份识别的页元素。已有位移动画 ValueNotifier、几何与文字缓存，不重复撤销这些边界。
 
-3. 日期提交的局部通知与首页重建范围。[首页订阅](/D:/Project/Flutter/sked/lib/screens/general_schedule_home_screen.dart:348)及 [MonthCalendarSource](/D:/Project/Flutter/sked/lib/screens/general_schedule_month_view.dart:120)都观察 GeneralViewState；[导航意图 setState](/D:/Project/Flutter/sked/lib/screens/general_schedule_home_screen.dart:981)还包含提交前与下一帧清理。先数清这些节点的真实 build 次数，再缩小装饰/导航状态的影响范围。领域发布已有 publication-key 去重，本轮不能据此宣称所有组件都被无差别重建。
+3. 日期提交的局部通知与首页重建范围。[首页订阅](../../lib/screens/general_schedule_home_screen.dart)及 [MonthCalendarSource](../../lib/screens/general_schedule_month_view.dart)都观察 GeneralViewState；[导航意图 setState](../../lib/screens/general_schedule_home_screen.dart)还包含提交前与下一帧清理。先数清这些节点的真实 build 次数，再缩小装饰/导航状态的影响范围。领域发布已有 publication-key 去重，本轮不能据此宣称所有组件都被无差别重建。
 
-归因边界：[真实 action](/D:/Project/Flutter/sked/benchmark/src/ui_performance_scenarios.dart:537)未将邻页首挂、settle、日期提交、延迟保存分别测量。[日期提交](/D:/Project/Flutter/sked/lib/controllers/general_navigation_controller.dart:83)会安排 UI 保存，[保存延迟](/D:/Project/Flutter/sked/lib/controllers/app_persistence.dart:20)为 450 ms，但 [本轮 MemoryStorage.save](/D:/Project/Flutter/sked/benchmark/src/ui_performance_harness.dart:81)只替换快照并计数。因此 action 中的 writes 不能冒充磁盘 JSON 序列化成本。任何缓存/页复用改动仍需保留日期选择、4/5/6 周、隐藏周末、文字/RTL/DPR、命中及议程位置行为。
+归因边界：[真实 action](../../benchmark/src/ui_performance_scenarios.dart)未将邻页首挂、settle、日期提交、延迟保存分别测量。[日期提交](../../lib/controllers/general_navigation_controller.dart)会安排 UI 保存，[保存延迟](../../lib/controllers/app_persistence.dart)为 450 ms，但 [本轮 MemoryStorage.save](../../benchmark/src/ui_performance_harness.dart)只替换快照并计数。因此 action 中的 writes 不能冒充磁盘 JSON 序列化成本。任何缓存/页复用改动仍需保留日期选择、4/5/6 周、隐藏周末、文字/RTL/DPR、命中及议程位置行为。
 
 ## 附录 A：完整 60 个交互，不删去升高项
 

@@ -4,7 +4,7 @@
 
 本轮实现、定向回归和同协议采样已完成，最终代码为 `0f5a8f96b04b7580f1759ef48dc9b91073f6c708`（2026-10-18）。改动涵盖日期与提醒候选复用、课表排版与语义复用、导航回调与 ticker 订阅边界，以及透明点击层去冗余。最新 8 文件回归 **143 项通过**，2 文件格式检查零改动，fatal-info 分析通过；日历 304 次与 reminder/DST 128 次按未变源码哈希关联，104 次补充检查仍为本地诊断。最终六轮 Profile 对照覆盖 `df5676f → 0f5a8f9` 完整改动集，严格可比且独立来源与数值审计通过，未隔离最后一项 Material 改动的单独收益；压力长帧及全部不利变化保留在[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。本轮完成不扩大为新的完整 VM、整套发布包、UI66、Android 真机或完整浏览器矩阵验收。
 
-最近一次综合平台检查点为 `e522134ac8db262c30c9823568d867dbaf4f860b`（2026-10-17）。最终仅保留 `1139840` 的列表本地日界复用；`1d45d46` 课表文字缓存未证实稳定收益，已由 `e522134` 签名撤回，tree 与 `1139840` 一致。最终 Source 为 **4,901 通过、1 跳过**，Windows Native/Packages、Android 构建、Web、完整 UI66，以及独立 Debian 13 Linux Release/链接与四时区 76 次执行均有该 SHA 独立终态。`5ef639c → e522134` 的最终交替三轮及所有长帧/内存代价见[最新续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。Android 真机、安装升级/认证、物理输入及完整辅助技术仍未验收。下文保留 `1142cfc` 原始 139 条提交链与当时验收，Disk30、UI60/Host11/编辑、启动和 `1d45d46` 候选样本不重标为最终源码。
+最近一次综合平台检查点为 `e522134ac8db262c30c9823568d867dbaf4f860b`（2026-10-17）。最终仅保留 `1139840` 的列表本地日界复用；`1d45d46` 课表文字缓存未证实稳定收益，已由 `e522134` 签名撤回，tree 与 `1139840` 一致。最终 Source 为 **4,901 通过、1 跳过**，Windows Native/Packages、Android 构建、Web、完整 UI66，以及独立 Debian 13 Linux Release/链接与四时区 76 次执行均有该 SHA 独立终态。`5ef639c → e522134` 的最终交替三轮及所有长帧/内存代价见[最新续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。JavaScript Release 与[该 SHA 的有限浏览器流程（来源记录）](LEGACY_EVIDENCE_INDEX.md#e087)通过；范围按独立回执。Android 真机、安装升级/认证、物理输入及完整辅助技术仍未验收。下文保留 `1142cfc` 原始 139 条提交链与当时验收，Disk30、UI60/Host11/编辑、启动和 `1d45d46` 候选样本不重标为最终源码。
 
 ## 计划覆盖与实现边界
 
@@ -98,16 +98,16 @@
 
 | 项目 | 当前事实 | 验收边界 |
 | --- | --- | --- |
-| Source | [9 步全部 exit0](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/source-20261016T234624419Z/receipt.json>)；完整 VM 4,901 通过、1 跳过；754 文件格式检查 0 改动，根应用与内部插件分析通过 | LCOV 是诊断附件；不同批次计数不相加。diff-whitespace 记录 exit0，零输出日志未单独落盘 |
-| Windows Native | [27/27 阶段通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/windows-native-20261016T235958921Z/receipt.json>)，66 updates、5 次同 PID MSAA、28 buttons / 2 text checks，graph/AX/fatal 0 | 三份预构建快照前后哈希一致；integrationPluginWarning=true 保留，不扩展为安装或物理输入验收 |
-| Windows Packages | [4 步全部 exit0](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/windows-packages-20261017T001804579Z/receipt.json>)；两次 Release/MSIX、Unsigned/Store 身份与 payload、归档 Store verifier 通过 | 先归档 Unsigned 再构建 Store，两个包都未签名；未安装、WACK 或发布 |
-| Android | [5 步全部 exit0](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/android-20261017T000729778Z/receipt.json>)；APK/AAB 与合并 manifest/资源安全检查通过 | JVM 为 UP-TO-DATE；保留 XML 10 项、0 失败/错误/跳过，不称本 SHA 新执行；无真机验收 |
-| Linux 日期／Chrome | [同 SHA 专项通过](<D:/Project/Flutter/sked/.scratch/refactor-20261017/final-audit/linux-final-1142cfce8944-20261017T002055669751Z/receipt.json>)；纽约/柏林/上海各 41 项、圣保罗 25 项，Chrome 155.0.8059.84 租约 4 项 | 148 是四时区执行次数；独立 Dart 午夜探针只证实环境行为。未构建 Linux native |
-| Web Release | [JavaScript Release 构建通过](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-1142cfce894449df36994e866b179b706bec742e/web-20261017T002340535Z/receipt.json>)；归档 index.html/main.dart.js | CupertinoIcons 字体扫描提示保留；Wasm 仅 dry run，页面视觉未验收 |
-| 完整 UI66 | [离线补验通过](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/ui66/offline-20261017T002119423Z/sidecar.json>)；一进程三规模，66 actions + 3 mounts，含 6 设置项和 36 scroll 项，0 AX/graph/fatal | 原 failed 回执保留；修正 JSON 日期读法，未改断言或重跑，报告哈希本轮首次封存。不是前后性能比较 |
-| Linux native 环境 | [Docker 初始化失败回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/linux-native-environment/receipt.json>)；原 Ubuntu 源缺 WPE 包 | Docker 后端退出，未拉镜像、未运行 Linux Release；未改系统软件源、升级系统或重置 Docker |
+| Source | [9 步全部 exit0（来源记录）](LEGACY_EVIDENCE_INDEX.md#e005)；完整 VM 4,901 通过、1 跳过；754 文件格式检查 0 改动，根应用与内部插件分析通过 | LCOV 是诊断附件；不同批次计数不相加。diff-whitespace 记录 exit0，零输出日志未单独落盘 |
+| Windows Native | [27/27 阶段通过（来源记录）](LEGACY_EVIDENCE_INDEX.md#e007)，66 updates、5 次同 PID MSAA、28 buttons / 2 text checks，graph/AX/fatal 0 | 三份预构建快照前后哈希一致；integrationPluginWarning=true 保留，不扩展为安装或物理输入验收 |
+| Windows Packages | [4 步全部 exit0（来源记录）](LEGACY_EVIDENCE_INDEX.md#e008)；两次 Release/MSIX、Unsigned/Store 身份与 payload、归档 Store verifier 通过 | 先归档 Unsigned 再构建 Store，两个包都未签名；未安装、WACK 或发布 |
+| Android | [5 步全部 exit0（来源记录）](LEGACY_EVIDENCE_INDEX.md#e004)；APK/AAB 与合并 manifest/资源安全检查通过 | JVM 为 UP-TO-DATE；保留 XML 10 项、0 失败/错误/跳过，不称本 SHA 新执行；无真机验收 |
+| Linux 日期／Chrome | [同 SHA 专项通过（来源记录）](LEGACY_EVIDENCE_INDEX.md#e034)；纽约/柏林/上海各 41 项、圣保罗 25 项，Chrome 155.0.8059.84 租约 4 项 | 148 是四时区执行次数；独立 Dart 午夜探针只证实环境行为。未构建 Linux native |
+| Web Release | [JavaScript Release 构建通过（来源记录）](LEGACY_EVIDENCE_INDEX.md#e006)；归档 index.html/main.dart.js | CupertinoIcons 字体扫描提示保留；Wasm 仅 dry run，页面视觉未验收 |
+| 完整 UI66 | [离线补验通过（来源记录）](LEGACY_EVIDENCE_INDEX.md#e091)；一进程三规模，66 actions + 3 mounts，含 6 设置项和 36 scroll 项，0 AX/graph/fatal | 原 failed 回执保留；修正 JSON 日期读法，未改断言或重跑，报告哈希本轮首次封存。不是前后性能比较 |
+| Linux native 环境 | [Docker 初始化失败回执（来源记录）](LEGACY_EVIDENCE_INDEX.md#e090)；原 Ubuntu 源缺 WPE 包 | Docker 后端退出，未拉镜像、未运行 Linux Release；未改系统软件源、升级系统或重置 Docker |
 
-[独立只读审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/evidence-audit/receipt-and-commit-audit-1142cfce.json>)核对 Source/Native/Android/Packages 的 22 个步骤和全部 128 份归档文件的 SHA-256/字节数，失败 0；Windows 包内六份 payload 与两包身份、Toast、capabilities、无签名状态再次匹配。[Linux/Web 补充审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/evidence-audit/linux-web-addendum-1142cfce.json>)另核对 43 份回执、脚本、日志、源码归档和产物，四时区计数、Chrome 的 4 项事件与 17 份源码 blob/归档绑定一致。较早的 522、500、324、103、57 等定向结果只说明对应改动，不加入当前 4,901 的分母。
+[独立只读审计（来源记录）](LEGACY_EVIDENCE_INDEX.md#e089)核对 Source/Native/Android/Packages 的 22 个步骤和全部 128 份归档文件的 SHA-256/字节数，失败 0；Windows 包内六份 payload 与两包身份、Toast、capabilities、无签名状态再次匹配。[Linux/Web 补充审计（来源记录）](LEGACY_EVIDENCE_INDEX.md#e088)另核对 43 份回执、脚本、日志、源码归档和产物，四时区计数、Chrome 的 4 项事件与 17 份源码 blob/归档绑定一致。较早的 522、500、324、103、57 等定向结果只说明对应改动，不加入当前 4,901 的分母。
 
 | 当前归档 | 字节数 | SHA-256 |
 | --- | ---: | --- |
@@ -180,7 +180,7 @@ Linux 四时区使用最终 HEAD 的 Git archive，冻结源码/锁文件与已�
 | Host11 | before/after 各 3 个 host 进程，11 项 comparable | 纯数据 host JIT，不能替代原生 UI 帧或真实响应 |
 | UIedit12 | 两侧各 3 次；before AX 199/204/201，invalid、0 数值比较 | after 共 36 动作、独立磁盘读回与 0 AX 仅作相应版本正确性，不能给出前后改善百分比 |
 
-原始准入分别保存在 [UI60](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-ui60-final-d328a17/summary.json>)、[Host11](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-host11-final-d328a17/summary.json>) 与 [UIedit](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-uiedit12-final-d328a17/summary.json>)。旧 UI66 before 和有 5,211 条 AX 的 home pilot 仍只作诊断；不截取通过片段、裁剪旧报告或把单进程 pilot 并入正式三进程总体。分位数按每进程计算再汇总，不能跨进程合池后冒充独立重复。
+原始准入分别保存在 [UI60（来源记录）](LEGACY_EVIDENCE_INDEX.md#e027)、[Host11（来源记录）](LEGACY_EVIDENCE_INDEX.md#e025) 与 [UIedit（来源记录）](LEGACY_EVIDENCE_INDEX.md#e029)。旧 UI66 before 和有 5,211 条 AX 的 home pilot 仍只作诊断；不截取通过片段、裁剪旧报告或把单进程 pilot 并入正式三进程总体。分位数按每进程计算再汇总，不能跨进程合池后冒充独立重复。
 
 ## 剩余验收与限制
 
@@ -195,7 +195,7 @@ Linux 四时区使用最终 HEAD 的 Git archive，冻结源码/锁文件与已�
 
 ## 此前 1142cfc 签名提交时间线
 
-基线 `77061b4` 不计入区间；截至 `1142cfc` 共 **139 条提交：137 条实现或测试、2 条纯文档**，时间均为 UTC+08:00。[139 条原审计](<D:/Project/Flutter/sked/.scratch/refactor-20261017/final-audit/commit-audit-1142cfce8944.json>)与[独立来源复核](<D:/Project/Flutter/sked/.scratch/refactor-20261017/resume-20261017/evidence-audit/receipt-and-commit-audit-1142cfce.json>)覆盖完整对象、线性父链、单行格式、中文摘要和 SSH 签名。前 129 条另有[逐次原始签名回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/commit-audit-d328a17.json>)；后 10 条已补存逐次只读 verify-commit 输出。138 个范围含汉字，`844d59b` 的 CI 是保留的技术缩写。后续本次文档收口提交单独记录，不计入以下实现检查点。
+基线 `77061b4` 不计入区间；截至 `1142cfc` 共 **139 条提交：137 条实现或测试、2 条纯文档**，时间均为 UTC+08:00。[139 条原审计（来源记录）](LEGACY_EVIDENCE_INDEX.md#e033)与[独立来源复核（来源记录）](LEGACY_EVIDENCE_INDEX.md#e089)覆盖完整对象、线性父链、单行格式、中文摘要和 SSH 签名。前 129 条另有[逐次原始签名回执（来源记录）](LEGACY_EVIDENCE_INDEX.md#e016)；后 10 条已补存逐次只读 verify-commit 输出。138 个范围含汉字，`844d59b` 的 CI 是保留的技术缩写。后续本次文档收口提交单独记录，不计入以下实现检查点。
 
 | 序号 | 性质 | 提交 | 时间（2026 年） | 主题 | SSH 签名 |
 | ---: | --- | --- | --- | --- | --- |

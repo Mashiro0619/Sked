@@ -6,24 +6,24 @@ RC.4 发布准备（2026-10-22）：当前候选为 `2.3.0-rc.4+19`，拟使用�
 
 ## 1. 当前状态与接手边界
 
-当前实现、分批回归、正式对照与阶段审计见[续验](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。[透明层 r2 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final-validation-r2/receipt.json>)记录 143 项回归，9 个源文件哈希对应当前提交；[日期验收汇总](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/actual-calendar-zones/20261017T132444816867Z/acceptance-summary.json>)只按 7 个未变关键文件关联。下表仍保留 **e522134 检查点**的综合验收，不表示当前代码已重跑全量、整套发布包、UI66、Linux 应用构建或完整浏览器矩阵。
+当前实现、分批回归、正式对照与阶段审计见[续验](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。[透明层 r2 回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e066)记录 143 项回归，9 个源文件哈希对应当前提交；[日期验收汇总（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e040)只按 7 个未变关键文件关联。下表仍保留 **e522134 检查点**的综合验收，不表示当前代码已重跑全量、整套发布包、UI66、Linux 应用构建或完整浏览器矩阵。
 
 | 项目 | e522134 检查点的结果与范围 |
 | --- | --- |
 | 工作目录／分支 | `D:\Project\Flutter\sked`，`main` |
 | 应用与工具链 | `2.3.0+17`；Flutter 3.47.7 / Dart 3.13.5；Windows 包版本 2.3.0.17 / 2.3.17.0 |
 | 提交范围 | `1139840` 列表日期复用保留，`1d45d46` 课表文字缓存候选由 `e522134` 签名撤回；最终 tree 与 `1139840` 相同。三个提交签名历史保留；截至 `1142cfc` 的历史 139 条链路见主报告，总数不是当前未推送数 |
-| Source | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/source-20261017T064226756Z/receipt.json>)；9 步全部退出 0；完整 VM **4,901 通过、1 跳过**；754 文件格式检查零改动，应用和内部插件分析通过。候选首次 OOM 中断与降并发完整重跑另行保留，不混入本次计数 |
-| Windows Packages | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/windows-packages-20261017T071315555Z/receipt.json>)；Unsigned/Store 两类 Release/MSIX、身份/Toast/capabilities/payload 与归档 verifier 通过，两包未签名；未安装、升级、WACK 或发布 |
-| Android 构建与 JVM | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/android-20261017T071003773Z/receipt.json>)；APK/AAB 与合并安全产物归档；JUnit XML 10 项、0 失败/错误/跳过；Gradle 报告结果复用（`> Task :app:testDebugUnitTest UP-TO-DATE`），不能计作本 SHA 新执行；无真机 |
-| Linux 四时区／Chrome | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/linux-native/runs/acceptance-e522134ac8db-20261017T071537812Z/receipt.json>)；纽约 23 项、柏林 23 项、上海 23 项、圣保罗 7 项，共 76 次、零失败/跳过。最终范围为日期回归与列表投影两文件；此前较大时区矩阵和 Chrome 租约 4 项仍属于 `1142cfc` |
-| Web Release | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/web-20261017T070850958Z/receipt.json>)；JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。`1d45d46` 的 RGB/Enter/Escape 是候选历史，课程 Enter 超时与窄屏 DOM overflow 不改写为通过 |
-| Windows MSAA | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/windows-native-20261017T070331240Z/receipt.json>)；27/27 阶段、66 次语义更新、5 次同 PID MSAA、28 个按钮与 2 个文本检查；AX/graph/fatal 均 0；integrationPluginWarning=true 原样保留 |
-| 完整 UI66 正确性 | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/tools/ui66/runs/ui66-correctness-e522134ac8db-20261017T070507875Z/receipt.json>)；e522134 新进程直接通过 66 actions + 3 mounts、6 settings/36 scroll、0 AX/graph/fatal。旧 `1142cfc` failed/sidecar 不重写 |
+| Source | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e011)；9 步全部退出 0；完整 VM **4,901 通过、1 跳过**；754 文件格式检查零改动，应用和内部插件分析通过。候选首次 OOM 中断与降并发完整重跑另行保留，不混入本次计数 |
+| Windows Packages | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e014)；Unsigned/Store 两类 Release/MSIX、身份/Toast/capabilities/payload 与归档 verifier 通过，两包未签名；未安装、升级、WACK 或发布 |
+| Android 构建与 JVM | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e010)；APK/AAB 与合并安全产物归档；JUnit XML 10 项、0 失败/错误/跳过；Gradle 报告结果复用（`> Task :app:testDebugUnitTest UP-TO-DATE`），不能计作本 SHA 新执行；无真机 |
+| Linux 四时区／Chrome | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e084)；纽约 23 项、柏林 23 项、上海 23 项、圣保罗 7 项，共 76 次、零失败/跳过。最终范围为日期回归与列表投影两文件；此前较大时区矩阵和 Chrome 租约 4 项仍属于 `1142cfc` |
+| Web Release | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e012)；JavaScript Release 与[该 SHA 的有限浏览器流程（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e087)通过；范围按独立回执。`1d45d46` 的 RGB/Enter/Escape 是候选历史，课程 Enter 超时与窄屏 DOM overflow 不改写为通过 |
+| Windows MSAA | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e013)；27/27 阶段、66 次语义更新、5 次同 PID MSAA、28 个按钮与 2 个文本检查；AX/graph/fatal 均 0；integrationPluginWarning=true 原样保留 |
+| 完整 UI66 正确性 | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e085)；e522134 新进程直接通过 66 actions + 3 mounts、6 settings/36 scroll、0 AX/graph/fatal。旧 `1142cfc` failed/sidecar 不重写 |
 | 后续长帧比较 | 最终 `5ef639c → e522134` 两侧各三进程、ABBAAB、60+3 可比；5k 首次列表最大 build 中位数 886.417 → 374.376 ms。仍有 27/60 个交互至少一次 ≥100 ms，含挂载后后测全局最坏 937.056 ms；实际帧节奏不同，整体 P95 仅作描述。全部不利结果见[续验结果](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)；1d 候选样本另列 |
 | 独立进程启动 | 原版 `77061b4` 加存档启动/隔离适配层 → `1142cfc`，18 个 Windows Profile 进程。5k 就绪 raster 中位数 5.459 → 2.267 s（−58.47%），就绪报告 RSS 386.71 → 444.41 MiB（+14.92%）；详见[启动结果](engineering/PROJECT_REFACTOR_STARTUP_RESULTS.md) |
 | 历史性能系列 | [Disk30](engineering/PROJECT_REFACTOR_DISK_PERFORMANCE.md) 的 after 保留 `1205c6e`；[UI60/Host11/编辑](engineering/PROJECT_REFACTOR_UI_PERFORMANCE.md) 保留 `d328a17` 系列。编辑 before AX 199/204/201 使数值比较 invalid，after 36 动作与读回 / 0 AX 仅作正确性证据 |
-| Linux native | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/linux-native/runs/acceptance-e522134ac8db-20261017T071537812Z/receipt.json>)；e522134 独立 Debian 13 Release/动态链接/四时区通过，1,026 个非生成文件字节不变，7 个生成文件只允许 CRLF→LF 后冻结；未图形运行、安装、通知或原生输入 |
+| Linux native | [最终回执（来源记录）](engineering/LEGACY_EVIDENCE_INDEX.md#e084)；e522134 独立 Debian 13 Release/动态链接/四时区通过，1,026 个非生成文件字节不变，7 个生成文件只允许 CRLF→LF 后冻结；未图形运行、安装、通知或原生输入 |
 | 尚未覆盖 | Android 真机按约定延期；Windows 安装/同签名升级/干净机器/WACK、物理输入、完整辅助技术，Linux 图形运行/安装/通知及 Web 离线/Wasm 仍未覆盖。最终压力长帧与内存/raster 代价保留；未推送、远端 CI、部署或发布 |
 
 本轮已完成领域状态与组合根迁移、存储和计算边界、两个工作区投影与缓存、编辑及导入任务、通知分层，以及测试和 CI 精简；后续又修正公历校验、月页日期复用、缺失午夜日界与启动依赖组装。逐项实现和验收来源见[全项目重构实施报告](engineering/PROJECT_REFACTOR_REPORT.md)。启动比较包含显式基线适配、外部服务隔离与保留的 OS/字体/shader 缓存，不能写成未修改发布包、磁盘冷启动或真实像素呈现对照。
