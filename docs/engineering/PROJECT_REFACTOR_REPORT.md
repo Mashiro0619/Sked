@@ -24,7 +24,7 @@
 
 `4276e92` 完成最终 124 个路径的组装切换，删除此前仍有 **1015 行**的 `lib/providers/timetable_provider.dart`。此前课表、日程、设置、生命周期和开发者业务 mixin 已分别移出并删除。
 
-新的 [AppRuntime](../lib/app_runtime.dart) 是 `final`、非 `Listenable` 的组合根，公开表面只含构造、19 个领域字段和 `dispose`。它没有业务转发 getter/method、全局通知、数据复制入口或旧符号重导出。稳定视图的发布器在构造内部连接各领域；`dispose` 保持幂等，触发待保存状态的收尾并释放同一组实例。显式退出时等待写入完成的职责保留在 `AppShutdownController.quiesce` 和 AppBootstrap 的退出顺序中。
+新的 [AppRuntime](../../lib/app_runtime.dart) 是 `final`、非 `Listenable` 的组合根，公开表面只含构造、19 个领域字段和 `dispose`。它没有业务转发 getter/method、全局通知、数据复制入口或旧符号重导出。稳定视图的发布器在构造内部连接各领域；`dispose` 保持幂等，触发待保存状态的收尾并释放同一组实例。显式退出时等待写入完成的职责保留在 `AppShutdownController.quiesce` 和 AppBootstrap 的退出顺序中。
 
 | 职责 | AppRuntime 公开字段 |
 | --- | --- |
@@ -36,9 +36,9 @@
 | 传输与备份 | `transfers`、`backups` |
 | 生命周期与操作 | `lifecycle`、`dataClear`、`shutdown`、`developer` |
 
-[AppScope](../lib/providers/app_scope.dart) 注册 19 个领域实例及独立 readiness 桥，已移除全局 `ChangeNotifierProvider<TimetableProvider>`，也没有 `Provider<AppRuntime>` 订阅入口。捕获的作用域在跨路由时复用同一实例，实例生命周期仍由应用所有者管理。后续 `d517f78` 通过 `runSkedApp` 统一平台初始化，`AppBootstrap` 接收 `AppRuntimeFactory` 与 `AppStartupDependencies`；偏好、通知和更新工厂按根生命周期惰性装配，`MyApp` 保留同一个首页实例。默认生产服务和租约/退出顺序保持原行为，测量入口可显式隔离外部副作用。
+[AppScope](../../lib/providers/app_scope.dart) 注册 19 个领域实例及独立 readiness 桥，已移除全局 `ChangeNotifierProvider<TimetableProvider>`，也没有 `Provider<AppRuntime>` 订阅入口。捕获的作用域在跨路由时复用同一实例，实例生命周期仍由应用所有者管理。后续 `d517f78` 通过 `runSkedApp` 统一平台初始化，`AppBootstrap` 接收 `AppRuntimeFactory` 与 `AppStartupDependencies`；偏好、通知和更新工厂按根生命周期惰性装配，`MyApp` 保留同一个首页实例。默认生产服务和租约/退出顺序保持原行为，测量入口可显式隔离外部副作用。
 
-[AppSession](../lib/controllers/app_session.dart) 管理当前快照、变更代际、写入状态和已接受快照的提交事件。各领域命令不持有另一份可写 `AppData`。仓储成功接受写入后才发布 [AppDataCommit](../lib/models/app_data_commit.dart)；失败回滚继续尊重变更代际、恢复写门禁与运行时密钥覆盖层。`AppSessionReadiness` 独立发布加载、可写和未知写入状态。
+[AppSession](../../lib/controllers/app_session.dart) 管理当前快照、变更代际、写入状态和已接受快照的提交事件。各领域命令不持有另一份可写 `AppData`。仓储成功接受写入后才发布 [AppDataCommit](../../lib/models/app_data_commit.dart)；失败回滚继续尊重变更代际、恢复写门禁与运行时密钥覆盖层。`AppSessionReadiness` 独立发布加载、可写和未知写入状态。
 
 `AppDataVersions` 分别记录 `student`、`general`、`settings`、`agenda`、`dataSession`。无关显示与浏览提交不会触发提醒重排；语言、提醒设置、工作区可用性以及有效课程/事件变化仍计入 `agenda`。通知继续消费耐久快照。
 
@@ -48,9 +48,9 @@
 
 ## 计算、查询与任务流程
 
-[AppDataCodec](../lib/data/app_data_codec.dart) 与 [DataTransferCodec](../lib/services/data_transfer_codec.dart) 承担存档、课表、日程 JSON/ICS、备份与加载规范化等纯计算。原生默认仍使用 `compute`。解析候选只携带数据，合并、维护预约和耐久写入保留在当前会话中；预览确认复用已解析候选，避免重复解析。
+[AppDataCodec](../../lib/data/app_data_codec.dart) 与 [DataTransferCodec](../../lib/services/data_transfer_codec.dart) 承担存档、课表、日程 JSON/ICS、备份与加载规范化等纯计算。原生默认仍使用 `compute`。解析候选只携带数据，合并、维护预约和耐久写入保留在当前会话中；预览确认复用已解析候选，避免重复解析。
 
-[严格存档校验](../lib/models/app_data_storage_validation.dart) 保留在读入、导入与恢复边界。普通命令维护所修改分支的不变量，未变课程、日程和索引对象继续复用。AppData v4 与已有备份格式继续兼容；恢复门禁、失败回滚、停用工作区保留数据以及密钥不入普通备份的边界继续由专门测试覆盖。
+[严格存档校验](../../lib/models/app_data_storage_validation.dart) 保留在读入、导入与恢复边界。普通命令维护所修改分支的不变量，未变课程、日程和索引对象继续复用。AppData v4 与已有备份格式继续兼容；恢复门禁、失败回滚、停用工作区保留数据以及密钥不入普通备份的边界继续由专门测试覆盖。
 
 日程查询、月页、列表、时间轴和课表周投影分离了稳定输入与动态呈现。日期浏览可以保留原事件集合；视图缓存根据所属数据与布局输入失效。月页位移不再要求每帧重新建立整页子树，文字测量与物理像素布局单独复用。课程实时描边仍保持独立更新。后续 `61446c3`、`e5615f9` 避免公历校验和月分桶的重复本地时区查询；`4d54cc3` 修正缺失午夜后的跨日事件范围，并将圣保罗时区加入 CI。实现与行为回归见[长帧优化记录](PROJECT_REFACTOR_LONG_FRAMES.md)，速度收益以各自协议的测量为准。
 
@@ -191,7 +191,7 @@ Linux 四时区使用最终 HEAD 的 Git archive，冻结源码/锁文件与已�
 - 本轮 0f5a8f9 的实现与本地证据闭环完成，但仍有 18/60 个动作至少一次 build ≥100 ms，最坏动作 585.285 ms、含挂载最坏 687.606 ms；5,000 数据 cold `student.day.open_scroll` 的最大 build 中位数升高 2.65%。该窗口包含进入日视图、滚动和返回周视图，当前周实际 1,000 张卡；未将最大帧唯一归因于某个子步骤。全部压力长帧、raster/RSS 不利变化、三次重复及外部 SDK/pub cache 未整体归档的边界见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)与独立审计。旧阶段样本仍保留原归属。
 - 本轮未推送、运行远端 CI、部署或发布；缓存整批清理仍按原约定暂停。
 
-[HANDOFF.md](HANDOFF.md) 同步该实现检查点与当前证据。启动、长帧、历史 UI/Host、Disk30 各附表保留实际版本与独立分母，文档提交不增加测试、采样或实现完成计数。
+[HANDOFF.md](../HANDOFF.md) 同步该实现检查点与当前证据。启动、长帧、历史 UI/Host、Disk30 各附表保留实际版本与独立分母，文档提交不增加测试、采样或实现完成计数。
 
 ## 此前 1142cfc 签名提交时间线
 

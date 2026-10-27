@@ -46,7 +46,7 @@ CPU 诊断含采样与序列化开销，只用于定位。正式 before 另行�
 
 随后只增加观察信息的原生诊断确认：旧定位器选中的是右侧 `general-reminders-list` 内的 `workspace-view-body`，其范围为 2744.6／2723.6；同页真正时间网格仍为 763.6／757.6。按整个工作区的最大滚动范围选控件会受提醒列表长度影响。
 
-采样现在限定 `workspace-canvas`，优先已有时间网格／课表主滚动 key；主画布内容无需滚动时不改滚其它面板。保持原有 fixture、60 动作、两次 400 ms 手势和等待，新增独立的 `protocol.scrollTargeting.version=1` 及范围、目标、最终滚动范围记录。两种原生 driver 均拒绝缺失该协议的结果。历史 native semantics 的 `harnessVersion=2` 含义不变，旧新定位协议不可混用，详见 [协议](../benchmark/WORKSPACE_PERFORMANCE.md)。
+采样现在限定 `workspace-canvas`，优先已有时间网格／课表主滚动 key；主画布内容无需滚动时不改滚其它面板。保持原有 fixture、60 动作、两次 400 ms 手势和等待，新增独立的 `protocol.scrollTargeting.version=1` 及范围、目标、最终滚动范围记录。两种原生 driver 均拒绝缺失该协议的结果。历史 native semantics 的 `harnessVersion=2` 含义不变，旧新定位协议不可混用，详见 [协议](../../benchmark/WORKSPACE_PERFORMANCE.md)。
 
 新增两个实际指针行为用例，保护较长旁栏和主画布无需滚动的情形；含 Windows／Android 稀疏真实页面流程在内的 8 项测试通过。完整 Windows 候选预检也通过 60 动作与 3 次挂载，0 AX，四项日／周场景重新落在 763.6／757.6，初末滚动范围相同。此单进程预检保留 `199f021bb22e` 和候选源码哈希，不充作正式三进程样本。
 

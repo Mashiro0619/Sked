@@ -2,11 +2,11 @@
 
 RC.4 发布准备（2026-10-22）：当前候选为 `2.3.0-rc.4+19`，拟使用标签 `v2.3.0-rc.4` 并标记预发布；[公开发布说明](releases/2.3.0-rc.4.md)与 CHANGELOG 已整理。当前处于本地准备阶段，尚未创建发布标签、上传附件或发布 Release。最终候选的本地构建、对应 CI、正式签名和实际设备验收分别记录；下方历史性能与平台回执保留原版本归属。AppData 顶层保持 v4，日程格式保持 RC.3 的 schema 6；升级与回退按发布说明保留旧备份。
 
-以下为 2026-10-18（Asia/Shanghai）的历史性能专项交接：当时实现、定向回归和同协议采样已完成，对应最终代码为 `0f5a8f96b04b7580f1759ef48dc9b91073f6c708`。改动涵盖日期与提醒候选复用、课表排版与语义复用、导航回调与 ticker 订阅边界，以及透明点击层去冗余。最新 8 文件回归 **143 项通过**，2 文件格式和 fatal-info 分析通过；日期 304/128 次按未变源码哈希关联，104 次本地补充单列。最终六轮 Profile 对照覆盖 `df5676f → 0f5a8f9` 完整改动集，严格可比且独立来源与数值审计通过，未隔离最后一项 Material 改动的单独收益；压力长帧及原平台边界仍保留，详见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。
+以下为 2026-10-18（Asia/Shanghai）的历史性能专项交接：当时实现、定向回归和同协议采样已完成，对应最终代码为 `0f5a8f96b04b7580f1759ef48dc9b91073f6c708`。改动涵盖日期与提醒候选复用、课表排版与语义复用、导航回调与 ticker 订阅边界，以及透明点击层去冗余。最新 8 文件回归 **143 项通过**，2 文件格式和 fatal-info 分析通过；日期 304/128 次按未变源码哈希关联，104 次本地补充单列。最终六轮 Profile 对照覆盖 `df5676f → 0f5a8f9` 完整改动集，严格可比且独立来源与数值审计通过，未隔离最后一项 Material 改动的单独收益；压力长帧及原平台边界仍保留，详见[续验结果](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。
 
 ## 1. 当前状态与接手边界
 
-当前实现、分批回归、正式对照与阶段审计见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。[透明层 r2 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final-validation-r2/receipt.json>)记录 143 项回归，9 个源文件哈希对应当前提交；[日期验收汇总](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/actual-calendar-zones/20261017T132444816867Z/acceptance-summary.json>)只按 7 个未变关键文件关联。下表仍保留 **e522134 检查点**的综合验收，不表示当前代码已重跑全量、整套发布包、UI66、Linux 应用构建或完整浏览器矩阵。
+当前实现、分批回归、正式对照与阶段审计见[续验](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。[透明层 r2 回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/transparency-final-validation-r2/receipt.json>)记录 143 项回归，9 个源文件哈希对应当前提交；[日期验收汇总](<D:/Project/Flutter/sked/.scratch/refactor-20261017/performance-closure/evidence-review/actual-calendar-zones/20261017T132444816867Z/acceptance-summary.json>)只按 7 个未变关键文件关联。下表仍保留 **e522134 检查点**的综合验收，不表示当前代码已重跑全量、整套发布包、UI66、Linux 应用构建或完整浏览器矩阵。
 
 | 项目 | e522134 检查点的结果与范围 |
 | --- | --- |
@@ -20,13 +20,13 @@ RC.4 发布准备（2026-10-22）：当前候选为 `2.3.0-rc.4+19`，拟使用�
 | Web Release | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/web-20261017T070850958Z/receipt.json>)；JavaScript Release 与[该 SHA 的有限浏览器流程](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/web-visual/final-flow.json>)通过；范围按独立回执。`1d45d46` 的 RGB/Enter/Escape 是候选历史，课程 Enter 超时与窄屏 DOM overflow 不改写为通过 |
 | Windows MSAA | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261014/final-e522134ac8db262c30c9823568d867dbaf4f860b/windows-native-20261017T070331240Z/receipt.json>)；27/27 阶段、66 次语义更新、5 次同 PID MSAA、28 个按钮与 2 个文本检查；AX/graph/fatal 均 0；integrationPluginWarning=true 原样保留 |
 | 完整 UI66 正确性 | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/tools/ui66/runs/ui66-correctness-e522134ac8db-20261017T070507875Z/receipt.json>)；e522134 新进程直接通过 66 actions + 3 mounts、6 settings/36 scroll、0 AX/graph/fatal。旧 `1142cfc` failed/sidecar 不重写 |
-| 后续长帧比较 | 最终 `5ef639c → e522134` 两侧各三进程、ABBAAB、60+3 可比；5k 首次列表最大 build 中位数 886.417 → 374.376 ms。仍有 27/60 个交互至少一次 ≥100 ms，含挂载后后测全局最坏 937.056 ms；实际帧节奏不同，整体 P95 仅作描述。全部不利结果见[续验结果](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)；1d 候选样本另列 |
-| 独立进程启动 | 原版 `77061b4` 加存档启动/隔离适配层 → `1142cfc`，18 个 Windows Profile 进程。5k 就绪 raster 中位数 5.459 → 2.267 s（−58.47%），就绪报告 RSS 386.71 → 444.41 MiB（+14.92%）；详见[启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) |
-| 历史性能系列 | [Disk30](PROJECT_REFACTOR_DISK_PERFORMANCE.md) 的 after 保留 `1205c6e`；[UI60/Host11/编辑](PROJECT_REFACTOR_UI_PERFORMANCE.md) 保留 `d328a17` 系列。编辑 before AX 199/204/201 使数值比较 invalid，after 36 动作与读回 / 0 AX 仅作正确性证据 |
+| 后续长帧比较 | 最终 `5ef639c → e522134` 两侧各三进程、ABBAAB、60+3 可比；5k 首次列表最大 build 中位数 886.417 → 374.376 ms。仍有 27/60 个交互至少一次 ≥100 ms，含挂载后后测全局最坏 937.056 ms；实际帧节奏不同，整体 P95 仅作描述。全部不利结果见[续验结果](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)；1d 候选样本另列 |
+| 独立进程启动 | 原版 `77061b4` 加存档启动/隔离适配层 → `1142cfc`，18 个 Windows Profile 进程。5k 就绪 raster 中位数 5.459 → 2.267 s（−58.47%），就绪报告 RSS 386.71 → 444.41 MiB（+14.92%）；详见[启动结果](engineering/PROJECT_REFACTOR_STARTUP_RESULTS.md) |
+| 历史性能系列 | [Disk30](engineering/PROJECT_REFACTOR_DISK_PERFORMANCE.md) 的 after 保留 `1205c6e`；[UI60/Host11/编辑](engineering/PROJECT_REFACTOR_UI_PERFORMANCE.md) 保留 `d328a17` 系列。编辑 before AX 199/204/201 使数值比较 invalid，after 36 动作与读回 / 0 AX 仅作正确性证据 |
 | Linux native | [最终回执](<D:/Project/Flutter/sked/.scratch/refactor-20261017/remaining-performance/linux-native/runs/acceptance-e522134ac8db-20261017T071537812Z/receipt.json>)；e522134 独立 Debian 13 Release/动态链接/四时区通过，1,026 个非生成文件字节不变，7 个生成文件只允许 CRLF→LF 后冻结；未图形运行、安装、通知或原生输入 |
 | 尚未覆盖 | Android 真机按约定延期；Windows 安装/同签名升级/干净机器/WACK、物理输入、完整辅助技术，Linux 图形运行/安装/通知及 Web 离线/Wasm 仍未覆盖。最终压力长帧与内存/raster 代价保留；未推送、远端 CI、部署或发布 |
 
-本轮已完成领域状态与组合根迁移、存储和计算边界、两个工作区投影与缓存、编辑及导入任务、通知分层，以及测试和 CI 精简；后续又修正公历校验、月页日期复用、缺失午夜日界与启动依赖组装。逐项实现和验收来源见[全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。启动比较包含显式基线适配、外部服务隔离与保留的 OS/字体/shader 缓存，不能写成未修改发布包、磁盘冷启动或真实像素呈现对照。
+本轮已完成领域状态与组合根迁移、存储和计算边界、两个工作区投影与缓存、编辑及导入任务、通知分层，以及测试和 CI 精简；后续又修正公历校验、月页日期复用、缺失午夜日界与启动依赖组装。逐项实现和验收来源见[全项目重构实施报告](engineering/PROJECT_REFACTOR_REPORT.md)。启动比较包含显式基线适配、外部服务隔离与保留的 OS/字体/shader 缓存，不能写成未修改发布包、磁盘冷启动或真实像素呈现对照。
 
 历史上已撤销的“Sked 2.3.0 完整体验优化最终计划”不自动恢复；六类设置等撤回方案和旧“4257 项通过”不构成本轮依据。设置目录与工作区可见性以 [settings_catalog.dart](../lib/models/settings_catalog.dart) 为准。
 
@@ -160,9 +160,9 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 | `61446c3`、`e5615f9`、`4d54cc3` | 公历校验避免重复时区查询，月页复用日期计算，修正缺失午夜后的跨日事件日界；CI 增加圣保罗专项 |
 | `199f021`、`d517f78` | 通知锁增加独立作用域；启动外部服务工厂按根生命周期装配并保持首页实例，支持显式隔离测量 |
 | `895ed70` | UI60/UI66 日周滚动固定到主画布，记录目标协议与几何；旧错误目标样本保留为失效证据 |
-| `c286e2c`、`1142cfc` | 增加正常窗口独立进程启动、原生时钟、分阶段 RSS/峰值和启动交互协议；[18 进程结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) 已另表保存 |
-| `1139840`、`1d45d46`、`e522134` | 列表日期复用保留；文字测量缓存候选经交替测量后撤回，最终 tree 与 `1139840` 相同；[最终续验与候选历史](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)分别记录 |
-| `d9d98af` | 列表逐条构建、稳定事件焦点与日期标题语义；相关回归和前后各三轮原生流程通过，严格性能比较因长度估算变化拒绝，见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md) |
+| `c286e2c`、`1142cfc` | 增加正常窗口独立进程启动、原生时钟、分阶段 RSS/峰值和启动交互协议；[18 进程结果](engineering/PROJECT_REFACTOR_STARTUP_RESULTS.md) 已另表保存 |
+| `1139840`、`1d45d46`、`e522134` | 列表日期复用保留；文字测量缓存候选经交替测量后撤回，最终 tree 与 `1139840` 相同；[最终续验与候选历史](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)分别记录 |
+| `d9d98af` | 列表逐条构建、稳定事件焦点与日期标题语义；相关回归和前后各三轮原生流程通过，严格性能比较因长度估算变化拒绝，见[续验](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md) |
 | `df5676f`、`423d030`、`5da71f9` | 冻结 workspace60-v2 可见内容/位移协议；复用本地日界、月页区间和提醒候选窗口，304/128 次跨时区定向与 104 次本地补充单列 |
 | `32cf799`、`08026f9`、`9cd2c4c` | 复用卡片数值布局、完整单行与二分探针；77、139 等回归及 080 阶段比较保留各自版本与范围 |
 | `00c096b`、`d782a02` | 稳定导航回调、按星期列隔离 ticker 通知；138 项阶段回归与 d782 独立六轮比较保留所有长帧及资源代价 |
@@ -174,7 +174,7 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 ## 7. 继续执行与证据限制
 
 1. **以当前实现和分范围回执交接。** 0f5a8f9 的 143 项回归与 9 个源文件哈希已核对；304/128 按 7 个未变关键文件关联，104 仍为本地诊断。215 成功加 1 个加载失败、17/14 独立复验、77/138/139/142 阶段回归及 e522 的 4,901/1 各自保留，不相加为当前全量。透明层 r1 的 142 通过/1 hover 断言失败、单项时序修正复验，以及语义 r1 的 139 成功/3 清理失败均保留，文档更新不增加执行数。
-2. **保留本轮完成范围与压力边界。** 0f5a8f9 的六个新进程于 2026-10-18 01:22:25–01:35:10（UTC+08:00）按 ABBAAB 完成，各 60 actions + 3 mounts，严格比较 comparable，独立来源与数值复核通过。本轮实现和本地验证完成，仍有 18/60 个动作至少一次 build ≥100 ms；cold `student.day.open_scroll` 的最大 build 中位数升高 2.65%，完整窗口含返回周视图的工作。三次重复只作描述，源码/完整 bundle 已冻结，外部 SDK/pub cache 未整体归档；详见[续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。旧阶段与 CPU 诊断不混入本轮因果判断。
+2. **保留本轮完成范围与压力边界。** 0f5a8f9 的六个新进程于 2026-10-18 01:22:25–01:35:10（UTC+08:00）按 ABBAAB 完成，各 60 actions + 3 mounts，严格比较 comparable，独立来源与数值复核通过。本轮实现和本地验证完成，仍有 18/60 个动作至少一次 build ≥100 ms；cold `student.day.open_scroll` 的最大 build 中位数升高 2.65%，完整窗口含返回周视图的工作。三次重复只作描述，源码/完整 bundle 已冻结，外部 SDK/pub cache 未整体归档；详见[续验](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md)。旧阶段与 CPU 诊断不混入本轮因果判断。
 3. **按实际剩余平台范围继续。** 当前 WSL 结果覆盖冻结实际源码的定向测试，e522 的 Linux Release/链接仍属于原版本；当前 Linux 图形运行、安装、通知和原生输入未验收。Android 真机按约定延期，设备可用后补通知、恢复、真实交互、旧数据/密钥升级和性能；完整辅助技术另列。
 4. **保留发布边界。** e522 的 Windows 两包、Android APK/AAB 与 Linux bundle 为原版本归档；本轮阶段 Profile 对照、诊断和定向回归不替代整套发布包、安装、同签名升级、干净机器、WACK/认证或远端 CI。e522 的有限浏览器结果保留原范围；本轮未推送、部署或发布。
 5. **历史线索不冒充当前缺陷。** 2026-10-07 撤回前的提醒/AI 预览与拖宽跳变没有当前复现结论；旧 Overlay 方案已废弃。Windows Chrome 工具适配、Linux Chrome 租约、候选 Chromium 视觉均保留各自来源，不能合并成最新完整浏览器验收。
@@ -182,8 +182,8 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 
 ## 8. 推荐阅读顺序
 
-1. 本文与[全项目重构实施报告](PROJECT_REFACTOR_REPORT.md)。
-2. [最新续验](PROJECT_REFACTOR_CONTINUATION_RESULTS.md) → [此前长帧结果](PROJECT_REFACTOR_LONG_FRAME_RESULTS.md) → [启动结果](PROJECT_REFACTOR_STARTUP_RESULTS.md) → [历史 UI/Host](PROJECT_REFACTOR_UI_PERFORMANCE.md)／[Disk30](PROJECT_REFACTOR_DISK_PERFORMANCE.md)。
+1. 本文与[全项目重构实施报告](engineering/PROJECT_REFACTOR_REPORT.md)。
+2. [最新续验](engineering/PROJECT_REFACTOR_CONTINUATION_RESULTS.md) → [此前长帧结果](engineering/PROJECT_REFACTOR_LONG_FRAME_RESULTS.md) → [启动结果](engineering/PROJECT_REFACTOR_STARTUP_RESULTS.md) → [历史 UI/Host](engineering/PROJECT_REFACTOR_UI_PERFORMANCE.md)／[Disk30](engineering/PROJECT_REFACTOR_DISK_PERFORMANCE.md)。
 3. [PRODUCT](../PRODUCT.md)／[README](../README.md) → [DESIGN](../DESIGN.md) → [自适应规范](ADAPTIVE_WORKSPACES.md)／[桌面浮层](DESKTOP_FLOATING_PANELS.md)。
 4. [可靠性](RELIABILITY_BASELINE.md) → [通知契约](NOTIFICATION_DEDUPLICATION.md) → [依赖维护](DEPENDENCY_UPGRADES.md)。
 5. [发布验收](RELEASE_ACCEPTANCE.md) → [Android 通知矩阵](ANDROID_NOTIFICATION_ACCEPTANCE.md) → [更新机制](updates.md)／[Store 指南](microsoft-store.md)。

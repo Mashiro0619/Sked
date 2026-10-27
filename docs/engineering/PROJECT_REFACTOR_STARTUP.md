@@ -34,7 +34,7 @@
 
 16 项纯回归覆盖整数溢出、时钟区间、5 ms 边界、帧号归属、warm-up、原生重绘与失效拒绝，并纳入常规测试目录；格式和静态分析通过。修正后的单进程诊断验证了窗口、输入、锁、QPC 和帧号链路；随后互审补齐引擎自身漂移保护并通过上述回归。随后用两侧正式构建完成三个数据集、各三进程的完整矩阵；诊断冒烟保留原用途，不混入正式样本。
 
-运行方式、原生可见性和时钟边界详见 [启动测量说明](../benchmark/STARTUP.md)。测试日志为 `.scratch/refactor-20261017/startup/clock-v2/clock-tests.log`；诊断证据为 `.scratch/refactor-20261017/startup/smoke-after-v2/`。Windows Profile 独立进程的完整时间与内存结果见 [启动结果报告](PROJECT_REFACTOR_STARTUP_RESULTS.md)。该报告保留 OS 缓存与隔离外部依赖，不作为 Release 安装态或 Android 真机冷启动结论。
+运行方式、原生可见性和时钟边界详见 [启动测量说明](../../benchmark/STARTUP.md)。测试日志为 `.scratch/refactor-20261017/startup/clock-v2/clock-tests.log`；诊断证据为 `.scratch/refactor-20261017/startup/smoke-after-v2/`。Windows Profile 独立进程的完整时间与内存结果见 [启动结果报告](PROJECT_REFACTOR_STARTUP_RESULTS.md)。该报告保留 OS 缓存与隔离外部依赖，不作为 Release 安装态或 Android 真机冷启动结论。
 
 ## 分阶段内存观测
 

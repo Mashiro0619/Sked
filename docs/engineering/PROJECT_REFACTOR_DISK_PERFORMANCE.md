@@ -10,7 +10,7 @@
 
 后续 [v2 校验器复核](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/results-disk30-v2validator/summary.json>) 仍为 30 项可比，逐项比较与进程指标同原汇总一致；[14 项历史规则检查](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/verification-v2.json>) 保留当时证据。最新 [最终采样审计](<D:/Project/Flutter/sked/.scratch/refactor-20261014/performance-comparison/audit-final-d328a17.json>) 再次复现原磁盘数值与分布。这些复核不是新增磁盘进程；UI60/Host11 已另行完成正式比较，编辑 before 的 AX 错误导致数值比较无效，详见 [UI/Host 性能报告](PROJECT_REFACTOR_UI_PERFORMANCE.md)。
 
-这些执行工件保存在本地，不随产品源码分发。原始报告 SHA 和 JSON Pointer 用于追溯具体观测；启动回执中的 PID 是命令启动器 PID，不是 `sked.exe` 的 PID。完整协议和限制见 [磁盘基准说明](../benchmark/DATA_OPERATIONS.md)，项目结果见 [实施报告](PROJECT_REFACTOR_REPORT.md)。
+这些执行工件保存在本地，不随产品源码分发。原始报告 SHA 和 JSON Pointer 用于追溯具体观测；启动回执中的 PID 是命令启动器 PID，不是 `sked.exe` 的 PID。完整协议和限制见 [磁盘基准说明](../../benchmark/DATA_OPERATIONS.md)，项目结果见 [实施报告](PROJECT_REFACTOR_REPORT.md)。
 
 ## 全部 30 项操作
 

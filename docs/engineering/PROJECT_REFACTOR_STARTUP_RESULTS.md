@@ -184,7 +184,7 @@ QPC／精确 FILETIME 原始样本、stamp 索引、引擎独立残差与 begin 
 
 ## 证据定位与复核
 
-采样方法见 [启动测量说明](../benchmark/STARTUP.md)，实现与验证边界见 [启动边界](PROJECT_REFACTOR_STARTUP.md)。以下证据根为仓库内本地 `.scratch/refactor-20261017/startup/`；原始目录不随 Git 文档一起发布。
+采样方法见 [启动测量说明](../../benchmark/STARTUP.md)，实现与验证边界见 [启动边界](PROJECT_REFACTOR_STARTUP.md)。以下证据根为仓库内本地 `.scratch/refactor-20261017/startup/`；原始目录不随 Git 文档一起发布。
 
 - 正式原始矩阵：`matrix-memory-v1/summary.json`，每个 runRoot 保留 `run.json`、`process.json`、`result.json`、`launcher-result.json`、锁证明及 stdout／stderr。
 - 统计与已核验文件清单：`report-tools/final-memory-v1/summary.json`；详细原始三值、观察成本与帧分布表：同目录 `report-candidate.md`。

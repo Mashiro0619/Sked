@@ -370,4 +370,4 @@ UI60 冻结 9 份、UIedit 冻结 12 份、Host 冻结 4 份来源，每份保�
 - 三轮、同环境标识与串行启动不能证明统计显著性，不能由此推广到不同刷新率、设备、功耗/温度或后台负载。
 - 本报告没有 Android 真机性能、已安装 Windows Release 启动、真实进程冷启动、OS 呈现帧或完整原生无障碍验收结论。
 
-既有磁盘结果继续使用原始 `77061b4172efdfac2c7cdd30f0b4953b6be31004` → `1205c6ed0816fcaf82a57870b89c7915ea8c1748`，完整 30 项结果和进程指标在本次离线审计中保持不变。详见 [磁盘性能附表](PROJECT_REFACTOR_DISK_PERFORMANCE.md)。工作区协议见 [WORKSPACE_PERFORMANCE.md](../benchmark/WORKSPACE_PERFORMANCE.md)，主验收边界见 [PROJECT_REFACTOR_REPORT.md](PROJECT_REFACTOR_REPORT.md)。
+既有磁盘结果继续使用原始 `77061b4172efdfac2c7cdd30f0b4953b6be31004` → `1205c6ed0816fcaf82a57870b89c7915ea8c1748`，完整 30 项结果和进程指标在本次离线审计中保持不变。详见 [磁盘性能附表](PROJECT_REFACTOR_DISK_PERFORMANCE.md)。工作区协议见 [WORKSPACE_PERFORMANCE.md](../../benchmark/WORKSPACE_PERFORMANCE.md)，主验收边界见 [PROJECT_REFACTOR_REPORT.md](PROJECT_REFACTOR_REPORT.md)。
