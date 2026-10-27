@@ -137,6 +137,60 @@ Future<void> _closeDetails(WidgetTester tester) async {
 }
 
 void main() {
+  for (final platform in [
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+    TargetPlatform.windows,
+  ]) {
+    for (final width in [320.0, 900.0]) {
+      testWidgets(
+        'horizontal scrolling keeps the $platform affordance at $width',
+        (tester) async {
+          final data = _data(
+            customRange: GeneralDateRange(
+              DateTime(2026, 6, 15),
+              DateTime(2026, 6, 28),
+            ),
+          );
+          await _mount(
+            tester,
+            width: width,
+            data: data.copyWith(
+              generalMode: data.generalMode.copyWith(
+                fitWeekColumnsToWidth: false,
+              ),
+            ),
+          );
+          final scroll = find
+              .byKey(const ValueKey('general-timeline-horizontal-scroll'))
+              .first;
+          final controller = tester
+              .widget<SingleChildScrollView>(scroll)
+              .controller!;
+          final bar = find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollbar && identical(widget.controller, controller),
+          );
+          expect(
+            bar,
+            platform == TargetPlatform.windows ? findsOneWidget : findsNothing,
+          );
+          expect(controller.position.maxScrollExtent, greaterThan(0));
+          final before = controller.offset;
+          await tester.drag(scroll, const Offset(-100, 0));
+          await tester.pumpAndSettle();
+          expect(controller.offset, greaterThan(before));
+          expect(
+            bar,
+            platform == TargetPlatform.windows ? findsOneWidget : findsNothing,
+          );
+          expect(tester.takeException(), isNull);
+        },
+        variant: TargetPlatformVariant.only(platform),
+      );
+    }
+  }
+
   setUpAll(() async {
     final fonts = Directory(
       '${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts',

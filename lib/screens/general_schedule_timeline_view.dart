@@ -2272,22 +2272,29 @@ class _CalendarHorizontalViewportState
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final overflow = widget.contentWidth > widget.viewportWidth + .5;
+      final scrollView = SingleChildScrollView(
+        key: const ValueKey('general-timeline-horizontal-scroll'),
+        controller: _controller,
+        scrollDirection: Axis.horizontal,
+        physics: overflow
+            ? const ClampingScrollPhysics()
+            : const NeverScrollableScrollPhysics(),
+        child: SizedBox(height: constraints.maxHeight, child: widget.child),
+      );
       return _TimelineHorizontalScope(
         controller: _controller,
-        child: Scrollbar(
-          controller: _controller,
-          thumbVisibility: overflow,
-          notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
-          child: SingleChildScrollView(
-            key: const ValueKey('general-timeline-horizontal-scroll'),
-            controller: _controller,
-            scrollDirection: Axis.horizontal,
-            physics: overflow
-                ? const ClampingScrollPhysics()
-                : const NeverScrollableScrollPhysics(),
-            child: SizedBox(height: constraints.maxHeight, child: widget.child),
-          ),
-        ),
+        child: WorkbenchChromeMetrics.of(context).desktop
+            ? Scrollbar(
+                controller: _controller,
+                thumbVisibility: overflow,
+                notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
+                child: scrollView,
+              )
+            : ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context)
+                    .copyWith(scrollbars: false),
+                child: scrollView,
+              ),
       );
     },
   );
