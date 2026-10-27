@@ -851,10 +851,13 @@ class WorkspaceEditorValue extends StatelessWidget {
   final IconData? icon;
   @override
   Widget build(BuildContext context) => Semantics(
+    container: true,
+    excludeSemantics: true,
     label: label,
     value: value,
     button: true,
     enabled: onPressed != null,
+    onTap: onPressed,
     child: TextButton(
       onPressed: onPressed,
       style:

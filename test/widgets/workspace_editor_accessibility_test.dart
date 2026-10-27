@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,6 +11,52 @@ import 'package:sked/widgets/workspace_editor_form.dart';
 import '../support/workspace_harness.dart';
 
 void main() {
+  for (final enabled in [true, false]) {
+    testWidgets('desktop value exposes a single named button: $enabled', (
+      t,
+    ) async {
+      final semantics = t.ensureSemantics();
+      var taps = 0;
+      await t.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 320,
+              child: WorkspaceEditorValue(
+                label: 'Starts',
+                value: '09:00',
+                onPressed: enabled ? () => taps++ : null,
+              ),
+            ),
+          ),
+        ),
+      );
+      final node = t.getSemantics(find.byType(WorkspaceEditorValue));
+      final data = node.getSemanticsData();
+      expect(data.label, 'Starts');
+      expect(data.value, '09:00');
+      expect(data.flagsCollection.isButton, isTrue);
+      expect(data.hasAction(ui.SemanticsAction.tap), enabled);
+      var children = 0;
+      node.visitChildren((_) {
+        children++;
+        return true;
+      });
+      expect(
+        children,
+        0,
+        reason: 'The inner TextButton must not be announced.',
+      );
+      if (enabled) {
+        node.owner!.performAction(node.id, ui.SemanticsAction.tap);
+        expect(taps, 1);
+        await t.tap(find.byType(TextButton));
+        expect(taps, 2);
+      }
+      semantics.dispose();
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  }
+
   for (final mode in AppMode.values) {
     for (final scale in [1.0, 1.5, 2.0]) {
       testWidgets(
