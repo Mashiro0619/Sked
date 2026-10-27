@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Build
 import androidx.work.BackoffPolicy
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -20,7 +21,6 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -128,21 +128,22 @@ class AgendaBackgroundReconcileWorker(
     appContext: Context,
     params: WorkerParameters,
 ) : Worker(appContext, params) {
+    private val session = AgendaBackgroundEngineSession()
+    private val failureReason = AtomicReference("execution_timed_out")
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     override fun doWork(): Result {
-        val completion = CountDownLatch(1)
         val succeeded = AtomicBoolean(false)
-        val started = AtomicBoolean(false)
-        val engineRef = AtomicReference<FlutterEngine?>(null)
-        val mainHandler = Handler(Looper.getMainLooper())
 
         mainHandler.post {
+            if (session.isStopped) return@post
             try {
                 val loader = FlutterInjector.instance().flutterLoader()
                 loader.startInitialization(applicationContext)
                 loader.ensureInitializationComplete(applicationContext, null)
 
                 val engine = FlutterEngine(applicationContext)
-                engineRef.set(engine)
+                if (!session.registerEngine { engine.destroy() }) return@post
                 // FlutterEngine registers generated plugins by default. A
                 // second manual registration produces duplicate-plugin
                 // warnings and can leave background plugin state device
@@ -151,6 +152,10 @@ class AgendaBackgroundReconcileWorker(
                     engine.dartExecutor.binaryMessenger,
                     AndroidProductivityContract.CHANNEL,
                 ).setMethodCallHandler { call, result ->
+                    if (session.isStopped) {
+                        result.error("background_reconciliation_stopped", null, null)
+                        return@setMethodCallHandler
+                    }
                     when (call.method) {
                         AndroidProductivityContract.METHOD_IS_IGNORING_BATTERY_OPTIMIZATIONS -> {
                             result.success(
@@ -172,13 +177,14 @@ class AgendaBackgroundReconcileWorker(
                         }
                         "completeBackgroundAgendaReconciliation" -> {
                             succeeded.set(call.argument<Boolean>("success") == true)
+                            if (!succeeded.get()) failureReason.set("reconciliation_failed")
                             result.success(null)
-                            completion.countDown()
+                            session.completion.countDown()
                         }
                         else -> result.notImplemented()
                     }
                 }
-                started.set(true)
+                if (session.isStopped) return@post
                 engine.dartExecutor.executeDartEntrypoint(
                     DartExecutor.DartEntrypoint(
                         loader.findAppBundlePath(),
@@ -187,24 +193,46 @@ class AgendaBackgroundReconcileWorker(
                     ),
                 )
             } catch (_: Exception) {
-                completion.countDown()
+                failureReason.set("engine_start_failed")
+                session.completion.countDown()
             }
         }
 
         val completed = try {
-            completion.await(MAX_EXECUTION_SECONDS, TimeUnit.SECONDS)
+            session.completion.await(MAX_EXECUTION_SECONDS, TimeUnit.SECONDS)
         } catch (_: InterruptedException) {
+            failureReason.set("interrupted")
+            Thread.currentThread().interrupt()
             false
         } finally {
-            mainHandler.post {
-                engineRef.getAndSet(null)?.destroy()
-            }
+            // Also stop queued initialization after a timeout, so an engine
+            // created late cannot continue after this Worker has returned.
+            session.stop()
+            mainHandler.post { session.releaseEngine() }
         }
-        return when {
-            !started.get() -> Result.retry()
-            completed && succeeded.get() -> Result.success()
-            else -> Result.retry()
+        return when (
+            AgendaBackgroundReconcilePolicy.outcome(
+                runAttemptCount,
+                completed && succeeded.get(),
+            )
+        ) {
+            AgendaBackgroundReconcileOutcome.SUCCESS -> Result.success()
+            AgendaBackgroundReconcileOutcome.RETRY -> Result.retry()
+            AgendaBackgroundReconcileOutcome.FAILURE -> Result.failure(
+                Data.Builder()
+                    .putString("failureReason", failureReason.get())
+                    .putInt("runAttemptCount", runAttemptCount)
+                    .putString("trigger", inputData.getString("reason"))
+                    .build(),
+            )
         }
+    }
+
+    override fun onStopped() {
+        failureReason.set("stopped")
+        session.stop()
+        mainHandler.post { session.releaseEngine() }
+        super.onStopped()
     }
 
     private companion object {

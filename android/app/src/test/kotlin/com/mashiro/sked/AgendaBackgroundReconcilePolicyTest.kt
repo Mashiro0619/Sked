@@ -1,6 +1,7 @@
 package com.mashiro.sked
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -19,6 +20,32 @@ class AgendaBackgroundReconcilePolicyTest {
                 AgendaBackgroundReconcilePolicy.shouldEnqueue(action) {
                     throw AssertionError("Unrelated broadcasts must not query the exact-alarm grant")
                 },
+            )
+        }
+    }
+
+    @Test
+    fun initialFailureAndFirstTwoRetriesCanRetryButThirdRetryIsTerminal() {
+        for (attempt in 0..2) {
+            assertEquals(
+                AgendaBackgroundReconcileOutcome.RETRY,
+                AgendaBackgroundReconcilePolicy.outcome(attempt, succeeded = false),
+            )
+        }
+        for (attempt in 3..6) {
+            assertEquals(
+                AgendaBackgroundReconcileOutcome.FAILURE,
+                AgendaBackgroundReconcilePolicy.outcome(attempt, succeeded = false),
+            )
+        }
+    }
+
+    @Test
+    fun successfulReconciliationStillSucceedsOnTheLastAllowedAttempt() {
+        for (attempt in 0..3) {
+            assertEquals(
+                AgendaBackgroundReconcileOutcome.SUCCESS,
+                AgendaBackgroundReconcilePolicy.outcome(attempt, succeeded = true),
             )
         }
     }
