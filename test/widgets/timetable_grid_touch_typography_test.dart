@@ -255,7 +255,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     final visual = tester.element(_visual());
-    const title = 'Academic\nWriting\nWorkshop';
+    // Keep these words within the column at 2x so height growth, rather than
+    // oversized-word truncation, exercises the retained layout cache here.
+    const title = 'Art\nMusic\nLab';
     final changed = _course(
       title: title,
       location: 'Room B201',

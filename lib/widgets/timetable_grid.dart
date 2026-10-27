@@ -2212,6 +2212,43 @@ class _CourseCard extends StatelessWidget {
   }
 }
 
+final _courseLatinWord = RegExp(
+  r"\p{Script=Latin}[\p{Script=Latin}\p{Mark}\p{Number}]*(?:['’][\p{Script=Latin}\p{Mark}\p{Number}]+)*",
+  unicode: true,
+);
+
+/// Flutter wraps a word at spaces when it fits, but can split an oversized word
+/// across several lines. Keep preceding complete lines and ellipsize that word
+/// on its first line instead. The displayed Text and its semantic label retain
+/// the original string; CJK and explicit line breaks keep their normal layout.
+void _limitOversizedCourseWords(
+  TextPainter painter,
+  String value,
+  double width,
+) {
+  if (width <= 0 || !width.isFinite) return;
+  for (final word in _courseLatinWord.allMatches(value)) {
+    final position = TextPosition(offset: word.start);
+    final line = painter.getLineBoundary(position);
+    if (line.end <= word.start || line.end >= word.end) continue;
+    final boxes = painter.getBoxesForSelection(
+      TextSelection(baseOffset: word.start, extentOffset: word.end),
+    );
+    if (boxes.isEmpty) return;
+    final wordCenterY = (boxes.first.top + boxes.first.bottom) / 2;
+    final lineMetrics = painter.computeLineMetrics();
+    final firstLine = lineMetrics.firstWhere(
+      (line) => wordCenterY < line.baseline + line.descent,
+      orElse: () => lineMetrics.last,
+    );
+    painter
+      ..maxLines = firstLine.lineNumber + 1
+      ..ellipsis = '…'
+      ..layout(maxWidth: width);
+    return;
+  }
+}
+
 /// Fit complete lines to the time-sized card without scaling or clipping text.
 /// The title uses the available height first; optional fields use what remains.
 class _TouchCourseTypography extends StatefulWidget {
@@ -2430,6 +2467,9 @@ class _TouchCourseTypographyState extends State<_TouchCourseTypography> {
         maxLines: lines,
         ellipsis: lines == null ? null : '…',
       )..layout(maxWidth: inputs.width);
+      if (lines == null) {
+        _limitOversizedCourseWords(painter, fields[field].value, inputs.width);
+      }
       final metrics = painter.computeLineMetrics();
       final result = (
         height: painter.height,
@@ -2711,6 +2751,9 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
         maxLines: lines,
         ellipsis: lines == null ? null : '…',
       )..layout(maxWidth: maxWidth);
+      if (lines == null) {
+        _limitOversizedCourseWords(painter, fields[i].value, maxWidth);
+      }
       final result = (
         height: painter.height,
         lines: painter.computeLineMetrics().length,

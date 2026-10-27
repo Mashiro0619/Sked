@@ -1012,9 +1012,11 @@ void main() {
         (tester) async {
           await tester.binding.setSurfaceSize(const Size(1440, 900));
           addTearDown(() => tester.binding.setSurfaceSize(null));
-          const title = '物理实验\nPhysics\nLab';
+          // This case isolates the vertical line budget. Oversized Latin words
+          // have separate wrapping/truncation coverage at narrow widths.
+          const title = '物理实验\nMath\nLab';
           const location = '辽河路校区\n玉衡 B112\n理学院物理\n实验室';
-          const teacher = '范玉乔\nTeacher';
+          const teacher = '范玉乔\nTutor';
           await tester.pumpWidget(
             _gridHarness(
               platform: TargetPlatform.windows,
@@ -1553,7 +1555,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('compact fitted week wraps the course title within its card', (
+  testWidgets('compact fitted week ellipsizes an oversized course word', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -1590,10 +1592,14 @@ void main() {
     );
     expect(title, findsOneWidget);
     final titleText = tester.widget<Text>(title);
-    expect(titleText.maxLines, greaterThan(0));
+    expect(titleText.maxLines, 1);
     expect(titleText.softWrap, isTrue);
     expect(titleText.overflow, TextOverflow.ellipsis);
-    expect(tester.getSize(title).height, greaterThan(20));
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: title, matching: find.byType(RichText)),
+    );
+    expect(paragraph.didExceedMaxLines, isTrue);
+    expect(paragraph.text.toPlainText(), 'Advanced Mathematics');
     expect(
       tester.getRect(title).bottom,
       lessThanOrEqualTo(tester.getRect(visual).bottom),
