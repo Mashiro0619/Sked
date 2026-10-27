@@ -86,6 +86,7 @@ void main() {
           canvasBefore.getSemanticsData().hasAction(ui.SemanticsAction.tap),
           isFalse,
         );
+        expect(canvasBefore.label, isEmpty);
         final viewSwitcher = _key('general-view-switcher');
         final viewSemantics = tester.getSemantics(viewSwitcher);
         expect(viewSemantics.id, isNot(canvasBefore.id));
@@ -134,6 +135,13 @@ void main() {
         expect(
           canvasWithPanel.getSemanticsData().hasAction(ui.SemanticsAction.tap),
           outsideDismiss,
+        );
+        expect(
+          canvasWithPanel.label,
+          outsideDismiss
+              ? MaterialLocalizations.of(tester.element(canvas))
+                    .modalBarrierDismissLabel
+              : isEmpty,
         );
         expect(
           tester
@@ -205,6 +213,7 @@ void main() {
           canvasAfter.getSemanticsData().hasAction(ui.SemanticsAction.tap),
           isFalse,
         );
+        expect(canvasAfter.label, isEmpty);
         expect(
           tester
               .getSemantics(navigation)

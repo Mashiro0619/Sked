@@ -1827,6 +1827,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                             // separate from the canvas controls.
                                             container: true,
                                             explicitChildNodes: true,
+                                            label: onCanvasTap == null
+                                                ? null
+                                                : MaterialLocalizations.of(
+                                                    context,
+                                                  ).modalBarrierDismissLabel,
                                             onTap: onCanvasTap,
                                             child: GestureDetector(
                                               behavior:
