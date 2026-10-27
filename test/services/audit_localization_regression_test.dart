@@ -9,6 +9,17 @@ import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 
 void main() {
+  test('every offered UI language has its own notification snooze action', () {
+    final english = notificationText('en').snoozeAction;
+    for (final locale in AppLocalizations.supportedLocales) {
+      final code = localeCodeFromLocale(locale);
+      final action = notificationText(code).snoozeAction;
+      expect(action, isNotEmpty, reason: code);
+      if (code != 'en') expect(action, isNot(english), reason: code);
+    }
+    expect(notificationText('el').snoozeAction, 'Αναβολή για 10 λεπτά');
+  });
+
   test('every offered UI language supplies every language subtitle', () {
     for (final locale in AppLocalizations.supportedLocales) {
       final options = supportedLanguageOptions(lookupAppLocalizations(locale));

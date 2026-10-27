@@ -200,6 +200,7 @@ NotificationText notificationText(String localeCode) {
     'da' => 'Udsæt 10 minutter',
     'zh' => traditional ? '延後 10 分鐘' : '延后 10 分钟',
     'de' => '10 Minuten verschieben',
+    'el' => 'Αναβολή για 10 λεπτά',
     'et' => 'Lükka 10 minutit edasi',
     'es' => 'Posponer 10 minutos',
     'fi' => 'Siirrä 10 minuuttia',
