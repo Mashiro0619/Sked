@@ -1,41 +1,5 @@
+import 'app_data_json_values.dart';
 import '../utils/time_utils.dart';
-
-Map<String, dynamic>? _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return null;
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
-
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-String? _nullableStringValue(Object? value) {
-  return value is String ? value : null;
-}
-
-int? _intValue(Object? value) {
-  if (value is num && !value.isFinite) {
-    throw const FormatException('General event number must be finite.');
-  }
-  return value is num ? value.toInt() : null;
-}
-
-bool? _boolValue(Object? value) {
-  return value is bool ? value : null;
-}
 
 enum GeneralEventRecurrence {
   none('none'),
@@ -80,7 +44,12 @@ class GeneralEventReminder {
 
   factory GeneralEventReminder.fromJson(Map<String, dynamic> json) {
     return GeneralEventReminder(
-      minutesBefore: _intValue(json['minutesBefore']) ?? 0,
+      minutesBefore:
+          appDataIntValue(
+            json['minutesBefore'],
+            nonFiniteMessage: 'General event number must be finite.',
+          ) ??
+          0,
     );
   }
 }
@@ -147,20 +116,32 @@ class GeneralEventRecurrenceRule {
 
   factory GeneralEventRecurrenceRule.fromJson(Map<String, dynamic> json) {
     final type = parseGeneralEventRecurrence(
-      _nullableStringValue(json['type']),
+      appDataNullableStringValue(json['type']),
     );
     final legacyUnit = switch (type) {
       GeneralEventRecurrence.daily => GeneralEventRecurrenceUnit.day,
       GeneralEventRecurrence.weekly => GeneralEventRecurrenceUnit.week,
       GeneralEventRecurrence.monthly => GeneralEventRecurrenceUnit.month,
-      _ => parseGeneralEventRecurrenceUnit(_nullableStringValue(json['unit'])),
+      _ => parseGeneralEventRecurrenceUnit(
+        appDataNullableStringValue(json['unit']),
+      ),
     };
     return GeneralEventRecurrenceRule(
       type: type,
-      interval: (_intValue(json['interval']) ?? 1).clamp(1, 999).toInt(),
+      interval:
+          (appDataIntValue(
+                    json['interval'],
+                    nonFiniteMessage: 'General event number must be finite.',
+                  ) ??
+                  1)
+              .clamp(1, 999)
+              .toInt(),
       unit: legacyUnit,
-      untilDateIso: _nullableStringValue(json['untilDate']),
-      count: _intValue(json['count']),
+      untilDateIso: appDataNullableStringValue(json['untilDate']),
+      count: appDataIntValue(
+        json['count'],
+        nonFiniteMessage: 'General event number must be finite.',
+      ),
       monthlyAnchorDay: _decodeMonthlyAnchorDay(json),
     );
   }
@@ -307,39 +288,41 @@ class GeneralEvent {
 
   factory GeneralEvent.fromJson(Map<String, dynamic> json) {
     final legacyRecurrence = parseGeneralEventRecurrence(
-      _nullableStringValue(json['recurrence']),
+      appDataNullableStringValue(json['recurrence']),
     );
     final ruleJson =
-        _asStringKeyedMap(json['recurrenceRule']) ??
+        appDataStringKeyedMap(json['recurrenceRule']) ??
         <String, dynamic>{
           'type': legacyRecurrence.value,
           if (json['recurrenceEndDate'] != null)
             'untilDate': json['recurrenceEndDate'],
         };
-    final remindersJson = _listValue(json['reminders']);
+    final remindersJson = appDataListValue(json['reminders']);
     return GeneralEvent(
-      id: _stringValue(json['id']),
-      calendarId: _stringValue(json['calendarId']),
-      title: _stringValue(json['title']),
-      startDateTimeIso: _stringValue(json['start']),
-      endDateTimeIso: _stringValue(json['end']),
-      isAllDay: _boolValue(json['isAllDay']) ?? false,
+      id: appDataStringValue(json['id']),
+      calendarId: appDataStringValue(json['calendarId']),
+      title: appDataStringValue(json['title']),
+      startDateTimeIso: appDataStringValue(json['start']),
+      endDateTimeIso: appDataStringValue(json['end']),
+      isAllDay: appDataBoolValue(json['isAllDay']) ?? false,
       recurrenceRule: GeneralEventRecurrenceRule.fromJson(ruleJson),
-      recurrenceExceptionDateIso: _listValue(json['recurrenceExceptionDates'])
-          .where((item) => item != null)
-          .map((item) => item.toString())
-          .toList(),
-      location: _stringValue(json['location']),
-      notes: _stringValue(json['notes']),
-      colorValue: _intValue(json['colorValue']),
+      recurrenceExceptionDateIso: appDataListValue(
+        json['recurrenceExceptionDates'],
+      ).where((item) => item != null).map((item) => item.toString()).toList(),
+      location: appDataStringValue(json['location']),
+      notes: appDataStringValue(json['notes']),
+      colorValue: appDataIntValue(
+        json['colorValue'],
+        nonFiniteMessage: 'General event number must be finite.',
+      ),
       reminderBehavior: _decodeReminderBehavior(json),
       reminders: remindersJson
-          .map(_asStringKeyedMap)
+          .map(appDataStringKeyedMap)
           .whereType<Map<String, dynamic>>()
           .map(GeneralEventReminder.fromJson)
           .toList(),
-      createdAtIso: _nullableStringValue(json['createdAt']),
-      updatedAtIso: _nullableStringValue(json['updatedAt']),
+      createdAtIso: appDataNullableStringValue(json['createdAt']),
+      updatedAtIso: appDataNullableStringValue(json['updatedAt']),
     );
   }
 

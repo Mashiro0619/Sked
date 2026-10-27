@@ -1,5 +1,26 @@
 import 'dart:convert';
 
+List<dynamic> appDataListValue(Object? value) =>
+    value is List ? value : const <dynamic>[];
+
+String appDataStringValue(Object? value, [String fallback = '']) =>
+    value is String ? value : fallback;
+
+String? appDataNullableStringValue(Object? value) =>
+    value is String ? value : null;
+
+bool? appDataBoolValue(Object? value) => value is bool ? value : null;
+
+/// Preserves numeric truncation. Callers that reject non-finite input supply
+/// their existing format-error message; legacy callers keep their old policy.
+int? appDataIntValue(Object? value, {String? nonFiniteMessage}) {
+  if (value is! num) return null;
+  if (nonFiniteMessage != null && !value.isFinite) {
+    throw FormatException(nonFiniteMessage);
+  }
+  return value.toInt();
+}
+
 Map<String, dynamic>? appDataStringKeyedMap(Object? value) {
   if (value is! Map) {
     return null;
