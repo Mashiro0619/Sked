@@ -3195,4 +3195,8 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get backupParserEndpointUnset => 'Not configured';
+
+  @override
+  String get periodTimesDayFull =>
+      'No room remains for another period today. Adjust the existing times before adding more.';
 }

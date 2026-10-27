@@ -2993,6 +2993,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backupParserEndpointUnset => '未配置';
+
+  @override
+  String get periodTimesDayFull => '当天已没有足够时间添加下一节，请先调整已有节次时间。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5985,4 +5988,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupParserEndpointUnset => '未設定';
+
+  @override
+  String get periodTimesDayFull => '當天已沒有足夠時間新增下一節，請先調整現有節次時間。';
 }

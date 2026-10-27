@@ -5699,6 +5699,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not configured'**
   String get backupParserEndpointUnset;
+
+  /// No description provided for @periodTimesDayFull.
+  ///
+  /// In en, this message translates to:
+  /// **'No room remains for another period today. Adjust the existing times before adding more.'**
+  String get periodTimesDayFull;
 }
 
 class _AppLocalizationsDelegate

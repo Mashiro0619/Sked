@@ -123,10 +123,11 @@ class _CompletingExportService extends ExportService {
   }
 }
 
-AppData _initialData() => buildInitialAppData(
-  buildDefaultPeriodTimes(),
-  localeCode: defaultLocaleCode,
-);
+AppData _initialData({List<CoursePeriodTime>? periodTimes}) =>
+    buildInitialAppData(
+      periodTimes ?? buildDefaultPeriodTimes(),
+      localeCode: defaultLocaleCode,
+    );
 
 Future<AppRuntime> _createProvider({TimetableStorage? storage}) async {
   final provider = AppRuntime(
@@ -218,6 +219,53 @@ Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
 }
 
 void main() {
+  testWidgets(
+    'adding beyond the day leaves the last valid periods and storage unchanged',
+    (tester) async {
+      final storage = _MemoryTimetableStorage(_initialData());
+      final provider = await _createProvider(storage: storage);
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        provider.dispose();
+      });
+      await _pumpPeriodTimesPage(tester, provider);
+      final add = find.byKey(const ValueKey('period-times-add'));
+      await tester.ensureVisible(add);
+      await tester.pumpAndSettle();
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      expect(_storedDefaultPeriodTimeSet(storage).periodTimes, hasLength(13));
+      final saved = _storedDefaultPeriodTimeSet(storage).periodTimes
+          .map((p) => p.toJson())
+          .toList();
+      final writes = storage.saveCount;
+      for (var attempt = 0; attempt < 4; attempt++) {
+        await tester.ensureVisible(add);
+        await tester.pumpAndSettle();
+        await tester.tap(add);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('period-start-time-action')),
+          findsNWidgets(13),
+        );
+        expect(
+          find.text(
+            'No room remains for another period today. Adjust the existing times before adding more.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          _storedDefaultPeriodTimeSet(storage).periodTimes
+              .map((p) => p.toJson())
+              .toList(),
+          saved,
+        );
+        expect(storage.saveCount, writes);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'wheel draft is not persisted before confirmation and duplicate confirm saves once',
     (tester) async {
@@ -757,7 +805,9 @@ void main() {
   testWidgets('edits remain enabled and serialize to the latest draft', (
     tester,
   ) async {
-    final storage = _BlockingTimetableStorage(_initialData());
+    final storage = _BlockingTimetableStorage(
+      _initialData(periodTimes: buildDefaultPeriodTimes().take(10).toList()),
+    );
     final provider = await _createProvider(storage: storage);
     await _pumpPeriodTimesPage(tester, provider);
 
@@ -805,7 +855,9 @@ void main() {
   testWidgets('a newer revision persists after the in-flight revision fails', (
     tester,
   ) async {
-    final storage = _FailingFirstBlockingStorage(_initialData());
+    final storage = _FailingFirstBlockingStorage(
+      _initialData(periodTimes: buildDefaultPeriodTimes().take(10).toList()),
+    );
     final provider = await _createProvider(storage: storage);
     await _pumpPeriodTimesPage(tester, provider);
     addTearDown(storage.releaseFirstSave);

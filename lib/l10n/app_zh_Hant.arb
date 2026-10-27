@@ -2151,6 +2151,6 @@
   "schoolImportEndpointChangeMessage": "變更後，解析課表或取得模型清單時，已儲存的 API 金鑰會傳送至新端點。\n\n目前：{previous}\n新的：{next}\n\n僅在信任該端點時繼續。",
   "schoolImportEndpointChangeConfirm": "變更端點",
   "restoreBackupParserSettingsSummary": "保留本機解析端點、模型和提示詞，並清除本機 API 金鑰。\n\n保留的端點：{current}\n備份中的端點（不採用）：{backup}",
-  "backupParserEndpointUnset": "未設定"
-
+  "backupParserEndpointUnset": "未設定",
+  "periodTimesDayFull": "當天已沒有足夠時間新增下一節，請先調整現有節次時間。"
 }

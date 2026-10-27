@@ -687,7 +687,7 @@ void main() {
         currentSet.copyWith(
           name: '全局新节次',
           periodTimes: buildPeriodTimesForCount(
-            14,
+            13,
             source: currentSet.periodTimes,
           ),
         ),
@@ -701,13 +701,13 @@ void main() {
         provider.studentView
             .periodTimesForTimetable(provider.studentView.timetables.first)
             .length,
-        14,
+        13,
       );
       expect(
         provider.studentView
             .periodTimesForTimetable(provider.studentView.timetables.last)
             .length,
-        14,
+        13,
       );
     });
 
@@ -766,7 +766,17 @@ void main() {
     });
 
     test('节次数量可以超过默认模板长度并自动补齐', () {
-      final periodTimes = buildPeriodTimesForCount(16);
+      final periodTimes = buildPeriodTimesForCount(
+        16,
+        source: List.generate(
+          12,
+          (index) => CoursePeriodTime(
+            index: index + 1,
+            startMinutes: 480 + index * 30,
+            endMinutes: 505 + index * 30,
+          ),
+        ),
+      );
 
       expect(periodTimes.length, 16);
       expect(periodTimes.last.index, 16);

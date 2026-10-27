@@ -225,29 +225,37 @@ List<CoursePeriodTime> buildDefaultPeriodTimes() {
   });
 }
 
+class PeriodTimesExceedDayException extends FormatException {
+  const PeriodTimesExceedDayException()
+    : super('There is not enough time left in the day for another period.');
+}
+
 List<CoursePeriodTime> buildPeriodTimesForCount(
   int count, {
   List<CoursePeriodTime>? source,
 }) {
   final safeCount = count < 1 ? 1 : count;
   final defaults = buildDefaultPeriodTimes();
-  final seed = (source == null || source.isEmpty)
-      ? <CoursePeriodTime>[]
-      : List.generate(
-          source.length,
-          (index) => _normalizePeriodTime(
-            source[index],
-            fallback: index < defaults.length ? defaults[index] : null,
-          ).copyWith(index: index + 1),
-        );
+  final seed = source ?? const <CoursePeriodTime>[];
   final result = <CoursePeriodTime>[];
 
   for (var index = 0; index < safeCount; index++) {
     if (index < seed.length) {
-      result.add(seed[index].copyWith(index: index + 1));
+      final period = seed[index];
+      if (period.startMinutes < 0 ||
+          period.endMinutes >= 24 * 60 ||
+          period.endMinutes <= period.startMinutes ||
+          (result.isNotEmpty && period.startMinutes < result.last.endMinutes)) {
+        throw const FormatException(
+          'Period times must be ordered, non-overlapping and within one day.',
+        );
+      }
+      result.add(period.copyWith(index: index + 1));
       continue;
     }
-    if (index < defaults.length) {
+    if (index < defaults.length &&
+        (result.isEmpty ||
+            defaults[index].startMinutes >= result.last.endMinutes)) {
       result.add(defaults[index].copyWith(index: index + 1));
       continue;
     }
@@ -255,33 +263,6 @@ List<CoursePeriodTime> buildPeriodTimesForCount(
   }
 
   return result;
-}
-
-CoursePeriodTime _normalizePeriodTime(
-  CoursePeriodTime period, {
-  CoursePeriodTime? fallback,
-}) {
-  final fallbackStart = fallback?.startMinutes ?? 8 * 60;
-  final fallbackEnd = fallback?.endMinutes ?? (8 * 60) + 45;
-  final startMinutes = normalizeMinuteOfDay(
-    period.startMinutes,
-    fallback: fallbackStart,
-  );
-  final endMinutes = normalizeMinuteOfDay(
-    period.endMinutes,
-    fallback: fallbackEnd,
-  );
-  if (endMinutes > startMinutes) {
-    return period.copyWith(startMinutes: startMinutes, endMinutes: endMinutes);
-  }
-  final repairedEnd = normalizeMinuteOfDay(
-    startMinutes + 45,
-    fallback: fallbackEnd,
-  );
-  if (repairedEnd > startMinutes) {
-    return period.copyWith(startMinutes: startMinutes, endMinutes: repairedEnd);
-  }
-  return period.copyWith(startMinutes: fallbackStart, endMinutes: fallbackEnd);
 }
 
 CoursePeriodTime _buildNextPeriodTime(
@@ -304,6 +285,9 @@ CoursePeriodTime _buildNextPeriodTime(
       ? 10
       : (last.startMinutes - previous.endMinutes).clamp(0, 120);
   final startMinutes = last.endMinutes + gap;
+  if (startMinutes + duration >= 24 * 60) {
+    throw const PeriodTimesExceedDayException();
+  }
   return CoursePeriodTime(
     index: index,
     startMinutes: startMinutes,

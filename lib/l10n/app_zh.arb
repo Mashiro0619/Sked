@@ -2149,6 +2149,6 @@
   "schoolImportEndpointChangeMessage": "更换后，解析课表或获取模型列表时，已保存的 API 密钥会发送到新接口。\n\n当前：{previous}\n新的：{next}\n\n仅在信任该接口时继续。",
   "schoolImportEndpointChangeConfirm": "更换接口",
   "restoreBackupParserSettingsSummary": "保留本机解析接口、模型和提示词，并清除本机 API 密钥。\n\n保留的接口：{current}\n备份中的接口（不采用）：{backup}",
-  "backupParserEndpointUnset": "未配置"
-
+  "backupParserEndpointUnset": "未配置",
+  "periodTimesDayFull": "当天已没有足够时间添加下一节，请先调整已有节次时间。"
 }

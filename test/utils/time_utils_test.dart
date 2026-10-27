@@ -1,7 +1,66 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/utils/time_utils.dart';
+import 'package:sked/models/course_item.dart';
 
 void main() {
+  test(
+    'period generation keeps late sources and refuses midnight overflow',
+    () {
+      final source = [
+        const CoursePeriodTime(index: 8, startMinutes: 1200, endMinutes: 1245),
+      ];
+      final generated = buildPeriodTimesForCount(3, source: source);
+      expect(
+        generated.map((period) => (period.startMinutes, period.endMinutes)),
+        [(1200, 1245), (1255, 1300), (1310, 1355)],
+      );
+      expect(source.single.index, 8);
+      final lastMinute = [
+        const CoursePeriodTime(index: 1, startMinutes: 1400, endMinutes: 1439),
+      ];
+      expect(
+        buildPeriodTimesForCount(1, source: lastMinute).single.endMinutes,
+        1439,
+      );
+      expect(
+        () => buildPeriodTimesForCount(2, source: lastMinute),
+        throwsA(isA<PeriodTimesExceedDayException>()),
+      );
+      expect(lastMinute.single.endMinutes, 1439);
+      for (final bad in [
+        const CoursePeriodTime(index: 1, startMinutes: 1440, endMinutes: 1485),
+        const CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 480),
+        const CoursePeriodTime(index: 1, startMinutes: 600, endMinutes: 500),
+        const CoursePeriodTime(index: 1, startMinutes: -1, endMinutes: 30),
+      ]) {
+        expect(
+          () => buildPeriodTimesForCount(1, source: [bad]),
+          throwsFormatException,
+        );
+      }
+      expect(
+        () => buildPeriodTimesForCount(
+          2,
+          source: const [
+            CoursePeriodTime(index: 1, startMinutes: 600, endMinutes: 645),
+            CoursePeriodTime(index: 2, startMinutes: 480, endMinutes: 525),
+          ],
+        ),
+        throwsFormatException,
+      );
+      expect(
+        buildPeriodTimesForCount(
+          2,
+          source: const [
+            CoursePeriodTime(index: 1, startMinutes: 600, endMinutes: 645),
+            CoursePeriodTime(index: 2, startMinutes: 645, endMinutes: 690),
+          ],
+        ),
+        hasLength(2),
+      );
+    },
+  );
+
   test(
     'strict ISO validation uses Gregorian month lengths and year bounds',
     () {

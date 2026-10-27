@@ -40,11 +40,17 @@ void main() {
         ),
         [(1, 600, 645), (2, 700, 745)],
       );
-      final extended = buildPeriodTimesForCount(15);
-      expect(extended, hasLength(15));
+      final extended = buildPeriodTimesForCount(13);
+      expect(extended, hasLength(13));
       expect(extended.first.index, 1);
-      expect(extended.last.index, 15);
-      expect(extended.last.startMinutes, greaterThan(extended[13].endMinutes));
+      expect(extended.last.index, 13);
+      expect(extended.last.startMinutes, greaterThan(extended[11].endMinutes));
+      for (final count in [14, 15, 16, 30]) {
+        expect(
+          () => buildPeriodTimesForCount(count),
+          throwsA(isA<PeriodTimesExceedDayException>()),
+        );
+      }
     },
   );
 

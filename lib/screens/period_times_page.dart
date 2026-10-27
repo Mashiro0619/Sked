@@ -511,11 +511,21 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     if (_interactionBlocked) {
       return;
     }
-    setState(() {
-      _periodTimes = buildPeriodTimesForCount(
+    late List<CoursePeriodTime> next;
+    try {
+      next = buildPeriodTimesForCount(
         _periodTimes.length + 1,
         source: _periodTimes,
       );
+    } on PeriodTimesExceedDayException {
+      _showMessage(AppLocalizations.of(context).periodTimesDayFull);
+      return;
+    } on FormatException {
+      _showMessage(AppLocalizations.of(context).periodTimesInvalidExitMessage);
+      return;
+    }
+    setState(() {
+      _periodTimes = next;
       _periodRowKeys.add(GlobalKey());
     });
     _scheduleAutoSave();
@@ -562,7 +572,9 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   bool get _hasInvalidPeriodTimes {
     for (var index = 0; index < _periodTimes.length; index++) {
       final period = _periodTimes[index];
-      if (period.endMinutes <= period.startMinutes) {
+      if (period.startMinutes < 0 ||
+          period.endMinutes >= 24 * 60 ||
+          period.endMinutes <= period.startMinutes) {
         return true;
       }
       if (index > 0 &&

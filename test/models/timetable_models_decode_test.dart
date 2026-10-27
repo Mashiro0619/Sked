@@ -158,23 +158,17 @@ void main() {
       expect(set.periodTimes.map((item) => item.endMinutes), [45, 525]);
     });
 
-    test('buildPeriodTimesForCount normalizes malformed source slots', () {
-      final result = buildPeriodTimesForCount(
-        2,
-        source: const [
-          CoursePeriodTime(index: 9, startMinutes: -10, endMinutes: -1),
-          CoursePeriodTime(index: 10, startMinutes: 2000, endMinutes: 2000),
-        ],
-      );
-
-      expect(result.map((item) => item.index), [1, 2]);
-      expect(result.first.startMinutes, 0);
-      expect(result.first.endMinutes, 45);
+    test('buildPeriodTimesForCount rejects malformed source slots', () {
       expect(
-        result.last.startMinutes,
-        buildDefaultPeriodTimes()[1].startMinutes,
+        () => buildPeriodTimesForCount(
+          2,
+          source: const [
+            CoursePeriodTime(index: 9, startMinutes: -10, endMinutes: -1),
+            CoursePeriodTime(index: 10, startMinutes: 2000, endMinutes: 2000),
+          ],
+        ),
+        throwsFormatException,
       );
-      expect(result.last.endMinutes, buildDefaultPeriodTimes()[1].endMinutes);
     });
 
     test('TimetableData filters invalid course entries', () {
