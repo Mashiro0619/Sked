@@ -3211,4 +3211,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get schoolWebImportSignOutFailed =>
       'Could not clear school sign-in data. Please try again.';
+
+  @override
+  String importWarningSkippedUnsupportedTimeZone(Object fields) {
+    return 'Skipped an event whose time zone cannot be interpreted safely: $fields.';
+  }
+
+  @override
+  String get icsSkippedTimeZonesReview =>
+      'The following events will be skipped because their time zones cannot be interpreted safely. Review the details before importing the remaining events.';
+
+  @override
+  String get icsImportRemainingAction => 'Continue with remaining events';
 }

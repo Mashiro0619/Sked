@@ -161,7 +161,7 @@ END:VCALENDAR
     },
   );
 
-  group('named time-zone rejection', () {
+  group('named time-zone filtering', () {
     for (final property in [
       'DTSTART',
       'DTEND',
@@ -172,9 +172,11 @@ END:VCALENDAR
       'LAST-MODIFIED',
       'RECURRENCE-ID',
     ]) {
-      test('rejects direct $property even alongside importable events', () {
-        final source =
-            '''BEGIN:VCALENDAR
+      test(
+        'skips an event with direct $property while preserving safe events',
+        () {
+          final source =
+              '''BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
 UID:safe
@@ -189,33 +191,21 @@ DTEND:20260701T100000
 $property;TZID="Europe/London":20260701T090000
 END:VEVENT
 END:VCALENDAR''';
-        expect(
-          () => service.importSchedules(source),
-          throwsA(
-            isA<GeneralCalendarIcsImportException>()
-                .having(
-                  (error) => error.code,
-                  'code',
-                  GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
-                )
-                .having(
-                  (error) => error.diagnostics.single.eventUid,
-                  'uid',
-                  'unsafe',
-                )
-                .having(
-                  (error) => error.diagnostics.single.property,
-                  'property',
-                  property,
-                )
-                .having(
-                  (error) => error.diagnostics.single.timeZoneId,
-                  'time zone',
-                  'Europe/London',
-                ),
-          ),
-        );
-      });
+          final result = service.importSchedules(source);
+          expect(
+            result.schedules.single.events.single.startDateTimeIso,
+            '2026-10-23T09:00:00.000Z',
+          );
+          final warning = result.warningItems.single;
+          expect(
+            warning.code,
+            GeneralCalendarIcsWarningCode.unsupportedTimeZone,
+          );
+          expect(warning.eventUid, 'unsafe');
+          expect(warning.eventTitle, 'London summer time');
+          expect(warning.values, ['$property;TZID=Europe/London']);
+        },
+      );
     }
 
     test(

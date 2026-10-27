@@ -1021,14 +1021,13 @@ END:VCALENDAR''';
       },
     );
 
-    test(
-      'named zones reject the entire append or replacement without mutation',
-      () {
-        final current = data();
-        final before = jsonEncode(current.toJson());
-        const source = '''BEGIN:VCALENDAR
+    test('named zones skip only their event for append and replacement', () {
+      final current = data();
+      final before = jsonEncode(current.toJson());
+      const source = '''BEGIN:VCALENDAR
 BEGIN:VEVENT
 UID:safe
+SUMMARY:Safe UTC event
 DTSTART:20261023T090000Z
 DTEND:20261023T100000Z
 END:VEVENT
@@ -1039,42 +1038,64 @@ DTSTART:20261023T090000Z
 DTEND;TZID=Europe/London:20261023T100000
 END:VEVENT
 END:VCALENDAR''';
-        for (final locale in ['en', 'zh']) {
-          for (final mode in GeneralScheduleImportMode.values) {
-            expect(
-              () => service.importGeneralSchedulesIcs(
-                current,
-                source,
-                mode: mode,
-                replacementScheduleId: current.schedules.first.id,
-                localeCode: locale,
-              ),
-              throwsA(
-                isA<GeneralCalendarIcsImportException>()
-                    .having(
-                      (error) => error.code,
-                      'code',
-                      GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
-                    )
-                    .having(
-                      (error) => error.diagnostics.single.eventUid,
-                      'event UID',
-                      'unsafe-zone',
-                    )
-                    .having(
-                      (error) => error.message,
-                      'localized message',
-                      contains(
-                        locale == 'zh' ? '未导入任何内容' : 'Nothing was imported',
-                      ),
-                    ),
-              ),
-            );
-            expect(jsonEncode(current.toJson()), before);
-          }
+      for (final locale in ['en', 'zh']) {
+        for (final mode in GeneralScheduleImportMode.values) {
+          final imported = service.importGeneralSchedulesIcs(
+            current,
+            source,
+            mode: mode,
+            replacementScheduleId: current.schedules.first.id,
+            localeCode: locale,
+          );
+          final events = imported.data.schedules.expand(
+            (schedule) => schedule.events,
+          );
+          expect(
+            events.where((event) => event.title == 'Safe UTC event'),
+            hasLength(1),
+          );
+          expect(
+            events.where((event) => event.title == 'London event'),
+            isEmpty,
+          );
+          expect(imported.result.icsWarnings.single.eventUid, 'unsafe-zone');
+          expect(
+            imported.result.icsWarnings.single.code,
+            GeneralCalendarIcsWarningCode.unsupportedTimeZone,
+          );
+          expect(jsonEncode(current.toJson()), before);
         }
-      },
-    );
+        expect(
+          () => service.previewImportGeneralSchedulesIcs(
+            source.replaceFirst(
+              'DTSTART:20261023T090000Z',
+              'DTSTART;TZID=Asia/Shanghai:20261023T090000',
+            ),
+            localeCode: locale,
+          ),
+          throwsA(
+            isA<GeneralCalendarIcsImportException>()
+                .having(
+                  (error) => error.code,
+                  'code',
+                  GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+                )
+                .having(
+                  (error) => error.diagnostics.map(
+                    (diagnostic) => diagnostic.eventUid,
+                  ),
+                  'event identities',
+                  ['safe', 'unsafe-zone'],
+                )
+                .having(
+                  (error) => error.message,
+                  'localized message',
+                  contains(locale == 'zh' ? '未导入任何内容' : 'Nothing was imported'),
+                ),
+          ),
+        );
+      }
+    });
 
     test(
       'localizes export failures while preserving codes and event identity',

@@ -2177,5 +2177,8 @@
   "schoolWebImportSignOutTitle": "Sign out of school websites?",
   "schoolWebImportSignOutMessage": "This clears sign-in cookies and saved website data for school pages in Sked. Imported timetables and app settings are kept.",
   "schoolWebImportSignOutSuccess": "School website sign-in data cleared.",
-  "schoolWebImportSignOutFailed": "Could not clear school sign-in data. Please try again."
+  "schoolWebImportSignOutFailed": "Could not clear school sign-in data. Please try again.",
+  "importWarningSkippedUnsupportedTimeZone": "Skipped an event whose time zone cannot be interpreted safely: {fields}.",
+  "icsSkippedTimeZonesReview": "The following events will be skipped because their time zones cannot be interpreted safely. Review the details before importing the remaining events.",
+  "icsImportRemainingAction": "Continue with remaining events"
 }

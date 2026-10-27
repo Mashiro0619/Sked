@@ -27,6 +27,9 @@ void main() {
               'schoolWebImportSignOutMessage',
               'schoolWebImportSignOutSuccess',
               'schoolWebImportSignOutFailed',
+              'importWarningSkippedUnsupportedTimeZone',
+              'icsSkippedTimeZonesReview',
+              'icsImportRemainingAction',
             };
       final file = File('lib/l10n/app_$locale.arb');
       expect(file.existsSync(), isTrue, reason: 'Missing locale source: $file');

@@ -121,6 +121,38 @@ void main() {
     );
 
     testWidgets(
+      'ICS skipped-event review remains cancellable ${scenario.locale} ${scenario.scale}',
+      (tester) async {
+        final context = await pumpPage(tester);
+        final session = SkedTaskSession(ownerRoute: ModalRoute.of(context));
+        addTearDown(session.dispose);
+        final confirmation = confirmGeneralIcsSkippedEvents(
+          context,
+          session: session,
+          details: [
+            'A skipped event\nUID: unsupported\nDTSTART;TZID=Europe/London',
+          ],
+        );
+        await tester.pumpAndSettle();
+        expectActionsVisible(tester, [
+          'general-ics-skipped-events-cancel',
+          'general-ics-skipped-events-copy',
+          'general-ics-skipped-events-continue',
+        ]);
+        expect(
+          tester.widget<SelectableText>(find.byType(SelectableText)).data,
+          contains(AppLocalizations.of(context).icsSkippedTimeZonesReview),
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('general-ics-skipped-events-cancel')),
+        );
+        await tester.pumpAndSettle();
+        expect(await confirmation, isFalse);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
       'ICS export failure choices remain reachable ${scenario.locale} ${scenario.scale}',
       (tester) async {
         final context = await pumpPage(tester);

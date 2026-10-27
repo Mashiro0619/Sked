@@ -5639,6 +5639,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not clear school sign-in data. Please try again.'**
   String get schoolWebImportSignOutFailed;
+
+  /// No description provided for @importWarningSkippedUnsupportedTimeZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped an event whose time zone cannot be interpreted safely: {fields}.'**
+  String importWarningSkippedUnsupportedTimeZone(Object fields);
+
+  /// No description provided for @icsSkippedTimeZonesReview.
+  ///
+  /// In en, this message translates to:
+  /// **'The following events will be skipped because their time zones cannot be interpreted safely. Review the details before importing the remaining events.'**
+  String get icsSkippedTimeZonesReview;
+
+  /// No description provided for @icsImportRemainingAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with remaining events'**
+  String get icsImportRemainingAction;
 }
 
 class _AppLocalizationsDelegate

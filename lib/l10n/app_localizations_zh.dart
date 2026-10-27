@@ -2956,6 +2956,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolWebImportSignOutFailed => '无法清除学校网页登录数据，请重试。';
+
+  @override
+  String importWarningSkippedUnsupportedTimeZone(Object fields) {
+    return '已跳过无法安全解析时区的日程：$fields。';
+  }
+
+  @override
+  String get icsSkippedTimeZonesReview =>
+      '以下日程的时区无法安全解析，将跳过这些日程。请先核对详情，再决定是否继续导入其余日程。';
+
+  @override
+  String get icsImportRemainingAction => '继续导入其余日程';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5911,4 +5923,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolWebImportSignOutFailed => '無法清除學校網站登入資料，請重試。';
+
+  @override
+  String importWarningSkippedUnsupportedTimeZone(Object fields) {
+    return '已略過無法安全解析時區的日程：$fields。';
+  }
+
+  @override
+  String get icsSkippedTimeZonesReview =>
+      '以下日程的時區無法安全解析，將略過這些日程。請先核對詳情，再決定是否繼續匯入其餘日程。';
+
+  @override
+  String get icsImportRemainingAction => '繼續匯入其餘日程';
 }

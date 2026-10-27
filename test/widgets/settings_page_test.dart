@@ -2283,6 +2283,102 @@ END:VCALENDAR''';
     },
   );
 
+  testWidgets('mixed ICS time-zone warnings are reviewed before any save', (
+    tester,
+  ) async {
+    final data = _buildGeneralDataWithReminders();
+    final storage = _MemoryTimetableStorage(data);
+    final provider = await _createProvider(data, storage: storage);
+    addTearDown(provider.dispose);
+    final original = provider.generalView.schedules;
+    await _openGeneralDataActions(tester, provider);
+    await tester.tap(find.text('Paste ICS'));
+    await _pumpRouteTransition(tester);
+    const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:safe-reviewed
+SUMMARY:Safe reviewed event
+DTSTART:20261023T090000Z
+DTEND:20261023T100000Z
+END:VEVENT
+BEGIN:VEVENT
+UID:unsafe-reviewed
+SUMMARY:Unsupported reviewed event
+DTSTART;TZID=Europe/London:20260329T090000
+DTEND;TZID=Europe/London:20260329T100000
+END:VEVENT
+END:VCALENDAR''';
+    await tester.enterText(find.byType(TextField), source);
+    for (final continueImport in [false, true]) {
+      await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+      await _pumpTransferUntil(
+        tester,
+        () => find
+            .byKey(const ValueKey('general-ics-skipped-events-warning'))
+            .evaluate()
+            .isNotEmpty,
+        reason: 'Skipped events must be disclosed before mutations',
+      );
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(TextImportPage)),
+      );
+      final report = tester
+          .widget<SelectableText>(find.byType(SelectableText))
+          .data!;
+      expect(report, contains(l10n.icsSkippedTimeZonesReview));
+      expect(report, contains('unsafe-reviewed'));
+      expect(report, contains('Europe/London'));
+      expect(storage.saveCount, 0);
+      expect(provider.generalView.schedules, same(original));
+      await tester.tap(
+        find.byKey(
+          ValueKey(
+            continueImport
+                ? 'general-ics-skipped-events-continue'
+                : 'general-ics-skipped-events-cancel',
+          ),
+        ),
+      );
+      await _pumpRouteTransition(tester);
+      if (!continueImport) {
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          source,
+        );
+        expect(storage.saveCount, 0);
+        expect(provider.generalView.schedules, same(original));
+      }
+    }
+    await _pumpTransferUntil(
+      tester,
+      () =>
+          find.text('Add as new category').hitTestable().evaluate().isNotEmpty,
+      reason: 'Approved safe events still require the original import choice',
+    );
+    expect(storage.saveCount, 0);
+    await tester.tap(find.text('Add as new category'));
+    await _pumpTransferUntil(
+      tester,
+      () => find
+          .byKey(const ValueKey('general-ics-import-report'))
+          .evaluate()
+          .isNotEmpty,
+      reason: 'The final report preserves the skipped-event warning',
+    );
+    final events = provider.generalView.schedules.expand(
+      (schedule) => schedule.events,
+    );
+    expect(
+      events.where((event) => event.title == 'Safe reviewed event'),
+      hasLength(1),
+    );
+    expect(
+      events.where((event) => event.title == 'Unsupported reviewed event'),
+      isEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('canceling the ICS export warning does not encode or save', (
     tester,
   ) async {

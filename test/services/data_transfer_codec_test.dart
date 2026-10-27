@@ -312,6 +312,40 @@ END:VCALENDAR''';
     );
   });
 
+  test(
+    'ICS worker returns safe events with per-event time-zone warnings',
+    () async {
+      const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:safe-worker
+SUMMARY:Safe worker event
+DTSTART:20261023T090000Z
+END:VEVENT
+BEGIN:VEVENT
+UID:unsupported-worker
+SUMMARY:Unsupported worker event
+DTSTART:20261023T090000Z
+EXDATE;TZID=Europe/London:20261024T090000
+END:VEVENT
+END:VCALENDAR''';
+      final imported = await codec.decodeSchedules(
+        source,
+        localeCode: 'zh',
+        ics: true,
+      );
+      expect(
+        imported.schedules.single.events.single.title,
+        'Safe worker event',
+      );
+      expect(
+        imported.warnings.single.code,
+        GeneralCalendarIcsWarningCode.unsupportedTimeZone,
+      );
+      expect(imported.warnings.single.eventUid, 'unsupported-worker');
+      expect(imported.warnings.single.values, ['EXDATE;TZID=Europe/London']);
+    },
+  );
+
   test('ICS worker preserves typed, localized export failure', () async {
     final data = GeneralScheduleData(
       activeScheduleId: 'calendar',

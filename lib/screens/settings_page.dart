@@ -1997,6 +1997,25 @@ class _SettingsPageState extends State<SettingsPage>
       final prepared = await transfers.prepareSchedules(content, ics: ics);
       if (!feedbackContext.mounted || !isCurrent()) return false;
       final preview = prepared.value.schedules;
+      final skippedTimeZones = prepared.value.warnings
+          .where(
+            (warning) =>
+                warning.code ==
+                GeneralCalendarIcsWarningCode.unsupportedTimeZone,
+          )
+          .toList();
+      if (ics && skippedTimeZones.isNotEmpty) {
+        final confirmed = await confirmGeneralIcsSkippedEvents(
+          feedbackContext,
+          session: task,
+          details: skippedTimeZones
+              .map((warning) => _formatIcsWarning(warning, l10n))
+              .toList(),
+        );
+        if (!confirmed || !isCurrent() || !transfers.isCurrent(prepared)) {
+          return false;
+        }
+      }
       final selectedIds = ics
           ? preview.map((schedule) => schedule.id).toList()
           : await _pickGeneralScheduleIds(
@@ -2320,6 +2339,8 @@ class _SettingsPageState extends State<SettingsPage>
         l10n.importWarningUnsupportedRRuleFrequency(
           warning.values.isEmpty ? '' : warning.values.first,
         ),
+      GeneralCalendarIcsWarningCode.unsupportedTimeZone =>
+        l10n.importWarningSkippedUnsupportedTimeZone(warning.values.join(', ')),
     };
     final identity = [
       if (warning.eventTitle?.isNotEmpty == true) warning.eventTitle!,

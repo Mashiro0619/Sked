@@ -8,6 +8,66 @@ import 'sked_task_session.dart';
 
 enum GeneralIcsExportFormat { ics, json }
 
+/// A partial import is reviewed before either an append or a replacement.
+Future<bool> confirmGeneralIcsSkippedEvents(
+  BuildContext context, {
+  required SkedTaskSession session,
+  required List<String> details,
+}) async {
+  var popped = false;
+  final confirmed = await showExpressiveDialog<bool>(
+    context: context,
+    session: session,
+    waitForTransitionComplete: true,
+    builder: (dialogContext) {
+      final l10n = AppLocalizations.of(dialogContext);
+      bool canAct() =>
+          !popped &&
+          dialogContext.mounted &&
+          session.isCurrent &&
+          ModalRoute.of(dialogContext)?.isCurrent == true;
+      void finish(bool value) {
+        if (!canAct()) return;
+        popped = true;
+        Navigator.of(dialogContext).pop(value);
+      }
+
+      final report = [l10n.icsSkippedTimeZonesReview, ...details].join('\n\n');
+      return SkedConfirmationDialog(
+        key: const ValueKey('general-ics-skipped-events-warning'),
+        scrollable: true,
+        title: Text(l10n.icsImportReportTitle),
+        content: SelectableText(report),
+        actions: [
+          TextButton(
+            key: const ValueKey('general-ics-skipped-events-cancel'),
+            onPressed: () => finish(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            key: const ValueKey('general-ics-skipped-events-copy'),
+            onPressed: () async {
+              if (!canAct()) return;
+              await Clipboard.setData(ClipboardData(text: report));
+              if (!dialogContext.mounted || !canAct()) return;
+              ScaffoldMessenger.maybeOf(
+                dialogContext,
+              )?.showSnackBar(SnackBar(content: Text(l10n.copiedToClipboard)));
+            },
+            child: Text(l10n.copyText),
+          ),
+          FilledButton(
+            key: const ValueKey('general-ics-skipped-events-continue'),
+            onPressed: () => finish(true),
+            child: Text(l10n.icsImportRemainingAction),
+          ),
+        ],
+      );
+    },
+  );
+  return confirmed == true && session.isCurrent;
+}
+
 /// The complete report stays available until the user closes or copies it.
 Future<void> showGeneralIcsImportReport(
   BuildContext context, {

@@ -2141,5 +2141,8 @@
   "schoolWebImportSignOutTitle": "登出學校網站？",
   "schoolWebImportSignOutMessage": "這會清除 Sked 內學校網頁的登入 Cookie 和儲存的網頁資料。已匯入的課表和應用程式設定會保留。",
   "schoolWebImportSignOutSuccess": "已清除學校網站登入資料。",
-  "schoolWebImportSignOutFailed": "無法清除學校網站登入資料，請重試。"
+  "schoolWebImportSignOutFailed": "無法清除學校網站登入資料，請重試。",
+  "importWarningSkippedUnsupportedTimeZone": "已略過無法安全解析時區的日程：{fields}。",
+  "icsSkippedTimeZonesReview": "以下日程的時區無法安全解析，將略過這些日程。請先核對詳情，再決定是否繼續匯入其餘日程。",
+  "icsImportRemainingAction": "繼續匯入其餘日程"
 }

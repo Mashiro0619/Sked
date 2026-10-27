@@ -9,6 +9,7 @@ enum GeneralCalendarIcsWarningCode {
   adjustedEnd,
   unsupportedFields,
   unsupportedRRuleFrequency,
+  unsupportedTimeZone,
 }
 
 enum GeneralCalendarIcsImportErrorCode {
@@ -137,6 +138,8 @@ class GeneralCalendarIcsImportWarning {
         'Ignored unsupported fields: ${values.join(', ')}.',
       GeneralCalendarIcsWarningCode.unsupportedRRuleFrequency =>
         'Unsupported RRULE frequency "${values.isEmpty ? '' : values.first}" was ignored.',
+      GeneralCalendarIcsWarningCode.unsupportedTimeZone =>
+        'Skipped an event with unsupported time zones: ${values.join(', ')}.',
     };
   }
 }
@@ -213,20 +216,13 @@ class GeneralCalendarIcsService {
       );
     }
 
-    // Validate every direct VEVENT property before producing a candidate. This
-    // includes overwritten duplicate properties and every EXDATE line, so a
-    // later field or a different event cannot hide unsupported time semantics.
+    // Validate every direct property, including overwritten duplicates and
+    // every EXDATE line. Unsupported time semantics invalidate their event,
+    // while independent safe events can still produce an import candidate.
     final parsedBlocks = blocks.map(_parseEventFields).toList();
     final timeZoneDiagnostics = <GeneralCalendarIcsTimeZoneDiagnostic>[
       for (final block in parsedBlocks) ...block.timeZoneDiagnostics,
     ];
-    if (timeZoneDiagnostics.isNotEmpty) {
-      throw GeneralCalendarIcsImportException(
-        GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
-        diagnostics: List.unmodifiable(timeZoneDiagnostics),
-      );
-    }
-
     final schedule = createDefaultGeneralSchedule(
       name: calendarName?.trim().isNotEmpty == true
           ? calendarName!.trim()
@@ -236,6 +232,20 @@ class GeneralCalendarIcsService {
     final warnings = <GeneralCalendarIcsImportWarning>[];
     final events = <GeneralEvent>[];
     for (final block in parsedBlocks) {
+      if (block.timeZoneDiagnostics.isNotEmpty) {
+        warnings.add(
+          GeneralCalendarIcsImportWarning(
+            code: GeneralCalendarIcsWarningCode.unsupportedTimeZone,
+            values: [
+              for (final diagnostic in block.timeZoneDiagnostics)
+                '${diagnostic.property};TZID=${diagnostic.timeZoneId}',
+            ],
+            eventUid: block.fields['UID']?.value.trim(),
+            eventTitle: block.fields['SUMMARY']?.value.trim(),
+          ),
+        );
+        continue;
+      }
       final eventWarnings = <GeneralCalendarIcsImportWarning>[];
       final event = _importEvent(
         block,
@@ -259,7 +269,10 @@ class GeneralCalendarIcsService {
     }
     if (events.isEmpty) {
       throw GeneralCalendarIcsImportException(
-        GeneralCalendarIcsImportErrorCode.noImportableEvents,
+        timeZoneDiagnostics.isEmpty
+            ? GeneralCalendarIcsImportErrorCode.noImportableEvents
+            : GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+        diagnostics: List.unmodifiable(timeZoneDiagnostics),
         warnings: List.unmodifiable(warnings),
       );
     }
