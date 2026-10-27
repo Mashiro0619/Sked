@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/data/app_repository.dart';
 import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/main.dart' hide main;
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
@@ -668,24 +669,32 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('bootstrap gate uses the deterministic default locale', (
-    tester,
-  ) async {
-    tester.platformDispatcher.localeTestValue = const Locale('ar');
-    addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+  for (final (systemLocales, expectedLocale) in [
+    ([const Locale('zh', 'CN')], const Locale('zh')),
+    (
+      [const Locale('zh', 'TW')],
+      const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+    ),
+    ([const Locale('ar'), const Locale('de', 'DE')], const Locale('de')),
+    ([const Locale('ar')], appLocaleFromCode(defaultLocaleCode)),
+  ]) {
+    testWidgets('bootstrap gate resolves system languages $systemLocales', (
+      tester,
+    ) async {
+      tester.platformDispatcher.localesTestValue = systemLocales;
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      await tester.pumpWidget(
+        AppBootstrap(lease: _FakeLease([false]), runtimeFactory: _provider),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      AppBootstrap(lease: _FakeLease([false]), runtimeFactory: _provider),
-    );
-    await tester.pumpAndSettle();
-
-    final scaffoldContext = tester.element(find.byType(Scaffold));
-    expect(
-      Localizations.localeOf(scaffoldContext),
-      appLocaleFromCode(defaultLocaleCode),
-    );
-    expect(find.text('Sked is already open'), findsOneWidget);
-  });
+      final scaffoldContext = tester.element(find.byType(Scaffold));
+      expect(Localizations.localeOf(scaffoldContext), expectedLocale);
+      final l10n = AppLocalizations.of(scaffoldContext);
+      expect(find.text(l10n.appInstanceBlockedTitle), findsOneWidget);
+      expect(find.text(l10n.appInstanceBlockedMessage), findsOneWidget);
+    });
+  }
 
   testWidgets('does not create a provider before the lease is acquired', (
     tester,

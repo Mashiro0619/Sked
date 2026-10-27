@@ -319,9 +319,15 @@ class _AppBootstrapGateState extends State<_AppBootstrapGate> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorObservers: [_windowModals],
-      // The bootstrap gate has no loaded user locale yet. Keep this transient
-      // screen deterministic and LTR until the persisted locale is available.
-      locale: const Locale('en'),
+      // User preferences are unavailable until the data lease is acquired.
+      // Resolve the first supported system language for this transient gate.
+      localeListResolutionCallback: (locales, _) {
+        for (final locale in locales ?? const <Locale>[]) {
+          final code = localeCodeFromLocale(locale);
+          if (isSupportedLocaleCode(code)) return appLocaleFromCode(code);
+        }
+        return appLocaleFromCode(defaultLocaleCode);
+      },
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: appLocalizationsDelegates,
