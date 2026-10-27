@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show ComputeCallback, compute;
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../models/school_site_models.dart';
 import '../models/timetable_models.dart';
@@ -12,6 +13,11 @@ typedef DataTransferComputation = Future<R> Function<M, R>(
   M message, {
   String? debugLabel,
 });
+
+typedef LocalTimeZoneIdResolver = Future<String?> Function();
+
+Future<String?> _platformLocalTimeZoneId() async =>
+    (await FlutterTimezone.getLocalTimezone()).identifier;
 
 class TimetableImportCandidate {
   const TimetableImportCandidate({
@@ -46,9 +52,13 @@ class NormalizedStoredAppData {
 /// only imported data; merging and durable writes remain with the live session.
 /// The computation boundary is injectable for deterministic widget fixtures.
 class DataTransferCodec {
-  const DataTransferCodec({this._run = compute});
+  const DataTransferCodec({
+    this._run = compute,
+    this._localTimeZoneIdResolver = _platformLocalTimeZoneId,
+  });
 
   final DataTransferComputation _run;
+  final LocalTimeZoneIdResolver _localTimeZoneIdResolver;
 
   Future<TimetableImportCandidate> decodeTimetables(
     String source, {
@@ -62,11 +72,24 @@ class DataTransferCodec {
     String source, {
     required String localeCode,
     bool ics = false,
-  }) => _run(_decodeSchedules, (
-    source,
-    localeCode,
-    ics,
-  ), debugLabel: 'sked.import.schedules');
+    String? localTimeZoneId,
+  }) async {
+    var timeZoneId = localTimeZoneId;
+    if (ics && timeZoneId == null) {
+      try {
+        timeZoneId = await _localTimeZoneIdResolver();
+      } catch (_) {
+        // Unknown local identity keeps named zones blocked; never infer one
+        // from the current UTC offset. Plugin access stays on the UI isolate.
+      }
+    }
+    return _run(_decodeSchedules, (
+      source,
+      localeCode,
+      ics,
+      timeZoneId,
+    ), debugLabel: 'sked.import.schedules');
+  }
 
   Future<List<CoursePeriodTime>> decodePeriodTimes(
     String source, {
@@ -140,11 +163,12 @@ TimetableImportCandidate _decodeTimetables((String, String) input) {
   );
 }
 
-GeneralImportCandidate _decodeSchedules((String, String, bool) input) {
+GeneralImportCandidate _decodeSchedules((String, String, bool, String?) input) {
   if (input.$3) {
     final imported = _service.previewImportGeneralSchedulesIcs(
       input.$1,
       localeCode: input.$2,
+      localTimeZoneId: input.$4,
     );
     return GeneralImportCandidate(
       schedules: imported.schedules,

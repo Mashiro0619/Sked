@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show ComputeCallback, compute;
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -13,6 +15,7 @@ AppData _data() => DeveloperSampleDataService.append(
 ).data;
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   const codec = DataTransferCodec();
   const service = ImportExportService();
 
@@ -345,6 +348,125 @@ END:VCALENDAR''';
       expect(imported.warnings.single.values, ['EXDATE;TZID=Europe/London']);
     },
   );
+
+  group('local IANA identity crosses the pure worker boundary', () {
+    const source = '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:local-worker
+DTSTART;TZID=Asia/Shanghai:20260525T090000
+DTEND;TZID=Asia/Shanghai:20260525T100000
+END:VEVENT
+END:VCALENDAR''';
+    const channel = MethodChannel('flutter_timezone');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    tearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    test('resolves the platform IANA id before dispatching compute', () async {
+      var platformCalls = 0;
+      var workerCalls = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'getLocalTimezone');
+        platformCalls++;
+        return 'Asia/Shanghai';
+      });
+      Future<R> checkedRun<M, R>(
+        ComputeCallback<M, R> callback,
+        M message, {
+        String? debugLabel,
+      }) {
+        workerCalls++;
+        expect(platformCalls, 1);
+        expect(
+          (message as (String, String, bool, String?)).$4,
+          'Asia/Shanghai',
+        );
+        return compute(callback, message, debugLabel: debugLabel);
+      }
+
+      final imported = await DataTransferCodec(run: checkedRun)
+          .decodeSchedules(source, localeCode: 'en', ics: true);
+      expect(
+        imported.schedules.single.events.single.startDateTimeIso,
+        '2026-05-25T09:00:00.000',
+      );
+      expect(imported.warnings, isEmpty);
+      expect(workerCalls, 1);
+      expect(platformCalls, 1);
+    });
+
+    test(
+      'an explicitly injected identity is passed without a second lookup',
+      () async {
+        var lookups = 0;
+        final localCodec = DataTransferCodec(
+          localTimeZoneIdResolver: () async {
+            lookups++;
+            return 'Europe/Paris';
+          },
+        );
+        final imported = await localCodec.decodeSchedules(
+          source,
+          localeCode: 'en',
+          ics: true,
+          localTimeZoneId: 'Asia/Shanghai',
+        );
+        expect(
+          imported.schedules.single.events.single.startDateTimeIso,
+          '2026-05-25T09:00:00.000',
+        );
+        expect(lookups, 0);
+      },
+    );
+
+    test(
+      'a failed platform lookup keeps local named zones unsupported',
+      () async {
+        final localCodec = DataTransferCodec(
+          localTimeZoneIdResolver: () async {
+            throw StateError('Native timezone unavailable');
+          },
+        );
+        await expectLater(
+          localCodec.decodeSchedules(source, localeCode: 'en', ics: true),
+          throwsA(
+            isA<GeneralCalendarIcsImportException>().having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('JSON decoding never queries the native time zone', () async {
+      var lookups = 0;
+      final localCodec = DataTransferCodec(
+        localTimeZoneIdResolver: () async {
+          lookups++;
+          return 'Asia/Shanghai';
+        },
+      );
+      final source = encodeGeneralScheduleDataEnvelope(
+        const GeneralScheduleExportData(
+          schedules: [
+            GeneralSchedule(
+              id: 'json-calendar',
+              name: 'JSON calendar',
+              events: [],
+            ),
+          ],
+        ),
+      );
+      final imported = await localCodec.decodeSchedules(
+        source,
+        localeCode: 'en',
+      );
+      expect(imported.schedules.single.name, 'JSON calendar');
+      expect(lookups, 0);
+    });
+  });
 
   test('ICS worker preserves typed, localized export failure', () async {
     final data = GeneralScheduleData(

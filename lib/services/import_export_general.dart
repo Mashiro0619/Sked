@@ -57,12 +57,14 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
   GeneralCalendarIcsImportResult previewImportGeneralSchedulesIcs(
     String source, {
     required String localeCode,
+    String? localTimeZoneId,
   }) {
     try {
       return _icsService.importSchedules(
         source,
         calendarName: icsImportedCalendarName(localeCode: localeCode),
         fallbackEventTitle: icsUntitledEventName(localeCode: localeCode),
+        localTimeZoneId: localTimeZoneId,
       );
     } on GeneralCalendarIcsImportException catch (error) {
       throw GeneralCalendarIcsImportException(
@@ -126,10 +128,12 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
     required GeneralScheduleImportMode mode,
     String? replacementScheduleId,
     required String localeCode,
+    String? localTimeZoneId,
   }) {
     final imported = previewImportGeneralSchedulesIcs(
       source,
       localeCode: localeCode,
+      localTimeZoneId: localTimeZoneId,
     );
     if (imported.schedules.isEmpty) {
       throw FormatException(noSchedulesInImportMessage(localeCode: localeCode));

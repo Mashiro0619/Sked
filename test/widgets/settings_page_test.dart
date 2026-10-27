@@ -102,7 +102,10 @@ class _NoopPrivacyService extends PrivacyService {
 
 class _ScheduleCodec extends DataTransferCodec {
   _ScheduleCodec({this.delayed = false, this.failIcs = false})
-    : super(run: runDataTransferInline);
+    : super(
+        run: runDataTransferInline,
+        localTimeZoneIdResolver: noLocalTimeZoneId,
+      );
 
   final bool delayed;
   final bool failIcs;
@@ -116,11 +119,17 @@ class _ScheduleCodec extends DataTransferCodec {
     String source, {
     required String localeCode,
     bool ics = false,
+    String? localTimeZoneId,
   }) async {
     decodeCalls += 1;
     if (!started.isCompleted) started.complete();
     if (delayed) await release.future;
-    return super.decodeSchedules(source, localeCode: localeCode, ics: ics);
+    return super.decodeSchedules(
+      source,
+      localeCode: localeCode,
+      ics: ics,
+      localTimeZoneId: localTimeZoneId,
+    );
   }
 
   @override
@@ -2282,6 +2291,69 @@ END:VCALENDAR''';
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('ICS import receives the native local IANA identity', (
+    tester,
+  ) async {
+    const channel = MethodChannel('flutter_timezone');
+    var calls = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      expect(call.method, 'getLocalTimezone');
+      calls++;
+      return 'Asia/Shanghai';
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    final data = _buildGeneralDataWithReminders();
+    final storage = _MemoryTimetableStorage(data);
+    final provider = await _createProvider(
+      data,
+      storage: storage,
+      codec: const DataTransferCodec(run: runDataTransferInline),
+    );
+    addTearDown(provider.dispose);
+    await _openGeneralDataActions(tester, provider);
+    await tester.tap(find.text('Paste ICS'));
+    await _pumpRouteTransition(tester);
+    await tester.enterText(find.byType(TextField), '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:local-settings
+SUMMARY:Local timezone event
+DTSTART;TZID=Asia/Shanghai:20260525T090000
+DTEND;TZID=Asia/Shanghai:20260525T100000
+END:VEVENT
+END:VCALENDAR''');
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await _pumpTransferUntil(
+      tester,
+      () =>
+          find.text('Add as new category').hitTestable().evaluate().isNotEmpty,
+      reason: 'A matching real local identity must reach the import choice',
+    );
+    expect(calls, 1);
+    expect(
+      find.byKey(const ValueKey('general-ics-skipped-events-warning')),
+      findsNothing,
+    );
+    expect(storage.saveCount, 0);
+    await tester.tap(find.text('Add as new category'));
+    await _pumpTransferUntil(
+      tester,
+      () => find.byType(TextImportPage).evaluate().isEmpty,
+      reason: 'The local event is imported without a skipped-zone report',
+    );
+    final event = provider.generalView.schedules
+        .expand((schedule) => schedule.events)
+        .singleWhere((event) => event.title == 'Local timezone event');
+    expect(event.startDateTimeIso, '2026-05-25T09:00:00.000');
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('mixed ICS time-zone warnings are reviewed before any save', (
     tester,

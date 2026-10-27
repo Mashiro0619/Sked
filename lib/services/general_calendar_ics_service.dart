@@ -185,6 +185,7 @@ class GeneralCalendarIcsService {
     String? calendarName,
     String fallbackEventTitle = 'Untitled event',
     int colorValue = defaultGeneralCalendarColorValue,
+    String? localTimeZoneId,
   }) {
     final unfolded = _unfoldLines(source);
     final blocks = <List<String>>[];
@@ -218,7 +219,11 @@ class GeneralCalendarIcsService {
     // Validate every direct property, including overwritten duplicates and
     // every EXDATE line. Unsupported time semantics invalidate their event,
     // while independent safe events can still produce an import candidate.
-    final parsedBlocks = blocks.map(_parseEventFields).toList();
+    final parsedBlocks = blocks
+        .map(
+          (lines) => _parseEventFields(lines, localTimeZoneId: localTimeZoneId),
+        )
+        .toList();
     final timeZoneDiagnostics = <GeneralCalendarIcsTimeZoneDiagnostic>[
       for (final block in parsedBlocks) ...block.timeZoneDiagnostics,
     ];
@@ -251,6 +256,7 @@ class GeneralCalendarIcsService {
         schedule.id,
         eventWarnings,
         fallbackEventTitle: fallbackEventTitle,
+        localTimeZoneId: localTimeZoneId,
       );
       warnings.addAll(
         eventWarnings.map(
@@ -337,6 +343,7 @@ class GeneralCalendarIcsService {
     String calendarId,
     List<GeneralCalendarIcsImportWarning> warnings, {
     required String fallbackEventTitle,
+    String? localTimeZoneId,
   }) {
     final fields = parsed.fields;
     final exceptionFields = parsed.exceptionFields;
@@ -349,7 +356,10 @@ class GeneralCalendarIcsService {
       );
       return null;
     }
-    final start = _parseIcsDateTime(startField);
+    final start = _parseIcsDateTime(
+      startField,
+      localTimeZoneId: localTimeZoneId,
+    );
     if (start == null) {
       warnings.add(
         const GeneralCalendarIcsImportWarning(
@@ -363,7 +373,9 @@ class GeneralCalendarIcsService {
     final durationField = fields['DURATION'];
     final ignoredSupportedFields = <String>[];
     var adjustedEnd = false;
-    var end = endField == null ? null : _parseIcsDateTime(endField);
+    var end = endField == null
+        ? null
+        : _parseIcsDateTime(endField, localTimeZoneId: localTimeZoneId);
     final hasInvalidEnd = endField != null && end == null;
     if (durationField != null) {
       if (endField == null || hasInvalidEnd) {
@@ -411,7 +423,10 @@ class GeneralCalendarIcsService {
     final description = fields['DESCRIPTION']?.value.trim() ?? '';
     final unsupportedFields = [
       ..._unsupportedFields(fields.keys),
-      ..._unsupportedFieldParameters([...fields.values, ...exceptionFields]),
+      ..._unsupportedFieldParameters([
+        ...fields.values,
+        ...exceptionFields,
+      ], localTimeZoneId: localTimeZoneId),
       ...parsed.unsupportedComponents,
       ...ignoredSupportedFields,
     ]..sort();
@@ -431,6 +446,7 @@ class GeneralCalendarIcsService {
       rule: recurrenceRule,
       allDay: isAllDay,
       unsupportedFields: unsupportedFields,
+      localTimeZoneId: localTimeZoneId,
     );
     final unsupported = [
       ...unsupportedFields,
@@ -491,15 +507,24 @@ const _icsTimeProperties = {
   'RECURRENCE-ID',
 };
 
-enum _IcsTimeZone { absent, utc, unsupported }
+enum _IcsTimeZone { absent, utc, local, unsupported }
 
-_IcsTimeZone _timeZoneOf(_IcsField field) {
+_IcsTimeZone _timeZoneOf(_IcsField field, {String? localTimeZoneId}) {
   if (field.timeZoneIds.isEmpty) return _IcsTimeZone.absent;
   if (field.timeZoneIds.length != 1 ||
       !_icsTimeProperties.contains(field.name)) {
     return _IcsTimeZone.unsupported;
   }
-  if (!const {'UTC', 'Etc/UTC', 'GMT'}.contains(field.timeZoneIds.single)) {
+  final utc = const {
+    'UTC',
+    'Etc/UTC',
+    'GMT',
+  }.contains(field.timeZoneIds.single);
+  final local =
+      localTimeZoneId != null &&
+      localTimeZoneId.trim().isNotEmpty &&
+      field.timeZoneIds.single == localTimeZoneId;
+  if (!utc && !local) {
     return _IcsTimeZone.unsupported;
   }
   // Do not let a known zone conceal an invalid DATE parameter or an explicit
@@ -513,17 +538,27 @@ _IcsTimeZone _timeZoneOf(_IcsField field) {
     if (_isIcsDateOnly(item)) return _IcsTimeZone.unsupported;
     final offset = _explicitIcsOffset(value.trim());
     if (offset != null &&
-        !const {'Z', '+0000', '+00:00', '-0000', '-00:00'}.contains(offset)) {
+        (!utc ||
+            !const {
+              'Z',
+              '+0000',
+              '+00:00',
+              '-0000',
+              '-00:00',
+            }.contains(offset))) {
       return _IcsTimeZone.unsupported;
     }
   }
-  return _IcsTimeZone.utc;
+  return utc ? _IcsTimeZone.utc : _IcsTimeZone.local;
 }
 
 String? _explicitIcsOffset(String value) =>
     RegExp(r'(Z|[+-]\d{2}:?\d{2})$').firstMatch(value)?.group(1);
 
-_IcsEventFields _parseEventFields(List<String> lines) {
+_IcsEventFields _parseEventFields(
+  List<String> lines, {
+  String? localTimeZoneId,
+}) {
   final fields = <String, _IcsField>{};
   final duplicateFields = <String>{};
   final unsupportedComponents = <String>{};
@@ -551,7 +586,8 @@ _IcsEventFields _parseEventFields(List<String> lines) {
     }
     if (field.name == 'END') continue;
     if (_icsTimeProperties.contains(field.name) &&
-        _timeZoneOf(field) == _IcsTimeZone.unsupported) {
+        _timeZoneOf(field, localTimeZoneId: localTimeZoneId) ==
+            _IcsTimeZone.unsupported) {
       timeZoneFields.add(field);
     }
     if (field.name == 'EXDATE') {
@@ -796,6 +832,7 @@ List<String> _importExceptionDates(
   required GeneralEventRecurrenceRule rule,
   required bool allDay,
   required List<String> unsupportedFields,
+  String? localTimeZoneId,
 }) {
   final dates = <String>{};
   for (final field in fields) {
@@ -806,7 +843,10 @@ List<String> _importExceptionDates(
         value: rawValue.trim(),
         timeZoneIds: field.timeZoneIds,
       );
-      final parsed = _parseIcsDateTime(single);
+      final parsed = _parseIcsDateTime(
+        single,
+        localTimeZoneId: localTimeZoneId,
+      );
       if (parsed == null || _isIcsDateOnly(single) != allDay) {
         unsupportedFields.add('EXDATE=${single.value}');
         continue;
@@ -832,8 +872,8 @@ List<String> _importExceptionDates(
   return dates.toList()..sort();
 }
 
-DateTime? _parseIcsDateTime(_IcsField field) {
-  final timeZone = _timeZoneOf(field);
+DateTime? _parseIcsDateTime(_IcsField field, {String? localTimeZoneId}) {
+  final timeZone = _timeZoneOf(field, localTimeZoneId: localTimeZoneId);
   if (timeZone == _IcsTimeZone.unsupported) return null;
   var value = field.value.trim();
   if (_isIcsDateOnly(field)) {
@@ -1323,13 +1363,17 @@ List<String> _unsupportedFields(Iterable<String> fields) {
   return fields.where((field) => !supported.contains(field)).toList()..sort();
 }
 
-List<String> _unsupportedFieldParameters(Iterable<_IcsField> fields) {
+List<String> _unsupportedFieldParameters(
+  Iterable<_IcsField> fields, {
+  String? localTimeZoneId,
+}) {
   final unsupported = <String>[];
   for (final field in fields) {
     final timezoneId = field.params['TZID']?.trim();
     if (timezoneId != null &&
         timezoneId.isNotEmpty &&
-        _timeZoneOf(field) == _IcsTimeZone.unsupported) {
+        _timeZoneOf(field, localTimeZoneId: localTimeZoneId) ==
+            _IcsTimeZone.unsupported) {
       unsupported.add('${field.name};TZID=$timezoneId');
     }
   }

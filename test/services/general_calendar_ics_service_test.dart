@@ -255,6 +255,106 @@ END:VCALENDAR''');
     }
   });
 
+  group('explicit local IANA time zone', () {
+    for (final zone in ['Asia/Shanghai', 'America/New_York', 'Europe/Berlin']) {
+      test('$zone retains floating wall times and exception dates', () {
+        final result = service.importSchedules('''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:local-zone
+DTSTART;TZID="$zone":20260525T233000
+DTEND;TZID=$zone:20260526T003000
+DTSTAMP;TZID=UTC:20260501T000000
+RRULE:FREQ=DAILY;COUNT=3
+EXDATE;TZID=$zone:20260526T233000,20260527T233000
+END:VEVENT
+END:VCALENDAR''', localTimeZoneId: zone);
+        final event = result.schedules.single.events.single;
+        expect(event.startDateTimeIso, '2026-05-25T23:30:00.000');
+        expect(event.endDateTimeIso, '2026-05-26T00:30:00.000');
+        expect(event.recurrenceRule.count, 3);
+        expect(event.recurrenceExceptionDateIso, ['2026-05-26', '2026-05-27']);
+        expect(result.warningItems, isEmpty);
+        final output = service.exportSchedules(result.schedules);
+        expect(output, contains('DTSTART:20260525T233000\r\n'));
+        final restored = service
+            .importSchedules(output)
+            .schedules
+            .single
+            .events
+            .single;
+        expect(restored.startDateTimeIso, event.startDateTimeIso);
+        expect(
+          restored.recurrenceExceptionDateIso,
+          event.recurrenceExceptionDateIso,
+        );
+      });
+    }
+
+    for (final localId in [null, '', '  ', 'Europe/Paris', 'europe/berlin']) {
+      test('different or unknown local identity is not guessed: $localId', () {
+        expect(
+          () => service.importSchedules('''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:berlin
+DTSTART;TZID=Europe/Berlin:20260525T090000
+END:VEVENT
+END:VCALENDAR''', localTimeZoneId: localId),
+          throwsA(
+            isA<GeneralCalendarIcsImportException>().having(
+              (error) => error.code,
+              'code',
+              GeneralCalendarIcsImportErrorCode.unsupportedTimeZone,
+            ),
+          ),
+        );
+      });
+    }
+
+    for (final field in [
+      'DTSTART;TZID=Asia/Shanghai;TZID=Asia/Shanghai:20260525T090000',
+      'DTSTART;TZID=Asia/Shanghai;TZID=:20260525T090000',
+      'DTSTART;TZID=;TZID=Asia/Shanghai:20260525T090000',
+      'DTSTART;TZID=Asia/Shanghai:20260525T090000Z',
+      'DTSTART;TZID=Asia/Shanghai:20260525T090000+0800',
+      'DTSTART;TZID=Asia/Shanghai;VALUE=DATE:20260525',
+      'EXDATE;TZID=Asia/Shanghai:20260526T090000,20260527T090000Z',
+      'EXDATE;TZID=Europe/Paris:20260526T090000\nEXDATE;TZID=Asia/Shanghai:20260527T090000',
+    ]) {
+      test('local TZID validation covers every value: $field', () {
+        final result = service.importSchedules('''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:safe
+DTSTART;TZID=Asia/Shanghai:20260525T090000
+END:VEVENT
+BEGIN:VEVENT
+UID:unsafe
+DTSTART;TZID=Asia/Shanghai:20260525T090000
+$field
+END:VEVENT
+END:VCALENDAR''', localTimeZoneId: 'Asia/Shanghai');
+        expect(result.schedules.single.events, hasLength(1));
+        expect(
+          result.warningItems.single.code,
+          GeneralCalendarIcsWarningCode.unsupportedTimeZone,
+        );
+        expect(result.warningItems.single.eventUid, 'unsafe');
+      });
+    }
+
+    test('UTC aliases retain UTC even when the host is UTC', () {
+      final result = service.importSchedules('''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:utc-host
+DTSTART;TZID=UTC:20260525T090000
+END:VEVENT
+END:VCALENDAR''', localTimeZoneId: 'UTC');
+      expect(
+        result.schedules.single.events.single.startDateTimeIso,
+        '2026-05-25T09:00:00.000Z',
+      );
+    });
+  });
+
   group('named time-zone filtering', () {
     for (final property in [
       'DTSTART',

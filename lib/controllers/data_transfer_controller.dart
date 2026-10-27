@@ -68,10 +68,15 @@ class DataTransferController {
   Future<PreparedDataImport<GeneralImportCandidate>> prepareSchedules(
     String source, {
     bool ics = false,
+    String? localTimeZoneId,
   }) => _prepare(
     AppMode.general,
-    () =>
-        _codec.decodeSchedules(source, localeCode: _data.localeCode, ics: ics),
+    () => _codec.decodeSchedules(
+      source,
+      localeCode: _data.localeCode,
+      ics: ics,
+      localTimeZoneId: localTimeZoneId,
+    ),
   );
 
   Future<PreparedDataImport<List<CoursePeriodTime>>> preparePeriodTimes(
@@ -217,12 +222,14 @@ class DataTransferController {
   }
 
   GeneralCalendarIcsImportResult previewImportGeneralSchedulesIcs(
-    String source,
-  ) {
+    String source, {
+    String? localTimeZoneId,
+  }) {
     _requireEnabled(AppMode.general);
     return _service.previewImportGeneralSchedulesIcs(
       source,
       localeCode: _data.localeCode,
+      localTimeZoneId: localTimeZoneId,
     );
   }
 
@@ -258,6 +265,7 @@ class DataTransferController {
     String source, {
     required GeneralScheduleImportMode mode,
     String? replacementScheduleId,
+    String? localTimeZoneId,
   }) async {
     _requireEnabled(AppMode.general);
     final mutation = _service.importGeneralSchedulesIcs(
@@ -266,6 +274,7 @@ class DataTransferController {
       mode: mode,
       replacementScheduleId: replacementScheduleId,
       localeCode: _data.localeCode,
+      localTimeZoneId: localTimeZoneId,
     );
     _data = _data.copyWith(generalMode: mutation.data);
     await _persistence.saveAndNotify();
