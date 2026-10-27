@@ -11,6 +11,110 @@ import 'package:sked/widgets/workspace_editor_form.dart';
 import '../support/workspace_harness.dart';
 
 void main() {
+  for (final (platform, scale, locale, direction) in [
+    (TargetPlatform.android, 1.0, 'en', TextDirection.ltr),
+    (TargetPlatform.android, 2.0, 'zh', TextDirection.rtl),
+    (TargetPlatform.iOS, 1.0, 'en', TextDirection.rtl),
+    (TargetPlatform.iOS, 2.0, 'zh', TextDirection.ltr),
+  ]) {
+    testWidgets(
+      'touch weekday choices keep real 48dp targets: $platform/$scale/$locale',
+      (t) async {
+        t.view.devicePixelRatio = 1;
+        t.view.physicalSize = const Size(320, 800);
+        addTearDown(t.view.reset);
+        final semantics = t.ensureSemantics();
+        final p = await workspaceProvider(locale: locale);
+        try {
+          await t.pumpWidget(
+            WorkspaceHarness(
+              provider: p,
+              locale: Locale(locale),
+              textScale: scale,
+              textDirection: direction,
+              home: Scaffold(
+                body: CourseEditorSheet(
+                  periodTimes: buildDefaultPeriodTimes(),
+                  totalWeeks: 18,
+                  dayOfWeek: 1,
+                ),
+              ),
+            ),
+          );
+          await t.pumpAndSettle();
+          final l = AppLocalizations.of(
+            t.element(find.byType(CourseEditorSheet)),
+          );
+          final field = find.byWidgetPredicate(
+            (widget) =>
+                widget is SkedEditorValueField && widget.label == l.dayOfWeek,
+          );
+          for (var day = 1; day <= 7; day++) {
+            await t.ensureVisible(field);
+            await t.tap(field);
+            await t.pumpAndSettle();
+            final label = formatDayOfWeekLabel(day, localeCode: locale);
+            final option = find.byWidgetPredicate(
+              (widget) => widget is SkedEditorOption && widget.label == label,
+            );
+            final hit = find.descendant(
+              of: option,
+              matching: find.byType(InkWell),
+            );
+            expect(find.byType(SkedEditorOption), findsNWidgets(7));
+            if (day == 1) {
+              await expectLater(t, meetsGuideline(androidTapTargetGuideline));
+              await expectLater(t, meetsGuideline(labeledTapTargetGuideline));
+              final rects = find
+                  .byType(SkedEditorOption)
+                  .evaluate()
+                  .map((element) => t.getRect(find.byWidget(element.widget)))
+                  .toList();
+              for (var index = 1; index < rects.length; index++) {
+                expect(
+                  rects[index - 1].bottom,
+                  lessThanOrEqualTo(rects[index].top),
+                );
+              }
+            }
+            await t.ensureVisible(hit);
+            await t.pumpAndSettle();
+            var rect = t.getRect(hit);
+            RenderObject child = t.renderObject(hit);
+            while (child.parent != null) {
+              final parent = child.parent!;
+              final clip = parent.describeApproximatePaintClip(child);
+              if (clip != null) {
+                rect = rect.intersect(
+                  MatrixUtils.transformRect(parent.getTransformTo(null), clip),
+                );
+              }
+              child = parent;
+            }
+            expect(rect.width, greaterThanOrEqualTo(48));
+            expect(rect.height, greaterThanOrEqualTo(48));
+            if (day.isEven) {
+              final node = t.getSemantics(hit);
+              node.owner!.performAction(node.id, ui.SemanticsAction.tap);
+            } else {
+              await t.tapAt(rect.center + const Offset(0, 23));
+            }
+            await t.pumpAndSettle();
+            expect(find.byType(SkedEditorOption), findsNothing);
+            expect(t.widget<SkedEditorValueField>(field).value, label);
+          }
+          expect(t.takeException(), isNull);
+        } finally {
+          await t.pumpWidget(const SizedBox());
+          await t.pumpAndSettle();
+          semantics.dispose();
+          p.dispose();
+        }
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
   for (final enabled in [true, false]) {
     testWidgets('desktop value exposes a single named button: $enabled', (
       t,
