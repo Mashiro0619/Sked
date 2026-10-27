@@ -43,8 +43,10 @@ class FlutterAgendaNotificationGateway
     bool? enabled,
     AgendaNotificationTestIdAllocator? developerTestIdAllocator,
     AgendaWindowsNotificationBackend? windowsBackend,
+    DateTime Function()? now,
     this._runtimeStore,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _now = now ?? DateTime.now,
        _enabled = enabled ?? (_isAndroid || _isWindows),
        _windowsBackend =
            windowsBackend ??
@@ -54,6 +56,7 @@ class FlutterAgendaNotificationGateway
            SharedPreferencesAgendaNotificationTestIdAllocator();
 
   final FlutterLocalNotificationsPlugin _plugin;
+  final DateTime Function() _now;
   final bool _enabled;
   final AgendaWindowsNotificationBackend? _windowsBackend;
   final AgendaNotificationRuntimeStore? _runtimeStore;
@@ -575,6 +578,11 @@ class FlutterAgendaNotificationGateway
       request.fireAt.toLocal(),
       tz.local,
     );
+    if (!request.fireAt.isAfter(_now())) {
+      throw const AgendaNotificationNotSubmitted(
+        'Reminder trigger time has already passed.',
+      );
+    }
     if (_isWindows) {
       await _windows.zonedSchedule(
         id: notificationId,
@@ -588,15 +596,25 @@ class FlutterAgendaNotificationGateway
       if (!exact) {
         throw StateError('Exact alarms are required for agenda reminders.');
       }
-      await _plugin.zonedSchedule(
-        id: notificationId,
-        title: request.title,
-        body: request.body,
-        notificationDetails: details,
-        scheduledDate: scheduledDate,
-        androidScheduleMode: AndroidScheduleMode.alarmClock,
-        payload: request.payload,
-      );
+      try {
+        await _plugin.zonedSchedule(
+          id: notificationId,
+          title: request.title,
+          body: request.body,
+          notificationDetails: details,
+          scheduledDate: scheduledDate,
+          androidScheduleMode: AndroidScheduleMode.alarmClock,
+          payload: request.payload,
+        );
+      } on ArgumentError catch (error) {
+        // The plugin checks this before invoking Android. Time may advance
+        // between our preflight and that validation; this is still a proven
+        // rejection, while all other failures retain uncertain-outcome rules.
+        if (error.message == 'Must be a date in the future') {
+          throw AgendaNotificationNotSubmitted(error);
+        }
+        rethrow;
+      }
     }
     _lastScheduledNotificationId = notificationId;
     _managedNotificationIds[request.key] = notificationId;

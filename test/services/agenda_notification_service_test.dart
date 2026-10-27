@@ -944,7 +944,10 @@ void main() {
     });
 
     test('authoritative reconcile cancels an active card after its pending entry is gone', () async {
-      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+      final gateway = FlutterAgendaNotificationGateway(
+        enabled: true,
+        now: () => DateTime(2026, 8, 3, 7),
+      );
       final service = AgendaNotificationService(
         enabled: true,
         gateway: gateway,
@@ -1138,6 +1141,85 @@ void main() {
         expect(platform.cancelledIds, containsAll(<int>[custom.id, 91]));
         expect(platform.cancelledIds, hasLength(2));
         expect(platform.cancelledIds, isNot(contains(92)));
+      },
+    );
+
+    for (final seconds in [-1, 0]) {
+      test(
+        'rejects an elapsed trigger before platform submission: $seconds',
+        () async {
+          final current = DateTime(2026, 8, 3, 7);
+          final gateway = FlutterAgendaNotificationGateway(
+            enabled: true,
+            now: () => current,
+          );
+          await expectLater(
+            gateway.schedule(
+              _platformRequest(
+                key: 'elapsed-$seconds',
+                fireAt: current.add(Duration(seconds: seconds)),
+              ),
+              exact: true,
+            ),
+            throwsA(isA<AgendaNotificationNotSubmitted>()),
+          );
+          expect(platform.schedules, isEmpty);
+        },
+      );
+    }
+
+    test(
+      'plugin future-date rejection is durable and eligible for late recovery',
+      () async {
+        var current = DateTime(2026, 8, 3, 7, 49);
+        final gateway = FlutterAgendaNotificationGateway(
+          enabled: true,
+          now: () => current,
+        );
+        final runtime = MemoryAgendaNotificationRuntimeStore(
+          clock: () => current,
+        );
+        final service = AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          runtimeStore: runtime,
+          now: () => current,
+        );
+        addTearDown(service.dispose);
+        platform.exactScheduleError = ArgumentError(
+          'Must be a date in the future',
+        );
+        await expectLater(
+          service.reconcile(_data(), anchor: current),
+          throwsA(isA<AgendaNotificationNotSubmitted>()),
+        );
+        final fence = await runtime.readProjectionFence();
+        final snapshot = await runtime.readRegistrationSnapshot(
+          fence,
+          now: current,
+        );
+        expect(
+          snapshot.records.values.single.state,
+          AgendaNotificationRegistrationState.rejected,
+        );
+        expect(platform.schedules, isEmpty);
+        final diagnostics = (await service.readNotificationDiagnostics())!;
+        expect(
+          diagnostics.registrationDecisions.map((entry) => entry.reason),
+          contains('proven_not_submitted'),
+        );
+        expect(
+          diagnostics.registrationDecisions.map((entry) => entry.reason),
+          isNot(contains('platform_result_uncertain')),
+        );
+
+        platform.exactScheduleError = null;
+        current = DateTime(2026, 8, 3, 7, 50, 1);
+        await service.reconcile(_data(), anchor: current);
+        expect(
+          platform.schedules.single.scheduledDate,
+          DateTime(2026, 8, 3, 7, 50, 6),
+        );
       },
     );
 
