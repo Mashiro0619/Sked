@@ -74,7 +74,7 @@ flutter run -d windows
 
 以上是接手运行说明，不代表这些命令在本次文档更新中重新执行。Profile 采样期间保持源码与构建输入稳定，不并发启动分析、测试、构建或改写依赖。运行应用前确认测试环境和数据位置；不用真实用户存档做破坏性验证，不提交本机签名文件、密钥或生成缓存。
 
-WebView 的 Android、iOS、macOS override 固定了不可变 Git 提交，原因在 [pubspec.yaml](../pubspec.yaml) 注释中。安全存储仍锁定 10.3.1，大版本升级需要真实旧密钥迁移验证。两者均不能仅为消除版本提示而顺手升级，详见 [依赖维护](DEPENDENCY_UPGRADES.md)。
+WebView 的 Android、iOS、macOS override 固定了不可变 Git 提交，原因在 [pubspec.yaml](../pubspec.yaml) 注释中。安全存储声明 `^11.2.0`，当前 [锁文件](../pubspec.lock) 解析为 `11.2.0`；[密钥存储](../lib/services/secret_store.dart) 使用 `AndroidOptions(migrateWithBackup: true)`。配置存在不能代替真实旧密钥迁移验证；适用的迁移范围及设备验收边界见 [依赖维护](DEPENDENCY_UPGRADES.md)。
 
 ## 4. 架构与代码入口
 
