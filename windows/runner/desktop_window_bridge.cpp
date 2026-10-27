@@ -1,4 +1,5 @@
 #include "desktop_window_bridge.h"
+#include "native_window_drag.h"
 #include <dwmapi.h>
 #include <windowsx.h>
 #include <algorithm>
@@ -53,8 +54,10 @@ DesktopWindowBridge::DesktopWindowBridge(HWND window, HWND view,
     if (method == "minimize") ShowWindow(window_, SW_MINIMIZE);
     else if (method == "toggleMaximize") ShowWindow(window_, IsZoomed(window_) ? SW_RESTORE : SW_MAXIMIZE);
     else if (method == "startDrag") {
-      ReleaseCapture();
-      SendMessage(window_, WM_NCLBUTTONDOWN, HTCAPTION, GetMessagePos());
+      if (!StartNativeCaptionDrag(window_)) {
+        result->Error("drag_unavailable", "Unable to read the current cursor position");
+        return;
+      }
     } else if (method == "confirmClose") {
       allow_close_ = true;
       PostMessage(window_, WM_CLOSE, 0, 0);
