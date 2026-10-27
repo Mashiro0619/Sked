@@ -287,9 +287,12 @@ class _DesktopMonthDayCell extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: occurrences.isEmpty
-          ? dateLabel
-          : '$dateLabel, ${l.monthDayEvents(date.day, occurrences.length)}',
+      label: [
+        dateLabel,
+        if (isToday) l.today,
+        if (occurrences.isNotEmpty)
+          l.monthDayEvents(date.day, occurrences.length),
+      ].join(', '),
       child: Material(
         key: const ValueKey('desktop-month-day-surface'),
         color: surface,

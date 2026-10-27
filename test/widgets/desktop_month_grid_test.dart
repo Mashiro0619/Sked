@@ -162,6 +162,58 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  for (final locale in ['en', 'zh']) {
+    testWidgets('desktop month announces today in $locale', (t) async {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final semantics = t.ensureSemantics();
+      await _mount(
+        t,
+        date: today,
+        locale: locale,
+        events: locale == 'en'
+            ? const []
+            : [
+                GeneralEvent(
+                  id: 'today',
+                  calendarId: 'empty',
+                  title: 'Meeting',
+                  startDateTimeIso: DateTime(
+                    today.year,
+                    today.month,
+                    today.day,
+                    10,
+                  ).toIso8601String(),
+                  endDateTimeIso: DateTime(
+                    today.year,
+                    today.month,
+                    today.day,
+                    11,
+                  ).toIso8601String(),
+                ),
+              ],
+      );
+      final cell = _cell(today);
+      final context = t.element(cell);
+      final l = AppLocalizations.of(context);
+      final label = t.getSemantics(cell).getSemanticsData().label;
+      expect(label, contains(l.today));
+      expect(
+        label,
+        contains(MaterialLocalizations.of(context).formatFullDate(today)),
+      );
+      if (locale == 'zh') {
+        expect(label, contains(l.monthDayEvents(today.day, 1)));
+      }
+      final other = DateTime(today.year, today.month, today.day == 1 ? 2 : 1);
+      expect(
+        t.getSemantics(_cell(other)).getSemanticsData().label,
+        isNot(contains(l.today)),
+      );
+      semantics.dispose();
+    }, variant: _desktop);
+  }
+
   testWidgets(
     'same-month clicks rebuild only the old and new selected date cells',
     (t) async {
