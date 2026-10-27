@@ -46,44 +46,99 @@ class AgendaBackgroundReconcileReceiver : BroadcastReceiver() {
     }
 }
 
+enum class AgendaBackgroundCancellationScope {
+    RENEWAL_ONLY,
+    RENEWAL_AND_WORK,
+}
+
 /** Native scheduling shell for the Dart background projection. */
 object AgendaBackgroundReconcileScheduler {
     private const val UNIQUE_WORK = "sked.agenda.background.reconcile"
     private const val REQUEST_CODE = 9302
     private const val MIN_DELAY_MILLIS = 1_000L
 
-    fun schedule(context: Context, epochMillis: Long?) {
+    fun schedule(
+        context: Context,
+        epochMillis: Long?,
+        cancellationScope: AgendaBackgroundCancellationScope =
+            AgendaBackgroundCancellationScope.RENEWAL_AND_WORK,
+    ) {
         val appContext = context.applicationContext
-        val alarmManager = appContext.getSystemService(AlarmManager::class.java) ?: return
-        val pending = pendingIntent(appContext)
-        alarmManager.cancel(pending)
-        val triggerAt = epochMillis
-        if (triggerAt == null) {
-            // A foreground reconciliation can legitimately have no next
-            // boundary. Do not leave a retry work item from an earlier
-            // system broadcast alive in that case.
-            WorkManager.getInstance(appContext).cancelUniqueWork(UNIQUE_WORK)
-            return
-        }
-        val now = System.currentTimeMillis()
-        if (triggerAt <= now + MIN_DELAY_MILLIS) {
-            enqueue(context, AndroidProductivityContract.ACTION_AGENDA_RECONCILE)
-            return
-        }
-        // This is only an ahead-of-time best-effort renewal, never
-        // user-facing reminder delivery. Do not use allow-while-idle here:
-        // Android quotas those wakeups per UID and a renewal alarm can
-        // otherwise delay the actual course/event reminder using alarmClock.
-        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+        val alarmManager = appContext.getSystemService(AlarmManager::class.java)
+        schedule(
+            epochMillis = epochMillis,
+            nowMillis = System.currentTimeMillis(),
+            cancellationScope = cancellationScope,
+            cancelRenewal = { alarmManager?.cancel(pendingIntent(appContext)) },
+            cancelWork = { WorkManager.getInstance(appContext).cancelUniqueWork(UNIQUE_WORK) },
+            enqueueNow = {
+                enqueue(appContext, AndroidProductivityContract.ACTION_AGENDA_RECONCILE)
+            },
+            scheduleRenewal = { triggerAt ->
+                // This best-effort renewal must not use allow-while-idle and
+                // consume the Android quota needed by user-facing reminders.
+                alarmManager?.set(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAt,
+                    pendingIntent(appContext),
+                )
+            },
+        )
     }
 
-    fun cancel(context: Context) {
+    fun cancel(
+        context: Context,
+        cancellationScope: AgendaBackgroundCancellationScope =
+            AgendaBackgroundCancellationScope.RENEWAL_AND_WORK,
+    ) {
         val appContext = context.applicationContext
-        appContext.getSystemService(AlarmManager::class.java)
-            ?.cancel(pendingIntent(appContext))
-        // Clearing Agenda runtime state must also remove work that was queued
-        // by boot/time-zone broadcasts, not just the next AlarmManager wake.
-        WorkManager.getInstance(appContext).cancelUniqueWork(UNIQUE_WORK)
+        cancel(
+            cancellationScope = cancellationScope,
+            cancelRenewal = {
+                appContext.getSystemService(AlarmManager::class.java)
+                    ?.cancel(pendingIntent(appContext))
+            },
+            cancelWork = { WorkManager.getInstance(appContext).cancelUniqueWork(UNIQUE_WORK) },
+        )
+    }
+
+    internal fun schedule(
+        epochMillis: Long?,
+        nowMillis: Long,
+        cancellationScope: AgendaBackgroundCancellationScope,
+        cancelRenewal: () -> Unit,
+        cancelWork: () -> Unit,
+        enqueueNow: () -> Unit,
+        scheduleRenewal: (Long) -> Unit,
+    ) {
+        cancel(
+            cancellationScope = if (epochMillis == null) {
+                cancellationScope
+            } else {
+                AgendaBackgroundCancellationScope.RENEWAL_ONLY
+            },
+            cancelRenewal = cancelRenewal,
+            cancelWork = cancelWork,
+        )
+        if (epochMillis == null) return
+        if (epochMillis <= nowMillis + MIN_DELAY_MILLIS) {
+            enqueueNow()
+        } else {
+            scheduleRenewal(epochMillis)
+        }
+    }
+
+    internal fun cancel(
+        cancellationScope: AgendaBackgroundCancellationScope,
+        cancelRenewal: () -> Unit,
+        cancelWork: () -> Unit,
+    ) {
+        cancelRenewal()
+        if (cancellationScope == AgendaBackgroundCancellationScope.RENEWAL_AND_WORK) {
+            // Foreground clear must remove queued work as well as its alarm.
+            // A Worker publishing no next renewal must survive to report success.
+            cancelWork()
+        }
     }
 
     fun enqueue(context: Context, reason: String) {
@@ -168,11 +223,15 @@ class AgendaBackgroundReconcileWorker(
                             AgendaBackgroundReconcileScheduler.schedule(
                                 applicationContext,
                                 call.epochMillisArgument(),
+                                AgendaBackgroundCancellationScope.RENEWAL_ONLY,
                             )
                             result.success(null)
                         }
                         "cancelAgendaReconciliation" -> {
-                            AgendaBackgroundReconcileScheduler.cancel(applicationContext)
+                            AgendaBackgroundReconcileScheduler.cancel(
+                                applicationContext,
+                                AgendaBackgroundCancellationScope.RENEWAL_ONLY,
+                            )
                             result.success(null)
                         }
                         "completeBackgroundAgendaReconciliation" -> {
