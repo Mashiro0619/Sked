@@ -65,8 +65,7 @@ class GeneralCalendarIcsImportException implements FormatException {
             'No VEVENT entries found.',
           GeneralCalendarIcsImportErrorCode.noImportableEvents =>
             'No importable events found.',
-          GeneralCalendarIcsImportErrorCode.unsupportedTimeZone =>
-            'Named time zones are not supported. Nothing was imported.',
+          GeneralCalendarIcsImportErrorCode.unsupportedTimeZone => 'These time zones cannot be interpreted safely. Nothing was imported.',
         };
   }
 
@@ -481,17 +480,50 @@ class _IcsEventFields {
   final List<GeneralCalendarIcsTimeZoneDiagnostic> timeZoneDiagnostics;
 }
 
+const _icsTimeProperties = {
+  'DTSTART',
+  'DTEND',
+  'EXDATE',
+  'RDATE',
+  'DTSTAMP',
+  'CREATED',
+  'LAST-MODIFIED',
+  'RECURRENCE-ID',
+};
+
+enum _IcsTimeZone { absent, utc, unsupported }
+
+_IcsTimeZone _timeZoneOf(_IcsField field) {
+  if (field.timeZoneIds.isEmpty) return _IcsTimeZone.absent;
+  if (field.timeZoneIds.length != 1 ||
+      !_icsTimeProperties.contains(field.name)) {
+    return _IcsTimeZone.unsupported;
+  }
+  if (!const {'UTC', 'Etc/UTC', 'GMT'}.contains(field.timeZoneIds.single)) {
+    return _IcsTimeZone.unsupported;
+  }
+  // Do not let a known zone conceal an invalid DATE parameter or an explicit
+  // conflicting offset, including an earlier member of a multi-value EXDATE.
+  for (final value in field.value.split(',')) {
+    final item = _IcsField(
+      name: field.name,
+      params: field.params,
+      value: value,
+    );
+    if (_isIcsDateOnly(item)) return _IcsTimeZone.unsupported;
+    final offset = _explicitIcsOffset(value.trim());
+    if (offset != null &&
+        !const {'Z', '+0000', '+00:00', '-0000', '-00:00'}.contains(offset)) {
+      return _IcsTimeZone.unsupported;
+    }
+  }
+  return _IcsTimeZone.utc;
+}
+
+String? _explicitIcsOffset(String value) =>
+    RegExp(r'(Z|[+-]\d{2}:?\d{2})$').firstMatch(value)?.group(1);
+
 _IcsEventFields _parseEventFields(List<String> lines) {
-  const timeProperties = {
-    'DTSTART',
-    'DTEND',
-    'EXDATE',
-    'RDATE',
-    'DTSTAMP',
-    'CREATED',
-    'LAST-MODIFIED',
-    'RECURRENCE-ID',
-  };
   final fields = <String, _IcsField>{};
   final duplicateFields = <String>{};
   final unsupportedComponents = <String>{};
@@ -518,7 +550,8 @@ _IcsEventFields _parseEventFields(List<String> lines) {
       continue;
     }
     if (field.name == 'END') continue;
-    if (timeProperties.contains(field.name) && field.timeZoneIds.isNotEmpty) {
+    if (_icsTimeProperties.contains(field.name) &&
+        _timeZoneOf(field) == _IcsTimeZone.unsupported) {
       timeZoneFields.add(field);
     }
     if (field.name == 'EXDATE') {
@@ -771,6 +804,7 @@ List<String> _importExceptionDates(
         name: field.name,
         params: field.params,
         value: rawValue.trim(),
+        timeZoneIds: field.timeZoneIds,
       );
       final parsed = _parseIcsDateTime(single);
       if (parsed == null || _isIcsDateOnly(single) != allDay) {
@@ -799,9 +833,14 @@ List<String> _importExceptionDates(
 }
 
 DateTime? _parseIcsDateTime(_IcsField field) {
-  final value = field.value.trim();
+  final timeZone = _timeZoneOf(field);
+  if (timeZone == _IcsTimeZone.unsupported) return null;
+  var value = field.value.trim();
   if (_isIcsDateOnly(field)) {
     return _parseDate(value);
+  }
+  if (timeZone == _IcsTimeZone.utc && _explicitIcsOffset(value) == null) {
+    value = '${value}Z';
   }
   final match = RegExp(
     r'^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z|[+-]\d{2}:?\d{2})?$',
@@ -1288,7 +1327,9 @@ List<String> _unsupportedFieldParameters(Iterable<_IcsField> fields) {
   final unsupported = <String>[];
   for (final field in fields) {
     final timezoneId = field.params['TZID']?.trim();
-    if (timezoneId != null && timezoneId.isNotEmpty) {
+    if (timezoneId != null &&
+        timezoneId.isNotEmpty &&
+        _timeZoneOf(field) == _IcsTimeZone.unsupported) {
       unsupported.add('${field.name};TZID=$timezoneId');
     }
   }

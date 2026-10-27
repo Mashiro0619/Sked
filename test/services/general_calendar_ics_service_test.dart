@@ -161,6 +161,100 @@ END:VCALENDAR
     },
   );
 
+  group('UTC TZID aliases', () {
+    for (final zone in ['UTC', 'Etc/UTC', 'GMT']) {
+      test('$zone preserves UTC dates, recurrence and every EXDATE value', () {
+        final source =
+            '''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:utc-alias
+SUMMARY:UTC alias recurrence
+DTSTART;TZID="$zone":20260525T233000
+DTEND;TZID=$zone:20260526T003000
+RRULE:FREQ=DAILY;COUNT=4
+EXDATE;TZID=$zone:20260526T233000,20260527T233000
+EXDATE;TZID=$zone:20260528T233000
+END:VEVENT
+END:VCALENDAR''';
+        final result = service.importSchedules(source);
+        final event = result.schedules.single.events.single;
+        expect(event.startDateTimeIso, '2026-05-25T23:30:00.000Z');
+        expect(event.endDateTimeIso, '2026-05-26T00:30:00.000Z');
+        expect(event.recurrenceRule.type, GeneralEventRecurrence.daily);
+        expect(event.recurrenceRule.count, 4);
+        expect(event.recurrenceExceptionDateIso, [
+          '2026-05-26',
+          '2026-05-27',
+          '2026-05-28',
+        ]);
+        expect(result.warningItems, isEmpty);
+        final output = service.exportSchedules(result.schedules);
+        expect(output, contains('DTSTART:20260525T233000Z'));
+        final roundTrip = service
+            .importSchedules(output)
+            .schedules
+            .single
+            .events
+            .single;
+        expect(roundTrip.startDateTimeIso, event.startDateTimeIso);
+        expect(
+          roundTrip.recurrenceExceptionDateIso,
+          event.recurrenceExceptionDateIso,
+        );
+      });
+    }
+
+    test('an explicit UTC designator is consistent with a UTC alias', () {
+      final result = service.importSchedules('''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:redundant-utc
+DTSTART;TZID=UTC:20260525T090000Z
+DTEND;TZID=GMT:20260525T100000+0000
+END:VEVENT
+END:VCALENDAR''');
+      expect(
+        result.schedules.single.events.single.startDateTimeIso,
+        '2026-05-25T09:00:00.000Z',
+      );
+      expect(
+        result.schedules.single.events.single.endDateTimeIso,
+        '2026-05-25T10:00:00.000Z',
+      );
+      expect(result.warningItems, isEmpty);
+    });
+
+    for (final field in [
+      'DTSTART;TZID=UTC;TZID=UTC:20260525T090000',
+      'DTSTART;TZID=UTC;TZID=:20260525T090000',
+      'DTSTART;TZID=;TZID=UTC:20260525T090000',
+      'DTSTART;TZID=Europe/London;TZID=UTC:20260525T090000',
+      'DTSTART;TZID=UTC:20260525T090000+0800',
+      'DTSTART;TZID=UTC;VALUE=DATE:20260525',
+      'EXDATE;TZID=UTC:20260526T090000Z,20260527T090000+0800',
+      'DTSTART;TZID=:20260525T090000Z',
+    ]) {
+      test('UTC cannot mask invalid zone semantics: $field', () {
+        final result = service.importSchedules('''BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:safe
+DTSTART;TZID=UTC:20260525T090000
+END:VEVENT
+BEGIN:VEVENT
+UID:unsafe
+DTSTART:20260525T090000Z
+$field
+END:VEVENT
+END:VCALENDAR''');
+        expect(result.schedules.single.events, hasLength(1));
+        expect(
+          result.warningItems.single.code,
+          GeneralCalendarIcsWarningCode.unsupportedTimeZone,
+        );
+        expect(result.warningItems.single.eventUid, 'unsafe');
+      });
+    }
+  });
+
   group('named time-zone filtering', () {
     for (final property in [
       'DTSTART',
