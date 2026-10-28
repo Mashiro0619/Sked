@@ -1,18 +1,5 @@
+import 'app_data_json_values.dart';
 import '../utils/time_utils.dart';
-
-Map<String, dynamic> _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return const <String, dynamic>{};
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
 
 List<int> _positiveIntList(Object? value, {int? maxValue}) {
   if (value is! List) {
@@ -43,26 +30,6 @@ List<int> _semesterWeekList(Object? value) {
   // source course's explicit weeks. Keep them for the review warning instead
   // of silently turning an out-of-range course into an every-week course.
   return weeks;
-}
-
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-int? _intValue(Object? value) {
-  return value is num && value.isFinite ? value.toInt() : null;
-}
-
-double? _doubleValue(Object? value) {
-  return value is num && value.isFinite ? value.toDouble() : null;
-}
-
-bool? _boolValue(Object? value) {
-  return value is bool ? value : null;
 }
 
 bool _hasTimetablePayload(Map<String, dynamic> json) {
@@ -153,10 +120,10 @@ class SchoolImportMeta {
 
   factory SchoolImportMeta.fromJson(Map<String, dynamic> json) {
     return SchoolImportMeta(
-      sourceUrl: _stringValue(json['sourceUrl']),
-      pageTitle: _stringValue(json['pageTitle']),
-      parser: _stringValue(json['parser']),
-      warnings: _listValue(json['warnings'])
+      sourceUrl: appDataStringValue(json['sourceUrl']),
+      pageTitle: appDataStringValue(json['pageTitle']),
+      parser: appDataStringValue(json['parser']),
+      warnings: appDataListValue(json['warnings'])
           .where((item) => item != null)
           .map((item) => item.toString())
           .where((item) => item.trim().isNotEmpty)
@@ -178,9 +145,9 @@ class ImportedPeriodTimeDraft {
 
   factory ImportedPeriodTimeDraft.fromJson(Map<String, dynamic> json) {
     return ImportedPeriodTimeDraft(
-      index: _intValue(json['index']) ?? 1,
-      startMinutes: _intValue(json['startMinutes']) ?? 0,
-      endMinutes: _intValue(json['endMinutes']) ?? 0,
+      index: appDataFiniteIntValue(json['index']) ?? 1,
+      startMinutes: appDataFiniteIntValue(json['startMinutes']) ?? 0,
+      endMinutes: appDataFiniteIntValue(json['endMinutes']) ?? 0,
     );
   }
 }
@@ -189,10 +156,10 @@ ImportedPeriodTimeDraft? _tryParseBundledPeriodTimeDraft(Object? value) {
   if (value is! Map) {
     return null;
   }
-  final json = _asStringKeyedMap(value);
-  final index = _intValue(json['index']);
-  final startMinutes = _intValue(json['startMinutes']);
-  final endMinutes = _intValue(json['endMinutes']);
+  final json = appDataStringKeyedMapOrEmpty(value);
+  final index = appDataFiniteIntValue(json['index']);
+  final startMinutes = appDataFiniteIntValue(json['startMinutes']);
+  final endMinutes = appDataFiniteIntValue(json['endMinutes']);
   if (index == null || startMinutes == null || endMinutes == null) {
     return null;
   }
@@ -217,14 +184,14 @@ class ImportedPeriodTimeSetDraft {
 
   factory ImportedPeriodTimeSetDraft.fromJson(Map<String, dynamic> json) {
     final periodTimes = <ImportedPeriodTimeDraft>[];
-    for (final item in _listValue(json['periodTimes'])) {
+    for (final item in appDataListValue(json['periodTimes'])) {
       final parsed = _tryParseBundledPeriodTimeDraft(item);
       if (parsed != null) {
         periodTimes.add(parsed);
       }
     }
     return ImportedPeriodTimeSetDraft(
-      name: _stringValue(json['name']),
+      name: appDataStringValue(json['name']),
       periodTimes: periodTimes,
     );
   }
@@ -259,17 +226,17 @@ class ImportedCourseDraft {
 
   factory ImportedCourseDraft.fromJson(Map<String, dynamic> json) {
     return ImportedCourseDraft(
-      name: _stringValue(json['name']),
-      teacher: _stringValue(json['teacher']),
-      location: _stringValue(json['location']),
-      dayOfWeek: _intValue(json['dayOfWeek']) ?? 1,
+      name: appDataStringValue(json['name']),
+      teacher: appDataStringValue(json['teacher']),
+      location: appDataStringValue(json['location']),
+      dayOfWeek: appDataFiniteIntValue(json['dayOfWeek']) ?? 1,
       semesterWeeks: _semesterWeekList(json['semesterWeeks']),
       periods: _positiveIntList(json['periods'], maxValue: 999),
-      startMinutes: _intValue(json['startMinutes']) ?? 0,
-      endMinutes: _intValue(json['endMinutes']) ?? 0,
-      credit: _doubleValue(json['credit']) ?? 0,
-      remarks: _stringValue(json['remarks']),
-      customFields: _asStringKeyedMap(json['customFields']),
+      startMinutes: appDataFiniteIntValue(json['startMinutes']) ?? 0,
+      endMinutes: appDataFiniteIntValue(json['endMinutes']) ?? 0,
+      credit: appDataFiniteDoubleValue(json['credit']) ?? 0,
+      remarks: appDataStringValue(json['remarks']),
+      customFields: appDataStringKeyedMapOrEmpty(json['customFields']),
     );
   }
 
@@ -297,16 +264,16 @@ class SchoolImportTimetableDraft {
   final List<ImportedCourseDraft> courses;
 
   factory SchoolImportTimetableDraft.fromJson(Map<String, dynamic> json) {
-    final startDateRaw = _stringValue(json['startDate']);
+    final startDateRaw = appDataStringValue(json['startDate']);
     return SchoolImportTimetableDraft(
-      name: _stringValue(json['name']),
+      name: appDataStringValue(json['name']),
       startDate: tryParseStrictIsoDate(startDateRaw) ?? DateTime.now(),
-      totalWeeks: _intValue(json['totalWeeks']) ?? 18,
+      totalWeeks: appDataFiniteIntValue(json['totalWeeks']) ?? 18,
       periodTimeSet: ImportedPeriodTimeSetDraft.fromJson(
-        _asStringKeyedMap(json['periodTimeSet']),
+        appDataStringKeyedMapOrEmpty(json['periodTimeSet']),
       ),
-      courses: _listValue(json['courses'])
-          .map(_asStringKeyedMap)
+      courses: appDataListValue(json['courses'])
+          .map(appDataStringKeyedMapOrEmpty)
           .where((item) => item.isNotEmpty)
           .map(ImportedCourseDraft.fromJson)
           .where((item) => item.isImportable)
@@ -338,18 +305,20 @@ class SchoolImportResponse {
   final SchoolImportTimetableDraft timetable;
 
   factory SchoolImportResponse.fromJson(Map<String, dynamic> json) {
-    final ok = _boolValue(json['ok']);
+    final ok = appDataBoolValue(json['ok']);
     if (ok == null) {
       throw const FormatException('Import response format is invalid.');
     }
     if (!ok) {
-      throw FormatException(_stringValue(json['message'], 'Import failed.'));
+      throw FormatException(
+        appDataStringValue(json['message'], 'Import failed.'),
+      );
     }
     final rawTimetable = json['timetable'];
     if (rawTimetable is! Map) {
       throw const FormatException('Import response format is invalid.');
     }
-    final timetableJson = _asStringKeyedMap(rawTimetable);
+    final timetableJson = appDataStringKeyedMapOrEmpty(rawTimetable);
     if (!_hasTimetablePayload(timetableJson)) {
       throw const FormatException('Import response format is invalid.');
     }
@@ -361,7 +330,9 @@ class SchoolImportResponse {
       throw const FormatException('Import response format is invalid.');
     }
     return SchoolImportResponse(
-      meta: SchoolImportMeta.fromJson(_asStringKeyedMap(json['meta'])),
+      meta: SchoolImportMeta.fromJson(
+        appDataStringKeyedMapOrEmpty(json['meta']),
+      ),
       timetable: timetable,
     );
   }
