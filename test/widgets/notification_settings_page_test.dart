@@ -266,6 +266,7 @@ void main() {
               home: NotificationSettingsPage(
                 notificationService: service,
                 productivityBridge: AndroidProductivityBridge(enabled: false),
+                embedded: true,
                 onOpenTroubleshooting: () => repairOpened = true,
               ),
             ),
@@ -292,6 +293,10 @@ void main() {
           batteryOnly ? findsNothing : findsOneWidget,
         );
         expect(
+          find.textContaining(l10n.notificationCoverageRenewable),
+          findsNothing,
+        );
+        expect(
           service.status.coverage == AgendaNotificationCoverage.blocked,
           !batteryOnly,
         );
@@ -299,6 +304,27 @@ void main() {
         await tester.pumpAndSettle();
         expect(repairOpened, isTrue);
         expect(gateway.scheduled, isEmpty);
+
+        gateway
+          ..permissionGranted = true
+          ..exactAlarmGranted = true
+          ..batteryOptimizationGranted = true;
+        await tester.runAsync(
+          () => service.reconcile(
+            provider.session.committedData,
+            anchor: DateTime(2026, 10, 26, 9),
+          ),
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(notice, findsNothing);
+        expect(provider.settingsView.notificationsEnabled, isTrue);
+        expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant({TargetPlatform.android}),
     );

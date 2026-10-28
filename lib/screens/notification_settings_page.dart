@@ -387,14 +387,16 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         final batteryRestricted =
             !_isWindows && _batteryOptimizationIgnored == false;
         final deliveryFailed = coverage == AgendaNotificationCoverage.failed;
+        final needsAttention =
+            deliveryBlocked || deliveryFailed || batteryRestricted;
         final showCoverageNotice =
             settings.notificationsEnabled &&
-            (deliveryBlocked ||
-                deliveryFailed ||
-                batteryRestricted ||
-                _isWindows ||
-                coverage == AgendaNotificationCoverage.renewable ||
-                coverage == AgendaNotificationCoverage.capacityLimited);
+            (needsAttention ||
+                (!widget.embedded &&
+                    (_isWindows ||
+                        coverage == AgendaNotificationCoverage.renewable ||
+                        coverage ==
+                            AgendaNotificationCoverage.capacityLimited)));
         final children = <Widget>[
           SettingsSectionNote(l10n.notificationPrecisionLimitations),
           SettingsSwitchTile(
@@ -414,23 +416,16 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             SettingsConnectedTile(
               key: const ValueKey('notification-coverage-notice'),
               leading: Icon(
-                deliveryBlocked || deliveryFailed || batteryRestricted
+                needsAttention
                     ? Icons.warning_amber_rounded
                     : Icons.info_outline,
               ),
               title: l10n.notificationCoverage,
               subtitle: _coverageSubtitle(context, l10n, notificationStatus),
-              trailing:
-                  !widget.troubleshooting &&
-                      (deliveryBlocked || deliveryFailed || batteryRestricted)
+              trailing: !widget.troubleshooting && needsAttention
                   ? const Icon(Icons.chevron_right)
                   : null,
-              onTap:
-                  !widget.troubleshooting &&
-                      (deliveryBlocked ||
-                          deliveryFailed ||
-                          batteryRestricted) &&
-                      !uiCommandBusy
+              onTap: !widget.troubleshooting && needsAttention && !uiCommandBusy
                   ? _openTroubleshooting
                   : null,
             ),
@@ -785,6 +780,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
       ].join('\n');
     } else if (status.coverage == AgendaNotificationCoverage.failed) {
       warning = l10n.notificationCoverageFailed;
+    }
+    if (widget.embedded) {
+      return [
+        ?warning,
+        if (!_isWindows && !batteryAllowed)
+          l10n.notificationBatteryOptimizationWarning,
+      ].join('\n');
     }
     if (!_isWindows) {
       return [

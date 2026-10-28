@@ -85,6 +85,7 @@ Future<void> _mount(
   _CoverageService service, {
   bool enabled = true,
   bool embedded = false,
+  VoidCallback? onOpenTroubleshooting,
   Locale locale = const Locale('en'),
   double width = 1000,
   double textScale = 1,
@@ -109,6 +110,7 @@ Future<void> _mount(
     notificationService: service,
     productivityBridge: bridge,
     embedded: embedded,
+    onOpenTroubleshooting: onOpenTroubleshooting,
   );
   await tester.pumpWidget(
     AppScope(
@@ -155,12 +157,24 @@ void _coverageTestWidgets(
 void main() {
   for (final embedded in [false, true]) {
     _coverageTestWidgets(
-      'Windows limit is visible before the first plan (embedded=$embedded)',
+      'Windows limit stays in notification details before the first plan (embedded=$embedded)',
       (tester) async {
         final service = _CoverageService(status: _status());
         addTearDown(service.dispose);
         await _mount(tester, service, embedded: embedded);
 
+        if (embedded) {
+          expect(_notice, findsNothing);
+          expect(
+            tester
+                .widget<SettingsSwitchTile>(
+                  find.byKey(const ValueKey('notification-settings-enabled')),
+                )
+                .value,
+            isTrue,
+          );
+          return;
+        }
         expect(_notice, findsOneWidget);
         final text = _noticeText(tester);
         expect(text, contains('next 14 days, up to 200'));
@@ -171,6 +185,57 @@ void main() {
       },
     );
   }
+
+  _coverageTestWidgets(
+    'overview shows actionable failures and removes them after recovery',
+    (tester) async {
+      final service = _CoverageService(status: _status());
+      addTearDown(service.dispose);
+      var repairOpened = 0;
+      await _mount(
+        tester,
+        service,
+        embedded: true,
+        onOpenTroubleshooting: () => repairOpened++,
+      );
+
+      for (final status in [
+        _status(end: DateTime(2031, 2, 18, 17, 45)),
+        _status(count: 1, end: DateTime(2031, 2, 18, 17, 45)),
+        _status(coverage: AgendaNotificationCoverage.renewable),
+        _status(
+          count: 200,
+          end: DateTime(2031, 2, 18, 17, 45),
+          coverage: AgendaNotificationCoverage.capacityLimited,
+          overflow: true,
+        ),
+      ]) {
+        service.publish(status);
+        await tester.pumpAndSettle();
+        expect(_notice, findsNothing);
+      }
+
+      for (final (coverage, message) in [
+        (AgendaNotificationCoverage.failed, 'could not be synced'),
+        (AgendaNotificationCoverage.blocked, 'will not fire'),
+      ]) {
+        service.publish(_status(coverage: coverage));
+        await tester.pumpAndSettle();
+        expect(_noticeText(tester), contains(message));
+        expect(_noticeText(tester), isNot(contains('Windows')));
+        expect(_noticeText(tester), isNot(contains('checked through')));
+        expect(_noticeText(tester), isNot(contains('200')));
+        await tester.tap(_notice);
+        await tester.pumpAndSettle();
+      }
+      expect(repairOpened, 2);
+
+      service.publish(_status(count: 2, end: DateTime(2031, 2, 19, 8, 30)));
+      await tester.pumpAndSettle();
+      expect(_notice, findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   _coverageTestWidgets(
     'successful plan shows its real count and window deadline',
