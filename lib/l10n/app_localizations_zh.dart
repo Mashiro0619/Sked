@@ -574,6 +574,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get selectTimetablesToImport => '选择要导入的课表';
 
   @override
+  String get studentDayNextCourse => '下一节课';
+
+  @override
+  String get studentDayNoMoreCourses => '本课表在本学期内已无后续课程。';
+
+  @override
   String get studentDayEmpty => '当天暂无课程';
 
   @override
@@ -3642,6 +3648,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get selectTimetablesToImport => '選擇要匯入的課表';
+
+  @override
+  String get studentDayNextCourse => '下一節課';
+
+  @override
+  String get studentDayNoMoreCourses => '本課表在本學期內已無後續課程。';
 
   @override
   String get studentDayEmpty => '當天暫無課程';

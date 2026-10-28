@@ -606,6 +606,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get selectTimetablesToImport => 'Valitse aikataulut tuoda';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Ei oppitunteja tälle päivälle';
 
   @override

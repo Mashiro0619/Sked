@@ -37,6 +37,8 @@ const commonEnglishFallbacks = <String>{
   'schoolImportFileAction',
   'schoolImportAiHint',
   'schoolImportConfigureAction',
+  'studentDayNextCourse',
+  'studentDayNoMoreCourses',
   'notificationCoverageBlocked',
   'notificationCoverageFailed',
   'notificationBatteryOptimizationWarning',

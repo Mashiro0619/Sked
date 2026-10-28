@@ -410,6 +410,10 @@
   "@selectTimetablesToExport": {},
   "selectTimetablesToImport": "Choose timetables to import",
   "@selectTimetablesToImport": {},
+  "studentDayNextCourse": "Next course",
+  "@studentDayNextCourse": {},
+  "studentDayNoMoreCourses": "No later courses in this timetable's semester.",
+  "@studentDayNoMoreCourses": {},
   "studentDayEmpty": "No courses for this day",
   "timetableCourseCount": "{count} courses",
   "@timetableCourseCount": {

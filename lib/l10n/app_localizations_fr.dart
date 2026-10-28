@@ -618,6 +618,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Choisir les emplois du temps à importer';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Aucun cours ce jour';
 
   @override

@@ -64,6 +64,9 @@ Widget _app(
   bool future = false,
   double scale = 1,
   Brightness brightness = Brightness.light,
+  Locale locale = const Locale('en'),
+  List<CoursePeriodTime> periodTimes = _periods,
+  bool showEmptyAdd = true,
   String? selectedId,
   String? Function(String)? conflictChoice,
   TimetableLiveCourseTarget? liveTarget,
@@ -75,7 +78,7 @@ Widget _app(
   ValueChanged<TimetableCourseTapInfo>? onTap,
   ValueChanged<BuildContext>? onAdd,
 }) => MaterialApp(
-  locale: const Locale('en'),
+  locale: locale,
   supportedLocales: AppLocalizations.supportedLocales,
   localizationsDelegates: appLocalizationsDelegates,
   theme: ThemeData(platform: TargetPlatform.windows, brightness: brightness),
@@ -88,11 +91,11 @@ Widget _app(
       selectedId: selectedId == null ? null : 'course:$selectedId',
       child: TimetableDayAgenda(
         timetable: timetable,
-        periodTimes: _periods,
-        weekDateStart: addCalendarDays(_weekStart, (week - 1) * 7),
+        periodTimes: periodTimes,
+        weekDateStart: startOfWeekFor(timetable.config, week),
         selectedWeek: week,
         realCurrentWeek: currentWeek,
-        localeCode: 'en',
+        localeCode: locale.toLanguageTag(),
         selectedWeekday: day,
         showPastEndedCourses: past,
         showFutureCourses: future,
@@ -110,6 +113,7 @@ Widget _app(
         liveCourseOutlineWidth: 4,
         onCourseTap: onTap,
         onAddCourse: onAdd,
+        showEmptyAddCourseAction: showEmptyAdd,
       ),
     ),
   ),
@@ -134,7 +138,330 @@ Future<void> _size(WidgetTester tester, Size size) async {
 RoundedRectangleBorder _shape(WidgetTester tester, String id) =>
     tester.widget<Material>(_card(id)).shape! as RoundedRectangleBorder;
 
+void _expectNext(
+  WidgetTester tester, {
+  required String name,
+  required DateTime date,
+  required int start,
+  required int end,
+}) {
+  final nameFinder = _key('student-day-next-course-name');
+  final dates = MaterialLocalizations.of(tester.element(nameFinder));
+  expect(tester.widget<Text>(nameFinder).data, name);
+  expect(
+    tester.widget<Text>(_key('student-day-next-course-date')).data,
+    dates.formatFullDate(date),
+  );
+  expect(
+    tester.widget<Text>(_key('student-day-next-course-time')).data,
+    buildTimeRange(start, end),
+  );
+  expect(_key('student-day-no-more-courses'), findsNothing);
+}
+
 void main() {
+  testWidgets('empty day searches after the selected date instead of today', (
+    tester,
+  ) async {
+    final table = _timetable([
+      _course('past', day: DateTime.tuesday, weeks: [1]),
+      _course('later', day: DateTime.tuesday, weeks: [3]),
+      _course('first', day: DateTime.monday, weeks: [3], start: 570, end: 620),
+    ]);
+    await tester.pumpWidget(
+      _app(table, day: DateTime.wednesday, currentWeek: 8),
+    );
+    await tester.pumpAndSettle();
+    _expectNext(
+      tester,
+      name: 'first',
+      date: DateTime(2026, 11, 2),
+      start: 570,
+      end: 620,
+    );
+    expect(_row('past'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'empty day skips non-meeting weeks and keeps explicit and legacy times',
+    (tester) async {
+      final table = _timetable([
+        _course(
+          'explicit',
+          day: DateTime.tuesday,
+          weeks: [5, 3, 5],
+          start: 600,
+          end: 645,
+          periods: [1],
+        ),
+        _course(
+          'legacy',
+          day: DateTime.tuesday,
+          weeks: [3],
+          start: 0,
+          end: 0,
+          periods: [2],
+        ),
+        _course(
+          'unknown',
+          day: DateTime.thursday,
+          weeks: [1],
+          start: 0,
+          end: 0,
+          periods: [99],
+        ),
+      ]);
+      await tester.pumpWidget(_app(table, day: DateTime.wednesday));
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'legacy',
+        date: DateTime(2026, 11, 3),
+        start: 570,
+        end: 620,
+      );
+      await tester.pumpWidget(
+        _app(
+          table,
+          day: DateTime.wednesday,
+          periodTimes: const [
+            CoursePeriodTime(index: 1, startMinutes: 490, endMinutes: 535),
+            CoursePeriodTime(index: 2, startMinutes: 700, endMinutes: 750),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'explicit',
+        date: DateTime(2026, 11, 3),
+        start: 600,
+        end: 645,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'weekly courses advance past Sunday and remain within the semester',
+    (tester) async {
+      final table = _timetable([
+        _course('weekly', weeks: []),
+        _course('outside', day: DateTime.tuesday, weeks: [3]),
+      ]).copyWith(config: _timetable([]).config.copyWith(totalWeeks: 2));
+      await tester.pumpWidget(_app(table, day: DateTime.sunday));
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'weekly',
+        date: DateTime(2026, 10, 26),
+        start: 480,
+        end: 540,
+      );
+      await tester.pumpWidget(_app(table, week: 2, day: DateTime.sunday));
+      await tester.pumpAndSettle();
+      expect(_key('student-day-next-course-name'), findsNothing);
+      expect(_key('student-day-no-more-courses'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'semester boundaries use real Monday weeks and never wrap holidays',
+    (tester) async {
+      final table = _timetable([_course('opening-week')]).copyWith(
+        config: _timetable([]).config
+            .copyWith(startDate: DateTime(2026, 10, 21), totalWeeks: 2),
+      );
+      await tester.pumpWidget(_app(table, week: 0, day: DateTime.sunday));
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'opening-week',
+        date: DateTime(2026, 10, 19),
+        start: 480,
+        end: 540,
+      );
+      await tester.pumpWidget(_app(table, week: 3, day: DateTime.sunday));
+      await tester.pumpAndSettle();
+      expect(_key('student-day-next-course-name'), findsNothing);
+      expect(_key('student-day-no-more-courses'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'next real course honors active conflict choice and ignores inactive previews',
+    (tester) async {
+      final table = _timetable([
+        _course('a', weeks: [2]),
+        _course('b', weeks: [2]),
+        _course('inactive', weeks: [1], start: 450, end: 600),
+      ]);
+      var choice = 'b';
+      String? pick(String key) => choice;
+      Widget app() => _app(
+        table,
+        day: DateTime.sunday,
+        past: true,
+        future: true,
+        conflictChoice: pick,
+      );
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'b',
+        date: DateTime(2026, 10, 26),
+        start: 480,
+        end: 540,
+      );
+      choice = 'a';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'a',
+        date: DateTime(2026, 10, 26),
+        start: 480,
+        end: 540,
+      );
+      choice = 'inactive';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(_key('student-day-next-course-name')).data,
+        isNot('inactive'),
+      );
+    },
+  );
+
+  testWidgets(
+    'next-course projection follows mutable weeks and a different timetable',
+    (tester) async {
+      final weeks = [2];
+      final table = _timetable([_course('first table', weeks: weeks)]);
+      await tester.pumpWidget(_app(table, day: DateTime.sunday));
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'first table',
+        date: DateTime(2026, 10, 26),
+        start: 480,
+        end: 540,
+      );
+      weeks[0] = 4;
+      await tester.pumpWidget(_app(table, day: DateTime.sunday));
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'first table',
+        date: DateTime(2026, 11, 9),
+        start: 480,
+        end: 540,
+      );
+      await tester.pumpWidget(
+        _app(
+          _timetable([
+            _course('second table', day: DateTime.tuesday, weeks: [2]),
+          ]).copyWith(id: 'different-table'),
+          day: DateTime.sunday,
+        ),
+      );
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'second table',
+        date: DateTime(2026, 10, 27),
+        start: 480,
+        end: 540,
+      );
+    },
+  );
+
+  testWidgets(
+    'sparse semester finds the final valid week without a search horizon',
+    (tester) async {
+      final table = _timetable([
+        _course('last course', weeks: [100]),
+      ]).copyWith(config: _timetable([]).config.copyWith(totalWeeks: 100));
+      await tester.pumpWidget(_app(table, day: DateTime.sunday));
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'last course',
+        date: startOfWeekFor(table.config, 100),
+        start: 480,
+        end: 540,
+      );
+    },
+  );
+
+  for (final locale in [
+    const Locale('en'),
+    const Locale('zh'),
+    const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+  ]) {
+    for (final size in [const Size(320, 640), const Size(1362, 768)]) {
+      for (final brightness in Brightness.values) {
+        testWidgets(
+          'empty course summary stays readable at $locale $size $brightness 2x',
+          (tester) async {
+            await _size(tester, size);
+            for (final populated in [true, false]) {
+              final table = _timetable([
+                if (populated)
+                  _course(
+                    'next',
+                    name: 'A long course name about applied mathematics and scientific computing',
+                    weeks: [2],
+                  ),
+              ]);
+              await tester.pumpWidget(
+                _app(
+                  table,
+                  day: DateTime.sunday,
+                  locale: locale,
+                  brightness: brightness,
+                  scale: 2,
+                  showEmptyAdd: false,
+                  onAdd: (_) {},
+                ),
+              );
+              await tester.pumpAndSettle();
+              final tail = _key(
+                populated
+                    ? 'student-day-next-course-time'
+                    : 'student-day-no-more-courses',
+              );
+              await tester.ensureVisible(tail);
+              await tester.pumpAndSettle();
+              final viewport = tester.getRect(
+                _key('student-day-agenda-scroll'),
+              );
+              expect(
+                tester.getRect(tail).bottom,
+                lessThanOrEqualTo(viewport.bottom),
+              );
+              if (populated) {
+                final name = _key('student-day-next-course-name');
+                await tester.ensureVisible(name);
+                await tester.pumpAndSettle();
+                expect(tester.widget<Text>(name).maxLines, isNull);
+                expect(
+                  tester.getRect(name).width,
+                  lessThanOrEqualTo(size.width),
+                );
+              }
+              expect(find.byType(FilledButton), findsNothing);
+              expect(tester.takeException(), isNull);
+            }
+          },
+        );
+      }
+    }
+  }
+
   testWidgets(
     'partial conflicts stay in stable time order with real metadata',
     (tester) async {

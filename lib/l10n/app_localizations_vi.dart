@@ -604,6 +604,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get selectTimetablesToImport => 'Chọn lịch trình để nhập';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Không có môn học trong ngày này';
 
   @override

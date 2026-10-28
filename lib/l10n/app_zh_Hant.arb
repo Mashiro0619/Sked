@@ -408,6 +408,8 @@
   "@selectTimetablesToExport": {},
   "selectTimetablesToImport": "選擇要匯入的課表",
   "@selectTimetablesToImport": {},
+  "studentDayNextCourse": "下一節課",
+  "studentDayNoMoreCourses": "本課表在本學期內已無後續課程。",
   "studentDayEmpty": "當天暫無課程",
   "timetableCourseCount": "{count} 門課程",
   "@timetableCourseCount": {

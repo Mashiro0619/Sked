@@ -408,6 +408,8 @@
   "@selectTimetablesToExport": {},
   "selectTimetablesToImport": "选择要导入的课表",
   "@selectTimetablesToImport": {},
+  "studentDayNextCourse": "下一节课",
+  "studentDayNoMoreCourses": "本课表在本学期内已无后续课程。",
   "studentDayEmpty": "当天暂无课程",
   "timetableCourseCount": "{count} 门课程",
   "@timetableCourseCount": {

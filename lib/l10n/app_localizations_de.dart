@@ -614,6 +614,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zu importierende Stundenpläne auswählen';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Keine Kurse an diesem Tag';
 
   @override

@@ -601,6 +601,13 @@ class AppLocalizationsTh extends AppLocalizations {
   String get selectTimetablesToImport => 'เลือกตารางเวลาที่จะนำเข้า';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'วันนี้ไม่มีวิชาเรียน';
 
   @override

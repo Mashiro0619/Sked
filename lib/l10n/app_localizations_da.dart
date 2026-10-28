@@ -602,6 +602,13 @@ class AppLocalizationsDa extends AppLocalizations {
   String get selectTimetablesToImport => 'Vælg tidsplaner at importere';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Ingen undervisning denne dag';
 
   @override

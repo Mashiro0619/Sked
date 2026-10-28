@@ -603,6 +603,13 @@ class AppLocalizationsCs extends AppLocalizations {
   String get selectTimetablesToImport => 'Vyberte plány pro import';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Na tento den nejsou žádné hodiny';
 
   @override

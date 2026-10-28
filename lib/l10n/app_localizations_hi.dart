@@ -602,6 +602,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String get selectTimetablesToImport => 'आयात करने के लिए टाइमटेबल चुनें';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'इस दिन कोई कक्षा नहीं है';
 
   @override

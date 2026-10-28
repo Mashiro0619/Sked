@@ -1819,6 +1819,7 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
                     child: RepaintBoundary(
                       child: TimetableDayAgenda(
                         key: ValueKey('student-day-agenda-$pageWeek'),
+                        showEmptyAddCourseAction: false,
                         timetable: widget.timetable,
                         periodTimes: widget.snapshot.periodTimes,
                         weekDateStart: weekStart,

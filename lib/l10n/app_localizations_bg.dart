@@ -613,6 +613,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get selectTimetablesToImport => 'Изберете графици за импортиране';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Няма занятия за този ден';
 
   @override

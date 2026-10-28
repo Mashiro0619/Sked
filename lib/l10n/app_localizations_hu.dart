@@ -616,6 +616,13 @@ class AppLocalizationsHu extends AppLocalizations {
       'Válassza ki az importáló menetrendeket';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Ezen a napon nincsenek órák';
 
   @override

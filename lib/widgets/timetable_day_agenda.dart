@@ -36,6 +36,7 @@ class TimetableDayAgenda extends StatefulWidget {
     required this.liveCourseOutlineWidth,
     this.onCourseTap,
     this.onAddCourse,
+    this.showEmptyAddCourseAction = true,
     this.bottomContentInset = 0,
   }) : assert(selectedWeekday >= DateTime.monday),
        assert(selectedWeekday <= DateTime.sunday),
@@ -62,6 +63,7 @@ class TimetableDayAgenda extends StatefulWidget {
   final double liveCourseOutlineWidth;
   final ValueChanged<TimetableCourseTapInfo>? onCourseTap;
   final ValueChanged<BuildContext>? onAddCourse;
+  final bool showEmptyAddCourseAction;
   final double bottomContentInset;
 
   @override
@@ -71,6 +73,7 @@ class TimetableDayAgenda extends StatefulWidget {
 class _TimetableDayAgendaState extends State<TimetableDayAgenda> {
   final _scrollController = ScrollController(keepScrollOffset: false);
   final _projectionCache = TimetableWeekProjectionCache();
+  final _nextProjectionCache = TimetableWeekProjectionCache();
   late TimetableWeekProjection _projection;
   bool _scrollResetPending = false;
 
@@ -113,6 +116,78 @@ class _TimetableDayAgendaState extends State<TimetableDayAgenda> {
         _scrollController.jumpTo(0);
       }
     });
+  }
+
+  _NextDayCourse? _nextCourseAfter(DateTime selectedDate) {
+    final config = widget.timetable.config;
+    final semesterStart = startOfWeekFor(config, 1);
+    final semesterEnd = addCalendarDays(
+      semesterStart,
+      config.totalWeeks * 7 - 1,
+    );
+    final followingDate = nextCalendarDate(selectedDate);
+    if (followingDate.isAfter(semesterEnd)) return null;
+    final firstDate = followingDate.isBefore(semesterStart)
+        ? semesterStart
+        : followingDate;
+    final firstWeek = calendarDaysBetween(semesterStart, firstDate) ~/ 7 + 1;
+    DateTime? nextDate;
+
+    // Find the first real meeting date in one pass over stored course weeks.
+    // This avoids projecting every empty week in a sparse or long semester.
+    for (final course in widget.timetable.courses) {
+      if (course.dayOfWeek < DateTime.monday ||
+          course.dayOfWeek > DateTime.sunday ||
+          resolveCourseTimeRange(course, _projection.periodTimes) == null) {
+        continue;
+      }
+      final earliestWeek =
+          firstWeek + (course.dayOfWeek < firstDate.weekday ? 1 : 0);
+      final weeks = normalizeSemesterWeeks(course.semesterWeeks);
+      final week = weeks.isEmpty
+          ? earliestWeek
+          : weeks.where((value) => value >= earliestWeek).firstOrNull;
+      if (week == null || week > config.totalWeeks) continue;
+      final date = addCalendarDays(
+        semesterStart,
+        (week - 1) * 7 + course.dayOfWeek - DateTime.monday,
+      );
+      if (nextDate == null || date.isBefore(nextDate)) nextDate = date;
+    }
+    if (nextDate == null) return null;
+
+    final week = calendarDaysBetween(semesterStart, nextDate) ~/ 7 + 1;
+    // Resolve the chosen day with the same conflict and legacy-period rules
+    // as the agenda; inactive previews cannot become the next real course.
+    final projection = _nextProjectionCache.project(
+      timetable: widget.timetable,
+      periodTimes: widget.periodTimes,
+      selectedWeek: week,
+      realCurrentWeek: widget.realCurrentWeek,
+      showPastEndedCourses: widget.showPastEndedCourses,
+      showFutureCourses: widget.showFutureCourses,
+      preserveGaps: false,
+    );
+    final layouts =
+        (projection.resolveLayouts(
+                  widget.displayedCourseIdForConflict,
+                )[nextDate.weekday] ??
+                const <CourseLayout>[])
+            .where(
+              (layout) =>
+                  layout.displayState == CourseDisplayState.active &&
+                  layout.endMinutes > layout.startMinutes,
+            )
+            .toList()
+          ..sort((a, b) {
+            final start = a.startMinutes.compareTo(b.startMinutes);
+            if (start != 0) return start;
+            final end = a.endMinutes.compareTo(b.endMinutes);
+            return end != 0 ? end : a.course!.id.compareTo(b.course!.id);
+          });
+    return layouts.isEmpty
+        ? null
+        : _NextDayCourse(date: nextDate, layout: layouts.first);
   }
 
   @override
@@ -170,7 +245,12 @@ class _TimetableDayAgendaState extends State<TimetableDayAgenda> {
                         )
                       : 0,
                 ),
-                child: _DayAgendaEmptyState(onAddCourse: widget.onAddCourse),
+                child: _DayAgendaEmptyState(
+                  nextCourse: _nextCourseAfter(date),
+                  onAddCourse: widget.showEmptyAddCourseAction
+                      ? widget.onAddCourse
+                      : null,
+                ),
               );
             }
             final layout = layouts[index];
@@ -534,9 +614,20 @@ class _AgendaMetadata extends StatelessWidget {
   }
 }
 
-class _DayAgendaEmptyState extends StatelessWidget {
-  const _DayAgendaEmptyState({required this.onAddCourse});
+class _NextDayCourse {
+  const _NextDayCourse({required this.date, required this.layout});
 
+  final DateTime date;
+  final CourseLayout layout;
+}
+
+class _DayAgendaEmptyState extends StatelessWidget {
+  const _DayAgendaEmptyState({
+    required this.nextCourse,
+    required this.onAddCourse,
+  });
+
+  final _NextDayCourse? nextCourse;
   final ValueChanged<BuildContext>? onAddCourse;
 
   @override
@@ -549,20 +640,72 @@ class _DayAgendaEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(
+              Icons.event_available_outlined,
+              size: 40,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
             Text(
               l10n.studentDayEmpty,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: theme.colorScheme.onSurface,
               ),
             ),
+            const SizedBox(height: 24),
+            if (nextCourse case final next?) ...[
+              Text(
+                l10n.studentDayNextCourse,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                next.layout.course!.name,
+                key: const ValueKey('student-day-next-course-name'),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                MaterialLocalizations.of(context).formatFullDate(next.date),
+                key: const ValueKey('student-day-next-course-date'),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                buildTimeRange(
+                  next.layout.startMinutes,
+                  next.layout.endMinutes,
+                ),
+                key: const ValueKey('student-day-next-course-time'),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ] else
+              Text(
+                l10n.studentDayNoMoreCourses,
+                key: const ValueKey('student-day-no-more-courses'),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             if (onAddCourse != null) ...[
               const SizedBox(height: 16),
               Builder(
-                builder: (buttonContext) => FilledButton.icon(
-                  onPressed: () => onAddCourse!(buttonContext),
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.addCourse),
+                builder: (buttonContext) => ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: FilledButton.icon(
+                    onPressed: () => onAddCourse!(buttonContext),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addCourse),
+                  ),
                 ),
               ),
             ],

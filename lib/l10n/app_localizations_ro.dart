@@ -608,6 +608,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get selectTimetablesToImport => 'Alegeți programele de import';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Nu sunt cursuri în această zi';
 
   @override

@@ -605,6 +605,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get selectTimetablesToImport => 'Kies roosters om te importeren';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Geen lessen op deze dag';
 
   @override

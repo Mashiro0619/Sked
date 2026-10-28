@@ -584,6 +584,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get selectTimetablesToImport => 'インポートする時間割を選択';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'この日の授業はありません';
 
   @override

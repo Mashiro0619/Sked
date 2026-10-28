@@ -610,6 +610,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get selectTimetablesToImport => 'Выберите расписания для импорта';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'В этот день нет занятий';
 
   @override

@@ -604,6 +604,13 @@ class AppLocalizationsEt extends AppLocalizations {
   String get selectTimetablesToImport => 'Importimiseks ajakavade valimine';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Sel päeval pole tunde';
 
   @override

@@ -618,6 +618,13 @@ class AppLocalizationsEl extends AppLocalizations {
   String get selectTimetablesToImport => 'Επιλέξτε χρονοδιάγραμμα για εισαγωγή';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Δεν υπάρχουν μαθήματα αυτή την ημέρα';
 
   @override

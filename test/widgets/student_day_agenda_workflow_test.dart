@@ -325,10 +325,10 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: phone);
 
-  testWidgets('phone FAB and empty-day add start on the selected weekday', (
+  testWidgets('phone FAB remains the single add action on empty days', (
     tester,
   ) async {
-    await _mount(tester);
+    final app = await _mount(tester);
     await _tap(tester, _key('student-day-2'));
     await _tap(tester, find.byTooltip('Add course'));
     expect(
@@ -339,10 +339,16 @@ void main() {
 
     await _tap(tester, _key('student-day-3'));
     expect(find.text('No courses for this day'), findsOneWidget);
-    await _tap(
-      tester,
+    expect(
       _inside(_agenda, find.widgetWithText(FilledButton, 'Add course')),
+      findsNothing,
     );
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.text('Lecture monday-0'), findsOneWidget);
+    final nextDate = startOfWeekFor(app.studentView.activeTimetable.config, 6);
+    final strings = MaterialLocalizations.of(tester.element(_agenda));
+    expect(find.text(strings.formatFullDate(nextDate)), findsOneWidget);
+    await _tap(tester, find.byType(FloatingActionButton));
     expect(
       tester.widget<CourseEditorSheet>(_editor).dayOfWeek,
       DateTime.wednesday,
@@ -350,14 +356,15 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: phone);
 
-  testWidgets('hidden phone add preference also hides empty-day add', (
+  testWidgets('empty-day add respects the existing phone FAB preference', (
     tester,
   ) async {
     final app = await _mount(tester, populated: false);
     expect(
       _inside(_agenda, find.widgetWithText(FilledButton, 'Add course')),
-      findsOneWidget,
+      findsNothing,
     );
+    expect(find.byType(FloatingActionButton), findsOneWidget);
     await app.settingsCommands.updateShowAddCourseFab(false);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Add course'), findsNothing);
@@ -371,6 +378,9 @@ void main() {
           .bottomContentInset,
       0,
     );
+    await app.settingsCommands.updateShowAddCourseFab(true);
+    await tester.pumpAndSettle();
+    expect(find.byType(FloatingActionButton), findsOneWidget);
     expect(tester.takeException(), isNull);
   }, variant: phone);
 
@@ -383,6 +393,12 @@ void main() {
     expect(agendaRect.width, lessThanOrEqualTo(880));
     expect(agendaRect.center.dx, closeTo(pagerRect.center.dx, .01));
     await _tap(tester, _key('student-day-4'));
+    expect(find.text('No courses for this day'), findsOneWidget);
+    expect(
+      _inside(_agenda, find.widgetWithText(FilledButton, 'Add course')),
+      findsNothing,
+    );
+    expect(_key('student-add-course'), findsOneWidget);
     await _tap(tester, _key('student-add-course'));
     expect(
       tester.widget<CourseEditorSheet>(_editor).dayOfWeek,

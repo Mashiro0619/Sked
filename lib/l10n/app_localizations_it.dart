@@ -612,6 +612,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get selectTimetablesToImport => 'Scegli gli orari da importare';
 
   @override
+  String get studentDayNextCourse => 'Next course';
+
+  @override
+  String get studentDayNoMoreCourses =>
+      'No later courses in this timetable\'s semester.';
+
+  @override
   String get studentDayEmpty => 'Nessuna lezione per questo giorno';
 
   @override
