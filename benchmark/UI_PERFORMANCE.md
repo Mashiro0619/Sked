@@ -58,9 +58,10 @@ performance evidence. There are no timing assertions in CI.
 $uiPerfRevision = (git rev-parse --short=12 HEAD).Trim()
 $uiPerfOldNoProxy = $env:NO_PROXY
 $uiPerfOldOutputs = $env:FLUTTER_TEST_OUTPUTS_DIR
+$uiPerfOutput = Join-Path ([IO.Path]::GetTempPath()) ('sked-ui-benchmark-' + [guid]::NewGuid().ToString('N'))
 try {
   $env:NO_PROXY = '127.0.0.1,localhost'
-  $env:FLUTTER_TEST_OUTPUTS_DIR = "$PWD\build\benchmarks\ui"
+  $env:FLUTTER_TEST_OUTPUTS_DIR = $uiPerfOutput
   flutter drive --profile -d windows `
     --driver=test_driver/ui_performance_benchmark_driver.dart `
     --target=integration_test/ui_performance_benchmark_test.dart `
@@ -81,7 +82,7 @@ try {
 ```
 
 Replace `windows` with the Android device ID for physical-device measurements.
-The JSON is `build/benchmarks/ui/ui-performance-before-r1.json`. Repeat in three
+The JSON is `ui-performance-before-r1.json` under `$uiPerfOutput`. Repeat in three
 independent processes with distinct labels on each revision, keeping the device,
 display refresh rate, window size, system scaling and power mode unchanged.
 Do not compare Windows and Android absolute numbers.

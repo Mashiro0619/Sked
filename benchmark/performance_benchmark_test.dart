@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../integration_test/support/capture_output_directory.dart';
 import 'src/performance_suite.dart';
 
 void main() {
@@ -14,13 +15,15 @@ void main() {
       'SKED_BENCHMARK_REVISION',
       defaultValue: 'unknown',
     );
+    final outputDirectory = createCaptureOutputDirectory(
+      label: 'performance-benchmark',
+      configuredPath: const String.fromEnvironment('SKED_BENCHMARK_OUTPUT_DIR'),
+    );
     final report = await runPerformanceSuite(
       label: label,
       revision: revision,
       runtime: 'flutter-test-host-jit',
     );
-    final outputDirectory = Directory('build/benchmarks')
-      ..createSync(recursive: true);
     final output = File(
       '${outputDirectory.path}/windows-host-${report.label}.json',
     )..writeAsStringSync('${report.encode()}\n');

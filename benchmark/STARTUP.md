@@ -38,7 +38,7 @@ Create a new evidence directory. Keep its absolute path when switching between
 the two comparison checkouts.
 
 ```powershell
-$startupEvidence = [IO.Path]::GetFullPath((Join-Path $PWD ('.scratch\startup-' + [Guid]::NewGuid().ToString('N'))))
+$startupEvidence = Join-Path ([IO.Path]::GetTempPath()) ('sked-startup-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $startupEvidence | Out-Null
 $startupFixtureRoot = Join-Path $startupEvidence 'fixtures'
 flutter test benchmark/startup_fixture_test.dart "--dart-define=SKED_STARTUP_FIXTURES=$startupFixtureRoot"

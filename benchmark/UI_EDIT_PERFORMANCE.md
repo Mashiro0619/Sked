@@ -67,9 +67,10 @@ notification service. It never registers the user's toast identity.
 $editRevision = (git rev-parse --short=12 HEAD).Trim()
 $editOldNoProxy = $env:NO_PROXY
 $editOldOutputs = $env:FLUTTER_TEST_OUTPUTS_DIR
+$editOutput = Join-Path ([IO.Path]::GetTempPath()) ('sked-ui-edit-benchmark-' + [guid]::NewGuid().ToString('N'))
 try {
   $env:NO_PROXY = '127.0.0.1,localhost,::1'
-  $env:FLUTTER_TEST_OUTPUTS_DIR = "$PWD\build\benchmarks\ui-edit-after\r1"
+  $env:FLUTTER_TEST_OUTPUTS_DIR = $editOutput
   flutter drive --profile -d windows `
     --driver=test_driver/ui_edit_benchmark_driver.dart `
     --target=integration_test/ui_edit_benchmark_test.dart `

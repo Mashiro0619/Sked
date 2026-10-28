@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/utils/time_utils.dart';
 
+import '../integration_test/support/capture_output_directory.dart';
 import 'src/benchmark_fixtures.dart';
 import 'src/benchmark_runner.dart';
 import 'src/performance_suite.dart';
@@ -27,7 +28,12 @@ void main() {
         'SKED_BENCHMARK_REVISION',
         defaultValue: 'unknown',
       );
-      const outputPath = String.fromEnvironment('SKED_BENCHMARK_OUTPUT_DIR');
+      final directory = createCaptureOutputDirectory(
+        label: 'date-benchmark',
+        configuredPath: const String.fromEnvironment(
+          'SKED_BENCHMARK_OUTPUT_DIR',
+        ),
+      );
       final fixtures = PerformanceFixtures.build();
       final fields = [
         for (final schedule in fixtures.generalData5000.schedules)
@@ -67,9 +73,6 @@ void main() {
         },
         results: await runPerformanceBenchmarks(cases),
       );
-      final directory = outputPath.isEmpty
-          ? Directory.systemTemp.createTempSync('sked-date-benchmark-')
-          : (Directory(outputPath)..createSync(recursive: true));
       final output = File('${directory.path}/windows-host-${report.label}.json')
         ..writeAsStringSync('${report.encode()}\n');
       stdout.writeln('Benchmark report: ${output.absolute.path}');

@@ -41,8 +41,11 @@ flutter test benchmark/performance_benchmark_test.dart `
   --dart-define=SKED_BENCHMARK_REVISION=$revision
 ```
 
-The report is written to
-`build/benchmarks/windows-host-<label>.json`.
+The report is written as `windows-host-<label>.json` in a unique system temporary
+directory. `SKED_CAPTURE_OUTPUT` and `Benchmark report:` log its absolute path.
+Set `--dart-define=SKED_BENCHMARK_OUTPUT_DIR=<absolute-directory>` to collect
+multiple named reports in a chosen location. Explicit directories and existing
+artifacts are retained; relative overrides are rejected.
 
 ## Focused strict date parsing comparison
 
@@ -51,9 +54,10 @@ the fixed 5,000-event fixture, its 42-day cold occurrence query, and a hot-cache
 control. It uses the same calibration, five warm-ups, eleven samples and
 three-process comparison protocol. Valid fixture dates are checked against
 the native ISO parser before and after timing; occurrence checksums stay fixed.
-Set `SKED_BENCHMARK_OUTPUT_DIR` to a system temporary directory when collecting
-local evidence. Compare a production baseline and candidate with the identical
-benchmark source, and do not infer allocation counts from timing alone.
+This target uses the same temporary default and absolute
+`SKED_BENCHMARK_OUTPUT_DIR` override as the host suite. Compare a production
+baseline and candidate with the identical benchmark source, and do not infer
+allocation counts from timing alone.
 
 The 2026-10-28 Windows host JIT comparison used `4f3011e` as the production
 baseline. The candidate only moved the strict ISO RegExp factory call to a
@@ -168,7 +172,8 @@ $revision = (git rev-parse --short=12 HEAD).Trim()
 $previousNoProxy = $env:NO_PROXY
 $previousOutputs = $env:FLUTTER_TEST_OUTPUTS_DIR
 $env:NO_PROXY = '127.0.0.1,localhost'
-$env:FLUTTER_TEST_OUTPUTS_DIR = "$PWD\build\benchmarks\android-local-r1"
+$androidBenchmarkOutput = Join-Path ([IO.Path]::GetTempPath()) ('sked-android-benchmark-' + [guid]::NewGuid().ToString('N'))
+$env:FLUTTER_TEST_OUTPUTS_DIR = $androidBenchmarkOutput
 flutter drive --profile -d $deviceId `
   --driver=test_driver/performance_benchmark_driver.dart `
   --target=integration_test/performance_benchmark_test.dart `
@@ -191,6 +196,16 @@ if ($null -eq $previousNoProxy) {
 Set `SKED_BENCHMARK_RUNTIME=android-emulator-x86_64-profile` for emulator
 runs. The localhost proxy bypass is required on hosts whose `HTTP_PROXY`
 would otherwise intercept Flutter's VM service connection.
+
+The benchmark drivers and native accessibility driver preserve an explicit
+absolute `FLUTTER_TEST_OUTPUTS_DIR`. When it is absent or empty, each report uses
+a unique system temporary directory and logs `SKED_CAPTURE_OUTPUT` with its
+location. Relative overrides fail clearly. Report filenames, result validation
+and measurement protocols remain unchanged; this only redirects custom reports,
+not Flutter or Gradle build/cache output. Copy the shared
+`test_driver/support/report_output_directory.dart` and
+`integration_test/support/capture_output_directory.dart` alongside a driver when
+adapting the same harness to an older checkout.
 
 ## Phase 8 evidence
 

@@ -1,5 +1,7 @@
 import 'package:integration_test/integration_test_driver.dart';
 
+import 'support/report_output_directory.dart';
+
 Future<void> main() => integrationDriver(
   responseDataCallback: (data) async {
     final report = data?['uiWorkspacePerformance'];
@@ -89,6 +91,9 @@ Future<void> main() => integrationDriver(
     await writeResponseData(
       report,
       testOutputFilename: 'ui-workspace-performance-$label',
+      destinationDirectory: createDriverReportOutputDirectory(
+        label: 'ui-workspace-performance-benchmark',
+      ).path,
     );
   },
 );

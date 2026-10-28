@@ -1,5 +1,7 @@
 import 'package:integration_test/integration_test_driver.dart';
 
+import 'support/report_output_directory.dart';
+
 Future<void> main() => integrationDriver(
   responseDataCallback: (data) async {
     final report = data?['uiPerformance'];
@@ -29,6 +31,9 @@ Future<void> main() => integrationDriver(
     await writeResponseData(
       report,
       testOutputFilename: 'ui-performance-$label',
+      destinationDirectory: createDriverReportOutputDirectory(
+        label: 'ui-performance-benchmark',
+      ).path,
     );
   },
 );

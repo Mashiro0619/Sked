@@ -1,5 +1,7 @@
 import 'package:integration_test/integration_test_driver.dart';
 
+import 'support/report_output_directory.dart';
+
 Future<void> main() => integrationDriver(
   responseDataCallback: (data) async {
     final report = data?['dataOperations'];
@@ -18,6 +20,9 @@ Future<void> main() => integrationDriver(
     await writeResponseData(
       report,
       testOutputFilename: 'data-operations-$label',
+      destinationDirectory: createDriverReportOutputDirectory(
+        label: 'data-operations-benchmark',
+      ).path,
     );
   },
 );

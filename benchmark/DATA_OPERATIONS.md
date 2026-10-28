@@ -36,9 +36,10 @@ work consistent. Example Windows process:
 $dataPerfRevision = (git rev-parse --short=12 HEAD).Trim()
 $dataPerfOldNoProxy = $env:NO_PROXY
 $dataPerfOldOutputs = $env:FLUTTER_TEST_OUTPUTS_DIR
+$dataPerfOutput = Join-Path ([IO.Path]::GetTempPath()) ('sked-data-benchmark-' + [guid]::NewGuid().ToString('N'))
 try {
   $env:NO_PROXY = '127.0.0.1,localhost,::1'
-  $env:FLUTTER_TEST_OUTPUTS_DIR = "$PWD\build\benchmarks\data-after\r1"
+  $env:FLUTTER_TEST_OUTPUTS_DIR = $dataPerfOutput
   flutter drive --profile -d windows `
     --driver=test_driver/data_operations_benchmark_driver.dart `
     --target=integration_test/data_operations_benchmark_test.dart `

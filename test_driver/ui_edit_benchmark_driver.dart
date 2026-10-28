@@ -1,5 +1,7 @@
 import 'package:integration_test/integration_test_driver.dart';
 
+import 'support/report_output_directory.dart';
+
 Future<void> main() => integrationDriver(
   responseDataCallback: (data) async {
     final report = data?['uiEdit'];
@@ -15,6 +17,12 @@ Future<void> main() => integrationDriver(
         !RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$').hasMatch(label)) {
       throw StateError('SKED_UI_EDIT_LABEL must be a filename-safe label.');
     }
-    await writeResponseData(report, testOutputFilename: 'ui-edit-$label');
+    await writeResponseData(
+      report,
+      testOutputFilename: 'ui-edit-$label',
+      destinationDirectory: createDriverReportOutputDirectory(
+        label: 'ui-edit-benchmark',
+      ).path,
+    );
   },
 );
