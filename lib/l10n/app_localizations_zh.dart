@@ -404,7 +404,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appBackupSheetSubtitle =>
-      '完整备份会覆盖当前应用数据。AI API 密钥存放在系统安全存储中，不会写入备份文件。';
+      '恢复完整备份会替换当前应用数据。AI API 密钥存放在系统安全存储中，不会写入备份文件。';
 
   @override
   String get restoreBackupFileTitle => '从 JSON 文件恢复';
@@ -3483,7 +3483,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get appBackupSheetSubtitle =>
-      '完整備份會覆蓋目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。';
+      '恢復完整備份會取代目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。';
 
   @override
   String get restoreBackupFileTitle => '從 JSON 檔案恢復';

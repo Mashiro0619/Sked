@@ -296,7 +296,7 @@
   "@dataImportExportDesc": {},
   "appBackupTitle": "完整應用備份與恢復",
   "@appBackupTitle": {},
-  "appBackupSheetSubtitle": "完整備份會覆蓋目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。",
+  "appBackupSheetSubtitle": "恢復完整備份會取代目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。",
   "@appBackupSheetSubtitle": {},
   "restoreBackupFileTitle": "從 JSON 檔案恢復",
   "@restoreBackupFileTitle": {},
