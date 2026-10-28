@@ -113,9 +113,9 @@ Future<void> _expectDesktopClippedTargets(WidgetTester tester) async {
   }
 }
 
-// These exact labels at 1x were found to be false positives from Flutter's
-// modal-light/modal-dark pixel partition: thin antialiased strokes dominated
-// its darker bucket. Each exception is rechecked below using the actual
+// These exact 1x light labels were pixel-verified on Windows and Linux after
+// Flutter's modal-light/modal-dark partition selected antialiased stroke edges
+// as the foreground. Each candidate is rechecked below using the actual
 // RenderParagraph foreground and the dominant painted background. WCAG 1.4.3
 // permits ignoring user-agent antialiasing; all other nodes use the stock rule.
 const _samplingLabels = <_AccessibilityPage, Set<String>>{
@@ -129,20 +129,25 @@ const _samplingLabels = <_AccessibilityPage, Set<String>>{
     'Bill payment',
     'Household chores',
     'Evening walk',
+    'Review session',
+    'Project deadline',
     'My calendar',
     'Study',
+    'Activities',
   },
-  _AccessibilityPage.list: {'Today', 'My calendar', 'Study'},
-  _AccessibilityPage.timeline: {'Today', 'My calendar', 'Study'},
+  _AccessibilityPage.list: {'Today', 'My calendar', 'Study', 'Activities'},
+  _AccessibilityPage.timeline: {'Today', 'My calendar', 'Study', 'Activities'},
   _AccessibilityPage.settings: {
     'Student timetable',
     'Reminders & notifications',
     'Features',
     'Data and privacy',
+    'About Sked',
   },
   _AccessibilityPage.courseEditor: {
     'Course name',
     'Location',
+    'Day',
     'Weeks',
     'End time',
     'Credits',
@@ -159,14 +164,13 @@ const _samplingLabels = <_AccessibilityPage, Set<String>>{
   },
 };
 
-// Keep phone evidence separate from desktop captions. At 393 dp and DPR 2.75,
-// both editors' End time paint contains the actual #42474e foreground on
-// #f2f3f9 (8.45:1); the modal dark bucket instead selects antialiased pixels.
-// The verifier still resolves every visible occurrence and enforces 4.5:1.
+// Keep phone evidence separate from desktop captions. The additional Linux
+// captions measured 8.45-16.27:1 using actual text paint and local backgrounds.
+// Verify every visible occurrence again on each host.
 const _phoneSamplingLabels = <_AccessibilityPage, Set<String>>{
-  _AccessibilityPage.studentWeek: {'Today', '1', '11:40', '21:40'},
-  _AccessibilityPage.courseEditor: {'End time'},
-  _AccessibilityPage.eventEditor: {'End time'},
+  _AccessibilityPage.studentWeek: {'Today', '1', '11:40', '21:40', 'Sep'},
+  _AccessibilityPage.courseEditor: {'Day', 'Weeks', 'End time'},
+  _AccessibilityPage.eventEditor: {'End time', 'Repeat'},
 };
 
 class _VerifiedNodeContrastGuideline extends MinimumTextContrastGuideline {
