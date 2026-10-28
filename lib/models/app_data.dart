@@ -22,24 +22,6 @@ import 'workspace_panel_display_mode.dart';
 
 const Symbol _keepNullable = #keep;
 
-int? _tryDecodeInt(Object? value) {
-  if (value is num) {
-    return value.toInt();
-  }
-  if (value is String) {
-    return int.tryParse(value.trim());
-  }
-  return null;
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-String? _nullableStringValue(Object? value) {
-  return value is String ? value : null;
-}
-
 class _ThemeSettingsSnapshot {
   const _ThemeSettingsSnapshot({
     required this.themeMode,
@@ -85,13 +67,13 @@ bool _hasModeThemeFields(Map<String, dynamic> json) {
 _ThemeSettingsSnapshot _decodeLegacyThemeSettings(Map<String, dynamic> json) {
   return _ThemeSettingsSnapshot(
     themeMode: normalizeThemeMode(
-      _stringValue(json['themeMode'], defaultThemeMode),
+      appDataStringValue(json['themeMode'], defaultThemeMode),
     ),
     themeColorMode: normalizeThemeColorMode(
-      _stringValue(json['themeColorMode'], defaultThemeColorMode),
+      appDataStringValue(json['themeColorMode'], defaultThemeColorMode),
     ),
     themeSeedColorValue:
-        _tryDecodeInt(json['themeSeedColorValue']) ??
+        appDataParsedIntValue(json['themeSeedColorValue']) ??
         defaultThemeSeedColorValue,
     colorfulUiColorValues: decodeColorValueMap(json['colorfulUiColorValues']),
   );
@@ -140,10 +122,6 @@ _ThemeSettingsSnapshot _themeSettingsForMode(
       colorfulUiColorValues: studentMode.colorfulUiColorValues,
     ),
   };
-}
-
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
 }
 
 class AppData {
@@ -327,7 +305,7 @@ class AppData {
     final migrated = appDataMigrationRunner.run(json);
 
     final localeCode = normalizeLocaleCode(
-      _stringValue(migrated['localeCode'], defaultLocaleCode),
+      appDataStringValue(migrated['localeCode'], defaultLocaleCode),
     );
 
     // Detect legacy format: old flat keys exist and studentMode key is absent
@@ -369,7 +347,9 @@ class AppData {
               localeCode: localeCode,
             )
           : _buildDefaultGeneralMode(localeCode: localeCode);
-      activeMode = parseAppMode(_nullableStringValue(migrated['activeMode']));
+      activeMode = parseAppMode(
+        appDataNullableStringValue(migrated['activeMode']),
+      );
     }
 
     if (isLegacy || usesLegacyThemeOwnership) {
@@ -409,19 +389,19 @@ class AppData {
       notificationSettings: NotificationSettings.fromJson(
         _decodeNotificationSettingsJson(migrated),
       ),
-      privacyPolicyAcceptedVersion: _nullableStringValue(
+      privacyPolicyAcceptedVersion: appDataNullableStringValue(
         migrated['privacyPolicyAcceptedVersion'],
       ),
-      privacyPolicyAcceptedAtIso: _nullableStringValue(
+      privacyPolicyAcceptedAtIso: appDataNullableStringValue(
         migrated['privacyPolicyAcceptedAtIso'],
       ),
       // Older versions omitted false, so a missing stored flag may be an
       // explicit opt-out. Only newly constructed data uses the enabled default.
       includePrereleaseUpdates: migrated['includePrereleaseUpdates'] == true,
-      ignoredUpdateVersion: _nullableStringValue(
+      ignoredUpdateVersion: appDataNullableStringValue(
         migrated['ignoredUpdateVersion'],
       ),
-      availableUpdateVersion: _nullableStringValue(
+      availableUpdateVersion: appDataNullableStringValue(
         migrated['availableUpdateVersion'],
       ),
     );
@@ -678,7 +658,7 @@ class ImportExportEnvelope {
         ) ??
         1;
     return ImportExportEnvelope(
-      schema: _stringValue(json['schema']),
+      schema: appDataStringValue(json['schema']),
       version: version,
       data: data ?? const {},
     );
@@ -778,7 +758,7 @@ List<CoursePeriodTime> decodePeriodTimesEnvelope(
     kind: ImportCountKind.periodTimes,
     localeCode: localeCode,
   );
-  final rawPeriodTimes = _listValue(envelope.data['periodTimes']);
+  final rawPeriodTimes = appDataListValue(envelope.data['periodTimes']);
   final periodTimes = rawPeriodTimes
       .map(appDataStringKeyedMap)
       .whereType<Map<String, dynamic>>()
@@ -879,7 +859,7 @@ class GeneralScheduleExportData {
         'General schedule schemaVersion is unsupported.',
       );
     }
-    final raw = _listValue(json['schedules']);
+    final raw = appDataListValue(json['schedules']);
     final scheduleMaps = raw
         .map(appDataStringKeyedMap)
         .whereType<Map<String, dynamic>>()
