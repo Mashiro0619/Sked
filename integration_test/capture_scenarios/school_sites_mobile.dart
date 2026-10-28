@@ -57,9 +57,7 @@ void registerCaptureScenarios() {
     await DesktopWindowBridge.instance.initialize();
     final wasAvailable = DesktopWindowBridge.instance.available;
     final previousPlatform = debugDefaultTargetPlatformOverride;
-    final captures = VisualCaptureSession(
-      defaultOutput: '.scratch/capture-scenes/school-sites-mobile',
-    );
+    final captures = VisualCaptureSession(label: 'school-sites-mobile');
     const profiles = [
       ('phone-320-en-2x', Size(320, 900), 2.0, 'en', TargetPlatform.android),
       ('phone-360-zh', Size(360, 850), 1.0, 'zh', TargetPlatform.android),

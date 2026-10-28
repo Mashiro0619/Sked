@@ -6,15 +6,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'capture_output_directory.dart';
+
 /// Captures Flutter client content; simulated platforms do not imply hardware
 /// acceptance. A manifest is published only after every expected scene succeeds.
 class VisualCaptureSession {
-  VisualCaptureSession({required String defaultOutput})
-    : _output = Directory(
-        const String.fromEnvironment('SKED_VISUAL_OUTPUT').isEmpty
-            ? defaultOutput
-            : const String.fromEnvironment('SKED_VISUAL_OUTPUT'),
-      );
+  VisualCaptureSession({
+    required String label,
+    String configuredPath = const String.fromEnvironment('SKED_VISUAL_OUTPUT'),
+  }) : _output = createCaptureOutputDirectory(
+         label: label,
+         configuredPath: configuredPath,
+       );
 
   final Directory _output;
   final _captures = <Map<String, Object?>>[];

@@ -8,15 +8,17 @@
 从仓库根目录运行，例如：
 
 ```powershell
+$captureRoot = Join-Path ([IO.Path]::GetTempPath()) ('sked-workspace-pages-' + [guid]::NewGuid().ToString('N'))
 flutter test integration_test/capture_scenarios_test.dart -d windows --no-pub `
   --dart-define=SKED_CAPTURE_SCENE=workspace-pages `
-  --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/capture-scenes/workspace-pages `
+  "--dart-define=SKED_VISUAL_OUTPUT=$captureRoot" `
   --reporter expanded
 ```
 
 将 `SKED_CAPTURE_SCENE` 替换为表中的一个 ID。省略或拼错 ID 会在采集前
-失败并列出可选值；不默认运行全部组。可省略输出参数，独立组默认写入
-`.scratch/capture-scenes/<ID>`。`floating-panels` 保留分类与查看面板的组合
+失败并列出可选值；不默认运行全部组。可省略输出参数，已迁移组每次在
+系统临时目录创建独立输出，并在日志报告绝对路径；清单见 [输出约定](CAPTURE_OUTPUT.md)。
+其余组在完成各自迁移前保留原默认位置。`floating-panels` 保留分类与查看面板的组合
 采集，子组使用各自默认目录；需要统一目录时显式指定 `SKED_VISUAL_OUTPUT`。
 为重复采集使用新的输出目录，结合退出码与本次完整场景清单判断成功，
 不把旧目录的图片当作新证据。

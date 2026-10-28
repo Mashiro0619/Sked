@@ -18,9 +18,7 @@ void registerCaptureScenarios() {
     t,
   ) async {
     await DesktopWindowBridge.instance.initialize();
-    final captures = VisualCaptureSession(
-      defaultOutput: '.scratch/capture-scenes/mobile-calendar-grids',
-    );
+    final captures = VisualCaptureSession(label: 'mobile-calendar-grids');
     final today = normalizeDateOnly(DateTime.now());
     final cases = <(String, Size, double, Brightness, TargetPlatform, String)>[
       (

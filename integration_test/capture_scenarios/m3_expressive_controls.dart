@@ -28,9 +28,7 @@ void registerCaptureScenarios() {
       final wasAvailable = bridge.available;
       final originalStrategy = FocusManager.instance.highlightStrategy;
       final boundary = GlobalKey();
-      final captures = VisualCaptureSession(
-        defaultOutput: '.scratch/capture-scenes/m3-expressive-controls',
-      );
+      final captures = VisualCaptureSession(label: 'm3-expressive-controls');
       const cases = [
         ('phone-360-zh', Size(360, 850), 1.0, 'zh', Brightness.light),
         ('phone-320-en-2x', Size(320, 900), 2.0, 'en', Brightness.light),

@@ -16,9 +16,7 @@ void registerCaptureScenarios() {
     t,
   ) async {
     await DesktopWindowBridge.instance.initialize();
-    final captures = VisualCaptureSession(
-      defaultOutput: '.scratch/capture-scenes/mobile-home',
-    );
+    final captures = VisualCaptureSession(label: 'mobile-home');
     final today = normalizeDateOnly(DateTime.now());
     final cases = <(String, Size, double, Brightness, TargetPlatform, String)>[
       (

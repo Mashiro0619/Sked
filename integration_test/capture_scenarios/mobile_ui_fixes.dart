@@ -22,9 +22,7 @@ void registerCaptureScenarios() {
   ) async {
     await DesktopWindowBridge.instance.initialize();
     final wasAvailable = DesktopWindowBridge.instance.available;
-    final captures = VisualCaptureSession(
-      defaultOutput: '.scratch/capture-scenes/mobile-ui-fixes',
-    );
+    final captures = VisualCaptureSession(label: 'mobile-ui-fixes');
     const cases = [
       ('phone-360-zh', Size(360, 850), 1.0, 'zh', Brightness.light),
       ('phone-320-en-2x', Size(320, 900), 2.0, 'en', Brightness.light),
