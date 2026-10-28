@@ -7,6 +7,7 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/controllers/app_lifecycle.dart'
     show bundledPrivacyPolicyVersion;
 import 'package:sked/services/secret_store.dart';
+import 'package:sked/screens/app_home_screen.dart';
 
 import '../support/data_transfer_codec.dart';
 
@@ -50,6 +51,7 @@ Future<AppRuntime> _providerFor(_ControllableStorage storage) async {
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
     secretStore: const _NoopSecretStore(),
+    appVersionLoader: () async => '2.3.0',
   );
   addTearDown(provider.dispose);
   await provider.lifecycle.load();
@@ -72,10 +74,11 @@ AppData _initialApp({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('new app data uses light theme without changing legacy fallbacks', () {
+  test('new app data follows system without changing legacy fallbacks', () {
     final data = buildInitialAppData(buildDefaultPeriodTimes());
 
     expect(defaultThemeMode, 'system');
+    expect(newUserDefaultThemeMode, 'system');
     expect(data.studentMode.themeMode, newUserDefaultThemeMode);
     expect(data.generalMode.themeMode, newUserDefaultThemeMode);
     expect(
@@ -89,7 +92,7 @@ void main() {
     expect(GeneralScheduleData.createDefault().themeMode, defaultThemeMode);
   });
 
-  testWidgets('fresh launch stays light when the system is dark', (
+  testWidgets('fresh launch follows changes to system brightness', (
     tester,
   ) async {
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
@@ -101,14 +104,141 @@ void main() {
     await tester.pumpAndSettle();
 
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(materialApp.themeMode, ThemeMode.light);
+    expect(materialApp.themeMode, ThemeMode.system);
+    expect(
+      Theme.of(
+        tester.element(find.byKey(const ValueKey('first-launch-onboarding'))),
+      ).brightness,
+      Brightness.dark,
+    );
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    await tester.pumpAndSettle();
     expect(
       Theme.of(
         tester.element(find.byKey(const ValueKey('first-launch-onboarding'))),
       ).brightness,
       Brightness.light,
     );
+    expect(storage.data!.studentMode.themeMode, 'system');
+    expect(storage.data!.generalMode.themeMode, 'system');
   });
+
+  for (final (themeMode, seed, onboarding) in [
+    ('light', defaultThemeSeedColorValue, true),
+    ('system', defaultThemeSeedColorValue, true),
+    ('dark', defaultThemeSeedColorValue, false),
+    ('light', 0xFF00695C, false),
+  ]) {
+    testWidgets('stored $themeMode/$seed theme keeps onboarding=$onboarding', (
+      tester,
+    ) async {
+      final initial = _initialApp(activeMode: AppMode.student);
+      final storage = _ControllableStorage(
+        initial.copyWith(
+          studentMode: initial.studentMode.copyWith(
+            themeMode: themeMode,
+            themeSeedColorValue: seed,
+          ),
+          generalMode: initial.generalMode.copyWith(
+            themeMode: themeMode,
+            themeSeedColorValue: seed,
+          ),
+        ),
+      );
+      final provider = await _providerFor(storage);
+      await tester.pumpWidget(MyApp(app: provider));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('first-launch-onboarding')),
+        onboarding ? findsOneWidget : findsNothing,
+      );
+      expect(storage.data!.studentMode.themeMode, themeMode);
+      expect(storage.data!.generalMode.themeMode, themeMode);
+      expect(storage.data!.studentMode.themeSeedColorValue, seed);
+      expect(storage.data!.generalMode.themeSeedColorValue, seed);
+    });
+  }
+
+  testWidgets(
+    'saved themes and custom colors remain independent across workspaces',
+    (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      final initial = _initialApp(
+        activeMode: AppMode.student,
+        acceptedVersion: bundledPrivacyPolicyVersion,
+        acceptedAtIso: '2026-01-02T03:04:05.000Z',
+      );
+      final student = initial.studentMode.copyWith(
+        themeMode: 'light',
+        themeSeedColorValue: 0xFF00695C,
+        colorfulUiColorValues: const {colorfulUiPrimaryKey: 0xFF00695C},
+      );
+      final general = initial.generalMode.copyWith(
+        themeMode: 'dark',
+        themeSeedColorValue: 0xFF6A1B9A,
+        colorfulUiColorValues: const {colorfulUiPrimaryKey: 0xFF6A1B9A},
+      );
+      final storage = _ControllableStorage(
+        initial.copyWith(studentMode: student, generalMode: general),
+      );
+      final provider = await _providerFor(storage);
+      await tester.pumpWidget(MyApp(app: provider));
+      await tester.pumpAndSettle();
+
+      Brightness brightness() =>
+          Theme.of(tester.element(find.byType(AppHomeScreen))).brightness;
+      expect(brightness(), Brightness.light);
+      expect(
+        find.byKey(const ValueKey('first-launch-onboarding')),
+        findsNothing,
+      );
+      await provider.workspaces.switchMode(AppMode.general);
+      await tester.pumpAndSettle();
+      expect(brightness(), Brightness.dark);
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      await tester.pumpAndSettle();
+      expect(brightness(), Brightness.dark);
+
+      await provider.settingsCommands.updateThemeMode('system');
+      await tester.pumpAndSettle();
+      expect(brightness(), Brightness.light);
+      await provider.workspaces.switchMode(AppMode.student);
+      await tester.pumpAndSettle();
+      expect(brightness(), Brightness.light);
+      expect(storage.data!.studentMode.themeMode, 'light');
+      expect(storage.data!.generalMode.themeMode, 'system');
+      expect(
+        storage.data!.studentMode.themeSeedColorValue,
+        student.themeSeedColorValue,
+      );
+      expect(
+        storage.data!.generalMode.themeSeedColorValue,
+        general.themeSeedColorValue,
+      );
+      expect(
+        storage.data!.studentMode.colorfulUiColorValues,
+        student.colorfulUiColorValues,
+      );
+      expect(
+        storage.data!.generalMode.colorfulUiColorValues,
+        general.colorfulUiColorValues,
+      );
+
+      final reopened = await _providerFor(storage);
+      expect(reopened.session.data.studentMode.themeMode, 'light');
+      expect(reopened.session.data.generalMode.themeMode, 'system');
+      expect(
+        reopened.session.data.studentMode.colorfulUiColorValues,
+        student.colorfulUiColorValues,
+      );
+      expect(
+        reopened.session.data.generalMode.colorfulUiColorValues,
+        general.colorfulUiColorValues,
+      );
+    },
+  );
 
   test('first launch commits mode and privacy acceptance once', () async {
     final storage = _ControllableStorage(_initialApp());
