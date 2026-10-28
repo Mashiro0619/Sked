@@ -55,6 +55,7 @@ Windows 渲染必须标为模拟布局，不能称为 Android 真机验收。
 | `mobile-calendar-interactions` | 触控日期拖动、实际字形与学生工作区 | [mobile_calendar_interactions.dart](capture_scenarios/mobile_calendar_interactions.dart) |
 | `mobile-calendar-grids` | 手机日期、月份和年份选择；语义日期及字号 | [mobile_calendar_grids.dart](capture_scenarios/mobile_calendar_grids.dart) |
 | `mobile-home` | 手机主页及区间导航 | [mobile_home.dart](capture_scenarios/mobile_home.dart) |
+| `home-typography` | 固定跨年数据；`SKED_VISUAL_GROUP=status` 采集320dp／2×英文课程状态，`range` 采集600dp／2×非紧凑触屏日期标题 | [home_typography.dart](capture_scenarios/home_typography.dart) |
 | `adaptive-layout` | 移动布局、安全区、横屏和字号 | [adaptive_layout.dart](capture_scenarios/adaptive_layout.dart) |
 | `mobile-picker-surfaces` | 移动选择器呈现 | [mobile_picker_surfaces.dart](capture_scenarios/mobile_picker_surfaces.dart) |
 | `mobile-secondary-pickers` | 移动次级选择器 | [mobile_secondary_pickers.dart](capture_scenarios/mobile_secondary_pickers.dart) |
@@ -83,6 +84,13 @@ Windows 渲染必须标为模拟布局，不能称为 Android 真机验收。
 保证所拍场景已真正打开，但截图采集本身不能代替完整行为回归。
 日常回归仍运行 `test/`；存储恢复、通知防重、保存竞争、重复日程和
 草稿生命周期的保护不依赖截图数量或历史组件树。
+
+`home-typography` 每次只采集一个子组并生成一张图。清单的`observations`
+记录原生段落宽高、最大行数、实际截断、缺失字形和拉丁词自然宽度及
+所跨行位置，用于固定协议下的前后比较。已知基线问题仍允许保存画面；
+退出成功表示场景与点击／取消断言通过，不表示观测文字全部可读。
+课程组使用实际英文“Off week”，不替换成虚构长词；日期组固定为
+2026-12-29至2027-01-04，并确认没有进入紧凑工具栏分支。
 
 独立原生行为入口保留：`data_lifecycle_smoke_test.dart` 使用隔离目录验证
 编辑、重新加载和恢复；`notification_queue_native_test.dart` 验证平台队列；

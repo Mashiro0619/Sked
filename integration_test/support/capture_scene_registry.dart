@@ -41,6 +41,7 @@ import '../capture_scenarios/mobile_ui_fixes.dart' as scene37;
 import '../capture_scenarios/m3_expressive_controls.dart' as scene38;
 import '../capture_scenarios/school_sites_mobile.dart' as scene39;
 import '../capture_scenarios/student_day_agenda.dart' as scene40;
+import '../capture_scenarios/home_typography.dart' as scene41;
 
 const captureSceneRegistry = <String, void Function()>{
   'category-panels': scene0.registerCaptureScenarios,
@@ -84,4 +85,5 @@ const captureSceneRegistry = <String, void Function()>{
   'm3-expressive-controls': scene38.registerCaptureScenarios,
   'school-sites-mobile': scene39.registerCaptureScenarios,
   'student-day-agenda': scene40.registerCaptureScenarios,
+  'home-typography': scene41.registerCaptureScenarios,
 };
