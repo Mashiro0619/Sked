@@ -57,6 +57,8 @@ CI 将完整 VM 测试按 `--total-shards=4 --shard-index=0..3` 分配，每个�
 
 性能修改先按 [基准说明](benchmark/README.md) 保存改动前后结果，固定源码、数据和协议；测量期间不并发运行分析、测试或构建。报告每轮值和退化，不能只保留有利样本。
 
+CI 重跑失败分片时，保留同一次工作流运行中已成功分片的覆盖率，只替换重跑分片的工件。最终检查仍要求所有分片及覆盖率合并成功；缺片、取消或失败不会通过。GitHub 的[重跑说明](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)明确重跑使用原提交和引用。
+
 ## 本地化
 
 编辑 `lib/l10n/app_*.arb`，以 `app_en.arb` 为模板；占位符名称、类型及消息含义保持一致。新文案至少提供英文、简体中文、繁体中文；其他语言暂用英文时，按现有机制显式加入 [allowedFallbacks](test/l10n_completeness_test.dart)，并记录后续补译范围。

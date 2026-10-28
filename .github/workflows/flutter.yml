@@ -146,7 +146,11 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-shard-${{ matrix.shard }}-${{ github.run_attempt }}
+          # Rerunning failed jobs does not rerun the successful shards. Keep one
+          # current artifact per shard within this workflow run and replace only
+          # the rerun shard, while the final gate still requires job success.
+          name: coverage-shard-${{ matrix.shard }}
+          overwrite: true
           path: coverage/lcov.info
           if-no-files-found: error
           retention-days: 14
@@ -173,7 +177,7 @@ jobs:
       - name: Download shard coverage
         uses: actions/download-artifact@v8
         with:
-          pattern: coverage-shard-*-${{ github.run_attempt }}
+          pattern: coverage-shard-*
           path: ${{ runner.temp }}/sked-coverage-shards
           merge-multiple: false
 

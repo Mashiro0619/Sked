@@ -115,13 +115,48 @@ void main() {
       expect(tests['continue-on-error'], isNull);
       final upload = stepNamed(steps, 'Upload shard coverage');
       expect(upload['if'], r'${{ always() }}');
-      expect(
-        upload['with']['name'],
-        r'coverage-shard-${{ matrix.shard }}-${{ github.run_attempt }}',
-      );
+      expect(upload['with']['name'], r'coverage-shard-${{ matrix.shard }}');
       expect(upload['with']['path'], 'coverage/lcov.info');
       expect(upload['with']['if-no-files-found'], 'error');
       expect(steps.indexOf(upload), greaterThan(steps.indexOf(tests)));
+    },
+  );
+
+  test(
+    'a partial rerun retains successful shards and replaces its own report',
+    () {
+      final upload = stepNamed(
+        stepsFor('test-shards'),
+        'Upload shard coverage',
+      );
+      final download = stepNamed(
+        stepsFor('coverage'),
+        'Download shard coverage',
+      );
+      String render(String value, int shard, int attempt) => value
+          .replaceAll(r'${{ matrix.shard }}', '$shard')
+          .replaceAll(r'${{ github.run_attempt }}', '$attempt');
+      final artifacts = <String, int>{};
+      for (var shard = 0; shard < 4; shard++) {
+        artifacts[render(upload['with']['name'] as String, shard, 1)] = shard;
+      }
+      artifacts[render(upload['with']['name'] as String, 2, 2)] = 20;
+      final pattern = render(download['with']['pattern'] as String, 0, 2);
+      final matches = RegExp(
+        '^${RegExp.escape(pattern).replaceAll(r'\*', '.*')}\$',
+      );
+      final downloaded = artifacts.entries.where(
+        (entry) => matches.hasMatch(entry.key),
+      );
+      expect(downloaded.map((entry) => entry.value).toList()..sort(), [
+        0,
+        1,
+        3,
+        20,
+      ]);
+      expect(upload['with']['overwrite'], isTrue);
+      expect(download['with']['run-id'], isNull);
+      expect(download['with']['repository'], isNull);
     },
   );
 
@@ -131,10 +166,7 @@ void main() {
     expect(job['if'], r'${{ always() && !cancelled() }}');
     final steps = stepsFor('coverage');
     final download = stepNamed(steps, 'Download shard coverage');
-    expect(
-      download['with']['pattern'],
-      r'coverage-shard-*-${{ github.run_attempt }}',
-    );
+    expect(download['with']['pattern'], 'coverage-shard-*');
     expect(download['with']['merge-multiple'], false);
     expect(
       download['with']['path'],
