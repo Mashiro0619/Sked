@@ -101,6 +101,11 @@ process and garbage-collection state. The result applies to eligible queued
 commands; a single edit, already started write or overlapping field does not
 receive the five-to-one reduction.
 
+Only the five explicitly declared preference command types participate.
+Course saves, general event saves and recurring-instance edits still use
+individual snapshot writes. This benchmark does not measure or establish a
+latency or throughput improvement for those editing paths.
+
 For the disjoint case, the three process medians of post-sequence RSS were
 295.90 / 295.65 / 304.45 MiB for the reference and 315.03 / 303.90 / 308.63 MiB
 for the candidate. The candidate's observed endpoints were higher; fewer
