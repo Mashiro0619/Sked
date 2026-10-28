@@ -1,3 +1,5 @@
+import 'app_data_json_values.dart';
+
 /// How a course resolves its reminder schedule.
 ///
 /// `inherit` uses the application-wide course default, `disabled` suppresses
@@ -17,14 +19,6 @@ CourseReminderBehavior parseCourseReminderBehavior(String? value) {
     if (behavior.value == value) return behavior;
   }
   return CourseReminderBehavior.inherit;
-}
-
-int? _decodeIntegralMinutes(Object? value) {
-  if (value is int) return value;
-  if (value is num && value.isFinite && value % 1 == 0) {
-    return value.toInt();
-  }
-  return null;
 }
 
 const Object _keepNullable = #keep;
@@ -52,9 +46,9 @@ class CourseReminderSettings {
   /// snapshot validator.
   factory CourseReminderSettings.fromJson(Map<String, dynamic> json) {
     final behavior = parseCourseReminderBehavior(
-      json['behavior'] is String ? json['behavior'] as String : null,
+      appDataNullableStringValue(json['behavior']),
     );
-    final minutes = _decodeIntegralMinutes(json['minutesBefore']);
+    final minutes = appDataIntegralIntValue(json['minutesBefore']);
     return CourseReminderSettings(
       behavior: behavior,
       minutesBefore: minutes,
