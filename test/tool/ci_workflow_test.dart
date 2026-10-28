@@ -42,9 +42,9 @@ void main() {
   });
 
   test(
-    'test job resolves the internal plugin before formatting and analysis',
+    'quality checks resolve the internal plugin before formatting and analysis',
     () {
-      final steps = stepsFor('test');
+      final steps = stepsFor('checks');
       final pluginLock = stepNamed(steps, 'Verify internal plugin lockfile');
       expect(
         pluginLock['working-directory'],
@@ -72,7 +72,7 @@ void main() {
         'America/Sao_Paulo': 'america-sao-paulo',
         'Pacific/Apia': 'pacific-apia',
       };
-      final timezoneSteps = stepsFor('test').where(
+      final timezoneSteps = stepsFor('checks').where(
         (step) => (step['env'] as YamlMap?)?['SKED_DST_TEST_ZONE'] != null,
       );
       for (final zone in zones.entries) {
@@ -97,6 +97,93 @@ void main() {
           reason: 'The original suite supports the four original zones only.',
         );
       }
+    },
+  );
+
+  test(
+    'all VM tests run in four independent shards with retained coverage',
+    () {
+      final job = jobs['test-shards'] as YamlMap;
+      expect(job['strategy']['fail-fast'], false);
+      expect(job['strategy']['matrix']['shard'], [0, 1, 2, 3]);
+      final steps = stepsFor('test-shards');
+      final tests = stepNamed(steps, 'Test shard with coverage');
+      expect(
+        tests['run'],
+        r'flutter test --no-pub --coverage --concurrency=2 --total-shards=4 --shard-index=${{ matrix.shard }}',
+      );
+      expect(tests['continue-on-error'], isNull);
+      final upload = stepNamed(steps, 'Upload shard coverage');
+      expect(upload['if'], r'${{ always() }}');
+      expect(
+        upload['with']['name'],
+        r'coverage-shard-${{ matrix.shard }}-${{ github.run_attempt }}',
+      );
+      expect(upload['with']['path'], 'coverage/lcov.info');
+      expect(upload['with']['if-no-files-found'], 'error');
+      expect(steps.indexOf(upload), greaterThan(steps.indexOf(tests)));
+    },
+  );
+
+  test('coverage is combined only after downloading every distinct shard', () {
+    final job = jobs['coverage'] as YamlMap;
+    expect(job['needs'], 'test-shards');
+    expect(job['if'], r'${{ always() && !cancelled() }}');
+    final steps = stepsFor('coverage');
+    final download = stepNamed(steps, 'Download shard coverage');
+    expect(
+      download['with']['pattern'],
+      r'coverage-shard-*-${{ github.run_attempt }}',
+    );
+    expect(download['with']['merge-multiple'], false);
+    expect(
+      download['with']['path'],
+      r'${{ runner.temp }}/sked-coverage-shards',
+    );
+    final merge = stepNamed(steps, 'Merge complete shard coverage');
+    expect(
+      merge['run'],
+      r'dart tool/merge_lcov.dart "$RUNNER_TEMP/sked-coverage-shards" coverage/lcov.info 4',
+    );
+    final upload = stepNamed(steps, 'Upload coverage report');
+    expect(
+      upload['with']['name'],
+      r'coverage-report-${{ github.run_attempt }}',
+    );
+    expect(upload['with']['if-no-files-found'], 'error');
+    expect(steps.indexOf(download), lessThan(steps.indexOf(merge)));
+    expect(steps.indexOf(merge), lessThan(steps.indexOf(upload)));
+    expect(merge['continue-on-error'], isNull);
+    expect(upload['if'], isNull);
+  });
+
+  test(
+    'the existing test gate fails for incomplete or failed dependencies',
+    () {
+      final job = jobs['test'] as YamlMap;
+      expect(job['needs'], ['checks', 'test-shards', 'coverage']);
+      expect(job['if'], r'${{ always() }}');
+      final gate = stepNamed(stepsFor('test'), 'Require all test results');
+      expect(gate['shell'], 'bash');
+      expect(gate['env']['CHECKS_RESULT'], r'${{ needs.checks.result }}');
+      expect(gate['env']['SHARDS_RESULT'], r'${{ needs.test-shards.result }}');
+      expect(gate['env']['COVERAGE_RESULT'], r'${{ needs.coverage.result }}');
+      expect((gate['run'] as String).trim().split('\n'), [
+        'set -eu',
+        r'test "$CHECKS_RESULT" = success',
+        r'test "$SHARDS_RESULT" = success',
+        r'test "$COVERAGE_RESULT" = success',
+      ]);
+      expect(gate['continue-on-error'], isNull);
+      final checks = stepsFor('checks');
+      expect(
+        stepNamed(checks, 'Test browser instance lease')['run'],
+        'flutter test --platform chrome test/services/app_instance_lease_web_test.dart',
+      );
+      expect(
+        stepNamed(checks, 'Build web release')['run'],
+        'flutter build web --release',
+      );
     },
   );
 

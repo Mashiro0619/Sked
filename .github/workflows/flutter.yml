@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  checks:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -49,9 +49,6 @@ jobs:
 
       - name: Analyze
         run: flutter analyze
-
-      - name: Test with coverage
-        run: flutter test --coverage
 
       - name: Test browser instance lease
         timeout-minutes: 10
@@ -120,14 +117,96 @@ jobs:
       - name: Build web release
         run: flutter build web --release
 
+  test-shards:
+    name: VM tests (shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Test shard with coverage
+        run: flutter test --no-pub --coverage --concurrency=2 --total-shards=4 --shard-index=${{ matrix.shard }}
+
+      - name: Upload shard coverage
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-shard-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 14
+
+  coverage:
+    needs: test-shards
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Download shard coverage
+        uses: actions/download-artifact@v8
+        with:
+          pattern: coverage-shard-*-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sked-coverage-shards
+          merge-multiple: false
+
+      - name: Merge complete shard coverage
+        run: dart tool/merge_lcov.dart "$RUNNER_TEMP/sked-coverage-shards" coverage/lcov.info 4
+
       - name: Upload coverage report
-        if: ${{ always() && hashFiles('coverage/lcov.info') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ github.run_attempt }}
           path: coverage/lcov.info
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
+
+  # Keep the existing required `test` check: skipped/cancelled/failed shards or
+  # missing coverage cannot turn it green merely because formatting passed.
+  test:
+    needs: [checks, test-shards, coverage]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all test results
+        shell: bash
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          SHARDS_RESULT: ${{ needs.test-shards.result }}
+          COVERAGE_RESULT: ${{ needs.coverage.result }}
+        run: |
+          set -eu
+          test "$CHECKS_RESULT" = success
+          test "$SHARDS_RESULT" = success
+          test "$COVERAGE_RESULT" = success
 
   android-build:
     name: Build Android release (CI signing only)
