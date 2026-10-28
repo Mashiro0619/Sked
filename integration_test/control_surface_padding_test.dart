@@ -11,6 +11,7 @@ import 'package:sked/widgets/workspace_editor_form.dart';
 
 import '../test/widgets/control_surface_padding_test.dart';
 import '../test/widgets/date_header_padding_test.dart';
+import 'support/capture_output_directory.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +23,10 @@ void main() {
       throw UnsupportedError('This capture uses the Windows engine.');
     }
     if (outputPath.isNotEmpty) {
-      await Directory(outputPath).create(recursive: true);
+      createCaptureOutputDirectory(
+        label: 'control-surface-padding',
+        configuredPath: outputPath,
+      );
     }
   });
 

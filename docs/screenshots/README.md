@@ -39,7 +39,7 @@ $skedDocRevision = git rev-parse HEAD
 $skedDocVersionLine = Select-String -LiteralPath 'pubspec.yaml' -Pattern '^version:\s*(\S+)\s*$'
 if (@($skedDocVersionLine).Count -ne 1) { throw 'Expected one version in pubspec.yaml.' }
 $skedDocVersion = $skedDocVersionLine.Matches[0].Groups[1].Value
-$skedDocCapture = Join-Path (Get-Location) ('.scratch/docs-desktop-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$skedDocCapture = Join-Path ([IO.Path]::GetTempPath()) ('sked-docs-desktop-' + [guid]::NewGuid().ToString('N'))
 flutter test integration_test/documentation_screenshots_test.dart -d windows --no-pub `
   --dart-define="SKED_VISUAL_OUTPUT=$skedDocCapture" `
   --dart-define="SKED_DOC_REVISION=$skedDocRevision" `
@@ -53,7 +53,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Export failed.' }
 
 - [采集测试](../../integration_test/documentation_screenshots_test.dart)使用真实详情和编辑入口，验证页面出现、临时提醒浮层已关闭后才截图；采集结束清理组件和内存状态。
 - [导出工具](../../tool/export_documentation_screenshots.py)先检查完整的 16 张清单、路径、格式与尺寸，再输出 JPEG（质量 90、4:4:4，不缩放、不裁剪）；不会覆盖手机图片。
-- `manifest.json`记录版本、UI 修订、采集时间、宿主平台、语言、场景、尺寸、主题、文件大小与 SHA-256。原始 PNG 留在忽略的 `.scratch/` 下，不进入仓库。
+- `manifest.json`记录版本、UI 修订、采集时间、宿主平台、语言、场景、尺寸、主题、文件大小与 SHA-256。原始 PNG 留在本次系统临时目录下供复核，不进入仓库。
 - 导出后逐张检查原图、确认双语 README 图片链接有效，并核实手机文件没有变动，再提交文档。商店素材需另行处理，本工具不更新商店截图包。
 
 ## English notes

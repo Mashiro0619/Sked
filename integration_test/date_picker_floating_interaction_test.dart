@@ -10,6 +10,7 @@ import 'package:sked/services/desktop_window_bridge.dart';
 
 import '../test/widgets/date_picker_floating_interaction_test.dart';
 import '../test/widgets/new_timetable_date_picker_position_test.dart';
+import 'support/capture_output_directory.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +23,10 @@ void main() {
     }
     await DesktopWindowBridge.instance.initialize();
     if (outputPath.isNotEmpty) {
-      await Directory(outputPath).create(recursive: true);
+      createCaptureOutputDirectory(
+        label: 'date-picker-floating',
+        configuredPath: outputPath,
+      );
     }
   });
 

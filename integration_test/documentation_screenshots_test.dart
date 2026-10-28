@@ -25,6 +25,7 @@ import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 
 import '../test/support/workspace_harness.dart';
+import 'support/capture_output_directory.dart';
 
 // Native Flutter renderer + production widgets, with exclusively in-memory data.
 // Capture only the Windows desktop surface; do not replace phone screenshots.
@@ -151,11 +152,13 @@ void main() {
     const outputPath = String.fromEnvironment('SKED_VISUAL_OUTPUT');
     if (outputPath.isEmpty) {
       throw StateError(
-        'Set SKED_VISUAL_OUTPUT to an ignored capture directory.',
+        'Set SKED_VISUAL_OUTPUT to an absolute capture directory.',
       );
     }
-    final out = Directory(outputPath);
-    await out.create(recursive: true);
+    final out = createCaptureOutputDirectory(
+      label: 'documentation',
+      configuredPath: outputPath,
+    );
     await DesktopWindowBridge.instance.initialize();
     expect(DesktopWindowBridge.instance.available, isTrue);
     const version = String.fromEnvironment('SKED_DOC_VERSION');

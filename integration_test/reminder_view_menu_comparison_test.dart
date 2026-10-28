@@ -8,6 +8,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../test/widgets/reminder_view_menu_comparison_test.dart';
+import 'support/capture_output_directory.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,10 @@ void main() {
       throw UnsupportedError('This regression uses the Windows engine.');
     }
     if (outputPath.isNotEmpty) {
-      await Directory(outputPath).create(recursive: true);
+      createCaptureOutputDirectory(
+        label: 'reminder-menu-comparison',
+        configuredPath: outputPath,
+      );
     }
   });
 

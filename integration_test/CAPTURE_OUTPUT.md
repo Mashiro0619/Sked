@@ -24,3 +24,14 @@
 多步编辑与标题组在每个测试开始时申请一次目录，将其传给全部截图和清单写入步骤，避免每次截图分别创建新目录。组件画廊继续在一个组内汇总多个带独立 profile 文件名的测试。
 
 原生窗口组保留各自的证据与截图文件名、指针传播设置和平台保护；通知队列组保留 `queue-report.json` 的 PASS/FAIL 记录与测试通知清理。输出目录协议的单元测试仅验证路径与写入，不代表运行了原生指针、通知队列或可见横幅验收。
+
+以下可选采集入口保留“未指定目录就只运行断言”的行为；启用时校验绝对目录并报告输出位置，不自动打开采集：
+
+| 入口 | 显式目录参数 |
+| --- | --- |
+| `sked_menu_surface_test.dart` | `SKED_MENU_CAPTURE_DIR` |
+| `reminder_view_menu_comparison_test.dart` | `SKED_MENU_COMPARISON_CAPTURE_DIR` |
+| `date_picker_floating_interaction_test.dart` | `SKED_DATE_PICKER_CAPTURE_DIR` |
+| `control_surface_padding_test.dart` | `SKED_CONTROL_PADDING_CAPTURE_DIR` |
+
+`documentation_screenshots_test.dart` 继续要求显式 `SKED_VISUAL_OUTPUT` 与版本、源码标识，目录也必须是绝对路径。复现命令见 [文档截图](../docs/screenshots/README.md)。
