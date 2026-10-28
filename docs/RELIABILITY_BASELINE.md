@@ -30,6 +30,8 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 文件夹具不能证明真实断电恢复或原生 keyring 迁移；显式退出保存不能保证操作系统强杀前落盘。通知重排、权限撤回、后台回收与厂商限制应结合 [通知验收矩阵](ANDROID_NOTIFICATION_ACCEPTANCE.md) 验证。
 
+仓库保存完成后返回实际落盘快照、写入编号及数据会话编号；会话根据回执发布提交，不用队列中较新的内存快照替代已经完成的写入，也不再次发布同一编号。当前每个完整快照仍单独排队执行原存储事务；接收入队不代表保存完成，失败不产生成功回执。见 [仓库串行保存测试](../test/data/app_repository_test.dart) 与 [提交发布测试](../test/controllers/app_session_commit_test.dart)。
+
 ## 外部 JSON 与备份导入的条数边界
 
 外部导入在 JSON 解析后、迁移复制和领域模型构建前统一检查原始条数。课表 JSON、普通日程 JSON、节次时间 JSON、完整备份、旧版 AppData 备份和学校站点 JSON 共用 [计数规则](../lib/models/import_count_limits.dart)。候选预览和实际导入使用同一入口；超过任一上限即整份拒绝，不截断或部分保存。错误提供英文、简体中文、繁体中文，其余语言明确登记英文回退。

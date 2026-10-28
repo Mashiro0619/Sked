@@ -312,6 +312,69 @@ void main() {
   });
 
   group('AppRepository write serialization', () {
+    test(
+      'receipts describe each completed write, not the queued current',
+      () async {
+        final initial = _emptyApp();
+        final firstGate = Completer<void>();
+        final secondGate = Completer<void>();
+        final storage = _FakeStorage(
+          initialResult: StorageLoadResult(
+            data: initial,
+            recoveryStatus: RecoveryStatus.none,
+          ),
+        )..saveGates.addAll([firstGate, secondGate]);
+        addTearDown(() {
+          if (!firstGate.isCompleted) firstGate.complete();
+          if (!secondGate.isCompleted) secondGate.complete();
+        });
+        final repo = AppRepository(storage: storage);
+        await repo.load();
+        final first = initial.copyWith(themeMode: 'dark');
+        final second = first.copyWith(themeMode: 'light');
+        final receipts = <RepositoryWriteReceipt>[];
+        final firstSave = repo.save(first, dataSessionRevision: 7);
+        final secondSave = repo.save(second, dataSessionRevision: 7);
+        unawaited(firstSave.then(receipts.add));
+        unawaited(secondSave.then(receipts.add));
+
+        while (storage.saveCount < 1) {
+          await Future<void>.delayed(Duration.zero);
+        }
+        expect(receipts, isEmpty);
+        expect(repo.current, same(second));
+        expect(repo.persisted, same(initial));
+        firstGate.complete();
+        final firstReceipt = await firstSave;
+        expect(firstReceipt.committedSnapshot, same(first));
+        expect(firstReceipt.dataSessionRevision, 7);
+        expect(storage.lastSaved, same(first));
+        expect(repo.current, same(second));
+        expect(repo.persisted, same(first));
+        expect(receipts, [same(firstReceipt)]);
+
+        secondGate.complete();
+        final secondReceipt = await secondSave;
+        expect(secondReceipt.committedSnapshot, same(second));
+        expect(secondReceipt.dataSessionRevision, 7);
+        expect(
+          secondReceipt.batchRevision,
+          greaterThan(firstReceipt.batchRevision),
+        );
+        expect(storage.writeLog, [same(first), same(second)]);
+        expect(repo.persisted, same(second));
+        expect(receipts, [same(firstReceipt), same(secondReceipt)]);
+
+        await repo.retryLoad();
+        final afterReload = await repo.save(first, dataSessionRevision: 8);
+        expect(
+          afterReload.batchRevision,
+          greaterThan(secondReceipt.batchRevision),
+        );
+        expect(afterReload.dataSessionRevision, 8);
+      },
+    );
+
     test('overlapping saves persist snapshots in registration order', () async {
       final storage = _FakeStorage(
         initialResult: StorageLoadResult(

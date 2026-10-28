@@ -127,6 +127,9 @@ void main() {
     expect(commits.last.changedDomains, {AppDataDomain.student});
     expect(commits.map((commit) => commit.versions.agenda), [1, 1]);
     expect(commits.map((commit) => commit.revision), [1, 2]);
+    expect(commits.first.snapshot.notificationSettings.enabled, isTrue);
+    expect(commits.first.snapshot.studentMode.themeMode, isNot('dark'));
+    expect(commits.last.snapshot, same(storage.data));
     expect(storage.data!.notificationSettings.enabled, isTrue);
     expect(storage.data!.studentMode.themeMode, 'dark');
   });

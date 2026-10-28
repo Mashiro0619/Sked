@@ -5,6 +5,20 @@ import 'package:flutter/foundation.dart';
 import '../models/app_data.dart';
 import 'timetable_storage.dart';
 
+/// Acknowledges the exact snapshot whose storage transaction completed.
+@immutable
+class RepositoryWriteReceipt {
+  const RepositoryWriteReceipt({
+    required this.committedSnapshot,
+    required this.batchRevision,
+    required this.dataSessionRevision,
+  });
+
+  final AppData committedSnapshot;
+  final int batchRevision;
+  final int dataSessionRevision;
+}
+
 /// 应用所有持久化数据的唯一入口。
 ///
 /// 设计目标：
@@ -130,7 +144,11 @@ class AppRepository {
     try {
       final revision = _replaceCurrent(data);
       await _awaitOrRollback(
-        _enqueueWrite(data, allowWhileRecoveryBlocked: true),
+        _enqueueWrite(
+          data,
+          revision: revision,
+          allowWhileRecoveryBlocked: true,
+        ),
         revision,
       );
     } catch (error) {
@@ -147,11 +165,18 @@ class AppRepository {
 
   /// 整份替换当前 AppData，并立即落盘（默认 flush=true，因为整份替换基本
   /// 都发生在导入、初始化等不能丢的场景）。
-  Future<void> save(AppData data) async {
+  Future<RepositoryWriteReceipt> save(
+    AppData data, {
+    int dataSessionRevision = 0,
+  }) async {
     _ensureWritable();
     final revision = _replaceCurrent(data);
-    final pendingWrite = _enqueueWrite(data);
-    await _awaitOrRollback(pendingWrite, revision);
+    final pendingWrite = _enqueueWrite(
+      data,
+      revision: revision,
+      dataSessionRevision: dataSessionRevision,
+    );
+    return _awaitOrRollback(pendingWrite, revision);
   }
 
   Future<String?> filePath() async {
@@ -199,9 +224,12 @@ class AppRepository {
     return _currentRevision;
   }
 
-  Future<void> _awaitOrRollback(Future<void> pendingWrite, int revision) async {
+  Future<RepositoryWriteReceipt> _awaitOrRollback(
+    Future<RepositoryWriteReceipt> pendingWrite,
+    int revision,
+  ) async {
     try {
-      await pendingWrite;
+      return await pendingWrite;
     } catch (_) {
       if (_currentRevision == revision) {
         _current = _lastPersisted;
@@ -211,8 +239,10 @@ class AppRepository {
     }
   }
 
-  Future<void> _enqueueWrite(
+  Future<RepositoryWriteReceipt> _enqueueWrite(
     AppData data, {
+    required int revision,
+    int dataSessionRevision = 0,
     bool allowWhileRecoveryBlocked = false,
   }) {
     _writesInFlight++;
@@ -240,10 +270,15 @@ class AppRepository {
             rethrow;
           }
           _lastPersisted = data;
+          return RepositoryWriteReceipt(
+            committedSnapshot: data,
+            batchRevision: revision,
+            dataSessionRevision: dataSessionRevision,
+          );
         });
-    _pendingWrite = write;
+    _pendingWrite = write.then<void>((_) {});
     unawaited(
-      write.then<void>(
+      _pendingWrite.then<void>(
         (_) {
           _writesInFlight--;
         },

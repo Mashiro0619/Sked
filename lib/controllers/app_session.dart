@@ -34,6 +34,7 @@ class AppSession {
   AppData _data;
   var _mutationEpoch = 0;
   var _commitRevision = 0;
+  var _publishedWriteRevision = 0;
   AppData? _lastPublishedSnapshot;
   var _versions = const AppDataVersions();
   var _committedSessionRevision = 0;
@@ -104,11 +105,15 @@ class AppSession {
     final attemptEpoch = _mutationEpoch;
     _lastPublishedSnapshot ??= repository.persisted;
     try {
-      await repository.save(snapshot);
-      if (publish) {
+      final receipt = await repository.save(
+        snapshot,
+        dataSessionRevision: dataSessionRevision,
+      );
+      if (publish && receipt.batchRevision > _publishedWriteRevision) {
+        _publishedWriteRevision = receipt.batchRevision;
         publishCommittedSnapshot(
-          snapshot,
-          dataSessionRevision: dataSessionRevision,
+          receipt.committedSnapshot,
+          dataSessionRevision: receipt.dataSessionRevision,
         );
       }
     } catch (error) {
