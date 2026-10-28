@@ -35,6 +35,7 @@ import 'package:sked/widgets/workspace_frame.dart';
 
 import '../../test/support/category_manager_harness.dart';
 import '../../test/support/workspace_harness.dart';
+import '../support/capture_output_directory.dart';
 
 enum _Group { course, timetable, event, categories, pickers, secondary }
 
@@ -85,6 +86,7 @@ void registerCaptureScenarios() {
     testWidgets('Windows panel headings: ${group.name}-${scene.name}', (
       tester,
     ) async {
+      final output = createCaptureOutputDirectory(label: 'panel-headings');
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = _wideSize;
       addTearDown(tester.view.reset);
@@ -111,7 +113,7 @@ void registerCaptureScenarios() {
       });
       final captures = <Map<String, Object?>>[];
       addTearDown(() async {
-        final output = await _outputDirectory();
+        await output.create(recursive: true);
         await File('${output.path}/${group.name}-${scene.name}-manifest.json')
             .writeAsString(
               const JsonEncoder.withIndent('  ').convert({
@@ -158,7 +160,7 @@ void registerCaptureScenarios() {
         ),
       );
       await tester.pumpAndSettle();
-      final capture = _Capture(tester, group, scene, captures);
+      final capture = _Capture(tester, group, scene, captures, output);
       switch (group) {
         case _Group.course:
           await _courseScenes(tester, provider, scene, capture);
@@ -693,7 +695,14 @@ class _Heading {
 }
 
 class _Capture {
-  const _Capture(this.tester, this.group, this.scene, this.captures);
+  const _Capture(
+    this.tester,
+    this.group,
+    this.scene,
+    this.captures,
+    this.output,
+  );
+  final Directory output;
   final WidgetTester tester;
   final _Group group;
   final _Scene scene;
@@ -731,7 +740,7 @@ class _Capture {
         .toImage(pixelRatio: 1);
     try {
       final data = (await image.toByteData(format: ui.ImageByteFormat.png))!;
-      final output = await _outputDirectory();
+      await output.create(recursive: true);
       await File('${output.path}/$name.png')
           .writeAsBytes(data.buffer.asUint8List());
       captures.add({
@@ -751,17 +760,6 @@ Map<String, double> _rect(Rect rect) => {
   'width': rect.width,
   'height': rect.height,
 };
-
-Future<Directory> _outputDirectory() async {
-  final output = Directory(
-    const String.fromEnvironment(
-      'SKED_VISUAL_OUTPUT',
-      defaultValue: '.scratch/capture-scenes/panel-headings',
-    ),
-  );
-  await output.create(recursive: true);
-  return output;
-}
 
 class _PickerGallery extends StatelessWidget {
   const _PickerGallery({required this.config});

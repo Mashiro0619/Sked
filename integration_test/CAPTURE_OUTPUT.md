@@ -16,5 +16,8 @@
 | 工作区与设置 | `compact-toolbars`、`desktop-panels`、`desktop-resize`、`workspace-chrome`、`workspace-pages`、`settings-layout`、`settings-transfer`、`theme-tasks` |
 | 分类与浮层 | `category-manager`、`category-panels`、`workspace-editor`、`floating-panels`、`floating-panel-anchors` |
 | 控件、日期与提醒 | `component-gallery`、`control-gallery`、`date-navigation`、`date-range-highlights`、`day-agenda`、`dropdown-focus`、`event-pickers`、`modal-chrome`、`reminder-hover`、`reminder-summary` |
+| 多步编辑与标题 | `course-details`、`editor-layouts`、`panel-headings` |
 
 移动捕获会话的图片与 `manifest.json` 位于同一目录；只有完成预期的全部截图后才写成功清单，重复文件名会被拒绝。其他场景保留原有文件名和清单协议。
+
+多步编辑与标题组在每个测试开始时申请一次目录，将其传给全部截图和清单写入步骤，避免每次截图分别创建新目录。组件画廊继续在一个组内汇总多个带独立 profile 文件名的测试。

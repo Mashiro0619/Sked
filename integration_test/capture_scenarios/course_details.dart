@@ -11,6 +11,7 @@ import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 
 import '../../test/support/workspace_harness.dart';
+import '../support/capture_output_directory.dart';
 
 const _captureKey = ValueKey('course-details-spacing-visual-capture');
 const _courseId = 'spacing-visual-course';
@@ -46,6 +47,7 @@ void registerCaptureScenarios() {
     testWidgets('course details Windows spacing: ${scene.name}', (
       tester,
     ) async {
+      final output = createCaptureOutputDirectory(label: 'course-details');
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(1440, 1000);
       addTearDown(tester.view.reset);
@@ -99,7 +101,7 @@ void registerCaptureScenarios() {
         findsOneWidget,
       );
       expect(edit.hitTestable(), findsOneWidget);
-      await _capture(tester, '${scene.name}-floating');
+      await _capture(tester, output, '${scene.name}-floating');
 
       if (scene.name == 'zh') {
         // Enter from the real header action, then return without modifying the
@@ -122,14 +124,14 @@ void registerCaptureScenarios() {
           originalBounds,
         );
         expect(edit.hitTestable(), findsOneWidget);
-        await _capture(tester, '${scene.name}-editor-return');
+        await _capture(tester, output, '${scene.name}-editor-return');
 
         await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
         await tester.pumpAndSettle();
         expect(tester.element(details), same(detailsElement));
-        await _capture(tester, '${scene.name}-docked');
+        await _capture(tester, output, '${scene.name}-docked');
         await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.overlay,
         );
@@ -144,14 +146,14 @@ void registerCaptureScenarios() {
         expect(tester.getSize(surface).width, closeTo(320, .1));
         expect(tester.element(details), same(detailsElement));
         expect(edit.hitTestable(), findsOneWidget);
-        await _capture(tester, '${scene.name}-width-320');
+        await _capture(tester, output, '${scene.name}-width-320');
 
         if (!scene.longContent) {
           tester.view.physicalSize = const Size(720, 420);
           await tester.pumpAndSettle();
           expect(tester.element(details), same(detailsElement));
           expect(edit.hitTestable(), findsOneWidget);
-          await _capture(tester, '${scene.name}-short');
+          await _capture(tester, output, '${scene.name}-short');
           final scrollable = find.descendant(
             of: _key('workspace-view-body'),
             matching: find.byType(Scrollable),
@@ -165,7 +167,7 @@ void registerCaptureScenarios() {
             find.descendant(of: details, matching: find.text(course.remarks)),
             findsOneWidget,
           );
-          await _capture(tester, '${scene.name}-short-scrolled');
+          await _capture(tester, output, '${scene.name}-short-scrolled');
         }
       }
       expect(tester.takeException(), isNull);
@@ -250,7 +252,11 @@ AppData _fixtureData(_Scenario scene) {
   );
 }
 
-Future<void> _capture(WidgetTester tester, String name) async {
+Future<void> _capture(
+  WidgetTester tester,
+  Directory output,
+  String name,
+) async {
   expect(tester.takeException(), isNull, reason: name);
   final surface = tester.getRect(_key('workspace-detail-surface'));
   final size = tester.view.physicalSize / tester.view.devicePixelRatio;
@@ -262,12 +268,6 @@ Future<void> _capture(WidgetTester tester, String name) async {
     _key('workspace-inspector-close').hitTestable(),
     findsOneWidget,
     reason: name,
-  );
-  final output = Directory(
-    const String.fromEnvironment(
-      'SKED_VISUAL_OUTPUT',
-      defaultValue: '.scratch/capture-scenes/course-details',
-    ),
   );
   await output.create(recursive: true);
   final boundary = tester.renderObject<RenderRepaintBoundary>(

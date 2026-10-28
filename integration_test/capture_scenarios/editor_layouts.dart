@@ -18,6 +18,7 @@ import 'package:sked/widgets/workspace_editor_time_rows.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../../test/support/workspace_harness.dart';
+import '../support/capture_output_directory.dart';
 
 enum _EditorGroup { course, event, timetable }
 
@@ -40,6 +41,7 @@ void registerCaptureScenarios() {
   ]) {
     final name = '${group.name}-$locale-${editing ? 'edit' : 'add'}-${scale}x';
     testWidgets('hybrid editor Windows fonts: $name', (tester) async {
+      final output = createCaptureOutputDirectory(label: 'editor-layouts');
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(1440, 1000);
       addTearDown(tester.view.reset);
@@ -148,7 +150,7 @@ void registerCaptureScenarios() {
           closeTo(tester.getRect(dates.last).left, .1),
         );
       }
-      await _capture(tester, '$name-floating');
+      await _capture(tester, output, '$name-floating');
       if (locale == 'zh' && editing) {
         if (group == _EditorGroup.event) {
           final toggle = find.descendant(
@@ -164,7 +166,7 @@ void registerCaptureScenarios() {
             ),
             findsNothing,
           );
-          await _capture(tester, '$name-all-day');
+          await _capture(tester, output, '$name-all-day');
           await tester.tap(toggle);
           await tester.pumpAndSettle();
           expect(
@@ -189,14 +191,14 @@ void registerCaptureScenarios() {
             );
           }
           await tester.pumpAndSettle();
-          await _capture(tester, '$name-more');
+          await _capture(tester, output, '$name-more');
         }
         await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
         await tester.pumpAndSettle();
         expect(tester.element(editor), same(element));
-        await _capture(tester, '$name-docked');
+        await _capture(tester, output, '$name-docked');
         await provider.settingsCommands.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.overlay,
         );
@@ -209,7 +211,7 @@ void registerCaptureScenarios() {
             same(titleController),
           );
           expect(titleController.text, draft);
-          await _capture(tester, '$name-width-$width');
+          await _capture(tester, output, '$name-width-$width');
         }
         tester.view.physicalSize = const Size(720, 420);
         await tester.pumpAndSettle();
@@ -221,7 +223,7 @@ void registerCaptureScenarios() {
           find.widgetWithText(FilledButton, strings.save).hitTestable(),
           findsOneWidget,
         );
-        await _capture(tester, '$name-short');
+        await _capture(tester, output, '$name-short');
         tester.view.physicalSize = const Size(1440, 1000);
         await tester.pumpAndSettle();
         await resize(defaultWidth);
@@ -237,7 +239,7 @@ void registerCaptureScenarios() {
         expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
         expect(titleController.text, retryDraft);
         expect(find.text(strings.saveFailedRetry), findsWidgets);
-        await _capture(tester, '$name-save-error');
+        await _capture(tester, output, '$name-save-error');
         await tester.tap(save);
         await tester.pumpAndSettle();
         expect(editor, findsNothing);
@@ -396,14 +398,12 @@ Future<void> _openEditor(
   );
 }
 
-Future<void> _capture(WidgetTester tester, String name) async {
+Future<void> _capture(
+  WidgetTester tester,
+  Directory output,
+  String name,
+) async {
   expect(tester.takeException(), isNull);
-  final output = Directory(
-    const String.fromEnvironment(
-      'SKED_VISUAL_OUTPUT',
-      defaultValue: '.scratch/capture-scenes/editor-layouts',
-    ),
-  );
   await output.create(recursive: true);
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(_captureKey),
