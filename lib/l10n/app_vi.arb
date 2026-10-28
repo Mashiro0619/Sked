@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Bản sao lưu đầy đủ bao gồm dữ liệu và lựa chọn không gian làm việc được bật.",
   "assistantLayoutPreview": "AI · Xem trước bố cục",
   "assistantSelectionContext": "Dùng mục đang chọn làm ngữ cảnh",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Bản nháp tin nhắn",
   "assistantPreviewNoSend": "Chỉ xem trước bố cục. Không gửi hoặc thay đổi bất cứ nội dung nào.",
   "resizePanel": "Đổi kích thước bảng",

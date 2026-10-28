@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "完全バックアップにはデータとワークスペースの有効状態が含まれます。",
   "assistantLayoutPreview": "AI · レイアウトのプレビュー",
   "assistantSelectionContext": "現在の選択内容をコンテキストとして使用します",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "メッセージの下書き",
   "assistantPreviewNoSend": "レイアウトのプレビューのみです。送信や変更は行いません。",
   "resizePanel": "パネルのサイズを変更",

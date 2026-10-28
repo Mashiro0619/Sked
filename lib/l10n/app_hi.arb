@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "पूरे बैकअप में डेटा और चालू कार्यक्षेत्रों का चयन शामिल होता है।",
   "assistantLayoutPreview": "AI · लेआउट पूर्वावलोकन",
   "assistantSelectionContext": "मौजूदा चयन को संदर्भ के रूप में उपयोग करता है",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "संदेश का मसौदा",
   "assistantPreviewNoSend": "केवल लेआउट का पूर्वावलोकन है। कुछ भी भेजा या बदला नहीं जाएगा।",
   "resizePanel": "पैनल का आकार बदलें",

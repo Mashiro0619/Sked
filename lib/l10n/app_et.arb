@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Täielik varukoopia sisaldab andmeid ja sisselülitatud tööruumide valikut.",
   "assistantLayoutPreview": "AI · Paigutuse eelvaade",
   "assistantSelectionContext": "Kasutab praegust valikut kontekstina",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Sõnumi mustand",
   "assistantPreviewNoSend": "Ainult paigutuse eelvaade. Midagi ei saadeta ega muudeta.",
   "resizePanel": "Muuda paneeli suurust",

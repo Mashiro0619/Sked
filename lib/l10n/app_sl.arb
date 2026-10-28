@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Celotna varnostna kopija vključuje podatke in izbor vklopljenih delovnih prostorov.",
   "assistantLayoutPreview": "UI · Predogled postavitve",
   "assistantSelectionContext": "Trenutni izbor uporabi kot kontekst",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Osnutek sporočila",
   "assistantPreviewNoSend": "Samo predogled postavitve. Nič ne bo poslano ali spremenjeno.",
   "resizePanel": "Spremeni velikost podokna",

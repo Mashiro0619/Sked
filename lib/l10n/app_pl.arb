@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Pełna kopia zapasowa zawiera dane i wybór włączonych obszarów roboczych.",
   "assistantLayoutPreview": "AI · Podgląd układu",
   "assistantSelectionContext": "Używa bieżącego zaznaczenia jako kontekstu",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Szkic wiadomości",
   "assistantPreviewNoSend": "To tylko podgląd układu. Nic nie zostanie wysłane ani zmienione.",
   "resizePanel": "Zmień rozmiar panelu",

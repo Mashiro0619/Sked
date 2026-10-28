@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "A teljes biztonsági másolat az adatokat és a bekapcsolt munkaterületek kiválasztását is tartalmazza.",
   "assistantLayoutPreview": "AI · Elrendezési előnézet",
   "assistantSelectionContext": "Az aktuális kijelölést használja kontextusként",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Üzenetpiszkozat",
   "assistantPreviewNoSend": "Csak elrendezési előnézet. Semmi sem lesz elküldve vagy módosítva.",
   "resizePanel": "Panel átméretezése",

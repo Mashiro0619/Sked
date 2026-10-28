@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
+import '../tool/l10n/translation_policy.dart';
+
 void main() {
   final template = jsonDecode(
     File('lib/l10n/app_en.arb').readAsStringSync(),
@@ -14,43 +16,7 @@ void main() {
 
   for (final locale in AppLocalizations.supportedLocales) {
     test('$locale supplies every offered interface message', () {
-      // New messages supply English and Chinese first; these explicit entries
-      // track the remaining translations until they are supplied.
-      final allowedFallbacks =
-          locale.languageCode == 'en' || locale.languageCode == 'zh'
-          ? const <String>{}
-          : const {
-              'notificationCoverageBlocked',
-              'notificationCoverageFailed',
-              'schoolWebImportSignOut',
-              'schoolWebImportSignOutTitle',
-              'schoolWebImportSignOutMessage',
-              'schoolWebImportSignOutSuccess',
-              'schoolWebImportSignOutFailed',
-              'importWarningSkippedUnsupportedTimeZone',
-              'expandTimelineEvents',
-              'timelineEvents',
-              'schoolImportEndpointChangeTitle',
-              'schoolImportEndpointChangeMessage',
-              'schoolImportEndpointChangeConfirm',
-              'restoreBackupParserSettingsSummary',
-              'backupParserEndpointUnset',
-              'periodTimesDayFull',
-              'icsImportReviewNotice',
-              'icsImportContinueAction',
-              'importWarningRecurrenceDateClamped',
-              'importEntryLimitExceededMessage',
-              'importWarningSkippedRecurrenceOverride',
-              'importWarningSkippedCancelledEvent',
-              'importWarningSkippedEmptyRecurrence',
-              'importTextFileTooLarge',
-              'confirmImportedStartDatesTitle',
-              'confirmImportedStartDatesMessage',
-              'importStartDateConfirmationRequiredMessage',
-              'importWarningRecurrenceRuleDowngraded',
-              'eventRecurrenceExceptionsChangeTitle',
-              'eventRecurrenceExceptionsChangeMessage',
-            };
+      final allowedFallbacks = allowedFallbacksForLocale(locale.toString());
       final file = File('lib/l10n/app_$locale.arb');
       expect(file.existsSync(), isTrue, reason: 'Missing locale source: $file');
       final messages =

@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Пълното резервно копие включва данните и избора на включени работни пространства.",
   "assistantLayoutPreview": "AI · Преглед на оформлението",
   "assistantSelectionContext": "Използва текущия избор като контекст",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Чернова на съобщение",
   "assistantPreviewNoSend": "Само преглед на оформлението. Нищо няма да бъде изпратено или променено.",
   "resizePanel": "Промяна на размера на панела",

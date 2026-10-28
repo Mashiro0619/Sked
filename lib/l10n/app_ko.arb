@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "전체 백업에는 데이터와 활성화된 작업 공간 설정이 포함됩니다.",
   "assistantLayoutPreview": "AI · 레이아웃 미리보기",
   "assistantSelectionContext": "현재 선택한 항목을 맥락으로 사용합니다",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "메시지 초안",
   "assistantPreviewNoSend": "레이아웃 미리보기 전용입니다. 전송하거나 변경하지 않습니다.",
   "resizePanel": "패널 크기 조절",

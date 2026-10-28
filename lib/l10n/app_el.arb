@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Το πλήρες αντίγραφο ασφαλείας περιλαμβάνει δεδομένα και την επιλογή ενεργών χώρων εργασίας.",
   "assistantLayoutPreview": "AI · Προεπισκόπηση διάταξης",
   "assistantSelectionContext": "Χρησιμοποιεί την τρέχουσα επιλογή ως πλαίσιο",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Πρόχειρο μηνύματος",
   "assistantPreviewNoSend": "Μόνο προεπισκόπηση διάταξης. Δεν θα σταλεί ή θα αλλάξει τίποτα.",
   "resizePanel": "Αλλαγή μεγέθους πίνακα",

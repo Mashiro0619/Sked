@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Полная резервная копия включает данные и выбор включённых рабочих пространств.",
   "assistantLayoutPreview": "ИИ · Предпросмотр компоновки",
   "assistantSelectionContext": "Использует текущее выделение как контекст",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Черновик сообщения",
   "assistantPreviewNoSend": "Только предпросмотр компоновки. Ничего не будет отправлено или изменено.",
   "resizePanel": "Изменить размер панели",

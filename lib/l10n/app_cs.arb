@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Úplná záloha obsahuje data a výběr zapnutých pracovních prostorů.",
   "assistantLayoutPreview": "AI · Náhled rozložení",
   "assistantSelectionContext": "Používá aktuální výběr jako kontext",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Koncept zprávy",
   "assistantPreviewNoSend": "Pouze náhled rozložení. Nic se neodešle ani nezmění.",
   "resizePanel": "Změnit velikost panelu",

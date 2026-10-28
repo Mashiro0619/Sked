@@ -2698,7 +2698,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get assistantPreviewDescription =>
-      'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
+      'Discuss and work in the current workspace. This preview only demonstrates the layout; AI is not connected.';
 
   @override
   String get assistantDraftLabel => 'Beskedkladde';

@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "La sauvegarde complète inclut les données et le choix des espaces activés.",
   "assistantLayoutPreview": "IA · Aperçu de la disposition",
   "assistantSelectionContext": "Utilise la sélection actuelle comme contexte",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Brouillon du message",
   "assistantPreviewNoSend": "Aperçu de la disposition uniquement. Rien ne sera envoyé ni modifié.",
   "resizePanel": "Redimensionner le panneau",

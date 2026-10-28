@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Copia de siguranță completă include datele și selecția spațiilor de lucru activate.",
   "assistantLayoutPreview": "AI · Previzualizare aspect",
   "assistantSelectionContext": "Folosește selecția curentă drept context",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Ciornă de mesaj",
   "assistantPreviewNoSend": "Doar o previzualizare a aspectului. Nimic nu va fi trimis sau modificat.",
   "resizePanel": "Redimensionează panoul",

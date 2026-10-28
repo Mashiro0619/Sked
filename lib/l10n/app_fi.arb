@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Täysi varmuuskopio sisältää tiedot ja käytössä olevien työtilojen valinnan.",
   "assistantLayoutPreview": "AI · Asettelun esikatselu",
   "assistantSelectionContext": "Käyttää nykyistä valintaa kontekstina",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Viestiluonnos",
   "assistantPreviewNoSend": "Vain asettelun esikatselu. Mitään ei lähetetä tai muuteta.",
   "resizePanel": "Muuta paneelin kokoa",

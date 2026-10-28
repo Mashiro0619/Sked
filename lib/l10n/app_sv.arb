@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "Den fullständiga säkerhetskopian innehåller data och valet av aktiva arbetsytor.",
   "assistantLayoutPreview": "AI · Layoutförhandsvisning",
   "assistantSelectionContext": "Använder det aktuella valet som sammanhang",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Meddelandeutkast",
   "assistantPreviewNoSend": "Endast förhandsvisning av layouten. Inget skickas eller ändras.",
   "resizePanel": "Ändra panelens storlek",

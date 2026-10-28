@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "La copia completa incluye los datos y la selección de espacios activados.",
   "assistantLayoutPreview": "IA · Vista previa del diseño",
   "assistantSelectionContext": "Usa la selección actual como contexto",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Borrador del mensaje",
   "assistantPreviewNoSend": "Solo es una vista previa del diseño. No se enviará ni cambiará nada.",
   "resizePanel": "Cambiar tamaño del panel",

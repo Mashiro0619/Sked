@@ -554,7 +554,7 @@ class AppLocalizationsNl extends AppLocalizations {
       'Ondersteunt één of meerdere roosterbestanden.';
 
   @override
-  String get importTimetableText => 'Import timetable from text';
+  String get importTimetableText => 'Import timetable from JSON text';
 
   @override
   String get importTimetableTextDesc =>
@@ -573,7 +573,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get saveTimetableFilesDesc => 'Kies eerst één of meer roosters.';
 
   @override
-  String get exportTimetableText => 'Export timetable as text';
+  String get exportTimetableText => 'Export timetable as JSON text';
 
   @override
   String get exportTimetableTextDesc =>
@@ -850,7 +850,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get privacyPolicyEntryDesc =>
-      'Learn how the app handles local storage, school-site configuration, file import/export, webpage parsing, and external links.';
+      'How local data, import and export, optional network requests and external links are handled.';
 
   @override
   String privacyPolicyAcceptedVersionLabel(Object version) {
@@ -1001,26 +1001,25 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolSitesJsonFileName => 'Sked_school_sites.json';
 
   @override
-  String get schoolHtmlImportEntry =>
-      'Import by pasting timetable page content';
+  String get schoolHtmlImportEntry => 'Parse timetable from text / HTML';
 
   @override
   String get schoolHtmlImportEntryDesc =>
-      'Paste source code or raw page content containing timetable information manually.';
+      'Paste plain timetable text, page text, or HTML source, then import it through your custom parser endpoint.';
 
   @override
-  String get schoolHtmlImportPageTitle => 'Parse timetable from page content';
+  String get schoolHtmlImportPageTitle => 'Parse timetable text / HTML';
 
   @override
-  String get schoolHtmlImportHtmlLabel => 'Page content';
+  String get schoolHtmlImportHtmlLabel => 'Text / HTML content';
 
   @override
   String get schoolHtmlImportHtmlHint =>
-      'Paste source code or raw page content containing timetable information here.';
+      'For example, \"Monday periods 3-4 Chinese\", or paste timetable page text or HTML source.';
 
   @override
   String get schoolHtmlImportNonHtmlHint =>
-      'Any content containing timetable information can be parsed and imported, not just HTML.';
+      'Any content containing timetable information can be parsed and imported; plain text and HTML are both supported.';
 
   @override
   String get schoolHtmlImportCompress => 'Inhoud voorbereiden';
@@ -1040,7 +1039,8 @@ class AppLocalizationsNl extends AppLocalizations {
       'Het analyseren kan even duren. Even geduld.';
 
   @override
-  String get schoolHtmlImportEmpty => 'Paste the page HTML first.';
+  String get schoolHtmlImportEmpty =>
+      'Paste timetable text or HTML content first.';
 
   @override
   String get schoolHtmlImportReturnToWebPage => 'Terug naar de webpagina';
@@ -2725,7 +2725,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get assistantPreviewDescription =>
-      'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
+      'Discuss and work in the current workspace. This preview only demonstrates the layout; AI is not connected.';
 
   @override
   String get assistantDraftLabel => 'Conceptbericht';

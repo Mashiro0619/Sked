@@ -1529,7 +1529,6 @@
   "backupWorkspaceSelection": "ข้อมูลสำรองทั้งหมดมีข้อมูลและการเลือกพื้นที่ทำงานที่เปิดใช้งาน",
   "assistantLayoutPreview": "AI · ตัวอย่างการจัดวาง",
   "assistantSelectionContext": "ใช้รายการที่เลือกอยู่เป็นบริบท",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "ข้อความร่าง",
   "assistantPreviewNoSend": "เป็นเพียงตัวอย่างการจัดวาง จะไม่ส่งข้อความหรือเปลี่ยนแปลงข้อมูลใด ๆ",
   "resizePanel": "ปรับขนาดแผง",

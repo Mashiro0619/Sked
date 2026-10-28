@@ -1531,7 +1531,6 @@
   "backupWorkspaceSelection": "Die vollständige Sicherung enthält Daten und die Auswahl aktiver Arbeitsbereiche.",
   "assistantLayoutPreview": "KI · Layoutvorschau",
   "assistantSelectionContext": "Verwendet die aktuelle Auswahl als Kontext",
-  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
   "assistantDraftLabel": "Nachrichtenentwurf",
   "assistantPreviewNoSend": "Nur eine Layoutvorschau. Es wird nichts gesendet oder geändert.",
   "resizePanel": "Panelgröße ändern",
