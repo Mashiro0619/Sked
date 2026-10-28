@@ -1215,8 +1215,6 @@ class _TimeRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Stack(
       clipBehavior: Clip.hardEdge,
       children: [
@@ -1227,58 +1225,120 @@ class _TimeRail extends StatelessWidget {
             right: 0,
             child: SizedBox(
               height: layout.slotHeight(slot),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: sidePadding),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final showTimes =
-                        constraints.maxHeight >=
-                        MediaQuery.textScalerOf(context).scale(42);
-                    return ClipRect(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            slot.index.toString(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (showTimes) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              formatMinutes(slot.startMinutes),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: textTheme.labelSmall?.copyWith(
-                                height: 1.15,
-                                color: muted,
-                              ),
-                            ),
-                            Text(
-                              formatMinutes(slot.endMinutes),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: textTheme.labelSmall?.copyWith(height: 1),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
+              child: _PeriodRailLabels(slot: slot, sidePadding: sidePadding),
             ),
           ),
       ],
     );
   }
+}
+
+class _PeriodRailLabels extends StatelessWidget {
+  const _PeriodRailLabels({required this.slot, required this.sidePadding});
+
+  final CoursePeriodTime slot;
+  final double sidePadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final number = slot.index.toString();
+    final start = formatMinutes(slot.startMinutes);
+    final end = formatMinutes(slot.endMinutes);
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label: '$number\n$start – $end',
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: sidePadding),
+        child: ClipRect(
+          child: CustomMultiChildLayout(
+            delegate: _PeriodRailLabelsLayout(),
+            children: [
+              LayoutId(
+                id: _PeriodRailPart.number,
+                child: Text(
+                  number,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              LayoutId(
+                id: _PeriodRailPart.start,
+                child: Text(
+                  start,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: textTheme.labelSmall?.copyWith(
+                    height: 1.15,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              LayoutId(
+                id: _PeriodRailPart.end,
+                child: Text(
+                  end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: textTheme.labelSmall?.copyWith(height: 1),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _PeriodRailPart { number, start, end }
+
+class _PeriodRailLabelsLayout extends MultiChildLayoutDelegate {
+  @override
+  void performLayout(Size size) {
+    final sizes = {
+      for (final part in _PeriodRailPart.values)
+        part: layoutChild(part, BoxConstraints(maxWidth: size.width)),
+    };
+    final numberHeight = sizes[_PeriodRailPart.number]!.height;
+    final fullHeight =
+        numberHeight +
+        2 +
+        sizes[_PeriodRailPart.start]!.height +
+        sizes[_PeriodRailPart.end]!.height;
+    final showAll = fullHeight <= size.height;
+    final showNumber = numberHeight <= size.height;
+    var top =
+        (size.height -
+            (showAll
+                ? fullHeight
+                : showNumber
+                ? numberHeight
+                : 0)) /
+        2;
+    for (final part in _PeriodRailPart.values) {
+      final child = sizes[part]!;
+      if (showAll || (part == _PeriodRailPart.number && showNumber)) {
+        positionChild(part, Offset((size.width - child.width) / 2, top));
+        top +=
+            child.height + (part == _PeriodRailPart.number && showAll ? 2 : 0);
+      } else {
+        // Natural text height may exceed a legal one-minute slot. Keep such
+        // labels outside the clip while the parent retains their full semantics.
+        positionChild(part, Offset(0, size.height + child.height + 1));
+      }
+    }
+  }
+
+  @override
+  bool shouldRelayout(_PeriodRailLabelsLayout oldDelegate) => false;
 }
 
 class _TimetableMetrics {

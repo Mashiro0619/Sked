@@ -284,6 +284,8 @@ An earlier 10-minute fixture exposed an existing short-slot label overflow.
 Ten-minute periods are valid input. That layout defect is handled separately
 from this performance comparison, preserving time proportions and semantics.
 The timings here describe widget-test pumps, not device frame rates or app RSS.
+The separate short-slot correction now chooses labels by their actual height;
+the table above predates that renderer and remains historical evidence.
 
 ## Android profile
 

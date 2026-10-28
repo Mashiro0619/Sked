@@ -725,9 +725,24 @@ void main() {
         tester.getRect(number).center.dy,
         closeTo(tester.getRect(rail).center.dy, .01),
       );
+      final hiddenTime = find.descendant(
+        of: rail,
+        matching: find.text('08:00'),
+      );
+      // Natural text is laid out to choose which lines fit, then clipped.
       expect(
-        find.descendant(of: rail, matching: find.text('08:00')),
-        findsNothing,
+        tester.getRect(hiddenTime).overlaps(tester.getRect(rail)),
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<ClipRect>(
+              find
+                  .ancestor(of: hiddenTime, matching: find.byType(ClipRect))
+                  .first,
+            )
+            .clipBehavior,
+        Clip.hardEdge,
       );
       expect(tester.takeException(), isNull);
     },
