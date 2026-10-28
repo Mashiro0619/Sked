@@ -6,6 +6,8 @@
 
 采集脚本现已归并到 [统一场景入口](../integration_test/README.md)。下文源码路径指对应场景模块，重跑使用 `capture_scenarios_test.dart` 并选择 `SKED_CAPTURE_SCENE`；原有细分组参数继续保留。示例命令已迁移，历史测试计数、截图目录和验收边界仍属于各节记录的当时版本。
 
+以下命令默认将本次截图写入唯一系统临时目录，日志通过 `SKED_CAPTURE_OUTPUT` 报告绝对路径；需要汇总时显式传入绝对 `SKED_VISUAL_OUTPUT`。正文中的 `.scratch` 目录只记录过去的证据位置，不是当前命令的默认输出。
+
 ## 统一拖拽调整大小（2026-10-11）
 
 桌面工作区域使用共用分隔条；独立内容浮窗提供四边及四角缩放。日期、时间、颜色等小型选择器、悬停预览和触屏底部任务继续按内容及平台布局。
@@ -169,7 +171,7 @@ Windows 实际字体截图由 `integration_test/capture_scenarios/category_panel
 
 复现：
 
-`flutter test -d windows --no-pub integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=event-pickers --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/general-floating-visual --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
+`flutter test -d windows --no-pub integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=event-pickers --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
 
 ## 当前范围
 
@@ -201,7 +203,7 @@ Windows 实际字体截图由 `integration_test/capture_scenarios/category_panel
 
 ## 复现
 
-`flutter test -d windows --no-pub integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=floating-panels --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/floating-panel-rollout --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
+`flutter test -d windows --no-pub integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=floating-panels --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
 
 原生鼠标步骤需要允许测试窗口获得前台焦点；如果它仍被遮挡或鼠标按键已经按下，测试应失败并保留保护，而不是向其他窗口注入输入。
 
@@ -335,7 +337,7 @@ Windows 实际字体入口为 `integration_test/capture_scenarios/editor_layouts
 
 ```powershell
 foreach ($editorGroup in @('course', 'event', 'timetable')) {
-  flutter test --no-pub -d windows integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=editor-layouts --dart-define=SKED_VISUAL_GROUP=$editorGroup --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/compact-editor-visual --reporter expanded
+  flutter test --no-pub -d windows integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=editor-layouts --dart-define=SKED_VISUAL_GROUP=$editorGroup --reporter expanded
 }
 ```
 
@@ -395,7 +397,7 @@ foreach ($editorGroup in @('course', 'event', 'timetable')) {
 实际字体入口为 `integration_test/capture_scenarios/panel_headings.dart`，提供 `course`、`timetable`、`event`、`categories`、`pickers`、`secondary` 分组和 `SKED_VISUAL_SCENE=zh/en/rtl`。复现课程编辑与周次选择的父子面板，覆盖普通、嵌套、窄矮、并排、暗色和 RTL 大字号，并为截图保存标题与关闭按钮矩形、合成样式 manifest。样例数据和外部动作均在内存中隔离。
 
 ```powershell
-flutter test --no-pub -d windows integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=panel-headings --dart-define=SKED_VISUAL_GROUP=course --dart-define=SKED_VISUAL_SCENE=zh --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/panel-heading-visual --reporter expanded
+flutter test --no-pub -d windows integration_test/capture_scenarios_test.dart --dart-define=SKED_CAPTURE_SCENE=panel-headings --dart-define=SKED_VISUAL_GROUP=course --dart-define=SKED_VISUAL_SCENE=zh --reporter expanded
 ```
 
 Windows 首次把课程三种语言连续放在一个进程运行时，在第二场发生测试进程中断且无 Dart 断言失败；后续逐场启动独立进程验证。截图与 manifest 位于 `.scratch/panel-heading-visual/`，回归日志为 `.scratch/panel-heading-final-regressions.log`，各 Windows 场景日志为 `.scratch/panel-heading-visual-{group}-{scene}.log`。合成指针测试不替代原生鼠标拖动验收。

@@ -97,11 +97,13 @@
 在 Windows 上分两个独立进程运行，不把原生 Windows 和模拟 Android 配置合并为同一进程：
 
 ```powershell
-$skedVisualRoot = Join-Path (Get-Location) '.scratch/component-unification'
+$skedVisualRoot = Join-Path ([IO.Path]::GetTempPath()) ('sked-component-unification-' + [guid]::NewGuid().ToString('N'))
 $skedTouchProfiles = 'phone-393-zh,phone-320-2x-ime,phone-landscape,phone-landscape-ime,phone-dark-rtl,tablet-1280-en'
 flutter test integration_test/capture_scenarios_test.dart -d windows --dart-define=SKED_CAPTURE_SCENE=component-gallery --dart-define="SKED_VISUAL_PROFILE=$skedTouchProfiles" --dart-define="SKED_VISUAL_OUTPUT=$skedVisualRoot/windows-touch-final" --reporter expanded
 flutter test integration_test/capture_scenarios_test.dart -d windows --dart-define=SKED_CAPTURE_SCENE=component-gallery --dart-define=SKED_VISUAL_PROFILE=windows-overlay,windows-side-by-side --dart-define="SKED_VISUAL_OUTPUT=$skedVisualRoot/windows-desktop-final" --reporter expanded
 ```
+
+本次重跑保存在 `$skedVisualRoot` 指向的系统临时目录，下面的 `.scratch` 路径仅标识原交付的历史证据。
 
 手机和 Windows 代表配置还采集时间／重复选择、分类管理／重命名、详情进入编辑、放弃草稿确认、设置及导入复核。导入复核采集使用本地解析结果数据，其 manifest 单独标注未经过源网页和网络解析；这些链路由导入流回归测试另行验证。
 
