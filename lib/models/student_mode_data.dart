@@ -1,62 +1,10 @@
+import 'app_data_json_values.dart';
 import '../l10n/app_locale.dart';
 import '../utils/constants.dart';
 import '../utils/localized_names.dart';
 import '../utils/time_utils.dart';
 import 'course_item.dart';
 import 'timetable_data.dart';
-
-Map<String, dynamic>? _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return null;
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
-
-Map<String, String> _decodeStringMap(Object? value) {
-  if (value is! Map) {
-    return const {};
-  }
-  final result = <String, String>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    final item = entry.value;
-    if (key is String && item is String) {
-      result[key] = item;
-    }
-  }
-  return result;
-}
-
-int? _tryDecodeInt(Object? value) {
-  return value is num ? value.toInt() : null;
-}
-
-double? _tryDecodeDouble(Object? value) {
-  return value is num ? value.toDouble() : null;
-}
-
-bool? _tryDecodeBool(Object? value) {
-  return value is bool ? value : null;
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-String? _nullableStringValue(Object? value) {
-  return value is String ? value : null;
-}
-
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
-}
 
 List<String> _reuseNormalizedToolbarIds(
   List<String> previous,
@@ -96,8 +44,8 @@ String _nextGeneratedPeriodTimeSetId(Set<String> existingIds) {
 }
 
 List<CoursePeriodTime> _decodeLegacyPeriodTimes(Map<String, dynamic> json) {
-  return _listValue(json['periodTimes'])
-      .map(_asStringKeyedMap)
+  return appDataListValue(json['periodTimes'])
+      .map(appDataStringKeyedMap)
       .whereType<Map<String, dynamic>>()
       .map(CoursePeriodTime.fromJson)
       .toList();
@@ -107,7 +55,7 @@ int _decodeLegacyDailyPeriods(
   Map<String, dynamic> json,
   List<CoursePeriodTime> legacyPeriodTimes,
 ) {
-  return (_tryDecodeInt(json['dailyPeriods']) ??
+  return (appDataIntValue(json['dailyPeriods']) ??
           (legacyPeriodTimes.isEmpty ? 10 : legacyPeriodTimes.length))
       .clamp(1, 999);
 }
@@ -222,12 +170,12 @@ class StudentModeData {
     Map<String, dynamic> json, {
     String localeCode = defaultLocaleCode,
   }) {
-    final rawTimetables = _listValue(json['timetables'])
-        .map(_asStringKeyedMap)
+    final rawTimetables = appDataListValue(json['timetables'])
+        .map(appDataStringKeyedMap)
         .whereType<Map<String, dynamic>>()
         .toList();
-    final rawPeriodTimeSets = _listValue(json['periodTimeSets'])
-        .map(_asStringKeyedMap)
+    final rawPeriodTimeSets = appDataListValue(json['periodTimeSets'])
+        .map(appDataStringKeyedMap)
         .whereType<Map<String, dynamic>>()
         .map((item) => PeriodTimeSet.fromJson(item, localeCode: localeCode))
         .toList();
@@ -242,7 +190,8 @@ class StudentModeData {
     final timetables = <TimetableData>[];
 
     for (final rawTimetable in rawTimetables) {
-      final rawConfig = _asStringKeyedMap(rawTimetable['config']) ?? const {};
+      final rawConfig =
+          appDataStringKeyedMap(rawTimetable['config']) ?? const {};
       var timetable = TimetableData.fromJson(
         rawTimetable,
         localeCode: localeCode,
@@ -278,7 +227,7 @@ class StudentModeData {
       timetables.add(timetable);
     }
 
-    final activeTimetableIdRaw = _stringValue(json['activeTimetableId']);
+    final activeTimetableIdRaw = appDataStringValue(json['activeTimetableId']);
     final activeTimetableId =
         timetables.any((item) => item.id == activeTimetableIdRaw)
         ? activeTimetableIdRaw
@@ -290,27 +239,27 @@ class StudentModeData {
       activeTimetableId: activeTimetableId,
       timetables: timetables,
       periodTimeSets: normalizedSets,
-      conflictDisplayCourseIds: _decodeStringMap(
+      conflictDisplayCourseIds: appDataStringMap(
         json['conflictDisplayCourseIds'],
       ),
       closeCoursePopupOnOutsideTap:
-          _tryDecodeBool(json['closeCoursePopupOnOutsideTap']) ?? true,
+          appDataBoolValue(json['closeCoursePopupOnOutsideTap']) ?? true,
       preserveTimetableGaps:
-          _tryDecodeBool(json['preserveTimetableGaps']) ?? false,
+          appDataBoolValue(json['preserveTimetableGaps']) ?? false,
       showPastEndedCourses:
-          _tryDecodeBool(json['showPastEndedCourses']) ?? false,
-      showFutureCourses: _tryDecodeBool(json['showFutureCourses']) ?? true,
+          appDataBoolValue(json['showPastEndedCourses']) ?? false,
+      showFutureCourses: appDataBoolValue(json['showFutureCourses']) ?? true,
       showTimetableGridLines:
-          _tryDecodeBool(json['showTimetableGridLines']) ?? true,
-      showAddCourseFab: _tryDecodeBool(json['showAddCourseFab']) ?? true,
+          appDataBoolValue(json['showTimetableGridLines']) ?? true,
+      showAddCourseFab: appDataBoolValue(json['showAddCourseFab']) ?? true,
       enableLongPressAddCourse:
-          _tryDecodeBool(json['enableLongPressAddCourse']) ?? true,
+          appDataBoolValue(json['enableLongPressAddCourse']) ?? true,
       fitDaySelectorToWidth:
-          _tryDecodeBool(json['fitDaySelectorToWidth']) ?? true,
+          appDataBoolValue(json['fitDaySelectorToWidth']) ?? true,
       fitWeekColumnsToWidth:
-          _tryDecodeBool(json['fitWeekColumnsToWidth']) ?? true,
+          appDataBoolValue(json['fitWeekColumnsToWidth']) ?? true,
       enableWeekSwipeNavigation:
-          _tryDecodeBool(json['enableWeekSwipeNavigation']) ?? true,
+          appDataBoolValue(json['enableWeekSwipeNavigation']) ?? true,
       toolbarNavigationOrder: decodeToolbarNavigationStringList(
         json,
         'toolbarNavigationOrder',
@@ -327,38 +276,39 @@ class StudentModeData {
         'toolbarHiddenItemsBehavior',
       ),
       themeMode: normalizeThemeMode(
-        _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
+        appDataNullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
       themeColorMode: normalizeThemeColorMode(
-        _nullableStringValue(json['themeColorMode']) ?? defaultThemeColorMode,
+        appDataNullableStringValue(json['themeColorMode']) ??
+            defaultThemeColorMode,
       ),
       themeSeedColorValue:
-          _tryDecodeInt(json['themeSeedColorValue']) ??
+          appDataIntValue(json['themeSeedColorValue']) ??
           defaultThemeSeedColorValue,
       colorfulUiColorValues: decodeColorValueMap(json['colorfulUiColorValues']),
       colorfulCourseTextColorMode: normalizeColorfulCourseTextColorMode(
-        _nullableStringValue(json['colorfulCourseTextColorMode']) ??
+        appDataNullableStringValue(json['colorfulCourseTextColorMode']) ??
             defaultColorfulCourseTextColorMode,
       ),
       courseNameColorValues: decodeColorValueMap(json['courseNameColorValues']),
       liveCourseOutlineColorValue:
-          _tryDecodeInt(json['liveCourseOutlineColorValue']) ??
+          appDataIntValue(json['liveCourseOutlineColorValue']) ??
           defaultLiveCourseOutlineColorValue,
       liveCourseOutlineEnabled:
-          _tryDecodeBool(json['liveCourseOutlineEnabled']) ??
+          appDataBoolValue(json['liveCourseOutlineEnabled']) ??
           defaultLiveCourseOutlineEnabled,
       liveCourseOutlineFollowTheme:
-          _tryDecodeBool(json['liveCourseOutlineFollowTheme']) ??
+          appDataBoolValue(json['liveCourseOutlineFollowTheme']) ??
           defaultLiveCourseOutlineFollowTheme,
       liveCourseOutlineCustomColorInitialized:
-          _tryDecodeBool(json['liveCourseOutlineCustomColorInitialized']) ??
+          appDataBoolValue(json['liveCourseOutlineCustomColorInitialized']) ??
           defaultLiveCourseOutlineCustomColorInitialized,
       liveCourseOutlineMode: normalizeLiveCourseOutlineMode(
-        _nullableStringValue(json['liveCourseOutlineMode']) ??
+        appDataNullableStringValue(json['liveCourseOutlineMode']) ??
             defaultLiveCourseOutlineMode,
       ),
       liveCourseOutlineWidth: normalizeLiveCourseOutlineWidth(
-        _tryDecodeDouble(json['liveCourseOutlineWidth']),
+        appDataDoubleValue(json['liveCourseOutlineWidth']),
       ),
     );
   }

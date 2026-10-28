@@ -11,6 +11,9 @@ String? appDataNullableStringValue(Object? value) =>
 
 bool? appDataBoolValue(Object? value) => value is bool ? value : null;
 
+double? appDataDoubleValue(Object? value) =>
+    value is num ? value.toDouble() : null;
+
 /// Preserves numeric truncation. Callers that reject non-finite input supply
 /// their existing format-error message; legacy callers keep their old policy.
 int? appDataIntValue(Object? value, {String? nonFiniteMessage}) {
@@ -50,6 +53,19 @@ Map<String, dynamic>? appDataStringKeyedMap(Object? value) {
 
 Map<String, dynamic> appDataStringKeyedMapOrEmpty(Object? value) =>
     appDataStringKeyedMap(value) ?? const <String, dynamic>{};
+
+Map<String, String> appDataStringMap(Object? value) {
+  if (value is! Map) return const {};
+  final result = <String, String>{};
+  for (final entry in value.entries) {
+    final key = entry.key;
+    final item = entry.value;
+    if (key is String && item is String) {
+      result[key] = item;
+    }
+  }
+  return result;
+}
 
 Map<String, dynamic> decodeAppDataJsonObject(String source) {
   final decoded = jsonDecode(source);
