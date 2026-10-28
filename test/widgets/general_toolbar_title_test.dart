@@ -43,6 +43,7 @@ Future<(AppRuntime, _Storage)> _mount(
   required Brightness brightness,
   GeneralDateRange? range,
   String view = generalViewWeek,
+  String format = generalDateLabelFormatSlash,
   bool desktop = false,
   bool interactive = true,
   List<String> order = generalToolbarNavigationDefaultOrder,
@@ -66,7 +67,7 @@ Future<(AppRuntime, _Storage)> _mount(
         selectedDateIso: selected.start.toIso8601String().split('T').first,
         defaultView: view,
         customDateRange: view == generalViewWeek ? selected : null,
-        dateLabelFormat: generalDateLabelFormatSlash,
+        dateLabelFormat: format,
         toolbarNavigationOrder: order,
         hiddenToolbarNavigationIds: const [],
         schedules: const [
@@ -152,7 +153,122 @@ Future<void> _openAndCloseDatePicker(WidgetTester tester, Finder button) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _expectTabletRange(
+  WidgetTester tester, {
+  required double width,
+  required Locale locale,
+  required Brightness brightness,
+  String format = generalDateLabelFormatSlash,
+}) async {
+  final range = GeneralDateRange(DateTime(2026, 12, 29), DateTime(2027, 1, 4));
+  final (provider, storage) = await _mount(
+    tester,
+    width: width,
+    locale: locale,
+    brightness: brightness,
+    range: range,
+    format: format,
+  );
+  final writes = storage.writes;
+  final button = _key('general-date-title-button');
+  final text = find.descendant(
+    of: button,
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is Text &&
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith(
+            'general-date-label-',
+          ),
+    ),
+  );
+  final paragraph = tester.renderObject<RenderParagraph>(text);
+  final colors = Theme.of(tester.element(button)).colorScheme;
+  expect(paragraph.text.style!.color, colors.onSurface);
+  expect(paragraph.text.style!.fontWeight, FontWeight.w600);
+  final label = paragraph.text.toPlainText();
+  expect(label, contains('2026'));
+  expect(label, contains('2027'));
+  _expectAllGlyphsVisible(tester, text);
+  final lines = paragraph
+      .getBoxesForSelection(
+        TextSelection(baseOffset: 0, extentOffset: label.length),
+      )
+      .map((box) => (box.top * 100).round())
+      .toSet();
+  expect(lines.length, lessThanOrEqualTo(2));
+  _expectRangeSemantics(tester, button, range);
+  await tester.ensureVisible(button);
+  await tester.pumpAndSettle();
+  final dateRect = tester.getRect(button);
+  expect(dateRect.width, greaterThanOrEqualTo(48));
+  expect(dateRect.height, greaterThanOrEqualTo(48));
+  for (final id in [
+    'general-previous-period',
+    'general-next-period',
+    'general-go-today',
+  ]) {
+    final command = _key(id).hitTestable();
+    if (command.evaluate().isEmpty) continue;
+    expect(tester.getRect(command).overlaps(dateRect), isFalse);
+  }
+  await _openAndCloseDatePicker(tester, button);
+  expect(provider.generalView.customDateRange, range);
+  expect(provider.generalView.data.dateLabelFormat, format);
+  expect(storage.writes, writes);
+  expect(tester.takeException(), isNull);
+}
+
 void main() {
+  for (final locale in _locales) {
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'tablet 600/2x $locale $brightness keeps localized cross-year endpoints',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await _expectTabletRange(
+              tester,
+              width: 600,
+              locale: locale,
+              brightness: brightness,
+              format: generalDateLabelFormatLocalized,
+            );
+          } finally {
+            semantics.dispose();
+          }
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
+    }
+  }
+  for (final width in [599.0, 600.0, 601.0, 800.0]) {
+    for (final format in [
+      generalDateLabelFormatSlash,
+      generalDateLabelFormatIso,
+      generalDateLabelFormatLocalized,
+    ]) {
+      testWidgets(
+        'touch boundary $width/2x $format preserves the whole range',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await _expectTabletRange(
+              tester,
+              width: width,
+              locale: const Locale('en'),
+              brightness: Brightness.light,
+              format: format,
+            );
+          } finally {
+            semantics.dispose();
+          }
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
+    }
+  }
+
   for (final locale in _locales) {
     for (final brightness in Brightness.values) {
       testWidgets(

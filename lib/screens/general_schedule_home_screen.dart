@@ -2846,6 +2846,19 @@ class _GeneralToolbarLayout extends StatelessWidget {
               calendarShowIcon: false,
             );
           }
+          metrics = _GeneralToolbarMetrics(
+            calendarWidth: metrics.calendarWidth,
+            dateWidth: math.max(
+              metrics.dateWidth,
+              _dateNavigationMinimumWidth(
+                context,
+                selectedDate,
+                view,
+                format: dateLabelFormat,
+              ),
+            ),
+            calendarShowIcon: metrics.calendarShowIcon,
+          );
           final calendar = SizedBox(
             width: metrics.calendarWidth,
             child: _GeneralCalendarSelector(
@@ -3009,6 +3022,13 @@ class _GeneralToolbarLayout extends StatelessWidget {
           if (settings != null && !orderedIds.contains('settings')) {
             orderedIds.add('settings');
           }
+          final widths = <String, double>{
+            'category': metrics.calendarWidth,
+            'date': metrics.dateWidth,
+            'view': 48,
+            'settings': 48,
+            'more': 48,
+          };
           if (compactToolbar &&
               order.join(',') !=
                   generalToolbarNavigationDefaultOrder.join(',')) {
@@ -3025,14 +3045,26 @@ class _GeneralToolbarLayout extends StatelessWidget {
             final dateIds = orderedIds
                 .where((id) => id == 'date' || id == 'view')
                 .toList();
-            Widget row(List<String> ids) => Row(
-              children: [
-                for (var i = 0; i < ids.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 4),
-                  actionById[ids[i]]!,
+            Widget row(List<String> ids) {
+              final extent =
+                  ids.fold<double>(0, (sum, id) => sum + (widths[id] ?? 48)) +
+                  math.max(0, ids.length - 1) * 4;
+              final content = Row(
+                children: [
+                  for (var i = 0; i < ids.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 4),
+                    actionById[ids[i]]!,
+                  ],
                 ],
-              ],
-            );
+              );
+              return extent > availableWidth + .5
+                  ? SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: content,
+                    )
+                  : content;
+            }
+
             return Column(
               key: const ValueKey('general-compact-toolbar-rows'),
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3046,13 +3078,6 @@ class _GeneralToolbarLayout extends StatelessWidget {
               ],
             );
           }
-          final widths = <String, double>{
-            'category': metrics.calendarWidth,
-            'date': metrics.dateWidth,
-            'view': 48,
-            'settings': 48,
-            'more': 48,
-          };
           final contentWidth =
               orderedIds.fold<double>(
                 0,
@@ -3296,10 +3321,22 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     final textFactor = WorkbenchLayoutPolicy.textFactor(
       MediaQuery.textScalerOf(context).scale(14) / 14,
     );
+    final minimumDateWidth = _dateNavigationMinimumWidth(
+      context,
+      selectedDate,
+      view,
+      format: dateLabelFormat,
+    );
     final showSteps =
-        includeDate && !compactTouch && dateWidth >= 192 * textFactor;
+        includeDate &&
+        !compactTouch &&
+        dateWidth >= 192 * textFactor &&
+        dateWidth >= minimumDateWidth + 96;
     final showToday =
-        !compactTouch && showSteps && dateWidth >= 320 * textFactor;
+        !compactTouch &&
+        showSteps &&
+        dateWidth >= 320 * textFactor &&
+        dateWidth >= minimumDateWidth + 144;
     final labelWidth = dateWidth - (showSteps ? 96 : 0) - (showToday ? 48 : 0);
     final dateLabel = _dateNavigationLabelForWidth(
       context,
@@ -3375,8 +3412,6 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
                         Text(
                           dateLabel,
                           key: ValueKey('general-date-label-$dateLabel'),
-                          maxLines: compactTouch ? null : 1,
-                          overflow: compactTouch ? null : TextOverflow.ellipsis,
                           textAlign: compactTouch
                               ? TextAlign.start
                               : TextAlign.center,
@@ -4051,6 +4086,37 @@ List<String> _compactDateNavigationCandidates(
 
 String _wrapDateNavigationRange(String label) => label.replaceFirst('–', '\n–');
 
+double _dateNavigationMinimumWidth(
+  BuildContext context,
+  DateTime date,
+  String view, {
+  required String format,
+}) {
+  final label = _dateNavigationCandidates(
+    date,
+    view,
+    format: format,
+    localeName: Localizations.localeOf(context).toLanguageTag(),
+    customRange: view == generalViewCustom
+        ? context.read<GeneralViewState>().customDateRange
+        : null,
+  ).last;
+  final painter = TextPainter(
+    text: TextSpan(
+      text: _wrapDateNavigationRange(label),
+      style: _generalDateTitleStyle(context),
+    ),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  final width =
+      painter.width +
+      _GeneralToolbarMetrics._dateButtonHorizontalPadding * 2 +
+      2;
+  painter.dispose();
+  return math.max(48, width);
+}
+
 String _dateNavigationLabelForWidth(
   BuildContext context,
   DateTime date,
@@ -4101,9 +4167,7 @@ String _dateNavigationLabelForWidth(
       return candidate;
     }
   }
-  return compactToolbar
-      ? _wrapDateNavigationRange(candidates.last)
-      : candidates.last;
+  return _wrapDateNavigationRange(candidates.last);
 }
 
 DateSelectionUnit _dateUnitForView(String view) => switch (view) {
