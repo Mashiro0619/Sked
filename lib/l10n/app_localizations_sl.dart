@@ -2614,8 +2614,8 @@ class AppLocalizationsSl extends AppLocalizations {
       'Dodano med izjeme optimizacije baterije v Androidu';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Natančni opomniki zahtevajo izjemo pri optimizaciji baterije v Androidu';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

@@ -2440,8 +2440,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationBatteryOptimizationAllowed => '已加入 Android 电池优化白名单';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      '精准提醒需要加入 Android 电池优化白名单';
+  String get notificationBatteryOptimizationWarning =>
+      '电池优化或厂商后台限制可能导致提醒延迟，可在系统设置中调整。';
 
   @override
   String get notificationBatteryOptimizationRequest => '打开电池优化设置';
@@ -5494,8 +5494,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationBatteryOptimizationAllowed => '已加入 Android 電池最佳化白名單';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      '精確提醒需要加入 Android 電池最佳化白名單';
+  String get notificationBatteryOptimizationWarning =>
+      '電池最佳化或廠商背景限制可能導致提醒延遲，可在系統設定中調整。';
 
   @override
   String get notificationBatteryOptimizationRequest => '開啟電池最佳化設定';

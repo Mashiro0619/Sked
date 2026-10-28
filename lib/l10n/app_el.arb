@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Έχει οριστεί εξαίρεση από τη βελτιστοποίηση μπαταρίας του Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Οι ακριβείς υπενθυμίσεις απαιτούν εξαίρεση από τη βελτιστοποίηση μπαταρίας του Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Άνοιγμα ρυθμίσεων βελτιστοποίησης μπαταρίας",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Εκκίνηση στο παρασκήνιο από τον κατασκευαστή",

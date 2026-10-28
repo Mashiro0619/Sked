@@ -1913,8 +1913,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Добавлено в исключения оптимизации батареи Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Для точных напоминаний нужно исключение из оптимизации батареи Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Открыть настройки оптимизации батареи",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Фоновый запуск производителя",

@@ -139,6 +139,7 @@ const _productivityChannel = MethodChannel(AndroidProductivityChannel.name);
 void _mockAndroidNotificationDiagnostics({
   required bool notificationsEnabled,
   required bool exactAlarmsAllowed,
+  bool batteryOptimizationIgnored = true,
   bool? postNotificationsGranted,
   String autostartVendor = 'unknown',
   bool autostartVendorEntryAvailable = false,
@@ -156,7 +157,7 @@ void _mockAndroidNotificationDiagnostics({
             'postNotificationsGranted':
                 postNotificationsGranted ?? notificationsEnabled,
             'exactAlarmsAllowed': exactAlarmsAllowed,
-            'batteryOptimizationIgnored': true,
+            'batteryOptimizationIgnored': batteryOptimizationIgnored,
             'channels': channels,
             'activeNotifications': activeNotifications,
           };
@@ -971,11 +972,12 @@ void main() {
   );
 
   testWidgets(
-    'notification diagnostic tests use the coordinator-owned service',
+    'notification diagnostic tests use the coordinator service despite battery restrictions',
     (tester) async {
       final (provider, _) = await _createProvider();
       addTearDown(provider.dispose);
-      final gateway = MemoryAgendaNotificationGateway();
+      final gateway = MemoryAgendaNotificationGateway()
+        ..batteryOptimizationGranted = false;
       final coordinator = _developerNotificationCoordinator(provider, gateway);
       addTearDown(coordinator.dispose);
       final bridge = AndroidProductivityBridge(
@@ -986,6 +988,7 @@ void main() {
       _mockAndroidNotificationDiagnostics(
         notificationsEnabled: true,
         exactAlarmsAllowed: true,
+        batteryOptimizationIgnored: false,
       );
 
       await _pumpDeveloperPage(

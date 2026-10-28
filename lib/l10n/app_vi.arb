@@ -1914,8 +1914,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Đã được miễn tối ưu hóa pin trên Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Lời nhắc chính xác cần được miễn tối ưu hóa pin trên Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Mở cài đặt tối ưu hóa pin",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Khởi động nền của nhà sản xuất",

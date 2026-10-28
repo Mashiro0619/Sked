@@ -2648,8 +2648,8 @@ class AppLocalizationsEl extends AppLocalizations {
       'Έχει οριστεί εξαίρεση από τη βελτιστοποίηση μπαταρίας του Android';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Οι ακριβείς υπενθυμίσεις απαιτούν εξαίρεση από τη βελτιστοποίηση μπαταρίας του Android';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

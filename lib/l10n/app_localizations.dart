@@ -4674,11 +4674,11 @@ abstract class AppLocalizations {
   /// **'Android battery optimization allowlisted'**
   String get notificationBatteryOptimizationAllowed;
 
-  /// No description provided for @notificationBatteryOptimizationRequired.
+  /// No description provided for @notificationBatteryOptimizationWarning.
   ///
   /// In en, this message translates to:
-  /// **'Precise reminders require the Android battery-optimization allowlist'**
-  String get notificationBatteryOptimizationRequired;
+  /// **'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.'**
+  String get notificationBatteryOptimizationWarning;
 
   /// No description provided for @notificationBatteryOptimizationRequest.
   ///

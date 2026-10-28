@@ -1913,8 +1913,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Kivétel az Android akkumulátoroptimalizálása alól",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "A pontos emlékeztetőkhöz kivétel szükséges az Android akkumulátoroptimalizálása alól",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Akkumulátoroptimalizálási beállítások megnyitása",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Gyártói háttérindítás",

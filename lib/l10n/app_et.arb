@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Androidi aku optimeerimise erand on lubatud",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Täpsed meeldetuletused vajavad Androidi aku optimeerimise erandit",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Ava aku optimeerimise seaded",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Tootja taustakäivitus",

@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Android 배터리 최적화 제외 목록에 등록됨",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "정확한 알림을 받으려면 Android 배터리 최적화 제외 목록에 등록해야 합니다",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "배터리 최적화 설정 열기",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "제조사 백그라운드 시작",

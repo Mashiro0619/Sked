@@ -1893,8 +1893,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Uitgezonderd van batterijoptimalisatie op Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Voor nauwkeurige herinneringen moet Sked worden uitgezonderd van batterijoptimalisatie op Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Instellingen voor batterijoptimalisatie openen",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Achtergrondstart van de fabrikant",

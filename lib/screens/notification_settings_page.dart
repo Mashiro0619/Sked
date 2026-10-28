@@ -383,14 +383,15 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         final deliveryBlocked =
             coverage == AgendaNotificationCoverage.blocked ||
             _notificationsPermissionGranted == false ||
-            (!_isWindows &&
-                (_exactAlarmAllowed == false ||
-                    _batteryOptimizationIgnored == false));
+            (!_isWindows && _exactAlarmAllowed == false);
+        final batteryRestricted =
+            !_isWindows && _batteryOptimizationIgnored == false;
         final deliveryFailed = coverage == AgendaNotificationCoverage.failed;
         final showCoverageNotice =
             settings.notificationsEnabled &&
             (deliveryBlocked ||
                 deliveryFailed ||
+                batteryRestricted ||
                 _isWindows ||
                 coverage == AgendaNotificationCoverage.renewable ||
                 coverage == AgendaNotificationCoverage.capacityLimited);
@@ -413,19 +414,22 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             SettingsConnectedTile(
               key: const ValueKey('notification-coverage-notice'),
               leading: Icon(
-                deliveryBlocked || deliveryFailed
+                deliveryBlocked || deliveryFailed || batteryRestricted
                     ? Icons.warning_amber_rounded
                     : Icons.info_outline,
               ),
               title: l10n.notificationCoverage,
               subtitle: _coverageSubtitle(context, l10n, notificationStatus),
               trailing:
-                  !widget.troubleshooting && (deliveryBlocked || deliveryFailed)
+                  !widget.troubleshooting &&
+                      (deliveryBlocked || deliveryFailed || batteryRestricted)
                   ? const Icon(Icons.chevron_right)
                   : null,
               onTap:
                   !widget.troubleshooting &&
-                      (deliveryBlocked || deliveryFailed) &&
+                      (deliveryBlocked ||
+                          deliveryFailed ||
+                          batteryRestricted) &&
                       !uiCommandBusy
                   ? _openTroubleshooting
                   : null,
@@ -771,24 +775,27 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     String? warning;
     if (status.coverage == AgendaNotificationCoverage.blocked ||
         !notificationsAllowed ||
-        (!_isWindows && (!exactAlarmsAllowed || !batteryAllowed))) {
+        (!_isWindows && !exactAlarmsAllowed)) {
       warning = [
         l10n.notificationCoverageBlocked,
         if (!notificationsAllowed)
           '${l10n.notificationPermission}: ${l10n.notificationPermissionDenied}',
         if (!_isWindows && !exactAlarmsAllowed)
           '${l10n.notificationExactAlarm}: ${l10n.notificationExactAlarmRequired}',
-        if (!_isWindows && !batteryAllowed)
-          '${l10n.notificationBatteryOptimization}: ${l10n.notificationBatteryOptimizationRequired}',
       ].join('\n');
     } else if (status.coverage == AgendaNotificationCoverage.failed) {
       warning = l10n.notificationCoverageFailed;
     }
     if (!_isWindows) {
-      if (warning != null) return warning;
-      return status.coverage == AgendaNotificationCoverage.capacityLimited
-          ? l10n.notificationCoverageCapacityLimited(status.directCapacity)
-          : l10n.notificationCoverageRenewable;
+      return [
+        warning ??
+            (status.coverage == AgendaNotificationCoverage.capacityLimited
+                ? l10n.notificationCoverageCapacityLimited(
+                    status.directCapacity,
+                  )
+                : l10n.notificationCoverageRenewable),
+        if (!batteryAllowed) l10n.notificationBatteryOptimizationWarning,
+      ].join('\n');
     }
     final windowEnd = status.schedulingWindowEndExclusive;
     final hasCurrentPlan =
@@ -841,7 +848,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     }
     return _batteryOptimizationIgnored == true
         ? l10n.notificationBatteryOptimizationAllowed
-        : l10n.notificationBatteryOptimizationRequired;
+        : l10n.notificationBatteryOptimizationWarning;
   }
 
   String _autostartSubtitle(AppLocalizations l10n) {

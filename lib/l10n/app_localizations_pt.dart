@@ -2629,8 +2629,8 @@ class AppLocalizationsPt extends AppLocalizations {
       'Isento da otimização de bateria do Android';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Lembretes precisos exigem uma exceção à otimização de bateria do Android';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

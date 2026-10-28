@@ -1914,8 +1914,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Undantagen från Androids batterioptimering",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Påminnelser vid exakt tid kräver undantag från Androids batterioptimering",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Öppna inställningar för batterioptimering",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Bakgrundsstart enligt tillverkaren",

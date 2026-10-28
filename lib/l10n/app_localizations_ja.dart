@@ -2504,8 +2504,8 @@ class AppLocalizationsJa extends AppLocalizations {
       'Android のバッテリー最適化の対象外に設定済み';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      '正確な通知には Android のバッテリー最適化の対象外に設定する必要があります';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest => 'バッテリー最適化の設定を開く';

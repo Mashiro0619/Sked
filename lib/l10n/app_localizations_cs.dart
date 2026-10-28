@@ -2606,8 +2606,8 @@ class AppLocalizationsCs extends AppLocalizations {
       'Povolena výjimka z optimalizace baterie Androidu';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Přesná připomenutí vyžadují výjimku z optimalizace baterie Androidu';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

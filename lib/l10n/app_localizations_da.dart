@@ -2594,8 +2594,8 @@ class AppLocalizationsDa extends AppLocalizations {
       'Undtaget fra Androids batterioptimering';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Præcise påmindelser kræver en undtagelse fra Androids batterioptimering';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

@@ -1914,8 +1914,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Dodano med izjeme optimizacije baterije v Androidu",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Natančni opomniki zahtevajo izjemo pri optimizaciji baterije v Androidu",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Odpri nastavitve optimizacije baterije",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Zagon v ozadju pri proizvajalcu",

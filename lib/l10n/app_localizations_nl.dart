@@ -2621,8 +2621,8 @@ class AppLocalizationsNl extends AppLocalizations {
       'Uitgezonderd van batterijoptimalisatie op Android';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Voor nauwkeurige herinneringen moet Sked worden uitgezonderd van batterijoptimalisatie op Android';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

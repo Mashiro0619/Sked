@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Povolena výjimka z optimalizace baterie Androidu",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Přesná připomenutí vyžadují výjimku z optimalizace baterie Androidu",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Otevřít nastavení optimalizace baterie",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Spouštění na pozadí podle výrobce",

@@ -2597,8 +2597,8 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đã được miễn tối ưu hóa pin trên Android';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Lời nhắc chính xác cần được miễn tối ưu hóa pin trên Android';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

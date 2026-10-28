@@ -2511,8 +2511,8 @@ class AppLocalizationsKo extends AppLocalizations {
       'Android 배터리 최적화 제외 목록에 등록됨';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      '정확한 알림을 받으려면 Android 배터리 최적화 제외 목록에 등록해야 합니다';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest => '배터리 최적화 설정 열기';

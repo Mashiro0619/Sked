@@ -2582,8 +2582,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Android battery optimization allowlisted';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Precise reminders require the Android battery-optimization allowlist';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

@@ -1913,8 +1913,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Esclusa dall’ottimizzazione della batteria di Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Per promemoria precisi serve un’esenzione dall’ottimizzazione della batteria di Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Apri le impostazioni di ottimizzazione della batteria",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Avvio in background del produttore",

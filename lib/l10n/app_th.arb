@@ -1914,8 +1914,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "อยู่ในรายการยกเว้นการเพิ่มประสิทธิภาพแบตเตอรี่ของ Android แล้ว",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "การเตือนตรงเวลาต้องอยู่ในรายการยกเว้นการเพิ่มประสิทธิภาพแบตเตอรี่ของ Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "เปิดการตั้งค่าการเพิ่มประสิทธิภาพแบตเตอรี่",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "การเริ่มเบื้องหลังของผู้ผลิต",

@@ -2634,8 +2634,8 @@ class AppLocalizationsRo extends AppLocalizations {
       'Exceptat de la optimizarea bateriei Android';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Mementourile precise necesită exceptarea de la optimizarea bateriei Android';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

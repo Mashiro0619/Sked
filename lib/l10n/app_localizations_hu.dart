@@ -2629,8 +2629,8 @@ class AppLocalizationsHu extends AppLocalizations {
       'Kivétel az Android akkumulátoroptimalizálása alól';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'A pontos emlékeztetőkhöz kivétel szükséges az Android akkumulátoroptimalizálása alól';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

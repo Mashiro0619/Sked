@@ -14,7 +14,6 @@ import 'agenda_notification_presentation.dart';
 import 'agenda_notification_runtime_actions.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_runtime_mutation_lock.dart';
-import 'android_productivity_bridge.dart';
 
 Future<void> handleAgendaNotificationBackgroundAction(
   NotificationResponse response, {
@@ -334,13 +333,6 @@ Future<bool> _backgroundExactDeliveryAllowed(
         await android.canScheduleExactNotifications() != true) {
       return false;
     }
-    final batteryOptimizationIgnored =
-        await const MethodChannel(AndroidProductivityChannel.backgroundName)
-            .invokeMethod<bool>(
-              AndroidProductivityChannel.isIgnoringBatteryOptimizations,
-            ) ??
-        false;
-    if (!batteryOptimizationIgnored) return false;
     final channels = await android.getNotificationChannels();
     AndroidNotificationChannel? channel;
     for (final item in channels ?? const <AndroidNotificationChannel>[]) {

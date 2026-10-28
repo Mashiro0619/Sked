@@ -3,6 +3,7 @@
 const commonEnglishFallbacks = <String>{
   'notificationCoverageBlocked',
   'notificationCoverageFailed',
+  'notificationBatteryOptimizationWarning',
   'schoolWebImportSignOut',
   'schoolWebImportSignOutTitle',
   'schoolWebImportSignOutMessage',

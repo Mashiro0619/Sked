@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Poikkeus Androidin akun optimoinnista on sallittu",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Tarkat muistutukset edellyttävät poikkeusta Androidin akun optimoinnista",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Avaa akun optimointiasetukset",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Valmistajan taustakäynnistys",

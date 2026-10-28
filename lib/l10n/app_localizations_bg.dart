@@ -2640,8 +2640,8 @@ class AppLocalizationsBg extends AppLocalizations {
       'Добавено е изключение от оптимизацията на батерията в Android';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Точните напомняния изискват изключение от оптимизацията на батерията в Android';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

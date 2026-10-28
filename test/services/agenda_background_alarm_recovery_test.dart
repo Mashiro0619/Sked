@@ -282,7 +282,27 @@ void main() {
     },
   );
 
-  for (final capability in ['notifications', 'exact alarms', 'battery']) {
+  test(
+    'background restoration continues with battery optimization active',
+    () async {
+      await foreground();
+      final originalId = platform.submissions.single;
+      final originalTime = platform.liveAlarms[originalId]!;
+      platform.liveAlarms.clear();
+      platform.batteryAllowed = false;
+
+      expect((await background()).succeeded, isTrue);
+      expect(platform.submissions, [originalId, originalId]);
+      expect(platform.liveAlarms, {originalId: originalTime});
+      expect(
+        runtime.diagnostics?.coverage,
+        isNot(AgendaNotificationCoverage.blocked),
+      );
+      expect(runtime.diagnostics?.batteryOptimizationIgnored, isFalse);
+    },
+  );
+
+  for (final capability in ['notifications', 'exact alarms']) {
     test('background restoration remains blocked by $capability', () async {
       await foreground();
       final originalId = platform.submissions.single;
@@ -292,8 +312,6 @@ void main() {
           platform.notificationsAllowed = false;
         case 'exact alarms':
           platform.exactAlarmsAllowed = false;
-        case 'battery':
-          platform.batteryAllowed = false;
       }
 
       await background();

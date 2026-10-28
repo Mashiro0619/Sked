@@ -407,13 +407,6 @@ class AgendaNotificationService extends ChangeNotifier {
       localeCode: localeCode,
       fireAt: fireAt,
     );
-    if (gateway is AgendaNotificationBatteryOptimizationGateway &&
-        !await (gateway as AgendaNotificationBatteryOptimizationGateway)
-            .batteryOptimizationIgnored) {
-      throw StateError(
-        'Battery optimization must be disabled for delayed tests.',
-      );
-    }
     if (gateway is AgendaNotificationChannelStateGateway &&
         !await (gateway as AgendaNotificationChannelStateGateway)
             .notificationChannelEnabled(request.channelId)) {
@@ -581,15 +574,9 @@ class AgendaNotificationService extends ChangeNotifier {
     await _ensureRuntimeState();
     final notificationsEnabled = await gateway.notificationsEnabled;
     final exactAlarmsAllowed = await gateway.exactAlarmsAllowed;
-    final batteryOptimizationIgnored =
-        gateway is AgendaNotificationBatteryOptimizationGateway
-        ? await (gateway as AgendaNotificationBatteryOptimizationGateway)
-              .batteryOptimizationIgnored
-        : true;
     if (await _precisionBlockReason(
           notificationsEnabled: notificationsEnabled,
           exactAlarmsAllowed: exactAlarmsAllowed,
-          batteryOptimizationIgnored: batteryOptimizationIgnored,
         ) !=
         null) {
       return null;
@@ -749,7 +736,6 @@ class AgendaNotificationService extends ChangeNotifier {
       final precisionBlockReason = await _precisionBlockReason(
         notificationsEnabled: notificationsEnabled,
         exactAlarmsAllowed: exactAllowed,
-        batteryOptimizationIgnored: batteryOptimizationIgnored,
       );
       if (precisionBlockReason != null) {
         await _recordPrecisionBlocked(
@@ -1021,7 +1007,6 @@ class AgendaNotificationService extends ChangeNotifier {
         final latestBlockReason = await _precisionBlockReason(
           notificationsEnabled: latestNotificationsEnabled,
           exactAlarmsAllowed: latestExactAlarmsAllowed,
-          batteryOptimizationIgnored: latestBatteryOptimizationIgnored,
         );
         if (latestBlockReason != null) {
           await _recordPrecisionBlocked(
@@ -1091,7 +1076,6 @@ class AgendaNotificationService extends ChangeNotifier {
           final afterBlockReason = await _precisionBlockReason(
             notificationsEnabled: afterNotificationsEnabled,
             exactAlarmsAllowed: afterExactAlarmsAllowed,
-            batteryOptimizationIgnored: afterBatteryOptimizationIgnored,
           );
           if (afterBlockReason != null) {
             throw _AgendaNotificationPrecisionBlocked(
@@ -1201,6 +1185,7 @@ class AgendaNotificationService extends ChangeNotifier {
               : AgendaNotificationDiagnosticResult.success,
           notificationsEnabled: notificationsEnabled,
           exactAlarmsAllowed: exactAllowed,
+          batteryOptimizationIgnored: batteryOptimizationIgnored,
           coverage: coverage,
           directScheduledCount: selected.directScheduledCount,
           directCapacity: planner.maxScheduledNotifications,
@@ -1278,16 +1263,12 @@ class AgendaNotificationService extends ChangeNotifier {
   Future<String?> _precisionBlockReason({
     required bool notificationsEnabled,
     required bool exactAlarmsAllowed,
-    required bool batteryOptimizationIgnored,
   }) async {
     if (!notificationsEnabled) {
       return 'System notification permission is required for agenda reminders.';
     }
     if (!exactAlarmsAllowed) {
       return 'Exact alarms are required for agenda reminders.';
-    }
-    if (!batteryOptimizationIgnored) {
-      return 'Battery optimization must be disabled for agenda reminders.';
     }
     return null;
   }

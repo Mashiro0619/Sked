@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_background_data.dart';
+import 'package:sked/services/agenda_notification_background.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_runtime_actions.dart';
 import 'package:sked/services/agenda_notification_fingerprint.dart';
@@ -1273,6 +1274,78 @@ void main() {
         expect(platform.schedules, isEmpty);
       },
     );
+
+    test('background snooze stays exact without a battery exemption', () async {
+      const channel = MethodChannel(AndroidProductivityChannel.backgroundName);
+      var batteryReads = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(
+          call.method,
+          AndroidProductivityChannel.isIgnoringBatteryOptimizations,
+        );
+        batteryReads++;
+        return false;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      SharedPreferences.setMockInitialValues({});
+      final current = DateTime.now();
+      const key = 'battery-snooze';
+      final payload = AgendaNotificationPayload(
+        key: key,
+        fireAt: current,
+        occurrenceId: 'course|battery-snooze',
+        occurrenceRevision: '1111111111111111111111111111111111111111',
+        fingerprint: 'battery-snooze-fingerprint',
+        target: const AgendaTarget(
+          sourceType: AgendaSourceType.course,
+          timetableId: 'table',
+          courseId: 'course',
+          dateIso: '2026-08-03',
+        ),
+        scheduleExact: true,
+      ).encode();
+      final runtime = SharedPreferencesAgendaNotificationRuntimeStore();
+      await runtime.saveBackgroundRequest(
+        AgendaNotificationBackgroundRequest(
+          key: key,
+          notificationId: 701001,
+          title: 'Course',
+          body: 'Reminder',
+          payload: payload,
+          fireAt: current,
+          localeCode: 'en',
+          lockScreenShowTitles: false,
+          channelId: 'sked_course_reminders',
+        ),
+      );
+      for (var repeat = 0; repeat < 2; repeat++) {
+        await handleAgendaNotificationBackgroundAction(
+          NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotificationAction,
+            actionId: 'snooze_10m',
+            payload: payload,
+          ),
+          loadData: () async =>
+              AgendaBackgroundDataSnapshot(data: _data(), canWrite: true),
+          backgroundCallback: agendaNotificationBackgroundAction,
+        );
+      }
+      expect(batteryReads, 0);
+      expect(platform.schedules, hasLength(1));
+      expect(
+        platform.schedules.single.scheduleMode,
+        AndroidScheduleMode.alarmClock,
+      );
+      expect(platform.schedules.single.id, 701001);
+      expect(await runtime.readPendingActions(), isEmpty);
+      expect(
+        (await runtime.readBackgroundRequest(key))!
+            .fireAt
+            .microsecondsSinceEpoch,
+        platform.schedules.single.scheduledDate.microsecondsSinceEpoch,
+      );
+    });
 
     test('uses alarm-clock mode for the delayed developer test when exact alarms are allowed', () async {
       final gateway = FlutterAgendaNotificationGateway(enabled: true);
@@ -2852,7 +2925,7 @@ void main() {
   );
 
   test(
-    'reconcile blocks scheduling when battery optimization is active',
+    'reconcile schedules exact reminders while battery optimization is active',
     () async {
       final gateway = _RecordingGateway()..batteryOptimizationGranted = false;
       final service = AgendaNotificationService(
@@ -2866,12 +2939,38 @@ void main() {
         anchor: DateTime(2026, 8, 3, 7),
       );
 
-      expect(gateway.scheduled, isEmpty);
-      expect(status.coverage == AgendaNotificationCoverage.blocked, isTrue);
+      expect(gateway.scheduled, hasLength(1));
+      expect(gateway.exactScheduleModes, [true]);
+      expect(status.coverage, isNot(AgendaNotificationCoverage.blocked));
       expect(status.batteryOptimizationIgnored, isFalse);
       final diagnostics = await service.readNotificationDiagnostics();
-      expect(diagnostics?.result, AgendaNotificationDiagnosticResult.blocked);
+      expect(diagnostics?.result, AgendaNotificationDiagnosticResult.success);
       expect(diagnostics?.batteryOptimizationIgnored, isFalse);
+    },
+  );
+
+  test(
+    'changing battery exemption preserves the existing exact plan',
+    () async {
+      final gateway = _RecordingGateway();
+      final anchor = DateTime(2026, 8, 3, 7, 40);
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => anchor,
+      );
+      addTearDown(service.dispose);
+      await service.reconcile(_data(), anchor: anchor);
+      final original = gateway.scheduled.values.single;
+      for (final allowed in [false, true]) {
+        gateway.batteryOptimizationGranted = allowed;
+        final status = await service.reconcile(_data(), anchor: anchor);
+        expect(gateway.scheduled.values.single.fireAt, original.fireAt);
+        expect(gateway.cancelledKeys, isEmpty);
+        expect(gateway.exactScheduleModes, [true]);
+        expect(status.batteryOptimizationIgnored, allowed);
+        expect(status.coverage, isNot(AgendaNotificationCoverage.blocked));
+      }
     },
   );
 
@@ -3011,6 +3110,11 @@ void main() {
       expect(status.coverage, AgendaNotificationCoverage.capacityLimited);
       expect(status.hasCapacityOverflow, isTrue);
       expect(status.nextRenewalAt, DateTime(2026, 8, 3, 10, 45, 30));
+      gateway.batteryOptimizationGranted = false;
+      expect(
+        await service.nextRenewalAt(_data(), anchor: anchor),
+        status.nextRenewalAt,
+      );
     },
   );
 
@@ -3901,42 +4005,40 @@ void main() {
     },
   );
 
-  test(
-    'developer notification tests use only dedicated test records',
-    () async {
-      final anchor = DateTime(2026, 8, 3, 7);
-      final gateway = MemoryAgendaNotificationGateway();
-      final service = AgendaNotificationService(
-        enabled: true,
-        gateway: gateway,
-        now: () => anchor,
-      );
+  test('developer tests keep dedicated records while battery optimization is active', () async {
+    final anchor = DateTime(2026, 8, 3, 7);
+    final gateway = MemoryAgendaNotificationGateway()
+      ..batteryOptimizationGranted = false;
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      now: () => anchor,
+    );
 
-      await service.showImmediateNotificationTest(
+    await service.showImmediateNotificationTest(
+      AgendaNotificationTestChannel.course,
+      localeCode: 'en',
+    );
+    await service.scheduleDeveloperNotificationTest(
+      AgendaNotificationTestChannel.schedule,
+      localeCode: 'en',
+    );
+
+    expect(gateway.scheduled, isEmpty);
+    expect(gateway.testNotifications, hasLength(2));
+    final requests = gateway.testNotifications.values.toList();
+    expect(
+      requests.map((request) => request.channel),
+      containsAll(<AgendaNotificationTestChannel>[
         AgendaNotificationTestChannel.course,
-        localeCode: 'en',
-      );
-      await service.scheduleDeveloperNotificationTest(
         AgendaNotificationTestChannel.schedule,
-        localeCode: 'en',
-      );
-
-      expect(gateway.scheduled, isEmpty);
-      expect(gateway.testNotifications, hasLength(2));
-      final requests = gateway.testNotifications.values.toList();
-      expect(
-        requests.map((request) => request.channel),
-        containsAll(<AgendaNotificationTestChannel>[
-          AgendaNotificationTestChannel.course,
-          AgendaNotificationTestChannel.schedule,
-        ]),
-      );
-      final delayed = requests.singleWhere(
-        (request) => request.channel == AgendaNotificationTestChannel.schedule,
-      );
-      expect(delayed.fireAt, anchor.add(const Duration(seconds: 30)));
-    },
-  );
+      ]),
+    );
+    final delayed = requests.singleWhere(
+      (request) => request.channel == AgendaNotificationTestChannel.schedule,
+    );
+    expect(delayed.fireAt, anchor.add(const Duration(seconds: 30)));
+  });
 
   test(
     'repeated developer tests retain separate immediate and delayed messages',

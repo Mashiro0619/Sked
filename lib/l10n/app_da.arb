@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Undtaget fra Androids batterioptimering",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Præcise påmindelser kræver en undtagelse fra Androids batterioptimering",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Åbn indstillinger for batterioptimering",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Producentens baggrundsstart",

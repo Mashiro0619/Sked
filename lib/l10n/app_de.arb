@@ -1911,8 +1911,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Von der Android-Akkuoptimierung ausgenommen",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Für genaue Erinnerungen ist eine Ausnahme von der Android-Akkuoptimierung erforderlich",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Einstellungen zur Akkuoptimierung öffnen",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Hintergrundstart des Herstellers",

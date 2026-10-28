@@ -2577,8 +2577,8 @@ class AppLocalizationsTh extends AppLocalizations {
       'อยู่ในรายการยกเว้นการเพิ่มประสิทธิภาพแบตเตอรี่ของ Android แล้ว';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'การเตือนตรงเวลาต้องอยู่ในรายการยกเว้นการเพิ่มประสิทธิภาพแบตเตอรี่ของ Android';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

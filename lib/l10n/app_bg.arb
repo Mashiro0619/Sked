@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Добавено е изключение от оптимизацията на батерията в Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Точните напомняния изискват изключение от оптимизацията на батерията в Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Отваряне на настройките за оптимизация на батерията",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Фоново стартиране според производителя",

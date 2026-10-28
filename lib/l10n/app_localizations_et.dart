@@ -2599,8 +2599,8 @@ class AppLocalizationsEt extends AppLocalizations {
       'Androidi aku optimeerimise erand on lubatud';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Täpsed meeldetuletused vajavad Androidi aku optimeerimise erandit';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

@@ -1913,8 +1913,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Exceptat de la optimizarea bateriei Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Mementourile precise necesită exceptarea de la optimizarea bateriei Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Deschide setările de optimizare a bateriei",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Pornire în fundal a producătorului",

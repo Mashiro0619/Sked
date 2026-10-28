@@ -1078,7 +1078,7 @@ class FlutterAgendaNotificationGateway
               ) ??
           false;
     } on PlatformException {
-      // Fail closed when the native capability cannot be verified.
+      // Show a reliability warning when the native exemption is unverified.
       return false;
     } on MissingPluginException {
       return false;

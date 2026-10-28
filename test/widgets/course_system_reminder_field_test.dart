@@ -258,7 +258,7 @@ void main() {
         l.notificationPermissionChecking,
         l.notificationPermissionRequestFailed,
         l.notificationExactAlarmRequired,
-        l.notificationBatteryOptimizationRequired,
+        l.notificationBatteryOptimizationWarning,
         l.notificationPlatformUnsupported,
         l.courseReminderDeliveryHint,
       ]) {

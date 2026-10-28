@@ -2632,8 +2632,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Von der Android-Akkuoptimierung ausgenommen';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Für genaue Erinnerungen ist eine Ausnahme von der Android-Akkuoptimierung erforderlich';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

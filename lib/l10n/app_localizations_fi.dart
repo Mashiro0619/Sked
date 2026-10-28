@@ -2609,8 +2609,8 @@ class AppLocalizationsFi extends AppLocalizations {
       'Poikkeus Androidin akun optimoinnista on sallittu';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'Tarkat muistutukset edellyttävät poikkeusta Androidin akun optimoinnista';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>

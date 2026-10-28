@@ -1890,8 +1890,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Android のバッテリー最適化の対象外に設定済み",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "正確な通知には Android のバッテリー最適化の対象外に設定する必要があります",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "バッテリー最適化の設定を開く",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "メーカー独自のバックグラウンド起動",

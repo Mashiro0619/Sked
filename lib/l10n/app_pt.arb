@@ -1913,8 +1913,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Isento da otimização de bateria do Android",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "Lembretes precisos exigem uma exceção à otimização de bateria do Android",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Abrir configurações de otimização de bateria",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "Inicialização em segundo plano do fabricante",

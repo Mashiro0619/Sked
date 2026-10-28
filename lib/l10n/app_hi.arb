@@ -1913,8 +1913,6 @@
   "@notificationBatteryOptimization": {},
   "notificationBatteryOptimizationAllowed": "Android के बैटरी ऑप्टिमाइज़ेशन से छूट मिली है",
   "@notificationBatteryOptimizationAllowed": {},
-  "notificationBatteryOptimizationRequired": "सटीक रिमाइंडर के लिए Android के बैटरी ऑप्टिमाइज़ेशन से छूट आवश्यक है",
-  "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "बैटरी ऑप्टिमाइज़ेशन सेटिंग्स खोलें",
   "@notificationBatteryOptimizationRequest": {},
   "notificationAutostart": "निर्माता का पृष्ठभूमि प्रारंभ",

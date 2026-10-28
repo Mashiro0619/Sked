@@ -387,9 +387,6 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     if (!android.exactAlarmsAllowed) {
       return _NotificationTestBlock.exactAlarmRequired;
     }
-    if (!android.batteryOptimizationIgnored) {
-      return _NotificationTestBlock.batteryOptimizationRequired;
-    }
     final channel = _selectedChannelState(android);
     if (channel?.exists == true && !channel!.enabled) {
       return _NotificationTestBlock.channelBlocked;
@@ -428,8 +425,6 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         l10n.developerNotificationTestBlockedChannel,
       _NotificationTestBlock.exactAlarmRequired =>
         l10n.notificationExactAlarmRequired,
-      _NotificationTestBlock.batteryOptimizationRequired =>
-        l10n.notificationBatteryOptimizationRequired,
     };
   }
 
@@ -668,7 +663,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                       ? l10n.notificationPermissionChecking
                       : android.batteryOptimizationIgnored
                       ? l10n.notificationBatteryOptimizationAllowed
-                      : l10n.notificationBatteryOptimizationRequired,
+                      : l10n.notificationBatteryOptimizationWarning,
                   onTap: android?.batteryOptimizationIgnored == true
                       ? () => unawaited(_refreshNotificationDiagnostics())
                       : () => unawaited(_openBatteryOptimizationSettings()),
@@ -1245,7 +1240,6 @@ enum _NotificationTestBlock {
   systemNotificationsBlocked,
   channelBlocked,
   exactAlarmRequired,
-  batteryOptimizationRequired,
 }
 
 class _NotificationChannelPresentation {

@@ -2599,8 +2599,8 @@ class AppLocalizationsHi extends AppLocalizations {
       'Android के बैटरी ऑप्टिमाइज़ेशन से छूट मिली है';
 
   @override
-  String get notificationBatteryOptimizationRequired =>
-      'सटीक रिमाइंडर के लिए Android के बैटरी ऑप्टिमाइज़ेशन से छूट आवश्यक है';
+  String get notificationBatteryOptimizationWarning =>
+      'Battery optimization or vendor background restrictions may delay reminders. You can adjust these in system settings.';
 
   @override
   String get notificationBatteryOptimizationRequest =>
