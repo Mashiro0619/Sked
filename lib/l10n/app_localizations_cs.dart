@@ -3262,4 +3262,15 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Označit jako vyřízené';
+
+  @override
+  String get developerTestNotificationTitle => 'Test oznámení Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kanál připomenutí kurzů funguje.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Kanál připomenutí událostí funguje.';
 }

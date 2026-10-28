@@ -3254,4 +3254,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Đánh dấu đã xử lý';
+
+  @override
+  String get developerTestNotificationTitle => 'Thông báo thử nghiệm Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kênh nhắc nhở môn học đang hoạt động.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Kênh nhắc nhở sự kiện đang hoạt động.';
 }

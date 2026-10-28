@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Aucun cours ce jour",
   "courseInactiveThisWeek": "Non prévu cette semaine",
   "notificationSnoozeAction": "Reporter de 10 minutes",
-  "notificationHandledAction": "Marquer comme traité"
+  "notificationHandledAction": "Marquer comme traité",
+  "developerTestNotificationTitle": "Test de notification Sked",
+  "developerTestNotificationCourseBody": "Le canal de rappel des cours fonctionne.",
+  "developerTestNotificationScheduleBody": "Le canal de rappel des événements fonctionne."
 }

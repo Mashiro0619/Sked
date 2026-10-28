@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Ei oppitunteja tälle päivälle",
   "courseInactiveThisWeek": "Ei opetusta tällä viikolla",
   "notificationSnoozeAction": "Siirrä 10 minuuttia",
-  "notificationHandledAction": "Merkitse käsitellyksi"
+  "notificationHandledAction": "Merkitse käsitellyksi",
+  "developerTestNotificationTitle": "Skedin testi-ilmoitus",
+  "developerTestNotificationCourseBody": "Kurssimuistutusten kanava toimii.",
+  "developerTestNotificationScheduleBody": "Tapahtumamuistutusten kanava toimii."
 }

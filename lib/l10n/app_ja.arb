@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "この日の授業はありません",
   "courseInactiveThisWeek": "今週は授業なし",
   "notificationSnoozeAction": "10 分後に再通知",
-  "notificationHandledAction": "処理済みとしてマーク"
+  "notificationHandledAction": "処理済みとしてマーク",
+  "developerTestNotificationTitle": "Sked 通知テスト",
+  "developerTestNotificationCourseBody": "授業リマインダーの通知チャンネルは正常です。",
+  "developerTestNotificationScheduleBody": "予定リマインダーの通知チャンネルは正常です。"
 }

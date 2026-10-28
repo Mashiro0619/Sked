@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Няма занятия за този ден",
   "courseInactiveThisWeek": "Не е планирано за тази седмица",
   "notificationSnoozeAction": "Отложи с 10 минути",
-  "notificationHandledAction": "Маркиране като обработено"
+  "notificationHandledAction": "Маркиране като обработено",
+  "developerTestNotificationTitle": "Тестово известие на Sked",
+  "developerTestNotificationCourseBody": "Каналът за напомняния за курсове работи.",
+  "developerTestNotificationScheduleBody": "Каналът за напомняния за събития работи."
 }

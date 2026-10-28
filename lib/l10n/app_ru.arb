@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "В этот день нет занятий",
   "courseInactiveThisWeek": "Не запланировано на эту неделю",
   "notificationSnoozeAction": "Отложить на 10 минут",
-  "notificationHandledAction": "Отметить выполненным"
+  "notificationHandledAction": "Отметить выполненным",
+  "developerTestNotificationTitle": "Тестовое уведомление Sked",
+  "developerTestNotificationCourseBody": "Канал напоминаний о курсах работает.",
+  "developerTestNotificationScheduleBody": "Канал напоминаний о событиях работает."
 }

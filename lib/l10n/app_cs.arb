@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Na tento den nejsou žádné hodiny",
   "courseInactiveThisWeek": "Tento týden není v rozvrhu",
   "notificationSnoozeAction": "Odložit o 10 minut",
-  "notificationHandledAction": "Označit jako vyřízené"
+  "notificationHandledAction": "Označit jako vyřízené",
+  "developerTestNotificationTitle": "Test oznámení Sked",
+  "developerTestNotificationCourseBody": "Kanál připomenutí kurzů funguje.",
+  "developerTestNotificationScheduleBody": "Kanál připomenutí událostí funguje."
 }

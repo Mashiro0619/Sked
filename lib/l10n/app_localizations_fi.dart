@@ -3266,4 +3266,15 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Merkitse käsitellyksi';
+
+  @override
+  String get developerTestNotificationTitle => 'Skedin testi-ilmoitus';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kurssimuistutusten kanava toimii.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Tapahtumamuistutusten kanava toimii.';
 }

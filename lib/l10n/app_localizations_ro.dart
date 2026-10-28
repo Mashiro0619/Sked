@@ -3295,4 +3295,15 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Marchează ca finalizat';
+
+  @override
+  String get developerTestNotificationTitle => 'Notificare de test Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Canalul de mementouri pentru cursuri funcționează.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Canalul de mementouri pentru evenimente funcționează.';
 }

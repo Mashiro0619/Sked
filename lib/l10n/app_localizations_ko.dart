@@ -3147,4 +3147,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get notificationHandledAction => '처리됨으로 표시';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked 알림 테스트';
+
+  @override
+  String get developerTestNotificationCourseBody => '수업 알림 채널이 정상적으로 작동합니다.';
+
+  @override
+  String get developerTestNotificationScheduleBody => '일정 알림 채널이 정상적으로 작동합니다.';
 }

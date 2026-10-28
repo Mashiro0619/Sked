@@ -3271,4 +3271,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Označi kot obdelano';
+
+  @override
+  String get developerTestNotificationTitle => 'Preizkusno obvestilo Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kanal opomnikov za predmete deluje.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Kanal opomnikov za dogodke deluje.';
 }

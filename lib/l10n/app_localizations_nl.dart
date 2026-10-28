@@ -3280,4 +3280,15 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Als afgehandeld markeren';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked-testmelding';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Het kanaal voor cursusherinneringen werkt.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Het kanaal voor afspraakherinneringen werkt.';
 }

@@ -3290,4 +3290,15 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Marcar como tratado';
+
+  @override
+  String get developerTestNotificationTitle => 'Notificação de teste do Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'O canal de lembretes de cursos está a funcionar.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'O canal de lembretes de eventos está a funcionar.';
 }

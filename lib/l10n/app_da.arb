@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Ingen undervisning denne dag",
   "courseInactiveThisWeek": "Ikke planlagt i denne uge",
   "notificationSnoozeAction": "Udsæt 10 minutter",
-  "notificationHandledAction": "Markér som håndteret"
+  "notificationHandledAction": "Markér som håndteret",
+  "developerTestNotificationTitle": "Sked-testmeddelelse",
+  "developerTestNotificationCourseBody": "Kanalen til kursuspåmindelser virker.",
+  "developerTestNotificationScheduleBody": "Kanalen til begivenhedspåmindelser virker."
 }

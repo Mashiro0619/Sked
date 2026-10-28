@@ -3247,4 +3247,15 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'पूर्ण के रूप में चिह्नित करें';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked परीक्षण सूचना';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'पाठ्यक्रम रिमाइंडर चैनल काम कर रहा है।';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'इवेंट रिमाइंडर चैनल काम कर रहा है।';
 }

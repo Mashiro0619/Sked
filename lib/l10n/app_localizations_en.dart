@@ -3254,4 +3254,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Mark handled';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked notification test';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'The course reminder channel is working.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'The schedule reminder channel is working.';
 }

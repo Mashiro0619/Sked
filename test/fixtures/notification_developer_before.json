@@ -1,0 +1,132 @@
+{
+  "bg": [
+    "Тестово известие на Sked",
+    "Каналът за напомняния за курсове работи.",
+    "Каналът за напомняния за събития работи."
+  ],
+  "cs": [
+    "Test oznámení Sked",
+    "Kanál připomenutí kurzů funguje.",
+    "Kanál připomenutí událostí funguje."
+  ],
+  "da": [
+    "Sked-testmeddelelse",
+    "Kanalen til kursuspåmindelser virker.",
+    "Kanalen til begivenhedspåmindelser virker."
+  ],
+  "de": [
+    "Sked-Benachrichtigungstest",
+    "Der Kanal für Kurserinnerungen funktioniert.",
+    "Der Kanal für Terminerinnerungen funktioniert."
+  ],
+  "el": [
+    "Δοκιμαστική ειδοποίηση Sked",
+    "Το κανάλι υπενθυμίσεων μαθημάτων λειτουργεί.",
+    "Το κανάλι υπενθυμίσεων συμβάντων λειτουργεί."
+  ],
+  "es": [
+    "Prueba de notificaciones de Sked",
+    "El canal de recordatorios de cursos funciona.",
+    "El canal de recordatorios de eventos funciona."
+  ],
+  "et": [
+    "Skedi testteavitus",
+    "Kursuste meeldetuletuste kanal töötab.",
+    "Sündmuste meeldetuletuste kanal töötab."
+  ],
+  "fi": [
+    "Skedin testi-ilmoitus",
+    "Kurssimuistutusten kanava toimii.",
+    "Tapahtumamuistutusten kanava toimii."
+  ],
+  "fr": [
+    "Test de notification Sked",
+    "Le canal de rappel des cours fonctionne.",
+    "Le canal de rappel des événements fonctionne."
+  ],
+  "hi": [
+    "Sked परीक्षण सूचना",
+    "पाठ्यक्रम रिमाइंडर चैनल काम कर रहा है।",
+    "इवेंट रिमाइंडर चैनल काम कर रहा है।"
+  ],
+  "hu": [
+    "Sked tesztértesítés",
+    "A kurzusemlékeztetők csatornája működik.",
+    "Az eseményemlékeztetők csatornája működik."
+  ],
+  "it": [
+    "Notifica di prova di Sked",
+    "Il canale dei promemoria dei corsi funziona.",
+    "Il canale dei promemoria degli eventi funziona."
+  ],
+  "ja": [
+    "Sked 通知テスト",
+    "授業リマインダーの通知チャンネルは正常です。",
+    "予定リマインダーの通知チャンネルは正常です。"
+  ],
+  "ko": [
+    "Sked 알림 테스트",
+    "수업 알림 채널이 정상적으로 작동합니다.",
+    "일정 알림 채널이 정상적으로 작동합니다."
+  ],
+  "nl": [
+    "Sked-testmelding",
+    "Het kanaal voor cursusherinneringen werkt.",
+    "Het kanaal voor afspraakherinneringen werkt."
+  ],
+  "pl": [
+    "Powiadomienie testowe Sked",
+    "Kanał przypomnień o kursach działa.",
+    "Kanał przypomnień o wydarzeniach działa."
+  ],
+  "pt": [
+    "Notificação de teste do Sked",
+    "O canal de lembretes de cursos está a funcionar.",
+    "O canal de lembretes de eventos está a funcionar."
+  ],
+  "ro": [
+    "Notificare de test Sked",
+    "Canalul de mementouri pentru cursuri funcționează.",
+    "Canalul de mementouri pentru evenimente funcționează."
+  ],
+  "ru": [
+    "Тестовое уведомление Sked",
+    "Канал напоминаний о курсах работает.",
+    "Канал напоминаний о событиях работает."
+  ],
+  "sl": [
+    "Preizkusno obvestilo Sked",
+    "Kanal opomnikov za predmete deluje.",
+    "Kanal opomnikov za dogodke deluje."
+  ],
+  "sv": [
+    "Sked-testavisering",
+    "Kanalen för kurspåminnelser fungerar.",
+    "Kanalen för händelsepåminnelser fungerar."
+  ],
+  "th": [
+    "การแจ้งเตือนทดสอบ Sked",
+    "ช่องการเตือนวิชาเรียนทำงานเป็นปกติ",
+    "ช่องการเตือนกิจกรรมทำงานเป็นปกติ"
+  ],
+  "vi": [
+    "Thông báo thử nghiệm Sked",
+    "Kênh nhắc nhở môn học đang hoạt động.",
+    "Kênh nhắc nhở sự kiện đang hoạt động."
+  ],
+  "en": [
+    "Sked notification test",
+    "The course reminder channel is working.",
+    "The schedule reminder channel is working."
+  ],
+  "zh": [
+    "Sked 测试通知",
+    "课程提醒通道正常。",
+    "日程提醒通道正常。"
+  ],
+  "zh_Hant": [
+    "Sked 測試通知",
+    "課程提醒通道正常。",
+    "日程提醒通道正常。"
+  ]
+}

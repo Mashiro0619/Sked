@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Sel päeval pole tunde",
   "courseInactiveThisWeek": "Sel nädalal tunniplaanis puudub",
   "notificationSnoozeAction": "Lükka 10 minutit edasi",
-  "notificationHandledAction": "Märgi käsitletuks"
+  "notificationHandledAction": "Märgi käsitletuks",
+  "developerTestNotificationTitle": "Skedi testteavitus",
+  "developerTestNotificationCourseBody": "Kursuste meeldetuletuste kanal töötab.",
+  "developerTestNotificationScheduleBody": "Sündmuste meeldetuletuste kanal töötab."
 }

@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Geen lessen op deze dag",
   "courseInactiveThisWeek": "Deze week niet ingepland",
   "notificationSnoozeAction": "10 minuten uitstellen",
-  "notificationHandledAction": "Als afgehandeld markeren"
+  "notificationHandledAction": "Als afgehandeld markeren",
+  "developerTestNotificationTitle": "Sked-testmelding",
+  "developerTestNotificationCourseBody": "Het kanaal voor cursusherinneringen werkt.",
+  "developerTestNotificationScheduleBody": "Het kanaal voor afspraakherinneringen werkt."
 }

@@ -3312,4 +3312,15 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Σήμανση ως διεκπεραιωμένο';
+
+  @override
+  String get developerTestNotificationTitle => 'Δοκιμαστική ειδοποίηση Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Το κανάλι υπενθυμίσεων μαθημάτων λειτουργεί.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Το κανάλι υπενθυμίσεων συμβάντων λειτουργεί.';
 }

@@ -3041,6 +3041,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationHandledAction => '标记已处理';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked 测试通知';
+
+  @override
+  String get developerTestNotificationCourseBody => '课程提醒通道正常。';
+
+  @override
+  String get developerTestNotificationScheduleBody => '日程提醒通道正常。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6081,4 +6090,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationHandledAction => '標記已處理';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked 測試通知';
+
+  @override
+  String get developerTestNotificationCourseBody => '課程提醒通道正常。';
+
+  @override
+  String get developerTestNotificationScheduleBody => '日程提醒通道正常。';
 }

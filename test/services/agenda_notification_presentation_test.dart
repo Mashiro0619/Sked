@@ -5,12 +5,35 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/services/agenda_notification_presentation.dart';
+import 'package:sked/services/agenda_notification_contract.dart';
 
 Map<String, String> _legacyActions(String name) {
   final values = jsonDecode(
     File('test/fixtures/notification_${name}_before.json').readAsStringSync(),
   ) as Map<String, dynamic>;
   return values.map((locale, value) => MapEntry(locale, value as String));
+}
+
+Map<String, List<String>> _legacyDeveloperCopy() {
+  final values = jsonDecode(
+    File('test/fixtures/notification_developer_before.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
+  return values.map(
+    (locale, value) =>
+        MapEntry(locale, (value as List<dynamic>).cast<String>()),
+  );
+}
+
+List<String> _developerCopy(String code) {
+  final course = developerNotificationText(
+    code,
+    AgendaNotificationTestChannel.course,
+  );
+  final schedule = developerNotificationText(
+    code,
+    AgendaNotificationTestChannel.schedule,
+  );
+  return [course.title, course.body, schedule.title, schedule.body];
 }
 
 const _legacyAliases = {
@@ -104,4 +127,49 @@ void main() {
       expect(actual, orderedEquals(expected.values));
     },
   );
+
+  test('developer notifications retain every pre-migration locale value', () {
+    final expected = _legacyDeveloperCopy();
+    expect(
+      expected.keys.toSet(),
+      AppLocalizations.supportedLocales.map((locale) => '$locale').toSet(),
+    );
+    for (final entry in expected.entries) {
+      final value = entry.value;
+      expect(_developerCopy(entry.key), [
+        value[0],
+        value[1],
+        value[0],
+        value[2],
+      ], reason: entry.key);
+    }
+  });
+
+  test(
+    'developer notifications retain legacy region and fallback behavior',
+    () {
+      final expected = _legacyDeveloperCopy();
+      for (final entry in _legacyAliases.entries) {
+        final value = expected[entry.value]!;
+        expect(_developerCopy(entry.key), [
+          value[0],
+          value[1],
+          value[0],
+          value[2],
+        ], reason: entry.key);
+      }
+    },
+  );
+
+  test('developer notifications are available in an isolate without widget context', () async {
+    final expected = _legacyDeveloperCopy();
+    final codes = expected.keys.toList();
+    final actual = await Isolate.run(
+      () => [for (final code in codes) _developerCopy(code)],
+    );
+    expect(actual, [
+      for (final value in expected.values)
+        [value[0], value[1], value[0], value[2]],
+    ]);
+  });
 }

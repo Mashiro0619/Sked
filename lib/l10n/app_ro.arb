@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Nu sunt cursuri în această zi",
   "courseInactiveThisWeek": "Nu este programat în această săptămână",
   "notificationSnoozeAction": "Amână 10 minute",
-  "notificationHandledAction": "Marchează ca finalizat"
+  "notificationHandledAction": "Marchează ca finalizat",
+  "developerTestNotificationTitle": "Notificare de test Sked",
+  "developerTestNotificationCourseBody": "Canalul de mementouri pentru cursuri funcționează.",
+  "developerTestNotificationScheduleBody": "Canalul de mementouri pentru evenimente funcționează."
 }

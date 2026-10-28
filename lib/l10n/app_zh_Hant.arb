@@ -2168,5 +2168,8 @@
   "icsImportContinueAction": "繼續匯入",
   "importWarningRecurrenceRuleDowngraded": "此日程將以單次事件匯入；不支援的欄位或規則部分：{fields}。",
   "notificationSnoozeAction": "延後 10 分鐘",
-  "notificationHandledAction": "標記已處理"
+  "notificationHandledAction": "標記已處理",
+  "developerTestNotificationTitle": "Sked 測試通知",
+  "developerTestNotificationCourseBody": "課程提醒通道正常。",
+  "developerTestNotificationScheduleBody": "日程提醒通道正常。"
 }

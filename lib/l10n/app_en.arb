@@ -2219,5 +2219,11 @@
   "notificationSnoozeAction": "Snooze 10 minutes",
   "@notificationSnoozeAction": {"description": "Notification action that snoozes this reminder by the fixed ten-minute duration."},
   "notificationHandledAction": "Mark handled",
-  "@notificationHandledAction": {"description": "Notification action that marks this occurrence handled."}
+  "@notificationHandledAction": {"description": "Notification action that marks this occurrence handled."},
+  "developerTestNotificationTitle": "Sked notification test",
+  "@developerTestNotificationTitle": {"description": "Title of the safe developer test notification."},
+  "developerTestNotificationCourseBody": "The course reminder channel is working.",
+  "@developerTestNotificationCourseBody": {"description": "Body of a developer test sent through the course reminder channel."},
+  "developerTestNotificationScheduleBody": "The schedule reminder channel is working.",
+  "@developerTestNotificationScheduleBody": {"description": "Body of a developer test sent through the schedule reminder channel."}
 }

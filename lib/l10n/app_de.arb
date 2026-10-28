@@ -2145,5 +2145,8 @@
   "studentDayEmpty": "Keine Kurse an diesem Tag",
   "courseInactiveThisWeek": "Diese Woche nicht im Stundenplan",
   "notificationSnoozeAction": "10 Minuten verschieben",
-  "notificationHandledAction": "Als erledigt markieren"
+  "notificationHandledAction": "Als erledigt markieren",
+  "developerTestNotificationTitle": "Sked-Benachrichtigungstest",
+  "developerTestNotificationCourseBody": "Der Kanal für Kurserinnerungen funktioniert.",
+  "developerTestNotificationScheduleBody": "Der Kanal für Terminerinnerungen funktioniert."
 }

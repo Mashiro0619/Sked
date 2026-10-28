@@ -3271,4 +3271,15 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Oznacz jako obsłużone';
+
+  @override
+  String get developerTestNotificationTitle => 'Powiadomienie testowe Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kanał przypomnień o kursach działa.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Kanał przypomnień o wydarzeniach działa.';
 }

@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "No hay clases este día",
   "courseInactiveThisWeek": "No programado esta semana",
   "notificationSnoozeAction": "Posponer 10 minutos",
-  "notificationHandledAction": "Marcar como gestionado"
+  "notificationHandledAction": "Marcar como gestionado",
+  "developerTestNotificationTitle": "Prueba de notificaciones de Sked",
+  "developerTestNotificationCourseBody": "El canal de recordatorios de cursos funciona.",
+  "developerTestNotificationScheduleBody": "El canal de recordatorios de eventos funciona."
 }

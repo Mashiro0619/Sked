@@ -3138,4 +3138,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get notificationHandledAction => '処理済みとしてマーク';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked 通知テスト';
+
+  @override
+  String get developerTestNotificationCourseBody => '授業リマインダーの通知チャンネルは正常です。';
+
+  @override
+  String get developerTestNotificationScheduleBody => '予定リマインダーの通知チャンネルは正常です。';
 }

@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Ezen a napon nincsenek órák",
   "courseInactiveThisWeek": "Ezen a héten nincs óra",
   "notificationSnoozeAction": "Elhalasztás 10 perccel",
-  "notificationHandledAction": "Megjelölés kezeltként"
+  "notificationHandledAction": "Megjelölés kezeltként",
+  "developerTestNotificationTitle": "Sked tesztértesítés",
+  "developerTestNotificationCourseBody": "A kurzusemlékeztetők csatornája működik.",
+  "developerTestNotificationScheduleBody": "Az eseményemlékeztetők csatornája működik."
 }

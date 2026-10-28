@@ -2162,5 +2162,8 @@
   "studentDayEmpty": "Không có môn học trong ngày này",
   "courseInactiveThisWeek": "Không có lịch học trong tuần này",
   "notificationSnoozeAction": "Hoãn 10 phút",
-  "notificationHandledAction": "Đánh dấu đã xử lý"
+  "notificationHandledAction": "Đánh dấu đã xử lý",
+  "developerTestNotificationTitle": "Thông báo thử nghiệm Sked",
+  "developerTestNotificationCourseBody": "Kênh nhắc nhở môn học đang hoạt động.",
+  "developerTestNotificationScheduleBody": "Kênh nhắc nhở sự kiện đang hoạt động."
 }

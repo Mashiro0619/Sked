@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Não há aulas neste dia",
   "courseInactiveThisWeek": "Não está agendado para esta semana",
   "notificationSnoozeAction": "Adiar 10 minutos",
-  "notificationHandledAction": "Marcar como tratado"
+  "notificationHandledAction": "Marcar como tratado",
+  "developerTestNotificationTitle": "Notificação de teste do Sked",
+  "developerTestNotificationCourseBody": "O canal de lembretes de cursos está a funcionar.",
+  "developerTestNotificationScheduleBody": "O canal de lembretes de eventos está a funcionar."
 }

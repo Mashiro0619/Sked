@@ -3293,4 +3293,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Als erledigt markieren';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked-Benachrichtigungstest';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Der Kanal für Kurserinnerungen funktioniert.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Der Kanal für Terminerinnerungen funktioniert.';
 }

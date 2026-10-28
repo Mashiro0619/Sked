@@ -3287,4 +3287,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Отметить выполненным';
+
+  @override
+  String get developerTestNotificationTitle => 'Тестовое уведомление Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Канал напоминаний о курсах работает.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Канал напоминаний о событиях работает.';
 }

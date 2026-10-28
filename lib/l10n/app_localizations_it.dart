@@ -3294,4 +3294,15 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Segna come gestito';
+
+  @override
+  String get developerTestNotificationTitle => 'Notifica di prova di Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Il canale dei promemoria dei corsi funziona.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Il canale dei promemoria degli eventi funziona.';
 }

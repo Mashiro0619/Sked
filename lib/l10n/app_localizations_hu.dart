@@ -3281,4 +3281,15 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Megjelölés kezeltként';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked tesztértesítés';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'A kurzusemlékeztetők csatornája működik.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Az eseményemlékeztetők csatornája működik.';
 }

@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Δεν υπάρχουν μαθήματα αυτή την ημέρα",
   "courseInactiveThisWeek": "Δεν έχει προγραμματιστεί αυτή την εβδομάδα",
   "notificationSnoozeAction": "Αναβολή για 10 λεπτά",
-  "notificationHandledAction": "Σήμανση ως διεκπεραιωμένο"
+  "notificationHandledAction": "Σήμανση ως διεκπεραιωμένο",
+  "developerTestNotificationTitle": "Δοκιμαστική ειδοποίηση Sked",
+  "developerTestNotificationCourseBody": "Το κανάλι υπενθυμίσεων μαθημάτων λειτουργεί.",
+  "developerTestNotificationScheduleBody": "Το κανάλι υπενθυμίσεων συμβάντων λειτουργεί."
 }

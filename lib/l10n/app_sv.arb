@@ -2162,5 +2162,8 @@
   "studentDayEmpty": "Inga lektioner denna dag",
   "courseInactiveThisWeek": "Inte schemalagt den här veckan",
   "notificationSnoozeAction": "Skjut upp 10 minuter",
-  "notificationHandledAction": "Markera som hanterad"
+  "notificationHandledAction": "Markera som hanterad",
+  "developerTestNotificationTitle": "Sked-testavisering",
+  "developerTestNotificationCourseBody": "Kanalen för kurspåminnelser fungerar.",
+  "developerTestNotificationScheduleBody": "Kanalen för händelsepåminnelser fungerar."
 }

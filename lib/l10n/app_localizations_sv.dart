@@ -3261,4 +3261,15 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Markera som hanterad';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked-testavisering';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kanalen för kurspåminnelser fungerar.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Kanalen för händelsepåminnelser fungerar.';
 }

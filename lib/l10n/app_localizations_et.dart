@@ -3254,4 +3254,15 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Märgi käsitletuks';
+
+  @override
+  String get developerTestNotificationTitle => 'Skedi testteavitus';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kursuste meeldetuletuste kanal töötab.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Sündmuste meeldetuletuste kanal töötab.';
 }

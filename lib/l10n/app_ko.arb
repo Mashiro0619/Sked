@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "이 날은 수업이 없습니다",
   "courseInactiveThisWeek": "이번 주 수업 없음",
   "notificationSnoozeAction": "10분 후 다시 알림",
-  "notificationHandledAction": "처리됨으로 표시"
+  "notificationHandledAction": "처리됨으로 표시",
+  "developerTestNotificationTitle": "Sked 알림 테스트",
+  "developerTestNotificationCourseBody": "수업 알림 채널이 정상적으로 작동합니다.",
+  "developerTestNotificationScheduleBody": "일정 알림 채널이 정상적으로 작동합니다."
 }

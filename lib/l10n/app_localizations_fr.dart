@@ -3321,4 +3321,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Marquer comme traité';
+
+  @override
+  String get developerTestNotificationTitle => 'Test de notification Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Le canal de rappel des cours fonctionne.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Le canal de rappel des événements fonctionne.';
 }

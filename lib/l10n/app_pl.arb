@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Brak zajęć w tym dniu",
   "courseInactiveThisWeek": "Brak zajęć w tym tygodniu",
   "notificationSnoozeAction": "Odłóż o 10 minut",
-  "notificationHandledAction": "Oznacz jako obsłużone"
+  "notificationHandledAction": "Oznacz jako obsłużone",
+  "developerTestNotificationTitle": "Powiadomienie testowe Sked",
+  "developerTestNotificationCourseBody": "Kanał przypomnień o kursach działa.",
+  "developerTestNotificationScheduleBody": "Kanał przypomnień o wydarzeniach działa."
 }

@@ -3300,4 +3300,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Marcar como gestionado';
+
+  @override
+  String get developerTestNotificationTitle =>
+      'Prueba de notificaciones de Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'El canal de recordatorios de cursos funciona.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'El canal de recordatorios de eventos funciona.';
 }

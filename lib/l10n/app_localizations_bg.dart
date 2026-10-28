@@ -3303,4 +3303,15 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Маркиране като обработено';
+
+  @override
+  String get developerTestNotificationTitle => 'Тестово известие на Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Каналът за напомняния за курсове работи.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Каналът за напомняния за събития работи.';
 }

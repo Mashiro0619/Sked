@@ -3231,4 +3231,15 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'ทำเครื่องหมายว่าจัดการแล้ว';
+
+  @override
+  String get developerTestNotificationTitle => 'การแจ้งเตือนทดสอบ Sked';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'ช่องการเตือนวิชาเรียนทำงานเป็นปกติ';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'ช่องการเตือนกิจกรรมทำงานเป็นปกติ';
 }

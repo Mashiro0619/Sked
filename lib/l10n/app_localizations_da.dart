@@ -3249,4 +3249,15 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get notificationHandledAction => 'Markér som håndteret';
+
+  @override
+  String get developerTestNotificationTitle => 'Sked-testmeddelelse';
+
+  @override
+  String get developerTestNotificationCourseBody =>
+      'Kanalen til kursuspåmindelser virker.';
+
+  @override
+  String get developerTestNotificationScheduleBody =>
+      'Kanalen til begivenhedspåmindelser virker.';
 }

@@ -2162,5 +2162,8 @@
   "studentDayEmpty": "วันนี้ไม่มีวิชาเรียน",
   "courseInactiveThisWeek": "ไม่มีเรียนในสัปดาห์นี้",
   "notificationSnoozeAction": "เลื่อน 10 นาที",
-  "notificationHandledAction": "ทำเครื่องหมายว่าจัดการแล้ว"
+  "notificationHandledAction": "ทำเครื่องหมายว่าจัดการแล้ว",
+  "developerTestNotificationTitle": "การแจ้งเตือนทดสอบ Sked",
+  "developerTestNotificationCourseBody": "ช่องการเตือนวิชาเรียนทำงานเป็นปกติ",
+  "developerTestNotificationScheduleBody": "ช่องการเตือนกิจกรรมทำงานเป็นปกติ"
 }

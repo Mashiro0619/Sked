@@ -5777,6 +5777,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark handled'**
   String get notificationHandledAction;
+
+  /// Title of the safe developer test notification.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked notification test'**
+  String get developerTestNotificationTitle;
+
+  /// Body of a developer test sent through the course reminder channel.
+  ///
+  /// In en, this message translates to:
+  /// **'The course reminder channel is working.'**
+  String get developerTestNotificationCourseBody;
+
+  /// Body of a developer test sent through the schedule reminder channel.
+  ///
+  /// In en, this message translates to:
+  /// **'The schedule reminder channel is working.'**
+  String get developerTestNotificationScheduleBody;
 }
 
 class _AppLocalizationsDelegate

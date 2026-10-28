@@ -2147,5 +2147,8 @@
   "studentDayEmpty": "Nessuna lezione per questo giorno",
   "courseInactiveThisWeek": "Non in programma questa settimana",
   "notificationSnoozeAction": "Posticipa di 10 minuti",
-  "notificationHandledAction": "Segna come gestito"
+  "notificationHandledAction": "Segna come gestito",
+  "developerTestNotificationTitle": "Notifica di prova di Sked",
+  "developerTestNotificationCourseBody": "Il canale dei promemoria dei corsi funziona.",
+  "developerTestNotificationScheduleBody": "Il canale dei promemoria degli eventi funziona."
 }
