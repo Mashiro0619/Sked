@@ -39,6 +39,36 @@ flutter test benchmark/performance_benchmark_test.dart `
 The report is written to
 `build/benchmarks/windows-host-<label>.json`.
 
+## Focused strict date parsing comparison
+
+`date_parsing_benchmark_test.dart` measures the 10,000 start/end fields from
+the fixed 5,000-event fixture, its 42-day cold occurrence query, and a hot-cache
+control. It uses the same calibration, five warm-ups, eleven samples and
+three-process comparison protocol. Valid fixture dates are checked against
+the native ISO parser before and after timing; occurrence checksums stay fixed.
+Set `SKED_BENCHMARK_OUTPUT_DIR` to a system temporary directory when collecting
+local evidence. Compare a production baseline and candidate with the identical
+benchmark source, and do not infer allocation counts from timing alone.
+
+The 2026-10-28 Windows host JIT comparison used `4f3011e` as the production
+baseline. The candidate only moved the strict ISO RegExp factory call to a
+top-level final field with the same pattern. Six new processes ran serially in
+ABBAAB order, each using the protocol above; other project validation jobs were
+stopped during this window. All workload checksums, fixture metadata and runtime
+metadata matched. The host was Windows 11 x64, Dart 3.13.5, 32 logical processors.
+
+| Case | Baseline process medians | Candidate process medians | Median change |
+| --- | --- | --- | ---: |
+| 10,000 strict ISO fields (ms/op) | 18.068 / 18.402 / 19.544 | 19.662 / 18.843 / 16.728 | +2.40% |
+| 5,000 events, 42-day cold query (ms/op) | 16.685 / 17.138 / 16.676 | 18.070 / 16.175 / 17.682 | +5.97% |
+| 5,000 events, 180-day hot cache (µs/op) | 0.163 / 0.162 / 0.176 | 0.173 / 0.163 / 0.164 | +0.71% |
+
+These overlapping samples do not establish a stable benefit, so the production
+candidate was not retained. Separately, 10,000 identical RegExp constructions
+returned one object identity on this runtime; the factory call's location alone
+does not prove a new allocation per date. This conclusion concerns this host and
+candidate, not all Dart runtimes or all RegExp workloads.
+
 ## Android profile
 
 Use a physical release-representative device for conclusions that influence
