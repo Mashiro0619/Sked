@@ -246,6 +246,45 @@ costs after a memory save, not real-device frame rates or full save latency.
 Regression tests also verify reminder-default updates, calendar visibility,
 calendar names and date navigation remain live in all three views.
 
+## Period-rail label measurements: candidate not retained
+
+`flutter test --no-pub --concurrency=1 --reporter=expanded
+benchmark/timetable_period_label_benchmark_test.dart` measures an empty grid
+with preserved gaps: 12 normal 45-minute periods or 48 dense 25-minute periods.
+It covers first mount, eight repeated layouts with unchanged labels, and eight
+period-time edits. Each case uses five warm-ups and eleven fixed-size samples
+without 250 ms calibration. Full rail/column geometry and rendered-text
+checksums are verified. The surface is 1280×900, grid width 1120 and text scale 1.
+
+The candidate retained one width measurement per grid, keyed by period values,
+text styles, complete text scaler, direction and locale, with system-font
+invalidation. It addressed the rail and did not restore the course-card
+candidate `1d45d46`, which was previously withdrawn. The new comparison used
+six independent Windows widget-test JIT processes in exclusive ABBAAB order,
+2026-10-28 14:12:41–14:14:42 UTC+08:00. All checksums, runtime/dataset metadata
+and shared-source hashes matched.
+
+| Case (ms/op) | Baseline process medians | Candidate process medians | Median change |
+| --- | --- | --- | ---: |
+| 12 periods, first mount | 31.346 / 29.080 / 30.308 | 34.202 / 32.322 / 30.819 | +6.65% |
+| 12 periods, eight repeated layouts | 47.404 / 37.733 / 39.450 | 45.502 / 47.472 / 39.750 | +15.34% |
+| 12 periods, eight edits | 67.763 / 57.740 / 63.806 | 70.300 / 76.214 / 64.306 | +10.18% |
+| 48 periods, first mount | 46.383 / 47.465 / 45.706 | 43.958 / 43.855 / 42.286 | −5.45% |
+| 48 periods, eight repeated layouts | 93.031 / 75.400 / 78.023 | 56.503 / 50.625 / 49.434 | −35.12% |
+| 48 periods, eight edits | 147.952 / 108.664 / 109.065 | 105.935 / 115.607 / 107.376 | −1.55% |
+
+The 48-period repeated-layout samples improve, but the common 12-period cases
+show higher medians and no reliable benefit. The general cache candidate is
+not retained, and production grid bytes were restored to the baseline. These
+two fixture sizes do not establish a justified activation threshold. The
+benchmark and all gains/regressions remain available; this is an evaluated,
+unadopted candidate, without a claim that period layouts are now faster.
+
+An earlier 10-minute fixture exposed an existing short-slot label overflow.
+Ten-minute periods are valid input. That layout defect is handled separately
+from this performance comparison, preserving time proportions and semantics.
+The timings here describe widget-test pumps, not device frame rates or app RSS.
+
 ## Android profile
 
 Use a physical release-representative device for conclusions that influence
