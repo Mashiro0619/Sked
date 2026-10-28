@@ -74,6 +74,47 @@ returned one object identity on this runtime; the factory call's location alone
 does not prove a new allocation per date. This conclusion concerns this host and
 candidate, not all Dart runtimes or all RegExp workloads.
 
+## Focused event-cache comparison
+
+`event_cache_benchmark_test.dart` compares the first 42-day query, two successive
+single-event edits with one or three 42-day windows, and an exact hot-query
+control over the fixed 5,000-event fixture. The edited and unedited snapshots
+are normalized before measurement; the actual calendar save command creates
+the edited state, and a precheck requires 4,999 unchanged event identities.
+The snapshots alternate within each operation. Both complete results, including
+their order, are checked against uncached queries before and after timing.
+`SKED_BENCHMARK_VERIFY_ONLY=true` runs a one-operation protocol check and labels
+its report `verification-only`; those timings are not performance evidence.
+
+Event reuse keys retain the event identity and exact start/end instants plus
+their UTC/local representation. Repeated events do not borrow a containing
+range. Cached geometry is rebound to the current calendar before the original
+global sort and filtering; mutable exception lists are checked on lookup.
+The default cache retains at most 20,000 entries and 250,000 values (occurrences
+plus exception strings), evicts least-recently-used entries, and drops removed
+events. Oversized expansions are returned in full without being retained.
+Injected occurrence services continue to own their existing query behavior.
+
+The 2026-10-28 Windows host JIT comparison used the unchanged expansion strategy
+at `b328481` and the bounded cache candidate, with identical benchmark sources.
+Six new processes ran in ABBAAB order while other project validation jobs were
+stopped. All four complete-result checksums, normalized fixture metadata and
+runtime metadata matched. The host was Windows 11 x64, Dart 3.13.5, 32 logical
+processors. These are query timings, not editor save latency or rendered frames.
+
+| Case | Baseline process medians | Candidate process medians | Median change |
+| --- | --- | --- | ---: |
+| First 42-day query (ms/op) | 20.247 / 21.475 / 22.017 | 22.909 / 24.895 / 25.843 | +15.93% |
+| Two snapshots, one 42-day query each (ms/op) | 43.593 / 43.835 / 44.803 | 3.094 / 3.351 / 3.391 | −92.36% |
+| Two snapshots, three 42-day queries each (ms/op) | 139.686 / 141.920 / 144.486 | 13.286 / 14.651 / 13.941 | −90.18% |
+| Exact hot query (µs/op) | 0.189 / 0.192 / 0.189 | 0.205 / 0.223 / 0.222 | +17.05% |
+
+The candidate is retained for the large reduction in recomputation after edits.
+The first query costs about 3.42 ms more at the median to populate the cache;
+the hot-query difference is about 0.032 µs. Three repeats describe this workload
+and do not establish a universal platform or UI performance improvement. The
+entry/value limits bound retained geometry, not the application's total RSS.
+
 ## Android profile
 
 Use a physical release-representative device for conclusions that influence

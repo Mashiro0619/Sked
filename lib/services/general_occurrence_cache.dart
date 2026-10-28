@@ -1,12 +1,27 @@
 import '../models/timetable_models.dart';
+import 'general_event_expansion_cache.dart';
 import 'general_occurrence_service.dart';
 
 class GeneralOccurrenceCache {
-  GeneralOccurrenceCache({this._service = const GeneralOccurrenceService()});
+  GeneralOccurrenceCache({
+    GeneralOccurrenceService? service,
+    GeneralEventExpansionCache? eventExpansionCache,
+  }) {
+    if (service != null && eventExpansionCache != null) {
+      throw ArgumentError('Provide a service or an event expansion cache.');
+    }
+    _eventExpansions = service == null
+        ? eventExpansionCache ?? GeneralEventExpansionCache()
+        : null;
+    _service =
+        service ??
+        GeneralOccurrenceService(expandEvent: _eventExpansions!.expand);
+  }
 
   static const _maxEntries = 64;
 
-  final GeneralOccurrenceService _service;
+  late final GeneralOccurrenceService _service;
+  late final GeneralEventExpansionCache? _eventExpansions;
   Object? _schedulesIdentity;
   bool _canReuseContainingRanges = false;
   final _reminderGroupsByDefault =
@@ -202,6 +217,7 @@ class GeneralOccurrenceCache {
   }
 
   void clear() {
+    _eventExpansions?.clear();
     _schedulesIdentity = null;
     _canReuseContainingRanges = false;
     _reminderGroupsByDefault.clear();
@@ -216,6 +232,9 @@ class GeneralOccurrenceCache {
       return;
     }
     _schedulesIdentity = schedulesIdentity;
+    _eventExpansions?.retainEvents(
+      general.schedules.expand((calendar) => calendar.events),
+    );
     _indexedReminderKey = null;
     _indexedReminders = null;
     _reminderGroupsByDefault.clear();

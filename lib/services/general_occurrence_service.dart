@@ -12,8 +12,8 @@ const maximumGeneralReminderLookback = Duration(days: 30);
 
 /// 通用模式（general mode）下"事件发生（occurrence）"相关的纯查询逻辑集合。
 ///
-/// 这个 service 只读 [GeneralScheduleData]，不持有任何状态，所有方法都是
-/// 幂等的。CRUD（增删改、reminder 标记 handled）属于 `GeneralCalendarService`。
+/// 这个 service 只读 [GeneralScheduleData]；展开策略可以复用缓存，但查询结果
+/// 保持幂等。CRUD（增删改、reminder 标记 handled）属于 `GeneralCalendarService`。
 class GeneralOccurrenceService {
   const GeneralOccurrenceService({
     this._expandEvent = expandGeneralEventOccurrences,
