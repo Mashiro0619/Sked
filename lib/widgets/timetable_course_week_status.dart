@@ -43,7 +43,7 @@ class TimetableCourseWeekStatus extends StatelessWidget {
         final scaler = MediaQuery.textScalerOf(context);
         final direction = Directionality.of(context);
         final locale = Localizations.maybeLocaleOf(context);
-        ({double height, int lines}) measure(
+        ({double height, int lines, bool needsMarker}) measure(
           String text,
           TextStyle style,
           int? lines,
@@ -61,10 +61,32 @@ class TimetableCourseWeekStatus extends StatelessWidget {
           final result = (
             height: painter.height,
             lines: painter.computeLineMetrics().length,
+            // Native paragraphs can lose even the ellipsis when no original
+            // glyph fits. Use the existing bounded icon only for that case.
+            needsMarker:
+                painter.didExceedMaxLines &&
+                painter
+                    .getBoxesForSelection(
+                      TextSelection(baseOffset: 0, extentOffset: text.length),
+                    )
+                    .isEmpty,
           );
           painter.dispose();
           return result;
         }
+
+        Widget marker(double height) => Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Icon(
+            Icons.more_horiz,
+            key: const ValueKey('timetable-week-status-overflow'),
+            size: math.min(
+              18,
+              math.max(0, math.min(constraints.maxWidth, height)),
+            ),
+            color: statusStyle.color,
+          ),
+        );
 
         final primary = measure(title, resolve(titleStyle), 1).height;
         final full = measure(label, statusStyle, null);
@@ -72,10 +94,10 @@ class TimetableCourseWeekStatus extends StatelessWidget {
         final room = constraints.maxHeight - primary - 2;
         if (room >= firstLine) {
           var lines = math.max(1, full.lines);
-          var height = full.height;
-          while (lines > 1 && height > room) {
+          var measured = full;
+          while (lines > 1 && measured.height > room) {
             lines--;
-            height = measure(label, statusStyle, lines).height;
+            measured = measure(label, statusStyle, lines);
           }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,17 +105,19 @@ class TimetableCourseWeekStatus extends StatelessWidget {
               Expanded(child: child),
               const SizedBox(height: 2),
               SizedBox(
-                height: height,
+                height: measured.height,
                 width: constraints.maxWidth,
-                child: Text(
-                  label,
-                  style: statusStyle,
-                  textScaler: scaler,
-                  locale: locale,
-                  textHeightBehavior: textHeightBehavior,
-                  maxLines: lines,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: measured.needsMarker
+                    ? marker(measured.height)
+                    : Text(
+                        label,
+                        style: statusStyle,
+                        textScaler: scaler,
+                        locale: locale,
+                        textHeightBehavior: textHeightBehavior,
+                        maxLines: lines,
+                        overflow: TextOverflow.ellipsis,
+                      ),
               ),
             ],
           );
@@ -102,8 +126,9 @@ class TimetableCourseWeekStatus extends StatelessWidget {
         // status first in its single summary; full course text remains on its
         // unchanged detail/semantic target, just as for other truncated cards.
         final summary = '$label · $title';
-        final summaryHeight = measure(summary, statusStyle, 1).height;
-        if (summaryHeight <= constraints.maxHeight) {
+        final summaryMeasure = measure(summary, statusStyle, 1);
+        if (summaryMeasure.height <= constraints.maxHeight) {
+          if (summaryMeasure.needsMarker) return marker(summaryMeasure.height);
           return Align(
             alignment: AlignmentDirectional.topStart,
             child: Text(
@@ -117,20 +142,7 @@ class TimetableCourseWeekStatus extends StatelessWidget {
             ),
           );
         }
-        return Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: Icon(
-            Icons.more_horiz,
-            size: math.min(
-              18,
-              math.max(
-                0,
-                math.min(constraints.maxWidth, constraints.maxHeight),
-              ),
-            ),
-            color: statusStyle.color,
-          ),
-        );
+        return marker(constraints.maxHeight);
       },
     ),
   );

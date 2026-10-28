@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/timetable_grid.dart';
+import 'package:sked/widgets/timetable_course_week_status.dart';
 
 import '../../test/support/workspace_harness.dart';
 import '../support/visual_capture_session.dart';
@@ -88,20 +91,50 @@ void registerCaptureScenarios() {
       final captures = VisualCaptureSession(label: 'home-typography-$group');
       final Finder text;
       final String name;
+      final Map<String, Object?> observations;
       if (group == 'status') {
         name = 'phone-320-2x-en-week-status';
         text = find.descendant(
           of: _key('timetable-course-week-status-inactive'),
           matching: find.text('Off week'),
         );
-        expect(text, findsOneWidget);
         final card = _key('timetable-course-visual-inactive');
-        expect(tester.getRect(card).contains(tester.getCenter(text)), isTrue);
-        final textRect = tester.getRect(text);
+        final marker = find.descendant(
+          of: _key('timetable-course-week-status-inactive'),
+          matching: _key('timetable-week-status-overflow'),
+        );
+        final visible = text.evaluate().isEmpty ? marker : text;
+        expect(visible, findsOneWidget);
+        expect(
+          tester.getRect(card).contains(tester.getCenter(visible)),
+          isTrue,
+        );
+        final textRect = tester.getRect(visible);
         expect(
           textRect.intersect(tester.getRect(find.byKey(boundary))),
           textRect,
         );
+        if (visible == marker) {
+          final status = tester.widget<TimetableCourseWeekStatus>(
+            _key('timetable-course-week-status-inactive'),
+          );
+          expect(status.label, 'Off week');
+          final ink = await _markerInk(tester, boundary, marker);
+          expect(ink, greaterThan(0));
+          observations = {
+            'presentation': 'more_horiz',
+            'text': status.label,
+            'width': textRect.width,
+            'height': textRect.height,
+            'markerInkPixels': ink,
+          };
+        } else {
+          observations = _observeParagraph(
+            tester.renderObject<RenderParagraph>(
+              find.descendant(of: text, matching: find.byType(RichText)),
+            ),
+          );
+        }
       } else {
         name = 'tablet-600-2x-en-cross-year-range';
         expect(_key('general-compact-toolbar-scroll'), findsNothing);
@@ -121,10 +154,12 @@ void registerCaptureScenarios() {
         final value = tester.widget<Text>(text).data!;
         expect(value, contains('2026/12/29'));
         expect(value, contains('2027/1/4'));
+        observations = _observeParagraph(
+          tester.renderObject<RenderParagraph>(
+            find.descendant(of: text, matching: find.byType(RichText)),
+          ),
+        );
       }
-      final paragraph = tester.renderObject<RenderParagraph>(
-        find.descendant(of: text, matching: find.byType(RichText)),
-      );
       await captures.capture(
         tester,
         boundary: find.byKey(boundary),
@@ -139,7 +174,7 @@ void registerCaptureScenarios() {
               : '2026-12-29 through 2027-01-04; noncompact Android toolbar',
           // Baselines may intentionally contain clipped text. Record actual
           // layout rather than treating a successful capture as readability proof.
-          'observations': _observeParagraph(paragraph),
+          'observations': observations,
         },
       );
       if (group == 'status') {
@@ -165,6 +200,51 @@ void registerCaptureScenarios() {
       DesktopWindowBridge.instance.available = false;
     }
   });
+}
+
+Future<int> _markerInk(
+  WidgetTester tester,
+  GlobalKey boundary,
+  Finder marker,
+) async {
+  final render = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(boundary),
+  );
+  final markerRect = tester
+      .getRect(marker)
+      .shift(-tester.getTopLeft(find.byKey(boundary)));
+  final color = tester.widget<Icon>(marker).color!.toARGB32();
+  final expected = [(color >> 16) & 255, (color >> 8) & 255, color & 255];
+  const ratio = 2.0;
+  final image = await render.toImage(pixelRatio: ratio);
+  try {
+    final bytes = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!
+        .buffer
+        .asUint8List();
+    var ink = 0;
+    for (
+      var y = (markerRect.top * ratio).ceil();
+      y < (markerRect.bottom * ratio).floor();
+      y++
+    ) {
+      for (
+        var x = (markerRect.left * ratio).ceil();
+        x < (markerRect.right * ratio).floor();
+        x++
+      ) {
+        final offset = (y * image.width + x) * 4;
+        if (List.generate(
+          3,
+          (channel) => (bytes[offset + channel] - expected[channel]).abs(),
+        ).every((difference) => difference <= 32)) {
+          ink++;
+        }
+      }
+    }
+    return ink;
+  } finally {
+    image.dispose();
+  }
 }
 
 Widget _statusGrid(ValueChanged<String> onTap) => TimetableGrid(

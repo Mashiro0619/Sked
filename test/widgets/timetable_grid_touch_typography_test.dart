@@ -283,11 +283,18 @@ void main() {
           final label = lookupAppLocalizations(appLocaleFromCode(locale))
               .courseInactiveBadge;
           for (final id in ['past', 'future']) {
+            final noGlyphsFit =
+                platform == TargetPlatform.android && locale == 'en';
             final status = find.descendant(
               of: _visual(id),
-              matching: find.text(label),
+              matching: noGlyphsFit
+                  ? find.byKey(const ValueKey('timetable-week-status-overflow'))
+                  : find.text(label),
             );
             expect(status, findsOneWidget);
+            if (noGlyphsFit) {
+              expect(tester.widget<Icon>(status).icon, Icons.more_horiz);
+            }
             expect(
               tester.getRect(status).intersect(tester.getRect(_visual(id))),
               tester.getRect(status),
