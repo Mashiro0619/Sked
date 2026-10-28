@@ -159,6 +159,16 @@ const _samplingLabels = <_AccessibilityPage, Set<String>>{
   },
 };
 
+// Keep phone evidence separate from desktop captions. At 393 dp and DPR 2.75,
+// both editors' End time paint contains the actual #42474e foreground on
+// #f2f3f9 (8.45:1); the modal dark bucket instead selects antialiased pixels.
+// The verifier still resolves every visible occurrence and enforces 4.5:1.
+const _phoneSamplingLabels = <_AccessibilityPage, Set<String>>{
+  _AccessibilityPage.studentWeek: {'Today', '1', '11:40', '21:40'},
+  _AccessibilityPage.courseEditor: {'End time'},
+  _AccessibilityPage.eventEditor: {'End time'},
+};
+
 class _VerifiedNodeContrastGuideline extends MinimumTextContrastGuideline {
   const _VerifiedNodeContrastGuideline(this.labels);
   final Set<String> labels;
@@ -636,10 +646,11 @@ void main() {
               );
               final sampling = await _verifySamplingLabels(
                 tester,
-                scale == 1 &&
-                        brightness == Brightness.light &&
-                        (desktop || page == _AccessibilityPage.studentWeek)
-                    ? _samplingLabels[page] ?? const {}
+                scale == 1 && brightness == Brightness.light
+                    ? (desktop
+                              ? _samplingLabels
+                              : _phoneSamplingLabels)[page] ??
+                          const {}
                     : const {},
               );
               expect(
