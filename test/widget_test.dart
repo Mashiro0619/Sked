@@ -2275,26 +2275,32 @@ void main() {
       },
     );
 
-    testWidgets('文本 / HTML 解析页在配置不完整时提示设置位置', (tester) async {
-      final incompleteProvider = AppRuntime(
-        dataTransferCodec: inlineDataTransferCodec,
-        storage: MemoryTimetableStorage(
-          initialData: _withSchoolImportSettings(
-            const AiApiSettings(
-              source: schoolImportParserSourceCustomOpenAi,
-              customBaseUrl: '',
-              customApiKey: '',
-              customModel: '',
-            ),
+    testWidgets('文本 / HTML 解析页优先提供文件导入并能往返解析设置', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(393, 852));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final storage = MemoryTimetableStorage(
+        initialData: _withSchoolImportSettings(
+          const AiApiSettings(
+            source: schoolImportParserSourceCustomOpenAi,
+            customBaseUrl: '',
+            customApiKey: '',
+            customModel: '',
           ),
         ),
       );
+      final incompleteProvider = AppRuntime(
+        dataTransferCodec: inlineDataTransferCodec,
+        storage: storage,
+      );
+      addTearDown(incompleteProvider.dispose);
       await incompleteProvider.lifecycle.load();
+      final savedBefore = storage.data!.encode();
 
       await tester.pumpWidget(
         AppScope(
           app: incompleteProvider,
           child: const MaterialApp(
+            builder: buildNotificationTestScope,
             locale: Locale('zh'),
             localizationsDelegates: [
               AppLocalizations.delegate,
@@ -2313,8 +2319,39 @@ void main() {
 
       expect(find.textContaining('自定义解析配置不完整'), findsOneWidget);
       expect(find.textContaining('设置 > 数据与安全'), findsNothing);
-      expect(find.widgetWithText(FilledButton, '打开设置'), findsOneWidget);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SchoolHtmlImportPage)),
+      );
+      final importFile = find.widgetWithText(
+        FilledButton,
+        l10n.schoolImportFileAction,
+      );
+      final configure = find.widgetWithText(
+        OutlinedButton,
+        l10n.schoolImportConfigureAction,
+      );
+      expect(tester.widget<FilledButton>(importFile).onPressed, isNotNull);
+      expect(tester.widget<OutlinedButton>(configure).onPressed, isNotNull);
       expect(find.widgetWithText(FilledButton, 'AI API 配置'), findsNothing);
+
+      await tester.ensureVisible(configure);
+      await tester.pumpAndSettle();
+      await tester.tap(configure);
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
+
+      final backTooltip = MaterialLocalizations.of(
+        tester.element(find.byType(SchoolImportParserSettingsPage)),
+      ).backButtonTooltip;
+      await tester.tap(find.byTooltip(backTooltip));
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
+      expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
+      expect(find.textContaining('自定义解析配置不完整'), findsOneWidget);
+      expect(tester.widget<FilledButton>(importFile).onPressed, isNotNull);
+      expect(tester.widget<OutlinedButton>(configure).onPressed, isNotNull);
+      expect(storage.data!.encode(), savedBefore);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('文本 / HTML 解析页会区分自定义配置缺失与完整状态', (tester) async {
