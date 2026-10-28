@@ -530,7 +530,10 @@ Map<String, int> buildStudentCourseNameColorValuesForTimetables(
     if (result.containsKey(courseName)) {
       continue;
     }
-    final colorValue = _pickNextCourseColorValue(usedColors);
+    final colorValue = _pickNextCourseColorValue(
+      usedColors,
+      allocatedCount: result.length,
+    );
     result[courseName] = colorValue;
     usedColors.add(colorValue);
   }
@@ -542,13 +545,18 @@ Map<String, int> buildStudentCourseNameColorValuesForTimetables(
   return result;
 }
 
-int _pickNextCourseColorValue(Set<int> usedColors) {
+int _pickNextCourseColorValue(
+  Set<int> usedColors, {
+  required int allocatedCount,
+}) {
   for (final colorValue in _studentCourseColorPalette) {
     if (!usedColors.contains(colorValue)) {
       return colorValue;
     }
   }
-  return _studentCourseColorPalette[usedColors.length %
+  // The distinct-color set stops growing once the palette is full. Continue
+  // its cycle by allocation count so later courses do not all receive slot 0.
+  return _studentCourseColorPalette[allocatedCount %
       _studentCourseColorPalette.length];
 }
 

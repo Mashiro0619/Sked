@@ -135,6 +135,33 @@ void main() {
         'Physics': shared,
       });
     });
+
+    test(
+      'automatic allocation remains varied beyond a single palette cycle',
+      () {
+        final courses = [
+          for (var index = 0; index < 40; index++)
+            course(
+              id: '$index',
+              name: 'Course ${index.toString().padLeft(2, '0')}',
+            ),
+        ];
+        final colors = buildStudentCourseNameColorValuesForTimetables([
+          timetable(courses: courses),
+        ]);
+        final reversed = buildStudentCourseNameColorValuesForTimetables([
+          timetable(courses: courses.reversed.toList()),
+        ]);
+        expect(colors, reversed);
+        final counts = <int, int>{};
+        for (final color in colors.values) {
+          counts.update(color, (count) => count + 1, ifAbsent: () => 1);
+        }
+        expect(counts.length, greaterThan(2));
+        final maximum = (colors.length + counts.length - 1) ~/ counts.length;
+        expect(counts.values, everyElement(lessThanOrEqualTo(maximum)));
+      },
+    );
   });
 
   group('StudentTimetableService timetables', () {
