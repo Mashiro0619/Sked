@@ -569,7 +569,7 @@ void main() {
         if (page == _AccessibilityPage.settings) (1.0, Brightness.dark),
       ]) {
         testWidgets(
-          '${page.name} ${platform.name} meets accessibility guidelines at $scale/${brightness.name}',
+          '${page == _AccessibilityPage.timeline ? 'timeline to list access' : page.name} ${platform.name} meets accessibility guidelines at $scale/${brightness.name}',
           (tester) async {
             final desktop = platform == TargetPlatform.windows;
             tester.view.devicePixelRatio = desktop ? 1 : 2.75;
@@ -594,6 +594,9 @@ void main() {
                     _AccessibilityPage.list => generalViewList,
                     _ => generalViewWeek,
                   },
+                  viewSwitchBehavior: page == _AccessibilityPage.timeline
+                      ? generalViewSwitchBehaviorMenu
+                      : null,
                 );
               }
               if (page == _AccessibilityPage.studentDay ||
@@ -620,18 +623,69 @@ void main() {
                 expect(find.byType(TimetableDayAgenda), findsOneWidget);
               }
               if (page == _AccessibilityPage.timeline) {
-                // Dense proportional blocks intentionally remain small. C-E2's
-                // explicit 48dp expansion/list path is their equivalent target.
-                final expand = find.byKey(
-                  const ValueKey('general-timeline-expand-events'),
+                // Keep timeline text validation independent of the alternative
+                // list path. At 2x the bottom 11:00 sample touches the scrollbar;
+                // verify its real foreground/background before stock checking.
+                final timelineSampling = await _verifySamplingLabels(
+                  tester,
+                  desktop && scale == 2
+                      ? const {'11:00'}
+                      : scale == 1 && brightness == Brightness.light
+                      ? (desktop
+                                ? _samplingLabels
+                                : _phoneSamplingLabels)[page] ??
+                            const {}
+                      : const {},
                 );
-                expect(expand, findsOneWidget);
-                expect(tester.getSize(expand).height, greaterThanOrEqualTo(48));
-                await tester.tap(expand);
-                await tester.pumpAndSettle();
                 expect(
-                  find.byKey(const ValueKey('general-more-occurrences-sheet')),
-                  findsOneWidget,
+                  timelineSampling.result.passed,
+                  isTrue,
+                  reason: timelineSampling.result.reason,
+                );
+                await expectLater(
+                  tester,
+                  meetsGuideline(
+                    _VerifiedNodeContrastGuideline(timelineSampling.labels),
+                  ),
+                );
+                // The existing list view is the full-sized selection path.
+                // These guidelines assess that surface, not the proportional
+                // blocks left behind a non-modal day-agenda panel.
+                final selectedDate = app.generalView.selectedDate;
+                final switcher = find.byKey(
+                  const ValueKey('general-view-switcher'),
+                );
+                final hasSwitcher = switcher
+                    .hitTestable()
+                    .evaluate()
+                    .isNotEmpty;
+                await tester.tap(
+                  hasSwitcher
+                      ? switcher
+                      : find.byKey(
+                          const ValueKey('general-desktop-toolbar-more'),
+                        ),
+                );
+                await tester.pumpAndSettle();
+                final listOption = hasSwitcher
+                    ? find.byWidgetPredicate(
+                        (widget) =>
+                            widget is PopupMenuItem<String> &&
+                            widget.value == generalViewList,
+                      )
+                    : find.byKey(const ValueKey('general-view-choice-list'));
+                await tester.ensureVisible(listOption);
+                await tester.tap(listOption);
+                await tester.pumpAndSettle();
+                expect(app.generalView.data.defaultView, generalViewWeek);
+                expect(
+                  find.byKey(const ValueKey('general-timeline-grid')),
+                  findsNothing,
+                );
+                expect(app.generalView.selectedDate, selectedDate);
+                expect(
+                  find.byKey(const ValueKey('general-timeline-expand-events')),
+                  findsNothing,
                 );
               }
               expect(tester.takeException(), isNull);
@@ -651,9 +705,10 @@ void main() {
               final sampling = await _verifySamplingLabels(
                 tester,
                 scale == 1 && brightness == Brightness.light
-                    ? (desktop
-                              ? _samplingLabels
-                              : _phoneSamplingLabels)[page] ??
+                    ? (desktop ? _samplingLabels : _phoneSamplingLabels)[page ==
+                                  _AccessibilityPage.timeline
+                              ? _AccessibilityPage.list
+                              : page] ??
                           const {}
                     : const {},
               );

@@ -106,7 +106,6 @@ class _ListCalendarView extends StatelessWidget {
 class _GeneralListOccurrenceTile extends StatelessWidget {
   const _GeneralListOccurrenceTile({
     this.compactPanel = false,
-    this.minimumHitHeight = 0,
     required this.occurrence,
     required this.onTap,
   });
@@ -114,7 +113,6 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
   final GeneralEventOccurrence occurrence;
   final VoidCallback onTap;
   final bool compactPanel;
-  final double minimumHitHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -192,9 +190,7 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
               child: InkWell(
                 onTap: onTap,
                 child: Container(
-                  constraints: BoxConstraints(
-                    minHeight: math.max(44, minimumHitHeight),
-                  ),
+                  constraints: const BoxConstraints(minHeight: 44),
                   padding: EdgeInsets.symmetric(
                     vertical: compactPanel ? 6 : 8,
                     horizontal: 10,
@@ -302,7 +298,7 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: minimumHitHeight),
+            constraints: const BoxConstraints(),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               child: Row(
