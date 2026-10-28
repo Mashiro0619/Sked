@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -636,7 +637,7 @@ void main() {
   );
 
   testWidgets(
-    'single-row touch toolbar distinguishes custom ranges without a second title line',
+    'single-row touch toolbar distinguishes custom ranges with complete dates',
     (t) async {
       _size(t, const Size(360, 1000));
       final (p, storage) = await _setup();
@@ -651,7 +652,32 @@ void main() {
         final texts = find.descendant(of: title, matching: find.byType(Text));
         expect(texts, findsOneWidget);
         final label = t.widget<Text>(texts);
-        expect(label.maxLines, 1);
+        final paragraph = t.renderObject<RenderParagraph>(
+          find.descendant(of: texts, matching: find.byType(RichText)),
+        );
+        expect(paragraph.didExceedMaxLines, isFalse);
+        final layout = TextPainter(
+          text: paragraph.text,
+          textDirection: paragraph.textDirection,
+          textScaler: paragraph.textScaler,
+          locale: paragraph.locale,
+          textHeightBehavior: paragraph.textHeightBehavior,
+        )..layout(maxWidth: paragraph.size.width);
+        expect(layout.computeLineMetrics().length, inInclusiveRange(1, 2));
+        layout.dispose();
+        for (var index = 0; index < label.data!.length; index++) {
+          if (label.data![index].trim().isEmpty) continue;
+          final boxes = paragraph.getBoxesForSelection(
+            TextSelection(baseOffset: index, extentOffset: index + 1),
+          );
+          expect(boxes, isNotEmpty);
+          for (final box in boxes) {
+            expect(box.left, greaterThanOrEqualTo(-.1));
+            expect(box.right, lessThanOrEqualTo(paragraph.size.width + .1));
+            expect(box.top, greaterThanOrEqualTo(-.1));
+            expect(box.bottom, lessThanOrEqualTo(paragraph.size.height + .1));
+          }
+        }
         labels.add(label.data!);
         expect(_key('general-custom-range-label'), findsNothing);
         final semanticLabel = t
@@ -661,7 +687,10 @@ void main() {
             .properties
             .label!;
         expect(semanticLabel, contains('自定义 · $days天'));
-        expect(semanticLabel, contains('2026'));
+        final dates = MaterialLocalizations.of(t.element(title));
+        final range = p.generalView.customDateRange!;
+        expect(semanticLabel, contains(dates.formatFullDate(range.start)));
+        expect(semanticLabel, contains(dates.formatFullDate(range.end)));
         expect(
           find.descendant(
             of: _key('general-view-switcher'),
@@ -670,8 +699,18 @@ void main() {
           findsOneWidget,
         );
         final row = t.getRect(_key('general-compact-toolbar-single-row'));
-        expect(row.height, lessThanOrEqualTo(52));
+        expect(row.height, greaterThanOrEqualTo(48));
+        expect(t.getRect(title).width, greaterThanOrEqualTo(48));
+        expect(t.getRect(title).height, greaterThanOrEqualTo(48));
         expect(t.getRect(title).center.dy, closeTo(row.center.dy, .1));
+        expect(
+          t.getRect(title).overlaps(t.getRect(_key('general-view-switcher'))),
+          isFalse,
+        );
+        await _tap(t, title);
+        expect(_popup, findsOneWidget);
+        await _tap(t, _key('sked-date-picker-close'));
+        expect(p.generalView.customDateRange, range);
         expect(p.generalView.customDateRange!.dayCount, days);
         // Showing a custom range must not rewrite the saved default view.
         expect(p.generalView.data.defaultView, generalViewWeek);
@@ -679,6 +718,36 @@ void main() {
         expect(t.takeException(), isNull);
       }
       expect(labels, hasLength(3));
+      await _tap(t, _key('general-view-switcher'));
+      await _tap(
+        t,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SkedPopupMenuItem<String> &&
+              widget.value == generalViewWeek,
+        ),
+      );
+      expect(p.generalView.customDateRange, isNull);
+      expect(
+        find.descendant(
+          of: _key('general-view-switcher'),
+          matching: find.byIcon(Icons.view_week_outlined),
+        ),
+        findsOneWidget,
+      );
+      final regularLabel = t
+          .widget<Semantics>(
+            find
+                .ancestor(
+                  of: _key('general-date-title-button'),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          )
+          .properties
+          .label!;
+      expect(regularLabel, isNot(contains('自定义')));
+      expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );

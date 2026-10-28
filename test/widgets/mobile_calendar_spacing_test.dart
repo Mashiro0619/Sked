@@ -182,7 +182,16 @@ void main() {
               final toolbarRect = t.getRect(toolbar),
                   headerRect = t.getRect(header);
               expect(toolbarRect.top, inset);
-              expect(toolbarRect.height, 48);
+              final dateButton = key(
+                mode == AppMode.general
+                    ? 'general-date-title-button'
+                    : 'student-week-picker-button',
+              );
+              chrome.expectReadableToolbarHeight(t, toolbarRect, dateButton);
+              expect(toolbarRect.height, greaterThanOrEqualTo(48));
+              if (scale == 1) expect(toolbarRect.height, 48);
+              expect(t.getRect(dateButton).width, greaterThanOrEqualTo(48));
+              expect(t.getRect(dateButton).height, greaterThanOrEqualTo(48));
               expect(headerRect.top, closeTo(toolbarRect.bottom, .1));
               final label = find.descendant(
                 of: header,
