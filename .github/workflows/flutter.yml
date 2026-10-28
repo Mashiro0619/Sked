@@ -111,6 +111,7 @@ jobs:
           SKED_DST_TEST_ZONE: pacific-apia
         run: >-
           flutter test test/named_timezone_indexed_reminder_test.dart
+          test/models/general_recurrence_exception_timezone_test.dart
           test/models/general_event_occurrence_range_test.dart
           test/services/general_reminder_indexed_items_test.dart
           test/services/general_occurrence_cache_test.dart

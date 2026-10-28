@@ -801,10 +801,24 @@ int? generalRecurrenceSequenceForDate(
           rule: rule,
         )
       : 0;
-  final candidate = generalRecurrenceStartAt(eventStart, rule, sequence);
-  return candidate != null && calendarDaysBetween(candidate, boundary) == 0
-      ? sequence
-      : null;
+  // A skipped civil day can normalize the previous ordinal onto this date.
+  // Check adjacent candidates with their own COUNT/UNTIL bounds, just as the
+  // indexed occurrence range locates date-only exclusions.
+  for (
+    var candidateSequence = sequence - 1;
+    candidateSequence <= sequence + 1;
+    candidateSequence++
+  ) {
+    final candidate = generalRecurrenceStartAt(
+      eventStart,
+      rule,
+      candidateSequence,
+    );
+    if (candidate != null && calendarDaysBetween(candidate, boundary) == 0) {
+      return candidateSequence;
+    }
+  }
+  return null;
 }
 
 /// Returns the finite number of candidates, including excluded candidates.
