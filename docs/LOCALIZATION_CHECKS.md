@@ -7,10 +7,19 @@
 运行 `flutter gen-l10n` 后，用以下检查确认消息与生成结果一致：
 
 ```powershell
-flutter test --no-pub test/l10n_completeness_test.dart test/l10n_english_fallback_test.dart
+dart tool/l10n/check.dart --json
+flutter test --no-pub test/l10n_completeness_test.dart test/l10n_english_fallback_test.dart test/l10n_count_phrases_test.dart test/tool/l10n_audit_test.dart
 ```
 
 键齐全、英文回退与自动检查通过，只能证明结构和已登记规则成立。语言自然度、术语、称谓和隐私说明的准确表达仍需要对应语言的人工复核。
+
+## 持续审计
+
+[共享审计](../tool/l10n/arb_audit.dart) 由原有完整性测试调用，随完整 VM 测试进入 CI；命令行入口使用相同规则，可用 `--arb-dir` 检查另一份 ARB 目录。默认检查仓库资源，`--json` 输出机器可读结果，不写入文件；通过返回 0，内容错误返回 1，参数错误返回 64。
+
+检查内容包括：26 种已提供语言的文件是否齐全、JSON 对象是否合法、消息键是否遗漏或多写、消息是否为空，以及回退登记是否引用真实模板键。已核实的旧英文按消息键与原文登记，忽略空白和大小写差异后检查；不会凭拉丁字母猜测语言，也不会把 Sked、Google Play 或共享词当成错误。显式回退键如果又复制了当前英文，会要求移除该副本，使未来英文修改自动生效；实际补上的译文仍可通过。
+
+新增或修改英文回退时更新登记；发现其他旧英文时，先核实其来源和当前含义，再补入旧值清单和回归。未登记的旧英文、语义偏差与自然度仍需人工复核。JSON 报告中的缺译数量表示已登记的资源缺失，不是翻译质量得分；计数短语使用真实生成类测试，合法的同形类别和“标签：数字”不被机械拒绝。ICU 语法及占位符仍由 `flutter gen-l10n` 的既有生成门禁验证，文案是否超出控件由相应布局测试验证。
 
 ## 计数短语
 

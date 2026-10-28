@@ -1,3 +1,34 @@
+/// Keep the offered language set explicit so deleting an ARB cannot silently
+/// remove a language from generated resources. A VM test compares runtime data.
+const offeredLocaleCodes = <String>{
+  'bg',
+  'cs',
+  'da',
+  'de',
+  'el',
+  'en',
+  'es',
+  'et',
+  'fi',
+  'fr',
+  'hi',
+  'hu',
+  'it',
+  'ja',
+  'ko',
+  'nl',
+  'pl',
+  'pt',
+  'ro',
+  'ru',
+  'sl',
+  'sv',
+  'th',
+  'vi',
+  'zh',
+  'zh_Hant',
+};
+
 /// Explicit untranslated messages use the current English template at build
 /// time. Removing a locale entry prevents a copied English sentence going stale.
 const commonEnglishFallbacks = <String>{
