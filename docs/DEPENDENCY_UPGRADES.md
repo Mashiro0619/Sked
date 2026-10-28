@@ -17,6 +17,8 @@
 
 移除 override 前，确认 pub.dev 发布版本确实包含对应修复，并分别验证 Android 与 Apple 构建和网页导入。不要将不可变提交换成浮动分支，或仅凭 Dart 分析通过就移除原生补丁。Linux 构建还依赖兼容的 WPE WebKit 系统库，版本检查以 CI 为准。
 
+固定提交、许可证、本地完整历史 bundle 与自有镜像的切换验收见 [WebView 镜像准备](WEBVIEW_MIRROR_PREPARATION.md)。本地资料已准备不表示远端仓库已经创建，也不改变现有 override 来源。
+
 ### 安全存储大版本迁移
 
 目前声明 `flutter_secure_storage: ^11.2.0`。项目引入安全存储时已使用 10.3.1 的默认加密算法，没有配置 v11 移除的旧算法或 `encryptedSharedPreferences`。这不能代替已安装版本的实际升级验证；[v11 的迁移说明](https://pub.dev/packages/flutter_secure_storage/changelog) 明确要求使用 v9 或更早加密路径的数据先经过 v10 迁移，不能通过打开迁移备份让 v11 直接恢复已移除的算法。
