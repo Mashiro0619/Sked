@@ -1513,7 +1513,7 @@ void main() {
       );
     });
 
-    test('加载旧数据时会自动拆开重复的默认课程配色', () async {
+    test('加载旧数据时保留不同课程已保存的相同配色', () async {
       final base = _buildTestAppData();
       final duplicatedDefaultColor = base.copyWith(
         studentMode: base.studentMode.copyWith(
@@ -1566,18 +1566,19 @@ void main() {
           },
         ),
       );
+      final storage = MemoryTimetableStorage(
+        initialData: duplicatedDefaultColor,
+      );
       final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
-        storage: MemoryTimetableStorage(initialData: duplicatedDefaultColor),
+        storage: storage,
       );
+      addTearDown(provider.dispose);
       await provider.lifecycle.load();
 
-      expect(provider.settingsView.courseNameColorValues['大学英语B1'], 0xFFE57373);
-      expect(provider.settingsView.courseNameColorValues['大学语文'], isNotNull);
-      expect(
-        provider.settingsView.courseNameColorValues['大学语文'],
-        isNot(0xFFE57373),
-      );
+      const expectedColors = {'大学英语B1': 0xFFE57373, '大学语文': 0xFFE57373};
+      expect(provider.settingsView.courseNameColorValues, expectedColors);
+      expect(storage.data!.studentMode.courseNameColorValues, expectedColors);
     });
 
     test('跟随主题色的描边派生色会比旧实现更浅但仍深于原色', () {
