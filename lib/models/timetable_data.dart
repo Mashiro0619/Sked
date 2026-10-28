@@ -1,44 +1,11 @@
+import 'app_data_json_values.dart';
+
 import 'dart:convert';
 
 import '../l10n/app_locale.dart';
 import '../utils/localized_names.dart';
 import '../utils/time_utils.dart';
 import 'course_item.dart';
-
-Map<String, dynamic> _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return const <String, dynamic>{};
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
-
-Map<String, dynamic> _decodeJsonObject(String source) {
-  final decoded = jsonDecode(source);
-  final object = _asStringKeyedMap(decoded);
-  if (decoded is! Map) {
-    throw const FormatException('JSON root must be an object.');
-  }
-  return object;
-}
-
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-int? _intValue(Object? value) {
-  return value is num ? value.toInt() : null;
-}
 
 class TimetableConfig {
   const TimetableConfig({
@@ -69,17 +36,17 @@ class TimetableConfig {
     Map<String, dynamic> json, {
     String localeCode = defaultLocaleCode,
   }) {
-    final startDateValue = _stringValue(json['startDate']);
+    final startDateValue = appDataStringValue(json['startDate']);
     final parsedStartDate = tryParseStrictIsoDateTime(startDateValue);
     return TimetableConfig(
-      name: _stringValue(
+      name: appDataStringValue(
         json['name'],
         untitledTimetableName(localeCode: localeCode),
       ),
       startDate: parsedStartDate ?? DateTime.now(),
       startDateNeedsConfirmation: parsedStartDate == null,
-      totalWeeks: normalizeTimetableWeeks(_intValue(json['totalWeeks'])),
-      periodTimeSetId: _stringValue(json['periodTimeSetId']),
+      totalWeeks: normalizeTimetableWeeks(appDataIntValue(json['totalWeeks'])),
+      periodTimeSetId: appDataStringValue(json['periodTimeSetId']),
     );
   }
 
@@ -124,13 +91,13 @@ class TimetableData {
     String localeCode = defaultLocaleCode,
   }) {
     return TimetableData(
-      id: _stringValue(json['id']),
+      id: appDataStringValue(json['id']),
       config: TimetableConfig.fromJson(
-        _asStringKeyedMap(json['config']),
+        appDataStringKeyedMapOrEmpty(json['config']),
         localeCode: localeCode,
       ),
-      courses: _listValue(json['courses'])
-          .map(_asStringKeyedMap)
+      courses: appDataListValue(json['courses'])
+          .map(appDataStringKeyedMapOrEmpty)
           .where((item) => item.isNotEmpty)
           .map(CourseItem.fromJson)
           .toList(),
@@ -140,7 +107,7 @@ class TimetableData {
   String encode() => jsonEncode(toJson());
 
   factory TimetableData.decode(String source) {
-    return TimetableData.fromJson(_decodeJsonObject(source));
+    return TimetableData.fromJson(decodeAppDataJsonObject(source));
   }
 
   TimetableData copyWith({
@@ -171,8 +138,8 @@ class TimetableLiveCourseTarget {
 }
 
 List<CoursePeriodTime> _decodeLegacyPeriodTimes(Map<String, dynamic> json) {
-  return _listValue(json['periodTimes'])
-      .map(_asStringKeyedMap)
+  return appDataListValue(json['periodTimes'])
+      .map(appDataStringKeyedMapOrEmpty)
       .where((item) => item.isNotEmpty)
       .map(CoursePeriodTime.fromJson)
       .toList();
@@ -182,7 +149,7 @@ int _decodeLegacyDailyPeriods(
   Map<String, dynamic> json,
   List<CoursePeriodTime> legacyPeriodTimes,
 ) {
-  return (_intValue(json['dailyPeriods']) ??
+  return (appDataIntValue(json['dailyPeriods']) ??
           (legacyPeriodTimes.isEmpty ? 10 : legacyPeriodTimes.length))
       .clamp(1, 999);
 }
@@ -215,10 +182,10 @@ class TimetableExportData {
     }
 
     final rawTimetables = json['timetables'];
-    final rawLegacyTimetable = _asStringKeyedMap(json['timetable']);
+    final rawLegacyTimetable = appDataStringKeyedMapOrEmpty(json['timetable']);
     final timetables = rawTimetables is List
         ? rawTimetables
-              .map(_asStringKeyedMap)
+              .map(appDataStringKeyedMapOrEmpty)
               .where((item) => item.isNotEmpty)
               .map(
                 (item) => TimetableData.fromJson(item, localeCode: localeCode),
@@ -233,8 +200,8 @@ class TimetableExportData {
       throw const FormatException('Timetable JSON format is invalid.');
     }
     final rawPeriodTimeSets = json['periodTimeSets'];
-    final decodedPeriodTimeSets = _listValue(rawPeriodTimeSets)
-        .map(_asStringKeyedMap)
+    final decodedPeriodTimeSets = appDataListValue(rawPeriodTimeSets)
+        .map(appDataStringKeyedMapOrEmpty)
         .where((item) => item.isNotEmpty)
         .map((item) => PeriodTimeSet.fromJson(item, localeCode: localeCode))
         .toList();
@@ -263,7 +230,7 @@ TimetableExportData _legacySingleTimetableExportData(
   Map<String, dynamic> rawTimetable, {
   required String localeCode,
 }) {
-  final rawConfig = _asStringKeyedMap(rawTimetable['config']);
+  final rawConfig = appDataStringKeyedMapOrEmpty(rawTimetable['config']);
   final timetable = TimetableData.fromJson(
     rawTimetable,
     localeCode: localeCode,

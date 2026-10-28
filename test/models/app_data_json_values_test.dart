@@ -39,6 +39,10 @@ void main() {
     expect(result, {'nested': nested});
     expect(result!['nested'], same(nested));
     expect(appDataStringKeyedMap([]), isNull);
+    expect(appDataStringKeyedMapOrEmpty([]), isEmpty);
+    expect(appDataStringKeyedMapOrEmpty({'nested': nested}), {
+      'nested': nested,
+    });
   });
 
   test(

@@ -42,6 +42,9 @@ Map<String, dynamic>? appDataStringKeyedMap(Object? value) {
   return result;
 }
 
+Map<String, dynamic> appDataStringKeyedMapOrEmpty(Object? value) =>
+    appDataStringKeyedMap(value) ?? const <String, dynamic>{};
+
 Map<String, dynamic> decodeAppDataJsonObject(String source) {
   final decoded = jsonDecode(source);
   final object = appDataStringKeyedMap(decoded);
