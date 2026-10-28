@@ -47,6 +47,70 @@ Set `--dart-define=SKED_BENCHMARK_OUTPUT_DIR=<absolute-directory>` to collect
 multiple named reports in a chosen location. Explicit directories and existing
 artifacts are retained; relative overrides are rejected.
 
+## Durable preference write batching
+
+`preference_write_batch_benchmark_test.dart` uses a fixed 5,000-event snapshot
+and the real `AppRuntime` settings commands with `IoTimetableStorage`. The
+reference leaves the optional preference callback unconnected, preserving the
+ordinary complete-snapshot path in the same source. The candidate connects it.
+This comparison isolates batching; it is not a historical binary comparison.
+
+Each new process runs a single preference, five disjoint preferences, and five
+successive edits to the same field. Every case has five warm-ups and eleven
+one-sequence samples; disk sequences are not calibrated to 250 ms. Field values
+alternate so every command changes its requested preference. After every
+sequence, validation checks the complete ordered snapshots passed to successful
+disk saves, the session/repository snapshot, and a new storage instance's full
+readback. Single and same-field controls retain one and five writes respectively;
+the five disjoint commands may share one transaction.
+
+Use `SKED_BENCHMARK_COALESCING=false` for the reference and `true` for the
+candidate. `SKED_BENCHMARK_VERIFY_ONLY=true` performs one protocol operation per
+case with no warm-up and explicitly labels it as verification, not performance
+evidence. Reports use the normal `SKED_BENCHMARK_LABEL`,
+`SKED_BENCHMARK_REVISION` and absolute `SKED_BENCHMARK_OUTPUT_DIR` options.
+
+Timing starts at command invocation and stops after every command future
+completes. Seed creation, load, checksums, independent readback, memory reads and
+cleanup are outside the measured sequence. AppData, journal and school-site
+paths use synthetic temporary directories and the secret store is empty in
+memory. Production flush, verification and rename remain enabled; the OS page
+cache may be warm. Reports preserve each elapsed time, write count, before/after
+whole-process RSS and process-lifetime maximum. RSS is neither Dart allocation
+count nor a per-sequence peak. These host JIT results do not measure UI frames,
+native startup, Android devices or power-loss recovery.
+
+The 2026-10-28 comparison used six fresh Windows host JIT processes in ABBAAB
+order, with the same source, runtime metadata, 1,600,623-byte seed snapshot and
+full result checksums. The clean window was 15:24:58–15:30:54 UTC+08:00; other
+SDK jobs and directory enumeration were stopped. A preceding window was
+interrupted after a reported concurrent directory scan and excluded in full,
+including both completed results. Its raw evidence was retained separately.
+
+| Command sequence (ms) | Reference process medians | Candidate process medians | Median change | Writes per sequence |
+| --- | --- | --- | ---: | --- |
+| One preference | 87.656 / 83.780 / 83.021 | 81.759 / 80.872 / 80.496 | −3.47% | 1 → 1 |
+| Five disjoint preferences | 422.599 / 426.882 / 435.054 | 76.273 / 78.444 / 76.703 | −82.03% | 5 → 1 |
+| Five edits to one field | 440.293 / 446.042 / 425.284 | 403.543 / 410.414 / 388.751 | −8.35% | 5 → 5 |
+
+The five disjoint requests completed about 350 ms sooner in this workload,
+with all their fields in the shared durable snapshot. The controls preserve
+their original write counts; their lower recorded times are not attributed to
+coalescing. Cases run in a fixed order, and preceding write counts can affect
+process and garbage-collection state. The result applies to eligible queued
+commands; a single edit, already started write or overlapping field does not
+receive the five-to-one reduction.
+
+For the disjoint case, the three process medians of post-sequence RSS were
+295.90 / 295.65 / 304.45 MiB for the reference and 315.03 / 303.90 / 308.63 MiB
+for the candidate. The candidate's observed endpoints were higher; fewer
+writes do not establish lower resident memory or fewer allocations. Lifetime
+process peaks across the entire protocol were 395.89 / 442.50 / 400.17 MiB and
+409.48 / 443.00 / 400.42 MiB respectively, with substantial overlap. Raw RSS
+before/after values and negative as well as positive deltas are retained in
+every report. The batching change is retained for its scoped durable latency
+and write-count reduction, without claiming a memory improvement.
+
 ## Focused strict date parsing comparison
 
 `date_parsing_benchmark_test.dart` measures the 10,000 start/end fields from
