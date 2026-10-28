@@ -5,6 +5,7 @@ import '../models/general_schedule.dart';
 /// Reuses event geometry only for the same event and exact query boundaries.
 /// Calendar metadata is rebound on every hit, and no old calendar snapshot is
 /// retained. Entry/value budgets include empty results and exception snapshots.
+/// Only geometry independent of the process's local timezone is retained.
 class GeneralEventExpansionCache {
   GeneralEventExpansionCache({
     this.maximumEntries = 20000,
@@ -31,6 +32,19 @@ class GeneralEventExpansionCache {
     required DateTime startInclusive,
     required DateTime endExclusive,
   }) {
+    // A schedule edit used to recompute every event. Retaining local DateTimes
+    // across that edit would hide a process timezone change. An offset/name
+    // fingerprint is insufficient: equal current offsets can have different
+    // historical rules. Until a synchronous timezone epoch is available, keep
+    // local parsing and local civil-day arithmetic on the original path.
+    if (!_isTimezoneIndependent(event, startInclusive)) {
+      return _expandEvent(
+        calendar: calendar,
+        event: event,
+        startInclusive: startInclusive,
+        endExclusive: endExclusive,
+      );
+    }
     final key = _EventExpansionKey(event, startInclusive, endExclusive);
     final cached = _entries.remove(key);
     if (cached != null) {
@@ -86,6 +100,27 @@ class GeneralEventExpansionCache {
     _entries.clear();
     _retainedValues = 0;
   }
+}
+
+final _explicitOffsetSuffix = RegExp(r'(?:Z|[+-]\d{2}:?\d{2})$');
+
+bool _hasExplicitOffset(String value) =>
+    _explicitOffsetSuffix.hasMatch(value.trim());
+
+bool _isTimezoneIndependent(GeneralEvent event, DateTime queryStart) {
+  if (!_hasExplicitOffset(event.startDateTimeIso) ||
+      !_hasExplicitOffset(event.endDateTimeIso)) {
+    return false;
+  }
+  final rule = event.recurrenceRule;
+  if (!rule.isRepeating) return true;
+  final until = rule.untilDateIso;
+  if (until != null && until.trim().isNotEmpty && !_hasExplicitOffset(until)) {
+    return false;
+  }
+  // Timed UTC recurrences convert the query boundary to UTC before calendar
+  // arithmetic. All-day recurrences first subtract civil days in its basis.
+  return !event.isAllDay || queryStart.isUtc;
 }
 
 class _EventExpansion {

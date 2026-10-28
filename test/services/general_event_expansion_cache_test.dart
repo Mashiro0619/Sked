@@ -96,6 +96,58 @@ class _Harness {
 }
 
 void main() {
+  test('local parsing and all-day local queries bypass retained geometry', () {
+    final local = _event('floating').copyWith(
+      startDateTimeIso: '2026-01-01T09:00:00',
+      endDateTimeIso: '2026-01-01T10:00:00',
+    );
+    final mixed = _event('mixed')
+        .copyWith(endDateTimeIso: '2026-01-01T10:00:00');
+    final until = _event('until').copyWith(
+      recurrenceRule: const GeneralEventRecurrenceRule(
+        type: GeneralEventRecurrence.daily,
+        untilDateIso: '2026-01-03',
+      ),
+    );
+    final allDay = _event('all-day').copyWith(isAllDay: true);
+    for (final event in [local, mixed, until, allDay]) {
+      final harness = _Harness();
+      final data = _data([
+        _calendar([event]),
+      ]);
+      final query = GeneralOccurrenceQuery(
+        startInclusive: _start.toLocal(),
+        endExclusive: _end,
+      );
+      _expectReference(harness.cache, data, query);
+      _expectReference(harness.cache, _data(List.of(data.schedules)), query);
+      expect(harness.calls, [event.id, event.id]);
+      expect(harness.expansions.entryCount, 0);
+    }
+  });
+
+  test('explicit offsets and UTC all-day query arithmetic can be retained', () {
+    for (final allDay in [false, true]) {
+      final harness = _Harness();
+      final event = _event('offset').copyWith(
+        startDateTimeIso: '2026-01-01T11:00:00+02:00',
+        endDateTimeIso: '2026-01-01T12:00:00+0200',
+        isAllDay: allDay,
+        recurrenceRule: const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.daily,
+          untilDateIso: '2026-01-03T00:00:00Z',
+        ),
+      );
+      final data = _data([
+        _calendar([event]),
+      ]);
+      _expectReference(harness.cache, data);
+      _expectReference(harness.cache, _data(List.of(data.schedules)));
+      expect(harness.calls, [event.id]);
+      expect(harness.expansions.entryCount, 1);
+    }
+  });
+
   test(
     'the real save command retains expansions for unchanged stored events',
     () {
