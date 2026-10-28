@@ -404,11 +404,13 @@ void main() {
     await _pumpSchoolHtmlImportPage(tester, provider);
 
     final openSettingsButton = find.widgetWithText(
-      FilledButton,
-      'Open settings',
+      OutlinedButton,
+      'Configure parsing API',
     );
     expect(openSettingsButton, findsOneWidget);
 
+    await tester.ensureVisible(openSettingsButton);
+    await tester.pumpAndSettle();
     await tester.tap(openSettingsButton);
     await tester.pumpAndSettle();
 

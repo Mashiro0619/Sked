@@ -1050,6 +1050,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportSuccess => '网页课表已导入';
 
   @override
+  String get schoolImportWithoutApiTitle => '无需配置接口也能添加课表';
+
+  @override
+  String get schoolImportManualHint => '手动添加：返回课表工作区，新建或选择一张课表，再选择「添加课程」。';
+
+  @override
+  String get schoolImportFileAction => '导入课表 JSON 文件';
+
+  @override
+  String get schoolImportAiHint =>
+      '如需解析粘贴的内容或学校网页，请连接兼容 OpenAI 的接口。提交的内容将发送到你配置的接口。';
+
+  @override
+  String get schoolImportConfigureAction => '配置解析接口';
+
+  @override
   String get schoolImportParserSettingsTitle => '课表解析 API';
 
   @override
@@ -4101,6 +4117,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolWebImportSuccess => '網頁課表已匯入';
+
+  @override
+  String get schoolImportWithoutApiTitle => '無需設定介面也能新增課表';
+
+  @override
+  String get schoolImportManualHint => '手動新增：返回課表工作區，新增或選擇一張課表，再選擇「新增課程」。';
+
+  @override
+  String get schoolImportFileAction => '匯入課表 JSON 檔案';
+
+  @override
+  String get schoolImportAiHint =>
+      '如需解析貼上的內容或學校網頁，請連接相容 OpenAI 的介面。提交的內容將傳送到你設定的介面。';
+
+  @override
+  String get schoolImportConfigureAction => '設定解析介面';
 
   @override
   String get schoolImportParserSettingsTitle => '課表解析 API';

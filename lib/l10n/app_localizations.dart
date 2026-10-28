@@ -2092,6 +2092,36 @@ abstract class AppLocalizations {
   /// **'Web timetable imported'**
   String get schoolWebImportSuccess;
 
+  /// No description provided for @schoolImportWithoutApiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a timetable without an API'**
+  String get schoolImportWithoutApiTitle;
+
+  /// No description provided for @schoolImportManualHint.
+  ///
+  /// In en, this message translates to:
+  /// **'To add courses manually, return to the timetable workspace, create or select a timetable, then choose Add course.'**
+  String get schoolImportManualHint;
+
+  /// No description provided for @schoolImportFileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import timetable JSON'**
+  String get schoolImportFileAction;
+
+  /// No description provided for @schoolImportAiHint.
+  ///
+  /// In en, this message translates to:
+  /// **'To parse pasted content or a school webpage, connect an OpenAI-compatible API. The content you submit will be sent to that endpoint.'**
+  String get schoolImportAiHint;
+
+  /// No description provided for @schoolImportConfigureAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure parsing API'**
+  String get schoolImportConfigureAction;
+
   /// No description provided for @schoolImportParserSettingsTitle.
   ///
   /// In en, this message translates to:

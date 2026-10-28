@@ -1131,6 +1131,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get schoolWebImportSuccess => 'Horario web importado';
 
   @override
+  String get schoolImportWithoutApiTitle => 'Add a timetable without an API';
+
+  @override
+  String get schoolImportManualHint =>
+      'To add courses manually, return to the timetable workspace, create or select a timetable, then choose Add course.';
+
+  @override
+  String get schoolImportFileAction => 'Import timetable JSON';
+
+  @override
+  String get schoolImportAiHint =>
+      'To parse pasted content or a school webpage, connect an OpenAI-compatible API. The content you submit will be sent to that endpoint.';
+
+  @override
+  String get schoolImportConfigureAction => 'Configure parsing API';
+
+  @override
   String get schoolImportParserSettingsTitle => 'API para importar horarios';
 
   @override

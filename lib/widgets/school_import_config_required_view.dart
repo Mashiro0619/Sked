@@ -1,5 +1,3 @@
-import '../theme/sked_surface.dart';
-
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -8,19 +6,52 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/app_scope.dart';
 import '../screens/school_import_parser_settings_page.dart';
+import '../screens/timetable_import_flow.dart';
 import '../services/school_import_api.dart';
 
-/// Explains why the custom parser cannot run yet and offers the shortcut to fix
-/// it.
+/// Offers local timetable paths before explaining the optional parser setup.
 ///
 /// Both school import entry points (HTML paste and in-app web import) gate on
 /// the same parser configuration, so they share this view instead of keeping
 /// two prompts that drift apart in wording and layout.
-class SchoolImportConfigRequiredView extends StatelessWidget {
+class SchoolImportConfigRequiredView extends StatefulWidget {
   const SchoolImportConfigRequiredView({super.key, required this.message});
 
   /// Built with [schoolImportConfigMessage].
   final String message;
+
+  @override
+  State<SchoolImportConfigRequiredView> createState() =>
+      _SchoolImportConfigRequiredViewState();
+}
+
+class _SchoolImportConfigRequiredViewState
+    extends State<SchoolImportConfigRequiredView> {
+  bool _isBusy = false;
+
+  Future<void> _importFile() =>
+      _runAction(() => TimetableImportFlow.importTimetables(context));
+
+  Future<void> _openSettings() => _runAction(() async {
+    final scope = AppScope.capture(context);
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            scope?.wrap(const SchoolImportParserSettingsPage()) ??
+            const SchoolImportParserSettingsPage(),
+      ),
+    );
+  });
+
+  Future<void> _runAction(Future<void> Function() action) async {
+    if (_isBusy) return;
+    setState(() => _isBusy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,44 +74,73 @@ class SchoolImportConfigRequiredView extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.tune_outlined,
-                      size: 28,
-                      color: skedReadableAccent(
-                        colors,
-                        surface: SkedSurface.colorOf(context),
+                    Text(
+                      l10n.schoolImportWithoutApiTitle,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: colors.onSurface,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      message,
-                      textAlign: TextAlign.center,
+                      l10n.schoolImportManualHint,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colors.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    // FilledButton is 40dp tall by default; hold the 48dp
-                    // minimum touch target this prompt's only action needs.
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 48),
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          final scope = AppScope.capture(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  scope?.wrap(
-                                    const SchoolImportParserSettingsPage(),
-                                  ) ??
-                                  const SchoolImportParserSettingsPage(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.settings_outlined),
-                        label: Text(l10n.openSettings),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: FilledButton.icon(
+                          onPressed: _isBusy ? null : _importFile,
+                          icon: _isBusy
+                              ? const SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.file_open_outlined),
+                          label: Text(l10n.schoolImportFileAction),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(height: 1),
+                    const SizedBox(height: 24),
+                    Text(
+                      l10n.schoolImportParserSettingsTitle,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.schoolImportAiHint,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.message,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: OutlinedButton.icon(
+                          onPressed: _isBusy ? null : _openSettings,
+                          icon: const Icon(Icons.settings_outlined),
+                          label: Text(l10n.schoolImportConfigureAction),
+                        ),
                       ),
                     ),
                   ],

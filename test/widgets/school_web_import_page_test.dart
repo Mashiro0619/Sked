@@ -12,6 +12,7 @@ import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
+import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/school_web_session_service.dart';
@@ -996,6 +997,76 @@ void main() {
     );
 
     testWidgets(
+      'captured school HTML survives parser guidance and a settings round trip',
+      (tester) async {
+        const content = '<p>Captured mathematics course</p>';
+        final provider = await _createConfiguredProvider();
+        addTearDown(provider.dispose);
+        final harness = _WebViewHarness();
+        final controller = _FakeWebViewController()
+          ..currentUrl = WebUri(_site.loginUrl)
+          ..javascriptResult = {
+            'content': content,
+            'url': _site.loginUrl,
+            'title': 'Synthetic timetable',
+          };
+        await tester.pumpWidget(
+          _browserApp(
+            provider: provider,
+            loadSites: () async => [_site],
+            webViewBuilder: harness.build,
+            supportsPopupWindows: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+        harness.pane().onWebViewCreated(controller);
+        harness.pane().onLoadStop(controller, WebUri(_site.loginUrl));
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SchoolWebImportPage)),
+        );
+        await tester.tap(
+          _iconButtonWithTooltip(l10n.schoolWebImportImportCurrentPage),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
+        final field = find.byType(TextField);
+        expect(tester.widget<TextField>(field).controller!.text, content);
+        const edited = '<p>Reviewed captured course</p>';
+        await tester.enterText(field, edited);
+        await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+          baseUrl: provider.settingsView.customSchoolImportBaseUrl,
+          model: '',
+          prompt: '',
+        );
+        await tester.pumpAndSettle();
+        final settings = find.widgetWithText(
+          OutlinedButton,
+          l10n.schoolImportConfigureAction,
+        );
+        await tester.ensureVisible(settings);
+        await tester.pumpAndSettle();
+        await tester.tap(settings);
+        await tester.pumpAndSettle();
+        final model = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.decoration?.labelText == l10n.schoolImportParserModel,
+        );
+        await tester.ensureVisible(model);
+        await tester.enterText(model, 'synthetic-model');
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(field).controller!.text, edited);
+        expect(
+          find.widgetWithText(TextButton, l10n.schoolHtmlImportReturnToWebPage),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
       'missing API configuration keeps a readable shortcut on a narrow screen',
       (tester) async {
         tester.view.physicalSize = const Size(640, 1136);
@@ -1021,8 +1092,8 @@ void main() {
           l10n.schoolImportParserCustomConfigIncomplete,
         );
         final settingsButton = find.widgetWithText(
-          FilledButton,
-          l10n.openSettings,
+          OutlinedButton,
+          l10n.schoolImportConfigureAction,
         );
         final importButton = find.ancestor(
           of: find.byIcon(Icons.file_download_outlined),
@@ -1037,6 +1108,8 @@ void main() {
         expect(tester.widget<Text>(message).maxLines, isNull);
         expect(tester.getRect(settingsButton).height, greaterThanOrEqualTo(48));
 
+        await tester.ensureVisible(settingsButton);
+        await tester.pumpAndSettle();
         await tester.tap(settingsButton);
         await tester.pumpAndSettle();
 
@@ -1065,16 +1138,16 @@ void main() {
       final l10n = AppLocalizations.of(context);
       final message = find.text(l10n.schoolImportParserCustomConfigIncomplete);
       final settingsButton = find.widgetWithText(
-        FilledButton,
-        l10n.openSettings,
+        OutlinedButton,
+        l10n.schoolImportConfigureAction,
       );
       final screenCenter =
           tester.view.physicalSize.width / tester.view.devicePixelRatio / 2;
 
       expect(tester.getRect(message).center.dx, closeTo(screenCenter, 1));
       expect(
-        tester.getRect(settingsButton).center.dx,
-        closeTo(screenCenter, 1),
+        tester.getRect(settingsButton).left,
+        closeTo(tester.getRect(message).left, 1),
       );
       expect(tester.getRect(settingsButton).width, lessThan(280));
       expect(tester.getRect(settingsButton).height, greaterThanOrEqualTo(48));
