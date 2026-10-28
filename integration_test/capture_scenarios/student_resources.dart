@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -17,12 +19,7 @@ void registerCaptureScenarios() {
     t,
   ) async {
     await DesktopWindowBridge.instance.initialize();
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/student-resources',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'student-resources');
     await output.create(recursive: true);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.resetDevicePixelRatio);

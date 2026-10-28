@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -20,12 +22,7 @@ void registerCaptureScenarios() {
     'compact semester week tasks on Windows and simulated touch layouts',
     (tester) async {
       await DesktopWindowBridge.instance.initialize();
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/teaching-weeks',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'teaching-weeks');
       await output.create(recursive: true);
       final manifest = <Map<String, Object?>>[];
       tester.view.devicePixelRatio = 1;

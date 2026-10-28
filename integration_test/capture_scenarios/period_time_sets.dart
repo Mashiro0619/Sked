@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -28,12 +30,7 @@ void registerCaptureScenarios() {
       await bridge.initialize();
       final originalAvailable = bridge.available;
       final originalPlatform = debugDefaultTargetPlatformOverride;
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/period-time-sets',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'period-time-sets');
       await output.create(recursive: true);
       final captures = <Map<String, Object?>>[];
       final periods = decodePeriodTimesEnvelope(

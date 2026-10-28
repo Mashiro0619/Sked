@@ -12,5 +12,6 @@
 | --- | --- |
 | 移动捕获会话 | `mobile-calendar-grids`、`m3-expressive-controls`、`mobile-home`、`mobile-ui-fixes`、`school-sites-mobile` |
 | 手机布局与交互 | `adaptive-layout`、`mobile-calendar-interactions`、`mobile-picker-surfaces`、`mobile-secondary-pickers`、`mobile-tasks` |
+| 课表与节次资源 | `student-day-agenda`、`student-resources`、`teaching-weeks`、`period-time-sets`、`period-times-editor` |
 
 移动捕获会话的图片与 `manifest.json` 位于同一目录；只有完成预期的全部截图后才写成功清单，重复文件名会被拒绝。其他场景保留原有文件名和清单协议。
