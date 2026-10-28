@@ -17,6 +17,55 @@ import 'package:sked/widgets/settings_list.dart';
 import '../support/workspace_harness.dart';
 
 void main() {
+  testWidgets('informational rows remain readable without a disabled action', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: const [
+                SettingsConnectedTile(
+                  key: ValueKey('info'),
+                  informational: true,
+                  leading: Icon(Icons.info_outline),
+                  title: 'Granted',
+                  subtitle: 'Ready',
+                ),
+                SettingsConnectedTile(
+                  key: ValueKey('disabled'),
+                  leading: Icon(Icons.settings),
+                  title: 'Unavailable action',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final colors = Theme.of(tester.element(find.text('Granted'))).colorScheme;
+      expect(
+        tester.widget<Text>(find.text('Granted')).style!.color,
+        colors.onSurface,
+      );
+      expect(
+        tester.widget<Text>(find.text('Ready')).style!.color,
+        colors.onSurfaceVariant,
+      );
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('info'))),
+        matchesSemantics(label: 'Granted, Ready'),
+      );
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('disabled'))),
+        matchesSemantics(label: 'Unavailable action', hasEnabledState: true),
+      );
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   testWidgets('maintenance reservations suspend and resume settings writes', (
     tester,
   ) async {

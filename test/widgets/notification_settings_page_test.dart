@@ -535,6 +535,18 @@ void main() {
         ),
         findsOneWidget,
       );
+      for (final key in [
+        'notification-exact-alarm',
+        'notification-battery-optimization',
+      ]) {
+        final row = tester.widget<SettingsConnectedTile>(
+          find.byKey(ValueKey(key)),
+        );
+        expect(row.informational, isTrue);
+        expect(row.onTap, isNull);
+        expect(row.trailing, isA<Icon>());
+        expect((row.trailing! as Icon).icon, Icons.check_circle_outline);
+      }
     },
   );
 

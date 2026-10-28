@@ -422,6 +422,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               ),
               title: l10n.notificationCoverage,
               subtitle: _coverageSubtitle(context, l10n, notificationStatus),
+              informational: widget.troubleshooting || !needsAttention,
               trailing: !widget.troubleshooting && needsAttention
                   ? const Icon(Icons.chevron_right)
                   : null,
@@ -507,17 +508,20 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               leading: const Icon(Icons.alarm_outlined),
               title: l10n.notificationExactAlarm,
               subtitle: exactAlarmSubtitle,
-              trailing: IconButton(
-                key: const ValueKey('notification-exact-alarm-action'),
-                tooltip: l10n.notificationExactAlarmRequest,
-                onPressed:
-                    uiCommandBusy ||
-                        _permissionLoading ||
-                        _exactAlarmAllowed == true
-                    ? null
-                    : _requestExactAlarmPermission,
-                icon: const Icon(Icons.open_in_new),
-              ),
+              informational: _exactAlarmAllowed == true,
+              trailing: _exactAlarmAllowed == true
+                  ? const Icon(Icons.check_circle_outline)
+                  : IconButton(
+                      key: const ValueKey('notification-exact-alarm-action'),
+                      tooltip: l10n.notificationExactAlarmRequest,
+                      onPressed:
+                          uiCommandBusy ||
+                              _permissionLoading ||
+                              _exactAlarmAllowed == true
+                          ? null
+                          : _requestExactAlarmPermission,
+                      icon: const Icon(Icons.open_in_new),
+                    ),
               onTap:
                   uiCommandBusy ||
                       _permissionLoading ||
@@ -533,17 +537,22 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               leading: const Icon(Icons.battery_saver_outlined),
               title: l10n.notificationBatteryOptimization,
               subtitle: _batteryOptimizationSubtitle(l10n),
-              trailing: IconButton(
-                key: const ValueKey('notification-battery-optimization-action'),
-                tooltip: l10n.notificationBatteryOptimizationRequest,
-                onPressed:
-                    uiCommandBusy ||
-                        _permissionLoading ||
-                        _batteryOptimizationIgnored == true
-                    ? null
-                    : _requestBatteryOptimizationExemption,
-                icon: const Icon(Icons.open_in_new),
-              ),
+              informational: _batteryOptimizationIgnored == true,
+              trailing: _batteryOptimizationIgnored == true
+                  ? const Icon(Icons.check_circle_outline)
+                  : IconButton(
+                      key: const ValueKey(
+                        'notification-battery-optimization-action',
+                      ),
+                      tooltip: l10n.notificationBatteryOptimizationRequest,
+                      onPressed:
+                          uiCommandBusy ||
+                              _permissionLoading ||
+                              _batteryOptimizationIgnored == true
+                          ? null
+                          : _requestBatteryOptimizationExemption,
+                      icon: const Icon(Icons.open_in_new),
+                    ),
               onTap:
                   uiCommandBusy ||
                       _permissionLoading ||

@@ -537,7 +537,11 @@ class SettingsConnectedTile extends StatelessWidget {
     this.foregroundColor,
     this.value,
     this.changesAppData = false,
-  });
+    this.informational = false,
+  }) : assert(
+         !informational ||
+             (onTap == null && onLongPress == null && semanticToggled == null),
+       );
 
   final Widget leading;
   final String title;
@@ -565,6 +569,9 @@ class SettingsConnectedTile extends StatelessWidget {
   /// Navigation and read-only actions stay available during a backup restore.
   final bool changesAppData;
 
+  /// Read-only information has no unavailable action and stays fully legible.
+  final bool informational;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -573,7 +580,8 @@ class SettingsConnectedTile extends StatelessWidget {
     final onTap = canWrite ? this.onTap : null;
     final onLongPress = canWrite ? this.onLongPress : null;
     final enabled = onTap != null || onLongPress != null;
-    final resolvedForegroundColor = enabled
+    final contentEnabled = enabled || informational;
+    final resolvedForegroundColor = contentEnabled
         ? foregroundColor
         : colors.onSurface.withValues(alpha: 0.38);
     final trailingWidget = trailing == null
@@ -612,7 +620,7 @@ class SettingsConnectedTile extends StatelessWidget {
       button: semanticToggled == null && enabled,
       toggled: semanticToggled,
       selected: semanticSelected,
-      enabled: enabled,
+      enabled: informational ? null : enabled,
       label: subtitle == null ? title : '$title, $subtitle',
       value: value,
       onTap: onTap,
@@ -630,7 +638,7 @@ class SettingsConnectedTile extends StatelessWidget {
                   subtitle: subtitle,
                   value: value,
                   trailing: trailingWidget,
-                  enabled: enabled,
+                  enabled: contentEnabled,
                   foregroundColor: foregroundColor,
                 )
               : ConstrainedBox(
@@ -661,7 +669,7 @@ class SettingsConnectedTile extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             _SettingsTileIcon(
-                              enabled: enabled,
+                              enabled: contentEnabled,
                               color: foregroundColor,
                               child: leading,
                             ),
