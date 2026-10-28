@@ -15,6 +15,7 @@ import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/workbench_chrome_metrics.dart';
 
 import '../test/support/workspace_harness.dart';
+import 'support/capture_output_directory.dart';
 
 class _MenuStorage extends WorkspaceMemoryStorage {
   _MenuStorage(super.data);
@@ -68,12 +69,7 @@ void main() {
       if (!Platform.isWindows) {
         throw UnsupportedError('This regression requires the Windows engine.');
       }
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/menu-window-drag',
-        ),
-      ).absolute;
+      final output = createCaptureOutputDirectory(label: 'menu-window-drag');
       final evidenceFile = File('${output.path}/evidence.json');
       if (await evidenceFile.exists()) {
         throw StateError(

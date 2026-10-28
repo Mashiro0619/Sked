@@ -13,6 +13,8 @@ import 'package:sked/services/windows_notification_backend.dart';
 import 'package:sked/services/notification_planner.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'support/capture_output_directory.dart';
+
 /// Never shares production AUMID, runtime preferences, ids or activation GUID.
 class IsolatedWindowsBackend extends FlutterAgendaWindowsNotificationBackend {
   IsolatedWindowsBackend();
@@ -55,6 +57,9 @@ void main() {
   testWidgets(
     'isolated unpackaged Windows queue removes duplicate schedules and never replays after due',
     (t) async {
+      final out = createCaptureOutputDirectory(
+        label: 'notification-native-windows',
+      );
       expect(
         MsixUtils.hasPackageIdentity(),
         isFalse,
@@ -176,7 +181,6 @@ void main() {
         for (final id in ids) {
           await cancelWindowsNotificationCopies(backend, id);
         }
-        final out = Directory('.scratch/notification-native-windows');
         await out.create(recursive: true);
         await File('${out.path}/queue-report.json')
             .writeAsString(const JsonEncoder.withIndent('  ').convert(report));

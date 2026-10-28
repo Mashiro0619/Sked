@@ -17,7 +17,10 @@
 | 分类与浮层 | `category-manager`、`category-panels`、`workspace-editor`、`floating-panels`、`floating-panel-anchors` |
 | 控件、日期与提醒 | `component-gallery`、`control-gallery`、`date-navigation`、`date-range-highlights`、`day-agenda`、`dropdown-focus`、`event-pickers`、`modal-chrome`、`reminder-hover`、`reminder-summary` |
 | 多步编辑与标题 | `course-details`、`editor-layouts`、`panel-headings` |
+| 原生窗口与通知 | `menu-window-drag`、`startup-window-drag`、`workbench-window`、`notification-native-windows` |
 
 移动捕获会话的图片与 `manifest.json` 位于同一目录；只有完成预期的全部截图后才写成功清单，重复文件名会被拒绝。其他场景保留原有文件名和清单协议。
 
 多步编辑与标题组在每个测试开始时申请一次目录，将其传给全部截图和清单写入步骤，避免每次截图分别创建新目录。组件画廊继续在一个组内汇总多个带独立 profile 文件名的测试。
+
+原生窗口组保留各自的证据与截图文件名、指针传播设置和平台保护；通知队列组保留 `queue-report.json` 的 PASS/FAIL 记录与测试通知清理。输出目录协议的单元测试仅验证路径与写入，不代表运行了原生指针、通知队列或可见横幅验收。

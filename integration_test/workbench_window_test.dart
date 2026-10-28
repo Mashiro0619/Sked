@@ -11,11 +11,12 @@ import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 
-import '../test/support/workspace_harness.dart';
-import '../test/support/workbench_dense_data.dart';
-
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/widgets/workbench_chrome_metrics.dart';
+
+import '../test/support/workspace_harness.dart';
+import '../test/support/workbench_dense_data.dart';
+import 'support/capture_output_directory.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -26,12 +27,7 @@ void main() {
   ) async {
     await DesktopWindowBridge.instance.initialize();
     expect(DesktopWindowBridge.instance.available, isTrue);
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/fusion-window',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'workbench-window');
     await output.create(recursive: true);
     final script = File('tool/capture_workbench_window.ps1').absolute.path;
     final evidence = <Map<String, dynamic>>[];

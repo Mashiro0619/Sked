@@ -95,13 +95,13 @@ Windows 渲染必须标为模拟布局，不能称为 Android 真机验收。
 ## Windows 原生行为审计
 
 以下入口使用隔离数据目录。每次运行先在仓库根目录执行公共准备，
-为本次结果创建新的 `.scratch` 子目录：
+为本次结果创建新的系统临时子目录：
 
 ```powershell
 $auditProjectRoot = (Resolve-Path .).Path
 $auditFlutterCommand = Get-Command flutter -ErrorAction Stop
 $auditFlutterRoot = Split-Path (Split-Path $auditFlutterCommand.Source -Parent) -Parent
-$auditOutput = Join-Path $auditProjectRoot ('.scratch/native-audit-' + [guid]::NewGuid().ToString('N'))
+$auditOutput = Join-Path ([IO.Path]::GetTempPath()) ('sked-native-audit-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $auditOutput | Out-Null
 ```
 

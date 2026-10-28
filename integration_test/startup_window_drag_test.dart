@@ -11,6 +11,7 @@ import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/workbench_chrome_metrics.dart';
 
 import '../test/support/workspace_harness.dart';
+import 'support/capture_output_directory.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -20,12 +21,7 @@ void main() {
     final bridge = DesktopWindowBridge.instance;
     await bridge.initialize();
     expect(bridge.available, isTrue);
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/startup-window-drag',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'startup-window-drag');
     await output.create(recursive: true);
     final evidence = <Map<String, dynamic>>[];
     const chrome = WorkbenchChromeMetrics(desktop: true, textScale: 1);
