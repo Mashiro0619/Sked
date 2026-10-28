@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "यह प्लेटफ़ॉर्म अभी एम्बेडेड वेब लॉगिन का समर्थन नहीं करता। कृपया WebView समर्थन वाले प्लेटफ़ॉर्म का उपयोग करें।",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "कोई स्कूल कॉन्फ़िगरेशन उपलब्ध नहीं है। पहले school_sites.json जाँचें।",
+  "schoolWebImportNoSchools": "कोई स्कूल उपलब्ध नहीं है।",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "विद्यालय की कॉन्फ़िगरेशन लोड नहीं हो सकी। फिर से प्रयास करें।",
   "@schoolWebImportSchoolLoadFailed": {},

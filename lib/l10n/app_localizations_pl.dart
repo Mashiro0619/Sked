@@ -1093,8 +1093,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ta platforma jeszcze nie obsługuje wbudowanego logowania internetowego. Proszę użyć platformy z obsługą WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Nie ma dostępnej konfiguracji szkoły. Najpierw sprawdź school_sites.json.';
+  String get schoolWebImportNoSchools => 'Brak dostępnych szkół.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

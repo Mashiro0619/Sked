@@ -1105,8 +1105,7 @@ class AppLocalizationsBg extends AppLocalizations {
       'Тази платформа все още не поддържа вградено уеб влизане. Моля, използвайте платформа с поддръжка на WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Няма налична конфигурация на училището. Първо проверете school_sites.json.';
+  String get schoolWebImportNoSchools => 'Няма налични училища.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

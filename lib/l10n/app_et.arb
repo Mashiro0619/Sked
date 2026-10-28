@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "See platvorm ei toeta veel sisseehitatud veebi sisselogimist. Palun kasutage platvormi WebView toetusega.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Kooli konfiguratsioon ei ole saadaval. Kontrollige kõigepealt school_sites.jsoni.",
+  "schoolWebImportNoSchools": "Ühtegi kooli pole saadaval.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Kooli seadistust ei saanud laadida. Proovi uuesti.",
   "@schoolWebImportSchoolLoadFailed": {},

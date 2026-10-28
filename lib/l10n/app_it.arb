@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Questa piattaforma non supporta ancora il login web incorporato. Usa una piattaforma con supporto WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Nessuna configurazione scolastica disponibile. Controlla prima school_sites.json.",
+  "schoolWebImportNoSchools": "Nessuna scuola disponibile.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Impossibile caricare la configurazione della scuola. Riprova.",
   "@schoolWebImportSchoolLoadFailed": {},

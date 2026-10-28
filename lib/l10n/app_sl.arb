@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Ta platforma še ne podpira vdelane spletne prijave. Prosimo, uporabite platformo s podporo WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Šolska nastavitev ni na voljo. Najprej preveri school_sites.json.",
+  "schoolWebImportNoSchools": "Na voljo ni šol.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Konfiguracije šole ni bilo mogoče naložiti. Poskusite znova.",
   "@schoolWebImportSchoolLoadFailed": {},

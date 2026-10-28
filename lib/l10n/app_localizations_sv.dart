@@ -1090,8 +1090,7 @@ class AppLocalizationsSv extends AppLocalizations {
       'Denna plattform stöder inte inbäddad webbloggning ännu. Använd en plattform med WebView-stöd.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Ingen skolkonfiguration är tillgänglig. Kontrollera school_sites.json först.';
+  String get schoolWebImportNoSchools => 'Inga skolor tillgängliga.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

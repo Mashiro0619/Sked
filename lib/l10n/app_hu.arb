@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Ez a platform még nem támogatja a beágyazott webes bejelentkezést. Kérjük, használjon WebView támogatással rendelkező platformot.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Nincs iskolai konfiguráció elérhető. Ellenőrizze először a school_sites.json-t.",
+  "schoolWebImportNoSchools": "Nincsenek elérhető iskolák.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Az iskola konfigurációját nem sikerült betölteni. Próbálja újra.",
   "@schoolWebImportSchoolLoadFailed": {},

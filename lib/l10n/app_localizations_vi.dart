@@ -1090,8 +1090,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Nền tảng này chưa hỗ trợ đăng nhập web nhúng. Vui lòng sử dụng một nền tảng với hỗ trợ WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Không có cấu hình trường có sẵn. Kiểm tra school_sites.json trước.';
+  String get schoolWebImportNoSchools => 'Không có trường nào khả dụng.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Tato platforma zatím nepodporuje vložené webové přihlášení. Používejte platformu s podporou WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Školní konfigurace není k dispozici. Nejprve zkontrolujte school_sites.json.",
+  "schoolWebImportNoSchools": "Žádné školy nejsou k dispozici.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Konfiguraci školy se nepodařilo načíst. Zkuste to znovu.",
   "@schoolWebImportSchoolLoadFailed": {},

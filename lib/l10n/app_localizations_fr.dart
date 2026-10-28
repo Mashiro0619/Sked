@@ -1114,8 +1114,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Cette plateforme ne prend pas encore en charge la connexion web intégrée. Veuillez utiliser une plateforme compatible WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Aucune configuration d\'établissement n\'est disponible. Vérifiez d\'abord school_sites.json.';
+  String get schoolWebImportNoSchools => 'Aucun établissement disponible.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

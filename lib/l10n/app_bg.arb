@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Тази платформа все още не поддържа вградено уеб влизане. Моля, използвайте платформа с поддръжка на WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Няма налична конфигурация на училището. Първо проверете school_sites.json.",
+  "schoolWebImportNoSchools": "Няма налични училища.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Конфигурацията на училището не можа да се зареди. Опитайте отново.",
   "@schoolWebImportSchoolLoadFailed": {},

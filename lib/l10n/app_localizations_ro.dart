@@ -1102,8 +1102,7 @@ class AppLocalizationsRo extends AppLocalizations {
       'Această platformă nu suportă încă autentificarea web încorporată. Vă rugăm să utilizați o platformă cu suport WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Nu este disponibilă configurația școlii. Verificați mai întâi school_sites.json.';
+  String get schoolWebImportNoSchools => 'Nu sunt școli disponibile.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

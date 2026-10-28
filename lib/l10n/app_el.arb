@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Αυτή η πλατφόρμα δεν υποστηρίζει ακόμα ενσωματωμένη σύνδεση στο διαδίκτυο. Χρησιμοποιήστε μια πλατφόρμα με υποστήριξη WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Δεν υπάρχει διαθέσιμη διαμόρφωση σχολείου. Ελέγξτε πρώτα το school_sites.json.",
+  "schoolWebImportNoSchools": "Δεν υπάρχουν διαθέσιμα σχολεία.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Δεν ήταν δυνατή η φόρτωση της διαμόρφωσης του σχολείου. Δοκιμάστε ξανά.",
   "@schoolWebImportSchoolLoadFailed": {},

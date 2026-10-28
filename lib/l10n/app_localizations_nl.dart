@@ -1093,8 +1093,7 @@ class AppLocalizationsNl extends AppLocalizations {
       'Dit platform ondersteunt ingebouwd inloggen op websites nog niet. Gebruik een platform met WebView-ondersteuning.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Er zijn geen scholen ingesteld. Controleer eerst school_sites.json.';
+  String get schoolWebImportNoSchools => 'Geen scholen beschikbaar.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

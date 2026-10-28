@@ -1087,8 +1087,7 @@ class AppLocalizationsEt extends AppLocalizations {
       'See platvorm ei toeta veel sisseehitatud veebi sisselogimist. Palun kasutage platvormi WebView toetusega.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Kooli konfiguratsioon ei ole saadaval. Kontrollige kõigepealt school_sites.jsoni.';
+  String get schoolWebImportNoSchools => 'Ühtegi kooli pole saadaval.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

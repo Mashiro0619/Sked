@@ -1093,8 +1093,7 @@ class AppLocalizationsFi extends AppLocalizations {
       'Tämä alusta ei vielä tue upotettua verkkokirjautumista. Käytä alustaa, jossa on WebView-tuki.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Koulun konfiguraatiota ei ole käytettävissä. Tarkista ensin school_sites.json.';
+  String get schoolWebImportNoSchools => 'Kouluja ei ole saatavilla.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

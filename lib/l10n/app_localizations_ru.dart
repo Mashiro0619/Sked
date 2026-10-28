@@ -1100,8 +1100,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Эта платформа пока не поддерживает встроенный вход через веб-интерфейс. Пожалуйста, используйте платформу с поддержкой WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Конфигурация учебных заведений недоступна. Сначала проверьте school_sites.json.';
+  String get schoolWebImportNoSchools => 'Нет доступных учебных заведений.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

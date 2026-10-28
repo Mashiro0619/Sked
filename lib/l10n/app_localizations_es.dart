@@ -1106,8 +1106,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Esta plataforma aún no admite el inicio de sesión web incrustado. Usa una plataforma con compatibilidad con WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'No hay ninguna configuración de escuela disponible. Revisa primero school_sites.json.';
+  String get schoolWebImportNoSchools => 'No hay escuelas disponibles.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

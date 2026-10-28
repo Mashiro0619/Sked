@@ -2053,7 +2053,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolWebImportNoSchools.
   ///
   /// In en, this message translates to:
-  /// **'No school configuration is available. Check school_sites.json first.'**
+  /// **'No schools available.'**
   String get schoolWebImportNoSchools;
 
   /// No description provided for @schoolWebImportSchoolLoadFailed.

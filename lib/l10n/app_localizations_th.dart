@@ -1082,8 +1082,7 @@ class AppLocalizationsTh extends AppLocalizations {
       'แพลตฟอร์มนี้ยังไม่รองรับการเข้าสู่ระบบเว็บที่ฝังอยู่ กรุณาใช้แพลตฟอร์มที่รองรับ WebView';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'ไม่มีการตั้งค่าโรงเรียน ตรวจสอบ school_sites.json ก่อน';
+  String get schoolWebImportNoSchools => 'ยังไม่มีโรงเรียนให้เลือก';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

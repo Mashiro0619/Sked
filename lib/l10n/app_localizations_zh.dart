@@ -1029,7 +1029,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '当前平台暂不支持内嵌网页登录，请在支持 WebView 的平台上使用。';
 
   @override
-  String get schoolWebImportNoSchools => '当前没有可用学校配置，请先检查 school_sites.json。';
+  String get schoolWebImportNoSchools => '暂无可用学校。';
 
   @override
   String get schoolWebImportSchoolLoadFailed => '学校配置加载失败，请重试。';
@@ -4113,7 +4113,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '當前平台暫不支援內嵌網頁登入，請在支援 WebView 的平台上使用。';
 
   @override
-  String get schoolWebImportNoSchools => '當前沒有可用學校設定，請先檢查 school_sites.json。';
+  String get schoolWebImportNoSchools => '暫無可用學校。';
 
   @override
   String get schoolWebImportSchoolLoadFailed => '學校設定載入失敗，請重試。';

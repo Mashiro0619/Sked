@@ -1092,8 +1092,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ta platforma še ne podpira vdelane spletne prijave. Prosimo, uporabite platformo s podporo WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Šolska nastavitev ni na voljo. Najprej preveri school_sites.json.';
+  String get schoolWebImportNoSchools => 'Na voljo ni šol.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

@@ -1082,8 +1082,7 @@ class AppLocalizationsDa extends AppLocalizations {
       'Denne platform understøtter endnu ikke indlejret weblogin. Brug en platform med WebView-støtte.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Der er ingen skolekonfiguration tilgængelig. Tjek school_sites.json først.';
+  String get schoolWebImportNoSchools => 'Ingen skoler tilgængelige.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

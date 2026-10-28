@@ -1103,8 +1103,7 @@ class AppLocalizationsHu extends AppLocalizations {
       'Ez a platform még nem támogatja a beágyazott webes bejelentkezést. Kérjük, használjon WebView támogatással rendelkező platformot.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Nincs iskolai konfiguráció elérhető. Ellenőrizze először a school_sites.json-t.';
+  String get schoolWebImportNoSchools => 'Nincsenek elérhető iskolák.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

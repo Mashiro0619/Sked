@@ -1052,8 +1052,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'このプラットフォームでは、埋め込みWebログインはまだサポートされていません。WebView対応のプラットフォームを使用してください。';
 
   @override
-  String get schoolWebImportNoSchools =>
-      '学校設定がありません。まず school_sites.json を確認してください。';
+  String get schoolWebImportNoSchools => '利用できる学校はありません。';
 
   @override
   String get schoolWebImportSchoolLoadFailed => '学校設定を読み込めませんでした。もう一度お試しください。';

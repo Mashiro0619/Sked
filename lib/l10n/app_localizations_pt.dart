@@ -1100,8 +1100,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Esta plataforma ainda não oferece suporte para login web incorporado. Use uma plataforma com suporte a WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Nenhuma configuração de escola está disponível. Verifique primeiro o school_sites.json.';
+  String get schoolWebImportNoSchools => 'Nenhuma escola disponível.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

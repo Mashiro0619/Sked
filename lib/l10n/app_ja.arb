@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "このプラットフォームでは、埋め込みWebログインはまだサポートされていません。WebView対応のプラットフォームを使用してください。",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "学校設定がありません。まず school_sites.json を確認してください。",
+  "schoolWebImportNoSchools": "利用できる学校はありません。",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "学校設定を読み込めませんでした。もう一度お試しください。",
   "@schoolWebImportSchoolLoadFailed": {},

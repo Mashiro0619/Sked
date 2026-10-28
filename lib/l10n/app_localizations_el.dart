@@ -1110,8 +1110,7 @@ class AppLocalizationsEl extends AppLocalizations {
       'Αυτή η πλατφόρμα δεν υποστηρίζει ακόμα ενσωματωμένη σύνδεση στο διαδίκτυο. Χρησιμοποιήστε μια πλατφόρμα με υποστήριξη WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Δεν υπάρχει διαθέσιμη διαμόρφωση σχολείου. Ελέγξτε πρώτα το school_sites.json.';
+  String get schoolWebImportNoSchools => 'Δεν υπάρχουν διαθέσιμα σχολεία.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

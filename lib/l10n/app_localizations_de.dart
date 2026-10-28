@@ -1100,8 +1100,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Plattform unterstützt noch keine eingebettete Web-Anmeldung. Bitte verwenden Sie eine Plattform mit WebView-Unterstützung.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Keine Schulkonfiguration verfügbar. Prüfen Sie zuerst school_sites.json.';
+  String get schoolWebImportNoSchools => 'Keine Schulen verfügbar.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

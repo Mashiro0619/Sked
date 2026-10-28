@@ -767,7 +767,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "This platform does not support embedded web login yet. Please use a platform with WebView support.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "No school configuration is available. Check school_sites.json first.",
+  "schoolWebImportNoSchools": "No schools available.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Couldn't load school configuration. Try again.",
   "@schoolWebImportSchoolLoadFailed": {},

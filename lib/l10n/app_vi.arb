@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Nền tảng này chưa hỗ trợ đăng nhập web nhúng. Vui lòng sử dụng một nền tảng với hỗ trợ WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Không có cấu hình trường có sẵn. Kiểm tra school_sites.json trước.",
+  "schoolWebImportNoSchools": "Không có trường nào khả dụng.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Không tải được cấu hình trường. Vui lòng thử lại.",
   "@schoolWebImportSchoolLoadFailed": {},

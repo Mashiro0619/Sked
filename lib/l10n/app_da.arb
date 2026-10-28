@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Denne platform understøtter endnu ikke indlejret weblogin. Brug en platform med WebView-støtte.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Der er ingen skolekonfiguration tilgængelig. Tjek school_sites.json først.",
+  "schoolWebImportNoSchools": "Ingen skoler tilgængelige.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Skolekonfigurationen kunne ikke indlæses. Prøv igen.",
   "@schoolWebImportSchoolLoadFailed": {},

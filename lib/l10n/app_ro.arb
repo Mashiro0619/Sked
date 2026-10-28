@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Această platformă nu suportă încă autentificarea web încorporată. Vă rugăm să utilizați o platformă cu suport WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Nu este disponibilă configurația școlii. Verificați mai întâi school_sites.json.",
+  "schoolWebImportNoSchools": "Nu sunt școli disponibile.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Configurația școlii nu a putut fi încărcată. Încercați din nou.",
   "@schoolWebImportSchoolLoadFailed": {},

@@ -1083,8 +1083,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'This platform does not support embedded web login yet. Please use a platform with WebView support.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'No school configuration is available. Check school_sites.json first.';
+  String get schoolWebImportNoSchools => 'No schools available.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

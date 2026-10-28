@@ -1088,8 +1088,7 @@ class AppLocalizationsCs extends AppLocalizations {
       'Tato platforma zatím nepodporuje vložené webové přihlášení. Používejte platformu s podporou WebView.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'Školní konfigurace není k dispozici. Nejprve zkontrolujte school_sites.json.';
+  String get schoolWebImportNoSchools => 'Žádné školy nejsou k dispozici.';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

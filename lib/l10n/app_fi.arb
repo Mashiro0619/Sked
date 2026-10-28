@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Tämä alusta ei vielä tue upotettua verkkokirjautumista. Käytä alustaa, jossa on WebView-tuki.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Koulun konfiguraatiota ei ole käytettävissä. Tarkista ensin school_sites.json.",
+  "schoolWebImportNoSchools": "Kouluja ei ole saatavilla.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "Koulun määrityksiä ei voitu ladata. Yritä uudelleen.",
   "@schoolWebImportSchoolLoadFailed": {},

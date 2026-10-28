@@ -1053,8 +1053,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '이 플랫폼은 아직 내장 웹 로그인 기능을 지원하지 않습니다. WebView를 지원하는 플랫폼을 사용하세요.';
 
   @override
-  String get schoolWebImportNoSchools =>
-      '사용 가능한 학교 설정이 없습니다. 먼저 school_sites.json을 확인하세요.';
+  String get schoolWebImportNoSchools => '사용 가능한 학교가 없습니다.';
 
   @override
   String get schoolWebImportSchoolLoadFailed => '학교 설정을 불러오지 못했습니다. 다시 시도하세요.';

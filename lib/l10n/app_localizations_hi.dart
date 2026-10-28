@@ -1084,8 +1084,7 @@ class AppLocalizationsHi extends AppLocalizations {
       'यह प्लेटफ़ॉर्म अभी एम्बेडेड वेब लॉगिन का समर्थन नहीं करता। कृपया WebView समर्थन वाले प्लेटफ़ॉर्म का उपयोग करें।';
 
   @override
-  String get schoolWebImportNoSchools =>
-      'कोई स्कूल कॉन्फ़िगरेशन उपलब्ध नहीं है। पहले school_sites.json जाँचें।';
+  String get schoolWebImportNoSchools => 'कोई स्कूल उपलब्ध नहीं है।';
 
   @override
   String get schoolWebImportSchoolLoadFailed =>

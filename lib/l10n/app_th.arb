@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "แพลตฟอร์มนี้ยังไม่รองรับการเข้าสู่ระบบเว็บที่ฝังอยู่ กรุณาใช้แพลตฟอร์มที่รองรับ WebView",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "ไม่มีการตั้งค่าโรงเรียน ตรวจสอบ school_sites.json ก่อน",
+  "schoolWebImportNoSchools": "ยังไม่มีโรงเรียนให้เลือก",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "โหลดการตั้งค่าโรงเรียนไม่สำเร็จ โปรดลองอีกครั้ง",
   "@schoolWebImportSchoolLoadFailed": {},

@@ -712,7 +712,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Dit platform ondersteunt ingebouwd inloggen op websites nog niet. Gebruik een platform met WebView-ondersteuning.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "Er zijn geen scholen ingesteld. Controleer eerst school_sites.json.",
+  "schoolWebImportNoSchools": "Geen scholen beschikbaar.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "De schoolconfiguratie kon niet worden geladen. Probeer het opnieuw.",
   "@schoolWebImportSchoolLoadFailed": {},

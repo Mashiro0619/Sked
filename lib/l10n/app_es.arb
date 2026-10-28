@@ -732,7 +732,7 @@
   "@schoolWebImportOpenPageHint": {},
   "schoolWebImportUnsupportedPlatform": "Esta plataforma aún no admite el inicio de sesión web incrustado. Usa una plataforma con compatibilidad con WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
-  "schoolWebImportNoSchools": "No hay ninguna configuración de escuela disponible. Revisa primero school_sites.json.",
+  "schoolWebImportNoSchools": "No hay escuelas disponibles.",
   "@schoolWebImportNoSchools": {},
   "schoolWebImportSchoolLoadFailed": "No se pudo cargar la configuración del centro. Inténtalo de nuevo.",
   "@schoolWebImportSchoolLoadFailed": {},
