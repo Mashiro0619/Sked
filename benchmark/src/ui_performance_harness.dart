@@ -1,3 +1,5 @@
+import '../../test/support/agenda_notification_memory.dart';
+
 import 'package:sked/providers/app_scope.dart';
 
 import 'dart:typed_data';
@@ -10,7 +12,6 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/app_home_screen.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/data_transfer_codec.dart';

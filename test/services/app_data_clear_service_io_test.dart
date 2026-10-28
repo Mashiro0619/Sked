@@ -1,3 +1,5 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'dart:io';
 import 'dart:async';
 
@@ -18,7 +20,6 @@ import 'package:sked/controllers/app_data_maintenance.dart'
     show AppBackupRestoreInProgressException;
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/app_exit_controller.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 
 class _FakeSecretStore implements SecretStore {

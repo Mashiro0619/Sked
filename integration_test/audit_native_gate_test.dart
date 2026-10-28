@@ -1,3 +1,5 @@
+import '../test/support/agenda_notification_memory.dart';
+
 // Windows native runner plus real child-process byte-range locks. Pointer and
 // key events below enter through Flutter's test binding, not OS SendInput.
 import 'dart:convert';
@@ -13,7 +15,6 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/main.dart' hide main;
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/app_instance_lease_io.dart';

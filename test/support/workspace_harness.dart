@@ -1,3 +1,5 @@
+import 'agenda_notification_memory.dart';
+
 import 'package:sked/controllers/workspace_view_state.dart';
 import 'package:sked/controllers/workspace_commands.dart';
 import 'package:sked/controllers/settings_view_state.dart';
@@ -23,7 +25,6 @@ import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/agenda_notification_service.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';

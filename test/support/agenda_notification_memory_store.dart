@@ -1,8 +1,7 @@
-import 'agenda_notification_identity.dart';
-import 'agenda_notification_runtime_contract.dart';
+import 'package:sked/services/agenda_notification_identity.dart';
+import 'package:sked/services/agenda_notification_runtime_contract.dart';
 
-/// In-memory implementation for tests and hosts without persistent
-/// preferences.
+/// In-memory runtime state for tests and isolated benchmark/preview hosts.
 class MemoryAgendaNotificationRuntimeStore
     implements
         AgendaNotificationRuntimeStore,

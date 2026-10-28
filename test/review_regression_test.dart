@@ -1,3 +1,4 @@
+import 'support/agenda_notification_memory.dart';
 import 'support/agenda_coordinator_harness.dart';
 import 'support/data_transfer_codec.dart';
 

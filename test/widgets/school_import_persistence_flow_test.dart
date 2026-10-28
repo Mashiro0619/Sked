@@ -1,3 +1,4 @@
+import '../support/agenda_notification_memory.dart';
 import '../support/school_import_preparation.dart';
 
 import 'dart:async';
@@ -22,7 +23,6 @@ import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/screens/settings_page.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_import_api.dart';

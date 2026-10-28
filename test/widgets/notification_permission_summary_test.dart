@@ -1,9 +1,10 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/notification_settings_page.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/widgets/settings_list.dart';

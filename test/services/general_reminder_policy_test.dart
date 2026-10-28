@@ -1,3 +1,5 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -6,7 +8,6 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/services/agenda_action_router.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/agenda_projection_service.dart';
 import 'package:sked/services/general_calendar_ics_service.dart';

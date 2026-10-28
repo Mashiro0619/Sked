@@ -25,7 +25,6 @@ import 'agenda_notification_identity.dart';
 
 export 'agenda_notification_contract.dart';
 export 'agenda_notification_flutter_gateway.dart';
-export 'agenda_notification_memory_gateway.dart';
 export 'agenda_notification_test_ids.dart';
 export 'agenda_notification_identity.dart' show notificationIdForKey;
 

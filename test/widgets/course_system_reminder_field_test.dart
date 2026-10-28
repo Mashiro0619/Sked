@@ -1,3 +1,5 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
@@ -8,7 +10,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_coordinator.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/widgets/course_system_reminder_field.dart';
 import 'package:sked/widgets/sked_menu_item_content.dart';

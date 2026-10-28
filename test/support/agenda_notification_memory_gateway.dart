@@ -2,11 +2,12 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-import 'agenda_action_router.dart';
-import 'agenda_notification_contract.dart';
-import 'agenda_notification_test_ids.dart';
+import 'package:sked/services/agenda_action_router.dart';
+import 'package:sked/services/agenda_notification_contract.dart';
 
-/// In-memory gateway useful for widget/unit tests and desktop previews.
+import 'agenda_notification_memory_test_ids.dart';
+
+/// In-memory gateway for tests and isolated benchmark/preview hosts.
 class MemoryAgendaNotificationGateway
     implements
         AgendaNotificationGateway,

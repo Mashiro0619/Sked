@@ -8,7 +8,6 @@ import 'agenda_notification_runtime_contract.dart';
 import 'agenda_runtime_mutation_lock.dart';
 
 export 'agenda_notification_runtime_contract.dart';
-export 'agenda_notification_memory_store.dart';
 
 /// SharedPreferences-backed runtime state used by Android and other native
 /// hosts. The keys are namespaced and can be removed independently during the

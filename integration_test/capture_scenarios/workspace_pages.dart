@@ -1,3 +1,5 @@
+import '../../test/support/agenda_notification_memory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -23,7 +25,6 @@ import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/timetable_display_settings_page.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/services/desktop_window_bridge.dart';

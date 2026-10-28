@@ -1,3 +1,5 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +15,6 @@ import 'package:sked/screens/timetable_display_settings_page.dart';
 import 'package:sked/screens/general_display_settings_page.dart';
 import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/services/agenda_notification_service.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 import '../support/workspace_harness.dart';

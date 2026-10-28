@@ -1,3 +1,5 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -10,7 +12,6 @@ import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/services/agenda_notification_service.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 
 import '../support/data_transfer_codec.dart';
 import '../support/timetable_storage_fakes.dart';

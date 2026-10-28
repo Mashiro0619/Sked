@@ -1,3 +1,5 @@
+import '../test/support/agenda_notification_memory.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -6,7 +8,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/main.dart' show AppStartupDependencies, runSkedApp;
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/agenda_runtime_mutation_lock.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';

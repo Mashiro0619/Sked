@@ -1,3 +1,5 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -6,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/app_data_clear_service.dart';

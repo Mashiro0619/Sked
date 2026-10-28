@@ -1,3 +1,4 @@
+import '../support/agenda_notification_memory.dart';
 import '../support/agenda_coordinator_harness.dart';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +15,6 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_service.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 
 import '../support/data_transfer_codec.dart';

@@ -1,3 +1,5 @@
+import '../support/agenda_notification_memory.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -6,7 +8,6 @@ import 'package:sked/services/agenda_notification_presentation.dart';
 import 'package:sked/services/agenda_projection_service.dart';
 import 'package:sked/services/general_calendar_service.dart';
 import 'package:sked/services/agenda_notification_service.dart';
-import 'package:sked/services/agenda_notification_runtime_store.dart';
 
 void main() {
   test('every offered UI language has its own notification snooze action', () {
