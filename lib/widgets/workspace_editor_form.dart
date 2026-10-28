@@ -15,7 +15,6 @@ import 'workbench_chrome_metrics.dart';
 
 abstract final class WorkspaceEditorFormMetrics {
   static const controlHeight = 40.0;
-  static const radius = 6.0;
   static const labelGap = 6.0;
   static const fieldGap = 12.0;
   static const sectionGap = 16.0;
@@ -37,6 +36,9 @@ TextStyle workspaceEditorContentStyle(BuildContext context) =>
       fontWeight: FontWeight.w400,
       color: Theme.of(context).colorScheme.onSurface,
     );
+
+Color workspaceEditorFieldFill(BuildContext context) =>
+    Theme.of(context).colorScheme.surfaceContainerLow;
 
 /// One input definition for touch sheets and compact desktop editors. The
 /// caller owns the controller, validation and draft; only chrome is adaptive.
@@ -232,12 +234,12 @@ class SkedEditorValueField extends StatelessWidget {
       onTap: onTap,
       child: ExcludeSemantics(
         child: Material(
-          color: colors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(16),
+          color: workspaceEditorFieldFill(context),
+          borderRadius: skedShapeSchemeOf(context).fieldRadius,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: skedShapeSchemeOf(context).fieldRadius,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 64),
               child: Padding(
@@ -260,9 +262,8 @@ class SkedEditorValueField extends StatelessWidget {
                             label,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: foreground,
-                              fontWeight: FontWeight.w500,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: secondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -270,8 +271,8 @@ class SkedEditorValueField extends StatelessWidget {
                             value,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: secondary,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: foreground,
                             ),
                           ),
                         ],
@@ -401,7 +402,7 @@ class SkedEditorOption extends StatelessWidget {
                     ? colors.primaryContainer
                     : colors.primary.withValues(alpha: .12)
               : Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          shape: skedShapeSchemeOf(context).compact,
         ),
         child: compact
             ? text
@@ -439,7 +440,7 @@ class SkedEditorSelectionIcon extends StatelessWidget {
       height: 42,
       decoration: ShapeDecoration(
         color: colors.primary.withValues(alpha: enabled ? .10 : .05),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: skedShapeSchemeOf(context).field,
       ),
       child: Icon(
         icon,
@@ -527,11 +528,10 @@ class SkedEditorValueAction extends StatelessWidget {
                           label,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
+                          style: theme.textTheme.bodySmall?.copyWith(
                             color: active
-                                ? colors.onSurface
+                                ? colors.onSurfaceVariant
                                 : colors.onSurface.withValues(alpha: .38),
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -539,9 +539,9 @@ class SkedEditorValueAction extends StatelessWidget {
                           value,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          style: theme.textTheme.bodyLarge?.copyWith(
                             color: active
-                                ? colors.onSurfaceVariant
+                                ? colors.onSurface
                                 : colors.onSurface.withValues(alpha: .38),
                           ),
                         ),
@@ -601,8 +601,8 @@ class SkedEditorSwitchField extends StatelessWidget {
     }
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(16),
+      color: workspaceEditorFieldFill(context),
+      borderRadius: skedShapeSchemeOf(context).fieldRadius,
       clipBehavior: Clip.antiAlias,
       child: SwitchListTile(
         value: value,
@@ -873,15 +873,8 @@ class WorkspaceEditorValue extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.onSurface,
             disabledForegroundColor: Theme.of(context).colorScheme.onSurface
                 .withValues(alpha: .38),
-            backgroundColor: Theme.of(context)
-                .colorScheme
-                .surfaceContainerHighest
-                .withValues(alpha: .35),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                WorkspaceEditorFormMetrics.radius,
-              ),
-            ),
+            backgroundColor: workspaceEditorFieldFill(context),
+            shape: skedShapeSchemeOf(context).field,
           ).copyWith(
             side: WidgetStateProperty.resolveWith((states) {
               final colors = Theme.of(context).colorScheme;
@@ -891,7 +884,7 @@ class WorkspaceEditorValue extends StatelessWidget {
                     : states.contains(WidgetState.focused)
                     ? skedReadableAccent(
                         colors,
-                        surface: colors.surfaceContainerHighest,
+                        surface: workspaceEditorFieldFill(context),
                       )
                     : states.contains(WidgetState.hovered)
                     ? colors.outline
@@ -975,7 +968,7 @@ InputDecoration workspaceEditorInputDecoration(
 }) {
   final colors = Theme.of(context).colorScheme;
   final border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(WorkspaceEditorFormMetrics.radius),
+    borderRadius: skedShapeSchemeOf(context).fieldRadius,
     borderSide: BorderSide(color: colors.outlineVariant),
   );
   return InputDecoration(
@@ -989,7 +982,7 @@ InputDecoration workspaceEditorInputDecoration(
       minHeight: WorkspaceEditorFormMetrics.controlHeight,
     ),
     filled: true,
-    fillColor: colors.surfaceContainerHighest.withValues(alpha: .35),
+    fillColor: workspaceEditorFieldFill(context),
     isDense: true,
     visualDensity: VisualDensity.standard,
     contentPadding: EdgeInsets.symmetric(
@@ -1007,7 +1000,7 @@ InputDecoration workspaceEditorInputDecoration(
       borderSide: BorderSide(
         color: skedReadableAccent(
           colors,
-          surface: colors.surfaceContainerHighest,
+          surface: workspaceEditorFieldFill(context),
         ),
       ),
     ),
@@ -1028,7 +1021,7 @@ class WorkspaceEditorDropdownStyle extends StatelessWidget {
     final theme = Theme.of(context);
     final contentStyle = workspaceEditorContentStyle(context);
     final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(WorkspaceEditorFormMetrics.radius),
+      borderRadius: skedShapeSchemeOf(context).fieldRadius,
       borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
     );
     return Theme(
@@ -1042,9 +1035,7 @@ class WorkspaceEditorDropdownStyle extends StatelessWidget {
           textStyle: contentStyle,
           inputDecorationTheme: InputDecorationThemeData(
             filled: true,
-            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: .35,
-            ),
+            fillColor: workspaceEditorFieldFill(context),
             isDense: true,
             visualDensity: VisualDensity.standard,
             contentPadding: const EdgeInsets.symmetric(
@@ -1065,7 +1056,7 @@ class WorkspaceEditorDropdownStyle extends StatelessWidget {
               borderSide: BorderSide(
                 color: skedReadableAccent(
                   theme.colorScheme,
-                  surface: theme.colorScheme.surfaceContainerHighest,
+                  surface: workspaceEditorFieldFill(context),
                 ),
               ),
             ),

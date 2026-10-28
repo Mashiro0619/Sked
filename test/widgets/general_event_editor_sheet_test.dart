@@ -535,13 +535,21 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(GeneralEventEditorSheet)),
       );
-      final startLabel = tester.getRect(find.text(l10n.eventStartTime));
+      final startContent = tester.getRect(
+        find
+            .ancestor(
+              of: find.text(l10n.eventStartTime),
+              matching: find.byType(Column),
+            )
+            .first,
+      );
       final dateAction = tester.getRect(find.byTooltip(l10n.pickDate).first);
       expect(
         dateAction.center.dy,
-        lessThanOrEqualTo(startLabel.bottom + 16),
+        inInclusiveRange(startContent.top, startContent.bottom),
         reason: '$width dp should keep date actions in the start row',
       );
+      expect(dateAction.left, greaterThanOrEqualTo(startContent.right));
       expect(dateAction.width, greaterThanOrEqualTo(48));
       expect(dateAction.height, greaterThanOrEqualTo(48));
       expect(tester.takeException(), isNull);

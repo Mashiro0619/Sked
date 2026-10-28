@@ -4,8 +4,142 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/workspace_editor.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
+import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/theme/app_theme.dart';
+import 'package:sked/theme/sked_expressive_theme.dart';
+import 'package:sked/utils/constants.dart';
 
 void main() {
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'filled editor controls stay coherent at large text: $platform/$brightness',
+        (tester) async {
+          final controller = TextEditingController(text: 'Saved draft');
+          addTearDown(controller.dispose);
+          tester.view.physicalSize = const Size(320, 1200);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final theme = buildAppTheme(
+            seedColor: const Color(defaultThemeSeedColorValue),
+            brightness: brightness,
+            themeColorMode: themeColorModeSingle,
+            colorfulUiColorValues: const {},
+          ).copyWith(platform: platform);
+          var picks = 0;
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MediaQuery(
+                  data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          SkedEditorTextField(
+                            label: 'Title',
+                            controller: controller,
+                          ),
+                          SkedEditorValueField(
+                            key: const ValueKey('active-picker'),
+                            label: 'Semester weeks',
+                            value: 'Weeks 1–18',
+                            onPressed: (_) => picks++,
+                          ),
+                          const SkedEditorValueField(
+                            key: ValueKey('disabled-picker'),
+                            label: 'Disabled',
+                            value: 'Retained value',
+                            onPressed: null,
+                          ),
+                          SkedEditorChoiceField<String>(
+                            label: 'Calendar',
+                            entries: const [
+                              DropdownMenuEntry(
+                                value: 'saved',
+                                label: 'Saved calendar',
+                              ),
+                            ],
+                            initialSelection: 'saved',
+                            onSelected: (_) {},
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final decorators = tester.widgetList<InputDecorator>(
+            find.byType(InputDecorator),
+          );
+          expect(decorators, hasLength(2));
+          for (final decorator in decorators) {
+            final effective = decorator.decoration.applyDefaults(
+              Theme.of(tester.element(find.byWidget(decorator)))
+                  .inputDecorationTheme,
+            );
+            expect(effective.filled, isTrue);
+            expect(effective.fillColor, theme.colorScheme.surfaceContainerLow);
+            expect(
+              (effective.enabledBorder as OutlineInputBorder).borderRadius,
+              theme.extension<SkedShapeScheme>()!.fieldRadius,
+            );
+          }
+          final active = find.byKey(const ValueKey('active-picker'));
+          final disabled = find.byKey(const ValueKey('disabled-picker'));
+          if (platform == TargetPlatform.windows) {
+            for (final picker in [active, disabled]) {
+              final button = tester.widget<TextButton>(
+                find.descendant(of: picker, matching: find.byType(TextButton)),
+              );
+              expect(
+                button.style!.backgroundColor!.resolve({}),
+                theme.colorScheme.surfaceContainerLow,
+              );
+              expect(
+                button.style!.shape!.resolve({}),
+                theme.extension<SkedShapeScheme>()!.field,
+              );
+            }
+          } else {
+            for (final picker in [active, disabled]) {
+              final surface = tester.widget<Material>(
+                find
+                    .descendant(of: picker, matching: find.byType(Material))
+                    .first,
+              );
+              expect(surface.color, theme.colorScheme.surfaceContainerLow);
+              expect(
+                surface.borderRadius,
+                theme.extension<SkedShapeScheme>()!.fieldRadius,
+              );
+              expect(tester.getSize(picker).height, greaterThanOrEqualTo(48));
+            }
+          }
+          await tester.ensureVisible(active);
+          await tester.tapAt(
+            tester.getBottomLeft(active) + const Offset(12, -12),
+          );
+          await tester.pump();
+          expect(picks, 1);
+          await tester.ensureVisible(disabled);
+          await tester.tap(disabled);
+          expect(picks, 1);
+          expect(controller.text, 'Saved draft');
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   for (final direction in TextDirection.values) {
     testWidgets('responsive form rows preserve active inputs: $direction', (
       t,
@@ -106,10 +240,7 @@ void main() {
           theme.colorScheme.primary,
         );
         expect(basic.errorBorder!.borderSide.color, theme.colorScheme.error);
-        expect(
-          basic.fillColor,
-          theme.colorScheme.surfaceContainerHighest.withValues(alpha: .35),
-        );
+        expect(basic.fillColor, theme.colorScheme.surfaceContainerLow);
         final headline = workspaceEditorInputDecoration(
           formContext,
           headline: true,

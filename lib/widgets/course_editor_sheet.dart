@@ -1412,8 +1412,8 @@ class _CourseTimeRange extends StatelessWidget {
     );
     return Material(
       key: const ValueKey('course-time-range'),
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: workspaceEditorFieldFill(context),
+      shape: skedShapeSchemeOf(context).field,
       clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
         builder: (context, constraints) {

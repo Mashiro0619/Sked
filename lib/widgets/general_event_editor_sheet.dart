@@ -1679,8 +1679,8 @@ class _DateTimeRange extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        color: workspaceEditorFieldFill(context),
+        borderRadius: skedShapeSchemeOf(context).fieldRadius,
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1765,19 +1765,16 @@ class _DateTimeRow extends StatelessWidget {
               Text(
                 label,
                 softWrap: true,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.onSurface,
-                  fontWeight: FontWeight.w500,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
                 softWrap: true,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: errorText == null
-                      ? colors.onSurfaceVariant
-                      : colors.error,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: errorText == null ? colors.onSurface : colors.error,
                 ),
               ),
               if (errorText != null)
