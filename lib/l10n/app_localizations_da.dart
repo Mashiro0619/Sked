@@ -2625,11 +2625,11 @@ class AppLocalizationsDa extends AppLocalizations {
       'Kunne ikke åbne producentens baggrundsindstillinger. Kontrollér Skeds appoplysninger manuelt.';
 
   @override
-  String get notificationLockScreenTitles => 'Vis titler på låseskærmen';
+  String get notificationLockScreenTitles => 'Vis titler i notifikationer';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Når indstillingen er slået fra, vises notifikationernes detaljer ikke på låseskærmen.';
+      'Gælder også låseskærmen. Når indstillingen er slået fra, vises kun type og tidspunkt.';
 
   @override
   String get notificationPlatformUnsupported =>

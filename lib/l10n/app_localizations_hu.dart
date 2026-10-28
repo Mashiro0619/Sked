@@ -2661,11 +2661,11 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get notificationLockScreenTitles =>
-      'Címek megjelenítése a zárolási képernyőn';
+      'Címek megjelenítése az értesítésekben';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Kikapcsolva az értesítések részletei rejtve maradnak a zárolási képernyőn.';
+      'A zárolási képernyőre is vonatkozik. Kikapcsolva csak a típus és az időpont szerepel az értesítésekben.';
 
   @override
   String get notificationPlatformUnsupported =>

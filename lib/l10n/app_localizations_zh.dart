@@ -2466,10 +2466,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationAutostartOpenFailed => '无法打开厂商后台设置，请手动检查 Sked 应用详情。';
 
   @override
-  String get notificationLockScreenTitles => '在锁屏上显示标题';
+  String get notificationLockScreenTitles => '在通知中显示标题';
 
   @override
-  String get notificationLockScreenTitlesHint => '关闭后，锁屏通知不会显示详细内容。';
+  String get notificationLockScreenTitlesHint => '同时适用于锁屏。关闭后，通知仅包含类型和时间。';
 
   @override
   String get notificationPlatformUnsupported => '当前平台不提供原生通知。';
@@ -5515,10 +5515,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '無法開啟廠商背景設定，請手動檢查 Sked 應用程式詳細資料。';
 
   @override
-  String get notificationLockScreenTitles => '在鎖定畫面顯示標題';
+  String get notificationLockScreenTitles => '在通知中顯示標題';
 
   @override
-  String get notificationLockScreenTitlesHint => '關閉後，鎖定畫面通知不會顯示詳細內容。';
+  String get notificationLockScreenTitlesHint => '同時適用於鎖定畫面。關閉後，通知僅包含類型和時間。';
 
   @override
   String get notificationPlatformUnsupported => '目前平台不提供原生通知。';

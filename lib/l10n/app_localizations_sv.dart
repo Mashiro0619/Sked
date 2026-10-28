@@ -2637,11 +2637,11 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att öppna tillverkarens bakgrundsinställningar. Kontrollera Skeds appinformation manuellt.';
 
   @override
-  String get notificationLockScreenTitles => 'Visa titlar på låsskärmen';
+  String get notificationLockScreenTitles => 'Visa titlar i aviseringar';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'När detta är avstängt döljs aviseringsdetaljer på låsskärmen.';
+      'Gäller även låsskärmen. När detta är avstängt visas bara typ och tid.';
 
   @override
   String get notificationPlatformUnsupported =>

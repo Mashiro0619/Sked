@@ -584,14 +584,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             ),
           SettingsSwitchTile(
             key: const ValueKey('notification-lock-screen-titles'),
-            icon: Icons.lock_outline,
+            icon: Icons.title,
             value: settings.lockScreenShowTitles,
             title: l10n.notificationLockScreenTitles,
             subtitle: l10n.notificationLockScreenTitlesHint,
             onChanged: uiCommandBusy
                 ? null
                 : (value) => _updateSetting(
-                    'Update lock screen notification titles',
+                    'Update notification titles',
                     () => commands.updateLockScreenShowTitles(value),
                   ),
           ),

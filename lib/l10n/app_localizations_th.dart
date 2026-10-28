@@ -2608,11 +2608,11 @@ class AppLocalizationsTh extends AppLocalizations {
       'เปิดการตั้งค่าเบื้องหลังของผู้ผลิตไม่ได้ โปรดตรวจสอบหน้าข้อมูลแอป Sked ด้วยตนเอง';
 
   @override
-  String get notificationLockScreenTitles => 'แสดงชื่อบนหน้าจอล็อก';
+  String get notificationLockScreenTitles => 'แสดงชื่อในการแจ้งเตือน';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'เมื่อปิด รายละเอียดการแจ้งเตือนจะถูกซ่อนบนหน้าจอล็อก';
+      'ใช้กับหน้าจอล็อกด้วย เมื่อปิด การแจ้งเตือนจะมีเฉพาะประเภทและเวลา';
 
   @override
   String get notificationPlatformUnsupported =>

@@ -2630,11 +2630,11 @@ class AppLocalizationsHi extends AppLocalizations {
       'निर्माता की पृष्ठभूमि सेटिंग्स नहीं खुल सकीं। Sked के ऐप विवरण स्वयं जाँचें।';
 
   @override
-  String get notificationLockScreenTitles => 'लॉक स्क्रीन पर शीर्षक दिखाएँ';
+  String get notificationLockScreenTitles => 'सूचनाओं में शीर्षक दिखाएँ';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'बंद होने पर सूचना का विवरण लॉक स्क्रीन पर निजी रहता है।';
+      'लॉक स्क्रीन पर भी लागू होता है। बंद होने पर, केवल प्रकार और समय शामिल होते हैं।';
 
   @override
   String get notificationPlatformUnsupported =>

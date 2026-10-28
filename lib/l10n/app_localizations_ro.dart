@@ -2665,12 +2665,11 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu s-au putut deschide setările de fundal ale producătorului. Verifică manual detaliile aplicației Sked.';
 
   @override
-  String get notificationLockScreenTitles =>
-      'Afișează titlurile pe ecranul de blocare';
+  String get notificationLockScreenTitles => 'Afișează titlurile în notificări';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Când este dezactivat, detaliile notificărilor rămân private pe ecranul de blocare.';
+      'Se aplică și ecranului de blocare. Când este dezactivat, sunt incluse doar tipul și ora.';
 
   @override
   String get notificationPlatformUnsupported =>

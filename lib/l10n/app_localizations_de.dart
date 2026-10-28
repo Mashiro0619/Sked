@@ -2664,11 +2664,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationLockScreenTitles =>
-      'Titel auf dem Sperrbildschirm anzeigen';
+      'Titel in Benachrichtigungen anzeigen';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Bei deaktivierter Option bleiben die Benachrichtigungsdetails auf dem Sperrbildschirm verborgen.';
+      'Gilt auch für den Sperrbildschirm. Bei deaktivierter Option enthalten Benachrichtigungen nur Art und Uhrzeit.';
 
   @override
   String get notificationPlatformUnsupported =>

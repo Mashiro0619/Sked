@@ -2671,11 +2671,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notificationLockScreenTitles =>
-      'Mostrar títulos en la pantalla de bloqueo';
+      'Mostrar títulos en las notificaciones';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Si se desactiva, los detalles de las notificaciones permanecerán privados en la pantalla de bloqueo.';
+      'También se aplica a la pantalla de bloqueo. Si se desactiva, solo se incluyen el tipo y la hora.';
 
   @override
   String get notificationPlatformUnsupported =>

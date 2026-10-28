@@ -2,6 +2,7 @@ import '../support/agenda_notification_memory.dart';
 import '../support/agenda_coordinator_harness.dart';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +17,7 @@ import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
+import 'package:sked/widgets/settings_list.dart';
 
 import '../support/data_transfer_codec.dart';
 
@@ -73,6 +75,87 @@ Future<AppRuntime> _provider() async {
 }
 
 void main() {
+  for (final (locale, title) in [
+    (const Locale('en'), 'Show titles in notifications'),
+    (const Locale('zh'), '在通知中显示标题'),
+    (
+      const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+      '在通知中顯示標題',
+    ),
+  ]) {
+    testWidgets(
+      'notification title switch describes its full scope in $locale',
+      (tester) async {
+        final desktop = defaultTargetPlatform == TargetPlatform.windows;
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(desktop ? 1280 : 320, 900);
+        addTearDown(tester.view.reset);
+        final provider = await _provider();
+        addTearDown(provider.dispose);
+        final service = AgendaNotificationService(
+          enabled: false,
+          gateway: MemoryAgendaNotificationGateway(),
+          runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+        );
+        addTearDown(service.dispose);
+        final bridge = AndroidProductivityBridge(enabled: false);
+        addTearDown(bridge.dispose);
+        await tester.pumpWidget(
+          AppScope(
+            app: provider,
+            child: MaterialApp(
+              locale: locale,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+              home: NotificationSettingsPage(
+                notificationService: service,
+                productivityBridge: bridge,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final tile = find.byKey(
+          const ValueKey('notification-lock-screen-titles'),
+        );
+        await tester.ensureVisible(tile);
+        await tester.pumpAndSettle();
+        final settingsTile = tester.widget<SettingsSwitchTile>(tile);
+        expect(settingsTile.title, title);
+        expect(settingsTile.subtitle, isNotEmpty);
+        expect(settingsTile.value, isFalse);
+        final toggle = find.descendant(of: tile, matching: find.byType(Switch));
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SettingsSwitchTile>(tile).value, isTrue);
+        expect(
+          provider.session.committedData.notificationSettings
+              .toJson()['lockScreenShowTitles'],
+          isTrue,
+        );
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SettingsSwitchTile>(tile).value, isFalse);
+        expect(
+          provider.session.committedData.notificationSettings
+              .toJson()['lockScreenShowTitles'],
+          isFalse,
+        );
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.windows,
+      }),
+    );
+  }
+
   for (final permission in [
     'already allowed',
     'grant',

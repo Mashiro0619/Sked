@@ -2645,12 +2645,11 @@ class AppLocalizationsSl extends AppLocalizations {
       'Nastavitev ozadja proizvajalca ni bilo mogoče odpreti. Ročno preverite podatke o aplikaciji Sked.';
 
   @override
-  String get notificationLockScreenTitles =>
-      'Prikaži naslove na zaklenjenem zaslonu';
+  String get notificationLockScreenTitles => 'Prikaži naslove v obvestilih';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Ko je možnost izklopljena, so podrobnosti obvestil na zaklenjenem zaslonu skrite.';
+      'Velja tudi za zaklenjeni zaslon. Ko je možnost izklopljena, sta vključena samo vrsta in čas.';
 
   @override
   String get notificationPlatformUnsupported =>

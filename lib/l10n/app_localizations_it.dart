@@ -2668,12 +2668,11 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile aprire le impostazioni in background del produttore. Controlla manualmente i dettagli di Sked.';
 
   @override
-  String get notificationLockScreenTitles =>
-      'Mostra i titoli sulla schermata di blocco';
+  String get notificationLockScreenTitles => 'Mostra i titoli nelle notifiche';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Se disattivata, i dettagli delle notifiche restano privati sulla schermata di blocco.';
+      'Vale anche per la schermata di blocco. Se disattivato, vengono inclusi solo il tipo e l’orario.';
 
   @override
   String get notificationPlatformUnsupported =>

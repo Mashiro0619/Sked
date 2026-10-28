@@ -2681,11 +2681,11 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get notificationLockScreenTitles =>
-      'Εμφάνιση τίτλων στην οθόνη κλειδώματος';
+      'Εμφάνιση τίτλων στις ειδοποιήσεις';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Όταν είναι απενεργοποιημένο, οι λεπτομέρειες ειδοποιήσεων αποκρύπτονται στην οθόνη κλειδώματος.';
+      'Ισχύει και για την οθόνη κλειδώματος. Όταν είναι απενεργοποιημένο, περιλαμβάνονται μόνο ο τύπος και η ώρα.';
 
   @override
   String get notificationPlatformUnsupported =>

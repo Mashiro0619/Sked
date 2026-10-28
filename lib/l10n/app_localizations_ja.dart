@@ -2533,10 +2533,11 @@ class AppLocalizationsJa extends AppLocalizations {
       'メーカーのバックグラウンド設定を開けませんでした。Sked のアプリ詳細画面を手動で確認してください。';
 
   @override
-  String get notificationLockScreenTitles => 'ロック画面にタイトルを表示';
+  String get notificationLockScreenTitles => '通知にタイトルを表示';
 
   @override
-  String get notificationLockScreenTitlesHint => 'オフにすると、ロック画面に通知の詳細を表示しません。';
+  String get notificationLockScreenTitlesHint =>
+      'ロック画面にも適用されます。オフの場合、通知には種類と時刻のみが含まれます。';
 
   @override
   String get notificationPlatformUnsupported => 'このプラットフォームはネイティブ通知を提供していません。';

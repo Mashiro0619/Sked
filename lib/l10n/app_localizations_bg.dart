@@ -2672,11 +2672,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get notificationLockScreenTitles =>
-      'Показване на заглавия на заключения екран';
+      'Показване на заглавия в известията';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Когато е изключено, подробностите в известията се скриват на заключения екран.';
+      'Важи и за заключения екран. Когато е изключено, известията съдържат само типа и часа.';
 
   @override
   String get notificationPlatformUnsupported =>

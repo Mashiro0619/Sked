@@ -2612,11 +2612,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not open vendor background settings. Check Sked\'s app details manually.';
 
   @override
-  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+  String get notificationLockScreenTitles => 'Show titles in notifications';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'When off, notification details stay private on the lock screen.';
+      'Also applies to the lock screen. When off, only the type and time are included.';
 
   @override
   String get notificationPlatformUnsupported =>

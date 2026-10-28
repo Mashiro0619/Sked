@@ -1882,10 +1882,14 @@
   "@notificationAutostartRequest": {},
   "notificationAutostartOpenFailed": "Could not open vendor background settings. Check Sked's app details manually.",
   "@notificationAutostartOpenFailed": {},
-  "notificationLockScreenTitles": "Show titles on the lock screen",
-  "@notificationLockScreenTitles": {},
-  "notificationLockScreenTitlesHint": "When off, notification details stay private on the lock screen.",
-  "@notificationLockScreenTitlesHint": {},
+  "notificationLockScreenTitles": "Show titles in notifications",
+  "@notificationLockScreenTitles": {
+    "description": "One saved switch controlling titles in all notification content and Android lock-screen visibility. Defaults to off; not limited to the lock screen."
+  },
+  "notificationLockScreenTitlesHint": "Also applies to the lock screen. When off, only the type and time are included.",
+  "@notificationLockScreenTitlesHint": {
+    "description": "When titles are hidden, notification content uses the source type and time. Location is omitted in both states."
+  },
   "notificationPlatformUnsupported": "This platform does not provide native notifications.",
   "@notificationPlatformUnsupported": {},
   "workspaceFeatures": "Features",

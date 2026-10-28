@@ -2640,11 +2640,11 @@ class AppLocalizationsFi extends AppLocalizations {
       'Valmistajan tausta-asetuksia ei voitu avata. Tarkista Skedin sovellustiedot käsin.';
 
   @override
-  String get notificationLockScreenTitles => 'Näytä otsikot lukitusnäytöllä';
+  String get notificationLockScreenTitles => 'Näytä otsikot ilmoituksissa';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Kun asetus on pois käytöstä, ilmoitusten yksityiskohdat piilotetaan lukitusnäytöllä.';
+      'Koskee myös lukitusnäyttöä. Kun asetus on pois käytöstä, ilmoituksissa on vain tyyppi ja kellonaika.';
 
   @override
   String get notificationPlatformUnsupported =>

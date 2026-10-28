@@ -2660,11 +2660,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get notificationLockScreenTitles =>
-      'Показывать заголовки на экране блокировки';
+      'Показывать заголовки в уведомлениях';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Если отключено, подробности уведомлений скрыты на экране блокировки.';
+      'Также действует на экране блокировки. Если отключено, уведомления содержат только тип и время.';
 
   @override
   String get notificationPlatformUnsupported =>

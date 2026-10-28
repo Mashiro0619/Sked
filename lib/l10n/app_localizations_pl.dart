@@ -2644,11 +2644,11 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się otworzyć ustawień pracy w tle producenta. Sprawdź ręcznie informacje o aplikacji Sked.';
 
   @override
-  String get notificationLockScreenTitles => 'Pokaż tytuły na ekranie blokady';
+  String get notificationLockScreenTitles => 'Pokazuj tytuły w powiadomieniach';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Po wyłączeniu szczegóły powiadomień pozostają ukryte na ekranie blokady.';
+      'Dotyczy także ekranu blokady. Po wyłączeniu powiadomienia zawierają tylko typ i godzinę.';
 
   @override
   String get notificationPlatformUnsupported =>

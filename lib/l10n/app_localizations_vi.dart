@@ -2628,12 +2628,11 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không thể mở cài đặt chạy nền của nhà sản xuất. Hãy kiểm tra thông tin ứng dụng Sked thủ công.';
 
   @override
-  String get notificationLockScreenTitles =>
-      'Hiển thị tiêu đề trên màn hình khóa';
+  String get notificationLockScreenTitles => 'Hiển thị tiêu đề trong thông báo';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Khi tắt, chi tiết thông báo sẽ được ẩn trên màn hình khóa.';
+      'Cũng áp dụng cho màn hình khóa. Khi tắt, thông báo chỉ có loại và thời gian.';
 
   @override
   String get notificationPlatformUnsupported =>

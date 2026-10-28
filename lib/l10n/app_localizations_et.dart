@@ -2629,11 +2629,11 @@ class AppLocalizationsEt extends AppLocalizations {
       'Tootja taustaseadete avamine nurjus. Kontrolli Skedi rakenduse teavet käsitsi.';
 
   @override
-  String get notificationLockScreenTitles => 'Kuva pealkirjad lukustuskuval';
+  String get notificationLockScreenTitles => 'Kuva pealkirjad teavitustes';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Väljalülitamisel peidetakse lukustuskuval teavituste üksikasjad.';
+      'Kehtib ka lukustuskuval. Väljalülitamisel sisaldavad teavitused ainult tüüpi ja kellaaega.';
 
   @override
   String get notificationPlatformUnsupported =>

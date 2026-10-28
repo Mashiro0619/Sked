@@ -2652,12 +2652,11 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kan de achtergrondinstellingen van de fabrikant niet openen. Controleer de appgegevens van Sked handmatig.';
 
   @override
-  String get notificationLockScreenTitles =>
-      'Titels op het vergrendelscherm tonen';
+  String get notificationLockScreenTitles => 'Titels in meldingen tonen';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Als dit is uitgeschakeld, blijven de meldingsdetails verborgen op het vergrendelscherm.';
+      'Geldt ook voor het vergrendelscherm. Als dit uitstaat, bevatten meldingen alleen het type en de tijd.';
 
   @override
   String get notificationPlatformUnsupported =>

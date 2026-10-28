@@ -2637,12 +2637,11 @@ class AppLocalizationsCs extends AppLocalizations {
       'Nastavení běhu na pozadí od výrobce se nepodařilo otevřít. Ručně zkontrolujte podrobnosti aplikace Sked.';
 
   @override
-  String get notificationLockScreenTitles =>
-      'Zobrazovat názvy na zamčené obrazovce';
+  String get notificationLockScreenTitles => 'Zobrazovat názvy v oznámeních';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Po vypnutí zůstanou podrobnosti oznámení na zamčené obrazovce skryté.';
+      'Platí i pro zamčenou obrazovku. Po vypnutí oznámení obsahují pouze typ a čas.';
 
   @override
   String get notificationPlatformUnsupported =>

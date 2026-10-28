@@ -2661,12 +2661,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível abrir as configurações de segundo plano do fabricante. Verifique os detalhes do Sked manualmente.';
 
   @override
-  String get notificationLockScreenTitles =>
-      'Mostrar títulos na tela de bloqueio';
+  String get notificationLockScreenTitles => 'Mostrar títulos nas notificações';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Quando desativado, os detalhes das notificações ficam privados na tela de bloqueio.';
+      'Também se aplica à tela de bloqueio. Quando desativado, apenas o tipo e o horário são incluídos.';
 
   @override
   String get notificationPlatformUnsupported =>

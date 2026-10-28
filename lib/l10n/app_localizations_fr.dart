@@ -2694,11 +2694,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationLockScreenTitles =>
-      'Afficher les titres sur l’écran verrouillé';
+      'Afficher les titres dans les notifications';
 
   @override
   String get notificationLockScreenTitlesHint =>
-      'Lorsque cette option est désactivée, les détails des notifications restent privés sur l’écran verrouillé.';
+      'S’applique aussi à l’écran verrouillé. Lorsque cette option est désactivée, seuls le type et l’heure sont inclus.';
 
   @override
   String get notificationPlatformUnsupported =>

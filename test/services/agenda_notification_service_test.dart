@@ -2524,7 +2524,7 @@ void main() {
   });
 
   test(
-    'hidden lock-screen details do not expose the occurrence location',
+    'hidden notification titles use the source type and time in all content',
     () async {
       final gateway = MemoryAgendaNotificationGateway();
       final service = AgendaNotificationService(
@@ -2536,11 +2536,13 @@ void main() {
       final request = gateway.scheduled.values.single;
       expect(request.body, isNot(contains('Room 1')));
       expect(request.title, 'Course');
+      expect(request.body, '08:00');
+      expect(request.lockScreenShowTitles, isFalse);
     },
   );
 
   test(
-    'shown lock-screen titles still do not expose occurrence locations',
+    'shown notification titles still do not expose occurrence locations',
     () async {
       final gateway = MemoryAgendaNotificationGateway();
       final service = AgendaNotificationService(
@@ -2562,6 +2564,7 @@ void main() {
       expect(request.title, 'Mathematics');
       expect(request.body, isNot(contains('Room 1')));
       expect(request.body, '08:00');
+      expect(request.lockScreenShowTitles, isTrue);
     },
   );
 

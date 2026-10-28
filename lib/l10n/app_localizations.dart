@@ -4722,16 +4722,16 @@ abstract class AppLocalizations {
   /// **'Could not open vendor background settings. Check Sked\'s app details manually.'**
   String get notificationAutostartOpenFailed;
 
-  /// No description provided for @notificationLockScreenTitles.
+  /// One saved switch controlling titles in all notification content and Android lock-screen visibility. Defaults to off; not limited to the lock screen.
   ///
   /// In en, this message translates to:
-  /// **'Show titles on the lock screen'**
+  /// **'Show titles in notifications'**
   String get notificationLockScreenTitles;
 
-  /// No description provided for @notificationLockScreenTitlesHint.
+  /// When titles are hidden, notification content uses the source type and time. Location is omitted in both states.
   ///
   /// In en, this message translates to:
-  /// **'When off, notification details stay private on the lock screen.'**
+  /// **'Also applies to the lock screen. When off, only the type and time are included.'**
   String get notificationLockScreenTitlesHint;
 
   /// No description provided for @notificationPlatformUnsupported.
