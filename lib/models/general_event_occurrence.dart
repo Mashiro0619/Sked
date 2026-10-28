@@ -832,7 +832,29 @@ int? boundedGeneralRecurrenceCount(
   return count == null || untilCount < count ? untilCount : count;
 }
 
-/// Keeps excluded ordinal positions when a series moves or is split.
+/// Compares the actual calendar step, independently of shorthand or bounds.
+bool hasSameGeneralRecurrenceStep(
+  GeneralEventRecurrenceRule a,
+  GeneralEventRecurrenceRule b,
+) {
+  if (!a.isRepeating || !b.isRepeating) {
+    return a.isRepeating == b.isRepeating;
+  }
+  final aUnit = _effectiveUnit(a);
+  final bUnit = _effectiveUnit(b);
+  if (aUnit == GeneralEventRecurrenceUnit.month ||
+      bUnit == GeneralEventRecurrenceUnit.month) {
+    return aUnit == bUnit && a.normalizedInterval == b.normalizedInterval;
+  }
+  final aDays =
+      a.normalizedInterval * (aUnit == GeneralEventRecurrenceUnit.week ? 7 : 1);
+  final bDays =
+      b.normalizedInterval * (bUnit == GeneralEventRecurrenceUnit.week ? 7 : 1);
+  return aDays == bDays;
+}
+
+/// Moves excluded ordinals with an unchanged calendar step. When the step
+/// changes, retains only original dates that are also new valid candidates.
 List<String> remapGeneralRecurrenceExceptionDates({
   required GeneralEvent source,
   required GeneralEvent destination,
@@ -842,6 +864,10 @@ List<String> remapGeneralRecurrenceExceptionDates({
   final oldStart = tryParseStrictIsoDateTime(source.startDateTimeIso);
   final newStart = tryParseStrictIsoDateTime(destination.startDateTimeIso);
   if (oldStart == null || newStart == null) return const [];
+  final keepAbsoluteDates = !hasSameGeneralRecurrenceStep(
+    source.recurrenceRule,
+    destination.recurrenceRule,
+  );
   final mapped = <String>{};
   for (final value in source.recurrenceExceptionDateIso) {
     final date = tryParseStrictIsoDate(value);
@@ -852,6 +878,17 @@ List<String> remapGeneralRecurrenceExceptionDates({
       date,
     );
     if (sequence == null || sequence < sourceSequenceOffset) continue;
+    if (keepAbsoluteDates) {
+      if (generalRecurrenceSequenceForDate(
+            newStart,
+            destination.recurrenceRule,
+            date,
+          ) !=
+          null) {
+        mapped.add(_dateIso(date));
+      }
+      continue;
+    }
     final candidate = generalRecurrenceStartAt(
       newStart,
       destination.recurrenceRule,

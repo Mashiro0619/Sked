@@ -5795,6 +5795,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The schedule reminder channel is working.'**
   String get developerTestNotificationScheduleBody;
+
+  /// Title of the confirmation before saving a changed repeat step that affects skipped dates.
+  ///
+  /// In en, this message translates to:
+  /// **'Change repeat pattern?'**
+  String get eventRecurrenceExceptionsChangeTitle;
+
+  /// Explains absolute-date exclusion retention and independent events before the user saves a changed repeat pattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Previously skipped dates stay skipped only if the new repeat pattern still has an occurrence on that date. Other skip records will be removed. Turning repeats off removes all skip records. Events edited separately stay unchanged.'**
+  String get eventRecurrenceExceptionsChangeMessage;
 }
 
 class _AppLocalizationsDelegate

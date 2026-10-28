@@ -2229,5 +2229,9 @@
   "developerTestNotificationCourseBody": "The course reminder channel is working.",
   "@developerTestNotificationCourseBody": {"description": "Body of a developer test sent through the course reminder channel."},
   "developerTestNotificationScheduleBody": "The schedule reminder channel is working.",
-  "@developerTestNotificationScheduleBody": {"description": "Body of a developer test sent through the schedule reminder channel."}
+  "@developerTestNotificationScheduleBody": {"description": "Body of a developer test sent through the schedule reminder channel."},
+  "eventRecurrenceExceptionsChangeTitle": "Change repeat pattern?",
+  "eventRecurrenceExceptionsChangeMessage": "Previously skipped dates stay skipped only if the new repeat pattern still has an occurrence on that date. Other skip records will be removed. Turning repeats off removes all skip records. Events edited separately stay unchanged.",
+  "@eventRecurrenceExceptionsChangeTitle": {"description": "Title of the confirmation before saving a changed repeat step that affects skipped dates."},
+  "@eventRecurrenceExceptionsChangeMessage": {"description": "Explains absolute-date exclusion retention and independent events before the user saves a changed repeat pattern."}
 }

@@ -10,8 +10,9 @@ const _service = GeneralCalendarService();
 
 Future<(GeneralEvent, GeneralScheduleData Function())> _mount(
   WidgetTester tester,
-  GeneralEventRecurrence type,
-) async {
+  GeneralEventRecurrence type, {
+  GeneralEventRecurrenceUnit? storedUnit,
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(430, 950);
   addTearDown(tester.view.reset);
@@ -28,7 +29,7 @@ Future<(GeneralEvent, GeneralScheduleData Function())> _mount(
     endDateTimeIso: '2026-01-31T10:00:00.000',
     recurrenceRule: GeneralEventRecurrenceRule(
       type: type,
-      unit: unit,
+      unit: storedUnit ?? unit,
       interval: 2,
       count: 6,
     ),
@@ -124,6 +125,44 @@ void main() {
       }),
     );
   }
+
+  testWidgets(
+    'an unused day unit on imported weekly recurrence does not clear handled state',
+    (tester) async {
+      final (original, current) = await _mount(
+        tester,
+        GeneralEventRecurrence.weekly,
+        storedUnit: GeneralEventRecurrenceUnit.day,
+      );
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(GeneralEventEditorSheet)),
+      );
+      expect(
+        find.textContaining(l10n.repeatsEvery(2, l10n.recurrenceWeeks)),
+        findsOneWidget,
+      );
+      await tester.enterText(find.byType(EditableText).first, 'Edited title');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await _tap(tester, find.widgetWithText(FilledButton, l10n.save));
+      final saved = current().schedules.single.events.single;
+      expect(saved.title, 'Edited title');
+      expect(saved.recurrenceRule.type, GeneralEventRecurrence.weekly);
+      expect(saved.recurrenceRule.normalizedInterval, 2);
+      expect(current().reminderAcknowledgements, hasLength(1));
+      final start = DateTime.parse(original.startDateTimeIso);
+      for (var index = 0; index < 6; index++) {
+        expect(
+          generalRecurrenceStartAt(start, saved.recurrenceRule, index),
+          generalRecurrenceStartAt(start, original.recurrenceRule, index),
+        );
+      }
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
+  );
 
   testWidgets('changing the imported interval saves the new custom rule', (
     tester,

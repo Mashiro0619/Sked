@@ -389,6 +389,17 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       createdAtIso: widget.initialEvent?.createdAtIso ?? now,
       updatedAtIso: now,
     );
+    final initial = widget.initialEvent;
+    if (initial != null &&
+        widget.editScope != GeneralEventEditScope.thisOccurrence &&
+        initial.recurrenceExceptionDateIso.isNotEmpty &&
+        !hasSameGeneralRecurrenceStep(
+          initial.recurrenceRule,
+          event.normalized(fallbackCalendarId: _calendarId).recurrenceRule,
+        )) {
+      final confirmed = await _confirmRecurrenceExceptionChange();
+      if (!mounted || !confirmed || _blocked) return;
+    }
     final result = GeneralEventEditorResult(event: event);
     final save = widget.onSave;
     if (save == null) {
@@ -408,6 +419,53 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     } else {
       setState(() => _actionInProgress = false);
     }
+  }
+
+  Future<bool> _confirmRecurrenceExceptionChange() async {
+    _dismissActiveInputFocus();
+    setState(() => _selectionDialogOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showExpressiveDialog<bool>(
+        context: context,
+        session: _editorSession,
+        waitForTransitionComplete: true,
+        builder: (dialogContext) {
+          final l10n = AppLocalizations.of(dialogContext);
+          var completed = false;
+          void finish(bool value) {
+            if (completed || !dialogContext.mounted) return;
+            completed = true;
+            completeEditorRoute(dialogContext, value);
+          }
+
+          return SkedConfirmationDialog(
+            key: const ValueKey('event-recurrence-exceptions-confirmation'),
+            scrollable: true,
+            title: Text(l10n.eventRecurrenceExceptionsChangeTitle),
+            content: Text(l10n.eventRecurrenceExceptionsChangeMessage),
+            actions: [
+              TextButton(
+                key: const ValueKey('event-recurrence-exceptions-cancel'),
+                onPressed: () => finish(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                key: const ValueKey('event-recurrence-exceptions-save'),
+                onPressed: () => finish(true),
+                child: Text(l10n.save),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _selectionDialogOpen = false);
+    }
+    return mounted &&
+        !_hasPopped &&
+        confirmed == true &&
+        _editorSession?.isCurrent != false;
   }
 
   Future<void> _delete() async {

@@ -3264,4 +3264,11 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get developerTestNotificationScheduleBody =>
       'Kênh nhắc nhở sự kiện đang hoạt động.';
+
+  @override
+  String get eventRecurrenceExceptionsChangeTitle => 'Change repeat pattern?';
+
+  @override
+  String get eventRecurrenceExceptionsChangeMessage =>
+      'Previously skipped dates stay skipped only if the new repeat pattern still has an occurrence on that date. Other skip records will be removed. Turning repeats off removes all skip records. Events edited separately stay unchanged.';
 }

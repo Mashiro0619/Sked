@@ -2171,5 +2171,7 @@
   "notificationHandledAction": "標記已處理",
   "developerTestNotificationTitle": "Sked 測試通知",
   "developerTestNotificationCourseBody": "課程提醒通道正常。",
-  "developerTestNotificationScheduleBody": "日程提醒通道正常。"
+  "developerTestNotificationScheduleBody": "日程提醒通道正常。",
+  "eventRecurrenceExceptionsChangeTitle": "變更重複方式？",
+  "eventRecurrenceExceptionsChangeMessage": "原先已略過的日期僅在新規則仍有該日程時繼續略過，其餘略過記錄將移除。停止重複會移除全部略過記錄。單獨修改過的日程不受影響。"
 }

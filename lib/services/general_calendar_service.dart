@@ -723,9 +723,7 @@ bool _recurrenceRulesEqual(
   GeneralEventRecurrenceRule a,
   GeneralEventRecurrenceRule b,
 ) {
-  return a.type == b.type &&
-      a.normalizedInterval == b.normalizedInterval &&
-      a.unit == b.unit &&
+  return hasSameGeneralRecurrenceStep(a, b) &&
       a.untilDateIso == b.untilDateIso &&
       a.monthlyAnchorDay == b.monthlyAnchorDay &&
       a.count == b.count;

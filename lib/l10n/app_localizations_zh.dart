@@ -3050,6 +3050,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get developerTestNotificationScheduleBody => '日程提醒通道正常。';
+
+  @override
+  String get eventRecurrenceExceptionsChangeTitle => '更改重复方式？';
+
+  @override
+  String get eventRecurrenceExceptionsChangeMessage =>
+      '原来已跳过的日期仅在新规则仍有该日程时继续跳过，其余跳过记录将移除。停止重复会移除全部跳过记录。单独修改过的日程不受影响。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6099,4 +6106,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developerTestNotificationScheduleBody => '日程提醒通道正常。';
+
+  @override
+  String get eventRecurrenceExceptionsChangeTitle => '變更重複方式？';
+
+  @override
+  String get eventRecurrenceExceptionsChangeMessage =>
+      '原先已略過的日期僅在新規則仍有該日程時繼續略過，其餘略過記錄將移除。停止重複會移除全部略過記錄。單獨修改過的日程不受影響。';
 }
