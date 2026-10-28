@@ -297,6 +297,7 @@ void main() {
         _course('a', weeks: [2]),
         _course('b', weeks: [2]),
         _course('inactive', weeks: [1], start: 450, end: 600),
+        _course('later-real', day: DateTime.tuesday, weeks: [3]),
       ]);
       var choice = 'b';
       String? pick(String key) => choice;
@@ -329,10 +330,85 @@ void main() {
       choice = 'inactive';
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-      expect(
-        tester.widget<Text>(_key('student-day-next-course-name')).data,
-        isNot('inactive'),
+      _expectNext(
+        tester,
+        name: 'a',
+        date: DateTime(2026, 10, 26),
+        start: 480,
+        end: 540,
       );
+    },
+  );
+
+  for (final scenario in [
+    'next Monday',
+    'weekly Friday',
+    'real Saturday',
+    'semester end',
+  ]) {
+    testWidgets('next course skips a missing civil date: $scenario', (
+      tester,
+    ) async {
+      final table =
+          _timetable([
+            _course(
+              'Friday',
+              day: DateTime.friday,
+              weeks: scenario == 'weekly Friday' ? [] : [1],
+            ),
+            if (scenario == 'next Monday') _course('Monday', weeks: [2]),
+            if (scenario == 'real Saturday')
+              _course('Saturday', day: DateTime.saturday, weeks: [1]),
+          ]).copyWith(
+            config: _timetable([]).config.copyWith(
+              startDate: DateTime(2011, 12, 26),
+              totalWeeks: scenario == 'semester end' ? 1 : 2,
+            ),
+          );
+      await tester.pumpWidget(_app(table));
+      await tester.pumpAndSettle();
+      final fridayExists = DateTime(2011, 12, 30).day == 30;
+      if (fridayExists) {
+        _expectNext(
+          tester,
+          name: 'Friday',
+          date: DateTime(2011, 12, 30),
+          start: 480,
+          end: 540,
+        );
+      } else if (scenario == 'semester end') {
+        expect(_key('student-day-no-more-courses'), findsOneWidget);
+        expect(_key('student-day-next-course-name'), findsNothing);
+      } else {
+        final (name, date) = switch (scenario) {
+          'next Monday' => ('Monday', DateTime(2012, 1, 2)),
+          'real Saturday' => ('Saturday', DateTime(2011, 12, 31)),
+          _ => ('Friday', DateTime(2012, 1, 6)),
+        };
+        _expectNext(tester, name: name, date: date, start: 480, end: 540);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'a midnight gap keeps the next course on the same existing civil date',
+    (tester) async {
+      final table = _timetable([_course('Sunday', day: DateTime.sunday)])
+          .copyWith(
+            config: _timetable([]).config
+                .copyWith(startDate: DateTime(2018, 10, 29)),
+          );
+      await tester.pumpWidget(_app(table, day: DateTime.friday));
+      await tester.pumpAndSettle();
+      _expectNext(
+        tester,
+        name: 'Sunday',
+        date: DateTime(2018, 11, 4),
+        start: 480,
+        end: 540,
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 

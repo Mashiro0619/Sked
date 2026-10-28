@@ -143,16 +143,25 @@ class _TimetableDayAgendaState extends State<TimetableDayAgenda> {
       }
       final earliestWeek =
           firstWeek + (course.dayOfWeek < firstDate.weekday ? 1 : 0);
+      if (earliestWeek > config.totalWeeks) continue;
       final weeks = normalizeSemesterWeeks(course.semesterWeeks);
-      final week = weeks.isEmpty
-          ? earliestWeek
-          : weeks.where((value) => value >= earliestWeek).firstOrNull;
-      if (week == null || week > config.totalWeeks) continue;
-      final date = addCalendarDays(
-        semesterStart,
-        (week - 1) * 7 + course.dayOfWeek - DateTime.monday,
-      );
-      if (nextDate == null || date.isBefore(nextDate)) nextDate = date;
+      final candidateWeeks = weeks.isEmpty
+          ? Iterable.generate(
+              config.totalWeeks - earliestWeek + 1,
+              (index) => earliestWeek + index,
+            )
+          : weeks.where((week) => week >= earliestWeek);
+      for (final week in candidateWeeks) {
+        if (week > config.totalWeeks) break;
+        final dayOffset = (week - 1) * 7 + course.dayOfWeek - DateTime.monday;
+        final date = addCalendarDays(semesterStart, dayOffset);
+        // A timezone may omit an entire civil date. DateTime then normalizes
+        // it into another weekday; that is not this course's real meeting.
+        // Keep searching its later weeks instead of blocking other courses.
+        if (calendarDaysBetween(semesterStart, date) != dayOffset) continue;
+        if (nextDate == null || date.isBefore(nextDate)) nextDate = date;
+        break;
+      }
     }
     if (nextDate == null) return null;
 
