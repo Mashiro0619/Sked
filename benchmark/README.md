@@ -90,6 +90,9 @@ their order, are checked against uncached queries before and after timing.
 `SKED_BENCHMARK_VERIFY_ONLY=true` runs a one-operation protocol check and labels
 its report `verification-only`; those timings are not performance evidence.
 
+Reports use the same unique system temporary default and absolute
+`SKED_BENCHMARK_OUTPUT_DIR` override as the host suite.
+
 Event reuse keys retain the event identity and exact start/end instants plus
 their UTC/local representation. Repeated events do not borrow a containing
 range. Cached geometry is rebound to the current calendar before the original

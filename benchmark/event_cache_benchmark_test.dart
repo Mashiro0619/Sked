@@ -7,6 +7,7 @@ import 'package:sked/services/general_calendar_service.dart';
 import 'package:sked/services/general_occurrence_cache.dart';
 import 'package:sked/services/general_occurrence_service.dart';
 
+import '../integration_test/support/capture_output_directory.dart';
 import 'src/benchmark_fixtures.dart';
 import 'src/benchmark_runner.dart';
 import 'src/performance_suite.dart';
@@ -21,7 +22,10 @@ void main() {
       'SKED_BENCHMARK_REVISION',
       defaultValue: 'unknown',
     );
-    const outputPath = String.fromEnvironment('SKED_BENCHMARK_OUTPUT_DIR');
+    final directory = createCaptureOutputDirectory(
+      label: 'event-cache-benchmark',
+      configuredPath: const String.fromEnvironment('SKED_BENCHMARK_OUTPUT_DIR'),
+    );
     const verifyOnly = bool.fromEnvironment('SKED_BENCHMARK_VERIFY_ONLY');
     final fixtures = PerformanceFixtures.build();
     final initial = fixtures.generalData5000.normalized();
@@ -193,9 +197,6 @@ void main() {
             : const BenchmarkRunConfig(),
       ),
     );
-    final directory = outputPath.isEmpty
-        ? Directory.systemTemp.createTempSync('sked-event-cache-benchmark-')
-        : (Directory(outputPath)..createSync(recursive: true));
     final output = File('${directory.path}/windows-host-${report.label}.json')
       ..writeAsStringSync('${report.encode()}\n');
     stdout.writeln('Benchmark report: ${output.absolute.path}');
