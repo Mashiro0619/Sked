@@ -121,6 +121,8 @@ Sked uses `/models` for model discovery and `/chat/completions` for timetable pa
 
 Issues and pull requests are welcome. Before submitting code, run the formatting check, static analysis, and tests, and add coverage for new behavior.
 
+See the [contribution guide (Chinese)](CONTRIBUTING.md) for setup, atomic commits, localization, and validation.
+
 School-site definitions are stored in [`assets/school_sites.json`](assets/school_sites.json); contributions for unlisted schools are welcome as well.
 
 ## License and Links

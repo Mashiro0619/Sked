@@ -121,6 +121,8 @@ Sked 通过 `/models` 获取模型列表，通过 `/chat/completions` 解析课�
 
 欢迎提交 [Issue](https://github.com/Mashiro0619/Sked/issues) 和 Pull Request。提交代码前，请运行格式检查、静态分析和测试，并为新增行为补充相应测试。
 
+环境准备、原子提交、本地化和验证流程见 [贡献指南](CONTRIBUTING.md)。
+
 学校站点配置位于 [`assets/school_sites.json`](assets/school_sites.json)，也欢迎补充尚未收录的学校。
 
 ## 许可证与相关链接
