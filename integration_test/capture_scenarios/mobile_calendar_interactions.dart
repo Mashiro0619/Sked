@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -22,11 +24,8 @@ void registerCaptureScenarios() {
     t,
   ) async {
     await DesktopWindowBridge.instance.initialize();
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/mobile-calendar-interactions',
-      ),
+    final output = createCaptureOutputDirectory(
+      label: 'mobile-calendar-interactions',
     );
     await output.create(recursive: true);
     const baseline = bool.fromEnvironment('SKED_VISUAL_BASELINE');

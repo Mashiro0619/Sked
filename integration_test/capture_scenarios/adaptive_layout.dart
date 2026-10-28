@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -26,12 +28,7 @@ void registerCaptureScenarios() {
     (t) async {
       await DesktopWindowBridge.instance.initialize();
       const baseline = bool.fromEnvironment('SKED_VISUAL_BASELINE');
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/adaptive-layout',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'adaptive-layout');
       await output.create(recursive: true);
       final manifest = <Map<String, Object?>>[];
       t.view.devicePixelRatio = 1;

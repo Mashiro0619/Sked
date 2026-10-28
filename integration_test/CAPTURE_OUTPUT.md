@@ -6,4 +6,11 @@
 
 截图、清单、原生交互记录用于测试结束后的人工复核，不在 `tearDown` 中自动删除。普通临时测试数据及验证目录工具本身的单元测试仍负责清理自己的目录。新采集结果应记录源码版本、平台、实际窗口与输入方式，不能把宿主模拟画面当作物理设备验收。
 
-已采用本约定的会话入口：`mobile-calendar-grids`、`m3-expressive-controls`、`mobile-home`、`mobile-ui-fixes`、`school-sites-mobile`。一次会话的图片与 `manifest.json` 位于同一目录；只有完成预期的全部截图后才写成功清单，重复文件名会被拒绝。
+已迁移入口：
+
+| 分组 | 场景 |
+| --- | --- |
+| 移动捕获会话 | `mobile-calendar-grids`、`m3-expressive-controls`、`mobile-home`、`mobile-ui-fixes`、`school-sites-mobile` |
+| 手机布局与交互 | `adaptive-layout`、`mobile-calendar-interactions`、`mobile-picker-surfaces`、`mobile-secondary-pickers`、`mobile-tasks` |
+
+移动捕获会话的图片与 `manifest.json` 位于同一目录；只有完成预期的全部截图后才写成功清单，重复文件名会被拒绝。其他场景保留原有文件名和清单协议。

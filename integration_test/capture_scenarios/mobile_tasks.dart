@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -37,12 +39,7 @@ void registerCaptureScenarios() {
     t,
   ) async {
     await DesktopWindowBridge.instance.initialize();
-    final out = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/mobile-tasks',
-      ),
-    );
+    final out = createCaptureOutputDirectory(label: 'mobile-tasks');
     await out.create(recursive: true);
     const baseline = bool.fromEnvironment('SKED_VISUAL_BASELINE');
     final manifest = <Map<String, Object?>>[];
