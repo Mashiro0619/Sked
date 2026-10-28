@@ -1147,7 +1147,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final commands = context.read<GeneralCommands>();
     final settings = context.read<SettingsViewState>();
     final workspace = context.read<WorkspaceViewState>();
-    final general = context.watch<GeneralViewState>();
+    // The home snapshot already observes the resource frame's displayed fields.
+    // Watching the whole view here would undo that selective subscription.
+    final general = context.read<GeneralViewState>();
     final l10n = AppLocalizations.of(context);
     final date = normalizeDateOnly(general.selectedDate);
     if (!DateUtils.isSameDay(date, _resourceSelectedDate)) {

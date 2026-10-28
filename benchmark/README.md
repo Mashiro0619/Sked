@@ -209,6 +209,43 @@ JIT query construction, without a device, rendered-frame or save-latency claim.
 The Linux same-process timezone test also verifies that prepared input reuse
 does not preserve old local occurrence times when TZ changes within a minute.
 
+## Home field subscriptions
+
+`flutter test --no-pub --concurrency=1 --reporter=expanded
+benchmark/general_home_subscription_benchmark_test.dart` runs 100 events at
+1280×900, text scale 1, in week/month/list views. Each sample makes four
+settings or calendar-name changes, awaits their in-memory saves, then times
+only widget pumps until settled. It uses five warm-ups and eleven fixed-size
+samples rather than the service benchmark's 250 ms calibration. Visible text
+and workspace-context checksums are verified, and home rebuild/pump counts
+are recorded. The reminder clock and selected date are fixed to June 1, 2026.
+The common output-directory helper and verification-only option apply.
+
+The 2026-10-28 comparison ran six independent Windows widget-test JIT processes
+in exclusive ABBAAB order, 13:16:19–13:20:43 UTC+08:00. Shared source hashes,
+runtime/dataset metadata and all six result checksums matched. The source
+change removes the broad `GeneralViewState` subscription inside the home
+frame helper, allowing its existing field selector to control home rebuilds.
+Reminder strips, timelines and supporting panels retain their own listeners.
+
+| View/update, four changes (ms/op) | Baseline process medians | Field-selector process medians | Median change |
+| --- | --- | --- | ---: |
+| Week, popup setting | 290.956 / 209.030 / 168.266 | 85.182 / 78.567 / 79.085 | −62.17% |
+| Week, visible calendar name | 304.605 / 208.576 / 180.753 | 204.749 / 248.931 / 199.102 | −1.83% |
+| Month, popup setting | 155.584 / 138.096 / 111.082 | 41.385 / 50.322 / 34.891 | −70.03% |
+| Month, visible calendar name | 400.111 / 315.099 / 258.473 | 323.805 / 334.170 / 275.391 | +2.76% |
+| List, popup setting | 181.170 / 115.695 / 95.636 | 30.388 / 35.443 / 24.809 | −73.73% |
+| List, visible calendar name | 230.100 / 160.293 / 142.533 | 161.652 / 171.110 / 137.386 | +0.85% |
+
+All popup-setting cases reduce home rebuilds from four to zero; all visible
+name controls retain four. Baseline timing drifts considerably across processes,
+and visible-update samples overlap, so the percentages describe only this
+instrumented test window. Popup samples remain separated across all three
+processes, supporting reduced work in that scenario. These are widget-pump
+costs after a memory save, not real-device frame rates or full save latency.
+Regression tests also verify reminder-default updates, calendar visibility,
+calendar names and date navigation remain live in all three views.
+
 ## Android profile
 
 Use a physical release-representative device for conclusions that influence
