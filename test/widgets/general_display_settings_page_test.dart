@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
@@ -17,6 +18,7 @@ import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 import '../support/data_transfer_codec.dart';
+import '../support/timetable_storage_fakes.dart' show MemoryTimetableStorage;
 
 class _PendingTimetableStorage implements TimetableStorage {
   _PendingTimetableStorage(this.data);
@@ -113,6 +115,94 @@ Future<void> _toggleSwitch(WidgetTester tester, String title) async {
 }
 
 void main() {
+  testWidgets(
+    'shows only applicable toolbar and add-button preferences without saving on resize',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final initial = buildInitialAppData(buildDefaultPeriodTimes());
+      final storage = MemoryTimetableStorage(
+        initialData: initial.copyWith(
+          activeMode: AppMode.general,
+          generalMode: initial.generalMode.copyWith(
+            viewSwitchBehavior: generalViewSwitchBehaviorCycle,
+            toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
+            showAddEventFab: false,
+          ),
+        ),
+      );
+      final provider = AppRuntime(
+        dataTransferCodec: inlineDataTransferCodec,
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      await provider.lifecycle.load();
+      addTearDown(provider.dispose);
+      final saved = storage.encodedData;
+      final saves = storage.saveCount;
+      final desktop = switch (defaultTargetPlatform) {
+        TargetPlatform.windows ||
+        TargetPlatform.macOS ||
+        TargetPlatform.linux => true,
+        _ => false,
+      };
+      for (final width in [320.0, 1440.0]) {
+        tester.view.physicalSize = Size(width, 900);
+        await _pumpPage(tester, provider);
+        final behavior = find.byKey(
+          const ValueKey('general-view-switch-behavior'),
+        );
+        final allocation = find.byKey(
+          const ValueKey('general-toolbar-width-policy'),
+        );
+        final addButton = find.byKey(
+          const ValueKey('show-add-event-fab-setting'),
+        );
+        for (final setting in [behavior, allocation, addButton]) {
+          expect(setting, desktop ? findsNothing : findsOneWidget);
+        }
+        expect(
+          find.byKey(const ValueKey('general-date-label-format')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('enable-long-press-add-event-setting')),
+          findsOneWidget,
+        );
+        if (!desktop) {
+          expect(
+            tester.widget<SettingsChoiceTile<String>>(behavior).value,
+            generalViewSwitchBehaviorCycle,
+          );
+          expect(
+            tester.widget<SettingsChoiceTile<String>>(allocation).value,
+            generalToolbarWidthPolicyDatePriority,
+          );
+          expect(tester.widget<SettingsSwitchTile>(addButton).value, isFalse);
+        }
+        expect(
+          provider.generalView.data.viewSwitchBehavior,
+          generalViewSwitchBehaviorCycle,
+        );
+        expect(
+          provider.generalView.data.toolbarWidthPolicy,
+          generalToolbarWidthPolicyDatePriority,
+        );
+        expect(provider.generalView.data.showAddEventFab, isFalse);
+        expect(storage.saveCount, saves);
+        expect(storage.encodedData, saved);
+        expect(tester.takeException(), isNull);
+      }
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+      TargetPlatform.windows,
+      TargetPlatform.macOS,
+      TargetPlatform.linux,
+    }),
+  );
+
   testWidgets(
     'general fit toggle defaults on, persists independently and reports failure',
     (tester) async {

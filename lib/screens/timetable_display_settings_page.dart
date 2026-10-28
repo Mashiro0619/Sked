@@ -45,6 +45,7 @@ class _TimetableDisplaySettingsPageState
     return Consumer2<SettingsViewState, WorkspaceViewState>(
       builder: (context, settings, workspace, child) {
         final commands = context.read<SettingsCommands>();
+        final desktop = WorkbenchChromeMetrics.of(context).desktop;
         final workspaceFallback =
             workspace.enabledWorkspaces.length > 1 &&
             settings.hideHomeWorkspaceNavigation;
@@ -227,17 +228,18 @@ class _TimetableDisplaySettingsPageState
                           ),
                         ),
                         SettingsSectionHeader(title: l10n.quickActionsSection),
-                        SettingsSwitchTile(
-                          key: const ValueKey('show-add-course-fab-setting'),
-                          icon: Icons.add_circle_outline,
-                          value: settings.showAddCourseFab,
-                          title: l10n.showAddCourseFab,
-                          subtitle: l10n.showAddCourseFabHint,
-                          onChanged: (value) => _updateSetting(
-                            'Update add course button visibility',
-                            () => commands.updateShowAddCourseFab(value),
+                        if (!desktop)
+                          SettingsSwitchTile(
+                            key: const ValueKey('show-add-course-fab-setting'),
+                            icon: Icons.add_circle_outline,
+                            value: settings.showAddCourseFab,
+                            title: l10n.showAddCourseFab,
+                            subtitle: l10n.showAddCourseFabHint,
+                            onChanged: (value) => _updateSetting(
+                              'Update add course button visibility',
+                              () => commands.updateShowAddCourseFab(value),
+                            ),
                           ),
-                        ),
                         SettingsSwitchTile(
                           key: const ValueKey(
                             'enable-long-press-add-course-setting',

@@ -1,5 +1,6 @@
 import 'dart:ui' show PointerDeviceKind;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show kPrimaryButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,6 +89,61 @@ Future<void> _toggleSetting(WidgetTester tester, String title) async {
 }
 
 void main() {
+  testWidgets(
+    'shows the floating add preference only on touch platforms without saving on resize',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final initial = buildInitialAppData(buildDefaultPeriodTimes());
+      final storage = MemoryTimetableStorage(
+        initialData: initial.copyWith(
+          studentMode: initial.studentMode.copyWith(showAddCourseFab: false),
+        ),
+      );
+      final provider = AppRuntime(
+        dataTransferCodec: inlineDataTransferCodec,
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      await provider.lifecycle.load();
+      addTearDown(provider.dispose);
+      final saved = storage.encodedData;
+      final saves = storage.saveCount;
+      final desktop = switch (defaultTargetPlatform) {
+        TargetPlatform.windows ||
+        TargetPlatform.macOS ||
+        TargetPlatform.linux => true,
+        _ => false,
+      };
+      for (final width in [320.0, 1440.0]) {
+        tester.view.physicalSize = Size(width, 900);
+        await _pumpPage(tester, provider);
+        final addButton = find.byKey(
+          const ValueKey('show-add-course-fab-setting'),
+        );
+        expect(addButton, desktop ? findsNothing : findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('enable-long-press-add-course-setting')),
+          findsOneWidget,
+        );
+        if (!desktop) {
+          expect(tester.widget<SettingsSwitchTile>(addButton).value, isFalse);
+        }
+        expect(provider.settingsView.showAddCourseFab, isFalse);
+        expect(storage.saveCount, saves);
+        expect(storage.encodedData, saved);
+        expect(tester.takeException(), isNull);
+      }
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+      TargetPlatform.windows,
+      TargetPlatform.macOS,
+      TargetPlatform.linux,
+    }),
+  );
+
   testWidgets('caps wide content and consumes Android navigation inset once', (
     tester,
   ) async {

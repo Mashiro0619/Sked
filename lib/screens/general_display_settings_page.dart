@@ -46,6 +46,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
       builder: (context, general, settings, workspace, child) {
         final display = general.data;
         final commands = context.read<GeneralCommands>();
+        final desktop = WorkbenchChromeMetrics.of(context).desktop;
         final workspaceFallback =
             workspace.enabledWorkspaces.length > 1 &&
             settings.hideHomeWorkspaceNavigation;
@@ -83,77 +84,82 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           _updateSetting,
                           enabled: !uiCommandBusy,
                         ),
-                        const SizedBox(height: 12),
-                        SettingsChoiceTile<String>(
-                          enabled:
-                              !WorkbenchChromeMetrics.compactTouch(context) ||
-                              !uiCommandBusy,
-                          key: const ValueKey('general-view-switch-behavior'),
-                          value: display.viewSwitchBehavior,
-                          title: l10n.generalViewSwitchBehavior,
-                          icon: Icons.swap_horiz_outlined,
-                          entries: [
-                            DropdownMenuEntry<String>(
-                              value: generalViewSwitchBehaviorCycle,
-                              label: l10n.generalViewSwitchCycle,
-                            ),
-                            DropdownMenuEntry<String>(
-                              value: generalViewSwitchBehaviorMenu,
-                              label: l10n.generalViewSwitchMenu,
-                            ),
-                          ],
-                          onSelected: (value) {
-                            if (value != null) {
-                              _updateSetting(
-                                'Update general view switch behavior',
-                                () => commands.updateDisplaySettings(
-                                  viewSwitchBehavior: value,
-                                ),
-                              );
-                            }
-                          },
-                        ),
+                        if (!desktop) ...[
+                          const SizedBox(height: 12),
+                          SettingsChoiceTile<String>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
+                            key: const ValueKey('general-view-switch-behavior'),
+                            value: display.viewSwitchBehavior,
+                            title: l10n.generalViewSwitchBehavior,
+                            icon: Icons.swap_horiz_outlined,
+                            entries: [
+                              DropdownMenuEntry<String>(
+                                value: generalViewSwitchBehaviorCycle,
+                                label: l10n.generalViewSwitchCycle,
+                              ),
+                              DropdownMenuEntry<String>(
+                                value: generalViewSwitchBehaviorMenu,
+                                label: l10n.generalViewSwitchMenu,
+                              ),
+                            ],
+                            onSelected: (value) {
+                              if (value != null) {
+                                _updateSetting(
+                                  'Update general view switch behavior',
+                                  () => commands.updateDisplaySettings(
+                                    viewSwitchBehavior: value,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
                         SettingsSectionHeader(
                           title: l10n.generalToolbarSection,
                         ),
-                        SettingsChoiceTile<String>(
-                          enabled:
-                              !WorkbenchChromeMetrics.compactTouch(context) ||
-                              !uiCommandBusy,
-                          key: const ValueKey('general-toolbar-width-policy'),
-                          value: display.toolbarWidthPolicy,
-                          title: l10n.generalToolbarWidthPolicy,
-                          icon: Icons.space_bar_outlined,
-                          entries: [
-                            DropdownMenuEntry(
-                              value: generalToolbarWidthPolicyContent,
-                              label: l10n.generalToolbarWidthContent,
-                            ),
-                            DropdownMenuEntry(
-                              value: generalToolbarWidthPolicyBalanced,
-                              label: l10n.generalToolbarWidthBalanced,
-                            ),
-                            DropdownMenuEntry(
-                              value: generalToolbarWidthPolicyCalendarPriority,
-                              label: l10n.generalToolbarWidthCalendarPriority,
-                            ),
-                            DropdownMenuEntry(
-                              value: generalToolbarWidthPolicyDatePriority,
-                              label: l10n.generalToolbarWidthDatePriority,
-                            ),
-                          ],
-                          onSelected: (value) {
-                            if (value != null) {
-                              _updateSetting(
-                                'Update general toolbar width policy',
-                                () => commands.updateDisplaySettings(
-                                  toolbarWidthPolicy: value,
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
+                        if (!desktop) ...[
+                          SettingsChoiceTile<String>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
+                            key: const ValueKey('general-toolbar-width-policy'),
+                            value: display.toolbarWidthPolicy,
+                            title: l10n.generalToolbarWidthPolicy,
+                            icon: Icons.space_bar_outlined,
+                            entries: [
+                              DropdownMenuEntry(
+                                value: generalToolbarWidthPolicyContent,
+                                label: l10n.generalToolbarWidthContent,
+                              ),
+                              DropdownMenuEntry(
+                                value: generalToolbarWidthPolicyBalanced,
+                                label: l10n.generalToolbarWidthBalanced,
+                              ),
+                              DropdownMenuEntry(
+                                value:
+                                    generalToolbarWidthPolicyCalendarPriority,
+                                label: l10n.generalToolbarWidthCalendarPriority,
+                              ),
+                              DropdownMenuEntry(
+                                value: generalToolbarWidthPolicyDatePriority,
+                                label: l10n.generalToolbarWidthDatePriority,
+                              ),
+                            ],
+                            onSelected: (value) {
+                              if (value != null) {
+                                _updateSetting(
+                                  'Update general toolbar width policy',
+                                  () => commands.updateDisplaySettings(
+                                    toolbarWidthPolicy: value,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         SettingsChoiceTile<String>(
                           enabled:
                               !WorkbenchChromeMetrics.compactTouch(context) ||
@@ -359,19 +365,20 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           ),
                         ),
                         SettingsSectionHeader(title: l10n.quickActionsSection),
-                        SettingsSwitchTile(
-                          key: const ValueKey('show-add-event-fab-setting'),
-                          icon: Icons.add_circle_outline,
-                          title: l10n.showAddEventFab,
-                          subtitle: l10n.showAddEventFabHint,
-                          value: display.showAddEventFab,
-                          onChanged: (value) => _updateSetting(
-                            'Update add event button visibility',
-                            () => commands.updateDisplaySettings(
-                              showAddEventFab: value,
+                        if (!desktop)
+                          SettingsSwitchTile(
+                            key: const ValueKey('show-add-event-fab-setting'),
+                            icon: Icons.add_circle_outline,
+                            title: l10n.showAddEventFab,
+                            subtitle: l10n.showAddEventFabHint,
+                            value: display.showAddEventFab,
+                            onChanged: (value) => _updateSetting(
+                              'Update add event button visibility',
+                              () => commands.updateDisplaySettings(
+                                showAddEventFab: value,
+                              ),
                             ),
                           ),
-                        ),
                         SettingsSwitchTile(
                           key: const ValueKey(
                             'enable-long-press-add-event-setting',
