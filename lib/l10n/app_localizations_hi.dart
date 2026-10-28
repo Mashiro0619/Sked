@@ -1419,11 +1419,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get studentTimetable => 'छात्र टाइमटेबल';
 
   @override
-  String get firstLaunchTitle => 'अपना प्रारंभिक मोड चुनें';
+  String get firstLaunchTitle => 'सक्रिय करने के लिए कार्यक्षेत्र चुनें';
 
   @override
   String get firstLaunchSubtitle =>
-      'जिस कार्यक्षेत्र का आप सबसे अधिक उपयोग करते हैं उसे चुनें। आप बाद में मोड बदल सकते हैं।';
+      'कक्षा समय-सारणी, कार्यक्रम या दोनों का उपयोग करें। बाद में सेटिंग में इसे बदल सकते हैं।';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1435,7 +1435,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'शुरुआती कार्यक्षेत्र चुनकर आप पुष्टि करते हैं कि आपने ';
+      'कार्यक्षेत्र चुनकर आप पुष्टि करते हैं कि आपने ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'गोपनीयता नीति';

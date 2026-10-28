@@ -1437,11 +1437,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get studentTimetable => 'Stundenplan';
 
   @override
-  String get firstLaunchTitle => 'Startmodus auswählen';
+  String get firstLaunchTitle => 'Arbeitsbereiche aktivieren';
 
   @override
   String get firstLaunchSubtitle =>
-      'Wähle den Arbeitsbereich, den du am häufigsten nutzt. Du kannst den Modus später wechseln.';
+      'Nutze den Stundenplan, Termine oder beides. Du kannst die Auswahl später in den Einstellungen ändern.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1453,7 +1453,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Mit der Wahl eines Startarbeitsbereichs bestätigst du, dass du die ';
+      'Mit der Wahl eines Arbeitsbereichs bestätigst du, dass du die ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Datenschutzrichtlinie';

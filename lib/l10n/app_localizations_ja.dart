@@ -1376,10 +1376,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get studentTimetable => '授業時間割';
 
   @override
-  String get firstLaunchTitle => '開始モードを選択';
+  String get firstLaunchTitle => '有効にするワークスペースを選択';
 
   @override
-  String get firstLaunchSubtitle => 'よく使うワークスペースを選択してください。モードは後から切り替えられます。';
+  String get firstLaunchSubtitle => '時間割、予定、または両方を利用できます。後から設定で変更できます。';
 
   @override
   String get firstLaunchStudentDesc => '時間割、科目、週、時限、インポートを管理します。';
@@ -1388,7 +1388,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get firstLaunchGeneralDesc => 'カテゴリ、イベント、リマインダー、JSON / ICS データを管理します。';
 
   @override
-  String get firstLaunchPrivacyConsentBefore => '開始ワークスペースを選択すると、';
+  String get firstLaunchPrivacyConsentBefore => 'ワークスペースを選択すると、';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'プライバシーポリシー';

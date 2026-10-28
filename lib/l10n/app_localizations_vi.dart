@@ -1425,11 +1425,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get studentTimetable => 'Thời khóa biểu';
 
   @override
-  String get firstLaunchTitle => 'Chọn chế độ bắt đầu';
+  String get firstLaunchTitle => 'Chọn không gian làm việc cần bật';
 
   @override
   String get firstLaunchSubtitle =>
-      'Chọn không gian làm việc bạn dùng nhiều nhất. Bạn có thể đổi chế độ sau.';
+      'Dùng thời khóa biểu, lịch hoặc cả hai. Bạn có thể đổi lựa chọn sau trong phần cài đặt.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1441,7 +1441,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Khi chọn không gian làm việc ban đầu, bạn xác nhận đã đọc và đồng ý với ';
+      'Khi chọn không gian làm việc, bạn xác nhận đã đọc và đồng ý với ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Chính sách quyền riêng tư';

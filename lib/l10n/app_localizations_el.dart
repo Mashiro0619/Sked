@@ -1447,11 +1447,11 @@ class AppLocalizationsEl extends AppLocalizations {
   String get studentTimetable => 'Πρόγραμμα μαθημάτων';
 
   @override
-  String get firstLaunchTitle => 'Επιλέξτε λειτουργία εκκίνησης';
+  String get firstLaunchTitle => 'Επιλέξτε χώρους εργασίας για ενεργοποίηση';
 
   @override
   String get firstLaunchSubtitle =>
-      'Επιλέξτε τον χώρο εργασίας που χρησιμοποιείτε περισσότερο. Μπορείτε να αλλάξετε λειτουργία αργότερα.';
+      'Χρησιμοποιήστε το ωρολόγιο πρόγραμμα, το ημερολόγιο ή και τα δύο. Μπορείτε να αλλάξετε την επιλογή αργότερα στις ρυθμίσεις.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1463,7 +1463,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Επιλέγοντας έναν αρχικό χώρο εργασίας, επιβεβαιώνετε ότι έχετε διαβάσει και αποδέχεστε την ';
+      'Επιλέγοντας έναν χώρο εργασίας, επιβεβαιώνετε ότι έχετε διαβάσει και αποδέχεστε την ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Πολιτική απορρήτου';

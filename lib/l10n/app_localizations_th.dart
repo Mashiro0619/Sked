@@ -1413,11 +1413,11 @@ class AppLocalizationsTh extends AppLocalizations {
   String get studentTimetable => 'ตารางเรียน';
 
   @override
-  String get firstLaunchTitle => 'เลือกโหมดเริ่มต้น';
+  String get firstLaunchTitle => 'เลือกพื้นที่ทำงานที่จะเปิดใช้งาน';
 
   @override
   String get firstLaunchSubtitle =>
-      'เลือกพื้นที่ทำงานที่คุณใช้บ่อยที่สุด คุณสามารถสลับโหมดได้ภายหลัง';
+      'ใช้ตารางเรียน กำหนดการ หรือทั้งสองอย่าง และเปลี่ยนตัวเลือกได้ภายหลังในการตั้งค่า';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1429,7 +1429,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'เมื่อเลือกพื้นที่ทำงานเริ่มต้น แสดงว่าคุณได้อ่านและยอมรับ';
+      'เมื่อเลือกพื้นที่ทำงาน แสดงว่าคุณได้อ่านและยอมรับ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'นโยบายความเป็นส่วนตัว';

@@ -1439,11 +1439,12 @@ class AppLocalizationsHu extends AppLocalizations {
   String get studentTimetable => 'Tanulói órarend';
 
   @override
-  String get firstLaunchTitle => 'Válassza ki a kezdő módot';
+  String get firstLaunchTitle =>
+      'Válassza ki az engedélyezni kívánt munkaterületeket';
 
   @override
   String get firstLaunchSubtitle =>
-      'Válassza ki a leggyakrabban használt munkaterületet. Később módot válthat.';
+      'Használja az órarendet, a naptárat vagy mindkettőt. A választást később a beállításokban módosíthatja.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1455,7 +1456,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'A kezdő munkaterület kiválasztásával megerősíti, hogy elolvasta és elfogadja az ';
+      'A munkaterület kiválasztásával megerősíti, hogy elolvasta és elfogadja az ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Adatvédelmi szabályzatot';

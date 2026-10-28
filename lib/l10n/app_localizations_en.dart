@@ -1416,11 +1416,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Choose workspaces to enable';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Use the timetable, schedule, or both. You can change this later in Settings.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1432,7 +1432,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'By choosing a starting workspace, you confirm that you have read and agree to the ';
+      'By choosing a workspace, you confirm that you have read and agree to the ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Privacy Policy';

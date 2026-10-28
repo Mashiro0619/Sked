@@ -1422,11 +1422,12 @@ class AppLocalizationsCs extends AppLocalizations {
   String get studentTimetable => 'Studijní rozvrh';
 
   @override
-  String get firstLaunchTitle => 'Vyberte výchozí režim';
+  String get firstLaunchTitle =>
+      'Vyberte pracovní prostory, které chcete zapnout';
 
   @override
   String get firstLaunchSubtitle =>
-      'Vyberte pracovní prostor, který používáte nejčastěji. Režim můžete později změnit.';
+      'Používejte rozvrh, kalendář nebo obojí. Výběr můžete později změnit v nastavení.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1438,7 +1439,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Výběrem počátečního pracovního prostoru potvrzujete, že jste si přečetli a souhlasíte se ';
+      'Výběrem pracovního prostoru potvrzujete, že jste si přečetli a souhlasíte se ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'zásadami ochrany osobních údajů';

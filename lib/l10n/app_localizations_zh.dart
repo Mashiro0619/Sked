@@ -1339,10 +1339,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studentTimetable => '学生课表';
 
   @override
-  String get firstLaunchTitle => '选择你的起始模式';
+  String get firstLaunchTitle => '选择要启用的工作区';
 
   @override
-  String get firstLaunchSubtitle => '先选一个最常用的工作区，之后仍可在应用内切换。';
+  String get firstLaunchSubtitle => '可启用课表、日程或两者，以后可在设置中调整。';
 
   @override
   String get firstLaunchStudentDesc => '管理课表、课程、周次、节次时间，并支持课表导入。';
@@ -1351,7 +1351,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get firstLaunchGeneralDesc => '管理分类、日程、提醒，以及 JSON / ICS 数据。';
 
   @override
-  String get firstLaunchPrivacyConsentBefore => '选择起始工作区，即表示你已阅读并同意';
+  String get firstLaunchPrivacyConsentBefore => '选择工作区，即表示你已阅读并同意';
 
   @override
   String get firstLaunchPrivacyConsentLink => '《隐私政策》';
@@ -4420,10 +4420,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get studentTimetable => '學生課表';
 
   @override
-  String get firstLaunchTitle => '選擇你的起始模式';
+  String get firstLaunchTitle => '選擇要啟用的工作區';
 
   @override
-  String get firstLaunchSubtitle => '先選一個最常用的工作區，之後仍可在應用內切換。';
+  String get firstLaunchSubtitle => '可啟用課表、日程或兩者，之後可在設定中調整。';
 
   @override
   String get firstLaunchStudentDesc => '管理課表、課程、週次、節次時間，並支援課表匯入。';
@@ -4432,7 +4432,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get firstLaunchGeneralDesc => '管理分類、日程、提醒，以及 JSON / ICS 資料。';
 
   @override
-  String get firstLaunchPrivacyConsentBefore => '選擇起始工作區，即表示你已閱讀並同意';
+  String get firstLaunchPrivacyConsentBefore => '選擇工作區，即表示你已閱讀並同意';
 
   @override
   String get firstLaunchPrivacyConsentLink => '《隱私政策》';

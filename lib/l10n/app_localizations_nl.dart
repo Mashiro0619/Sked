@@ -1428,11 +1428,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get studentTimetable => 'Lesrooster';
 
   @override
-  String get firstLaunchTitle => 'Kies je startmodus';
+  String get firstLaunchTitle => 'Kies welke werkruimtes je wilt inschakelen';
 
   @override
   String get firstLaunchSubtitle =>
-      'Kies de werkruimte die je het meest gebruikt. Je kunt later van modus wisselen.';
+      'Gebruik het lesrooster, de agenda of beide. Je kunt dit later wijzigen in de instellingen.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1444,7 +1444,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Door een startwerkruimte te kiezen, bevestig je dat je het ';
+      'Door een werkruimte te kiezen, bevestig je dat je het ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Privacybeleid';

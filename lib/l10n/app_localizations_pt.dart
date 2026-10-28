@@ -1434,11 +1434,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get studentTimetable => 'Horário';
 
   @override
-  String get firstLaunchTitle => 'Escolha o modo inicial';
+  String get firstLaunchTitle => 'Escolha os espaços de trabalho a ativar';
 
   @override
   String get firstLaunchSubtitle =>
-      'Escolha o espaço de trabalho que você mais usa. Você pode trocar de modo depois.';
+      'Use o horário, a agenda ou ambos. Você pode mudar essa escolha depois nas configurações.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1450,7 +1450,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Ao escolher um espaço de trabalho inicial, você confirma que leu e aceita a ';
+      'Ao escolher um espaço de trabalho, você confirma que leu e aceita a ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Política de privacidade';

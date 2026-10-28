@@ -2635,13 +2635,13 @@ abstract class AppLocalizations {
   /// No description provided for @firstLaunchTitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose your starting mode'**
+  /// **'Choose workspaces to enable'**
   String get firstLaunchTitle;
 
   /// No description provided for @firstLaunchSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Pick the workspace you use most. You can switch modes later.'**
+  /// **'Use the timetable, schedule, or both. You can change this later in Settings.'**
   String get firstLaunchSubtitle;
 
   /// No description provided for @firstLaunchStudentDesc.
@@ -2659,7 +2659,7 @@ abstract class AppLocalizations {
   /// No description provided for @firstLaunchPrivacyConsentBefore.
   ///
   /// In en, this message translates to:
-  /// **'By choosing a starting workspace, you confirm that you have read and agree to the '**
+  /// **'By choosing a workspace, you confirm that you have read and agree to the '**
   String get firstLaunchPrivacyConsentBefore;
 
   /// No description provided for @firstLaunchPrivacyConsentLink.

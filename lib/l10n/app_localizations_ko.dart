@@ -1376,11 +1376,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get studentTimetable => '학생 시간표';
 
   @override
-  String get firstLaunchTitle => '시작 모드 선택';
+  String get firstLaunchTitle => '활성화할 작업 공간 선택';
 
   @override
   String get firstLaunchSubtitle =>
-      '가장 많이 사용하는 작업 공간을 선택하세요. 나중에 모드를 전환할 수 있습니다.';
+      '시간표, 일정 또는 둘 다 사용할 수 있습니다. 나중에 설정에서 변경할 수 있습니다.';
 
   @override
   String get firstLaunchStudentDesc => '시간표, 과목, 주차, 교시 시간, 가져오기를 관리합니다.';
@@ -1389,7 +1389,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get firstLaunchGeneralDesc => '카테고리, 이벤트, 알림, JSON / ICS 데이터를 관리합니다.';
 
   @override
-  String get firstLaunchPrivacyConsentBefore => '시작 작업 공간을 선택하면 ';
+  String get firstLaunchPrivacyConsentBefore => '작업 공간을 선택하면 ';
 
   @override
   String get firstLaunchPrivacyConsentLink => '개인정보 처리방침';

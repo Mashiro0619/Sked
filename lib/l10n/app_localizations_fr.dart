@@ -1451,11 +1451,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get studentTimetable => 'Emploi du temps';
 
   @override
-  String get firstLaunchTitle => 'Choisissez votre mode de départ';
+  String get firstLaunchTitle => 'Choisissez les espaces de travail à activer';
 
   @override
   String get firstLaunchSubtitle =>
-      'Choisissez l’espace de travail que vous utilisez le plus. Vous pourrez changer de mode plus tard.';
+      'Utilisez l’emploi du temps, l’agenda ou les deux. Vous pourrez modifier ce choix dans les paramètres.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1467,7 +1467,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'En choisissant un espace de travail de départ, vous confirmez avoir lu et accepté la ';
+      'En choisissant un espace de travail, vous confirmez avoir lu et accepté la ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Politique de confidentialité';

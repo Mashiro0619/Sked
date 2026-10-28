@@ -1420,11 +1420,11 @@ class AppLocalizationsEt extends AppLocalizations {
   String get studentTimetable => 'Tunniplaan';
 
   @override
-  String get firstLaunchTitle => 'Vali algrežiim';
+  String get firstLaunchTitle => 'Vali aktiveeritavad tööruumid';
 
   @override
   String get firstLaunchSubtitle =>
-      'Vali tööruum, mida kasutad kõige rohkem. Režiimi saab hiljem muuta.';
+      'Kasuta tunniplaani, kalendrit või mõlemat. Valikut saad hiljem seadetes muuta.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1436,7 +1436,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Alustava tööruumi valimisega kinnitad, et oled lugenud ';
+      'Tööruumi valimisega kinnitad, et oled lugenud ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'privaatsuspoliitikat';

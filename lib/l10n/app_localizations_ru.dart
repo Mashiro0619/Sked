@@ -1438,11 +1438,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get studentTimetable => 'Учебное расписание';
 
   @override
-  String get firstLaunchTitle => 'Выберите начальный режим';
+  String get firstLaunchTitle => 'Выберите рабочие пространства для включения';
 
   @override
   String get firstLaunchSubtitle =>
-      'Выберите рабочую область, которой пользуетесь чаще всего. Режим можно изменить позже.';
+      'Используйте учебное расписание, события или оба варианта. Выбор можно изменить позже в настройках.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1454,7 +1454,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Выбирая начальное рабочее пространство, вы подтверждаете, что прочитали и принимаете ';
+      'Выбирая рабочее пространство, вы подтверждаете, что прочитали и принимаете ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Политику конфиденциальности';

@@ -1426,11 +1426,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get studentTimetable => 'Urnik pouka';
 
   @override
-  String get firstLaunchTitle => 'Izberite začetni način';
+  String get firstLaunchTitle => 'Izberite delovne prostore za vklop';
 
   @override
   String get firstLaunchSubtitle =>
-      'Izberite delovni prostor, ki ga najpogosteje uporabljate. Način lahko pozneje zamenjate.';
+      'Uporabljajte urnik, koledar ali oboje. Izbiro lahko pozneje spremenite v nastavitvah.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1442,7 +1442,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Z izbiro začetnega delovnega prostora potrjujete, da ste prebrali in sprejeli ';
+      'Z izbiro delovnega prostora potrjujete, da ste prebrali in sprejeli ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Pravilnik o zasebnosti';

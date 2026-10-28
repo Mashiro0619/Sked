@@ -1438,11 +1438,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get studentTimetable => 'Orar școlar';
 
   @override
-  String get firstLaunchTitle => 'Alege modul de pornire';
+  String get firstLaunchTitle => 'Alege spațiile de lucru de activat';
 
   @override
   String get firstLaunchSubtitle =>
-      'Alege spațiul de lucru pe care îl folosești cel mai des. Poți schimba modul mai târziu.';
+      'Folosește orarul, agenda sau ambele. Poți schimba alegerea mai târziu în setări.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1454,7 +1454,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Alegând un spațiu de lucru inițial, confirmi că ai citit și accepți ';
+      'Alegând un spațiu de lucru, confirmi că ai citit și accepți ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Politica de confidențialitate';

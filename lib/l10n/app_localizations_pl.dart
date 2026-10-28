@@ -1427,11 +1427,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get studentTimetable => 'Plan zajęć ucznia';
 
   @override
-  String get firstLaunchTitle => 'Wybierz tryb początkowy';
+  String get firstLaunchTitle => 'Wybierz obszary robocze do włączenia';
 
   @override
   String get firstLaunchSubtitle =>
-      'Wybierz obszar roboczy, którego używasz najczęściej. Tryb możesz później zmienić.';
+      'Korzystaj z planu zajęć, terminarza lub obu. Wybór możesz później zmienić w ustawieniach.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1443,7 +1443,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Wybierając początkowy obszar roboczy, potwierdzasz, że znasz i akceptujesz ';
+      'Wybierając obszar roboczy, potwierdzasz, że znasz i akceptujesz ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Politykę prywatności';

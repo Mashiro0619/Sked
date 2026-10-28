@@ -1423,11 +1423,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get studentTimetable => 'Kursschema';
 
   @override
-  String get firstLaunchTitle => 'Välj startläge';
+  String get firstLaunchTitle => 'Välj arbetsytor att aktivera';
 
   @override
   String get firstLaunchSubtitle =>
-      'Välj den arbetsyta du använder mest. Du kan byta läge senare.';
+      'Använd schema, kalender eller båda. Du kan ändra valet senare i inställningarna.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1439,7 +1439,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Genom att välja en startarbetsyta bekräftar du att du har läst och godkänner ';
+      'Genom att välja en arbetsyta bekräftar du att du har läst och godkänner ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'Integritetspolicyn';

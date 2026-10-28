@@ -1415,11 +1415,11 @@ class AppLocalizationsDa extends AppLocalizations {
   String get studentTimetable => 'Studieskema';
 
   @override
-  String get firstLaunchTitle => 'Vælg starttilstand';
+  String get firstLaunchTitle => 'Vælg arbejdsområder, der skal aktiveres';
 
   @override
   String get firstLaunchSubtitle =>
-      'Vælg det arbejdsområde, du bruger mest. Du kan skifte tilstand senere.';
+      'Brug skoleskema, kalender eller begge dele. Du kan ændre valget senere i indstillingerne.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1431,7 +1431,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Ved at vælge et startarbejdsområde bekræfter du, at du har læst og accepterer ';
+      'Ved at vælge et arbejdsområde bekræfter du, at du har læst og accepterer ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'privatlivspolitikken';

@@ -1426,11 +1426,11 @@ class AppLocalizationsFi extends AppLocalizations {
   String get studentTimetable => 'Lukujärjestys';
 
   @override
-  String get firstLaunchTitle => 'Valitse aloitustila';
+  String get firstLaunchTitle => 'Valitse käyttöön otettavat työtilat';
 
   @override
   String get firstLaunchSubtitle =>
-      'Valitse työtila, jota käytät eniten. Voit vaihtaa tilaa myöhemmin.';
+      'Käytä lukujärjestystä, kalenteria tai molempia. Voit muuttaa valintaa myöhemmin asetuksissa.';
 
   @override
   String get firstLaunchStudentDesc =>
@@ -1442,7 +1442,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get firstLaunchPrivacyConsentBefore =>
-      'Valitsemalla aloitustyötilan vahvistat, että olet lukenut ja hyväksyt ';
+      'Valitsemalla työtilan vahvistat, että olet lukenut ja hyväksyt ';
 
   @override
   String get firstLaunchPrivacyConsentLink => 'tietosuojakäytännön';
