@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../utils/latin_word_wrapping.dart';
+
 /// Reserves room for a visible week status before optional course metadata.
 /// The surrounding course target owns the full title, status and tap semantics.
 class TimetableCourseWeekStatus extends StatelessWidget {
@@ -55,6 +57,7 @@ class TimetableCourseWeekStatus extends StatelessWidget {
             maxLines: lines,
             ellipsis: lines == null ? null : '…',
           )..layout(maxWidth: constraints.maxWidth);
+          limitOversizedLatinWords(painter, text, constraints.maxWidth);
           final result = (
             height: painter.height,
             lines: painter.computeLineMetrics().length,

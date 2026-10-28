@@ -5,6 +5,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/widgets/timetable_grid.dart';
+import 'package:sked/widgets/timetable_course_week_status.dart';
 
 CourseItem _course({
   String id = 'course',
@@ -144,6 +145,55 @@ void _expectWholeVisibleLines(WidgetTester tester, String id, double scale) {
 }
 
 void main() {
+  for (final direction in TextDirection.values) {
+    testWidgets(
+      'week status truncates an oversized Latin word on its first line: $direction',
+      (tester) async {
+        const label = 'Off Supercalifragilistic';
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Directionality(
+              textDirection: direction,
+              child: Scaffold(
+                body: Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 72,
+                    height: 300,
+                    child: TimetableCourseWeekStatus(
+                      title: 'Course',
+                      label: label,
+                      titleStyle: const TextStyle(
+                        fontFamily: 'Ahem',
+                        fontSize: 12,
+                      ),
+                      style: const TextStyle(fontFamily: 'Ahem', fontSize: 12),
+                      child: const Text('Course'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final paragraph = _paragraph(tester, find.text(label));
+        final wordBoxes = paragraph.getBoxesForSelection(
+          const TextSelection(baseOffset: 4, extentOffset: label.length),
+        );
+        expect(wordBoxes, isNotEmpty);
+        expect(wordBoxes.map((box) => box.top).toSet(), hasLength(1));
+        final precedingWordBoxes = paragraph.getBoxesForSelection(
+          const TextSelection(baseOffset: 0, extentOffset: 3),
+        );
+        expect(precedingWordBoxes, hasLength(1));
+        expect(precedingWordBoxes.single.top, lessThan(wordBoxes.first.top));
+        expect(paragraph.text.toPlainText(), label);
+        expect(paragraph.didExceedMaxLines, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final duration in [5, 15]) {
     testWidgets(
       'short inactive $duration minute cards keep geometry and complete targets',
