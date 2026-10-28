@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/main.dart' show AppStartupDependencies, runSkedApp;
 import 'package:sked/services/agenda_notification_service.dart';
@@ -29,6 +30,9 @@ import 'src/startup_runtime_adapter.dart';
 
 const _compiledRevision = String.fromEnvironment('SKED_STARTUP_REVISION');
 const _compiledEngine = String.fromEnvironment('SKED_STARTUP_ENGINE');
+// The preview candidate was not adopted. Historical candidate checkouts
+// provide their own observer; shipping storage has no preview API.
+const _previewEnabled = false;
 
 Future<void> main(List<String> arguments) async {
   final clock = StartupClock();
@@ -55,6 +59,7 @@ Future<void> main(List<String> arguments) async {
   );
   await withAgendaRuntimeMutationLockScope(scope, () async {
     final probe = StartupProbe(clock, memory: memory);
+    probe.expectedPreviewTitle = spec.fixture['startupPreviewTitle'] as String?;
     final network = _NoNetwork();
     HttpOverrides.global = network;
     final secrets = _SyntheticSecrets();
@@ -152,7 +157,7 @@ Future<void> main(List<String> arguments) async {
       await runSkedApp(
         bootstrapFactory: () => createStartupRoot(
           StartupDependencies(
-            storage: IoTimetableStorage(layout: storageLayout),
+            storage: _ObservedStartupStorage(storageLayout, probe),
             lease: IoAppInstanceLease(layout: storageLayout),
             services: services,
             secrets: secrets,
@@ -241,6 +246,10 @@ Future<void> main(List<String> arguments) async {
       'pid': pid,
       'compiledRevision': _compiledRevision,
       'compiledEngine': _compiledEngine,
+      'startupPreviewEnabled': _previewEnabled,
+      'buildDiagnosticsEnabled': const bool.fromEnvironment(
+        'SKED_F5_BUILD_DIAGNOSTIC',
+      ),
       'operatingSystem': Platform.operatingSystemVersion,
       'dartVersion': Platform.version,
       'executable': Platform.resolvedExecutable,
@@ -276,6 +285,20 @@ Future<void> main(List<String> arguments) async {
     if (!DesktopWindowBridge.instance.available) exit(2);
     await DesktopWindowBridge.instance.requestClose();
   });
+}
+
+class _ObservedStartupStorage extends IoTimetableStorage {
+  _ObservedStartupStorage(AppStorageLayout layout, this.probe)
+    : super(layout: layout);
+
+  final StartupProbe probe;
+
+  @override
+  Future<StorageLoadResult> load() async {
+    final result = await super.load();
+    probe.event('storage.authoritative', {'status': result.status.name});
+    return result;
+  }
 }
 
 Future<Map<String, Object?>> _verifyPhysicalLocks(StartupRunSpec spec) async {

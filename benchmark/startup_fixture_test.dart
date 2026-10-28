@@ -16,6 +16,7 @@ import 'src/ui_performance_fixtures.dart';
 void main() {
   test('write immutable startup inputs', () async {
     const output = String.fromEnvironment('SKED_STARTUP_FIXTURES');
+    const includeBackup = bool.fromEnvironment('SKED_STARTUP_INCLUDE_BACKUP');
     if (!path.isAbsolute(output)) {
       throw StateError('Set SKED_STARTUP_FIXTURES.');
     }
@@ -40,6 +41,10 @@ void main() {
           .create(recursive: true);
       final files = <String, String>{
         'archive/Sked_data.json': data.encode(),
+        if (includeBackup)
+          'archive/Sked_data.json.bak': data
+              .copyWith(ignoredUpdateVersion: 'startup-distinct-backup')
+              .encode(),
         'archive/Sked_school_sites.json': encodeSchoolSiteStorageSnapshot(
           sites,
         ),
@@ -57,6 +62,8 @@ void main() {
         'uiDatasetVersion': uiPerformanceDatasetVersion,
         'selectedDate': startupSelectedDate,
         'inputDate': startupInputDate,
+        'startupPreviewTitle': data.generalMode.schedules.first.name,
+        'includesBackup': includeBackup,
         'semanticSha256': semanticHash(data),
         'semanticSummary': semanticSummary(data),
         'files': {

@@ -21,6 +21,7 @@ export 'startup_clock.dart'
 export 'startup_memory.dart' show startupMemoryProtocolId;
 
 const startupProtocolVersion = 1;
+const startupReadableProtocolId = 'startup-readable-v1';
 const startupDatasets = ['sparse', '1000', '5000'];
 const startupPrivacyVersion = '2026-08-07';
 const startupSelectedDate = '2026-08-17';

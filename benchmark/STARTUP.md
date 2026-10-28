@@ -3,6 +3,11 @@
 This harness measures a fresh Windows process running the production
 `runSkedApp → AppBootstrap → MyApp` startup path. It reports the first raster,
 verified ready raster, response to a selected-day input, and whole-process RSS.
+The `startup-readable-v1` extension separately reports the first verified
+readable startup preview, authoritative storage completion, and writable
+lifecycle readiness. If no preview is actually rendered, the readable milestone
+is the original ready raster. Shipping storage uses the ordinary complete load;
+the 2026-10-28 preview candidate was not adopted, as recorded below.
 Use it separately
 from host JIT microbenchmarks and in-process UI workloads.
 
@@ -51,6 +56,12 @@ desktop/developer preferences. The fixed selected day is `2026-08-17`; the
 probe selects `2026-08-18`. Privacy version `2026-08-07` is accepted and
 notifications are enabled. Dataset versions and semantic/file hashes are
 recorded with the inputs.
+
+For the cold-start preview experiment, prepare a second input root with
+`--dart-define=SKED_STARTUP_INCLUDE_BACKUP=true`. It adds a distinct, valid backup
+of the same size class; its bytes and the expected visible calendar title are
+recorded in each manifest. Compare both no-backup and backup input roots, keeping
+all bytes identical between the two sides of each comparison.
 
 The launcher verifies and copies these same bytes into every sample directory.
 The measured child does not build fixtures or preload the repository. When an
@@ -106,6 +117,7 @@ Get-ChildItem -LiteralPath $startupArtifact -File -Recurse -Force |
   mode = 'profile'
   target = 'benchmark/startup_main.dart'
   revision = $startupRevision
+  startupPreviewEnabled = $false
   sdkRevision = $startupSdk.frameworkRevision
   engineRevision = $startupSdk.engineRevision
   buildCommand = 'flutter ' + ($startupBuildArguments -join ' ')
@@ -126,6 +138,27 @@ after artifact directories prevent later builds from replacing measured files.
 Do not measure `flutter run`, an integration-test binding, or a reused process.
 The child accepts exactly one `--run-root=<absolute prepared directory>`
 argument; let the launcher prepare and supply that directory.
+
+The current benchmark storage adapter observes ordinary `load()` completion.
+It reports `startupPreviewEnabled=false` and does not require a preview API in
+production. The archived experimental checkout supported
+`SKED_STARTUP_PREVIEW=false/true` only in its benchmark adapter. Its comparison
+kept the same source and full recovery protocol, changing candidate observation;
+it was not a comparison of historical release binaries. Replaying that experiment
+requires restoring the complete candidate source/overlay, not enabling a hidden
+shipping feature with a build flag.
+
+Readable preview evidence requires the expected synthetic data title, a laid-out
+`RenderParagraph` with visible glyph boxes inside the viewport, a current route,
+a real hit test, and the normal Win32 visibility checks at framework observation
+and timing-report receipt. The framework frame must have its own engine frame
+identity and corresponding raster timing. Callback time alone is never a
+readable frame. The record retains small text and geometry values, not the
+candidate data or widget tree; it also reports whether storage authority and
+writability were already observed. This is raster/geometry evidence, not an
+unobscured-pixels or physical-input assertion. The original four RSS observations
+and full-ready/input protocol remain unchanged; they do not sample transient
+preview-only memory.
 
 ## Smoke, then sample
 
@@ -311,6 +344,19 @@ desktop close path. The launcher records the exit and only terminates its own
 timed-out child.
 
 ## Results and maintenance
+
+The [2026-10-28 preview experiment](STARTUP_PREVIEW_2026-10-28.md) records the
+complete 36-process comparison, twelve targeted follow-up processes, and the
+decision not to adopt the candidate. Its earlier readable content did not
+justify the repeated initial-input delay. Shipping startup is unchanged.
+
+Use `--dart-define=SKED_F5_BUILD_DIAGNOSTIC=true` only in separate diagnostic
+builds when investigating unexpected rebuilds. It records build-scheduling
+stacks and dirty widget types for the first four loaded draws, delegates to the
+normal scheduler, and neither subscribes to widget dependencies nor requests
+extra frames. The report and launcher mark these runs diagnostic-only; their
+timings cannot form a completed performance matrix. Normal builds leave the
+flag absent.
 
 Each run root retains its process metadata, child report, launcher result,
 stdout/stderr, and lock proof. Failed starts, timeouts, missing reports, and

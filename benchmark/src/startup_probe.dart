@@ -21,7 +21,20 @@ export 'startup_native_clock.dart' show StartupClock;
 /// No IntegrationTest binding, overridden surface, synthetic semantics handle,
 /// empty runApp, manual warm-up frame, or pump/settle loop is used.
 class StartupBinding extends WidgetsFlutterBinding {
-  StartupBinding(this.probe);
+  StartupBinding(this.probe) {
+    if (_buildDiagnostic) {
+      final original = buildOwner!.onBuildScheduled;
+      buildOwner!.onBuildScheduled = () {
+        if (probe.runtime?.loaded == true && !probe.stopped) {
+          probe.event('diagnostic.build.scheduled', {
+            'previousFrame': probe._drawFrameNumber,
+            'stack': StackTrace.current.toString(),
+          });
+        }
+        original?.call();
+      };
+    }
+  }
   final StartupProbe probe;
 
   @override
@@ -46,6 +59,8 @@ class StartupBinding extends WidgetsFlutterBinding {
   }
 }
 
+const _buildDiagnostic = bool.fromEnvironment('SKED_F5_BUILD_DIAGNOSTIC');
+
 class StartupFrame {
   StartupFrame(this.timing, this.receipt);
   final ui.FrameTiming timing;
@@ -69,6 +84,7 @@ class StartupProbe {
   final StartupMemoryRecorder memory;
   StartupRuntime? runtime;
   bool Function() preferencesReady = () => false;
+  String? expectedPreviewTitle;
   final events = <Map<String, Object?>>[];
   final errors = <String>[];
   final beginAssociation = StartupBeginAssociation();
@@ -83,6 +99,8 @@ class StartupProbe {
   final response = Completer<StartupFrame>();
   AppData? readyData;
   int? readyNumber, responseNumber;
+  int? previewNumber;
+  Map<String, Object?>? previewText;
   Map<String, Object?>? readyView, responseView;
   Map<String, int>? inputStamp;
   Offset? inputPosition;
@@ -92,6 +110,7 @@ class StartupProbe {
   Timer? _visibilityRetry;
   int _visibilityFramesRequested = 0;
   int? _drawFrameNumber;
+  int _diagnosticDraws = 0;
 
   void attach() {
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
@@ -121,6 +140,27 @@ class StartupProbe {
     );
     if (_drawFrameNumber != null) {
       begins[_drawFrameNumber]!['associatedAtDrawStart'] = clock.stamp();
+    }
+    if (_buildDiagnostic && runtime?.loaded == true && _diagnosticDraws < 4) {
+      _diagnosticDraws++;
+      final dirty = <String, int>{};
+      var elements = 0;
+      void visit(Element element) {
+        elements++;
+        if (element.dirty) {
+          final type = element.widget.runtimeType.toString();
+          dirty[type] = (dirty[type] ?? 0) + 1;
+        }
+        element.visitChildren(visit);
+      }
+
+      WidgetsBinding.instance.rootElement?.visitChildren(visit);
+      event('diagnostic.draw.dirty', {
+        'frameNumber': _drawFrameNumber,
+        'ordinal': _diagnosticDraws,
+        'elements': elements,
+        'dirtyWidgets': dirty,
+      });
     }
   }
 
@@ -230,7 +270,17 @@ class StartupProbe {
       'baseReady': baseReady,
       'engineFrameIdentityAvailable': number != null,
     });
-    if (!baseReady) return;
+    if (!baseReady) {
+      if (number != null &&
+          app != null &&
+          !app.loaded &&
+          app.loading &&
+          previewNumber == null) {
+        _observePreview(number, storageWritable: app.writable);
+      }
+      _resolveFrames();
+      return;
+    }
     if (number == null) {
       // Production warm-up callbacks have rawBeginUs == null and cannot be
       // relabelled with a previous engine ID. Wait for a real engine frame.
@@ -307,6 +357,77 @@ class StartupProbe {
     WidgetsBinding.instance.rootElement?.visitChildren(visit);
   }
 
+  void _observePreview(int number, {required bool storageWritable}) {
+    Element? title;
+    void visit(Element element) {
+      if (element.widget.key == const ValueKey('startup-preview-title')) {
+        title = element;
+        return;
+      }
+      if (title == null) element.visitChildren(visit);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildren(visit);
+    final element = title;
+    if (element == null ||
+        ModalRoute.of(element)?.isCurrent != true ||
+        _hit(element) == null ||
+        !DesktopWindowBridge.instance.available) {
+      return;
+    }
+    final paragraph = element.findRenderObject();
+    if (paragraph is! RenderParagraph ||
+        !paragraph.hasSize ||
+        paragraph.didExceedMaxLines) {
+      return;
+    }
+    final text = paragraph.text.toPlainText();
+    if (text.trim().isEmpty || text != expectedPreviewTitle) return;
+    final view = WidgetsBinding.instance.platformDispatcher.views.single;
+    final viewport = Offset.zero & (view.physicalSize / view.devicePixelRatio);
+    final transform = paragraph.getTransformTo(null);
+    final glyphs = paragraph.getBoxesForSelection(
+      TextSelection(baseOffset: 0, extentOffset: text.length),
+    );
+    final visibleGlyphs = glyphs
+        .map((box) => MatrixUtils.transformRect(transform, box.toRect()))
+        .where(
+          (box) =>
+              !box.isEmpty &&
+              viewport.contains(box.topLeft) &&
+              viewport.contains(box.bottomRight),
+        )
+        .toList(growable: false);
+    if (visibleGlyphs.isEmpty || visibleGlyphs.length != glyphs.length) return;
+    final native = _observeNativeWindow(
+      'previewFramework',
+      frameNumber: number,
+    );
+    if (native['validatedVisible'] != true) {
+      _waitForVisibleReadyFrame();
+      return;
+    }
+    previewNumber = number;
+    // Retain only small text/geometry evidence, never the candidate or Element.
+    previewText = {
+      'text': text,
+      'frameNumber': number,
+      'visibleGlyphBoxes': [
+        for (final box in visibleGlyphs)
+          [box.left, box.top, box.right, box.bottom],
+      ],
+      'logicalViewport': [viewport.width, viewport.height],
+      'currentRoute': true,
+      'hitTestable': true,
+      'storageWritable': storageWritable,
+      'storageAuthorityObserved': events.any(
+        (event) => event['name'] == 'storage.authoritative',
+      ),
+    };
+    nativeWindowMilestones['previewFramework'] = native;
+    event('home.preview.framework', {'frameNumber': number});
+  }
+
   bool _selected(Element element) {
     bool? selected;
     void visit(Element node) {
@@ -351,6 +472,13 @@ class StartupProbe {
 
   void _resolveFrames() {
     for (final frame in frames) {
+      if (frame.number == previewNumber &&
+          !nativeWindowMilestones.containsKey('previewFrameReport')) {
+        nativeWindowMilestones['previewFrameReport'] = _observeNativeWindow(
+          'previewFrameReport',
+          frameNumber: frame.number,
+        );
+      }
       if (frame.number == readyNumber && !ready.isCompleted) {
         memory.capture(
           'readyRasterReportObserved',
@@ -476,7 +604,11 @@ class StartupProbe {
           rawBeginUs: begin?['rawBeginUs'] as int?,
         );
       }).toList(),
-      requiredBeginFrameNumbers: {?readyNumber, ?responseNumber},
+      requiredBeginFrameNumbers: {
+        ?previewNumber,
+        ?readyNumber,
+        ?responseNumber,
+      },
       observationIssues: [...clock.issues, ...beginAssociation.issues],
     );
     final ordered = frames.toList()
@@ -489,6 +621,7 @@ class StartupProbe {
     }
 
     final first = ordered.isEmpty ? null : ordered.first;
+    final previewFrame = numbered(previewNumber);
     final readyFrame = numbered(readyNumber);
     final responseFrame = numbered(responseNumber);
     final memoryReport = memory.report(
@@ -499,6 +632,12 @@ class StartupProbe {
     errors.addAll((memoryReport['issues']! as List).cast<String>());
     if (readyFrame == null || responseFrame == null) {
       errors.add('A required raster frame is missing.');
+    }
+    if (previewNumber != null &&
+        (previewFrame == null ||
+            readyFrame == null ||
+            previewFrame.number >= readyFrame.number)) {
+      errors.add('Preview raster is missing or does not precede readiness.');
     }
     if (first == null || first.number < 0) {
       errors.add('The first raster has no engine frame identity.');
@@ -513,7 +652,8 @@ class StartupProbe {
         errors.add('View changed during input: $key');
       }
     }
-    const requiredNativePhases = [
+    final requiredNativePhases = [
+      if (previewNumber != null) ...['previewFramework', 'previewFrameReport'],
       'readyFramework',
       'readyFrameReport',
       'inputDispatch',
@@ -543,6 +683,11 @@ class StartupProbe {
       'clock': clockReport,
       'memory': memoryReport,
       'firstRaster': first?.toJson(),
+      'readableProtocolId': startupReadableProtocolId,
+      'previewRaster': previewFrame?.toJson(),
+      'previewText': previewText,
+      'firstReadableRaster': (previewFrame ?? readyFrame)?.toJson(),
+      'firstReadableSource': previewFrame == null ? 'ready' : 'startupPreview',
       'readyRaster': readyFrame?.toJson(),
       'responseRaster': responseFrame?.toJson(),
       'input': {

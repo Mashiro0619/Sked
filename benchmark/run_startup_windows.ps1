@@ -10,6 +10,53 @@ param(
 $ErrorActionPreference = 'Stop'
 $startupClockProtocolId = 'win32-qpc-precise-filetime-v2'
 $startupMemoryProtocolId = 'process-rss-v1'
+$startupReadableProtocolId = 'startup-readable-v1'
+
+function Get-ReadableContractIssues([object]$Child) {
+  $problems = [System.Collections.Generic.List[string]]::new()
+  $measurement = $Child.measurement
+  $preview = $measurement.previewRaster
+  $readable = $measurement.firstReadableRaster
+  if ($measurement.readableProtocolId -ne $startupReadableProtocolId -or $null -eq $readable) {
+    $problems.Add('Missing startup-readable-v1 raster evidence.')
+  }
+  $expected = if ($null -ne $preview) { $preview } else { $measurement.readyRaster }
+  $source = if ($null -ne $preview) { 'startupPreview' } else { 'ready' }
+  if ($readable.frameNumber -ne $expected.frameNumber -or
+      $readable.rasterFinishWallTimeUs -ne $expected.rasterFinishWallTimeUs -or
+      $measurement.firstReadableSource -ne $source) {
+    $problems.Add('Readable milestone does not identify its actual raster.')
+  }
+  if ($null -ne $preview -and ($Child.startupPreviewEnabled -ne $true -or
+      $measurement.previewText.text -ne $Child.run.fixture.startupPreviewTitle -or
+      $measurement.previewText.frameNumber -ne $preview.frameNumber -or
+      @($measurement.previewText.visibleGlyphBoxes).Count -eq 0 -or
+      $measurement.previewText.currentRoute -ne $true -or
+      $measurement.previewText.hitTestable -ne $true -or
+      $preview.rasterFinishWallTimeUs -ge $measurement.readyRaster.rasterFinishWallTimeUs)) {
+    $problems.Add('Preview text does not have valid earlier rendered evidence.')
+  }
+  $final = @($measurement.events | Where-Object name -eq 'storage.authoritative')
+  $notified = @($measurement.events | Where-Object name -eq 'storage.preview.notified')
+  $writable = @($measurement.events | Where-Object {
+    $_.name -eq 'runtime.readiness' -and $_.loaded -eq $true -and
+      $_.loading -eq $false -and $_.writable -eq $true
+  })
+  if ($final.Count -ne 1 -or $final[0].status -ne 'success' -or $writable.Count -lt 1 -or
+      $writable[0].utcUs -lt $final[0].utcUs -or
+      $writable[0].utcUs -gt $measurement.readyRaster.rasterFinishWallTimeUs) {
+    $problems.Add('Storage final and writable readiness must precede ready raster in order.')
+  }
+  $expectedNotifications = if ($Child.startupPreviewEnabled) { 1 } else { 0 }
+  if ($notified.Count -ne $expectedNotifications -or
+      ($notified.Count -eq 1 -and $notified[0].utcUs -gt $final[0].utcUs)) {
+    $problems.Add('Storage preview callback count/order differs from the compiled experiment.')
+  }
+  if ($null -ne $preview -and $notified[0].utcUs -gt $preview.rasterFinishWallTimeUs) {
+    $problems.Add('Rendered preview precedes its candidate callback.')
+  }
+  return $problems.ToArray()
+}
 
 function Is-ReportInteger([object]$Value) {
   return ($Value -is [int] -or $Value -is [long])
@@ -123,6 +170,10 @@ function Since-ProcessStartUs([object]$Frame, [DateTime]$StartUtc) {
   $remainder = [long]0
   return [Math]::DivRem([long]($ticks - $StartUtc.Ticks), [long]10, [ref]$remainder)
 }
+function Since-ProcessStampUs([object]$Stamp, [DateTime]$StartUtc) {
+  if ($null -eq $Stamp) { return $null }
+  return Since-ProcessStartUs @{ rasterFinishWallTimeUs = $Stamp.utcUs } $StartUtc
+}
 
 if (-not $IsWindows) { throw 'The launcher requires Windows.' }
 if ($BuildManifests.Count -lt 1 -or $BuildManifests.Count -gt 2) { throw 'Use one smoke build or a before/after pair.' }
@@ -173,6 +224,11 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
     $fixtureDirectory = Under-Root $fixtures $dataset
     $fixture = Get-Content -Raw -LiteralPath (Join-Path $fixtureDirectory 'fixture.json') | ConvertFrom-Json
     if ($fixture.protocolVersion -ne 1 -or $fixture.dataset -ne $dataset) { throw 'Fixture protocol mismatch.' }
+    $hasBackupFile = $fixture.files.PSObject.Properties.Name -contains 'archive/Sked_data.json.bak'
+    if ($fixture.includesBackup -isnot [bool] -or $fixture.includesBackup -ne $hasBackupFile -or
+        [string]::IsNullOrWhiteSpace($fixture.startupPreviewTitle)) {
+      throw 'Fixture backup inventory or expected readable title is incomplete.'
+    }
     $orderedBuilds = @($builds | Sort-Object { $_.value.side })
     if ($repeat % 2 -eq 0) { [array]::Reverse($orderedBuilds) }
     foreach ($build in $orderedBuilds) {
@@ -300,6 +356,11 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
       if ($null -ne $child) {
         try {
           foreach ($memoryIssue in @(Get-MemoryContractIssues $child)) { $launcherFailures.Add($memoryIssue) }
+          foreach ($readableIssue in @(Get-ReadableContractIssues $child)) { $launcherFailures.Add($readableIssue) }
+          if ($build.value.startupPreviewEnabled -isnot [bool] -or
+              $child.startupPreviewEnabled -ne $build.value.startupPreviewEnabled) {
+            $launcherFailures.Add('Compiled startup preview setting differs from the manifest.')
+          }
         } catch {
           $launcherFailures.Add('Memory contract validation failed: ' + $_.ToString())
         }
@@ -314,13 +375,24 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
         $child.measurement.memory.validated -eq $true -and
         $child.measurement.nativeWindowVisibility.validated -eq $true -and $lockProbeHandled
       $firstUs = $null; $readyUs = $null; $responseUs = $null; $inputUs = $null
+      $readableUs = $null; $storageUs = $null; $writableUs = $null
       if ($valid) {
         $firstUs = Since-ProcessStartUs $child.measurement.firstRaster $processStartUtc
+        $readableUs = Since-ProcessStartUs $child.measurement.firstReadableRaster $processStartUtc
+        $storageStamp = @($child.measurement.events | Where-Object name -eq 'storage.authoritative')[0]
+        $writableStamp = @($child.measurement.events | Where-Object {
+          $_.name -eq 'runtime.readiness' -and $_.loaded -eq $true -and
+            $_.loading -eq $false -and $_.writable -eq $true
+        })[0]
+        $storageUs = Since-ProcessStampUs $storageStamp $processStartUtc
+        $writableUs = Since-ProcessStampUs $writableStamp $processStartUtc
         $readyUs = Since-ProcessStartUs $child.measurement.readyRaster $processStartUtc
         $responseUs = Since-ProcessStartUs $child.measurement.responseRaster $processStartUtc
         $inputUs = [long]$child.measurement.responseRaster.rasterFinishWallTimeUs -
           [long]$child.measurement.input.stamp.utcUs
-        if ($firstUs -lt 0 -or $readyUs -lt $firstUs -or $responseUs -lt $readyUs -or $inputUs -lt 0) {
+        if ($firstUs -lt 0 -or $readableUs -lt $firstUs -or $readyUs -lt $readableUs -or
+            $storageUs -lt 0 -or $writableUs -lt $storageUs -or
+            $readyUs -lt $writableUs -or $responseUs -lt $readyUs -or $inputUs -lt 0) {
           $launcherFailures.Add('Raster milestones do not follow OS process creation and input order.')
           $valid = $false
         }
@@ -331,6 +403,8 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
       $row = [ordered]@{
         side = $build.value.side; dataset = $dataset; repetition = $repeat;
         pid = $process.Id; exitCode = $process.ExitCode; timedOut = $timedOut;
+        includesBackup = $fixture.includesBackup;
+        diagnosticOnly = ($child.buildDiagnosticsEnabled -eq $true);
         status = $(if ($valid) { 'ok' } else { 'failed' }); runRoot = $runRoot;
         processStartTimeUtc = $processStartUtc.ToString('o');
         launcherClockDriftUs = $launcherClockDriftUs;
@@ -346,6 +420,11 @@ for ($repeat = 1; $repeat -le $Repetitions; $repeat++) {
         peakRssBytes = $(if ($valid) { [long]$child.measurement.memory.samples[3].maxRssBytes } else { $null });
         peakRssGrowthFromEntryBytes = $(if ($valid) { [long]$child.measurement.memory.samples[3].maxRssBytes - [long]$child.measurement.memory.samples[0].maxRssBytes } else { $null });
         processToFirstRasterUs = $(if ($valid) { $firstUs } else { $null });
+        readableProtocolId = $child.measurement.readableProtocolId;
+        firstReadableSource = $child.measurement.firstReadableSource;
+        processToFirstReadableRasterUs = $(if ($valid) { $readableUs } else { $null });
+        processToStorageAuthoritativeUs = $(if ($valid) { $storageUs } else { $null });
+        processToWritableReadyUs = $(if ($valid) { $writableUs } else { $null });
         processToReadyRasterUs = $(if ($valid) { $readyUs } else { $null });
         inputToResponseRasterUs = $(if ($valid) { $inputUs } else { $null });
         processToTestedResponseRasterUs = $(if ($valid) { $responseUs } else { $null });
@@ -372,6 +451,7 @@ $groups = foreach ($group in ($rows | Group-Object side, dataset)) {
   $valid = @($group.Group | Where-Object status -eq 'ok')
   $stats = [ordered]@{}
   foreach ($metric in @('processToFirstRasterUs', 'processToReadyRasterUs', 'inputToResponseRasterUs',
+      'processToFirstReadableRasterUs', 'processToStorageAuthoritativeUs', 'processToWritableReadyUs',
       'entryRssBytes', 'readyRssBytes', 'responseRssBytes', 'endRssBytes',
       'entryToReadyRssDeltaBytes', 'entryToEndRssDeltaBytes', 'peakRssBytes', 'peakRssGrowthFromEntryBytes')) {
     $values = @($valid | ForEach-Object { $_.$metric } | Sort-Object)
@@ -406,16 +486,21 @@ $viewSignatures = @($rows | Where-Object status -eq 'ok' | ForEach-Object {
 } | Select-Object -Unique)
 $allNativeWindowsVisible = ($rows.Count -gt 0 -and
   @($rows | Where-Object { $_.nativeWindowVisibility.validated -ne $true }).Count -eq 0)
+$diagnosticOnly = @($rows | Where-Object diagnosticOnly -eq $true).Count -gt 0
 Write-JsonAtomic (Join-Path $output 'summary.json') @{
   protocolVersion = 1; rows = @($rows); groups = @($groups);
   clockProtocolId = $startupClockProtocolId;
   memoryProtocolId = $startupMemoryProtocolId;
+  readableProtocolId = $startupReadableProtocolId;
+  diagnosticOnly = $diagnosticOnly;
   matrixComplete = (@($builds).Count -eq 2 -and $Datasets.Count -eq 3 -and
-    $Repetitions -eq 3 -and @($rows | Where-Object status -ne 'ok').Count -eq 0);
+    $Repetitions -eq 3 -and -not $diagnosticOnly -and @($rows | Where-Object status -ne 'ok').Count -eq 0);
   comparableViewAndSemanticsState = ($viewSignatures.Count -eq 1);
   allMeasuredNativeWindowsVisible = $allNativeWindowsVisible;
   observedViewSignatures = $viewSignatures;
-  claim = $(if ($allNativeWindowsVisible) {
+  claim = $(if ($diagnosticOnly) {
+    'Build scheduling/dirty-widget diagnostics were enabled; timings are diagnostic observations, not performance evidence.'
+  } elseif ($allNativeWindowsVisible) {
     'Fresh normal-window Profile processes with verified Win32 visibility at ready/input/response; OS page cache retained; isolated native adapters.'
   } else {
     'Win32 visibility acceptance failed or is incomplete; no normal-window startup comparison.'
