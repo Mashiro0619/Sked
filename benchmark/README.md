@@ -163,6 +163,52 @@ bypass retention, including normalized product events with an end date. These
 are Windows host JIT query results, without a UI-frame, device or save-latency
 claim; they do not compare timings across the two separate measurement windows.
 
+## Indexed reminder preparation
+
+Run `flutter test --no-pub --concurrency=1 --reporter=expanded
+benchmark/indexed_reminder_cache_benchmark_test.dart` for the indexed reminder
+workload. It uses 100 daily events, a 129-day reminder lead and 6,000 earlier
+handled occurrences, normalized through the production model. The controls
+cover a first query, four distinct instants within one minute, four separate
+minutes, and an exact hot query. Every result row is checked outside timing,
+including status, occurrence key, end time, sequence and owner metadata.
+`SKED_BENCHMARK_VERIFY_ONLY=true` runs protocol checks without performance
+claims. Output defaults to a unique system temporary directory;
+`SKED_BENCHMARK_OUTPUT_DIR` overrides must be absolute.
+
+Only filtering, effective lead times and handled-key lookup are reused for the
+minute. Each changed instant still builds the original precise recurrence
+range and status sections. Source calendar/event identities and reminder,
+exception and history list contents are checked before a result hit; raw list
+aliases cannot preserve stale preparation. Minute, representation, settings,
+query-window and filter changes replace the single retained preparation.
+Custom injected services retain their existing indexed query entry point.
+The final lazy result keeps its existing 256-row limit; the input snapshot is
+proportional to the current input, without retaining a history of minutes.
+
+On 2026-10-28, 12:54:45–12:58:31 UTC+08:00, six independent Windows host JIT
+processes ran in exclusive ABBAAB order. The baseline has the preparation API
+but builds it afresh for each exact-time miss. Only the occurrence-cache
+implementation differs; benchmark, model, service and helper hashes are fixed.
+All four full-result checksums, runtime metadata and normalized dataset values
+match in all six reports. Each case uses five warm-ups and eleven samples.
+
+| Case | Baseline process medians | Prepared-cache process medians | Median change |
+| --- | --- | --- | ---: |
+| First query (ms/op) | 22.677 / 20.668 / 21.120 | 20.767 / 21.046 / 21.039 | −0.39% |
+| Four same-minute queries (ms/op) | 91.403 / 82.361 / 83.782 | 60.897 / 65.494 / 62.083 | −25.90% |
+| Four separate-minute queries (ms/op) | 94.716 / 82.928 / 81.625 | 84.748 / 83.947 / 84.080 | +1.39% |
+| Exact hot query (µs/op) | 0.140 / 0.140 / 0.136 | 14.250 / 13.401 / 14.291 | +10090.60% |
+
+Same-minute queries save about 21.70 ms per four-query operation at the median.
+First and separate-minute samples overlap and do not show a stable improvement.
+The exact hot path adds about 14.11 µs to verify 6,000 history entries and event
+inputs before reuse; this is a real regression, retained to observe mutable
+source aliases as well as normal snapshots. This evidence covers Windows host
+JIT query construction, without a device, rendered-frame or save-latency claim.
+The Linux same-process timezone test also verifies that prepared input reuse
+does not preserve old local occurrence times when TZ changes within a minute.
+
 ## Android profile
 
 Use a physical release-representative device for conclusions that influence

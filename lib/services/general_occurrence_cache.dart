@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/timetable_models.dart';
 import 'general_event_expansion_cache.dart';
 import 'general_occurrence_service.dart';
@@ -16,12 +18,14 @@ class GeneralOccurrenceCache {
     _service =
         service ??
         GeneralOccurrenceService(expandEvent: _eventExpansions!.expand);
+    _reuseIndexedPreparation = service == null;
   }
 
   static const _maxEntries = 64;
 
   late final GeneralOccurrenceService _service;
   late final GeneralEventExpansionCache? _eventExpansions;
+  late final bool _reuseIndexedPreparation;
   Object? _schedulesIdentity;
   bool _canReuseContainingRanges = false;
   final _reminderGroupsByDefault =
@@ -30,6 +34,13 @@ class GeneralOccurrenceCache {
       <_GeneralOccurrenceQueryCacheKey, List<GeneralEventOccurrence>>{};
   Object? _indexedReminderKey;
   GeneralReminderItems? _indexedReminders;
+  Object? _indexedPreparationKey;
+  GeneralIndexedReminderInputs? _indexedPreparation;
+  _IndexedReminderSourceSnapshot? _indexedSource;
+  var _indexedPreparationBuildCount = 0;
+
+  @visibleForTesting
+  int get indexedPreparationBuildCount => _indexedPreparationBuildCount;
 
   List<GeneralEventOccurrence> occurrencesForRange(
     GeneralScheduleData general, {
@@ -147,15 +158,49 @@ class GeneralOccurrenceCache {
         occurrenceFilter?.searchQuery.trim().toLowerCase(),
         occurrenceFilter?.colorValue,
       );
+      if (_reuseIndexedPreparation) {
+        final preparationKey = (
+          _minuteBoundary(anchor).microsecondsSinceEpoch,
+          anchor.isUtc,
+          notificationSettings.generalDefaultMinutesBefore,
+          notificationSettings.remindHiddenGeneralCalendars,
+          upcomingHorizon,
+          boundedGeneralReminderLookback(overdueWindow),
+          occurrenceFilter?.searchQuery.trim().toLowerCase(),
+          occurrenceFilter?.colorValue,
+        );
+        if (_indexedPreparationKey != preparationKey ||
+            _indexedSource?.matches(general) != true) {
+          final prepared = _service.prepareIndexedReminderInputs(
+            general,
+            occurrenceFilter: occurrenceFilter,
+            notificationSettings: notificationSettings,
+          );
+          final source = _IndexedReminderSourceSnapshot(general);
+          _indexedPreparationKey = preparationKey;
+          _indexedPreparation = prepared;
+          _indexedSource = source;
+          _indexedPreparationBuildCount++;
+          _indexedReminderKey = null;
+          _indexedReminders = null;
+        }
+      }
       if (_indexedReminderKey == key) return _indexedReminders!;
-      final items = _service.indexedReminderItems(
-        general,
-        now: anchor,
-        upcomingHorizon: upcomingHorizon,
-        overdueWindow: overdueWindow,
-        occurrenceFilter: occurrenceFilter,
-        notificationSettings: notificationSettings,
-      );
+      final items = _reuseIndexedPreparation
+          ? _service.indexedReminderItemsFromPrepared(
+              _indexedPreparation!,
+              now: anchor,
+              upcomingHorizon: upcomingHorizon,
+              overdueWindow: overdueWindow,
+            )
+          : _service.indexedReminderItems(
+              general,
+              now: anchor,
+              upcomingHorizon: upcomingHorizon,
+              overdueWindow: overdueWindow,
+              occurrenceFilter: occurrenceFilter,
+              notificationSettings: notificationSettings,
+            );
       // Retain one compact snapshot and a bounded row cache, never a full list
       // per minute for a recurrence with hundreds of thousands of reminders.
       _indexedReminderKey = key;
@@ -164,6 +209,7 @@ class GeneralOccurrenceCache {
     }
     _indexedReminderKey = null;
     _indexedReminders = null;
+    _clearIndexedPreparation();
     final defaultLead = notificationSettings.generalDefaultMinutesBefore;
     var groups = _reminderGroupsByDefault[defaultLead];
     if (groups == null) {
@@ -224,6 +270,13 @@ class GeneralOccurrenceCache {
     _queries.clear();
     _indexedReminderKey = null;
     _indexedReminders = null;
+    _clearIndexedPreparation();
+  }
+
+  void _clearIndexedPreparation() {
+    _indexedPreparationKey = null;
+    _indexedPreparation = null;
+    _indexedSource = null;
   }
 
   void _ensureFreshFor(GeneralScheduleData general) {
@@ -237,6 +290,7 @@ class GeneralOccurrenceCache {
     );
     _indexedReminderKey = null;
     _indexedReminders = null;
+    _clearIndexedPreparation();
     _reminderGroupsByDefault.clear();
     // Recurrence expansion can choose a different first candidate or stop at
     // a skipped civil date depending on the query. Only one-off events form
@@ -247,6 +301,80 @@ class GeneralOccurrenceCache {
     );
     _queries.clear();
   }
+}
+
+// Raw DTOs can expose mutable lists. Checking contents before even an exact
+// result hit prevents an alias edit from retaining stale prepared lead times,
+// filters or acknowledgement ownership. Only one snapshot is retained.
+class _IndexedReminderSourceSnapshot {
+  _IndexedReminderSourceSnapshot(GeneralScheduleData general)
+    : history = List.of(general.reminderAcknowledgements),
+      calendars = [
+        for (final calendar in general.schedules)
+          (
+            calendar: calendar,
+            events: [
+              for (final event in calendar.events)
+                (
+                  event: event,
+                  reminders: List.of(event.reminders),
+                  exceptions: List.of(event.recurrenceExceptionDateIso),
+                ),
+            ],
+          ),
+      ];
+
+  final List<GeneralReminderAcknowledgement> history;
+  final List<
+    ({
+      GeneralSchedule calendar,
+      List<
+        ({
+          GeneralEvent event,
+          List<GeneralEventReminder> reminders,
+          List<String> exceptions,
+        })
+      >
+      events,
+    })
+  >
+  calendars;
+
+  bool matches(GeneralScheduleData general) {
+    if (!_sameIdentityItems(history, general.reminderAcknowledgements) ||
+        calendars.length != general.schedules.length) {
+      return false;
+    }
+    for (var index = 0; index < calendars.length; index++) {
+      final saved = calendars[index];
+      final current = general.schedules[index];
+      if (!identical(saved.calendar, current) ||
+          saved.events.length != current.events.length) {
+        return false;
+      }
+      for (var eventIndex = 0; eventIndex < saved.events.length; eventIndex++) {
+        final savedEvent = saved.events[eventIndex];
+        final event = current.events[eventIndex];
+        if (!identical(savedEvent.event, event) ||
+            !_sameIdentityItems(savedEvent.reminders, event.reminders) ||
+            !listEquals(
+              savedEvent.exceptions,
+              event.recurrenceExceptionDateIso,
+            )) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+}
+
+bool _sameIdentityItems<T>(List<T> saved, List<T> current) {
+  if (saved.length != current.length) return false;
+  for (var index = 0; index < saved.length; index++) {
+    if (!identical(saved[index], current[index])) return false;
+  }
+  return true;
 }
 
 DateTime _minuteBoundary(DateTime value, {bool roundUp = false}) {

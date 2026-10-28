@@ -6,6 +6,7 @@ import 'package:sked/models/general_event.dart';
 import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/models/general_schedule.dart';
 import 'package:sked/models/general_schedule_data.dart';
+import 'package:sked/models/notification_settings.dart';
 import 'package:sked/services/general_calendar_service.dart';
 import 'package:sked/services/general_occurrence_cache.dart';
 import 'package:sked/services/general_occurrence_service.dart';
@@ -13,6 +14,83 @@ import 'package:sked/services/general_occurrence_service.dart';
 // Run this file alone in its own Linux test process. TZ is changed only in that
 // process; the machine's timezone and the parent environment remain untouched.
 void main() {
+  test(
+    'same-minute prepared reminders rebuild local ranges after a TZ change',
+    () {
+      final timezone = _ProcessTimezone();
+      final original = Platform.environment['TZ'];
+      try {
+        timezone.set('America/New_York');
+        final data = GeneralScheduleData(
+          activeScheduleId: 'calendar',
+          schedules: [
+            GeneralSchedule(
+              id: 'calendar',
+              name: 'Calendar',
+              events: [
+                GeneralEvent(
+                  id: 'floating',
+                  calendarId: 'calendar',
+                  title: 'Floating',
+                  startDateTimeIso: '1967-06-01T09:00:00',
+                  endDateTimeIso: '1967-06-01T10:00:00',
+                  reminderBehavior: GeneralEventReminderBehavior.inherit,
+                  recurrenceRule: const GeneralEventRecurrenceRule(
+                    type: GeneralEventRecurrence.daily,
+                    count: 30,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ).normalized();
+        const settings = NotificationSettings(
+          generalDefaultMinutesBefore: 129 * 24 * 60,
+        );
+        final cache = GeneralOccurrenceCache();
+        final now = DateTime.utc(1967, 6, 1, 13, 30);
+        final before = cache.reminderItems(
+          data,
+          now: now,
+          notificationSettings: settings,
+        );
+        final beforeInstants = _instants([
+          for (final item in before) item.occurrence,
+        ]);
+        timezone.set('America/Detroit');
+        final next = now.add(const Duration(microseconds: 1));
+        final actual = cache.reminderItems(
+          data,
+          now: next,
+          notificationSettings: settings,
+        );
+        final expected = const GeneralOccurrenceService().reminderItems(
+          data,
+          now: next,
+          notificationSettings: settings,
+        );
+        final expectedInstants = _instants([
+          for (final item in expected) item.occurrence,
+        ]);
+        expect(expectedInstants, isNot(beforeInstants));
+        expect(
+          _instants([for (final item in actual) item.occurrence]),
+          expectedInstants,
+        );
+        expect(
+          [for (final item in actual) item.status],
+          [for (final item in expected) item.status],
+        );
+        expect(cache.indexedPreparationBuildCount, 1);
+      } finally {
+        timezone.set(original);
+      }
+    },
+    skip:
+        !Platform.isLinux ||
+        Platform.environment['SKED_TEST_TIMEZONE_SWITCH'] != '1',
+  );
+
   test(
     'snapshot edits recompute local geometry after an in-process TZ change',
     () {
