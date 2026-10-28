@@ -40,7 +40,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get editTimetable => '時間割を編集';
 
   @override
-  String get schoolImportResultEditorTitle => '解析結果を編集';
+  String get schoolImportResultEditorTitle => 'JSON を編集';
 
   @override
   String get schoolImportParsePageTitle => '時間割を解析';
@@ -118,7 +118,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noTimetableTitle => '時間割がありません';
 
   @override
-  String get noTimetableMessage => '時間割を作成するか、JSONファイルからインポートしてください。';
+  String get noTimetableMessage => '時間割を作成するか、インポート方法を選択してください。';
 
   @override
   String get importTimetable => '時間割をインポート';
@@ -573,6 +573,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'クリップボードにコピーしました';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => '共有';

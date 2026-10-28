@@ -40,7 +40,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get editTimetable => 'Muokkaa lukujärjestystä';
 
   @override
-  String get schoolImportResultEditorTitle => 'Muokkaa jäsennettyä tulosta';
+  String get schoolImportResultEditorTitle => 'Muokkaa JSON-tietoja';
 
   @override
   String get schoolImportParsePageTitle => 'Jäsennä lukujärjestys';
@@ -119,8 +119,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get noTimetableTitle => 'Ei aikataulua vielä';
 
   @override
-  String get noTimetableMessage =>
-      'Luo aikataulu tai tuo yksi JSON-tiedostosta.';
+  String get noTimetableMessage => 'Luo lukujärjestys tai valitse tuontitapa.';
 
   @override
   String get importTimetable => 'Tuo aikataulu';
@@ -595,6 +594,9 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Kopioi leikepöydälle';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Jaa';

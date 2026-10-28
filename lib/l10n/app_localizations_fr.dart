@@ -40,7 +40,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get editTimetable => 'Modifier l\'emploi du temps';
 
   @override
-  String get schoolImportResultEditorTitle => 'Modifier le résultat analysé';
+  String get schoolImportResultEditorTitle => 'Modifier le JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Analyser l’emploi du temps';
@@ -122,7 +122,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Créez un emploi du temps ou importez-en un depuis un fichier JSON.';
+      'Créez un emploi du temps ou choisissez une méthode d’importation.';
 
   @override
   String get importTimetable => 'Importer un emploi du temps';
@@ -605,6 +605,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Copié dans le presse-papiers';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Partager';

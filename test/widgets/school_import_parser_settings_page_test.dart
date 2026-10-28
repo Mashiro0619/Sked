@@ -367,6 +367,8 @@ void main() {
       final provider = await _createProvider();
       final api = _ImmediateSchoolImportApi();
       await _pumpPage(tester, provider, api);
+      expect(_modelTextField(), findsOneWidget);
+      expect(find.text('Model'), findsOneWidget);
       await tester.enterText(_baseUrlTextField(), 'https://new.example/v1');
       await tester.pump(const Duration(seconds: 1));
       expect(_endpointConfirmation(), findsNothing);

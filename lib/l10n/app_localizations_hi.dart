@@ -40,8 +40,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get editTimetable => 'टाइमटेबल संपादित करें';
 
   @override
-  String get schoolImportResultEditorTitle =>
-      'पार्स किया गया परिणाम संपादित करें';
+  String get schoolImportResultEditorTitle => 'JSON संपादित करें';
 
   @override
   String get schoolImportParsePageTitle => 'टाइमटेबल पार्स करें';
@@ -119,8 +118,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get noTimetableTitle => 'अभी तक कोई टाइमटेबल नहीं';
 
   @override
-  String get noTimetableMessage =>
-      'एक टाइमटेबल बनाएँ या JSON फ़ाइल से आयात करें।';
+  String get noTimetableMessage => 'समय-सारणी बनाएँ या आयात का तरीका चुनें।';
 
   @override
   String get importTimetable => 'टाइमटेबल आयात करें';
@@ -591,6 +589,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'क्लिपबोर्ड में कॉपी किया गया';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'साझा करें';

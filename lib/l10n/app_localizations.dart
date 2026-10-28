@@ -196,7 +196,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolImportResultEditorTitle.
   ///
   /// In en, this message translates to:
-  /// **'Edit parsed result'**
+  /// **'Edit JSON'**
   String get schoolImportResultEditorTitle;
 
   /// No description provided for @schoolImportParsePageTitle.
@@ -340,7 +340,7 @@ abstract class AppLocalizations {
   /// No description provided for @noTimetableMessage.
   ///
   /// In en, this message translates to:
-  /// **'Create a timetable or import one from a JSON file.'**
+  /// **'Create a timetable or choose an import method.'**
   String get noTimetableMessage;
 
   /// No description provided for @importTimetable.
@@ -1218,6 +1218,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copied to clipboard'**
   String get copiedToClipboard;
+
+  /// No description provided for @copyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not copy. Please try again.'**
+  String get copyFailed;
 
   /// No description provided for @share.
   ///

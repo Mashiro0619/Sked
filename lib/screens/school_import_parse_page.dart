@@ -14,6 +14,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/rendering.dart' show ScrollDirection;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -142,6 +143,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   bool _weekRangeConfirmationOpen = false;
   bool _hasPopped = false;
   bool _warningsExpanded = false;
+  bool _rawPreviewExpanded = false;
   bool _hasFailed = false;
   bool _followOutput = true;
   bool _scrollAnimationActive = false;
@@ -463,6 +465,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
 
     void settle(Duration _) {
       if (!mounted ||
+          (!_isDone && !_rawPreviewExpanded) ||
           (_isDone && _hasDirectImportConfiguration) ||
           !_scrollController.hasClients ||
           !_followOutput) {
@@ -1340,26 +1343,64 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
     );
   }
 
+  Future<void> _copyParserOutput() async {
+    if (_rawText.isEmpty || _hasPopped) return;
+    final l10n = AppLocalizations.of(context);
+    var message = l10n.copiedToClipboard;
+    try {
+      await Clipboard.setData(ClipboardData(text: _rawText));
+    } catch (_) {
+      message = l10n.copyFailed;
+    }
+    if (!mounted || _hasPopped) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Widget _buildRawPreview(BuildContext context, AppLocalizations l10n) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final text = _previewText.isNotEmpty
         ? _previewText
         : l10n.schoolImportParsePageParsing;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
+    return ExpansionTile(
+      key: const ValueKey('school-import-parser-details'),
+      initiallyExpanded: false,
+      backgroundColor: colors.surfaceContainerLow,
+      collapsedBackgroundColor: colors.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      collapsedShape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: SelectableText(
-        text,
-        style: theme.textTheme.bodySmall?.copyWith(
-          fontFamily: 'monospace',
-          height: 1.5,
+      title: Text(l10n.schoolWebImportParserDetails),
+      onExpansionChanged: (expanded) {
+        _rawPreviewExpanded = expanded;
+      },
+      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      children: [
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            key: const ValueKey('school-import-copy-parser-output'),
+            onPressed: _rawText.isEmpty || _hasPopped
+                ? null
+                : _copyParserOutput,
+            icon: const Icon(Icons.copy_outlined),
+            label: Text(l10n.copyText),
+          ),
         ),
-      ),
+        SizedBox(
+          width: double.infinity,
+          child: SelectableText(
+            text,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontFamily: 'monospace',
+              height: 1.5,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -40,7 +40,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get editTimetable => 'Edytuj harmonogram';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edytuj przeanalizowany wynik';
+  String get schoolImportResultEditorTitle => 'Edytuj JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Analizuj plan lekcji';
@@ -120,7 +120,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Utwórz harmonogram lub zaimportuj go z pliku JSON.';
+      'Utwórz plan zajęć lub wybierz sposób importu.';
 
   @override
   String get importTimetable => 'Import harmonogramu';
@@ -597,6 +597,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Skopiowanie do schowka';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Udostępnij';

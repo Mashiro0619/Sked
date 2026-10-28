@@ -40,7 +40,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get editTimetable => 'แก้ไขตารางเวลา';
 
   @override
-  String get schoolImportResultEditorTitle => 'แก้ไขผลการวิเคราะห์';
+  String get schoolImportResultEditorTitle => 'แก้ไข JSON';
 
   @override
   String get schoolImportParsePageTitle => 'วิเคราะห์ตารางเรียน';
@@ -119,7 +119,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get noTimetableTitle => 'ยังไม่มีตารางเวลา';
 
   @override
-  String get noTimetableMessage => 'สร้างตารางเวลาหรือนำเข้าจากไฟล์ JSON';
+  String get noTimetableMessage => 'สร้างตารางเรียนหรือเลือกวิธีนำเข้า';
 
   @override
   String get importTimetable => 'ตารางเวลานำเข้า';
@@ -590,6 +590,9 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'คัดลอกไปยังคลิปบอร์ด';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'แบ่งปัน';

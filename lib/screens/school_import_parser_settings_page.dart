@@ -227,9 +227,6 @@ class _SchoolImportParserSettingsPageState
                                 _scheduleApiKeyUpdate(secrets, value),
                           ),
                           const SizedBox(height: 12),
-                          SettingsSectionHeader(
-                            title: l10n.schoolImportParserModel,
-                          ),
                           SkedEditorTextField(
                             label: l10n.schoolImportParserModel,
                             controller: _modelController,

@@ -40,7 +40,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get editTimetable => 'Muuda tunniplaani';
 
   @override
-  String get schoolImportResultEditorTitle => 'Muuda analüüsi tulemust';
+  String get schoolImportResultEditorTitle => 'Muuda JSON-i';
 
   @override
   String get schoolImportParsePageTitle => 'Analüüsi tunniplaani';
@@ -119,8 +119,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get noTimetableTitle => 'Veel ajakava pole';
 
   @override
-  String get noTimetableMessage =>
-      'Looge ajakava või importige üks JSON-failist.';
+  String get noTimetableMessage => 'Loo tunniplaan või vali importimisviis.';
 
   @override
   String get importTimetable => 'Importimise ajakava';
@@ -593,6 +592,9 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Kopeeritud lõikepuhvrisse';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Jaga';

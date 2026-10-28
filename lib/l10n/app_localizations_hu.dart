@@ -40,8 +40,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get editTimetable => 'A menetrend szerkesztése';
 
   @override
-  String get schoolImportResultEditorTitle =>
-      'Feldolgozott eredmény szerkesztése';
+  String get schoolImportResultEditorTitle => 'JSON szerkesztése';
 
   @override
   String get schoolImportParsePageTitle => 'Órarend elemzése';
@@ -123,7 +122,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Hozzon létre egy ütemtervet, vagy importáljon egyet egy JSON fájlból.';
+      'Hozzon létre órarendet, vagy válasszon importálási módot.';
 
   @override
   String get importTimetable => 'Importálási menetrend';
@@ -604,6 +603,9 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Másolás a vágólapra';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Megosztás';

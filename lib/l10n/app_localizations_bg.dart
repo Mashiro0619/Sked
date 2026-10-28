@@ -40,8 +40,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get editTimetable => 'Редактиране на графика';
 
   @override
-  String get schoolImportResultEditorTitle =>
-      'Редактиране на резултата от анализа';
+  String get schoolImportResultEditorTitle => 'Редактиране на JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Анализ на графика';
@@ -123,7 +122,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Създайте график или импортирайте един от JSON файл.';
+      'Създайте учебна програма или изберете начин за импортиране.';
 
   @override
   String get importTimetable => 'Внос на график';
@@ -602,6 +601,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Копиране в клипборда';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Споделяне';

@@ -40,7 +40,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editTimetable => '编辑课表';
 
   @override
-  String get schoolImportResultEditorTitle => '编辑解析结果';
+  String get schoolImportResultEditorTitle => '编辑 JSON';
 
   @override
   String get schoolImportParsePageTitle => '解析课表';
@@ -116,7 +116,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noTimetableTitle => '当前没有课表';
 
   @override
-  String get noTimetableMessage => '可以新建一个课表，或从 JSON 文件导入已有课表。';
+  String get noTimetableMessage => '可以新建课表，或选择一种导入方式。';
 
   @override
   String get importTimetable => '导入课表';
@@ -563,6 +563,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get copiedToClipboard => '已复制到剪贴板';
+
+  @override
+  String get copyFailed => '复制失败，请重试。';
 
   @override
   String get share => '分享';
@@ -3119,7 +3122,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get editTimetable => '編輯課表';
 
   @override
-  String get schoolImportResultEditorTitle => '編輯解析結果';
+  String get schoolImportResultEditorTitle => '編輯 JSON';
 
   @override
   String get schoolImportParsePageTitle => '解析課表';
@@ -3195,7 +3198,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get noTimetableTitle => '當前沒有課表';
 
   @override
-  String get noTimetableMessage => '可以新建一個課表，或從 JSON 檔案匯入已有課表。';
+  String get noTimetableMessage => '可以新建課表，或選擇一種匯入方式。';
 
   @override
   String get importTimetable => '匯入課表';
@@ -3642,6 +3645,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get copiedToClipboard => '已複製到剪貼簿';
+
+  @override
+  String get copyFailed => '複製失敗，請重試。';
 
   @override
   String get share => '分享';

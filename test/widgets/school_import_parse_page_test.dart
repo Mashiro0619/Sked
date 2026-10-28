@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
@@ -142,6 +143,23 @@ Future<void> _pumpPage(
   await tester.pump();
 }
 
+Future<void> _expandParserDetails(WidgetTester tester) async {
+  final details = find.byKey(const ValueKey('school-import-parser-details'));
+  final l10n = AppLocalizations.of(tester.element(details));
+  final header = find.descendant(
+    of: details,
+    matching: find.text(l10n.schoolWebImportParserDetails),
+  );
+  await Scrollable.ensureVisible(tester.element(header), alignment: .5);
+  await tester.pump();
+  expect(header.hitTestable(), findsOneWidget);
+  await tester.tap(header);
+  await tester.pump();
+  // The live parse spinner does not settle; finish the disclosure animation.
+  await tester.pump(const Duration(milliseconds: 400));
+  expect(header.hitTestable(), findsOneWidget);
+}
+
 Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
   WidgetTester tester,
   StreamController<SchoolImportStreamEvent> controller,
@@ -195,6 +213,139 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
+  testWidgets(
+    'parser output is hidden until requested and copies the full response',
+    (tester) async {
+      final controller = StreamController<SchoolImportStreamEvent>();
+      addTearDown(controller.close);
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied =
+                (call.arguments as Map<Object?, Object?>)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await _pumpPage(tester, controller);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SchoolImportParsePage)),
+      );
+      final original = 'prefix\n${'x' * 5000}\nlast line';
+      controller.add(ParseDelta(original));
+      await tester.pump();
+      expect(find.text(l10n.schoolWebImportParserDetails), findsOneWidget);
+      expect(find.byType(SelectableText), findsNothing);
+      expect(find.text(l10n.schoolImportParsePageParsing), findsOneWidget);
+      expect(copied, isNull);
+
+      await _expandParserDetails(tester);
+      final preview = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
+      expect(preview.data, endsWith('last line'));
+      expect(preview.data!.length, lessThanOrEqualTo(4096));
+      final copy = find.byKey(
+        const ValueKey('school-import-copy-parser-output'),
+      );
+      expect(copy.hitTestable(), findsOneWidget);
+      await tester.tap(copy);
+      await tester.pump();
+      expect(copied, original);
+      expect(find.text(l10n.copiedToClipboard), findsOneWidget);
+
+      final details = find.byKey(
+        const ValueKey('school-import-parser-details'),
+      );
+      final header = find.descendant(
+        of: details,
+        matching: find.text(l10n.schoolWebImportParserDetails),
+      );
+      expect(header.hitTestable(), findsOneWidget);
+      await tester.tap(header);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(SelectableText), findsNothing);
+      controller.add(const ParseDelta('\nlater output'));
+      controller.add(const ParseError('internal test error'));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.schoolImportParsePageFailed), findsOneWidget);
+      expect(find.text(l10n.schoolImportParseErrorMessage), findsOneWidget);
+      expect(find.textContaining('later output'), findsNothing);
+      expect(find.text('internal test error'), findsNothing);
+      await _expandParserDetails(tester);
+      expect(
+        tester
+            .widget<SelectableText>(
+              find.descendant(
+                of: details,
+                matching: find.byType(SelectableText),
+              ),
+            )
+            .data,
+        endsWith('later output'),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('clipboard failure keeps parser output available for retry', (
+    tester,
+  ) async {
+    final controller = StreamController<SchoolImportStreamEvent>();
+    addTearDown(controller.close);
+    var failCopy = true;
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          if (failCopy) throw PlatformException(code: 'clipboard_unavailable');
+          copied = (call.arguments as Map<Object?, Object?>)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await _pumpPage(tester, controller);
+    controller.add(const ParseDelta('original parser response'));
+    await tester.pump();
+    await _expandParserDetails(tester);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SchoolImportParsePage)),
+    );
+    final copy = find.byKey(const ValueKey('school-import-copy-parser-output'));
+    await tester.tap(copy);
+    await tester.pump();
+    expect(find.text(l10n.copyFailed), findsOneWidget);
+    expect(find.text(l10n.copiedToClipboard), findsNothing);
+    expect(find.text('original parser response'), findsOneWidget);
+    expect(copied, isNull);
+    expect(tester.takeException(), isNull);
+
+    failCopy = false;
+    await tester.tap(copy);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(copied, 'original parser response');
+    expect(find.text(l10n.copiedToClipboard), findsOneWidget);
+    expect(find.text('original parser response'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final streamError in [false, true]) {
     testWidgets(
       'parse failure uses localized copy for streamError=$streamError',
@@ -875,6 +1026,8 @@ void main() {
         findsNothing,
       );
       expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
+      expect(find.byType(SelectableText), findsNothing);
+      await _expandParserDetails(tester);
       final preview = tester.widget<SelectableText>(
         find.byType(SelectableText),
       );
@@ -896,6 +1049,7 @@ void main() {
       final controller = StreamController<SchoolImportStreamEvent>();
       addTearDown(controller.close);
       await _pumpPage(tester, controller);
+      await _expandParserDetails(tester);
 
       controller.add(ParseDelta(List<String>.filled(220, 'line').join('\n')));
       await tester.pump();
@@ -931,6 +1085,7 @@ void main() {
     final controller = StreamController<SchoolImportStreamEvent>();
     addTearDown(controller.close);
     await _pumpPage(tester, controller);
+    await _expandParserDetails(tester);
 
     controller.add(ParseDelta(List<String>.filled(160, 'line').join('\n')));
     await tester.pump();

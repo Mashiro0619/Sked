@@ -40,7 +40,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get editTimetable => 'Uredi urnik';
 
   @override
-  String get schoolImportResultEditorTitle => 'Uredi rezultat razčlenjevanja';
+  String get schoolImportResultEditorTitle => 'Uredi JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Razčleni urnik';
@@ -118,8 +118,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get noTimetableTitle => 'Časovnega razporeda še ni';
 
   @override
-  String get noTimetableMessage =>
-      'Ustvarite urnik ali ga uvozite iz datoteke JSON.';
+  String get noTimetableMessage => 'Ustvarite urnik ali izberite način uvoza.';
 
   @override
   String get importTimetable => 'Uvozni časovni razpored';
@@ -596,6 +595,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Kopirano v odložišče';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Delež';

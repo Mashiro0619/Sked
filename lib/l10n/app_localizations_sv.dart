@@ -40,7 +40,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get editTimetable => 'Redigera tidtabell';
 
   @override
-  String get schoolImportResultEditorTitle => 'Redigera tolkningsresultat';
+  String get schoolImportResultEditorTitle => 'Redigera JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Analysera schema';
@@ -120,7 +120,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Skapa en tidsplan eller importera en från en JSON-fil.';
+      'Skapa ett schema eller välj ett sätt att importera.';
 
   @override
   String get importTimetable => 'Importera tidtabell';
@@ -596,6 +596,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Kopierad till klippstavla';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Dela';

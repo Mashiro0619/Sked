@@ -40,7 +40,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get editTimetable => 'Rooster bewerken';
 
   @override
-  String get schoolImportResultEditorTitle => 'Analyseresultaat bewerken';
+  String get schoolImportResultEditorTitle => 'JSON bewerken';
 
   @override
   String get schoolImportParsePageTitle => 'Rooster analyseren';
@@ -119,7 +119,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Maak een rooster of importeer er een uit een JSON-bestand.';
+      'Maak een lesrooster of kies een importmethode.';
 
   @override
   String get importTimetable => 'Rooster importeren';
@@ -594,6 +594,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Gekopieerd naar het klembord';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Delen';

@@ -40,7 +40,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editTimetable => 'Edit timetable';
 
   @override
-  String get schoolImportResultEditorTitle => 'Edit parsed result';
+  String get schoolImportResultEditorTitle => 'Edit JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Parse timetable';
@@ -120,7 +120,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Create a timetable or import one from a JSON file.';
+      'Create a timetable or choose an import method.';
 
   @override
   String get importTimetable => 'Import timetable';
@@ -591,6 +591,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Share';

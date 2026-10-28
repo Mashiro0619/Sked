@@ -40,7 +40,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get editTimetable => 'Upravit rozvrh';
 
   @override
-  String get schoolImportResultEditorTitle => 'Upravit výsledek analýzy';
+  String get schoolImportResultEditorTitle => 'Upravit JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Analyzovat rozvrh';
@@ -119,7 +119,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Vytvořte plán nebo importujte z souboru JSON.';
+      'Vytvořte rozvrh nebo vyberte způsob importu.';
 
   @override
   String get importTimetable => 'Importovat rozvrh';
@@ -592,6 +592,9 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Kopírovat do schránky';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Sdílet';

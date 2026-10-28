@@ -40,8 +40,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get editTimetable => 'Stundenplan bearbeiten';
 
   @override
-  String get schoolImportResultEditorTitle =>
-      'Analysiertes Ergebnis bearbeiten';
+  String get schoolImportResultEditorTitle => 'JSON bearbeiten';
 
   @override
   String get schoolImportParsePageTitle => 'Stundenplan analysieren';
@@ -122,7 +121,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Erstellen Sie einen Stundenplan oder importieren Sie einen aus einer JSON-Datei.';
+      'Erstellen Sie einen Stundenplan oder wählen Sie eine Importmethode.';
 
   @override
   String get importTimetable => 'Stundenplan importieren';
@@ -601,6 +600,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'In die Zwischenablage kopiert';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Teilen';

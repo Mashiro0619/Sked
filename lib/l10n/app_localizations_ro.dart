@@ -40,7 +40,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get editTimetable => 'Editați orarul';
 
   @override
-  String get schoolImportResultEditorTitle => 'Editează rezultatul analizat';
+  String get schoolImportResultEditorTitle => 'Editează JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Analizează orarul';
@@ -121,7 +121,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Creați un orar sau importați unul dintr-un fișier JSON.';
+      'Creează un orar sau alege o metodă de import.';
 
   @override
   String get importTimetable => 'Import orar';
@@ -597,6 +597,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Copiat în clipboard';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Partajați';

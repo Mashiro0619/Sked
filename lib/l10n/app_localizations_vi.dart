@@ -40,7 +40,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get editTimetable => 'Chỉnh sửa lịch trình';
 
   @override
-  String get schoolImportResultEditorTitle => 'Chỉnh sửa kết quả phân tích';
+  String get schoolImportResultEditorTitle => 'Chỉnh sửa JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Phân tích thời khóa biểu';
@@ -119,8 +119,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noTimetableTitle => 'Chưa có lịch trình';
 
   @override
-  String get noTimetableMessage =>
-      'Tạo một lịch trình hoặc nhập một từ một tệp JSON.';
+  String get noTimetableMessage => 'Tạo thời khóa biểu hoặc chọn cách nhập.';
 
   @override
   String get importTimetable => 'Nhập lịch trình';
@@ -593,6 +592,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Sao chép vào clipboard';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Chia sẻ';

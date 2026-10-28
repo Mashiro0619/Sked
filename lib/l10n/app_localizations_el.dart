@@ -40,8 +40,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get editTimetable => 'Επεξεργασία προγράμματος';
 
   @override
-  String get schoolImportResultEditorTitle =>
-      'Επεξεργασία αποτελέσματος ανάλυσης';
+  String get schoolImportResultEditorTitle => 'Επεξεργασία JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Ανάλυση προγράμματος';
@@ -122,7 +121,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Δημιουργήστε ένα χρονοδιάγραμμα ή εισάγετε ένα από ένα αρχείο JSON.';
+      'Δημιουργήστε ένα ωρολόγιο πρόγραμμα ή επιλέξτε τρόπο εισαγωγής.';
 
   @override
   String get importTimetable => 'Εισαγωγή προγράμματος';
@@ -607,6 +606,9 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Αντιγραφή στο πρόβλημα';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Μοιραστείτε';

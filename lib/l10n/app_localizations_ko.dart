@@ -40,7 +40,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get editTimetable => '시간표 수정';
 
   @override
-  String get schoolImportResultEditorTitle => '분석 결과 편집';
+  String get schoolImportResultEditorTitle => 'JSON 편집';
 
   @override
   String get schoolImportParsePageTitle => '시간표 분석';
@@ -117,7 +117,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noTimetableTitle => '아직 시간표가 없습니다';
 
   @override
-  String get noTimetableMessage => '시간표를 만들거나 JSON 파일에서 가져오세요.';
+  String get noTimetableMessage => '시간표를 만들거나 가져오기 방법을 선택하세요.';
 
   @override
   String get importTimetable => '시간표 가져오기';
@@ -573,6 +573,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get copiedToClipboard => '클립보드에 복사됨';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => '공유';

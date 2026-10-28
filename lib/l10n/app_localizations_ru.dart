@@ -40,7 +40,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get editTimetable => 'Редактировать расписание';
 
   @override
-  String get schoolImportResultEditorTitle => 'Редактировать результат разбора';
+  String get schoolImportResultEditorTitle => 'Редактировать JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Разобрать расписание';
@@ -120,7 +120,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Создайте расписание или импортируйте его из JSON-файла.';
+      'Создайте учебное расписание или выберите способ импорта.';
 
   @override
   String get importTimetable => 'Импортировать расписание';
@@ -599,6 +599,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Скопировано в буфер обмена';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Поделиться';

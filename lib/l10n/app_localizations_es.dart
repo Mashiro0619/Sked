@@ -40,7 +40,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editTimetable => 'Editar horario';
 
   @override
-  String get schoolImportResultEditorTitle => 'Editar resultado analizado';
+  String get schoolImportResultEditorTitle => 'Editar JSON';
 
   @override
   String get schoolImportParsePageTitle => 'Analizar horario';
@@ -120,7 +120,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noTimetableMessage =>
-      'Crea un horario o importa uno desde un archivo JSON.';
+      'Crea un horario o elige una forma de importarlo.';
 
   @override
   String get importTimetable => 'Importar horario';
@@ -599,6 +599,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Copiado al portapapeles';
+
+  @override
+  String get copyFailed => 'Could not copy. Please try again.';
 
   @override
   String get share => 'Compartir';

@@ -72,6 +72,7 @@ const commonEnglishFallbacks = <String>{
   'eventRecurrenceExceptionsChangeTitle',
   'eventRecurrenceExceptionsChangeMessage',
   'assistantPreviewDescription',
+  'copyFailed',
 };
 
 const localeEnglishFallbacks = <String, Set<String>>{
