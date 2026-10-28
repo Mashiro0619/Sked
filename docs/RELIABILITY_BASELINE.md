@@ -16,6 +16,10 @@
 | 原生安全 | Android 禁止普通系统备份，通知 receiver 不导出；允许可配置 HTTP Endpoint 的网络策略需与前述确认配合。Apple 权限与 Windows 通知身份也需检查。见 [平台测试](../test/platform) 和 [产物检查器](../tool/platform_artifact_check.dart)。 |
 | 日视图末卡 | 手机添加按钮的避让空间属于可滚动内容，不压缩日视图视口；末卡尾部可滚到真实按钮上方并打开正确课程详情，关闭按钮后释放避让空间。可容纳的卡片验证整卡可见，超过可用高度的大字卡片验证顶部和尾部能分别完整阅读。见 [真实主页日视图测试](../test/widgets/student_day_agenda_workflow_test.dart)。 |
 
+自定义解析接口继续兼容 HTTP 与 HTTPS，不用固定域名白名单限制用户的学校或自建服务，也不新增默认明文请求。Android 的动态端点网络配置保留明文兼容；这项平台能力不代替应用发送前的确认。HTTP 提示说明 API 密钥和提交内容在传输途中可能被读取或篡改，取消不发送；确认页隐藏地址中的凭据、查询和片段，许可只对当前进程内已确认的规范化端点有效。
+
+获取模型列表与提交解析内容都使用已经确认的设置快照，并禁止敏感请求自动跟随重定向；返回 3xx 时报告失败，不将密钥或内容转发到新地址。HTTPS 不需要明文传输确认，但使用相同的重定向保护。学校网页进入解析前也经过同一提交页面，网页可访问不等于已同意向解析接口发送内容。见 [端点确认](../test/services/school_import_http_consent_test.dart)、[请求保护](../test/services/school_import_api_test.dart)、[模型列表入口](../test/widgets/school_import_parser_settings_page_test.dart) 与 [内容提交入口](../test/widgets/school_html_import_page_test.dart)。
+
 Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的原生回复，不能用一帧结束代替原生页面销毁。尚在创建的页面或销毁失败会阻止数据清理；失败后重试仍需完成销毁确认。清理期间新打开的学校页面保持挂起，新登记的浏览器必须纳入清理后才能报告成功。
 
 学校网页页头提供“退出登录”，确认后清理 Sked 内学校页面的 Cookie、站点存储与缓存，并重新建立网页；保留已经导入的课表、应用设置和解析接口配置。取消确认不清理，清理失败不显示成功并保留重试入口，解析进行中不允许同时退出登录。
