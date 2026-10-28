@@ -1243,7 +1243,7 @@ void main() {
       expect(pager, findsOneWidget);
       final initialPagerElement = tester.element(pager);
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
       await tester.pumpAndSettle();
       expect(provider.studentView.selectedWeek, 3);
 
@@ -1251,7 +1251,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(identical(tester.element(pager), initialPagerElement), isTrue);
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
       await tester.pumpAndSettle();
       expect(provider.studentView.selectedWeek, 3);
 
@@ -1285,7 +1285,7 @@ void main() {
       expect(shortcutFocus.canRequestFocus, isTrue);
       expect(shortcutFocus.focusNode?.hasFocus, isTrue);
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
       await tester.pumpAndSettle();
       expect(provider.studentView.selectedWeek, 2);
       expect(tester.takeException(), isNull);

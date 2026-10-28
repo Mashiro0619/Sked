@@ -3087,9 +3087,9 @@ void main() {
     await provider.studentCommands.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
     await tester.pumpAndSettle();
 
     expect(provider.studentView.selectedWeek, 6);
@@ -3097,7 +3097,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('RTL week shortcuts follow the visible spatial direction', (
+  testWidgets('RTL week shortcuts keep the same chronological direction', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1120, 680));
@@ -3110,15 +3110,128 @@ void main() {
       textDirection: TextDirection.rtl,
     );
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
     await tester.pumpAndSettle();
     expect(provider.studentView.selectedWeek, 6);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
     await tester.pumpAndSettle();
     expect(provider.studentView.selectedWeek, 5);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('arrow keys move between courses without changing the week', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await provider.studentCommands.setSelectedWeek(5);
+    final template = _buildLongCourseStudentData()
+        .studentMode
+        .timetables
+        .single
+        .courses
+        .single;
+    for (final day in [1, 2]) {
+      await provider.studentCommands.saveCourse(
+        template.copyWith(id: 'focus-$day', name: 'Focus $day', dayOfWeek: day),
+      );
+    }
+    await _pumpHomeScreenWithProvider(tester, provider);
+    expect(find.byTooltip(RegExp('PageUp')), findsOneWidget);
+    expect(find.byTooltip(RegExp('PageDown')), findsOneWidget);
+    FocusNode courseFocus(int day) => Focus.of(
+      tester.element(
+        find
+            .descendant(
+              of: find.byKey(ValueKey('timetable-course-hit-focus-$day')),
+              matching: find.byType(MouseRegion),
+            )
+            .first,
+      ),
+    );
+    final first = courseFocus(1);
+    final second = courseFocus(2);
+    first.requestFocus();
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(second.hasPrimaryFocus, isTrue);
+    expect(provider.studentView.selectedWeek, 5);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(first.hasPrimaryFocus, isTrue);
+    expect(provider.studentView.selectedWeek, 5);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+  testWidgets('page keys retain week bounds on a narrow scrolling timetable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await provider.settingsCommands.updateFitWeekColumnsToWidth(false);
+    await provider.studentCommands.setSelectedWeek(1);
+    await _pumpHomeScreenWithProvider(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+    await tester.pumpAndSettle();
+    expect(provider.studentView.selectedWeek, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pumpAndSettle();
+    expect(provider.studentView.selectedWeek, 2);
+    final last = provider.studentView.activeTimetable.config.totalWeeks;
+    await provider.studentCommands.setSelectedWeek(last);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pumpAndSettle();
+    expect(provider.studentView.selectedWeek, last);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('editor and week picker keep keyboard input within their task', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await provider.studentCommands.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await tester.tap(find.byKey(const ValueKey('student-week-picker-button')));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pumpAndSettle();
+    expect(provider.studentView.selectedWeek, 5);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('student-add-course')));
+    await tester.pumpAndSettle();
+    final field = find
+        .descendant(
+          of: find.byType(CourseEditorSheet),
+          matching: find.byType(EditableText),
+        )
+        .first;
+    await tester.enterText(field, 'Keyboard title');
+    final controller = tester.widget<EditableText>(field).controller;
+    controller.selection = const TextSelection.collapsed(offset: 4);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(controller.selection.baseOffset, 3);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pump();
+    expect(provider.studentView.selectedWeek, 5);
+    expect(controller.text, 'Keyboard title');
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
 
   testWidgets('long pressing the week picker jumps to the current week', (
     tester,

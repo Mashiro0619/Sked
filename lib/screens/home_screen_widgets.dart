@@ -106,13 +106,15 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             ),
           IconButton(
             key: const ValueKey('student-previous-week'),
-            tooltip: MaterialLocalizations.of(context).previousPageTooltip,
+            tooltip:
+                '${MaterialLocalizations.of(context).previousPageTooltip} (PageUp)',
             onPressed: week > 1 && onStep != null ? () => onStep!(-1) : null,
             icon: const Icon(Icons.chevron_left),
           ),
           IconButton(
             key: const ValueKey('student-next-week'),
-            tooltip: MaterialLocalizations.of(context).nextPageTooltip,
+            tooltip:
+                '${MaterialLocalizations.of(context).nextPageTooltip} (PageDown)',
             onPressed: week < timetable.config.totalWeeks && onStep != null
                 ? () => onStep!(1)
                 : null,
@@ -629,13 +631,15 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       onDateLongPress: onJumpToToday,
       previous: WorkbenchOverflowAction(
         id: 'student-previous-week',
-        label: MaterialLocalizations.of(context).previousPageTooltip,
+        label:
+            '${MaterialLocalizations.of(context).previousPageTooltip} (PageUp)',
         icon: Icons.chevron_left,
         onSelected: week > 1 && onStep != null ? (_) => onStep!(-1) : null,
       ),
       next: WorkbenchOverflowAction(
         id: 'student-next-week',
-        label: MaterialLocalizations.of(context).nextPageTooltip,
+        label:
+            '${MaterialLocalizations.of(context).nextPageTooltip} (PageDown)',
         icon: Icons.chevron_right,
         onSelected: week < timetable.config.totalWeeks && onStep != null
             ? (_) => onStep!(1)
@@ -1932,7 +1936,6 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
 
   @override
   Widget build(BuildContext context) {
-    final textScale = MediaQuery.textScalerOf(context).scale(1);
     final pageView = ScrollConfiguration(
       behavior: const MaterialScrollBehavior().copyWith(
         dragDevices: {
@@ -1964,21 +1967,15 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
         ),
       ),
     );
-    final horizontalGridMayScroll =
-        widget.viewMode == _StudentTimetableView.week &&
-        !widget.fitWeekColumnsToWidth &&
-        (MediaQuery.sizeOf(context).width < 760 || textScale > 1.3);
-    final shortcutsEnabled =
-        _shortcutsEnabled && widget.interactive && !horizontalGridMayScroll;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final shortcutsEnabled = _shortcutsEnabled && widget.interactive;
     return CallbackShortcuts(
       bindings: shortcutsEnabled
           ? {
-              const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-                unawaited(widget.onJumpWeekBy(isRtl ? 1 : -1));
+              const SingleActivator(LogicalKeyboardKey.pageUp): () {
+                unawaited(widget.onJumpWeekBy(-1));
               },
-              const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-                unawaited(widget.onJumpWeekBy(isRtl ? -1 : 1));
+              const SingleActivator(LogicalKeyboardKey.pageDown): () {
+                unawaited(widget.onJumpWeekBy(1));
               },
             }
           : const <ShortcutActivator, VoidCallback>{},
@@ -1986,8 +1983,8 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
         focusNode: _shortcutFocusNode,
         autofocus: widget.shortcutFocusNode == null && shortcutsEnabled,
         canRequestFocus: shortcutsEnabled,
-        // Inner scrolling only disables the outer week shortcuts. Courses
-        // must retain their own keyboard activation on narrow viewports.
+        // Arrow keys remain available for directional focus and inner controls,
+        // including when a narrow timetable can scroll horizontally.
         descendantsAreFocusable: _shortcutsEnabled && widget.interactive,
         descendantsAreTraversable: _shortcutsEnabled && widget.interactive,
         child: pageView,
