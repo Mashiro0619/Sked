@@ -220,12 +220,22 @@ Widget _statusGrid(ValueChanged<String> onTap) => TimetableGrid(
 
 Map<String, Object?> _observeParagraph(RenderParagraph paragraph) {
   final value = paragraph.text.toPlainText();
+  final marker = TextPainter(
+    text: TextSpan(text: '…', style: paragraph.text.style),
+    textDirection: paragraph.textDirection,
+    textScaler: paragraph.textScaler,
+    locale: paragraph.locale,
+    textHeightBehavior: paragraph.textHeightBehavior,
+  )..layout();
+  final markerSize = [marker.width, marker.height];
+  marker.dispose();
   return {
     'text': value,
     'width': paragraph.size.width,
     'height': paragraph.size.height,
     'maxLines': paragraph.maxLines,
     'didExceedMaxLines': paragraph.didExceedMaxLines,
+    'ellipsisNaturalSize': markerSize,
     'missingGlyphIndices': [
       for (var index = 0; index < value.length; index++)
         if (value[index].trim().isNotEmpty &&
