@@ -810,6 +810,7 @@ AppData buildInitialAppData(
   List<CoursePeriodTime> periodTimes, {
   String localeCode = defaultLocaleCode,
   bool includePrereleaseUpdates = true,
+  String studentThemeColorMode = defaultThemeColorMode,
 }) {
   final defaultSet = PeriodTimeSet(
     id: defaultPeriodTimeSetId,
@@ -827,6 +828,7 @@ AppData buildInitialAppData(
       timetables: const [],
       periodTimeSets: [defaultSet],
       themeMode: newUserDefaultThemeMode,
+      themeColorMode: studentThemeColorMode,
     ),
     generalMode: GeneralScheduleData.createDefault(localeCode: localeCode)
         .copyWith(themeMode: newUserDefaultThemeMode),

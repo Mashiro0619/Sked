@@ -121,7 +121,101 @@ void main() {
     );
     expect(storage.data!.studentMode.themeMode, 'system');
     expect(storage.data!.generalMode.themeMode, 'system');
+    expect(storage.data!.studentMode.themeColorMode, themeColorModeColorful);
+    expect(storage.data!.generalMode.themeColorMode, themeColorModeSingle);
+    final reopened = await _providerFor(storage);
+    expect(
+      reopened.session.data.studentMode.themeColorMode,
+      themeColorModeColorful,
+    );
+    expect(
+      reopened.session.data.generalMode.themeColorMode,
+      themeColorModeSingle,
+    );
   });
+
+  for (final selected in [themeColorModeSingle, themeColorModeColorful]) {
+    test(
+      'existing $selected course preference and exact colors survive loading',
+      () async {
+        final initial = _initialApp();
+        final saved = initial.copyWith(
+          studentMode: initial.studentMode.copyWith(
+            themeColorMode: selected,
+            activeTimetableId: 'saved-table',
+            timetables: [
+              TimetableData(
+                id: 'saved-table',
+                config: TimetableConfig(
+                  name: 'Saved timetable',
+                  startDate: DateTime(2026, 9, 1),
+                  totalWeeks: 18,
+                  periodTimeSetId: defaultPeriodTimeSetId,
+                ),
+                courses: [
+                  for (final name in ['Physics', 'Chemistry'])
+                    CourseItem(
+                      id: name,
+                      name: name,
+                      teacher: '',
+                      location: '',
+                      dayOfWeek: 1,
+                      semesterWeeks: const [1],
+                      periods: const [1],
+                      startMinutes: 480,
+                      endMinutes: 525,
+                      timeRange: '08:00-08:45',
+                      credit: 0,
+                      remarks: '',
+                      customFields: const {},
+                    ),
+                ],
+              ),
+            ],
+            courseNameColorValues: const {
+              'Physics': 0xFF123456,
+              'Chemistry': 0xFF123456,
+            },
+          ),
+          generalMode: initial.generalMode.copyWith(
+            themeColorMode: themeColorModeColorful,
+            colorfulUiColorValues: const {colorfulUiPrimaryKey: 0xFF234567},
+          ),
+        );
+        final storage = _ControllableStorage(saved);
+        final provider = await _providerFor(storage);
+        expect(provider.session.data.studentMode.themeColorMode, selected);
+        expect(
+          provider.session.data.studentMode.courseNameColorValues,
+          saved.studentMode.courseNameColorValues,
+        );
+        expect(
+          provider.session.data.generalMode.themeColorMode,
+          themeColorModeColorful,
+        );
+        expect(
+          provider.session.data.generalMode.colorfulUiColorValues,
+          saved.generalMode.colorfulUiColorValues,
+        );
+        expect(storage.saveCount, 0);
+      },
+    );
+  }
+
+  test(
+    'legacy missing course color preference keeps its single fallback',
+    () async {
+      final source = _initialApp().toJson();
+      (source['studentMode'] as Map<String, dynamic>).remove('themeColorMode');
+      final storage = _ControllableStorage(AppData.fromJson(source));
+      final provider = await _providerFor(storage);
+      expect(
+        provider.session.data.studentMode.themeColorMode,
+        themeColorModeSingle,
+      );
+      expect(storage.saveCount, 0);
+    },
+  );
 
   for (final (themeMode, seed, onboarding) in [
     ('light', defaultThemeSeedColorValue, true),

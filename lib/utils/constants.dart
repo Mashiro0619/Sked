@@ -5,6 +5,7 @@ const newUserDefaultThemeMode = 'system';
 const defaultThemeColorMode = 'single';
 const themeColorModeSingle = 'single';
 const themeColorModeColorful = 'colorful';
+const newUserDefaultStudentThemeColorMode = themeColorModeColorful;
 const colorfulUiPrimaryKey = 'primary';
 const colorfulUiSecondaryKey = 'secondary';
 const colorfulUiTertiaryKey = 'tertiary';

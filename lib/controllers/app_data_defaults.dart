@@ -45,6 +45,7 @@ class AppDataDefaults {
         periods,
         localeCode: localeCode,
         includePrereleaseUpdates: includePrereleaseUpdates,
+        studentThemeColorMode: newUserDefaultStudentThemeColorMode,
       ),
       localeCode: localeCode,
     );

@@ -1028,6 +1028,7 @@ bool _hasDefaultStudentData(StudentModeData data) {
         themeColorMode: data.themeColorMode,
         themeSeedColorValue: data.themeSeedColorValue,
         colorfulUiColorValues: data.colorfulUiColorValues,
+        newUserThemeColorMode: newUserDefaultStudentThemeColorMode,
       )) {
     return false;
   }
@@ -1154,13 +1155,15 @@ bool _hasDefaultModeTheme({
   required String themeColorMode,
   required int themeSeedColorValue,
   required Map<String, int> colorfulUiColorValues,
+  String newUserThemeColorMode = defaultThemeColorMode,
 }) {
   // Old, unconfigured snapshots used light before new installs followed the
   // system. Recognize them without rewriting the saved theme preference.
   return (themeMode == newUserDefaultThemeMode ||
           themeMode == defaultThemeMode ||
           themeMode == 'light') &&
-      themeColorMode == defaultThemeColorMode &&
+      (themeColorMode == defaultThemeColorMode ||
+          themeColorMode == newUserThemeColorMode) &&
       themeSeedColorValue == defaultThemeSeedColorValue &&
       colorfulUiColorValues.isEmpty;
 }
