@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Sel päeval pole tunde",
   "courseInactiveThisWeek": "Sel nädalal tunniplaanis puudub",
-  "notificationSnoozeAction": "Lükka 10 minutit edasi"
+  "notificationSnoozeAction": "Lükka 10 minutit edasi",
+  "notificationHandledAction": "Märgi käsitletuks"
 }

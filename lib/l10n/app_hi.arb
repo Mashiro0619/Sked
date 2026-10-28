@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "इस दिन कोई कक्षा नहीं है",
   "courseInactiveThisWeek": "इस सप्ताह निर्धारित नहीं है",
-  "notificationSnoozeAction": "10 मिनट बाद याद दिलाएं"
+  "notificationSnoozeAction": "10 मिनट बाद याद दिलाएं",
+  "notificationHandledAction": "पूर्ण के रूप में चिह्नित करें"
 }

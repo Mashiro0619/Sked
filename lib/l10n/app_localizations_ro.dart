@@ -3292,4 +3292,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Amână 10 minute';
+
+  @override
+  String get notificationHandledAction => 'Marchează ca finalizat';
 }

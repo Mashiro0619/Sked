@@ -2161,5 +2161,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Inga lektioner denna dag",
   "courseInactiveThisWeek": "Inte schemalagt den här veckan",
-  "notificationSnoozeAction": "Skjut upp 10 minuter"
+  "notificationSnoozeAction": "Skjut upp 10 minuter",
+  "notificationHandledAction": "Markera som hanterad"
 }

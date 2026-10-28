@@ -3251,4 +3251,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Lükka 10 minutit edasi';
+
+  @override
+  String get notificationHandledAction => 'Märgi käsitletuks';
 }

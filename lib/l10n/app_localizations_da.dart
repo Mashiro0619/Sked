@@ -3246,4 +3246,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Udsæt 10 minutter';
+
+  @override
+  String get notificationHandledAction => 'Markér som håndteret';
 }

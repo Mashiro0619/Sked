@@ -3318,4 +3318,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Reporter de 10 minutes';
+
+  @override
+  String get notificationHandledAction => 'Marquer comme traité';
 }

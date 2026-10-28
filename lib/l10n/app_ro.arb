@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Nu sunt cursuri în această zi",
   "courseInactiveThisWeek": "Nu este programat în această săptămână",
-  "notificationSnoozeAction": "Amână 10 minute"
+  "notificationSnoozeAction": "Amână 10 minute",
+  "notificationHandledAction": "Marchează ca finalizat"
 }

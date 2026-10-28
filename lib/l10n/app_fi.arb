@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Ei oppitunteja tälle päivälle",
   "courseInactiveThisWeek": "Ei opetusta tällä viikolla",
-  "notificationSnoozeAction": "Siirrä 10 minuuttia"
+  "notificationSnoozeAction": "Siirrä 10 minuuttia",
+  "notificationHandledAction": "Merkitse käsitellyksi"
 }

@@ -3297,4 +3297,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Posponer 10 minutos';
+
+  @override
+  String get notificationHandledAction => 'Marcar como gestionado';
 }

@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Nessuna lezione per questo giorno",
   "courseInactiveThisWeek": "Non in programma questa settimana",
-  "notificationSnoozeAction": "Posticipa di 10 minuti"
+  "notificationSnoozeAction": "Posticipa di 10 minuti",
+  "notificationHandledAction": "Segna come gestito"
 }

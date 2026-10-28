@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Няма занятия за този ден",
   "courseInactiveThisWeek": "Не е планирано за тази седмица",
-  "notificationSnoozeAction": "Отложи с 10 минути"
+  "notificationSnoozeAction": "Отложи с 10 минути",
+  "notificationHandledAction": "Маркиране като обработено"
 }

@@ -3287,4 +3287,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Adiar 10 minutos';
+
+  @override
+  String get notificationHandledAction => 'Marcar como tratado';
 }

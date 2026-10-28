@@ -2217,5 +2217,7 @@
   "icsImportContinueAction": "Continue import",
   "importWarningRecurrenceRuleDowngraded": "This event will be imported as a single event. Unsupported fields or rule parts: {fields}.",
   "notificationSnoozeAction": "Snooze 10 minutes",
-  "@notificationSnoozeAction": {"description": "Notification action that snoozes this reminder by the fixed ten-minute duration."}
+  "@notificationSnoozeAction": {"description": "Notification action that snoozes this reminder by the fixed ten-minute duration."},
+  "notificationHandledAction": "Mark handled",
+  "@notificationHandledAction": {"description": "Notification action that marks this occurrence handled."}
 }

@@ -3268,4 +3268,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Preloži za 10 minut';
+
+  @override
+  String get notificationHandledAction => 'Označi kot obdelano';
 }

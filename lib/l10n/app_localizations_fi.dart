@@ -3263,4 +3263,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Siirrä 10 minuuttia';
+
+  @override
+  String get notificationHandledAction => 'Merkitse käsitellyksi';
 }

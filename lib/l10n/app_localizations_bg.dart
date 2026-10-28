@@ -3300,4 +3300,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Отложи с 10 минути';
+
+  @override
+  String get notificationHandledAction => 'Маркиране като обработено';
 }

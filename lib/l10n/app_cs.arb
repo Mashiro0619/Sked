@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Na tento den nejsou žádné hodiny",
   "courseInactiveThisWeek": "Tento týden není v rozvrhu",
-  "notificationSnoozeAction": "Odložit o 10 minut"
+  "notificationSnoozeAction": "Odložit o 10 minut",
+  "notificationHandledAction": "Označit jako vyřízené"
 }

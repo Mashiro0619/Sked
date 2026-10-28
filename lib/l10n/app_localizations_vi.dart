@@ -3251,4 +3251,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Hoãn 10 phút';
+
+  @override
+  String get notificationHandledAction => 'Đánh dấu đã xử lý';
 }

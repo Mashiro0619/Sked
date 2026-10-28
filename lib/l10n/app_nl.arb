@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Geen lessen op deze dag",
   "courseInactiveThisWeek": "Deze week niet ingepland",
-  "notificationSnoozeAction": "10 minuten uitstellen"
+  "notificationSnoozeAction": "10 minuten uitstellen",
+  "notificationHandledAction": "Als afgehandeld markeren"
 }

@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "В этот день нет занятий",
   "courseInactiveThisWeek": "Не запланировано на эту неделю",
-  "notificationSnoozeAction": "Отложить на 10 минут"
+  "notificationSnoozeAction": "Отложить на 10 минут",
+  "notificationHandledAction": "Отметить выполненным"
 }

@@ -3268,4 +3268,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Odłóż o 10 minut';
+
+  @override
+  String get notificationHandledAction => 'Oznacz jako obsłużone';
 }

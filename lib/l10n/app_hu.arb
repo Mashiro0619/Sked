@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Ezen a napon nincsenek órák",
   "courseInactiveThisWeek": "Ezen a héten nincs óra",
-  "notificationSnoozeAction": "Elhalasztás 10 perccel"
+  "notificationSnoozeAction": "Elhalasztás 10 perccel",
+  "notificationHandledAction": "Megjelölés kezeltként"
 }

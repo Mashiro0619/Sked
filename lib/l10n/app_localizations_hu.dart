@@ -3278,4 +3278,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Elhalasztás 10 perccel';
+
+  @override
+  String get notificationHandledAction => 'Megjelölés kezeltként';
 }

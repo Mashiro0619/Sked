@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Não há aulas neste dia",
   "courseInactiveThisWeek": "Não está agendado para esta semana",
-  "notificationSnoozeAction": "Adiar 10 minutos"
+  "notificationSnoozeAction": "Adiar 10 minutos",
+  "notificationHandledAction": "Marcar como tratado"
 }

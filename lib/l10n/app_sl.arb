@@ -2161,5 +2161,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Ta dan ni pouka",
   "courseInactiveThisWeek": "Ta teden ni na urniku",
-  "notificationSnoozeAction": "Preloži za 10 minut"
+  "notificationSnoozeAction": "Preloži za 10 minut",
+  "notificationHandledAction": "Označi kot obdelano"
 }

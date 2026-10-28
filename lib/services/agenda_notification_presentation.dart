@@ -188,45 +188,11 @@ DeveloperNotificationText developerNotificationText(
 NotificationText notificationText(String localeCode) {
   final locale = notificationLocale(localeCode);
   final l10n = lookupNotificationLocalizations(locale);
-  final language = locale.languageCode.toLowerCase();
-  final traditional =
-      locale.languageCode == 'zh' &&
-      (locale.scriptCode?.toLowerCase() == 'hant' ||
-          locale.countryCode?.toLowerCase() == 'tw' ||
-          locale.countryCode?.toLowerCase() == 'hk');
-  final snoozeAction = _notificationActionLocalizations(locale)
-      .notificationSnoozeAction;
-  final handledAction = switch (language) {
-    'bg' => 'Маркиране като обработено',
-    'cs' => 'Označit jako vyřízené',
-    'da' => 'Markér som håndteret',
-    'de' => 'Als erledigt markieren',
-    'el' => 'Σήμανση ως διεκπεραιωμένο',
-    'es' => 'Marcar como gestionado',
-    'et' => 'Märgi käsitletuks',
-    'fi' => 'Merkitse käsitellyksi',
-    'fr' => 'Marquer comme traité',
-    'hi' => 'पूर्ण के रूप में चिह्नित करें',
-    'hu' => 'Megjelölés kezeltként',
-    'it' => 'Segna come gestito',
-    'ja' => '処理済みとしてマーク',
-    'ko' => '처리됨으로 표시',
-    'nl' => 'Als afgehandeld markeren',
-    'pl' => 'Oznacz jako obsłużone',
-    'pt' => 'Marcar como tratado',
-    'ro' => 'Marchează ca finalizat',
-    'ru' => 'Отметить выполненным',
-    'sl' => 'Označi kot obdelano',
-    'sv' => 'Markera som hanterad',
-    'th' => 'ทำเครื่องหมายว่าจัดการแล้ว',
-    'vi' => 'Đánh dấu đã xử lý',
-    'zh' => traditional ? '標記已處理' : '标记已处理',
-    _ => l10n.markReminderHandled,
-  };
+  final actions = _notificationActionLocalizations(locale);
   return NotificationText(
     allDay: l10n.allDay,
-    snoozeAction: snoozeAction,
-    handledAction: handledAction,
+    snoozeAction: actions.notificationSnoozeAction,
+    handledAction: actions.notificationHandledAction,
   );
 }
 

@@ -3284,4 +3284,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Отложить на 10 минут';
+
+  @override
+  String get notificationHandledAction => 'Отметить выполненным';
 }

@@ -3228,4 +3228,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'เลื่อน 10 นาที';
+
+  @override
+  String get notificationHandledAction => 'ทำเครื่องหมายว่าจัดการแล้ว';
 }

@@ -5771,6 +5771,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Snooze 10 minutes'**
   String get notificationSnoozeAction;
+
+  /// Notification action that marks this occurrence handled.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark handled'**
+  String get notificationHandledAction;
 }
 
 class _AppLocalizationsDelegate

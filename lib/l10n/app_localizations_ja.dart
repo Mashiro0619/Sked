@@ -3135,4 +3135,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => '10 分後に再通知';
+
+  @override
+  String get notificationHandledAction => '処理済みとしてマーク';
 }

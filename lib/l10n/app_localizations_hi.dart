@@ -3244,4 +3244,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => '10 मिनट बाद याद दिलाएं';
+
+  @override
+  String get notificationHandledAction => 'पूर्ण के रूप में चिह्नित करें';
 }

@@ -66,4 +66,42 @@ void main() {
       expect(actual, orderedEquals(expected.values));
     },
   );
+
+  test('handled labels retain every pre-migration locale value', () {
+    final expected = _legacyActions('handledAction');
+    expect(
+      expected.keys.toSet(),
+      AppLocalizations.supportedLocales.map((locale) => '$locale').toSet(),
+    );
+    for (final entry in expected.entries) {
+      expect(
+        notificationText(entry.key).handledAction,
+        entry.value,
+        reason: entry.key,
+      );
+    }
+  });
+
+  test('handled labels retain legacy region and fallback behavior', () {
+    final expected = _legacyActions('handledAction');
+    for (final entry in _legacyAliases.entries) {
+      expect(
+        notificationText(entry.key).handledAction,
+        expected[entry.value],
+        reason: entry.key,
+      );
+    }
+  });
+
+  test(
+    'handled labels are available in an isolate without widget context',
+    () async {
+      final expected = _legacyActions('handledAction');
+      final codes = expected.keys.toList();
+      final actual = await Isolate.run(
+        () => [for (final code in codes) notificationText(code).handledAction],
+      );
+      expect(actual, orderedEquals(expected.values));
+    },
+  );
 }

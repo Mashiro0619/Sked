@@ -3258,4 +3258,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Skjut upp 10 minuter';
+
+  @override
+  String get notificationHandledAction => 'Markera som hanterad';
 }

@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "この日の授業はありません",
   "courseInactiveThisWeek": "今週は授業なし",
-  "notificationSnoozeAction": "10 分後に再通知"
+  "notificationSnoozeAction": "10 分後に再通知",
+  "notificationHandledAction": "処理済みとしてマーク"
 }

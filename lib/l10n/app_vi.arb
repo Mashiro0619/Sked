@@ -2161,5 +2161,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Không có môn học trong ngày này",
   "courseInactiveThisWeek": "Không có lịch học trong tuần này",
-  "notificationSnoozeAction": "Hoãn 10 phút"
+  "notificationSnoozeAction": "Hoãn 10 phút",
+  "notificationHandledAction": "Đánh dấu đã xử lý"
 }

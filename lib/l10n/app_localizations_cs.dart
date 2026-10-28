@@ -3259,4 +3259,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Odložit o 10 minut';
+
+  @override
+  String get notificationHandledAction => 'Označit jako vyřízené';
 }

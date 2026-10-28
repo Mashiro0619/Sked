@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Ingen undervisning denne dag",
   "courseInactiveThisWeek": "Ikke planlagt i denne uge",
-  "notificationSnoozeAction": "Udsæt 10 minutter"
+  "notificationSnoozeAction": "Udsæt 10 minutter",
+  "notificationHandledAction": "Markér som håndteret"
 }

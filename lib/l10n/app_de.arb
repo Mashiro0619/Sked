@@ -2144,5 +2144,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Keine Kurse an diesem Tag",
   "courseInactiveThisWeek": "Diese Woche nicht im Stundenplan",
-  "notificationSnoozeAction": "10 Minuten verschieben"
+  "notificationSnoozeAction": "10 Minuten verschieben",
+  "notificationHandledAction": "Als erledigt markieren"
 }

@@ -3144,4 +3144,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => '10분 후 다시 알림';
+
+  @override
+  String get notificationHandledAction => '처리됨으로 표시';
 }

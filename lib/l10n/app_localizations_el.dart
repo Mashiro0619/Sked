@@ -3309,4 +3309,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => 'Αναβολή για 10 λεπτά';
+
+  @override
+  String get notificationHandledAction => 'Σήμανση ως διεκπεραιωμένο';
 }

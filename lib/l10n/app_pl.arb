@@ -2146,5 +2146,6 @@
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Brak zajęć w tym dniu",
   "courseInactiveThisWeek": "Brak zajęć w tym tygodniu",
-  "notificationSnoozeAction": "Odłóż o 10 minut"
+  "notificationSnoozeAction": "Odłóż o 10 minut",
+  "notificationHandledAction": "Oznacz jako obsłużone"
 }

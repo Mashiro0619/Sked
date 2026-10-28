@@ -3038,6 +3038,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationSnoozeAction => '延后 10 分钟';
+
+  @override
+  String get notificationHandledAction => '标记已处理';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6075,4 +6078,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationSnoozeAction => '延後 10 分鐘';
+
+  @override
+  String get notificationHandledAction => '標記已處理';
 }
