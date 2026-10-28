@@ -17,7 +17,6 @@ import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
@@ -44,7 +43,6 @@ class UiPerformanceSession {
       // This benchmark is a test target; never acquire the user's runtime lock.
       // ignore: invalid_use_of_visible_for_testing_member
       workspaceMutationLock: (action) => action(),
-      privacyService: _OfflinePrivacy(),
       systemLocaleCodeResolver: () => data.localeCode,
       // Deliberately retain the production UI-state save delay.
     );
@@ -134,11 +132,6 @@ class _MemoryJournal extends AppBackupRestoreJournal {
       'memory://ui-performance/recovery';
   @override
   Future<Uint8List?> readRecoveryArtifact(String path) async => null;
-}
-
-class _OfflinePrivacy extends PrivacyService {
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
 class UiPerformanceApp extends StatefulWidget {

@@ -19,7 +19,6 @@ AppBootstrap createStartupRoot(
       secretStore: dependencies.secrets,
       schoolSiteService: dependencies.sites,
       backupRestoreJournal: dependencies.journal,
-      privacyService: dependencies.privacy,
       systemLocaleCodeResolver: () => 'zh',
       // Keep the production codec, save debounce, and scoped runtime lock.
     );

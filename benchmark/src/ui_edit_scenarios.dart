@@ -17,7 +17,6 @@ import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/general_occurrence_service.dart';
 import 'package:sked/services/import_export_service.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store_io.dart';
 import 'package:sked/services/secret_store.dart';
@@ -128,7 +127,6 @@ Future<Map<String, Object?>> runUiEditBenchmarks(
             journal: FileAppBackupRestoreJournal(
               directoryProvider: () async => directory,
             ),
-            privacy: _Privacy(),
             localeCode: seed.localeCode,
           ),
         );
@@ -637,11 +635,6 @@ class _Secrets implements SecretStore {
   Future<void> writeCustomSchoolImportApiKey(String value) async {
     _value = value;
   }
-}
-
-class _Privacy extends PrivacyService {
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
 Object? _canonical(Object? value) {

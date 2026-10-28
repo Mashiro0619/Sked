@@ -10,7 +10,6 @@ import 'package:sked/main.dart' show AppStartupDependencies;
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/app_instance_lease.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/secret_store.dart';
 
@@ -47,7 +46,6 @@ class StartupDependencies {
     required this.secrets,
     required this.sites,
     required this.journal,
-    required this.privacy,
   });
   final TimetableStorage storage;
   final AppInstanceLease lease;
@@ -55,7 +53,6 @@ class StartupDependencies {
   final SecretStore secrets;
   final SchoolSiteService sites;
   final AppBackupRestoreJournal journal;
-  final PrivacyService privacy;
 }
 
 Object? canonicalJson(Object? value) => switch (value) {

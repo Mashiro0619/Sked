@@ -11,7 +11,6 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store_io.dart';
 import 'package:sked/services/secret_store.dart';
@@ -28,16 +27,10 @@ class _Secrets implements SecretStore {
   }
 }
 
-class _Privacy extends PrivacyService {
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
-}
-
 Future<AppRuntime> _load(Directory directory) async {
   final provider = AppRuntime(
     storage: IoTimetableStorage(directoryProvider: () async => directory),
     secretStore: _Secrets(),
-    privacyService: _Privacy(),
     schoolSiteService: SchoolSiteService(
       store: PlatformSchoolSiteStore(directoryProvider: () async => directory),
     ),

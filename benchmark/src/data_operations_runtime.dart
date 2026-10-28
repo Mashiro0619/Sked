@@ -1,7 +1,6 @@
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/secret_store.dart';
 
@@ -34,7 +33,6 @@ class DataOperationsDependencies {
     required this.secrets,
     required this.schoolSites,
     required this.journal,
-    required this.privacy,
     required this.localeCode,
   });
 
@@ -42,6 +40,5 @@ class DataOperationsDependencies {
   final SecretStore secrets;
   final SchoolSiteService schoolSites;
   final AppBackupRestoreJournal journal;
-  final PrivacyService privacy;
   final String localeCode;
 }

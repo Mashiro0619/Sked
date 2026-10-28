@@ -3437,7 +3437,7 @@ void main() {
         storage: MemoryTimetableStorage(initialData: initialData),
       );
       await provider.lifecycle.load();
-      provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-04-20');
+      provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-04-20');
 
       await tester.pumpWidget(
         AppScope(

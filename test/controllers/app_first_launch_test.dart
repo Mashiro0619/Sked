@@ -6,7 +6,6 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/controllers/app_lifecycle.dart'
     show bundledPrivacyPolicyVersion;
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -19,13 +18,6 @@ class _NoopSecretStore implements SecretStore {
 
   @override
   Future<void> writeCustomSchoolImportApiKey(String value) async {}
-}
-
-class _NoopPrivacyService extends PrivacyService {
-  const _NoopPrivacyService();
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
 class _ControllableStorage implements TimetableStorage {
@@ -57,7 +49,6 @@ Future<AppRuntime> _providerFor(_ControllableStorage storage) async {
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
-    privacyService: const _NoopPrivacyService(),
     secretStore: const _NoopSecretStore(),
   );
   addTearDown(provider.dispose);
@@ -190,7 +181,7 @@ void main() {
       final initial = _initialApp();
       final storage = _ControllableStorage(initial);
       final provider = await _providerFor(storage);
-      provider.lifecycle.injectRemotePrivacyPolicyVersion('invalid');
+      provider.lifecycle.injectPrivacyPolicyVersionForTesting('invalid');
 
       await expectLater(
         provider.lifecycle.completeFirstLaunch(

@@ -9,7 +9,6 @@ import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/import_export_service.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store_io.dart';
 import 'package:sked/services/secret_store.dart';
@@ -527,7 +526,6 @@ class _DiskSession {
         secrets: _SyntheticSecrets(),
         schoolSites: sites,
         journal: journal,
-        privacy: _OfflinePrivacy(),
         localeCode: seed.localeCode,
       ),
     );
@@ -587,11 +585,6 @@ class _SyntheticSecrets implements SecretStore {
   @override
   Future<void> writeCustomSchoolImportApiKey(String value) async =>
       _value = value;
-}
-
-class _OfflinePrivacy extends PrivacyService {
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
 List<Map<String, dynamic>> _siteJson(List<SchoolSite> sites) => [

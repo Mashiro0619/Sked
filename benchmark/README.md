@@ -11,6 +11,11 @@ Its memory samples include precise observation times, read costs, entry-to-ready
 and entry-to-end changes, and the process lifetime peak through measurement end.
 These are separate from this suite's warmed host JIT and UI frame workloads.
 
+The current runtime no longer has a remote privacy-version service to replace
+with an offline fake. Older baselines must retain their own frozen runtime
+adapters and dependency isolation; do not apply current composition changes to
+historical comparison samples without recording and validating the adaptation.
+
 ## Protocol
 
 - Fixtures are built before timing and contain 1,000/5,000 calendar events,

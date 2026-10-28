@@ -14,7 +14,6 @@ import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/export_service.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/text_file_picker.dart';
@@ -95,13 +94,6 @@ class _RecoverySchoolSiteStore extends SchoolSiteStore {
   }
 }
 
-class _NoopPrivacyService extends PrivacyService {
-  const _NoopPrivacyService();
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
-}
-
 class _CompletingExportService extends ExportService {
   final started = Completer<void>();
   final result = Completer<ExportSaveResult>();
@@ -174,7 +166,6 @@ Future<AppRuntime> _createProvider() async {
       path: 'memory://school-sites-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: const _NoopPrivacyService(),
   );
   await provider.lifecycle.load();
   return provider;

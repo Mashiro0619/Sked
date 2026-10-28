@@ -23,7 +23,6 @@ import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
@@ -144,13 +143,6 @@ class _MemorySecrets implements SecretStore {
   }
 }
 
-class _QuietPrivacy extends PrivacyService {
-  const _QuietPrivacy();
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
-}
-
 class _MemorySites extends SchoolSiteStore {
   _MemorySites() : super.base();
 
@@ -174,7 +166,6 @@ AppRuntime _isolatedProvider({
   secretStore: _MemorySecrets(),
   schoolSiteService: SchoolSiteService(store: _MemorySites()),
   backupRestoreJournal: _EmptyJournal(),
-  privacyService: const _QuietPrivacy(),
   systemLocaleCodeResolver: () => 'en',
   workspaceMutationLock: (action) => action(),
 );
@@ -840,7 +831,6 @@ void main() {
         repository: repository,
         secretStore: _MemorySecrets(),
         backupRestoreJournal: _EmptyJournal(),
-        privacyService: const _QuietPrivacy(),
         systemLocaleCodeResolver: () => 'en',
         dataTransferCodec: inlineDataTransferCodec,
       );

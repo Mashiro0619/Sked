@@ -19,7 +19,6 @@ class _CurrentUiSession implements UiEditSession, UiPerformanceSession {
       secretStore: dependencies.secrets,
       schoolSiteService: dependencies.schoolSites,
       backupRestoreJournal: dependencies.journal,
-      privacyService: dependencies.privacy,
       systemLocaleCodeResolver: () => dependencies.localeCode,
       // The existing UI host supplies a disabled memory notification service.
       // ignore: invalid_use_of_visible_for_testing_member

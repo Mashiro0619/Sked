@@ -27,7 +27,6 @@ import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/export_service.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
@@ -121,30 +120,6 @@ class _FailingTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://failing-home-timetable-test';
 }
 
-class _NoopPrivacyService extends PrivacyService {
-  const _NoopPrivacyService();
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
-}
-
-class _RecordingPrivacyService extends PrivacyService {
-  var fetchCount = 0;
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async {
-    fetchCount += 1;
-    return null;
-  }
-}
-
-class _MutablePrivacyService extends PrivacyService {
-  String? version;
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => version;
-}
-
 class _NoopSecretStore implements SecretStore {
   const _NoopSecretStore();
 
@@ -214,7 +189,6 @@ Future<AppRuntime> _createRecoveryProvider({
   List<String> recoveryArtifacts = const [],
   Uint8List? recoveryArtifactBytes,
   Object? recoveryArtifactReadError,
-  PrivacyService privacyService = const _NoopPrivacyService(),
 }) async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
@@ -227,7 +201,6 @@ Future<AppRuntime> _createRecoveryProvider({
       recoveryArtifactReadError: recoveryArtifactReadError,
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: privacyService,
     secretStore: const _NoopSecretStore(),
   );
   await provider.lifecycle.load();
@@ -251,17 +224,6 @@ class _RecordingRecoveryExportService extends ExportService {
       status: ExportSaveStatus.saved,
       path: 'memory://exported-recovery.json',
     );
-  }
-}
-
-class _BlockingPrivacyService extends PrivacyService {
-  final Completer<String?> _completer = Completer<String?>();
-  var fetchCount = 0;
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() {
-    fetchCount += 1;
-    return _completer.future;
   }
 }
 
@@ -430,7 +392,6 @@ Future<AppRuntime> _createProvider() async {
     dataTransferCodec: inlineDataTransferCodec,
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: const _NoopPrivacyService(),
     secretStore: const _NoopSecretStore(),
   );
   await provider.lifecycle.load();
@@ -449,7 +410,6 @@ Future<AppRuntime> _createEmptyProvider(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: const _NoopPrivacyService(),
     secretStore: const _NoopSecretStore(),
   );
   await provider.lifecycle.load();
@@ -726,7 +686,6 @@ void main() {
         storage: storage,
         workspaceMutationLock: (action) => action(),
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       addTearDown(provider.dispose);
@@ -812,7 +771,6 @@ void main() {
       final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -1034,13 +992,11 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(320, 640));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
-      final privacyService = _RecordingPrivacyService();
       final provider = await _createRecoveryProvider(
         storage: storage,
         status: StorageLoadStatus.corrupt,
         recoveryStatus: RecoveryStatus.failedBackupRestore,
         recoveryArtifacts: const ['memory://recovery/app-data.corrupt.json'],
-        privacyService: privacyService,
       );
 
       await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
@@ -1057,7 +1013,6 @@ void main() {
       );
       expect(find.text('Choose your starting mode'), findsNothing);
       expect(find.byType(HomeScreen), findsNothing);
-      expect(privacyService.fetchCount, 0);
       expect(storage.saveCount, 0);
     },
   );
@@ -1217,7 +1172,6 @@ void main() {
         ),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1295,7 +1249,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1345,7 +1298,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildLegacySystemFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1374,7 +1326,6 @@ void main() {
         ),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1407,7 +1358,6 @@ void main() {
           dataTransferCodec: inlineDataTransferCodec,
           storage: _MemoryTimetableStorage(data),
           systemLocaleCodeResolver: () => defaultLocaleCode,
-          privacyService: const _NoopPrivacyService(),
           secretStore: const _NoopSecretStore(),
         );
         await provider.lifecycle.load();
@@ -1435,7 +1385,6 @@ void main() {
         ),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1457,7 +1406,6 @@ void main() {
         data.copyWith(homeWorkspaceNavigationCollapsed: true),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1488,12 +1436,10 @@ void main() {
       'first launch starts ${scenario.mode.name} and accepts privacy in one save',
       (tester) async {
         final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
-        final privacyService = _BlockingPrivacyService();
         final provider = AppRuntime(
           dataTransferCodec: inlineDataTransferCodec,
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
-          privacyService: privacyService,
           secretStore: const _NoopSecretStore(),
         );
         await provider.lifecycle.load();
@@ -1503,7 +1449,6 @@ void main() {
 
         expect(find.text('Choose your starting mode'), findsOneWidget);
         expect(find.byType(AlertDialog), findsNothing);
-        expect(privacyService.fetchCount, 0);
 
         await tester.tap(find.byKey(scenario.card));
         await tester.pumpAndSettle();
@@ -1528,7 +1473,6 @@ void main() {
           bundledPrivacyPolicyVersion,
         );
         expect(provider.lifecycle.privacyPolicyAcceptedAt, isNotNull);
-        expect(privacyService.fetchCount, 0);
         expect(find.byType(AlertDialog), findsNothing);
         expect(
           find.text('Please agree to the privacy policy before using the app'),
@@ -1560,7 +1504,6 @@ void main() {
           dataTransferCodec: inlineDataTransferCodec,
           storage: storage,
           systemLocaleCodeResolver: () => defaultLocaleCode,
-          privacyService: const _NoopPrivacyService(),
           secretStore: const _NoopSecretStore(),
         );
         addTearDown(provider.dispose);
@@ -1625,11 +1568,10 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(initialData),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
-    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-06-02');
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-06-02');
 
     await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
@@ -1648,7 +1590,6 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -1761,7 +1702,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1802,7 +1742,6 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -1902,7 +1841,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1937,7 +1875,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -1965,7 +1902,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2010,7 +1946,6 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -2063,7 +1998,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2109,7 +2043,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2136,7 +2069,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2167,7 +2099,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2222,11 +2153,10 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
-    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-05-25');
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-05-25');
 
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
@@ -2277,11 +2207,10 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
-    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-05-25');
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-05-25');
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
     final agreeButton = find.descendant(
@@ -2298,10 +2227,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('existing launch does not fetch a remote privacy version', (
+  testWidgets('existing launch uses bundled policy and preserves acceptance', (
     tester,
   ) async {
-    final privacyService = _BlockingPrivacyService();
     final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(
@@ -2311,7 +2239,6 @@ void main() {
         ),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: privacyService,
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2319,15 +2246,25 @@ void main() {
     await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(privacyService.fetchCount, 0);
+    expect(
+      provider.lifecycle.activePrivacyPolicyVersion,
+      bundledPrivacyPolicyVersion,
+    );
+    expect(
+      provider.session.data.privacyPolicyAcceptedVersion,
+      bundledPrivacyPolicyVersion,
+    );
+    expect(
+      provider.session.data.privacyPolicyAcceptedAtIso,
+      '2026-06-02T00:00:00.000',
+    );
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets(
-    'newer persisted privacy acceptance remains valid without networking',
+    'newer persisted acceptance remains valid against the bundled policy',
     (tester) async {
-      final privacyService = _RecordingPrivacyService();
       final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: _MemoryTimetableStorage(
@@ -2337,7 +2274,6 @@ void main() {
           ),
         ),
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: privacyService,
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -2350,7 +2286,6 @@ void main() {
         bundledPrivacyPolicyVersion,
       );
       expect(provider.lifecycle.hasAcceptedCurrentPrivacyPolicy, isTrue);
-      expect(privacyService.fetchCount, 0);
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
     },
@@ -2371,7 +2306,6 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -2400,7 +2334,6 @@ void main() {
           ),
         ),
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -2414,35 +2347,30 @@ void main() {
     expect(older.lifecycle.hasAcceptedCurrentPrivacyPolicy, isFalse);
 
     final accepted = await providerWithAcceptedVersion('2026-08-07');
-    accepted.lifecycle.injectRemotePrivacyPolicyVersion('2026-09-01');
+    accepted.lifecycle.injectPrivacyPolicyVersionForTesting('2026-09-01');
     expect(accepted.lifecycle.hasAcceptedCurrentPrivacyPolicy, isFalse);
   });
 
   test('active privacy policy version only moves forward', () async {
-    final privacyService = _MutablePrivacyService();
     final provider = AppRuntime(
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildPopulatedStudentData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: privacyService,
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
 
-    privacyService.version = '2026-05-01';
-    await provider.lifecycle.fetchRemotePrivacyPolicyVersion();
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-05-01');
     expect(
       provider.lifecycle.activePrivacyPolicyVersion,
       bundledPrivacyPolicyVersion,
     );
 
-    privacyService.version = '2026-09-01';
-    await provider.lifecycle.fetchRemotePrivacyPolicyVersion();
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-09-01');
     expect(provider.lifecycle.activePrivacyPolicyVersion, '2026-09-01');
 
-    privacyService.version = '2026-08-20';
-    await provider.lifecycle.fetchRemotePrivacyPolicyVersion();
-    provider.lifecycle.injectRemotePrivacyPolicyVersion('2026-08-15');
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-08-20');
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('2026-08-15');
     expect(provider.lifecycle.activePrivacyPolicyVersion, '2026-09-01');
   });
 
@@ -2452,11 +2380,10 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
-    provider.lifecycle.injectRemotePrivacyPolicyVersion('invalid');
+    provider.lifecycle.injectPrivacyPolicyVersionForTesting('invalid');
 
     expect(provider.lifecycle.hasAcceptedCurrentPrivacyPolicy, isFalse);
     await expectLater(
@@ -2511,7 +2438,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2566,7 +2492,6 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -2600,7 +2525,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2650,7 +2574,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2709,7 +2632,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -2862,7 +2784,6 @@ void main() {
         ),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -3732,7 +3653,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: _MemoryTimetableStorage(_buildLongCourseStudentData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -3888,7 +3808,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4241,7 +4160,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4288,7 +4206,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4344,7 +4261,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4380,7 +4296,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4448,7 +4363,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4513,7 +4427,6 @@ void main() {
         final provider = AppRuntime(
           dataTransferCodec: inlineDataTransferCodec,
           storage: storage,
-          privacyService: const _NoopPrivacyService(),
           secretStore: const _NoopSecretStore(),
         );
         await provider.lifecycle.load();
@@ -4619,7 +4532,6 @@ void main() {
       final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -4694,7 +4606,6 @@ void main() {
       final provider = AppRuntime(
         dataTransferCodec: inlineDataTransferCodec,
         storage: storage,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -4770,7 +4681,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4809,7 +4719,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4836,7 +4745,6 @@ void main() {
       dataTransferCodec: inlineDataTransferCodec,
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
@@ -4979,7 +4887,6 @@ void main() {
         dataTransferCodec: inlineDataTransferCodec,
         storage: _MemoryTimetableStorage(data),
         systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
         secretStore: const _NoopSecretStore(),
       );
       await provider.lifecycle.load();
@@ -5064,7 +4971,6 @@ void main() {
         ),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();

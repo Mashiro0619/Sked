@@ -1,14 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
-    show VoidCallback, debugPrint, setEquals;
+    show VoidCallback, debugPrint, setEquals, visibleForTesting;
 
 import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../models/timetable_models.dart';
 import '../services/app_backup_restore_journal.dart';
 import '../services/data_transfer_codec.dart';
-import '../services/privacy_service.dart';
 import 'app_backup_controller.dart';
 import 'app_data_defaults.dart';
 import 'app_persistence.dart';
@@ -29,7 +28,6 @@ class AppLifecycle extends ObservableViewState {
     required this._defaults,
     required this._backups,
     required this._secrets,
-    required this._privacy,
     required this._notifyViewChanged,
     this._codec = const DataTransferCodec(),
   }) {
@@ -42,7 +40,6 @@ class AppLifecycle extends ObservableViewState {
   final AppDataDefaults _defaults;
   final AppBackupController _backups;
   final SchoolImportSecretController _secrets;
-  final PrivacyService _privacy;
   final VoidCallback _notifyViewChanged;
   final DataTransferCodec _codec;
   String? _storagePath;
@@ -55,7 +52,7 @@ class AppLifecycle extends ObservableViewState {
   Object get publicationKey => (
     _storagePath,
     _session.readiness.value,
-    _remotePrivacyPolicyVersion,
+    _activePrivacyPolicyVersion,
     _data.privacyPolicyAcceptedVersion,
     _data.privacyPolicyAcceptedAtIso,
     _repository.lastRecoveryStatus,
@@ -93,9 +90,9 @@ class AppLifecycle extends ObservableViewState {
           _repository.recoveryArtifacts.isNotEmpty) ||
       _backups.canStartFreshAfterRecovery;
 
-  String? _remotePrivacyPolicyVersion = bundledPrivacyPolicyVersion;
+  String? _activePrivacyPolicyVersion = bundledPrivacyPolicyVersion;
 
-  String? get activePrivacyPolicyVersion => _remotePrivacyPolicyVersion;
+  String? get activePrivacyPolicyVersion => _activePrivacyPolicyVersion;
 
   String? get acceptedPrivacyPolicyVersion =>
       _data.privacyPolicyAcceptedVersion;
@@ -108,38 +105,31 @@ class AppLifecycle extends ObservableViewState {
   bool get hasAcceptedCurrentPrivacyPolicy {
     return _isPrivacyPolicyVersionAtLeast(
       _data.privacyPolicyAcceptedVersion,
-      _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion,
+      _activePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion,
     );
   }
 
-  void injectRemotePrivacyPolicyVersion(String version) {
+  @visibleForTesting
+  void injectPrivacyPolicyVersionForTesting(String version) {
     if (_parsePrivacyPolicyVersion(version) == null) {
-      _remotePrivacyPolicyVersion = version;
+      _activePrivacyPolicyVersion = version;
       return;
     }
     _promoteActivePrivacyPolicyVersion(version);
   }
 
-  Future<void> fetchRemotePrivacyPolicyVersion() async {
-    final version = await _privacy.fetchCurrentPrivacyPolicyVersion();
-    if (version == null || !_promoteActivePrivacyPolicyVersion(version)) {
-      return;
-    }
-    _notifyViewChanged();
-  }
-
   bool _promoteActivePrivacyPolicyVersion(String candidate) {
     if (_parsePrivacyPolicyVersion(candidate) == null) return false;
     final current =
-        _parsePrivacyPolicyVersion(_remotePrivacyPolicyVersion) == null
+        _parsePrivacyPolicyVersion(_activePrivacyPolicyVersion) == null
         ? bundledPrivacyPolicyVersion
-        : _remotePrivacyPolicyVersion!;
+        : _activePrivacyPolicyVersion!;
     final floor = current.compareTo(bundledPrivacyPolicyVersion) >= 0
         ? current
         : bundledPrivacyPolicyVersion;
     final next = candidate.compareTo(floor) > 0 ? candidate : floor;
-    if (_remotePrivacyPolicyVersion == next) return false;
-    _remotePrivacyPolicyVersion = next;
+    if (_activePrivacyPolicyVersion == next) return false;
+    _activePrivacyPolicyVersion = next;
     return true;
   }
 
@@ -323,7 +313,7 @@ class AppLifecycle extends ObservableViewState {
   }
 
   Future<void> acceptPrivacyPolicyCurrentVersion() async {
-    final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
+    final active = _activePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
     if (_isPrivacyPolicyVersionAtLeast(
       _data.privacyPolicyAcceptedVersion,
       active,
@@ -345,7 +335,7 @@ class AppLifecycle extends ObservableViewState {
     required bool hideWorkspaceNavigation,
     Set<AppMode>? enabledWorkspaces,
   }) async {
-    final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
+    final active = _activePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
     if (_parsePrivacyPolicyVersion(active) == null) {
       throw StateError('Invalid active privacy policy version: $active');
     }

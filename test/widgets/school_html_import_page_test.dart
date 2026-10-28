@@ -20,18 +20,10 @@ import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'package:sked/services/school_import_http_consent.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 
 import '../support/data_transfer_codec.dart';
 import '../support/timetable_storage_fakes.dart';
-
-class _NoopPrivacyService extends PrivacyService {
-  const _NoopPrivacyService();
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
-}
 
 class _RecordingSchoolImportApi extends SchoolImportApi {
   var callCount = 0;
@@ -109,7 +101,6 @@ Future<AppRuntime> _createProvider({
       path: 'memory://school-html-import-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: const _NoopPrivacyService(),
   );
   await provider.lifecycle.load();
   return provider;

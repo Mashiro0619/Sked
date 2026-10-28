@@ -16,7 +16,6 @@ import 'package:sked/services/app_storage_layout_io.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store_io.dart';
 import 'package:sked/services/secret_store.dart';
@@ -161,7 +160,6 @@ Future<void> main(List<String> arguments) async {
               store: PlatformSchoolSiteStore(layout: storageLayout),
             ),
             journal: FileAppBackupRestoreJournal(layout: storageLayout),
-            privacy: const _OfflinePrivacy(),
           ),
           (created) {
             if (created.loaded || created.repository.current != null) {
@@ -327,13 +325,6 @@ class _SyntheticSecrets implements SecretStore {
   Future<void> writeCustomSchoolImportApiKey(String next) async {
     value = next;
   }
-}
-
-class _OfflinePrivacy extends PrivacyService {
-  const _OfflinePrivacy();
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async =>
-      startupPrivacyVersion;
 }
 
 class _OfflineUpdates extends UpdateService {

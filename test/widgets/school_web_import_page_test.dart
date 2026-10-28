@@ -14,7 +14,6 @@ import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_web_session_service.dart';
 import 'package:sked/widgets/expressive_empty_state.dart';
 
@@ -69,13 +68,6 @@ Widget _browserApp({
   return AppScope(app: provider, child: app);
 }
 
-class _NoopPrivacyService extends PrivacyService {
-  const _NoopPrivacyService();
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
-}
-
 Future<AppRuntime> _createConfiguredProvider() async {
   final initial =
       buildInitialAppData(
@@ -96,7 +88,6 @@ Future<AppRuntime> _createConfiguredProvider() async {
       path: 'memory://school-web-import-test',
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: const _NoopPrivacyService(),
   );
   await provider.lifecycle.load();
   return provider;

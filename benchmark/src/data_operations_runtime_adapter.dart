@@ -15,7 +15,6 @@ class _CurrentRuntime implements DataOperationsRuntime {
         secretStore: dependencies.secrets,
         schoolSiteService: dependencies.schoolSites,
         backupRestoreJournal: dependencies.journal,
-        privacyService: dependencies.privacy,
         systemLocaleCodeResolver: () => dependencies.localeCode,
         // Native codecs and the production 450 ms save debounce stay enabled.
         // The benchmark must not acquire the user's notification runtime lock.

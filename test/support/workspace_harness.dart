@@ -23,7 +23,6 @@ import 'package:sked/services/developer_sample_data_service.dart';
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
@@ -84,11 +83,6 @@ class _Journal extends AppBackupRestoreJournal {
   Future<Uint8List?> readRecoveryArtifact(String path) async => null;
 }
 
-class _Privacy extends PrivacyService {
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
-}
-
 Future<AppRuntime> workspaceProvider({
   AppMode mode = AppMode.student,
   String locale = 'en',
@@ -112,7 +106,6 @@ Future<AppRuntime> workspaceProvider({
     schoolSiteService: SchoolSiteService(store: _Sites()),
     backupRestoreJournal: _Journal(),
     workspaceMutationLock: workspaceMutationLock ?? (action) => action(),
-    privacyService: _Privacy(),
     systemLocaleCodeResolver: () => locale,
     uiStateSaveDelay: Duration.zero,
   );

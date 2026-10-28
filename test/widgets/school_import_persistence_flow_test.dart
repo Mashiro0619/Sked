@@ -24,7 +24,6 @@ import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/agenda_notification_service.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
@@ -59,12 +58,6 @@ class _Storage implements TimetableStorage {
 
   @override
   Future<String?> filePath() async => 'memory://school-import-persistence';
-}
-
-class _NoPrivacyRequest extends PrivacyService {
-  const _NoPrivacyRequest();
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
 void _replaceDataSession(AppRuntime provider) {
@@ -151,7 +144,6 @@ Future<(AppRuntime, _Storage)> _provider() async {
     storage: storage,
     dataTransferCodec: inlineDataTransferCodec,
     systemLocaleCodeResolver: () => 'en',
-    privacyService: const _NoPrivacyRequest(),
   );
   await provider.lifecycle.load();
   return (provider, storage);

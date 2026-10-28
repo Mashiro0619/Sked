@@ -33,7 +33,6 @@ import 'models/timetable_models.dart';
 import 'services/agenda_runtime_mutation_lock.dart';
 import 'services/app_backup_restore_journal.dart';
 import 'services/data_transfer_codec.dart';
-import 'services/privacy_service.dart';
 import 'services/school_site_service.dart';
 import 'services/secret_store.dart';
 import 'services/settings_service.dart';
@@ -46,7 +45,6 @@ final class AppRuntime {
     AppRepository? repository,
     String Function()? systemLocaleCodeResolver,
     SettingsService? settingsService,
-    PrivacyService? privacyService,
     SecretStore? secretStore,
     SchoolSiteService? schoolSiteService,
     AppBackupRestoreJournal? backupRestoreJournal,
@@ -57,7 +55,6 @@ final class AppRuntime {
   }) {
     final localeCodeResolver =
         systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver;
-    final privacy = privacyService ?? const PrivacyService();
     final schoolSites = schoolSiteService ?? SchoolSiteService();
     final journal = backupRestoreJournal ?? AppBackupRestoreJournal();
     final mutationLock =
@@ -171,7 +168,6 @@ final class AppRuntime {
       defaults: defaults,
       backups: backups,
       secrets: schoolImportSecrets,
-      privacy: privacy,
       codec: dataTransferCodec,
       notifyViewChanged: publishViews,
     );

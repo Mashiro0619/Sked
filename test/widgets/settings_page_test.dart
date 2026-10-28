@@ -20,7 +20,6 @@ import 'package:sked/controllers/app_data_clear_controller.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
-import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/microsoft_store_update_service.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/school_site_service.dart';
@@ -91,13 +90,6 @@ class _MemoryTimetableStorage
     final source = recoverySources[artifactPath];
     return source == null ? null : Uint8List.fromList(utf8.encode(source));
   }
-}
-
-class _NoopPrivacyService extends PrivacyService {
-  const _NoopPrivacyService();
-
-  @override
-  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
 class _ScheduleCodec extends DataTransferCodec {
@@ -319,7 +311,6 @@ Future<AppRuntime> _createProvider(
           recoveryReadError: recoveryReadError,
         ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
-    privacyService: const _NoopPrivacyService(),
     schoolSiteService: schoolSiteService,
   );
   await provider.lifecycle.load();
