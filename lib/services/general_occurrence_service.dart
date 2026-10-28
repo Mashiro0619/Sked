@@ -213,9 +213,27 @@ class GeneralOccurrenceService {
     GeneralOccurrenceQuery? occurrenceFilter,
     NotificationSettings notificationSettings = const NotificationSettings(),
   }) {
-    final start = now.subtract(boundedGeneralReminderLookback(overdueWindow));
+    return indexedReminderItemsFromPrepared(
+      prepareIndexedReminderInputs(
+        general,
+        occurrenceFilter: occurrenceFilter,
+        notificationSettings: notificationSettings,
+      ),
+      now: now,
+      upcomingHorizon: upcomingHorizon,
+      overdueWindow: overdueWindow,
+    );
+  }
+
+  /// Prepares filtering, lead times and handled-key lookup without parsing or
+  /// retaining occurrence DateTimes. Reuse requires unchanged source inputs.
+  GeneralIndexedReminderInputs prepareIndexedReminderInputs(
+    GeneralScheduleData general, {
+    GeneralOccurrenceQuery? occurrenceFilter,
+    NotificationSettings notificationSettings = const NotificationSettings(),
+  }) {
     final handled = _HandledReminderIndex(general.reminderAcknowledgements);
-    final runs = <GeneralReminderRun>[];
+    final events = <_PreparedReminderEvent>[];
     for (final calendar in general.schedules) {
       if (!calendar.isVisible &&
           !notificationSettings.remindHiddenGeneralCalendars) {
@@ -231,67 +249,92 @@ class GeneralOccurrenceService {
         for (final reminder in reminders) {
           if (reminder.minutesBefore > lead) lead = reminder.minutesBefore;
         }
-        final end = generalReminderCandidateEndExclusive(
-          general,
-          anchor: now,
-          upcomingHorizon: upcomingHorizon,
-          notificationSettings: notificationSettings,
-          maximumMinutesBefore: lead,
-        );
-        final range = GeneralEventOccurrenceRange(
+        events.add((
           calendar: calendar,
           event: event,
-          startInclusive: start,
-          endExclusive: end,
-          excludedStartDateTimeIso: handled.startTimesFor(
-            calendar.id,
-            event.id,
+          maximumMinutesBefore: lead,
+        ));
+      }
+    }
+    return GeneralIndexedReminderInputs._(
+      general,
+      notificationSettings,
+      handled,
+      List.unmodifiable(events),
+    );
+  }
+
+  /// Builds the original exact range and status sections for each requested
+  /// instant. Prepared inputs never supply a wider cached range to slice.
+  GeneralReminderItems indexedReminderItemsFromPrepared(
+    GeneralIndexedReminderInputs inputs, {
+    required DateTime now,
+    Duration upcomingHorizon = const Duration(hours: 24),
+    Duration overdueWindow = defaultGeneralReminderOverdueWindow,
+  }) {
+    final start = now.subtract(boundedGeneralReminderLookback(overdueWindow));
+    final runs = <GeneralReminderRun>[];
+    for (final prepared in inputs._events) {
+      final end = generalReminderCandidateEndExclusive(
+        inputs._general,
+        anchor: now,
+        upcomingHorizon: upcomingHorizon,
+        notificationSettings: inputs._notificationSettings,
+        maximumMinutesBefore: prepared.maximumMinutesBefore,
+      );
+      final range = GeneralEventOccurrenceRange(
+        calendar: prepared.calendar,
+        event: prepared.event,
+        startInclusive: start,
+        endExclusive: end,
+        excludedStartDateTimeIso: inputs._handled.startTimesFor(
+          prepared.calendar.id,
+          prepared.event.id,
+        ),
+      );
+      if (range.isEmpty) continue;
+      final future = _firstReminderIndex(
+        range,
+        (occurrence) => occurrence.start.isAfter(now),
+      );
+      final notEnded = _firstReminderIndex(
+        range,
+        (occurrence) => occurrence.end.isAfter(now),
+      );
+      if (notEnded > 0) {
+        runs.add(
+          GeneralReminderRun(
+            range: range.slice(0, notEnded),
+            status: GeneralReminderStatus.overdue,
           ),
         );
-        if (range.isEmpty) continue;
-        final future = _firstReminderIndex(
-          range,
-          (occurrence) => occurrence.start.isAfter(now),
+      }
+      if (future > notEnded) {
+        runs.add(
+          GeneralReminderRun(
+            range: range.slice(notEnded, future),
+            status: GeneralReminderStatus.inProgress,
+          ),
         );
-        final notEnded = _firstReminderIndex(
-          range,
-          (occurrence) => occurrence.end.isAfter(now),
+      }
+      final notDue = _firstReminderIndex(
+        range,
+        (occurrence) =>
+            occurrence.start.isAfter(now) &&
+            !isInReminderWindow(
+              occurrence,
+              now,
+              defaultMinutesBefore:
+                  inputs._notificationSettings.generalDefaultMinutesBefore,
+            ),
+      );
+      if (notDue > future) {
+        runs.add(
+          GeneralReminderRun(
+            range: range.slice(future, notDue),
+            status: GeneralReminderStatus.upcoming,
+          ),
         );
-        if (notEnded > 0) {
-          runs.add(
-            GeneralReminderRun(
-              range: range.slice(0, notEnded),
-              status: GeneralReminderStatus.overdue,
-            ),
-          );
-        }
-        if (future > notEnded) {
-          runs.add(
-            GeneralReminderRun(
-              range: range.slice(notEnded, future),
-              status: GeneralReminderStatus.inProgress,
-            ),
-          );
-        }
-        final notDue = _firstReminderIndex(
-          range,
-          (occurrence) =>
-              occurrence.start.isAfter(now) &&
-              !isInReminderWindow(
-                occurrence,
-                now,
-                defaultMinutesBefore:
-                    notificationSettings.generalDefaultMinutesBefore,
-              ),
-        );
-        if (notDue > future) {
-          runs.add(
-            GeneralReminderRun(
-              range: range.slice(future, notDue),
-              status: GeneralReminderStatus.upcoming,
-            ),
-          );
-        }
       }
     }
     return GeneralReminderItems(runs, compare: compareGeneralReminderItems);
@@ -343,6 +386,28 @@ class GeneralOccurrenceService {
     }
     return items..sort(compareGeneralReminderItems);
   }
+}
+
+typedef _PreparedReminderEvent = ({
+  GeneralSchedule calendar,
+  GeneralEvent event,
+  int maximumMinutesBefore,
+});
+
+/// Time-independent inputs for indexed reminders. This snapshot is valid only
+/// while its source events, reminder lists and acknowledgement history match.
+class GeneralIndexedReminderInputs {
+  const GeneralIndexedReminderInputs._(
+    this._general,
+    this._notificationSettings,
+    this._handled,
+    this._events,
+  );
+
+  final GeneralScheduleData _general;
+  final NotificationSettings _notificationSettings;
+  final _HandledReminderIndex _handled;
+  final List<_PreparedReminderEvent> _events;
 }
 
 bool _matchesReminderEvent(
