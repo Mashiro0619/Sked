@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -21,12 +23,7 @@ void registerCaptureScenarios() {
     (t) async {
       await DesktopWindowBridge.instance.initialize();
       const baseline = bool.fromEnvironment('SKED_SETTINGS_BASELINE');
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/settings-layout',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'settings-layout');
       await output.create(recursive: true);
       final manifest = <Map<String, Object?>>[];
       final cases = [

@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -56,12 +58,7 @@ void registerCaptureScenarios() {
   ) async {
     await DesktopWindowBridge.instance.initialize();
     final wasAvailable = DesktopWindowBridge.instance.available;
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/settings-transfer',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'settings-transfer');
     await output.create(recursive: true);
     final manifest = <Map<String, Object?>>[];
     tester.view.devicePixelRatio = 1;

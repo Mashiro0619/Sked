@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -24,12 +26,7 @@ void registerCaptureScenarios() {
     await DesktopWindowBridge.instance.initialize();
     expect(DesktopWindowBridge.instance.available, isTrue);
     const baseline = bool.fromEnvironment('SKED_VISUAL_BASELINE');
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/compact-toolbars',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'compact-toolbars');
     await output.create(recursive: true);
     final manifest = <Map<String, Object?>>[];
     t.view.devicePixelRatio = 1;

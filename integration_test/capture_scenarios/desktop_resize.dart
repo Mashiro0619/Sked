@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -22,12 +24,7 @@ void registerCaptureScenarios() {
   testWidgets(
     'desktop resizing keeps real content and produces Windows font captures',
     (tester) async {
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/desktop-resize',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'desktop-resize');
       await output.create(recursive: true);
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(1600, 1000);

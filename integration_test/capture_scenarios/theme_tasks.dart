@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -14,12 +16,7 @@ void registerCaptureScenarios() {
   testWidgets(
     'theme color normal invalid busy and failed Windows screenshots',
     (t) async {
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/theme-tasks',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'theme-tasks');
       await output.create(recursive: true);
       for (final kind in ['seed', 'value', 'course']) {
         for (final scale in [1.0, 2.0]) {

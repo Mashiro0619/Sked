@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import '../../test/support/agenda_notification_memory.dart';
 
 import 'dart:convert';
@@ -76,12 +78,7 @@ void registerCaptureScenarios() {
         LicenseEntryWithLineBreaks(const ['Sked'], projectLicense),
       ),
     );
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/workspace-pages',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'workspace-pages');
     await output.create(recursive: true);
     final captures = <Map<String, Object?>>[];
     tester.view.devicePixelRatio = 1;

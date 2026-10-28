@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -18,12 +20,7 @@ void registerCaptureScenarios() {
   testWidgets('capture desktop viewing panels with isolated sample data', (
     t,
   ) async {
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/desktop-panels',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'desktop-panels');
     await output.create(recursive: true);
     t.view.devicePixelRatio = 1;
     t.view.physicalSize = const Size(1440, 900);
