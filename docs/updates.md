@@ -21,8 +21,9 @@ Settings → About → **Receive prerelease updates** is an app-wide, saved pref
 New installations of stable releases default to **off**; Alpha, Beta, RC, and
 other valid prerelease versions default to **on**. The installed version is read
 from local application metadata using the same full-version resolver as update
-checks. If the version is unavailable or malformed, a new installation defaults
-to **off**. This choice makes no network request. Existing saved choices are
+checks. If the version is unavailable, malformed, or takes longer than three
+seconds to resolve, a new installation defaults to **off**; a late metadata
+result cannot change that choice. This choice makes no network request. Existing saved choices are
 preserved and are not recalculated when the application version changes.
 
 Older versions omitted this field when it was off, so an existing snapshot

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
 
 void main() {
-  test('new app data receives prerelease updates by default', () {
+  test('raw model builder keeps its compatibility update default', () {
     final data = buildInitialAppData(buildDefaultPeriodTimes());
     expect(data.includePrereleaseUpdates, isTrue);
     expect(data.toJson()['includePrereleaseUpdates'], isTrue);

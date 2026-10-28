@@ -809,6 +809,7 @@ TimetableExportData decodeTimetableDataEnvelope(
 AppData buildInitialAppData(
   List<CoursePeriodTime> periodTimes, {
   String localeCode = defaultLocaleCode,
+  bool includePrereleaseUpdates = true,
 }) {
   final defaultSet = PeriodTimeSet(
     id: defaultPeriodTimeSetId,
@@ -830,6 +831,7 @@ AppData buildInitialAppData(
     generalMode: GeneralScheduleData.createDefault(localeCode: localeCode)
         .copyWith(themeMode: newUserDefaultThemeMode),
     localeCode: localeCode,
+    includePrereleaseUpdates: includePrereleaseUpdates,
   );
 }
 

@@ -49,6 +49,7 @@ final class AppRuntime {
     SchoolSiteService? schoolSiteService,
     AppBackupRestoreJournal? backupRestoreJournal,
     DataTransferCodec dataTransferCodec = const DataTransferCodec(),
+    @visibleForTesting Future<String> Function()? appVersionLoader,
     @visibleForTesting Duration? uiStateSaveDelay,
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
@@ -90,6 +91,7 @@ final class AppRuntime {
       session: session,
       localeCodeResolver: localeCodeResolver,
       codec: dataTransferCodec,
+      appVersionLoader: appVersionLoader,
     );
     studentView = StudentViewState(session);
     persistence = AppPersistence(
