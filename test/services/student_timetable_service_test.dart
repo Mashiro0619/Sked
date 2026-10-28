@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/student_timetable_service.dart';
+import 'package:sked/services/settings_service.dart';
 
 void main() {
   const service = StudentTimetableService();
@@ -77,6 +78,64 @@ void main() {
       courseNameColorValues: courseNameColorValues,
     );
   }
+
+  group('course color preservation', () {
+    test('adding a course retains two saved uses of the same preset', () {
+      const shared = 0xFFE57373;
+      final source = data(
+        timetables: [
+          timetable(
+            courses: [
+              course(),
+              course(id: 'physics', name: 'Physics'),
+            ],
+          ),
+        ],
+        courseNameColorValues: const {'Algebra': shared, 'Physics': shared},
+      );
+      final updated = service.saveCourse(
+        source,
+        'table1',
+        course(id: 'chemistry', name: 'Chemistry'),
+      );
+      expect(updated.courseNameColorValues['Algebra'], shared);
+      expect(updated.courseNameColorValues['Physics'], shared);
+      expect(updated.courseNameColorValues['Chemistry'], isNot(shared));
+      expect(
+        StudentModeData.fromJson(updated.toJson()).courseNameColorValues,
+        updated.courseNameColorValues,
+      );
+    });
+
+    test('a user may choose the same preset for two course names', () {
+      const shared = 0xFFE57373;
+      final source = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+        studentMode: data(
+          timetables: [
+            timetable(
+              courses: [
+                course(),
+                course(id: 'physics', name: 'Physics'),
+              ],
+            ),
+          ],
+          courseNameColorValues: const {
+            'Algebra': shared,
+            'Physics': 0xFF64B5F6,
+          },
+        ),
+      );
+      final updated = const SettingsService().updateCourseNameColorValue(
+        source,
+        'Physics',
+        shared,
+      );
+      expect(updated.studentMode.courseNameColorValues, {
+        'Algebra': shared,
+        'Physics': shared,
+      });
+    });
+  });
 
   group('StudentTimetableService timetables', () {
     test('switches only to an existing timetable', () {

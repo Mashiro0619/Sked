@@ -522,10 +522,6 @@ Map<String, int> buildStudentCourseNameColorValuesForTimetables(
       continue;
     }
     final colorValue = entry.value;
-    if (usedColors.contains(colorValue) &&
-        _studentCourseColorPalette.contains(colorValue)) {
-      continue;
-    }
     result[normalizedName] = colorValue;
     usedColors.add(colorValue);
   }
