@@ -6,6 +6,9 @@ import 'dart:async';
 /// commit phase blocks ordinary saves, so those preparations cannot deadlock
 /// behind the transaction they are preparing. No application data lives here.
 class WorkspaceTransactions {
+  WorkspaceTransactions({this._onBoundary});
+
+  final void Function()? _onBoundary;
   WorkspaceTransaction? _activeTransaction;
   WorkspaceCommit? _activeCommit;
 
@@ -14,6 +17,7 @@ class WorkspaceTransactions {
   Future<void> run(
     Future<void> Function(WorkspaceTransaction transaction) command,
   ) async {
+    _onBoundary?.call();
     while (_activeTransaction != null) {
       await _activeTransaction!._completed.future;
     }
@@ -22,6 +26,7 @@ class WorkspaceTransactions {
     try {
       await command(transaction);
     } finally {
+      _onBoundary?.call();
       _activeTransaction = null;
       // A later command observes the settled state without inheriting a
       // failure that belongs to the caller of this command.

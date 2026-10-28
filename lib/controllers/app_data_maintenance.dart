@@ -53,6 +53,7 @@ class AppDataMaintenance extends ObservableViewState {
 
   /// The caller flushes any scheduled UI save before closing this write gate.
   AppDataSessionToken reserve() {
+    _repository.sealWriteBatch();
     final token = AppDataSessionToken._(_dataSessionToken.revision + 1);
     _dataSessionToken = token;
     _reservations.add(token);

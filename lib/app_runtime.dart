@@ -60,7 +60,6 @@ final class AppRuntime {
     final journal = backupRestoreJournal ?? AppBackupRestoreJournal();
     final mutationLock =
         workspaceMutationLock ?? withAgendaRuntimeMutationLock<void>;
-    final transactions = WorkspaceTransactions();
     late final AppViewUpdates viewUpdates;
     void publishViews() {
       if (!_isDisposed) viewUpdates.publish();
@@ -68,6 +67,9 @@ final class AppRuntime {
 
     final appRepository =
         repository ?? AppRepository(storage: storage ?? TimetableStorage());
+    final transactions = WorkspaceTransactions(
+      onBoundary: appRepository.sealWriteBatch,
+    );
     maintenance = AppDataMaintenance(
       repository: appRepository,
       notifyViewChanged: publishViews,
@@ -137,6 +139,8 @@ final class AppRuntime {
       secrets: schoolImportSecrets,
       session: session,
       persist: persistence.saveAndNotify,
+      persistPreference: (write) =>
+          persistence.saveAndNotify(preferenceWrite: write),
       service: settingsService ?? const SettingsService(),
     );
     transfers = DataTransferController(

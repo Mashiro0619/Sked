@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../data/app_repository.dart';
 import '../models/app_data.dart';
 import '../models/app_data_commit.dart';
+import '../models/app_preference_write.dart';
 import 'app_session_readiness.dart';
 
 export 'app_session_readiness.dart';
@@ -100,6 +101,8 @@ class AppSession {
     bool publish = true,
     bool rollbackOnFailure = true,
     int dataSessionRevision = 0,
+    AppPreferenceWrite? preferenceWrite,
+    RepositoryWriteContext? writeContext,
   }) async {
     _requireMutationAllowed();
     final attemptEpoch = _mutationEpoch;
@@ -108,6 +111,8 @@ class AppSession {
       final receipt = await repository.save(
         snapshot,
         dataSessionRevision: dataSessionRevision,
+        preferenceWrite: preferenceWrite,
+        writeContext: writeContext,
       );
       if (publish && receipt.batchRevision > _publishedWriteRevision) {
         _publishedWriteRevision = receipt.batchRevision;
@@ -165,6 +170,7 @@ class AppSession {
   /// Accepted writes may finish during shutdown, but can no longer publish.
   Future<void> close() {
     if (isClosed) return _commits.done;
+    repository.sealWriteBatch();
     _readiness.dispose();
     return _commits.close();
   }

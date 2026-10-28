@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../models/app_data.dart';
+import '../models/app_preference_write.dart';
 import 'timetable_storage.dart';
 
 /// Acknowledges the exact snapshot whose storage transaction completed.
@@ -16,6 +17,24 @@ class RepositoryWriteReceipt {
 
   final AppData committedSnapshot;
   final int batchRevision;
+  final int dataSessionRevision;
+}
+
+/// Captured before a command can wait at a workspace or maintenance boundary.
+@immutable
+class RepositoryWriteContext {
+  const RepositoryWriteContext._(
+    this._repository,
+    this._loadGeneration,
+    this._persistedRevision,
+    this._boundaryRevision,
+    this.dataSessionRevision,
+  );
+
+  final Object _repository;
+  final int _loadGeneration;
+  final int _persistedRevision;
+  final int _boundaryRevision;
   final int dataSessionRevision;
 }
 
@@ -43,6 +62,11 @@ class AppRepository {
   Future<void> _pendingWrite = Future.value();
   var _currentRevision = 0;
   int _writesInFlight = 0;
+  final _identity = Object();
+  var _loadGeneration = 0;
+  var _persistedRevision = 0;
+  var _writeBoundaryRevision = 0;
+  _PendingWriteBatch? _tailBatch;
 
   /// 上一次 [load] 的恢复状态。UI 必须消费这个值以决定是否给用户提示
   /// （比如 banner 或设置页通知）。
@@ -62,10 +86,28 @@ class AppRepository {
   /// The last snapshot confirmed by storage, never an optimistic queued write.
   AppData? get persisted => _lastPersisted;
 
+  RepositoryWriteContext captureWriteContext({
+    required int dataSessionRevision,
+  }) => RepositoryWriteContext._(
+    _identity,
+    _loadGeneration,
+    _persistedRevision,
+    _writeBoundaryRevision,
+    dataSessionRevision,
+  );
+
+  /// Ends the current pending batch synchronously without skipping its write.
+  void sealWriteBatch() {
+    _writeBoundaryRevision += 1;
+    _tailBatch = null;
+  }
+
   /// 从底层存储加载一次。返回值为 null 表示首次启动或彻底无数据。
   ///
   /// 加载结果会被缓存到 [current]，恢复状态写入 [lastRecoveryStatus]。
   Future<AppData?> load() async {
+    sealWriteBatch();
+    _loadGeneration += 1;
     late final StorageLoadResult result;
     try {
       result = await _storage.load();
@@ -78,6 +120,7 @@ class AppRepository {
       _current = null;
       _lastPersisted = null;
       _currentRevision += 1;
+      _persistedRevision = _currentRevision;
       return null;
     }
     _lastRecoveryStatus = result.recoveryStatus;
@@ -88,11 +131,13 @@ class AppRepository {
     _current = result.data;
     _lastPersisted = result.data;
     _currentRevision += 1;
+    _persistedRevision = _currentRevision;
     return _current;
   }
 
   /// 重新探测底层存储。I/O/权限问题消失后，成功结果会自动解除写门禁。
   Future<AppData?> retryLoad() async {
+    sealWriteBatch();
     try {
       await _pendingWrite;
     } catch (_) {
@@ -107,6 +152,7 @@ class AppRepository {
   /// Backup restore uses this before taking its provider-level write lease so
   /// an earlier UI save cannot finish in the middle of the restore transaction.
   Future<void> waitForPendingWrites({bool propagateErrors = false}) async {
+    sealWriteBatch();
     final observeFailure = propagateErrors && _writesInFlight > 0;
     while (true) {
       final pendingWrite = _pendingWrite;
@@ -125,6 +171,7 @@ class AppRepository {
   }
 
   void blockWritesAfterInitializationFailure() {
+    sealWriteBatch();
     _lastRecoveryStatus = RecoveryStatus.ioFailure;
     _lastLoadStatus = StorageLoadStatus.ioFailure;
     _canWrite = false;
@@ -168,6 +215,8 @@ class AppRepository {
   Future<RepositoryWriteReceipt> save(
     AppData data, {
     int dataSessionRevision = 0,
+    AppPreferenceWrite? preferenceWrite,
+    RepositoryWriteContext? writeContext,
   }) async {
     _ensureWritable();
     final revision = _replaceCurrent(data);
@@ -175,6 +224,8 @@ class AppRepository {
       data,
       revision: revision,
       dataSessionRevision: dataSessionRevision,
+      preferenceWrite: preferenceWrite,
+      writeContext: writeContext,
     );
     return _awaitOrRollback(pendingWrite, revision);
   }
@@ -213,6 +264,7 @@ class AppRepository {
   }
 
   void _blockWritesAfterStorageFailure() {
+    sealWriteBatch();
     _lastRecoveryStatus = RecoveryStatus.ioFailure;
     _lastLoadStatus = StorageLoadStatus.ioFailure;
     _canWrite = false;
@@ -244,7 +296,37 @@ class AppRepository {
     required int revision,
     int dataSessionRevision = 0,
     bool allowWhileRecoveryBlocked = false,
+    AppPreferenceWrite? preferenceWrite,
+    RepositoryWriteContext? writeContext,
   }) {
+    final prepared =
+        !allowWhileRecoveryBlocked &&
+        preferenceWrite != null &&
+        identical(preferenceWrite.snapshot, data) &&
+        writeContext != null &&
+        _isCurrentWriteContext(writeContext, dataSessionRevision);
+    if (!prepared) sealWriteBatch();
+    final tail = _tailBatch;
+    if (prepared &&
+        tail != null &&
+        !tail.started &&
+        _sameWriteContext(tail.context, writeContext) &&
+        identical(tail.data, preferenceWrite.before) &&
+        !tail.fields.any(preferenceWrite.fields.contains)) {
+      // The verified before/after chain proves that every earlier command's
+      // disjoint fields still exist in this exact final snapshot.
+      tail.data = data;
+      tail.revision = revision;
+      tail.fields.addAll(preferenceWrite.fields);
+      return tail.future;
+    }
+    final batch = _PendingWriteBatch(
+      data: data,
+      revision: revision,
+      context: prepared ? writeContext : null,
+      fields: prepared ? preferenceWrite.fields : const {},
+    );
+    _tailBatch = batch;
     _writesInFlight++;
     final write = _pendingWrite
         .catchError((e) {
@@ -253,6 +335,8 @@ class AppRepository {
           );
         })
         .then((_) async {
+          batch.started = true;
+          final data = batch.data;
           if (!allowWhileRecoveryBlocked) {
             _ensureAcceptedWriteStillWritable();
           }
@@ -270,12 +354,14 @@ class AppRepository {
             rethrow;
           }
           _lastPersisted = data;
+          _persistedRevision = batch.revision;
           return RepositoryWriteReceipt(
             committedSnapshot: data,
-            batchRevision: revision,
+            batchRevision: batch.revision,
             dataSessionRevision: dataSessionRevision,
           );
         });
+    batch.future = write;
     _pendingWrite = write.then<void>((_) {});
     unawaited(
       _pendingWrite.then<void>(
@@ -290,11 +376,42 @@ class AppRepository {
     return write;
   }
 
+  bool _isCurrentWriteContext(RepositoryWriteContext context, int session) =>
+      identical(context._repository, _identity) &&
+      context._loadGeneration == _loadGeneration &&
+      context._persistedRevision == _persistedRevision &&
+      context._boundaryRevision == _writeBoundaryRevision &&
+      context.dataSessionRevision == session;
+
+  bool _sameWriteContext(RepositoryWriteContext? a, RepositoryWriteContext b) =>
+      a != null &&
+      identical(a._repository, b._repository) &&
+      a._loadGeneration == b._loadGeneration &&
+      a._persistedRevision == b._persistedRevision &&
+      a._boundaryRevision == b._boundaryRevision &&
+      a.dataSessionRevision == b.dataSessionRevision;
+
   void _ensureAcceptedWriteStillWritable() {
     if (!_canWrite) {
       throw AcceptedWriteBlockedException(_lastLoadStatus);
     }
   }
+}
+
+class _PendingWriteBatch {
+  _PendingWriteBatch({
+    required this.data,
+    required this.revision,
+    required this.context,
+    required Set<AppPreferenceField> fields,
+  }) : fields = {...fields};
+
+  AppData data;
+  int revision;
+  final RepositoryWriteContext? context;
+  final Set<AppPreferenceField> fields;
+  bool started = false;
+  late final Future<RepositoryWriteReceipt> future;
 }
 
 class RecoveryWriteBlockedException implements Exception {

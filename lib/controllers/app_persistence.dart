@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/app_preference_write.dart';
 import 'app_data_maintenance.dart';
 import 'app_session.dart';
 import 'student_view_state.dart';
@@ -37,6 +38,7 @@ class AppPersistence {
     bool rollbackOnFailure = true,
     bool emitCommit = true,
     int? rollbackSelectedWeek,
+    AppPreferenceWrite? preferenceWrite,
   }) async {
     _session.ensureMutationAllowed();
     final timetableIdBeforeSave = _student.activeTimetableOrNull?.id;
@@ -47,6 +49,7 @@ class AppPersistence {
         workspaceCommit: workspaceCommit,
         rollbackOnFailure: rollbackOnFailure,
         emitCommit: emitCommit,
+        preferenceWrite: preferenceWrite,
       );
     } catch (_) {
       final timetable = _student.activeTimetableOrNull;
@@ -76,19 +79,29 @@ class AppPersistence {
     WorkspaceCommit? workspaceCommit,
     bool rollbackOnFailure = true,
     bool emitCommit = true,
+    AppPreferenceWrite? preferenceWrite,
   }) async {
+    final revision = _maintenance.writeSessionRevision;
+    final writeContext = _session.repository.captureWriteContext(
+      dataSessionRevision: revision,
+    );
+    final canPreparePreference =
+        _transactions.isIdle && !_maintenance.isReserved;
     final pendingCommit = _transactions.waitBeforeSave(commit: workspaceCommit);
     if (pendingCommit != null) await pendingCommit;
     _session.ensureMutationAllowed();
     // Commands already preserve their domain invariants. Capturing the token
     // here also keeps a newly queued restore out of this older save's commit.
     final snapshot = _session.data;
-    final revision = _maintenance.writeSessionRevision;
     await _session.persist(
       snapshot,
       publish: emitCommit,
       rollbackOnFailure: rollbackOnFailure,
-      dataSessionRevision: revision,
+      dataSessionRevision: _maintenance.writeSessionRevision,
+      preferenceWrite: canPreparePreference && pendingCommit == null
+          ? preferenceWrite
+          : null,
+      writeContext: writeContext,
     );
   }
 
@@ -114,6 +127,7 @@ class AppPersistence {
 
   /// Must run synchronously before a maintenance reservation closes the gate.
   void flushScheduledUiStateSave() {
+    _session.repository.sealWriteBatch();
     if (cancelScheduledUiStateSave()) startDeferredUiStateSave();
   }
 

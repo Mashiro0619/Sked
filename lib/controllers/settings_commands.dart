@@ -1,4 +1,5 @@
 import '../models/timetable_models.dart';
+import '../models/app_preference_write.dart';
 import '../services/settings_service.dart';
 import 'app_session.dart';
 import 'school_import_secret_controller.dart';
@@ -27,12 +28,14 @@ class SettingsCommands {
   SettingsCommands({
     required this._session,
     required this._persist,
+    this._persistPreference,
     required this._secrets,
     this._service = const SettingsService(),
   });
 
   final AppSession _session;
   final Future<void> Function() _persist;
+  final Future<void> Function(AppPreferenceWrite write)? _persistPreference;
   final SchoolImportSecretController _secrets;
   final SettingsService _service;
 
@@ -46,10 +49,10 @@ class SettingsCommands {
   }
 
   Future<void> updateIncludePrereleaseUpdates(bool value) async {
+    final before = _data;
     final next = _service.updateIncludePrereleaseUpdates(_data, value);
     if (identical(next, _data)) return;
-    _data = next;
-    await _persist();
+    await _savePreference(before, next, AppPreferenceCommand.prereleaseUpdates);
   }
 
   Future<void> updateNotificationSettings({
@@ -111,22 +114,32 @@ class SettingsCommands {
   }
 
   Future<void> updateHideHomeWorkspaceNavigation(bool value) async {
-    _data = _service.updateHideHomeWorkspaceNavigation(_data, value);
-    await _persist();
+    final before = _data;
+    final next = _service.updateHideHomeWorkspaceNavigation(before, value);
+    await _savePreference(
+      before,
+      next,
+      AppPreferenceCommand.homeNavigationVisibility,
+    );
   }
 
   Future<void> updateHomeWorkspaceNavigationCollapsed(bool value) async {
-    _data = _service.updateHomeWorkspaceNavigationCollapsed(_data, value);
-    await _persist();
+    final before = _data;
+    final next = _service.updateHomeWorkspaceNavigationCollapsed(before, value);
+    await _savePreference(
+      before,
+      next,
+      AppPreferenceCommand.homeNavigationCollapsed,
+    );
   }
 
   Future<void> updateWorkspacePanelDisplayMode(
     WorkspacePanelDisplayMode value,
   ) async {
+    final before = _data;
     final next = _service.updateWorkspacePanelDisplayMode(_data, value);
     if (identical(next, _data)) return;
-    _data = next;
-    await _persist();
+    await _savePreference(before, next, AppPreferenceCommand.panelDisplayMode);
   }
 
   Future<void> updateCloseCoursePopupOnOutsideTap(bool value) async {
@@ -237,8 +250,28 @@ class SettingsCommands {
   }
 
   Future<void> updateLocaleCode(String localeCode) async {
-    _data = _service.updateLocaleCode(_data, localeCode);
-    await _persist();
+    final before = _data;
+    final next = _service.updateLocaleCode(before, localeCode);
+    await _savePreference(before, next, AppPreferenceCommand.locale);
+  }
+
+  Future<void> _savePreference(
+    AppData before,
+    AppData next,
+    AppPreferenceCommand command,
+  ) async {
+    _data = next;
+    final persistPreference = _persistPreference;
+    final write = AppPreferenceWrite.tryCreate(
+      before: before,
+      snapshot: next,
+      command: command,
+    );
+    if (write == null || persistPreference == null) {
+      await _persist();
+    } else {
+      await persistPreference(write);
+    }
   }
 
   AppData _editTheme(AppMode? workspace, AppData Function(AppData) edit) {
