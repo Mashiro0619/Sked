@@ -2922,7 +2922,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count périodes',
-      one: '1 période',
+      one: '$count période',
     );
     return '$_temp0';
   }

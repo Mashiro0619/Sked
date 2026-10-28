@@ -1561,7 +1561,7 @@
   "@dateRangeChooseEnd": {},
   "dateRangeLimit": "Выберите от 1 до 14 дней, включая обе граничные даты.",
   "@dateRangeLimit": {},
-  "dateRangeCustomDays": "Произвольный · {days, plural, =1{1 день} few{{days} дня} other{{days} дней}}",
+  "dateRangeCustomDays": "Произвольный · {days, plural, one{{days} день} few{{days} дня} other{{days} дней}}",
   "@dateRangeCustomDays": {
     "placeholders": {
       "days": {
@@ -1969,7 +1969,7 @@
   "@settingsFeaturesSummary": {},
   "settingsPrivacySummary": "Политика конфиденциальности и очистка локальных данных",
   "@settingsPrivacySummary": {},
-  "periodTimesCount": "{count, plural, =1{Занятий: 1} other{Занятий: {count}}}",
+  "periodTimesCount": "Занятий: {count}",
   "@periodTimesCount": {
     "placeholders": {
       "count": {

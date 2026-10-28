@@ -2823,8 +2823,9 @@ class AppLocalizationsRo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       days,
       locale: localeName,
-      other: '$days zile',
-      one: '1 zi',
+      other: '$days de zile',
+      few: '$days zile',
+      one: '$days zi',
     );
     return 'Personalizat · $_temp0';
   }

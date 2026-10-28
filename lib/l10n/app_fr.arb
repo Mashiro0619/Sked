@@ -1969,7 +1969,7 @@
   "@settingsFeaturesSummary": {},
   "settingsPrivacySummary": "Politique de confidentialité et suppression des données locales",
   "@settingsPrivacySummary": {},
-  "periodTimesCount": "{count, plural, =1{1 période} other{{count} périodes}}",
+  "periodTimesCount": "{count, plural, one{{count} période} other{{count} périodes}}",
   "@periodTimesCount": {
     "placeholders": {
       "count": {

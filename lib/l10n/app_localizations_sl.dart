@@ -2804,7 +2804,7 @@ class AppLocalizationsSl extends AppLocalizations {
       locale: localeName,
       other: '$days dni',
       two: '$days dneva',
-      one: '1 dan',
+      one: '$days dan',
     );
     return 'Po meri · $_temp0';
   }
@@ -2874,7 +2874,7 @@ class AppLocalizationsSl extends AppLocalizations {
       count,
       locale: localeName,
       other: 'Število šolskih ur: $count',
-      one: '1 šolska ura',
+      one: '$count šolska ura',
     );
     return '$_temp0';
   }

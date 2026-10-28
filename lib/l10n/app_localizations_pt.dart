@@ -2890,7 +2890,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count períodos',
-      one: '1 período',
+      one: '$count período',
     );
     return '$_temp0';
   }

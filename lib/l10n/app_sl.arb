@@ -1561,7 +1561,7 @@
   "@dateRangeChooseEnd": {},
   "dateRangeLimit": "Izberi od 1 do 14 dni, vključno z obema datumoma.",
   "@dateRangeLimit": {},
-  "dateRangeCustomDays": "Po meri · {days, plural, =1{1 dan} two{{days} dneva} other{{days} dni}}",
+  "dateRangeCustomDays": "Po meri · {days, plural, one{{days} dan} two{{days} dneva} other{{days} dni}}",
   "@dateRangeCustomDays": {
     "placeholders": {
       "days": {
@@ -1984,7 +1984,7 @@
   "@settingsFeaturesSummary": {},
   "settingsPrivacySummary": "Pravilnik o zasebnosti in čiščenje lokalnih podatkov",
   "@settingsPrivacySummary": {},
-  "periodTimesCount": "{count, plural, =1{1 šolska ura} other{Število šolskih ur: {count}}}",
+  "periodTimesCount": "{count, plural, one{{count} šolska ura} other{Število šolskih ur: {count}}}",
   "@periodTimesCount": {
     "placeholders": {
       "count": {

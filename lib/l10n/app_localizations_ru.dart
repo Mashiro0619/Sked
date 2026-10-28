@@ -2820,7 +2820,7 @@ class AppLocalizationsRu extends AppLocalizations {
       locale: localeName,
       other: '$days дней',
       few: '$days дня',
-      one: '1 день',
+      one: '$days день',
     );
     return 'Произвольный · $_temp0';
   }
@@ -2885,13 +2885,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String periodTimesCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Занятий: $count',
-      one: 'Занятий: 1',
-    );
-    return '$_temp0';
+    return 'Занятий: $count';
   }
 
   @override

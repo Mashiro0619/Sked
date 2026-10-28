@@ -2846,13 +2846,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String periodTimesCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count पीरियड',
-      one: '1 पीरियड',
-    );
-    return '$_temp0';
+    return '$count पीरियड';
   }
 
   @override

@@ -1969,7 +1969,7 @@
   "@settingsFeaturesSummary": {},
   "settingsPrivacySummary": "गोपनीयता नीति और स्थानीय डेटा मिटाना",
   "@settingsPrivacySummary": {},
-  "periodTimesCount": "{count, plural, =1{1 पीरियड} other{{count} पीरियड}}",
+  "periodTimesCount": "{count} पीरियड",
   "@periodTimesCount": {
     "placeholders": {
       "count": {

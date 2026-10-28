@@ -1561,7 +1561,7 @@
   "@dateRangeChooseEnd": {},
   "dateRangeLimit": "Selectează între 1 și 14 zile, inclusiv ambele capete.",
   "@dateRangeLimit": {},
-  "dateRangeCustomDays": "Personalizat · {days, plural, =1{1 zi} other{{days} zile}}",
+  "dateRangeCustomDays": "Personalizat · {days, plural, one{{days} zi} few{{days} zile} other{{days} de zile}}",
   "@dateRangeCustomDays": {
     "placeholders": {
       "days": {
