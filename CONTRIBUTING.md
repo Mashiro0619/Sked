@@ -51,6 +51,8 @@ git diff --check
 
 CI 将完整 VM 测试按 `--total-shards=4 --shard-index=0..3` 分配，每个分片以 `--concurrency=2` 运行并保存自己的覆盖率。`tool/merge_lcov.dart` 要求四份报告齐全后才合并默认行覆盖率，重新计算命中总数；若未来启用函数或分支覆盖率，需先扩展合并器，不能丢弃未知记录。原 `test` 门禁等待质量检查、所有分片和覆盖率合并成功，失败、取消或缺片均不能通过；浏览器、五个时区及平台构建仍分别运行。
 
+按名称单跑或分片运行时，每个用例也必须具备完整前置条件。测试自行初始化所需的进程内服务和注册项，不依赖其他用例的执行顺序或遗留状态。
+
 独立设置页组件测试通过 `test/support/notification_test_scope.dart` 的 `MaterialApp.builder` 注入内存通知网关和运行时存储，或显式传入测试自己的通知服务。同文件的 `setUpNotificationTestPlatform` 只为当前测试注册自动启动能力读取的替身，并在每项结束时移除；未知平台调用仍会报错。不要屏蔽 `debugPrint`、吞掉平台错误或全局替换通知插件来消除日志；通知网关专项仍需覆盖真实失败反馈。
 
 构建命令与平台验收入口见 [可靠性验证指南](docs/RELIABILITY_BASELINE.md)。常用本地命令为 `flutter build windows --release` 和 `flutter build apk --debug`；正式 Android 签名、MSIX 身份与商店配置遵守对应发布文档，不使用或提交他人的签名材料。

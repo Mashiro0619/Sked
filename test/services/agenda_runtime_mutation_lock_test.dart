@@ -127,6 +127,8 @@ void main() {
   });
 
   test('cancels active and queued broker requests safely', () async {
+    // A shard or named run may execute this without an earlier lock request.
+    await withAgendaRuntimeMutationLock(() async {});
     final broker = IsolateNameServer.lookupPortByName(
       _runtimeMutationBrokerName,
     );
