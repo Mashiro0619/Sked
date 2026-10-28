@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -20,12 +22,7 @@ import '../../test/support/workspace_harness.dart';
 void registerCaptureScenarios() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('desktop editor Windows-font layout matrix', (t) async {
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/workspace-editor',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'workspace-editor');
     await output.create(recursive: true);
     final captures = <Map<String, Object?>>[];
     addTearDown(t.view.reset);

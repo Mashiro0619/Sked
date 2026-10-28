@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -18,11 +20,8 @@ void registerCaptureScenarios() {
   anchors.runFloatingAnchorRegressionTests(
     group: group,
     capture: (tester, scene) async {
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/floating-panel-anchors',
-        ),
+      final output = createCaptureOutputDirectory(
+        label: 'floating-panel-anchors',
       );
       await output.create(recursive: true);
       final boundary = tester.renderObject<RenderRepaintBoundary>(

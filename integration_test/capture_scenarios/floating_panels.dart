@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -29,12 +31,7 @@ void registerCaptureScenarios() {
   testWidgets(
     'course fields open adjacent redesigned panels with actual fonts',
     (t) async {
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/floating-panels',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'floating-panels');
       await output.create(recursive: true);
       t.view.devicePixelRatio = 1;
       t.view.physicalSize = const Size(1366, 900);
@@ -151,12 +148,7 @@ void registerCaptureScenarios() {
   testWidgets(
     'desktop floating choices actual-font light dark locale and scale gallery',
     (t) async {
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/floating-panels',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'floating-panels');
       await output.create(recursive: true);
       t.view.devicePixelRatio = 1;
       t.view.physicalSize = const Size(1280, 900);

@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -20,12 +22,7 @@ void registerCaptureScenarios() {
   binding.shouldPropagateDevicePointerEvents = true;
   testWidgets('category list and name dialogs with actual fonts', (t) async {
     await DesktopWindowBridge.instance.initialize();
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/category-manager',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'category-manager');
     await output.create(recursive: true);
     final captures = <Map<String, Object?>>[];
     final cases = [
