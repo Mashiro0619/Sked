@@ -2143,5 +2143,6 @@
   "notificationWindowsCoverageCapacityLimited": "Das Erinnerungslimit ist erreicht. Einige Erinnerungen sind noch nicht geplant. Öffne die App erneut, nachdem anstehende Erinnerungen ausgelöst wurden, um den Plan zu aktualisieren.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Keine Kurse an diesem Tag",
-  "courseInactiveThisWeek": "Diese Woche nicht im Stundenplan"
+  "courseInactiveThisWeek": "Diese Woche nicht im Stundenplan",
+  "notificationSnoozeAction": "10 Minuten verschieben"
 }

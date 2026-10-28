@@ -2145,5 +2145,6 @@
   "notificationWindowsCoverageCapacityLimited": "Byl dosažen limit připomenutí. Některá ještě nejsou naplánována. Po spuštění nejbližších připomenutí aplikaci znovu otevřete a aktualizujte plán.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Na tento den nejsou žádné hodiny",
-  "courseInactiveThisWeek": "Tento týden není v rozvrhu"
+  "courseInactiveThisWeek": "Tento týden není v rozvrhu",
+  "notificationSnoozeAction": "Odložit o 10 minut"
 }

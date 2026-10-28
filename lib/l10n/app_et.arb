@@ -2145,5 +2145,6 @@
   "notificationWindowsCoverageCapacityLimited": "Meeldetuletuste piirang on saavutatud. Mõned pole veel ajastatud. Plaani uuendamiseks ava rakendus pärast lähimate meeldetuletuste käivitumist uuesti.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Sel päeval pole tunde",
-  "courseInactiveThisWeek": "Sel nädalal tunniplaanis puudub"
+  "courseInactiveThisWeek": "Sel nädalal tunniplaanis puudub",
+  "notificationSnoozeAction": "Lükka 10 minutit edasi"
 }

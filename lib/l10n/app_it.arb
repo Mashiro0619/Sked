@@ -2145,5 +2145,6 @@
   "notificationWindowsCoverageCapacityLimited": "È stato raggiunto il limite di promemoria. Alcuni non sono ancora programmati. Riapri l’app dopo l’attivazione dei prossimi promemoria per aggiornare il piano.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Nessuna lezione per questo giorno",
-  "courseInactiveThisWeek": "Non in programma questa settimana"
+  "courseInactiveThisWeek": "Non in programma questa settimana",
+  "notificationSnoozeAction": "Posticipa di 10 minuti"
 }

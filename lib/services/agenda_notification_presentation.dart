@@ -194,33 +194,8 @@ NotificationText notificationText(String localeCode) {
       (locale.scriptCode?.toLowerCase() == 'hant' ||
           locale.countryCode?.toLowerCase() == 'tw' ||
           locale.countryCode?.toLowerCase() == 'hk');
-  final snoozeAction = switch (language) {
-    'bg' => 'Отложи с 10 минути',
-    'cs' => 'Odložit o 10 minut',
-    'da' => 'Udsæt 10 minutter',
-    'zh' => traditional ? '延後 10 分鐘' : '延后 10 分钟',
-    'de' => '10 Minuten verschieben',
-    'el' => 'Αναβολή για 10 λεπτά',
-    'et' => 'Lükka 10 minutit edasi',
-    'es' => 'Posponer 10 minutos',
-    'fi' => 'Siirrä 10 minuuttia',
-    'fr' => 'Reporter de 10 minutes',
-    'hi' => '10 मिनट बाद याद दिलाएं',
-    'hu' => 'Elhalasztás 10 perccel',
-    'it' => 'Posticipa di 10 minuti',
-    'ja' => '10 分後に再通知',
-    'ko' => '10분 후 다시 알림',
-    'nl' => '10 minuten uitstellen',
-    'pl' => 'Odłóż o 10 minut',
-    'pt' => 'Adiar 10 minutos',
-    'ro' => 'Amână 10 minute',
-    'ru' => 'Отложить на 10 минут',
-    'sl' => 'Preloži za 10 minut',
-    'sv' => 'Skjut upp 10 minuter',
-    'th' => 'เลื่อน 10 นาที',
-    'vi' => 'Hoãn 10 phút',
-    _ => 'Snooze 10 minutes',
-  };
+  final snoozeAction = _notificationActionLocalizations(locale)
+      .notificationSnoozeAction;
   final handledAction = switch (language) {
     'bg' => 'Маркиране като обработено',
     'cs' => 'Označit jako vyřízené',
@@ -252,6 +227,21 @@ NotificationText notificationText(String localeCode) {
     allDay: l10n.allDay,
     snoozeAction: snoozeAction,
     handledAction: handledAction,
+  );
+}
+
+AppLocalizations _notificationActionLocalizations(Locale locale) {
+  // Keep legacy region aliases, including an explicit Hans script combined
+  // with TW/HK, consistent with the notification labels they already use.
+  final traditional =
+      locale.languageCode == 'zh' &&
+      (locale.scriptCode?.toLowerCase() == 'hant' ||
+          locale.countryCode?.toLowerCase() == 'tw' ||
+          locale.countryCode?.toLowerCase() == 'hk');
+  return lookupNotificationLocalizations(
+    traditional
+        ? const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
+        : locale,
   );
 }
 

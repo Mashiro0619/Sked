@@ -2145,5 +2145,6 @@
   "notificationWindowsCoverageCapacityLimited": "La limite de rappels est atteinte. Certains ne sont pas encore programmés. Rouvrez l’application après le déclenchement des prochains rappels pour actualiser le planning.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Aucun cours ce jour",
-  "courseInactiveThisWeek": "Non prévu cette semaine"
+  "courseInactiveThisWeek": "Non prévu cette semaine",
+  "notificationSnoozeAction": "Reporter de 10 minutes"
 }

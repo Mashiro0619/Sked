@@ -3274,4 +3274,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String importWarningRecurrenceRuleDowngraded(Object fields) {
     return 'This event will be imported as a single event. Unsupported fields or rule parts: $fields.';
   }
+
+  @override
+  String get notificationSnoozeAction => '10 minuten uitstellen';
 }

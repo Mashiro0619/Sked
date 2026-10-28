@@ -2164,5 +2164,6 @@
   "importTextFileTooLarge": "文本文件不能超过 {size} MB。",
   "icsImportReviewNotice": "准备导入 {count} 个日程，共有 {warningCount} 条提示。请核对下方所有跳过和调整的内容；目前尚未保存。",
   "icsImportContinueAction": "继续导入",
-  "importWarningRecurrenceRuleDowngraded": "此日程将按单次事件导入；不支持的字段或规则部分：{fields}。"
+  "importWarningRecurrenceRuleDowngraded": "此日程将按单次事件导入；不支持的字段或规则部分：{fields}。",
+  "notificationSnoozeAction": "延后 10 分钟"
 }

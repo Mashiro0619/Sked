@@ -2160,5 +2160,6 @@
   "notificationWindowsCoverageCapacityLimited": "ถึงขีดจำกัดจำนวนการเตือนแล้ว บางรายการยังไม่ได้ตั้งเวลา โปรดเปิดแอปอีกครั้งหลังจากการเตือนที่ใกล้ถึงกำหนดทำงานแล้วเพื่ออัปเดตแผน",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "วันนี้ไม่มีวิชาเรียน",
-  "courseInactiveThisWeek": "ไม่มีเรียนในสัปดาห์นี้"
+  "courseInactiveThisWeek": "ไม่มีเรียนในสัปดาห์นี้",
+  "notificationSnoozeAction": "เลื่อน 10 นาที"
 }

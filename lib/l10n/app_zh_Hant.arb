@@ -2166,5 +2166,6 @@
   "importTextFileTooLarge": "文字檔案不能超過 {size} MB。",
   "icsImportReviewNotice": "準備匯入 {count} 個日程，共有 {warningCount} 則提示。請核對下方所有略過和調整的內容；目前尚未儲存。",
   "icsImportContinueAction": "繼續匯入",
-  "importWarningRecurrenceRuleDowngraded": "此日程將以單次事件匯入；不支援的欄位或規則部分：{fields}。"
+  "importWarningRecurrenceRuleDowngraded": "此日程將以單次事件匯入；不支援的欄位或規則部分：{fields}。",
+  "notificationSnoozeAction": "延後 10 分鐘"
 }

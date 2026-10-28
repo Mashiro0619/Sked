@@ -2215,5 +2215,7 @@
   "importTextFileTooLarge": "Text files must be {size} MB or smaller.",
   "icsImportReviewNotice": "Ready to import {count} events with {warningCount} warnings. Review all skipped events and changes below. Nothing has been saved yet.",
   "icsImportContinueAction": "Continue import",
-  "importWarningRecurrenceRuleDowngraded": "This event will be imported as a single event. Unsupported fields or rule parts: {fields}."
+  "importWarningRecurrenceRuleDowngraded": "This event will be imported as a single event. Unsupported fields or rule parts: {fields}.",
+  "notificationSnoozeAction": "Snooze 10 minutes",
+  "@notificationSnoozeAction": {"description": "Notification action that snoozes this reminder by the fixed ten-minute duration."}
 }

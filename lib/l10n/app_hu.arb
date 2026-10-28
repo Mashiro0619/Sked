@@ -2145,5 +2145,6 @@
   "notificationWindowsCoverageCapacityLimited": "Az emlékeztetők száma elérte a korlátot. Néhány még nincs ütemezve. A terv frissítéséhez a közelgő emlékeztetők jelzése után nyisd meg újra az alkalmazást.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "Ezen a napon nincsenek órák",
-  "courseInactiveThisWeek": "Ezen a héten nincs óra"
+  "courseInactiveThisWeek": "Ezen a héten nincs óra",
+  "notificationSnoozeAction": "Elhalasztás 10 perccel"
 }

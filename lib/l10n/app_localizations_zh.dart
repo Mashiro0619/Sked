@@ -3035,6 +3035,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String importWarningRecurrenceRuleDowngraded(Object fields) {
     return '此日程将按单次事件导入；不支持的字段或规则部分：$fields。';
   }
+
+  @override
+  String get notificationSnoozeAction => '延后 10 分钟';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6069,4 +6072,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String importWarningRecurrenceRuleDowngraded(Object fields) {
     return '此日程將以單次事件匯入；不支援的欄位或規則部分：$fields。';
   }
+
+  @override
+  String get notificationSnoozeAction => '延後 10 分鐘';
 }

@@ -2145,5 +2145,6 @@
   "notificationWindowsCoverageCapacityLimited": "Достигнут лимит напоминаний. Некоторые ещё не запланированы. После срабатывания ближайших напоминаний откройте приложение заново, чтобы обновить план.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "studentDayEmpty": "В этот день нет занятий",
-  "courseInactiveThisWeek": "Не запланировано на эту неделю"
+  "courseInactiveThisWeek": "Не запланировано на эту неделю",
+  "notificationSnoozeAction": "Отложить на 10 минут"
 }

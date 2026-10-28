@@ -5765,6 +5765,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This event will be imported as a single event. Unsupported fields or rule parts: {fields}.'**
   String importWarningRecurrenceRuleDowngraded(Object fields);
+
+  /// Notification action that snoozes this reminder by the fixed ten-minute duration.
+  ///
+  /// In en, this message translates to:
+  /// **'Snooze 10 minutes'**
+  String get notificationSnoozeAction;
 }
 
 class _AppLocalizationsDelegate
