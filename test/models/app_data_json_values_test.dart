@@ -57,6 +57,18 @@ void main() {
     });
   });
 
+  test('strict object reader rejects mixed keys without dropping data', () {
+    final nested = <String, Object?>{'value': 1};
+    expect(
+      appDataStrictStringKeyedMap({'nested': nested, 42: 'value'}),
+      isNull,
+    );
+    expect(appDataStrictStringKeyedMap([]), isNull);
+    final accepted = appDataStrictStringKeyedMap({'nested': nested});
+    expect(accepted, {'nested': nested});
+    expect(accepted!['nested'], same(nested));
+  });
+
   test(
     'numeric truncation and optional format errors are distinct policies',
     () {

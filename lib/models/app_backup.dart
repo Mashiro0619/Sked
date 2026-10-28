@@ -1,3 +1,5 @@
+import 'app_data_json_values.dart';
+
 import 'dart:convert';
 
 import '../l10n/app_locale.dart';
@@ -61,7 +63,7 @@ AppBackupData _decodeAppBackup(
         localeCode: localeCode,
       );
     }
-    final rawAppData = _stringKeyedMap(envelope.data['appData']);
+    final rawAppData = appDataStrictStringKeyedMap(envelope.data['appData']);
     final rawSchoolSites = envelope.data['schoolSites'];
     if (rawAppData == null || rawSchoolSites is! List) {
       throw const FormatException('App backup format is invalid.');
@@ -94,18 +96,4 @@ AppBackupData _decodeAppBackup(
   }
 
   throw FormatException(importFileTypeMismatchMessage(localeCode: localeCode));
-}
-
-Map<String, dynamic>? _stringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return null;
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    if (entry.key is! String) {
-      return null;
-    }
-    result[entry.key as String] = entry.value;
-  }
-  return result;
 }

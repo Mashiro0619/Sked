@@ -54,6 +54,18 @@ Map<String, dynamic>? appDataStringKeyedMap(Object? value) {
 Map<String, dynamic> appDataStringKeyedMapOrEmpty(Object? value) =>
     appDataStringKeyedMap(value) ?? const <String, dynamic>{};
 
+/// Strict objects reject the whole value instead of dropping non-string keys.
+Map<String, dynamic>? appDataStrictStringKeyedMap(Object? value) {
+  if (value is! Map) return null;
+  final result = <String, dynamic>{};
+  for (final entry in value.entries) {
+    final key = entry.key;
+    if (key is! String) return null;
+    result[key] = entry.value;
+  }
+  return result;
+}
+
 Map<String, String> appDataStringMap(Object? value) {
   if (value is! Map) return const {};
   final result = <String, String>{};
