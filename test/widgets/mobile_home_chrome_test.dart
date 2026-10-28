@@ -12,6 +12,27 @@ import '../support/workspace_harness.dart';
 
 Finder key(String value) => find.byKey(ValueKey(value));
 
+void expectReadableToolbarHeight(WidgetTester tester, Rect row, Finder button) {
+  final text = find.descendant(of: button, matching: find.byType(Text));
+  final paragraph = tester.renderObject<RenderParagraph>(
+    find.descendant(of: text, matching: find.byType(RichText)),
+  );
+  final line = TextPainter(
+    text: TextSpan(text: '0', style: paragraph.text.style),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(tester.element(text)),
+  )..layout();
+  // Large text may use two complete date/week lines. Neither workspace may
+  // regain the old single-line ellipsis just to stay under 52dp.
+  expect(paragraph.didExceedMaxLines, isFalse);
+  expect(paragraph.size.height, lessThanOrEqualTo(line.height * 2 + .1));
+  expect(
+    row.height,
+    lessThanOrEqualTo((line.height * 2 + 16).clamp(52, double.infinity)),
+  );
+  line.dispose();
+}
+
 class _Storage extends WorkspaceMemoryStorage {
   _Storage(super.data);
   int writes = 0;
@@ -125,7 +146,7 @@ void main() {
           final row = t.getRect(key('general-compact-toolbar-single-row'));
           expect(key('general-compact-toolbar-rows'), findsNothing);
           expect(row.top, 28);
-          expect(row.height, lessThanOrEqualTo(52));
+          expectReadableToolbarHeight(t, row, key('general-date-title-button'));
           for (final name in [
             'general-calendar-selector',
             'general-date-title-button',
@@ -133,6 +154,8 @@ void main() {
             'general-toolbar-more-button',
             'general-toolbar-more-button',
           ]) {
+            await t.ensureVisible(key(name));
+            await t.pumpAndSettle();
             final item = t.getRect(key(name));
             expect(item.center.dy, closeTo(row.center.dy, 1), reason: name);
             expect(item.width, greaterThanOrEqualTo(48));
@@ -144,8 +167,16 @@ void main() {
           final scrolling = t.widget<SingleChildScrollView>(
             key('general-compact-toolbar-scroll'),
           );
-          expect(scrolling.physics, isA<NeverScrollableScrollPhysics>());
+          final viewport = t.getRect(key('general-compact-toolbar-scroll'));
+          expect(
+            scrolling.physics,
+            row.width > viewport.width + .5
+                ? isA<ClampingScrollPhysics>()
+                : isA<NeverScrollableScrollPhysics>(),
+          );
           expect(storage.writes, before);
+          await t.ensureVisible(key('general-date-title-button'));
+          await t.pumpAndSettle();
           await t.tap(key('general-date-title-button'));
           await t.pumpAndSettle();
           expect(find.byType(SkedDatePicker), findsOneWidget);
@@ -159,7 +190,11 @@ void main() {
           final toolbar = find.byType(SkedWorkspaceToolbar).hitTestable().first;
           final toolbarRect = t.getRect(toolbar);
           expect(toolbarRect.top, 28);
-          expect(toolbarRect.height, lessThanOrEqualTo(52));
+          expectReadableToolbarHeight(
+            t,
+            toolbarRect,
+            key('student-week-picker-button'),
+          );
           final control = t.getRect(key('student-week-picker-button'));
           expect(control.top, closeTo(toolbarRect.top, 1));
           expect(
