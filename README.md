@@ -40,7 +40,7 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 
 ### 平板 / 桌面
 
-> 以下大屏截图已于 2026-10-09 更新，展示当前课表、日程、设置与编辑界面。这些图片由 Windows 原生 Flutter 渲染器生成，并非 Android 平板实机截图。详见[截图说明](docs/screenshots/README.md)。
+> 以下大屏截图已于 2026-10-09 更新，展示当时版本的课表、日程、设置与编辑界面。这些图片由 Windows 原生 Flutter 渲染器生成，并非 Android 平板实机截图。详见[截图说明](docs/screenshots/README.md)。
 
 <p align="center">
   <a href="docs/screenshots/zh/student-week-desktop.jpg"><img src="docs/screenshots/zh/student-week-desktop.jpg" width="400" alt="课表周视图" title="课表周视图"></a>
