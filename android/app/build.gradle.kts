@@ -89,6 +89,9 @@ tasks.matching { isReleaseBuildTask(it.name) }.configureEach {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     testImplementation("junit:junit:4.13.2")
+    // Own the streaming JSON dependency used by the filtered D2D artifact.
+    // This is already the version resolved by flutter_local_notifications.
+    implementation("com.google.code.gson:gson:2.12.0")
     // Own the Activity Result API dependency used by MainActivity explicitly.
     // Keep the version already resolved by Flutter's Android embedding.
     implementation("androidx.activity:activity:1.9.0")

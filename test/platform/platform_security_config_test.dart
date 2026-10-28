@@ -107,7 +107,18 @@ void main() {
     );
     expect(
       application.getAttribute('allowBackup', namespaceUri: _androidNamespace),
-      'false',
+      'true',
+    );
+    expect(
+      application.getAttribute('backupAgent', namespaceUri: _androidNamespace),
+      '.SkedBackupAgent',
+    );
+    expect(
+      application.getAttribute(
+        'fullBackupOnly',
+        namespaceUri: _androidNamespace,
+      ),
+      'true',
     );
     expect(
       application.getAttribute(
@@ -256,7 +267,7 @@ void main() {
     );
   });
 
-  test('Android backup rules exclude every app data domain', () {
+  test('Android backup permits only the filtered device-transfer artifact', () {
     final rules = _readXml(
       'android/app/src/main/res/xml/data_extraction_rules.xml',
     );
@@ -272,7 +283,7 @@ void main() {
       'device_sharedpref:.',
     };
 
-    for (final sectionName in ['cloud-backup', 'device-transfer']) {
+    for (final sectionName in ['cloud-backup']) {
       final section = _singleElement(rules, sectionName);
       final exclusions = section.children
           .whereType<XmlElement>()
@@ -291,6 +302,17 @@ void main() {
         reason: sectionName,
       );
     }
+    final transfer = _singleElement(rules, 'device-transfer');
+    final entries = transfer.children.whereType<XmlElement>().toList();
+    expect(entries, hasLength(1));
+    expect(entries.single.localName, 'include');
+    expect(entries.single.getAttribute('domain'), 'file');
+    expect(
+      entries.single.getAttribute('path'),
+      'Sked_device_transfer/Sked_data.json',
+    );
+    expect(entries.single.attributes, hasLength(2));
+    expect(entries.single.children.whereType<XmlElement>(), isEmpty);
   });
 
   test('Apple targets declare local-network, Keychain, and sandbox access', () {

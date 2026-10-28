@@ -152,9 +152,25 @@ List<String> androidMergedManifestIssues(
     issues,
     application,
     'allowBackup',
-    'false',
+    'true',
     'application',
   );
+  _expectAndroidAttribute(
+    issues,
+    application,
+    'fullBackupOnly',
+    'true',
+    'application',
+  );
+  if (_resolveAndroidComponentName(
+        _androidAttribute(application, 'backupAgent'),
+        applicationId,
+      ) !=
+      '$applicationId.SkedBackupAgent') {
+    issues.add(
+      'Release application must use android:backupAgent=".SkedBackupAgent".',
+    );
+  }
   _expectAndroidAttribute(
     issues,
     application,
@@ -810,6 +826,25 @@ void _validateAndroidDataExtractionRules(String contents, List<String> issues) {
   }
   for (final section in sections) {
     final children = section.children.whereType<XmlElement>().toList();
+    if (section.attributes.isNotEmpty) {
+      issues.add(
+        '${section.localName} must not override the transfer contract.',
+      );
+    }
+    if (section.localName == 'device-transfer') {
+      if (children.length != 1 ||
+          children.single.localName != 'include' ||
+          children.single.getAttribute('domain') != 'file' ||
+          children.single.getAttribute('path') !=
+              'Sked_device_transfer/Sked_data.json' ||
+          children.single.attributes.length != 2 ||
+          children.single.children.whereType<XmlElement>().isNotEmpty) {
+        issues.add(
+          'device-transfer must include only the filtered main-data artifact.',
+        );
+      }
+      continue;
+    }
     if (children.any((element) => element.localName != 'exclude')) {
       issues.add('${section.localName} must contain only exclusions.');
       continue;
@@ -822,7 +857,12 @@ void _validateAndroidDataExtractionRules(String contents, List<String> issues) {
         .toSet();
     if (exclusions.length != children.length ||
         !exclusions.containsAll(expectedExclusions) ||
-        exclusions.length != expectedExclusions.length) {
+        exclusions.length != expectedExclusions.length ||
+        children.any(
+          (element) =>
+              element.attributes.length != 2 ||
+              element.children.whereType<XmlElement>().isNotEmpty,
+        )) {
       issues.add('${section.localName} must exclude every app data domain.');
     }
   }

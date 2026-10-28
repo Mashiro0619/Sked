@@ -19,6 +19,77 @@ void main() {
     );
   });
 
+  test(
+    'requires the filtered full-backup agent and disables legacy backup',
+    () {
+      for (final attribute in {
+        'backupAgent': '.SkedBackupAgent',
+        'fullBackupOnly': 'true',
+        'fullBackupContent': 'false',
+      }.entries) {
+        for (final replacement in [
+          '',
+          'android:${attribute.key}="unexpected"',
+        ]) {
+          final manifest = _androidManifest().replaceFirst(
+            'android:${attribute.key}="${attribute.value}"',
+            replacement,
+          );
+          expect(
+            androidMergedManifestIssues(
+              manifest,
+              applicationId: _applicationId,
+              expectedTargetSdk: _expectedTargetSdk,
+            ),
+            contains(contains(attribute.key)),
+          );
+        }
+      }
+      expect(
+        androidMergedManifestIssues(
+          _androidManifest().replaceFirst(
+            'android:backupAgent=".SkedBackupAgent"',
+            'android:backupAgent="$_applicationId.SkedBackupAgent"',
+          ),
+          applicationId: _applicationId,
+          expectedTargetSdk: _expectedTargetSdk,
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  test('device-transfer never includes raw data, runtime state or whole domains', () {
+    const approved =
+        '<include domain="file" path="Sked_device_transfer/Sked_data.json" />';
+    for (final replacement in [
+      '',
+      '<include domain="file" path="Sked_data.json" />',
+      '<include domain="file" path="Sked_data.json.bak" />',
+      '<include domain="file" path="Sked_device_transfer" />',
+      '<include domain="file" path="." />',
+      '<include domain="root" path="." />',
+      '<include domain="sharedpref" path="." />',
+      '<include domain="database" path="." />',
+      '$approved$approved',
+      '$approved<exclude domain="root" path="." />',
+      approved.replaceFirst(' />', ' requireFlags="clientSideEncryption" />'),
+    ]) {
+      expect(
+        androidReleaseResourceIssues(
+          _androidResources(
+            dataExtractionRules: _dataExtractionRules.replaceFirst(
+              approved,
+              replacement,
+            ),
+          ),
+        ),
+        contains(contains('only the filtered main-data artifact')),
+        reason: replacement,
+      );
+    }
+  });
+
   test('rejects the unused direct battery-exemption request permission', () {
     for (final tag in ['uses-permission', 'uses-permission-sdk-23']) {
       expect(
@@ -156,7 +227,7 @@ void main() {
     final manifest = _androidManifest(
       extraPermission:
           '<uses-permission android:name="android.permission.CAMERA" />',
-      allowBackup: 'true',
+      allowBackup: 'false',
       applicationAttributes: 'android:usesCleartextTraffic="true"',
       extraComponent:
           '<receiver android:name=".UnsafeReceiver" android:exported="true" />',
@@ -550,7 +621,7 @@ String _androidManifest({
   String extraPermission = '',
   String internetPermission =
       '<uses-permission android:name="android.permission.INTERNET" />',
-  String allowBackup = 'false',
+  String allowBackup = 'true',
   String targetSdkVersion = '36',
   String applicationAttributes = '',
   String mainActivityAttributes = '',
@@ -576,6 +647,8 @@ String _androidManifest({
   $permissionUse
   <application
       android:allowBackup="$allowBackup"
+      android:backupAgent=".SkedBackupAgent"
+      android:fullBackupOnly="true"
       android:fullBackupContent="false"
       android:dataExtractionRules="@xml/data_extraction_rules"
       android:networkSecurityConfig="@xml/network_security_config"
@@ -682,15 +755,7 @@ const _dataExtractionRules = '''
     <exclude domain="device_sharedpref" path="." />
   </cloud-backup>
   <device-transfer>
-    <exclude domain="root" path="." />
-    <exclude domain="file" path="." />
-    <exclude domain="database" path="." />
-    <exclude domain="sharedpref" path="." />
-    <exclude domain="external" path="." />
-    <exclude domain="device_root" path="." />
-    <exclude domain="device_file" path="." />
-    <exclude domain="device_database" path="." />
-    <exclude domain="device_sharedpref" path="." />
+    <include domain="file" path="Sked_device_transfer/Sked_data.json" />
   </device-transfer>
 </data-extraction-rules>
 ''';
