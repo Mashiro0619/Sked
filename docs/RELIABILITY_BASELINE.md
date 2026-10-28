@@ -36,6 +36,8 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 合并批次仍执行原来的完整文件事务，所有调用仅在该事务成功后得到同一实际快照回执；有发布请求时提交流发布一次，全部静默保存时不发布。失败时所有批内调用失败，继续执行原有写门禁、结果未知和较新草稿的 epoch 回滚规则。普通完整快照保存、加载、恢复与清除预约、工作区事务、显式 flush、退出等待和关闭会话均终止当前批次；不能跨这些边界合并。见 [批次及磁盘故障测试](../test/data/app_repository_batch_test.dart)、[真实偏好命令与发布测试](../test/controllers/app_preference_batch_test.dart) 和 [写集合校验](../test/models/app_preference_write_test.dart)。
 
+原生存储的可选预览观察入口只返回当前可安全读取的候选，不代表完整读取或恢复完成。temporary 与 main 完整解码后，先读取并冻结 backup 字节，再发出候选；同一份冻结字节仍须完整解码。不能越过更高优先级的未来版本或 I/O 阻断展示较低候选，backup 的未来版本与 I/O 错误仍能关闭最终写入。恢复工件扫描、损坏隔离、temporary 提升、backup 恢复及写入前字节核对继续按原次序执行；观察者异常只报告展示失败，不改变文件分类。见 [预览与恢复结果对照](../test/data/timetable_storage_preview_test.dart)。
+
 ## 外部 JSON 与备份导入的条数边界
 
 外部导入在 JSON 解析后、迁移复制和领域模型构建前统一检查原始条数。课表 JSON、普通日程 JSON、节次时间 JSON、完整备份、旧版 AppData 备份和学校站点 JSON 共用 [计数规则](../lib/models/import_count_limits.dart)。候选预览和实际导入使用同一入口；超过任一上限即整份拒绝，不截断或部分保存。错误提供英文、简体中文、繁体中文，其余语言明确登记英文回退。
