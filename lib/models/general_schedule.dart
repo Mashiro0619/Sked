@@ -1,3 +1,4 @@
+import 'app_data_json_values.dart';
 import 'general_event.dart';
 import '../l10n/app_locale.dart';
 import '../utils/localized_names.dart';
@@ -40,36 +41,6 @@ int normalizeGeneralCalendarColorValue(int colorValue) {
   };
 }
 
-Map<String, dynamic>? _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return null;
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
-
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-int? _intValue(Object? value) {
-  return value is num ? value.toInt() : null;
-}
-
-bool? _boolValue(Object? value) {
-  return value is bool ? value : null;
-}
-
 class GeneralSchedule {
   const GeneralSchedule({
     required this.id,
@@ -100,9 +71,9 @@ class GeneralSchedule {
     Map<String, dynamic> json, {
     String? localeCode,
   }) {
-    final id = _stringValue(json['id']);
-    final events = _listValue(json['events'])
-        .map(_asStringKeyedMap)
+    final id = appDataStringValue(json['id']);
+    final events = appDataListValue(json['events'])
+        .map(appDataStringKeyedMap)
         .whereType<Map<String, dynamic>>()
         .map(GeneralEvent.fromJson)
         .map(
@@ -111,14 +82,15 @@ class GeneralSchedule {
         .toList();
     return GeneralSchedule(
       id: id,
-      name: _stringValue(
+      name: appDataStringValue(
         json['name'],
         defaultGeneralCalendarName(localeCode: localeCode ?? defaultLocaleCode),
       ),
       colorValue:
-          _intValue(json['colorValue']) ?? defaultGeneralCalendarColorValue,
-      isVisible: _boolValue(json['isVisible']) ?? true,
-      sortOrder: _intValue(json['sortOrder']) ?? 0,
+          appDataIntValue(json['colorValue']) ??
+          defaultGeneralCalendarColorValue,
+      isVisible: appDataBoolValue(json['isVisible']) ?? true,
+      sortOrder: appDataIntValue(json['sortOrder']) ?? 0,
       events: events,
     );
   }
