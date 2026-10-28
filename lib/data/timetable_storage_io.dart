@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:path/path.dart' as path;
 
 import 'migrations/migration.dart';
@@ -17,7 +16,6 @@ TimetableStorage createTimetableStorage() => IoTimetableStorage();
 class IoTimetableStorage
     implements
         TimetableStorage,
-        TimetableStoragePreviewReader,
         TimetableRecoveryArtifactReader,
         TimetableLegacySecretSanitizer {
   IoTimetableStorage({
@@ -77,13 +75,7 @@ class IoTimetableStorage
   final Stream<FileSystemEntity> Function(Directory) _directoryLister;
 
   @override
-  Future<StorageLoadResult> load() => _load();
-
-  @override
-  Future<StorageLoadResult> loadWithPreview(void Function(AppData) onPreview) =>
-      _load(onPreview: onPreview);
-
-  Future<StorageLoadResult> _load({void Function(AppData)? onPreview}) async {
+  Future<StorageLoadResult> load() async {
     late final AppDataStoragePaths storagePaths;
     try {
       storagePaths = await _resolvePaths();
@@ -102,15 +94,7 @@ class IoTimetableStorage
 
     final tmpAttempt = await _tryDecode(tmp);
     final mainAttempt = await _tryDecode(main);
-    // Freeze the backup read before exposing a candidate. The exact same bytes
-    // still undergo complete decoding and all original recovery decisions.
-    final backupRead = await _tryRead(backup);
-    final earlyData = _readableDataBeforeBlockingCandidate([
-      tmpAttempt,
-      mainAttempt,
-    ]);
-    if (earlyData != null) _emitPreview(onPreview, earlyData);
-    final backupAttempt = await _decodeRead(backupRead);
+    final backupAttempt = await _tryDecode(backup);
     final attempts = <File, _DecodeAttempt>{
       tmp: tmpAttempt,
       main: mainAttempt,
@@ -121,9 +105,6 @@ class IoTimetableStorage
       mainAttempt,
       backupAttempt,
     ]);
-    if (earlyData == null && safelyLoadedData != null) {
-      _emitPreview(onPreview, safelyLoadedData);
-    }
     final directory = storagePaths.root;
     final recoveryArtifactScan = await _scanExistingRecoveryArtifacts(
       directory,
@@ -846,39 +827,19 @@ class IoTimetableStorage
     await _bestEffortFlushDirectory(main.parent);
   }
 
-  Future<_DecodeAttempt> _tryDecode(File file) async =>
-      _decodeRead(await _tryRead(file));
-
-  Future<_StorageRead> _tryRead(File file) async {
+  Future<_DecodeAttempt> _tryDecode(File file) async {
+    List<int>? snapshot;
     try {
       final type = await FileSystemEntity.type(file.path, followLinks: false);
       if (type == FileSystemEntityType.notFound) {
-        return const _StorageRead.failed(_Outcome.missing);
+        return const _DecodeAttempt(_Outcome.missing, null);
       }
       if (type != FileSystemEntityType.file) {
-        return const _StorageRead.failed(_Outcome.ioFailure);
+        return const _DecodeAttempt(_Outcome.ioFailure, null);
       }
       final bytes = await (_fileReader?.call(file) ?? file.readAsBytes());
-      return _StorageRead.bytes(
-        bytes is Uint8List
-            ? Uint8List.fromList(bytes).asUnmodifiableView()
-            : List<int>.unmodifiable(bytes),
-      );
-    } on UnsupportedSchemaVersionException {
-      return const _StorageRead.failed(_Outcome.unsupportedVersion);
-    } on FileSystemException {
-      return const _StorageRead.failed(_Outcome.ioFailure);
-    } catch (_) {
-      return const _StorageRead.failed(_Outcome.corrupt);
-    }
-  }
-
-  Future<_DecodeAttempt> _decodeRead(_StorageRead read) async {
-    final failure = read.failure;
-    if (failure != null) return _DecodeAttempt(failure, null);
-    final snapshot = read.bytes!;
-    try {
-      final data = await AppDataCodec.decodeStorage(snapshot);
+      snapshot = List<int>.unmodifiable(bytes);
+      final data = await AppDataCodec.decodeStorage(bytes);
       return _DecodeAttempt(_Outcome.success, data, snapshot);
     } on UnsupportedSchemaVersionException {
       return _DecodeAttempt(_Outcome.unsupportedVersion, null, snapshot);
@@ -888,17 +849,6 @@ class IoTimetableStorage
       return _DecodeAttempt(_Outcome.corrupt, null, snapshot);
     } catch (_) {
       return _DecodeAttempt(_Outcome.corrupt, null, snapshot);
-    }
-  }
-
-  void _emitPreview(void Function(AppData)? observer, AppData data) {
-    if (observer == null) return;
-    try {
-      observer(data);
-    } catch (error, stackTrace) {
-      // Presentation failure must not reclassify a valid storage candidate or
-      // skip the remaining authoritative validation and recovery transaction.
-      debugPrint('Storage preview observer failed: $error\n$stackTrace');
     }
   }
 
@@ -1078,14 +1028,6 @@ class _DecodeAttempt {
   final _Outcome outcome;
   final AppData? data;
   final List<int>? bytes;
-}
-
-class _StorageRead {
-  const _StorageRead.bytes(this.bytes) : failure = null;
-  const _StorageRead.failed(this.failure) : bytes = null;
-
-  final List<int>? bytes;
-  final _Outcome? failure;
 }
 
 class _StaleStorageSnapshotException implements Exception {

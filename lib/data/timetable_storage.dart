@@ -122,14 +122,6 @@ abstract class TimetableStorage {
   Future<String?> filePath();
 }
 
-/// A candidate may be readable before the complete recovery decision is known.
-/// This callback does not authorize writes or acknowledge a committed snapshot.
-abstract interface class TimetableStoragePreviewReader {
-  Future<StorageLoadResult> loadWithPreview(
-    void Function(AppData data) onPreview,
-  );
-}
-
 /// 可选的恢复产物读取能力，避免扩大所有 [TimetableStorage] fake 的契约。
 abstract interface class TimetableRecoveryArtifactReader {
   Future<Uint8List?> readRecoveryArtifact(String artifactPath);
