@@ -1,3 +1,4 @@
+import 'app_data_json_values.dart';
 import '../l10n/app_locale.dart';
 import '../utils/localized_names.dart';
 import '../utils/time_utils.dart';
@@ -28,7 +29,7 @@ class CoursePeriodTime {
       fallbackEnd: (8 * 60) + 45,
     );
     return CoursePeriodTime(
-      index: _intValue(json['index']) ?? 1,
+      index: appDataFiniteIntValue(json['index']) ?? 1,
       startMinutes: range.$1,
       endMinutes: range.$2,
     );
@@ -43,20 +44,6 @@ class CoursePeriodTime {
   }
 }
 
-Map<String, dynamic>? _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return null;
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
-
 List<int> _intList(Object? value) {
   if (value is! List) {
     return const [];
@@ -68,22 +55,6 @@ List<int> _intList(Object? value) {
       .toList();
 }
 
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-int? _intValue(Object? value) {
-  return value is num && value.isFinite ? value.toInt() : null;
-}
-
-double? _doubleValue(Object? value) {
-  return value is num && value.isFinite ? value.toDouble() : null;
-}
-
 (int, int) _normalizeDecodedTimeRange({
   required Object? rawStart,
   required Object? rawEnd,
@@ -91,8 +62,8 @@ double? _doubleValue(Object? value) {
   required int fallbackEnd,
   bool preserveUnknownZero = false,
 }) {
-  final rawStartValue = _intValue(rawStart);
-  final rawEndValue = _intValue(rawEnd);
+  final rawStartValue = appDataFiniteIntValue(rawStart);
+  final rawEndValue = appDataFiniteIntValue(rawEnd);
   final start = normalizeMinuteOfDay(rawStartValue, fallback: fallbackStart);
   final end = normalizeMinuteOfDay(rawEndValue, fallback: fallbackEnd);
   if (preserveUnknownZero && rawStartValue == 0 && rawEndValue == 0) {
@@ -130,13 +101,13 @@ class PeriodTimeSet {
     String localeCode = defaultLocaleCode,
   }) {
     return PeriodTimeSet(
-      id: _stringValue(json['id']),
-      name: _stringValue(
+      id: appDataStringValue(json['id']),
+      name: appDataStringValue(
         json['name'],
         periodTimeSetFallbackName(localeCode: localeCode),
       ),
-      periodTimes: _listValue(json['periodTimes'])
-          .map(_asStringKeyedMap)
+      periodTimes: appDataListValue(json['periodTimes'])
+          .map(appDataStringKeyedMap)
           .whereType<Map<String, dynamic>>()
           .map(CoursePeriodTime.fromJson)
           .toList(),
@@ -157,11 +128,11 @@ class PeriodTimeSet {
 }
 
 int _decodeLegacyDayOfWeek(Map<String, dynamic> json) {
-  final weekday = _intValue(json['weekday']);
+  final weekday = appDataFiniteIntValue(json['weekday']);
   if (weekday != null) {
     return weekday;
   }
-  final weekdays = _listValue(json['weekdays']);
+  final weekdays = appDataListValue(json['weekdays']);
   if (weekdays.isNotEmpty) {
     final firstNumber = weekdays.whereType<num>().where(
       (item) => item.isFinite,
@@ -231,7 +202,8 @@ class CourseItem {
 
   factory CourseItem.fromJson(Map<String, dynamic> json) {
     final legacyDayOfWeek =
-        _intValue(json['dayOfWeek']) ?? _decodeLegacyDayOfWeek(json);
+        appDataFiniteIntValue(json['dayOfWeek']) ??
+        _decodeLegacyDayOfWeek(json);
     final semesterWeeks = _intList(json['semesterWeeks']);
     final range = _normalizeDecodedTimeRange(
       rawStart: json['startMinutes'],
@@ -241,20 +213,20 @@ class CourseItem {
       preserveUnknownZero: true,
     );
     return CourseItem(
-      id: _stringValue(json['id']),
-      name: _stringValue(json['name']),
-      teacher: _stringValue(json['teacher']),
-      location: _stringValue(json['location']),
+      id: appDataStringValue(json['id']),
+      name: appDataStringValue(json['name']),
+      teacher: appDataStringValue(json['teacher']),
+      location: appDataStringValue(json['location']),
       dayOfWeek: normalizeDayOfWeek(legacyDayOfWeek),
       semesterWeeks: normalizeSemesterWeeks(semesterWeeks),
       periods: _intList(json['periods']),
       startMinutes: range.$1,
       endMinutes: range.$2,
-      timeRange: _stringValue(json['timeRange']),
-      credit: _doubleValue(json['credit']) ?? 0,
-      remarks: _stringValue(json['remarks']),
+      timeRange: appDataStringValue(json['timeRange']),
+      credit: appDataFiniteDoubleValue(json['credit']) ?? 0,
+      remarks: appDataStringValue(json['remarks']),
       customFields: Map<String, dynamic>.from(
-        _asStringKeyedMap(json['customFields']) ?? const {},
+        appDataStringKeyedMap(json['customFields']) ?? const {},
       ),
       reminderSettings: _decodeCourseReminderSettings(json['reminderSettings']),
     );
@@ -298,7 +270,7 @@ class CourseItem {
 }
 
 CourseReminderSettings _decodeCourseReminderSettings(Object? value) {
-  final map = _asStringKeyedMap(value);
+  final map = appDataStringKeyedMap(value);
   return map == null
       ? const CourseReminderSettings()
       : CourseReminderSettings.fromJson(map);

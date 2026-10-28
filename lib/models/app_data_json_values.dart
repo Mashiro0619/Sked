@@ -21,6 +21,13 @@ int? appDataIntValue(Object? value, {String? nonFiniteMessage}) {
   return value.toInt();
 }
 
+/// Lenient model fields omit non-finite values and keep their field defaults.
+int? appDataFiniteIntValue(Object? value) =>
+    value is num && value.isFinite ? value.toInt() : null;
+
+double? appDataFiniteDoubleValue(Object? value) =>
+    value is num && value.isFinite ? value.toDouble() : null;
+
 Map<String, dynamic>? appDataStringKeyedMap(Object? value) {
   if (value is! Map) {
     return null;

@@ -2,6 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/app_data_json_values.dart';
 
 void main() {
+  test('lenient finite-number readers keep their existing fallback policy', () {
+    expect(appDataFiniteIntValue(3.9), 3);
+    expect(appDataFiniteDoubleValue(3), 3.0);
+    for (final value in [
+      double.infinity,
+      double.negativeInfinity,
+      double.nan,
+      '3',
+    ]) {
+      expect(appDataFiniteIntValue(value), isNull);
+      expect(appDataFiniteDoubleValue(value), isNull);
+    }
+  });
+
   test('string and boolean readers retain type-specific defaults', () {
     expect(appDataStringValue(' value '), ' value ');
     expect(appDataStringValue(42, 'fallback'), 'fallback');
