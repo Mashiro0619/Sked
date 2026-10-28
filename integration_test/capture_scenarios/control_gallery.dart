@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -27,12 +29,7 @@ void registerCaptureScenarios() {
     (t) async {
       await DesktopWindowBridge.instance.initialize();
       const baseline = bool.fromEnvironment('SKED_VISUAL_BASELINE');
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/control-gallery',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'control-gallery');
       await output.create(recursive: true);
       final manifest = <Map<String, Object?>>[];
       final cases =
@@ -392,12 +389,7 @@ void registerCaptureScenarios() {
     'settings retains state across real Win32 resizes and keeps caption hit regions clear',
     (t) async {
       await DesktopWindowBridge.instance.initialize();
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/control-gallery',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'control-gallery');
       await output.create(recursive: true);
       final evidence = <Map<String, dynamic>>[];
       final boundary = GlobalKey();

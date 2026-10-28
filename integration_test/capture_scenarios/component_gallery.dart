@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -240,12 +242,7 @@ SchoolImportResponse _reviewFixture() => SchoolImportResponse(
 
 void registerCaptureScenarios() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  final output = Directory(
-    const String.fromEnvironment(
-      'SKED_VISUAL_OUTPUT',
-      defaultValue: '.scratch/capture-scenes/component-gallery',
-    ),
-  );
+  final output = createCaptureOutputDirectory(label: 'component-gallery');
   const revision = String.fromEnvironment('SKED_VISUAL_REVISION');
   const baseline = bool.fromEnvironment('SKED_VISUAL_BASELINE');
   const onlyProfile = String.fromEnvironment('SKED_VISUAL_PROFILE');

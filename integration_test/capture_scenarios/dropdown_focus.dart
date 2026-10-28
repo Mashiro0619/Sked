@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -24,12 +26,7 @@ void registerCaptureScenarios() {
     'settings menu dismissal clears pointer focus but keeps keyboard feedback',
     (t) async {
       await DesktopWindowBridge.instance.initialize();
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/dropdown-focus',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'dropdown-focus');
       await output.create(recursive: true);
       final captures = <Map<String, Object?>>[];
       t.view.devicePixelRatio = 1;

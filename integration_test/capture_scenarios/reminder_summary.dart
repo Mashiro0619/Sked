@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -38,12 +40,7 @@ void registerCaptureScenarios() {
     'grouped reminders with eligible startup, drag takeover and manual fallback',
     (t) async {
       await DesktopWindowBridge.instance.initialize();
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/reminder-summary',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'reminder-summary');
       await output.create(recursive: true);
       final captures = <String>[];
       final startupObservations = <Map<String, Object?>>[];

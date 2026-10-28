@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -26,12 +28,7 @@ void registerCaptureScenarios() {
   testWidgets('hover preview and independent detail use one Windows surface', (
     t,
   ) async {
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/reminder-hover',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'reminder-hover');
     await output.create(recursive: true);
     final captures = <String>[];
     addTearDown(t.view.reset);
@@ -187,12 +184,7 @@ void registerCaptureScenarios() {
     if (!const bool.fromEnvironment('SKED_NATIVE_POINTER_CHECK')) return;
     binding.shouldPropagateDevicePointerEvents = true;
     await DesktopWindowBridge.instance.initialize();
-    final output = Directory(
-      const String.fromEnvironment(
-        'SKED_VISUAL_OUTPUT',
-        defaultValue: '.scratch/capture-scenes/reminder-hover',
-      ),
-    );
+    final output = createCaptureOutputDirectory(label: 'reminder-hover');
     await output.create(recursive: true);
     final evidence = <Map<String, dynamic>>[];
     addTearDown(

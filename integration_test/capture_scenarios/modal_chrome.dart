@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -22,12 +24,7 @@ void registerCaptureScenarios() {
     (tester) async {
       await DesktopWindowBridge.instance.initialize();
       expect(DesktopWindowBridge.instance.available, isTrue);
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/modal-chrome',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'modal-chrome');
       await output.create(recursive: true);
       final captures = <Map<String, Object?>>[];
       tester.view.devicePixelRatio = 1;

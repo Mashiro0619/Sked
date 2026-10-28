@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -23,12 +25,7 @@ void registerCaptureScenarios() {
     'general recurrence and reminders render adjacent with real Windows fonts',
     (t) async {
       await DesktopWindowBridge.instance.initialize();
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/event-pickers',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'event-pickers');
       await output.create(recursive: true);
       final captures = <Map<String, Object?>>[];
       final nativeEvidence = <Map<String, Object?>>[];

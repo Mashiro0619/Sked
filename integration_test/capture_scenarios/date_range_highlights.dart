@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -29,11 +31,8 @@ void registerCaptureScenarios() {
     'range highlights on actual desktop and simulated phone surfaces',
     (t) async {
       await DesktopWindowBridge.instance.initialize();
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/date-range-highlights',
-        ),
+      final output = createCaptureOutputDirectory(
+        label: 'date-range-highlights',
       );
       await output.create(recursive: true);
       final manifest = <Map<String, Object?>>[];

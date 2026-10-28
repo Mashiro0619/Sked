@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -22,12 +24,7 @@ void registerCaptureScenarios() {
   testWidgets(
     'day agenda preview and independent detail Windows font screenshots',
     (t) async {
-      final output = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/day-agenda',
-        ),
-      );
+      final output = createCaptureOutputDirectory(label: 'day-agenda');
       await output.create(recursive: true);
       final captures = <String>[];
       addTearDown(t.view.reset);

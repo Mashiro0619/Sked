@@ -1,3 +1,5 @@
+import '../support/capture_output_directory.dart';
+
 import 'package:sked/widgets/workspace_frame.dart';
 
 import 'package:flutter/gestures.dart';
@@ -28,12 +30,7 @@ void registerCaptureScenarios() {
     'render custom date navigation on desktop and simulated touch layouts',
     (tester) async {
       await DesktopWindowBridge.instance.initialize();
-      final out = Directory(
-        const String.fromEnvironment(
-          'SKED_VISUAL_OUTPUT',
-          defaultValue: '.scratch/capture-scenes/date-navigation',
-        ),
-      );
+      final out = createCaptureOutputDirectory(label: 'date-navigation');
       await out.create(recursive: true);
       final manifest = <Map<String, Object?>>[];
       tester.view.devicePixelRatio = 1;
