@@ -1,3 +1,5 @@
+import 'app_data_json_values.dart';
+
 /// Application-wide settings used by the platform reminder and widget
 /// coordinators.  A null default offset means that no reminder is configured
 /// for that source by default.
@@ -28,19 +30,17 @@ class NotificationSettings {
 
   factory NotificationSettings.fromJson(Map<String, dynamic> json) {
     return NotificationSettings(
-      enabled: json['enabled'] is bool ? json['enabled'] as bool : false,
-      courseDefaultMinutesBefore: _decodeNotificationMinutes(
+      enabled: appDataBoolValue(json['enabled']) ?? false,
+      courseDefaultMinutesBefore: appDataIntegralIntValue(
         json['courseDefaultMinutesBefore'],
       ),
-      generalDefaultMinutesBefore: _decodeNotificationMinutes(
+      generalDefaultMinutesBefore: appDataIntegralIntValue(
         json['generalDefaultMinutesBefore'],
       ),
-      lockScreenShowTitles: json['lockScreenShowTitles'] is bool
-          ? json['lockScreenShowTitles'] as bool
-          : false,
-      remindHiddenGeneralCalendars: json['remindHiddenGeneralCalendars'] is bool
-          ? json['remindHiddenGeneralCalendars'] as bool
-          : false,
+      lockScreenShowTitles:
+          appDataBoolValue(json['lockScreenShowTitles']) ?? false,
+      remindHiddenGeneralCalendars:
+          appDataBoolValue(json['remindHiddenGeneralCalendars']) ?? false,
     ).normalized();
   }
 
@@ -97,14 +97,6 @@ class NotificationSettings {
     lockScreenShowTitles,
     remindHiddenGeneralCalendars,
   );
-}
-
-int? _decodeNotificationMinutes(Object? value) {
-  if (value is int) return value;
-  if (value is num && value.isFinite && value % 1 == 0) {
-    return value.toInt();
-  }
-  return null;
 }
 
 int? _normalizeNotificationMinutes(int? value) {

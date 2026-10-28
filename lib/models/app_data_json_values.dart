@@ -30,6 +30,14 @@ int? appDataParsedIntValue(Object? value) {
   return appDataIntValue(value);
 }
 
+int? appDataIntegralIntValue(Object? value) {
+  if (value is int) return value;
+  if (value is num && value.isFinite && value % 1 == 0) {
+    return value.toInt();
+  }
+  return null;
+}
+
 /// Lenient model fields omit non-finite values and keep their field defaults.
 int? appDataFiniteIntValue(Object? value) =>
     value is num && value.isFinite ? value.toInt() : null;
