@@ -186,8 +186,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     _endTime = TimeOfDay(hour: endDt.hour, minute: endDt.minute);
     _isAllDay = event?.isAllDay ?? false;
     _calendarId = _resolveCalendarId(event?.calendarId);
-    _recurrence = rule.type;
-    _customUnit = rule.unit;
+    _recurrence = rule.isRepeating && rule.normalizedInterval > 1
+        ? GeneralEventRecurrence.custom
+        : rule.type;
+    _customUnit = effectiveGeneralRecurrenceUnit(rule);
     _interval = rule.normalizedInterval;
     _untilDate = rule.untilDateIso == null
         ? null
@@ -497,8 +499,20 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     if (_recurrence == GeneralEventRecurrence.none) {
       return const GeneralEventRecurrenceRule();
     }
+    final original = widget.initialEvent?.recurrenceRule;
+    // Fixed kinds imported with a longer interval use the custom controls.
+    // Retain their stored kind when those controls still describe that rule,
+    // so an ordinary content edit does not change occurrence identity.
+    final retainOriginalKind =
+        original != null &&
+        original.isRepeating &&
+        original.type != GeneralEventRecurrence.custom &&
+        original.normalizedInterval > 1 &&
+        _recurrence == GeneralEventRecurrence.custom &&
+        _interval == original.normalizedInterval &&
+        _customUnit == effectiveGeneralRecurrenceUnit(original);
     return GeneralEventRecurrenceRule(
-      type: _recurrence,
+      type: retainOriginalKind ? original.type : _recurrence,
       interval: _recurrence == GeneralEventRecurrence.custom ? _interval : 1,
       unit: switch (_recurrence) {
         GeneralEventRecurrence.daily => GeneralEventRecurrenceUnit.day,
