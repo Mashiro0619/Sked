@@ -50,6 +50,7 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
     this.onDateLongPress,
     this.moreFocusNode,
     this.badgeCount = 0,
+    this.dateTextStyle,
   });
 
   final String id;
@@ -64,13 +65,16 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
   final VoidCallback? onDateLongPress;
   final FocusNode? moreFocusNode;
   final int badgeCount;
+  final TextStyle? dateTextStyle;
 
   @override
   Widget build(BuildContext context) {
     final m = WorkbenchChromeMetrics.of(context);
     final theme = Theme.of(context);
     final base = DefaultTextStyle.of(context).style;
-    final dateStyle = base.merge(theme.textTheme.titleMedium);
+    final dateStyle = base
+        .merge(theme.textTheme.titleMedium)
+        .merge(dateTextStyle);
     final commandStyle = base.merge(theme.textTheme.labelLarge);
     double measure(String label, TextStyle style) {
       final painter = TextPainter(

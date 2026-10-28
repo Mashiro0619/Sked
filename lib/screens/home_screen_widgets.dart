@@ -83,9 +83,12 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final first = startOfWeekFor(timetable.config, week);
+    final last = addCalendarDays(first, 6);
+    final dates = MaterialLocalizations.of(context);
+    final fullWeekLabel =
+        '${l10n.weekLabel(week)} · ${dates.formatFullDate(first)} – ${dates.formatFullDate(last)}';
     if (WorkbenchChromeMetrics.of(context).desktop) {
-      final first = startOfWeekFor(timetable.config, week);
-      final last = addCalendarDays(first, 6);
       return WorkbenchCommandBar(
         key: const ValueKey('student-workspace-toolbar'),
         compactBuilder: (context) => _desktopCompact(context, first, last),
@@ -126,15 +129,25 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             child: Text(l10n.today),
           ),
           Builder(
-            builder: (anchor) => TextButton(
-              key: const ValueKey('student-week-picker-button'),
-              onPressed: onOpenWeekPicker == null
-                  ? null
-                  : () => onOpenWeekPicker!(anchor),
-              onLongPress: onJumpToToday,
-              child: Text(
-                '${l10n.weekLabel(week)} · ${first.month}/${first.day} – ${last.month}/${last.day}',
-                style: theme.textTheme.titleMedium,
+            builder: (anchor) => SkedTooltip(
+              message: fullWeekLabel,
+              excludeFromSemantics: true,
+              child: TextButton(
+                key: const ValueKey('student-week-picker-button'),
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.onSurface,
+                  textStyle: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: onOpenWeekPicker == null
+                    ? null
+                    : () => onOpenWeekPicker!(anchor),
+                onLongPress: onJumpToToday,
+                child: Text(
+                  '${l10n.weekLabel(week)} · ${first.month}/${first.day} – ${last.month}/${last.day}',
+                  semanticsLabel: fullWeekLabel,
+                ),
               ),
             ),
           ),
@@ -203,7 +216,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         phoneWidth && (screenWidth < 360 || scaledLabelSize > 18.2);
     final controlShape = skedShapeSchemeOf(context).control;
     final motion = SkedMotionPolicy.of(context);
-    final weekTextStyle = theme.textTheme.labelLarge;
+    final weekTextStyle = theme.textTheme.labelLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+    );
     final weekTextPainter = TextPainter(
       text: TextSpan(text: l10n.weekLabel(week), style: weekTextStyle),
       textDirection: Directionality.of(context),
@@ -219,24 +234,29 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     );
     Widget buildTimetableSelector() {
       return Builder(
-        builder: (anchor) => TextButton(
-          key: const ValueKey('student-timetable-picker-button'),
-          onPressed: interactive && onOpenTimetablePicker != null
-              ? () => onOpenTimetablePicker!(anchor)
-              : null,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
-            minimumSize: const Size(48, 48),
-            shape: controlShape,
-            alignment: AlignmentDirectional.centerStart,
-            textStyle: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+        builder: (anchor) => SkedTooltip(
+          message: timetable.config.name,
+          excludeFromSemantics: true,
+          child: TextButton(
+            key: const ValueKey('student-timetable-picker-button'),
+            onPressed: interactive && onOpenTimetablePicker != null
+                ? () => onOpenTimetablePicker!(anchor)
+                : null,
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurface,
+              padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
+              minimumSize: const Size(48, 48),
+              shape: controlShape,
+              alignment: AlignmentDirectional.centerStart,
+              textStyle: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          child: Text(
-            timetable.config.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            child: Text(
+              timetable.config.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
       );
@@ -271,7 +291,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     Widget buildWeekPicker({required double width}) {
       return Builder(
         builder: (anchor) => SkedTooltip(
-          message: '${l10n.jumpToWeek}; ${l10n.today}',
+          message: '$fullWeekLabel\n${l10n.jumpToWeek}; ${l10n.today}',
           child: Semantics(
             key: const ValueKey('student-week-picker-semantics'),
             button: true,
@@ -279,7 +299,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 interactive &&
                 (onOpenWeekPicker != null || onJumpToToday != null),
             excludeSemantics: true,
-            label: l10n.weekLabel(week),
+            label: fullWeekLabel,
             hint: '${l10n.jumpToWeek}; ${l10n.today}',
             onTap: interactive && onOpenWeekPicker != null
                 ? () => onOpenWeekPicker!(anchor)
@@ -296,6 +316,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                     : null,
                 onLongPress: interactive ? onJumpToToday : null,
                 style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.onSurface,
+                  textStyle: weekTextStyle,
                   minimumSize: const Size(48, 48),
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   shape: controlShape,
@@ -319,8 +341,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                             distance: 12,
                             child: Text(
                               l10n.weekLabel(week),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -524,11 +545,11 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             weekMinimum,
             measuredWeekWidth + 12,
           );
+          // Give the date its preferred width before allocating the filter.
+          // A long localized week can wrap once the filter reaches its minimum;
+          // keep the existing scroll fallback for rows whose targets cannot fit.
           final weekWidth = hasWeek
-              ? math
-                    .min(desiredWeekWidth, maximumWeekWidth)
-                    .clamp(48.0, desiredWeekWidth)
-                    .toDouble()
+              ? math.min(desiredWeekWidth, maximumWeekWidth)
               : 0.0;
           final flexibleWidth = math.max(
             selectorMinimum,
@@ -611,6 +632,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
     return WorkbenchCompactCalendarBar(
       id: 'student',
+      dateTextStyle: const TextStyle(fontWeight: FontWeight.w600),
       primaryAction: WorkbenchOverflowAction(
         id: 'student-add-course',
         label: l.addCourse,
@@ -624,6 +646,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         id: 'student-week-picker-button',
         label:
             '${l.weekLabel(week)} · ${first.month}/${first.day} – ${last.month}/${last.day}',
+        tooltip:
+            '${l.weekLabel(week)} · ${MaterialLocalizations.of(context).formatFullDate(first)} – ${MaterialLocalizations.of(context).formatFullDate(last)}',
         icon: Icons.date_range_outlined,
         onSelected: onOpenWeekPicker,
       ),
