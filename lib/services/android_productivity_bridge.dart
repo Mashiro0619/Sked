@@ -12,11 +12,9 @@ abstract final class AndroidProductivityChannel {
   static const backgroundName =
       'com.mashiro.sked/android_productivity_background';
   static const getInitialAgendaIntent = 'getInitialAgendaIntent';
-  static const requestNotificationPermission = 'requestNotificationPermission';
   static const isNotificationPermissionGranted =
       'isNotificationPermissionGranted';
   static const canScheduleExactAlarms = 'canScheduleExactAlarms';
-  static const requestExactAlarmPermission = 'requestExactAlarmPermission';
   static const isIgnoringBatteryOptimizations =
       'isIgnoringBatteryOptimizations';
   static const openBatteryOptimizationSettings =
@@ -347,14 +345,6 @@ class AndroidProductivityBridge {
     );
   }
 
-  Future<bool> requestNotificationPermission() async {
-    if (!_enabled || _disposed) return true;
-    return await _channel.invokeMethod<bool>(
-          AndroidProductivityChannel.requestNotificationPermission,
-        ) ??
-        false;
-  }
-
   Future<bool> isNotificationPermissionGranted() async {
     if (!_enabled || _disposed) return true;
     return await _channel.invokeMethod<bool>(
@@ -367,14 +357,6 @@ class AndroidProductivityBridge {
     if (!_enabled || _disposed) return true;
     return await _channel.invokeMethod<bool>(
           AndroidProductivityChannel.canScheduleExactAlarms,
-        ) ??
-        false;
-  }
-
-  Future<bool> requestExactAlarmPermission() async {
-    if (!_enabled || _disposed) return true;
-    return await _channel.invokeMethod<bool>(
-          AndroidProductivityChannel.requestExactAlarmPermission,
         ) ??
         false;
   }

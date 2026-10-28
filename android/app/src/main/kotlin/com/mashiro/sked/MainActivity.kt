@@ -75,9 +75,6 @@ class MainActivity : FlutterFragmentActivity() {
     private var exportFileChannel: MethodChannel? = null
     private var appInstanceLeaseChannel: MethodChannel? = null
     private var productivityChannel: MethodChannel? = null
-    private val pendingNotificationPermission = PendingActivityRequest<MethodChannel.Result>()
-    private var pendingExactAlarmPermissionResult: MethodChannel.Result? = null
-    private var exactAlarmPermissionRequestLeftActivity = false
     private val pendingSave = PendingActivityRequest<SaveTextFileRequest>()
     private var activityDestroying = false
 
@@ -92,49 +89,12 @@ class MainActivity : FlutterFragmentActivity() {
         handleAgendaIntent(intent)
     }
 
-    override fun onResume() {
-        super.onResume()
-        // ACTION_REQUEST_SCHEDULE_EXACT_ALARM returns through the activity
-        // lifecycle rather than a result intent. Resolve the Flutter call only
-        // after the user has left Settings so the caller observes the actual
-        // permission state and can reconcile existing alarms immediately.
-        resolveExactAlarmPermissionRequest()
-    }
-
-    override fun onPause() {
-        if (pendingExactAlarmPermissionResult != null) {
-            exactAlarmPermissionRequestLeftActivity = true
-        }
-        super.onPause()
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        // Some OEM request surfaces are dialogs rather than a full Activity.
-        // They can take focus without consistently producing a pause/resume
-        // pair, so use focus loss as the same evidence that the request UI was
-        // actually shown. Do not resolve merely because the launch call returned.
-        if (!hasFocus) {
-            if (pendingExactAlarmPermissionResult != null) {
-                exactAlarmPermissionRequestLeftActivity = true
-            }
-        } else {
-            resolveExactAlarmPermissionRequest()
-        }
-    }
-
     override fun onDestroy() {
         activityDestroying = true
         // Complete live calls before Flutter detaches. Activity recreation
         // cannot carry a MethodChannel.Result or an export payload to the new
         // engine, even when Android restores a pending platform result.
-        pendingNotificationPermission.cancel()?.success(false)
         pendingSave.cancel()?.result?.success(null)
-        pendingExactAlarmPermissionResult?.let { result ->
-            pendingExactAlarmPermissionResult = null
-            exactAlarmPermissionRequestLeftActivity = false
-            result.success(false)
-        }
         super.onDestroy()
     }
 
@@ -208,14 +168,10 @@ class MainActivity : FlutterFragmentActivity() {
                         // after the result has reached Flutter.
                         mainHandler.post { drainPendingAgendaIntents() }
                     }
-                    "requestNotificationPermission" ->
-                        requestNotificationPermission(result)
                     "isNotificationPermissionGranted" ->
                         result.success(isNotificationPermissionGranted())
                     "canScheduleExactAlarms" ->
                         result.success(canScheduleExactAlarms())
-                    "requestExactAlarmPermission" ->
-                        requestExactAlarmPermission(result)
                     AndroidProductivityContract.METHOD_IS_IGNORING_BATTERY_OPTIMIZATIONS ->
                         result.success(isIgnoringBatteryOptimizations())
                     AndroidProductivityContract.METHOD_OPEN_BATTERY_OPTIMIZATION_SETTINGS ->
@@ -247,10 +203,7 @@ class MainActivity : FlutterFragmentActivity() {
         // Platform surfaces can outlive their initiating engine. Invalidate
         // the request tokens as well as dropping their results/content so a
         // late callback cannot consume a new engine's pending request.
-        pendingNotificationPermission.cancel()
         pendingSave.cancel()
-        pendingExactAlarmPermissionResult = null
-        exactAlarmPermissionRequestLeftActivity = false
         exportFileChannel?.setMethodCallHandler(null)
         exportFileChannel = null
         appInstanceLeaseChannel?.setMethodCallHandler(null)
@@ -308,43 +261,6 @@ class MainActivity : FlutterFragmentActivity() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun requestNotificationPermission(result: MethodChannel.Result) {
-        if (activityDestroying || isFinishing || isDestroyed) {
-            result.success(false)
-            return
-        }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            isNotificationPermissionGranted()) {
-            result.success(true)
-            return
-        }
-        val request = pendingNotificationPermission.begin(result)
-        if (request == null) {
-            result.error("busy", "A notification permission request is already in progress.", null)
-            return
-        }
-        try {
-            val launcher = activityResultRegistry.register(
-                request.key,
-                ActivityResultContracts.RequestPermission(),
-            ) { granted ->
-                pendingNotificationPermission.complete(request)?.success(
-                    !activityDestroying && !isFinishing && !isDestroyed &&
-                        granted && isNotificationPermissionGranted(),
-                )
-            }
-            pendingNotificationPermission.releaseWhenComplete(request) {
-                // Registry 1.9 clears its launched key after invoking this
-                // callback. Unregister on the next main-loop turn so the key
-                // is removed as well as the callback.
-                mainHandler.post { launcher.unregister() }
-            }
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } catch (_: RuntimeException) {
-            pendingNotificationPermission.complete(request)?.success(false)
-        }
-    }
-
     private fun canScheduleExactAlarms(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
         return try {
@@ -352,18 +268,6 @@ class MainActivity : FlutterFragmentActivity() {
         } catch (_: SecurityException) {
             false
         }
-    }
-
-    private fun resolveExactAlarmPermissionRequest() {
-        if (pendingExactAlarmPermissionResult == null ||
-            !exactAlarmPermissionRequestLeftActivity
-        ) {
-            return
-        }
-        val result = pendingExactAlarmPermissionResult!!
-        pendingExactAlarmPermissionResult = null
-        exactAlarmPermissionRequestLeftActivity = false
-        result.success(canScheduleExactAlarms())
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean =
@@ -460,35 +364,6 @@ class MainActivity : FlutterFragmentActivity() {
             "channels" to channels,
             "activeNotifications" to activeNotifications,
         )
-    }
-
-    private fun requestExactAlarmPermission(result: MethodChannel.Result) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || canScheduleExactAlarms()) {
-            result.success(true)
-            return
-        }
-        if (pendingExactAlarmPermissionResult != null) {
-            result.error("busy", "An exact alarm permission request is already in progress.", null)
-            return
-        }
-        pendingExactAlarmPermissionResult = result
-        exactAlarmPermissionRequestLeftActivity = false
-        try {
-            startActivity(
-                Intent(
-                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                    Uri.parse("package:$packageName"),
-                ),
-            )
-        } catch (_: ActivityNotFoundException) {
-            pendingExactAlarmPermissionResult = null
-            exactAlarmPermissionRequestLeftActivity = false
-            result.success(false)
-        } catch (_: SecurityException) {
-            pendingExactAlarmPermissionResult = null
-            exactAlarmPermissionRequestLeftActivity = false
-            result.success(false)
-        }
     }
 
     private fun saveTextFile(

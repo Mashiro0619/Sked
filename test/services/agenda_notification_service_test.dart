@@ -62,6 +62,7 @@ class _FakeAndroidNotificationsPlatform
   int initializeCount = 0;
   int launchDetailsCount = 0;
   int exactAlarmRequestCount = 0;
+  int notificationPermissionRequestCount = 0;
   AndroidInitializationSettings? initializationSettings;
   DidReceiveNotificationResponseCallback? _onResponse;
   DidReceiveBackgroundNotificationResponseCallback? backgroundResponse;
@@ -170,8 +171,10 @@ class _FakeAndroidNotificationsPlatform
   }
 
   @override
-  Future<bool?> requestNotificationsPermission() async =>
-      notificationsPermissionResult;
+  Future<bool?> requestNotificationsPermission() async {
+    notificationPermissionRequestCount += 1;
+    return notificationsPermissionResult;
+  }
 
   @override
   Future<bool?> requestExactAlarmsPermission() async {
@@ -1522,8 +1525,16 @@ void main() {
     );
 
     test(
-      'reports Android permission and exact alarm state from the platform',
+      'requests Android permissions through the plugin and reports live state',
       () async {
+        final bridgeCalls = <String>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(_androidProductivityChannel, (
+              call,
+            ) async {
+              bridgeCalls.add(call.method);
+              throw StateError('Permission requests must use the plugin.');
+            });
         final gateway = FlutterAgendaNotificationGateway(enabled: true);
         platform.notificationsPermissionResult = false;
         platform.exactAlarmRequestResult = true;
@@ -1533,10 +1544,18 @@ void main() {
 
         expect(await gateway.requestPermission(), isFalse);
         expect(await gateway.requestExactAlarmPermission(), isFalse);
+        expect(platform.notificationPermissionRequestCount, 1);
         expect(platform.exactAlarmRequestCount, 1);
         expect(await gateway.notificationsEnabled, isFalse);
         expect(await gateway.exactAlarmsAllowed, isFalse);
         expect(await gateway.openNotificationSettings(), isTrue);
+        platform.notificationsPermissionResult = true;
+        platform.exactAlarmsAllowedResult = true;
+        expect(await gateway.requestPermission(), isTrue);
+        expect(await gateway.requestExactAlarmPermission(), isTrue);
+        expect(platform.notificationPermissionRequestCount, 2);
+        expect(platform.exactAlarmRequestCount, 2);
+        expect(bridgeCalls, isEmpty);
       },
     );
 
