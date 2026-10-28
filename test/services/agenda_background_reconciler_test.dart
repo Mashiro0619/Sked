@@ -34,6 +34,45 @@ class _BlockingScheduleGateway extends MemoryAgendaNotificationGateway {
   }
 }
 
+class _BatteryObservationGateway extends MemoryAgendaNotificationGateway {
+  int batteryReads = 0;
+  final exactModes = <bool>[];
+  final cancellations = <String>[];
+
+  @override
+  Future<bool> get batteryOptimizationIgnored async {
+    batteryReads++;
+    return super.batteryOptimizationIgnored;
+  }
+
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    exactModes.add(exact);
+    await super.schedule(request, exact: exact);
+  }
+
+  @override
+  Future<void> cancel(String key) async {
+    cancellations.add(key);
+    await super.cancel(key);
+  }
+
+  @override
+  Future<void> cancelNotificationId(int id, {String? tag}) async {
+    cancellations.add('id:$id');
+    await super.cancelNotificationId(id, tag: tag);
+  }
+
+  @override
+  Future<void> cancelAll() async {
+    cancellations.add('all');
+    await super.cancelAll();
+  }
+}
+
 AppData _data() {
   final base = buildInitialAppData(buildDefaultPeriodTimes());
   final event = GeneralEvent(
@@ -140,8 +179,6 @@ void main() {
             gateway.permissionGranted = value,
         'exact alarm permission': (gateway, value) =>
             gateway.exactAlarmGranted = value,
-        'battery allowlist': (gateway, value) =>
-            gateway.batteryOptimizationGranted = value,
       }.entries) {
     test(
       'background recreation rechecks revoked and restored ${capability.key}',
@@ -212,6 +249,76 @@ void main() {
       },
     );
   }
+
+  test('background recreation refreshes battery reliability without blocking alarms', () async {
+    final anchor = DateTime(2026, 9, 2, 8);
+    final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+    final gateway = _BatteryObservationGateway();
+    final data = _data();
+    final original = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: runtime,
+      now: () => anchor,
+    );
+    await original.reconcile(data, anchor: anchor);
+    final firstRequest = gateway.scheduled.values.single;
+    expect(original.status.batteryOptimizationIgnored, isTrue);
+    original.dispose();
+    gateway.cancellations.clear();
+
+    for (final ignored in [false, true]) {
+      gateway.batteryOptimizationGranted = ignored;
+      final previousReads = gateway.batteryReads;
+      final previousSchedules = gateway.exactModes.length;
+      final recreated = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      try {
+        final result = await AgendaBackgroundReconciler(
+          notificationService: recreated,
+          loadData: () async =>
+              AgendaBackgroundDataSnapshot(data: data, canWrite: true),
+          clock: () => anchor,
+        ).reconcile();
+
+        expect(result.succeeded, isTrue);
+        expect(result.shouldRetry, isFalse);
+        expect(result.nextRenewalAt, isNull);
+        expect(gateway.batteryReads, greaterThan(previousReads));
+        expect(gateway.scheduled, hasLength(1));
+        final request = gateway.scheduled.values.single;
+        expect(request.id, firstRequest.id);
+        expect(request.key, firstRequest.key);
+        expect(request.fireAt, DateTime(2026, 9, 2, 9, 45));
+        expect(gateway.cancellations, isEmpty);
+        expect(gateway.exactModes.length, greaterThan(previousSchedules));
+        expect(gateway.exactModes, everyElement(isTrue));
+        expect(recreated.status.healthy, isTrue);
+        expect(recreated.status.batteryOptimizationIgnored, ignored);
+        expect(recreated.status.coverage, AgendaNotificationCoverage.ready);
+        expect(runtime.diagnostics?.batteryOptimizationIgnored, ignored);
+        expect(
+          runtime.diagnostics?.mode,
+          AgendaNotificationReconcileMode.recovery,
+        );
+        expect(
+          runtime.diagnostics?.origin,
+          AgendaNotificationReconcileOrigin.background,
+        );
+        expect(
+          runtime.diagnostics?.result,
+          AgendaNotificationDiagnosticResult.success,
+        );
+        expect(runtime.diagnostics?.coverage, AgendaNotificationCoverage.ready);
+      } finally {
+        recreated.dispose();
+      }
+    }
+  });
 
   test(
     'a background retry after recreation replaces the failed diagnostic',

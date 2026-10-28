@@ -65,6 +65,8 @@ N14 的注入应由可控测试构建完成；撤回精确闹钟权限属于已�
 
 精确提醒的自动回归入口为 [通知服务](../test/services/agenda_notification_service_test.dart)、[Android 闹钟恢复](../test/services/agenda_background_alarm_recovery_test.dart) 和 [通知设置](../test/widgets/notification_settings_page_test.dart)：覆盖未授权、取消／拒绝引导、调用期间撤权、授权后恢复，以及插件缓存与实际待发闹钟分离。前台日程、后台稍后和延迟测试的系统调用均维持精确模式；失败不会另建非精确任务。这些替身验证用于检查应用的调用与状态，N11 的真实系统撤权、进程退出和投递结果仍需按设备矩阵执行。
 
+[后台重建回归](../test/services/agenda_background_reconciler_test.dart) 分别核对通知/精确闹钟权限与电池可靠性：前两者撤回时取消受阻计划，恢复后重新排程；电池豁免变化时，新服务重新读取实际状态并更新诊断，保留相同提醒身份与触发时间、继续精确排程。可靠性提示的显示由通知设置回归验证，不能把电池状态重新当作权限硬门槛。
+
 ## 5. 单次执行记录模板
 
 每个设备、每个场景复制一份。当前不要填写“通过”。
