@@ -333,17 +333,8 @@ class _DayAgendaCourseRow extends StatelessWidget {
         ? Color(courseColorValue)
         : colors.primary;
     final inactive = layout.displayState != CourseDisplayState.active;
-    final courseColor = switch (layout.displayState) {
-      CourseDisplayState.active => activeCourseColor,
-      CourseDisplayState.futureInactive => Color.lerp(
-        colors.outline,
-        activeCourseColor,
-        0.12,
-      )!,
-      CourseDisplayState.pastEnded => colors.outlineVariant,
-    };
     final background = Color.alphaBlend(
-      courseColor.withValues(alpha: inactive ? 0.025 : 0.07),
+      activeCourseColor.withValues(alpha: inactive ? 0.05 : 0.07),
       colors.surfaceContainerLow,
     );
     final textColor =
@@ -402,7 +393,7 @@ class _DayAgendaCourseRow extends StatelessWidget {
       if (periodsLabel.isNotEmpty) periodsLabel,
       if (location.isNotEmpty) '${l10n.location}: $location',
       if (teacher.isNotEmpty) '${l10n.teacherName}: $teacher',
-      if (inactive) inactiveWeeksLabel,
+      if (inactive) ...[l10n.courseInactiveThisWeek, inactiveWeeksLabel],
       if (layout.conflictCourses.length > 1)
         '${l10n.conflictCourses}: ${layout.conflictCourses.length}',
     ].join(', ');
@@ -481,6 +472,11 @@ class _DayAgendaCourseRow extends StatelessWidget {
                             ],
                             if (inactive) ...[
                               const SizedBox(height: 4),
+                              Text(
+                                l10n.courseInactiveThisWeek,
+                                style: bodyStyle,
+                              ),
+                              const SizedBox(height: 2),
                               Text(inactiveWeeksLabel, style: bodyStyle),
                             ],
                             if (location.isNotEmpty) ...[

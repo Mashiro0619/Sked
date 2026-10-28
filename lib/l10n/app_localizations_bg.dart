@@ -3237,6 +3237,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get courseInactiveThisWeek => 'Не е планирано за тази седмица';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override

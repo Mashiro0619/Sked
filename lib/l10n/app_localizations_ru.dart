@@ -3215,6 +3215,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get courseInactiveThisWeek => 'Не запланировано на эту неделю';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override

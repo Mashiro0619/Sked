@@ -3200,6 +3200,9 @@ class AppLocalizationsFi extends AppLocalizations {
   String get courseInactiveThisWeek => 'Ei opetusta tällä viikolla';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override

@@ -14,6 +14,7 @@ import '../theme/sked_expressive_theme.dart';
 import '../theme/timetable_contrast.dart';
 import '../utils/latin_word_wrapping.dart';
 import 'timetable_entry.dart';
+import 'timetable_course_week_status.dart';
 import 'timetable_week_projection.dart';
 import 'sked_calendar_day_label.dart';
 import 'sked_floating_anchor.dart';
@@ -1130,6 +1131,7 @@ class _DayColumn extends StatelessWidget {
                 for (final geometry in geometries)
                   _CourseCard(
                     geometry: geometry,
+                    localeCode: localeCode,
                     metrics: metrics,
                     themeColorMode: themeColorMode,
                     courseNameColorValues: courseNameColorValues,
@@ -1855,6 +1857,7 @@ List<_CourseGeometry> _buildCourseGeometries({
 class _CourseCard extends StatelessWidget {
   const _CourseCard({
     required this.geometry,
+    required this.localeCode,
     required this.metrics,
     required this.themeColorMode,
     required this.courseNameColorValues,
@@ -1868,6 +1871,7 @@ class _CourseCard extends StatelessWidget {
   });
 
   final _CourseGeometry geometry;
+  final String localeCode;
   final _TimetableMetrics metrics;
   final String themeColorMode;
   final Map<String, int> courseNameColorValues;
@@ -1970,24 +1974,16 @@ class _CourseCard extends StatelessWidget {
                 0.18 + (layout.priorityDepth * 0.18),
               ) ??
               colorScheme.secondaryContainer;
-    final futureInactiveColor = themeColorMode == themeColorModeColorful
-        ? Color.lerp(activeBaseColor, colorScheme.surface, 0.58) ??
-              colorScheme.surfaceContainerHighest
-        : Color.lerp(
-                colorScheme.surfaceContainerHighest,
-                colorScheme.outlineVariant,
-                0.34,
-              ) ??
-              colorScheme.surfaceContainerHighest;
-    final pastEndedColor = themeColorMode == themeColorModeColorful
-        ? Color.lerp(activeBaseColor, colorScheme.surface, 0.74) ??
-              colorScheme.surfaceContainerHighest
-        : Color.lerp(
-                colorScheme.surface,
-                colorScheme.surfaceContainerHighest,
-                0.72,
-              ) ??
-              colorScheme.surfaceContainerHighest;
+    final futureInactiveColor = Color.lerp(
+      activeBaseColor,
+      colorScheme.surface,
+      0.58,
+    )!;
+    final pastEndedColor = Color.lerp(
+      activeBaseColor,
+      colorScheme.surface,
+      0.74,
+    )!;
     final baseColor = switch (layout.displayState) {
       CourseDisplayState.active => activeBaseColor,
       CourseDisplayState.futureInactive => futureInactiveColor,
@@ -2166,7 +2162,7 @@ class _CourseCard extends StatelessWidget {
                           ),
                         )
                       : null;
-                  return Stack(
+                  final content = Stack(
                     children: [
                       if (desktopCourse)
                         Positioned.fill(
@@ -2263,6 +2259,23 @@ class _CourseCard extends StatelessWidget {
                         ),
                     ],
                   );
+                  final isCourse =
+                      layout.course != null ||
+                      layout.entry?.kind == TimetableEntryKind.course;
+                  return _isInactiveForCurrentWeek && isCourse
+                      ? TimetableCourseWeekStatus(
+                          key: ValueKey('timetable-course-week-status-$itemId'),
+                          title: _title,
+                          label: lookupAppLocalizations(
+                            appLocaleFromCode(localeCode),
+                          ).courseInactiveBadge,
+                          titleStyle: titleStyle,
+                          style: bodyStyle?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          child: content,
+                        )
+                      : content;
                 },
               ),
             ),

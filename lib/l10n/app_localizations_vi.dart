@@ -3187,6 +3187,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get courseInactiveThisWeek => 'Không có lịch học trong tuần này';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override

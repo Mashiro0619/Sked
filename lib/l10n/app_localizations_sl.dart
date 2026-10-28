@@ -3204,6 +3204,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get courseInactiveThisWeek => 'Ta teden ni na urniku';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override

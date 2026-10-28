@@ -2,6 +2,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/widgets/timetable_grid.dart';
 
 CourseItem _course({
@@ -35,6 +37,9 @@ Widget _grid({
   List<int> days = const [1, 2, 3, 4, 5, 6, 7],
   TextDirection direction = TextDirection.ltr,
   ValueChanged<TimetableCourseTapInfo>? onTap,
+  int selectedWeek = 1,
+  String localeCode = 'zh',
+  Map<String, int> colors = const {},
 }) => MaterialApp(
   theme: theme ?? ThemeData(platform: TargetPlatform.android),
   builder: (context, child) => MediaQuery(
@@ -58,9 +63,9 @@ Widget _grid({
         CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 720),
       ],
       weekDateStart: DateTime(2026, 1, 5),
-      selectedWeek: 1,
-      realCurrentWeek: 1,
-      localeCode: 'zh',
+      selectedWeek: selectedWeek,
+      realCurrentWeek: selectedWeek,
+      localeCode: localeCode,
       preserveGaps: true,
       showPastEndedCourses: true,
       showFutureCourses: true,
@@ -71,8 +76,10 @@ Widget _grid({
       onCourseTap: onTap ?? (_) {},
       displayedCourseIdForConflict: (_) => courses.first.id,
       onEmptySlotTap: (_) {},
-      themeColorMode: themeColorModeSingle,
-      courseNameColorValues: const {},
+      themeColorMode: colors.isEmpty
+          ? themeColorModeSingle
+          : themeColorModeColorful,
+      courseNameColorValues: colors,
       colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
       liveCourseOutlineEnabled: false,
       liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
@@ -137,6 +144,130 @@ void _expectWholeVisibleLines(WidgetTester tester, String id, double scale) {
 }
 
 void main() {
+  for (final duration in [5, 15]) {
+    testWidgets(
+      'short inactive $duration minute cards keep geometry and complete targets',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 700);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final course = _course(title: '完整课程名称', duration: duration);
+        await tester.pumpWidget(_grid(courses: [course], scale: 2));
+        await tester.pumpAndSettle();
+        final activeRect = tester.getRect(_visual());
+        TimetableCourseTapInfo? opened;
+        await tester.pumpWidget(
+          _grid(
+            courses: [course],
+            scale: 2,
+            selectedWeek: 2,
+            onTap: (info) => opened = info,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.getRect(_visual()), activeRect);
+        expect(
+          find.byKey(const ValueKey('timetable-course-week-status-course')),
+          findsOneWidget,
+        );
+        final semantics = tester.ensureSemantics();
+        expect(find.bySemanticsLabel(RegExp('完整课程名称.*本周不上课')), findsWidgets);
+        semantics.dispose();
+        await tester.tapAt(tester.getCenter(_visual()));
+        expect(opened?.course.name, '完整课程名称');
+        expect(opened?.selectedWeek, 2);
+        _expectWholeVisibleLines(tester, 'course', 2);
+      },
+    );
+  }
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final locale in ['en', 'zh', 'zh_Hant']) {
+      testWidgets(
+        'inactive courses keep visible status, hue and detail targets: $platform/$locale',
+        (tester) async {
+          tester.view.physicalSize = Size(
+            platform == TargetPlatform.android ? 320 : 1280,
+            900,
+          );
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final course = _course(
+            id: 'past',
+            title: 'Past',
+            duration: 90,
+            day: 1,
+          );
+          final future = _course(
+            id: 'future',
+            title: 'Future',
+            duration: 90,
+            day: 2,
+          ).copyWith(semesterWeeks: [3]);
+          final active = _course(
+            id: 'active',
+            title: 'Active',
+            duration: 90,
+            day: 3,
+          ).copyWith(semesterWeeks: [2]);
+          final selections = <String>[];
+          await tester.pumpWidget(
+            _grid(
+              courses: [course, future, active],
+              selectedWeek: 2,
+              localeCode: locale,
+              scale: 2,
+              boldText: true,
+              theme: ThemeData(platform: platform),
+              colors: const {
+                'Past': 0xFFC62828,
+                'Future': 0xFF1565C0,
+                'Active': 0xFF00897B,
+              },
+              onTap: (info) => selections.add(info.course.id),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final label = lookupAppLocalizations(appLocaleFromCode(locale))
+              .courseInactiveBadge;
+          for (final id in ['past', 'future']) {
+            final status = find.descendant(
+              of: _visual(id),
+              matching: find.text(label),
+            );
+            expect(status, findsOneWidget);
+            expect(
+              tester.getRect(status).intersect(tester.getRect(_visual(id))),
+              tester.getRect(status),
+            );
+            final semantics = tester.ensureSemantics();
+            final fullStatus = lookupAppLocalizations(appLocaleFromCode(locale))
+                .courseInactiveThisWeek;
+            final target = find.bySemanticsLabel(
+              RegExp('${id == 'past' ? 'Past' : 'Future'}.*$fullStatus'),
+            );
+            expect(target, findsWidgets);
+            semantics.dispose();
+            await tester.tapAt(tester.getCenter(_visual(id)));
+          }
+          expect(
+            find.descendant(of: _visual('active'), matching: find.text(label)),
+            findsNothing,
+          );
+          final pastFill = tester.widget<Card>(_visual('past')).color!;
+          final futureFill = tester.widget<Card>(_visual('future')).color!;
+          expect(pastFill.r, greaterThan(pastFill.b));
+          expect(futureFill.b, greaterThan(futureFill.r));
+          expect(selections, ['past', 'future']);
+          _expectWholeVisibleLines(tester, 'past', 2);
+          _expectWholeVisibleLines(tester, 'future', 2);
+        },
+      );
+    }
+  }
+
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     testWidgets(
       '2x text doubles course duration and time offsets on $platform',

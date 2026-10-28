@@ -2198,6 +2198,8 @@
   "notificationWindowsCoverageCapacityLimited": "The reminder limit has been reached. Some reminders are not yet scheduled. Reopen the app after upcoming reminders have fired to refresh the plan.",
   "@notificationWindowsCoverageCapacityLimited": {},
   "courseInactiveThisWeek": "Not scheduled this week",
+  "courseInactiveBadge": "Off week",
+  "@courseInactiveBadge": {"description": "Short visible course-card status for a course not scheduled in the displayed week. Full status and actual weeks remain in accessibility and details."},
   "@courseInactiveThisWeek": {"description": "Accessibility status of a course that does not run in the displayed week."},
   "schoolWebImportSignOut": "Sign out",
   "schoolWebImportSignOutTitle": "Sign out of school websites?",

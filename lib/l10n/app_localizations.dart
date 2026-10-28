@@ -5676,6 +5676,12 @@ abstract class AppLocalizations {
   /// **'Not scheduled this week'**
   String get courseInactiveThisWeek;
 
+  /// Short visible course-card status for a course not scheduled in the displayed week. Full status and actual weeks remain in accessibility and details.
+  ///
+  /// In en, this message translates to:
+  /// **'Off week'**
+  String get courseInactiveBadge;
+
   /// No description provided for @schoolWebImportSignOut.
   ///
   /// In en, this message translates to:

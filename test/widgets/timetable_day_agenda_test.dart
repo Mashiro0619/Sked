@@ -584,13 +584,32 @@ void main() {
       expect(find.text('11:00'), findsOneWidget);
       expect(find.text('11:45'), findsOneWidget);
       await tester.pumpWidget(
-        _app(timetable, week: 2, currentWeek: 2, past: true, future: true),
+        _app(
+          timetable,
+          week: 2,
+          currentWeek: 2,
+          past: true,
+          future: true,
+          themeMode: themeColorModeColorful,
+          courseColors: const {'past': 0xFFC62828, 'future': 0xFF1565C0},
+        ),
       );
       await tester.pumpAndSettle();
       expect(_row('past'), findsOneWidget);
       expect(_row('future'), findsOneWidget);
       expect(find.text('Weeks 1'), findsOneWidget);
       expect(find.text('Weeks 3'), findsOneWidget);
+      expect(find.text('Not scheduled this week'), findsNWidgets(2));
+      for (final id in ['past', 'future']) {
+        expect(
+          tester.widget<Semantics>(_semantics(id)).properties.label,
+          contains('Not scheduled this week'),
+        );
+      }
+      final pastFill = tester.widget<Material>(_card('past')).color!;
+      final futureFill = tester.widget<Material>(_card('future')).color!;
+      expect(pastFill.r, greaterThan(pastFill.b));
+      expect(futureFill.b, greaterThan(futureFill.r));
     },
   );
 

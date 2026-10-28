@@ -2977,6 +2977,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get courseInactiveThisWeek => '本周不上课';
 
   @override
+  String get courseInactiveBadge => '非本周';
+
+  @override
   String get schoolWebImportSignOut => '退出登录';
 
   @override
@@ -6053,6 +6056,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get courseInactiveThisWeek => '本週不上課';
+
+  @override
+  String get courseInactiveBadge => '非本週';
 
   @override
   String get schoolWebImportSignOut => '登出';

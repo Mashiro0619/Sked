@@ -3195,6 +3195,9 @@ class AppLocalizationsCs extends AppLocalizations {
   String get courseInactiveThisWeek => 'Tento týden není v rozvrhu';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override

@@ -3073,6 +3073,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get courseInactiveThisWeek => '今週は授業なし';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override

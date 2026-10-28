@@ -2150,6 +2150,7 @@
   "notificationWindowsCoverageCapacityLimited": "已达到提醒数量上限，其余提醒尚未安排。近期提醒触发后，请重新打开应用更新计划。",
   "@notificationWindowsCoverageCapacityLimited": {},
   "courseInactiveThisWeek": "本周不上课",
+  "courseInactiveBadge": "非本周",
   "schoolWebImportSignOut": "退出登录",
   "schoolWebImportSignOutTitle": "退出学校网页登录？",
   "schoolWebImportSignOutMessage": "这会清除 Sked 内学校网页的登录 Cookie 和保存的网页数据。已导入的课表和应用设置会保留。",

@@ -3246,6 +3246,9 @@ class AppLocalizationsEl extends AppLocalizations {
       'Δεν έχει προγραμματιστεί αυτή την εβδομάδα';
 
   @override
+  String get courseInactiveBadge => 'Off week';
+
+  @override
   String get schoolWebImportSignOut => 'Sign out';
 
   @override
