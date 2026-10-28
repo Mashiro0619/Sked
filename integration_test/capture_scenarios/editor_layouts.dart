@@ -114,6 +114,7 @@ void registerCaptureScenarios() {
         );
       }
 
+      await _capture(tester, output, '$name-floating');
       if (group == _EditorGroup.event && scale == 1) {
         final rows = find.byType(WorkspaceEditorTimeRows);
         final dates = find.descendant(
@@ -129,28 +130,57 @@ void registerCaptureScenarios() {
           of: rows,
           matching: find.text(strings.eventStartTime),
         );
-        expect(
-          tester.getCenter(startLabel).dy,
-          closeTo(tester.getCenter(dates.first).dy, .1),
+        final endLabel = find.descendant(
+          of: rows,
+          matching: find.text(strings.eventEndTime),
         );
-        expect(
-          tester.getCenter(allDay).dy,
-          closeTo(tester.getCenter(dates.first).dy, .1),
-        );
+        final startLabelRect = tester.getRect(startLabel);
+        final endLabelRect = tester.getRect(endLabel);
+        final startDateRect = tester.getRect(dates.first);
+        final endDateRect = tester.getRect(dates.last);
+        final allDayRect = tester.getRect(allDay);
+        // Native fonts can move the labels above their controls. Both layouts
+        // keep all-day beside the start label and retain aligned date columns.
+        expect(allDayRect.center.dy, closeTo(startLabelRect.center.dy, .1));
+        if (startLabelRect.bottom < startDateRect.top) {
+          expect(allDayRect.bottom, lessThan(startDateRect.top));
+          expect(endLabelRect.bottom, lessThan(endDateRect.top));
+          expect(
+            endLabelRect.top,
+            greaterThan(tester.getRect(times.first).bottom),
+          );
+        } else {
+          expect(
+            startLabelRect.center.dy,
+            closeTo(startDateRect.center.dy, .1),
+          );
+          expect(endLabelRect.center.dy, closeTo(endDateRect.center.dy, .1));
+        }
+        final controls = [
+          startLabelRect,
+          startDateRect,
+          tester.getRect(times.first),
+          allDayRect,
+          endLabelRect,
+          endDateRect,
+          tester.getRect(times.last),
+        ];
+        for (var index = 0; index < controls.length; index++) {
+          for (final other in controls.skip(index + 1)) {
+            expect(controls[index].overlaps(other), isFalse);
+          }
+        }
         expect(
           tester.getCenter(times.first).dy,
-          closeTo(tester.getCenter(dates.first).dy, .1),
+          closeTo(startDateRect.center.dy, .1),
         );
         expect(
-          tester.getRect(dates.last).top,
-          greaterThan(tester.getRect(dates.first).bottom),
+          tester.getCenter(times.last).dy,
+          closeTo(endDateRect.center.dy, .1),
         );
-        expect(
-          tester.getRect(dates.first).left,
-          closeTo(tester.getRect(dates.last).left, .1),
-        );
+        expect(endDateRect.top, greaterThan(startDateRect.bottom));
+        expect(startDateRect.left, closeTo(endDateRect.left, .1));
       }
-      await _capture(tester, output, '$name-floating');
       if (locale == 'zh' && editing) {
         if (group == _EditorGroup.event) {
           final toggle = find.descendant(
