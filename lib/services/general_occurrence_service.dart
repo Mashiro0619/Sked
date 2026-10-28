@@ -15,7 +15,11 @@ const maximumGeneralReminderLookback = Duration(days: 30);
 /// 这个 service 只读 [GeneralScheduleData]，不持有任何状态，所有方法都是
 /// 幂等的。CRUD（增删改、reminder 标记 handled）属于 `GeneralCalendarService`。
 class GeneralOccurrenceService {
-  const GeneralOccurrenceService();
+  const GeneralOccurrenceService({
+    this._expandEvent = expandGeneralEventOccurrences,
+  });
+
+  final GeneralEventOccurrenceExpander _expandEvent;
 
   List<GeneralEventOccurrence> occurrencesForRange(
     GeneralScheduleData general, {
@@ -42,6 +46,7 @@ class GeneralOccurrenceService {
       startInclusive: query.startInclusive,
       endExclusive: query.endExclusive,
       onlyVisibleCalendars: query.onlyVisibleCalendars,
+      expandEvent: _expandEvent,
     ).where(query.matches).toList();
   }
 

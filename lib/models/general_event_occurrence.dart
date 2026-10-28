@@ -201,11 +201,19 @@ bool _matchesGeneralOccurrenceColor(
       normalizeGeneralCalendarColorValue(colorValue);
 }
 
+typedef GeneralEventOccurrenceExpander = List<GeneralEventOccurrence> Function({
+  required GeneralSchedule calendar,
+  required GeneralEvent event,
+  required DateTime startInclusive,
+  required DateTime endExclusive,
+});
+
 List<GeneralEventOccurrence> expandGeneralOccurrences({
   required Iterable<GeneralSchedule> calendars,
   required DateTime startInclusive,
   required DateTime endExclusive,
   bool onlyVisibleCalendars = true,
+  GeneralEventOccurrenceExpander expandEvent = expandGeneralEventOccurrences,
 }) {
   final results = <GeneralEventOccurrence>[];
   for (final calendar in calendars) {
@@ -214,7 +222,7 @@ List<GeneralEventOccurrence> expandGeneralOccurrences({
     }
     for (final event in calendar.events) {
       results.addAll(
-        expandGeneralEventOccurrences(
+        expandEvent(
           calendar: calendar,
           event: event,
           startInclusive: startInclusive,
