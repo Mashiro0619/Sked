@@ -1,17 +1,115 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/theme/app_theme.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/utils/constants.dart';
 
 void main() {
+  test('standard shapes share the 8 12 20 scale and real round ends', () {
+    final shapes = SkedShapeScheme.standard;
+    for (final (shape, radius) in [
+      (shapes.compact, 8.0),
+      (shapes.field, 12.0),
+      (shapes.pageContainer, 20.0),
+      (shapes.dialog, 20.0),
+      (shapes.hero, 20.0),
+    ]) {
+      expect(
+        (shape as RoundedRectangleBorder).borderRadius,
+        BorderRadius.circular(radius),
+      );
+    }
+    expect(shapes.selection, isA<StadiumBorder>());
+    expect(shapes.fab, shapes.selection);
+    final circle = shapes.fab.getOuterPath(const Rect.fromLTWH(0, 0, 48, 48));
+    expect(circle.contains(const Offset(1, 1)), isFalse);
+    expect(circle.contains(const Offset(24, 1)), isTrue);
+    expect(circle.contains(const Offset(1, 24)), isTrue);
+  });
+
+  test('control-to-selection interpolation changes geometry continuously', () {
+    final begin = SkedShapeScheme.standard;
+    final end = begin.copyWith(control: begin.selection);
+    String silhouette(double t) {
+      final path = begin
+          .lerp(end, t)
+          .control
+          .getOuterPath(const Rect.fromLTWH(0, 0, 120, 48));
+      return [
+        for (var y = 0.5; y < 24; y += 0.5)
+          for (var x = 0.5; x < 24; x += 0.5)
+            path.contains(Offset(x, y)) ? '1' : '0',
+      ].join();
+    }
+
+    expect({
+      for (final t in [0.0, .25, .5, .75, 1.0]) silhouette(t),
+    }, hasLength(5));
+  });
+
+  test('custom superellipse fields retain their radius and interpolation', () {
+    final begin = SkedShapeScheme.standard.copyWith(
+      control: const RoundedSuperellipseBorder(
+        borderRadius: BorderRadius.all(Radius.circular(24)),
+      ),
+    );
+    final end = begin.copyWith(
+      control: const RoundedSuperellipseBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+      ),
+    );
+    expect(begin.fieldRadius, BorderRadius.circular(24));
+    expect(begin.lerp(end, .5).fieldRadius, BorderRadius.circular(16));
+  });
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    test(
+      '$platform theme uses semantic controls and fields at both brightnesses',
+      () {
+        debugDefaultTargetPlatformOverride = platform;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        for (final brightness in Brightness.values) {
+          final theme = buildAppTheme(
+            seedColor: const Color(defaultThemeSeedColorValue),
+            brightness: brightness,
+            themeColorMode: themeColorModeSingle,
+            colorfulUiColorValues: const {},
+          );
+          final shapes = theme.extension<SkedShapeScheme>()!;
+          expect(
+            theme.filledButtonTheme.style!.shape!.resolve({}),
+            shapes.control,
+          );
+          expect(
+            theme.iconButtonTheme.style!.shape!.resolve({}),
+            shapes.selection,
+          );
+          expect(theme.dialogTheme.shape, shapes.dialog);
+          for (final border in [
+            theme.inputDecorationTheme.enabledBorder,
+            theme.inputDecorationTheme.focusedBorder,
+            theme.inputDecorationTheme.errorBorder,
+            theme.dropdownMenuTheme.inputDecorationTheme!.enabledBorder,
+          ]) {
+            expect(
+              (border as OutlineInputBorder).borderRadius,
+              shapes.fieldRadius,
+            );
+          }
+        }
+      },
+    );
+  }
+
   test('shape scheme exposes semantic families and interpolates same-family shapes', () {
     final shapes = SkedShapeScheme.standard;
 
     expect(shapes.card, same(shapes.container));
     expect(shapes.field, same(shapes.control));
-    expect(shapes.bottomSheet, isA<RoundedSuperellipseBorder>());
-    final sheetRadius = (shapes.bottomSheet as RoundedSuperellipseBorder)
+    expect(shapes.bottomSheet, isA<RoundedRectangleBorder>());
+    final sheetRadius = (shapes.bottomSheet as RoundedRectangleBorder)
         .borderRadius
         .resolve(TextDirection.ltr);
     expect(sheetRadius.bottomLeft.x, 0);
@@ -19,19 +117,19 @@ void main() {
 
     final mid = shapes.lerp(
       shapes.copyWith(
-        control: const RoundedSuperellipseBorder(
+        control: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
       ),
       0.5,
     );
-    expect(mid.control, isA<RoundedSuperellipseBorder>());
+    expect(mid.control, isA<RoundedRectangleBorder>());
     expect(
-      (mid.control as RoundedSuperellipseBorder).borderRadius
+      (mid.control as RoundedRectangleBorder).borderRadius
           .resolve(TextDirection.ltr)
           .topLeft
           .x,
-      closeTo(12, 0.001),
+      closeTo(10, 0.001),
     );
   });
 
@@ -46,7 +144,7 @@ void main() {
       expect(shapes.menu, same(shapes.control));
       expect(shapes.dialog, same(shapes.prominent));
       expect(shapes.selectionIndicator, same(shapes.selection));
-      expect(shapes.fab, same(shapes.prominent));
+      expect(shapes.fab, same(shapes.selection));
       expect(shapes.toolbar, same(shapes.container));
       expect(shapes.copyWith().control, same(shapes.control));
       expect(shapes.lerp(null, 0.5), same(shapes));
@@ -71,7 +169,7 @@ void main() {
       expect(changed.prominent, prominent);
       expect(changed.selection, selection);
       expect(changed.hero, hero);
-      expect(changed.fieldRadius, const BorderRadius.all(Radius.circular(16)));
+      expect(changed.fieldRadius, const BorderRadius.all(Radius.circular(12)));
     },
   );
 

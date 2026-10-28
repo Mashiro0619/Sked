@@ -4,7 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_motion.dart';
 
-/// The six shape families used to give Sked a consistent expressive grammar.
+/// Semantic shape families sharing the app's 8 / 12 / 20 / full-round scale.
 ///
 /// Semantic getters deliberately map multiple components to the same families
 /// so the app does not grow a one-off shape token for every widget.
@@ -20,25 +20,22 @@ class SkedShapeScheme extends ThemeExtension<SkedShapeScheme> {
   });
 
   static const standard = SkedShapeScheme(
-    compact: RoundedSuperellipseBorder(
+    compact: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(8)),
+    ),
+    control: RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
-    control: RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.all(Radius.circular(16)),
+    container: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(20)),
     ),
-    container: RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.all(Radius.circular(24)),
+    prominent: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(20)),
     ),
-    prominent: RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.all(Radius.circular(28)),
-    ),
-    // Keep selection in the same rounded-superellipse family as controls so
-    // ButtonStyle can interpolate the radius instead of snapping shapes.
-    selection: RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.all(Radius.circular(24)),
-    ),
-    hero: RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.all(Radius.circular(36)),
+    // Flutter interpolates rounded rectangles and stadiums continuously.
+    selection: StadiumBorder(),
+    hero: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(20)),
     ),
   );
 
@@ -54,19 +51,23 @@ class SkedShapeScheme extends ThemeExtension<SkedShapeScheme> {
   OutlinedBorder get field => control;
   OutlinedBorder get menu => control;
   OutlinedBorder get dialog => prominent;
-  OutlinedBorder get bottomSheet => const RoundedSuperellipseBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+  OutlinedBorder get bottomSheet => const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
   );
   OutlinedBorder get selectionIndicator => selection;
-  OutlinedBorder get fab => prominent;
+  OutlinedBorder get fab => selection;
   OutlinedBorder get toolbar => container;
 
   BorderRadius get fieldRadius {
     final shape = field;
-    return shape is RoundedSuperellipseBorder &&
-            shape.borderRadius is BorderRadius
-        ? shape.borderRadius as BorderRadius
-        : const BorderRadius.all(Radius.circular(16));
+    final radius = switch (shape) {
+      RoundedRectangleBorder(:final borderRadius) => borderRadius,
+      RoundedSuperellipseBorder(:final borderRadius) => borderRadius,
+      _ => null,
+    };
+    return radius is BorderRadius
+        ? radius
+        : const BorderRadius.all(Radius.circular(12));
   }
 
   @override

@@ -257,7 +257,7 @@ _Appearance _inspectMenu(WidgetTester tester, Finder surface, ThemeData theme) {
     expect(shape, isA<RoundedRectangleBorder>());
     expect(
       (shape as RoundedRectangleBorder).borderRadius.resolve(TextDirection.ltr),
-      BorderRadius.circular(8),
+      BorderRadius.circular(12),
     );
   }
   for (final label in [_selectedLabel, _otherLabel, _disabledLabel]) {

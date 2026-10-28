@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../widgets/sked_floating_surface.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import 'sked_expressive_theme.dart';
 import 'sked_surface.dart';
@@ -67,18 +66,9 @@ class SkedMenuStyle {
       skedReadableAccent(colors, surface: selectedSurface);
 
   OutlinedBorder get shape =>
-      (desktop
-              ? const RoundedRectangleBorder(
-                  borderRadius: SkedFloatingStyle.radius,
-                )
-              : shapes.menu)
-          .copyWith(side: BorderSide(color: outline));
+      shapes.menu.copyWith(side: BorderSide(color: outline));
 
-  OutlinedBorder get itemShape => desktop
-      ? const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(4)),
-        )
-      : shapes.compact;
+  OutlinedBorder get itemShape => shapes.compact;
 
   Color foreground(Set<WidgetState> states, {bool selected = false}) {
     if (states.contains(WidgetState.disabled)) {

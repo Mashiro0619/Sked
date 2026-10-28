@@ -573,7 +573,7 @@ void main() {
       final inkWell = tester.widget<InkWell>(
         find.descendant(of: action, matching: find.byType(InkWell)),
       );
-      expect(inkWell.customBorder, isA<RoundedSuperellipseBorder>());
+      expect(inkWell.customBorder, isA<RoundedRectangleBorder>());
     }
     final iconContainer = tester.widget<Container>(
       find.descendant(of: iconBackground, matching: find.byType(Container)),

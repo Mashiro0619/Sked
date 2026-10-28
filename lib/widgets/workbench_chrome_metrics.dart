@@ -46,6 +46,5 @@ class WorkbenchChromeMetrics {
     tapTargetSize: desktop
         ? MaterialTapTargetSize.shrinkWrap
         : MaterialTapTargetSize.padded,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
   );
 }

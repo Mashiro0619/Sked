@@ -55,9 +55,7 @@ ThemeData buildAppTheme({
           labelLarge: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
         )
       : theme.textTheme;
-  final controlShape = desktop
-      ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))
-      : shapes.control;
+  final controlShape = shapes.control;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
   final accent = skedReadableAccent(
     colorScheme,
@@ -162,7 +160,7 @@ ThemeData buildAppTheme({
         minimumSize: desktop ? const Size.square(32) : const Size.square(48),
         padding: EdgeInsets.all(desktop ? 6 : 8),
         iconSize: desktop ? 18 : 24,
-        shape: controlShape,
+        shape: shapes.selection,
         foregroundColor: colorScheme.onSurfaceVariant,
         highlightColor: colorScheme.primary.withValues(alpha: 0.12),
       ),
@@ -265,23 +263,23 @@ ThemeData buildAppTheme({
         return TextStyle(color: color);
       }),
       border: OutlineInputBorder(
-        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: accent, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.error, width: 2),
       ),
     ),
@@ -408,15 +406,15 @@ ThemeData buildAppTheme({
         filled: true,
         fillColor: colorScheme.surfaceContainerLow,
         border: OutlineInputBorder(
-          borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+          borderRadius: shapes.fieldRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+          borderRadius: shapes.fieldRadius,
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
+          borderRadius: shapes.fieldRadius,
           borderSide: BorderSide(color: accent, width: 2),
         ),
       ),
