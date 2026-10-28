@@ -269,14 +269,15 @@ void main() {
 
     final target = currentOrNextCourseTargetFor(
       timetable: table,
-      selectedWeek: 1,
+      selectedWeek: 2,
       realCurrentWeek: 1,
-      now: DateTime(2026, 5, 24, 20),
+      now: DateTime(2026, 5, 31, 20),
       displayedCourseIdForConflict: (requested) =>
           requested == key ? selected.id : null,
     );
 
     expect(target?.weekday, DateTime.monday);
+    expect(target?.week, 2);
     expect(target?.courseId, selected.id);
     expect(target?.isCurrentCourse, isFalse);
   });
