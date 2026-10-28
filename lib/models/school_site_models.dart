@@ -1,3 +1,5 @@
+import 'app_data_json_values.dart';
+
 import 'dart:convert';
 
 import '../l10n/app_locale.dart';
@@ -15,24 +17,6 @@ class UnsupportedSchoolSiteStorageVersionException implements Exception {
   String toString() => 'School-site storage version $version is not supported.';
 }
 
-Map<String, dynamic> _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return const <String, dynamic>{};
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
-
-String _stringValue(Object? value) {
-  return value is String ? value : '';
-}
-
 class SchoolSite {
   const SchoolSite({required this.name, required this.loginUrl});
 
@@ -41,8 +25,8 @@ class SchoolSite {
 
   factory SchoolSite.fromJson(Map<String, dynamic> json) {
     return SchoolSite(
-      name: _stringValue(json['name']).trim(),
-      loginUrl: _stringValue(json['loginUrl']).trim(),
+      name: appDataStringValue(json['name']).trim(),
+      loginUrl: appDataStringValue(json['loginUrl']).trim(),
     );
   }
 
@@ -115,7 +99,7 @@ SchoolSiteImportPreview decodeSchoolSitesForImport(
       );
       continue;
     }
-    final item = _asStringKeyedMap(value);
+    final item = appDataStringKeyedMapOrEmpty(value);
     final name = item['name'];
     if (name is! String || name.trim().isEmpty) {
       issues.add(
@@ -158,7 +142,7 @@ SchoolSiteImportPreview decodeSchoolSitesForImport(
 List<SchoolSite> decodeSchoolSitesStrict(String source) {
   final decoded = jsonDecode(source);
   if (decoded is Map) {
-    final envelope = _asStringKeyedMap(decoded);
+    final envelope = appDataStringKeyedMapOrEmpty(decoded);
     if (envelope['schema'] == schoolSiteStorageSchema) {
       final version = envelope['version'];
       if (version is! int) {
@@ -173,7 +157,7 @@ List<SchoolSite> decodeSchoolSitesStrict(String source) {
         );
       }
       final rawData = envelope['data'];
-      final data = _asStringKeyedMap(rawData);
+      final data = appDataStringKeyedMapOrEmpty(rawData);
       if (rawData is! Map || data['sites'] is! List) {
         throw const FormatException('School site storage data is invalid.');
       }
@@ -190,7 +174,7 @@ List<SchoolSite> _decodeSchoolSiteListStrict(Object? decoded) {
   final sites = <SchoolSite>[];
   for (var index = 0; index < decoded.length; index += 1) {
     final value = decoded[index];
-    final item = _asStringKeyedMap(value);
+    final item = appDataStringKeyedMapOrEmpty(value);
     if (value is! Map ||
         item['name'] is! String ||
         item['loginUrl'] is! String) {
