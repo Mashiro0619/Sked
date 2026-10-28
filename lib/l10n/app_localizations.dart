@@ -4563,7 +4563,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationCoverageBlocked.
   ///
   /// In en, this message translates to:
-  /// **'Reminders are blocked and will not fire. Review the system requirements below.'**
+  /// **'Reminders are blocked and will not fire. Check notification settings.'**
   String get notificationCoverageBlocked;
 
   /// No description provided for @notificationCoverageFailed.
@@ -5861,6 +5861,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Previously skipped dates stay skipped only if the new repeat pattern still has an occurrence on that date. Other skip records will be removed. Turning repeats off removes all skip records. Events edited separately stay unchanged.'**
   String get eventRecurrenceExceptionsChangeMessage;
+
+  /// No description provided for @noPendingReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending reminders.'**
+  String get noPendingReminders;
 }
 
 class _AppLocalizationsDelegate

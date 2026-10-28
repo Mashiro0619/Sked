@@ -2378,7 +2378,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationCoverage => '提醒覆盖状态';
 
   @override
-  String get notificationCoverageBlocked => '提醒受阻，暂时不会触发。请检查下列系统条件。';
+  String get notificationCoverageBlocked => '提醒受阻，暂时不会触发。请检查提醒设置。';
 
   @override
   String get notificationCoverageFailed => '提醒同步失败。请打开提醒设置后重试。';
@@ -3085,6 +3085,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get eventRecurrenceExceptionsChangeMessage =>
       '原来已跳过的日期仅在新规则仍有该日程时继续跳过，其余跳过记录将移除。停止重复会移除全部跳过记录。单独修改过的日程不受影响。';
+
+  @override
+  String get noPendingReminders => '暂无待处理提醒';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5460,7 +5463,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationCoverage => '提醒覆蓋狀態';
 
   @override
-  String get notificationCoverageBlocked => '提醒受阻，暫時不會觸發。請檢查下列系統條件。';
+  String get notificationCoverageBlocked => '提醒受阻，暫時不會觸發。請檢查提醒設定。';
 
   @override
   String get notificationCoverageFailed => '提醒同步失敗。請開啟提醒設定後重試。';
@@ -6169,4 +6172,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get eventRecurrenceExceptionsChangeMessage =>
       '原先已略過的日期僅在新規則仍有該日程時繼續略過，其餘略過記錄將移除。停止重複會移除全部略過記錄。單獨修改過的日程不受影響。';
+
+  @override
+  String get noPendingReminders => '暫無待處理提醒';
 }

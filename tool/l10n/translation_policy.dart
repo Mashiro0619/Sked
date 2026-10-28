@@ -41,6 +41,7 @@ const commonEnglishFallbacks = <String>{
   'studentDayNextCourse',
   'studentDayNoMoreCourses',
   'notificationCoverageBlocked',
+  'noPendingReminders',
   'notificationCoverageFailed',
   'notificationBatteryOptimizationWarning',
   'schoolWebImportSignOut',

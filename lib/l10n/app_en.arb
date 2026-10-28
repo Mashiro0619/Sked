@@ -1816,7 +1816,7 @@
   "@notificationSettingsSection": {},
   "notificationCoverage": "Reminder coverage",
   "@notificationCoverage": {},
-  "notificationCoverageBlocked": "Reminders are blocked and will not fire. Review the system requirements below.",
+  "notificationCoverageBlocked": "Reminders are blocked and will not fire. Check notification settings.",
   "@notificationCoverageBlocked": {},
   "notificationCoverageFailed": "Reminders could not be synced. Open notification settings and try again.",
   "@notificationCoverageFailed": {},
@@ -2251,5 +2251,7 @@
   "eventRecurrenceExceptionsChangeTitle": "Change repeat pattern?",
   "eventRecurrenceExceptionsChangeMessage": "Previously skipped dates stay skipped only if the new repeat pattern still has an occurrence on that date. Other skip records will be removed. Turning repeats off removes all skip records. Events edited separately stay unchanged.",
   "@eventRecurrenceExceptionsChangeTitle": {"description": "Title of the confirmation before saving a changed repeat step that affects skipped dates."},
-  "@eventRecurrenceExceptionsChangeMessage": {"description": "Explains absolute-date exclusion retention and independent events before the user saves a changed repeat pattern."}
+  "@eventRecurrenceExceptionsChangeMessage": {"description": "Explains absolute-date exclusion retention and independent events before the user saves a changed repeat pattern."},
+  "noPendingReminders": "No pending reminders.",
+  "@noPendingReminders": {}
 }

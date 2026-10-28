@@ -123,11 +123,129 @@ Future<void> _pumpReminderScreen(
     ),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const ValueKey('general-reminders-action')));
+  final action = find.byKey(const ValueKey('general-reminders-action'));
+  if (action.hitTestable().evaluate().isEmpty) {
+    await tester.tap(find.byKey(const ValueKey('general-toolbar-more-button')));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(action);
   await tester.pumpAndSettle();
 }
 
 void main() {
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets(
+      'reminder rows retain status semantics and only phones repeat the group label: $platform',
+      (tester) async {
+        final desktop = platform == TargetPlatform.windows;
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = desktop
+            ? const Size(1440, 900)
+            : const Size(393, 852);
+        addTearDown(tester.view.reset);
+        final semantics = tester.ensureSemantics();
+        try {
+          final provider = await _createProvider();
+          addTearDown(provider.dispose);
+          final clock = _MutableClock(DateTime(2026, 6, 16, 9, 55));
+          await _pumpReminderScreen(
+            tester,
+            provider: provider,
+            clock: clock,
+            timers: _TrackingTimerFactory(),
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final list = find.byKey(const ValueKey('general-reminders-list'));
+          final title = find.descendant(of: list, matching: find.text('Exam'));
+          for (final (now, label) in [
+            (DateTime(2026, 6, 16, 9, 55), l10n.reminderUpcoming),
+            (DateTime(2026, 6, 16, 10, 5), l10n.reminderInProgress),
+            (DateTime(2026, 6, 16, 11, 5), l10n.reminderEnded),
+          ]) {
+            clock.value = now;
+            await tester.pump(const Duration(minutes: 1));
+            await tester.pumpAndSettle();
+            expect(title, findsOneWidget);
+            expect(
+              find.descendant(of: list, matching: find.text(label)),
+              desktop ? findsNothing : findsOneWidget,
+            );
+            expect(
+              find.descendant(of: list, matching: find.text('$label · 1')),
+              desktop ? findsOneWidget : findsNothing,
+            );
+            final spoken = tester.getSemantics(title).label;
+            expect(spoken, contains('Exam'));
+            expect(spoken, contains(label));
+          }
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        } finally {
+          semantics.dispose();
+        }
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+
+    testWidgets(
+      'handling the last reminder leaves its future event and shows no pending reminders: $platform',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = platform == TargetPlatform.windows
+            ? const Size(1440, 900)
+            : const Size(393, 852);
+        addTearDown(tester.view.reset);
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final clock = _MutableClock(DateTime(2026, 6, 16, 9, 55));
+        await _pumpReminderScreen(
+          tester,
+          provider: provider,
+          clock: clock,
+          timers: _TrackingTimerFactory(),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final list = find.byKey(const ValueKey('general-reminders-list'));
+        expect(
+          provider.generalView.reminderItems(now: clock.now()),
+          hasLength(1),
+        );
+        await tester.tap(
+          find
+              .descendant(
+                of: list,
+                matching: find.byTooltip(l10n.markReminderHandled),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
+        expect(provider.generalView.reminderItems(now: clock.now()), isEmpty);
+        expect(
+          find.descendant(
+            of: list,
+            matching: find.text(l10n.noPendingReminders),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: list, matching: find.text(l10n.noUpcomingEvents)),
+          findsNothing,
+        );
+        final events = provider.generalView.schedules.single.events;
+        expect(events, hasLength(1));
+        expect(events.single.title, 'Exam');
+        expect(events.single.startDateTimeIso, '2026-06-16T10:00:00.000');
+        expect(
+          DateTime.parse(events.single.startDateTimeIso).isAfter(clock.now()),
+          isTrue,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
   testWidgets(
     'reminder panel reports blocked delivery and clears after repair',
     (tester) async {

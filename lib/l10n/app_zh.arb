@@ -1794,7 +1794,7 @@
   "@notificationSettingsSection": {},
   "notificationCoverage": "提醒覆盖状态",
   "@notificationCoverage": {},
-  "notificationCoverageBlocked": "提醒受阻，暂时不会触发。请检查下列系统条件。",
+  "notificationCoverageBlocked": "提醒受阻，暂时不会触发。请检查提醒设置。",
   "@notificationCoverageBlocked": {},
   "notificationCoverageFailed": "提醒同步失败。请打开提醒设置后重试。",
   "@notificationCoverageFailed": {},
@@ -2181,5 +2181,7 @@
   "developerTestNotificationCourseBody": "课程提醒通道正常。",
   "developerTestNotificationScheduleBody": "日程提醒通道正常。",
   "eventRecurrenceExceptionsChangeTitle": "更改重复方式？",
-  "eventRecurrenceExceptionsChangeMessage": "原来已跳过的日期仅在新规则仍有该日程时继续跳过，其余跳过记录将移除。停止重复会移除全部跳过记录。单独修改过的日程不受影响。"
+  "eventRecurrenceExceptionsChangeMessage": "原来已跳过的日期仅在新规则仍有该日程时继续跳过，其余跳过记录将移除。停止重复会移除全部跳过记录。单独修改过的日程不受影响。",
+  "noPendingReminders": "暂无待处理提醒",
+  "@noPendingReminders": {}
 }

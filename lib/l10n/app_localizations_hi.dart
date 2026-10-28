@@ -2531,7 +2531,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get notificationCoverageBlocked =>
-      'Reminders are blocked and will not fire. Review the system requirements below.';
+      'Reminders are blocked and will not fire. Check notification settings.';
 
   @override
   String get notificationCoverageFailed =>
@@ -3287,4 +3287,7 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get eventRecurrenceExceptionsChangeMessage =>
       'Previously skipped dates stay skipped only if the new repeat pattern still has an occurrence on that date. Other skip records will be removed. Turning repeats off removes all skip records. Events edited separately stay unchanged.';
+
+  @override
+  String get noPendingReminders => 'No pending reminders.';
 }

@@ -394,7 +394,7 @@ class _ReminderStripState extends State<_ReminderStrip>
                 ? SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text(l.noUpcomingEvents),
+                      child: Text(l.noPendingReminders),
                     ),
                   )
                 // Keep every reminder in one lazy sequence. Separate lists
@@ -408,6 +408,7 @@ class _ReminderStripState extends State<_ReminderStrip>
                         source: source,
                         builder: (activate) => _ReminderSummaryRow(
                           item: item,
+                          showStatusLabel: false,
                           busy: _handling.contains(
                             item.occurrence.occurrenceKey,
                           ),
@@ -495,7 +496,7 @@ class _ReminderStripState extends State<_ReminderStrip>
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(l.noUpcomingEvents),
+                child: Text(l.noPendingReminders),
               ),
             ),
           _reminderRowsSliver(
@@ -594,11 +595,13 @@ class _ReminderSummaryRow extends StatelessWidget {
     required this.busy,
     required this.onOpen,
     required this.onHandle,
+    this.showStatusLabel = true,
   });
   final GeneralReminderItem item;
   final bool busy;
   final ValueChanged<BuildContext> onOpen;
   final VoidCallback onHandle;
+  final bool showStatusLabel;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -626,6 +629,9 @@ class _ReminderSummaryRow extends StatelessWidget {
       key: ValueKey('general-reminder-${occurrence.occurrenceKey}'),
       title: Text(
         occurrence.event.title,
+        semanticsLabel: showStatusLabel
+            ? null
+            : '${occurrence.event.title}\n${_reminderStatusLabel(item.status, l)}',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodyMedium?.copyWith(
@@ -639,13 +645,14 @@ class _ReminderSummaryRow extends StatelessWidget {
           spacing: 8,
           runSpacing: 2,
           children: [
-            Text(
-              _reminderStatusLabel(item.status, l),
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: _reminderStatusColor(item.status, theme.colorScheme),
+            if (showStatusLabel)
+              Text(
+                _reminderStatusLabel(item.status, l),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: _reminderStatusColor(item.status, theme.colorScheme),
+                ),
               ),
-            ),
             Text(
               occurrence.isAllDay || sameDay
                   ? '$dateLabel · $timeLabel'
