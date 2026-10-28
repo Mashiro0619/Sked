@@ -13,7 +13,7 @@
 | 敏感数据 | 普通 AppData 和备份不包含 API Key 值；错误展示需脱敏认证头、URL 凭据及已知密钥的编码/截断形式，同时保持正常认证、成功响应和取消语义。见 [密钥持久化](../test/controllers/school_import_secret_persistence_test.dart) 与 [错误脱敏测试](../test/services/school_import_error_redactor_test.dart)。 |
 | 学校网页会话清除 | 清除应用数据前先关闭学校浏览器的原生页面并清除 Cookie、站点存储及缓存；Android/iOS 使用对应 WebView 数据接口，Windows 使用同一默认 WebView2 profile 的 `ClearBrowsingDataAll`。清理失败时保留主存档和 API 密钥，不假报成功；页面重开使用新的文档，不复用旧登录上下文。见 [清除服务测试](../test/services/app_data_clear_service_io_test.dart) 与 [网页会话测试](../test/services/school_web_session_service_test.dart)。 |
 | HTTP Endpoint | 所有 HTTP Endpoint，包括 loopback、私网和公网，都需要发送前确认；同意按端点保留于当前进程，HTTPS 不触发该确认。确认和请求必须使用同一设置快照，并保留重定向防护。见 [导入流程测试](../test/services/school_import_workflow_test.dart)。 |
-| 原生安全 | Android 禁止普通系统备份，通知 receiver 不导出；允许可配置 HTTP Endpoint 的网络策略需与前述确认配合。Apple 权限与 Windows 通知身份也需检查。见 [平台测试](../test/platform) 和 [产物检查器](../tool/platform_artifact_check.dart)。 |
+| 原生安全 | Android 云备份和旧版整包备份关闭；设备间迁移仅使用先过滤当前及旧版密钥的受控主数据工件，恢复不覆盖已有存档。通知 receiver 不导出；可配置 HTTP Endpoint 的网络策略需与前述确认配合。Apple 权限与 Windows 通知身份也需检查。见 [设备迁移约定](ANDROID_DEVICE_TRANSFER.md)、[平台测试](../test/platform) 和 [产物检查器](../tool/platform_artifact_check.dart)。 |
 | 日视图末卡 | 手机添加按钮的避让空间属于可滚动内容，不压缩日视图视口；末卡尾部可滚到真实按钮上方并打开正确课程详情，关闭按钮后释放避让空间。可容纳的卡片验证整卡可见，超过可用高度的大字卡片验证顶部和尾部能分别完整阅读。见 [真实主页日视图测试](../test/widgets/student_day_agenda_workflow_test.dart)。 |
 
 自定义解析接口继续兼容 HTTP 与 HTTPS，不用固定域名白名单限制用户的学校或自建服务，也不新增默认明文请求。Android 的动态端点网络配置保留明文兼容；这项平台能力不代替应用发送前的确认。HTTP 提示说明 API 密钥和提交内容在传输途中可能被读取或篡改，取消不发送；确认页隐藏地址中的凭据、查询和片段，许可只对当前进程内已确认的规范化端点有效。
