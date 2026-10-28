@@ -550,33 +550,50 @@ void main() {
       p.dispose();
     },
   );
-  testWidgets(
-    'editing the other workspace theme does not navigate away from the current workspace',
-    (tester) async {
-      final p = await workspaceProvider();
-      await tester.pumpWidget(
-        WorkspaceHarness(
-          provider: p,
-          home: const ThemeSettingsPage(initialWorkspace: AppMode.general),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final brightness = find.byKey(
-        const ValueKey('theme-brightness-mode-choice-list'),
-      );
-      await tester.ensureVisible(brightness);
-      await tester.tap(brightness);
-      await tester.pumpAndSettle();
-      final dark = find.text('Dark');
-      await tester.ensureVisible(dark.first);
-      await tester.pumpAndSettle();
-      await tester.tap(dark.first);
-      await tester.pumpAndSettle();
-      expect(p.workspaceView.activeMode, AppMode.student);
-      expect(p.generalView.visibleData.themeMode, 'dark');
-      expect(p.studentView.data.themeMode, 'light');
-      await tester.pumpWidget(const SizedBox.shrink());
-      p.dispose();
-    },
-  );
+  for (final savedStudentTheme in [null, 'light']) {
+    testWidgets(
+      'editing the other workspace theme preserves navigation and ${savedStudentTheme ?? 'default system'} preference',
+      (tester) async {
+        final initial = buildInitialAppData(buildDefaultPeriodTimes());
+        final storage = WorkspaceMemoryStorage(
+          initial.copyWith(
+            studentMode: initial.studentMode.copyWith(
+              themeMode: savedStudentTheme,
+            ),
+          ),
+        );
+        final p = await workspaceProvider(storage: storage);
+        final studentThemeBefore = p.studentView.data.themeMode;
+        expect(studentThemeBefore, savedStudentTheme ?? 'system');
+        await tester.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            home: const ThemeSettingsPage(initialWorkspace: AppMode.general),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final brightness = find.byKey(
+          const ValueKey('theme-brightness-mode-choice-list'),
+        );
+        await tester.ensureVisible(brightness);
+        await tester.tap(brightness);
+        await tester.pumpAndSettle();
+        final dark = find.text('Dark');
+        await tester.ensureVisible(dark.first);
+        await tester.pumpAndSettle();
+        await tester.tap(dark.first);
+        await tester.pumpAndSettle();
+        expect(p.workspaceView.activeMode, AppMode.student);
+        expect(p.generalView.visibleData.themeMode, 'dark');
+        expect(p.studentView.data.themeMode, studentThemeBefore);
+        final saved = AppData.decode(storage.data.encode());
+        expect(saved.activeMode, AppMode.student);
+        expect(saved.generalMode.themeMode, 'dark');
+        expect(saved.studentMode.themeMode, studentThemeBefore);
+        expect(find.byType(ThemeSettingsPage), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+        p.dispose();
+      },
+    );
+  }
 }
