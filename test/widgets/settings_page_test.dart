@@ -32,6 +32,7 @@ import 'package:sked/widgets/period_time_set_manager.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
 import '../support/data_transfer_codec.dart';
+import '../support/notification_test_scope.dart';
 
 import '../support/period_time_assets.dart';
 
@@ -344,6 +345,7 @@ Future<void> _pumpSettingsPage(
       app: provider,
       child: MaterialApp(
         locale: locale,
+        builder: buildNotificationTestScope,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
@@ -404,6 +406,7 @@ Future<void> _pumpSettingsHostPage(
       app: provider,
       child: MaterialApp(
         locale: const Locale('en'),
+        builder: buildNotificationTestScope,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
@@ -564,6 +567,33 @@ Future<void> _openIcsReplacementWarning(
 }
 
 void main() {
+  setUpNotificationTestPlatform();
+
+  testWidgets(
+    'standalone settings host reads notification permissions without a plugin',
+    (tester) async {
+      final provider = await _createProvider(_buildStudentData());
+      addTearDown(provider.dispose);
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        destination: SettingsDestination.notificationPermissions,
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        tester
+            .widget<SettingsConnectedTile>(
+              find.byKey(const ValueKey('notification-permission')),
+            )
+            .subtitle,
+        l10n.notificationPermissionGranted,
+      );
+      expect(find.text(l10n.notificationPermissionRequestFailed), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
   testWidgets('about page has one page heading and keeps its links reachable', (
     tester,
   ) async {

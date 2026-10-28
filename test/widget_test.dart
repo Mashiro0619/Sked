@@ -45,6 +45,7 @@ import 'package:http/testing.dart';
 import 'support/school_import_preparation.dart';
 import 'support/timetable_storage_fakes.dart';
 import 'support/data_transfer_codec.dart';
+import 'support/notification_test_scope.dart';
 
 class MemorySecretStore implements SecretStore {
   MemorySecretStore([String initialValue = '']) : value = initialValue.trim();
@@ -307,6 +308,8 @@ SchoolImportResponse _buildSchoolImportResponse({
 }
 
 void main() {
+  setUpNotificationTestPlatform();
+
   group('课表 JSON 存储', () {
     test('旧 weekday 字段会兼容成 dayOfWeek，且周次默认为全学期语义', () {
       final legacyJson = {
@@ -2117,6 +2120,7 @@ void main() {
         AppScope(
           app: provider,
           child: const MaterialApp(
+            builder: buildNotificationTestScope,
             locale: Locale('zh'),
             localizationsDelegates: [
               AppLocalizations.delegate,
@@ -2173,6 +2177,7 @@ void main() {
         AppScope(
           app: provider,
           child: const MaterialApp(
+            builder: buildNotificationTestScope,
             locale: Locale('zh'),
             localizationsDelegates: [
               AppLocalizations.delegate,
@@ -2228,6 +2233,7 @@ void main() {
           AppScope(
             app: provider,
             child: const MaterialApp(
+              builder: buildNotificationTestScope,
               locale: Locale('en'),
               localizationsDelegates: [
                 AppLocalizations.delegate,

@@ -49,6 +49,8 @@ git diff --check
 
 上面的测试文件只是命令示例，应替换为本次修改对应的测试。里程碑完成时运行 `flutter test --no-pub --concurrency=4`；需要覆盖率时使用 CI 的 `--coverage` 选项。日期、时区或重复规则改动还需按 CI 的五个 `TZ` 与 `SKED_DST_TEST_ZONE` 组合运行专项；在支持这些时区设置的环境中执行，不把 Windows 本机单一时区结果当作五区通过。
 
+独立设置页组件测试通过 `test/support/notification_test_scope.dart` 的 `MaterialApp.builder` 注入内存通知网关和运行时存储，或显式传入测试自己的通知服务。同文件的 `setUpNotificationTestPlatform` 只为当前测试注册自动启动能力读取的替身，并在每项结束时移除；未知平台调用仍会报错。不要屏蔽 `debugPrint`、吞掉平台错误或全局替换通知插件来消除日志；通知网关专项仍需覆盖真实失败反馈。
+
 构建命令与平台验收入口见 [可靠性验证指南](docs/RELIABILITY_BASELINE.md)。常用本地命令为 `flutter build windows --release` 和 `flutter build apk --debug`；正式 Android 签名、MSIX 身份与商店配置遵守对应发布文档，不使用或提交他人的签名材料。
 
 性能修改先按 [基准说明](benchmark/README.md) 保存改动前后结果，固定源码、数据和协议；测量期间不并发运行分析、测试或构建。报告每轮值和退化，不能只保留有利样本。
