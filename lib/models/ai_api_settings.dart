@@ -1,13 +1,6 @@
 import '../utils/constants.dart';
 import '../utils/time_utils.dart';
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-String? _nullableStringValue(Object? value) {
-  return value is String ? value : null;
-}
+import 'app_data_json_values.dart';
 
 class AiApiSettings {
   const AiApiSettings({
@@ -34,12 +27,12 @@ class AiApiSettings {
   factory AiApiSettings.fromJson(Map<String, dynamic> json) {
     return AiApiSettings(
       source: normalizeSchoolImportParserSource(
-        _nullableStringValue(json['source']),
+        appDataNullableStringValue(json['source']),
       ),
-      customBaseUrl: _stringValue(json['customBaseUrl']).trim(),
-      customApiKey: _stringValue(json['customApiKey']).trim(),
-      customModel: _stringValue(json['customModel']).trim(),
-      customPrompt: _stringValue(json['customPrompt']).trim(),
+      customBaseUrl: appDataStringValue(json['customBaseUrl']).trim(),
+      customApiKey: appDataStringValue(json['customApiKey']).trim(),
+      customModel: appDataStringValue(json['customModel']).trim(),
+      customPrompt: appDataStringValue(json['customPrompt']).trim(),
     );
   }
 
