@@ -1,3 +1,5 @@
+import 'app_data_json_values.dart';
+
 import 'dart:collection';
 
 import '../l10n/app_locale.dart';
@@ -50,77 +52,6 @@ int? normalizeGeneralCustomDayMinWidth(int? value) {
       generalCustomDayMinWidthStep;
 }
 
-Map<String, dynamic>? _asStringKeyedMap(Object? value) {
-  if (value is! Map) {
-    return null;
-  }
-  final result = <String, dynamic>{};
-  for (final entry in value.entries) {
-    final key = entry.key;
-    if (key is String) {
-      result[key] = entry.value;
-    }
-  }
-  return result;
-}
-
-List<dynamic> _listValue(Object? value) {
-  return value is List ? value : const <dynamic>[];
-}
-
-String _stringValue(Object? value, [String fallback = '']) {
-  return value is String ? value : fallback;
-}
-
-String? _nullableStringValue(Object? value) {
-  return value is String ? value : null;
-}
-
-int? _intValue(Object? value) {
-  return value is num ? value.toInt() : null;
-}
-
-int? _tryDecodeInt(Object? value) {
-  if (value is num) {
-    return value.toInt();
-  }
-  if (value is String) {
-    return int.tryParse(value.trim());
-  }
-  return null;
-}
-
-int? _schemaVersionValue(Object? value) {
-  if (value is int) {
-    return value.toInt();
-  }
-  if (value is num && value.isFinite && value % 1 == 0) {
-    return value.toInt();
-  }
-  if (value is String) {
-    final trimmed = value.trim();
-    if (RegExp(r'^\d+$').hasMatch(trimmed)) {
-      return int.parse(trimmed);
-    }
-  }
-  return null;
-}
-
-int? _readSchemaVersion(Map<String, dynamic> json) {
-  if (!json.containsKey('schemaVersion')) {
-    return null;
-  }
-  final version = _schemaVersionValue(json['schemaVersion']);
-  if (version == null || version <= 0) {
-    throw const FormatException('General schedule schemaVersion is invalid.');
-  }
-  return version;
-}
-
-bool? _boolValue(Object? value) {
-  return value is bool ? value : null;
-}
-
 bool _decodeGeneralAllDayTimelineCollapsed(Map<String, dynamic> json) {
   if (!json.containsKey('allDayTimelineCollapsed')) {
     return false;
@@ -157,9 +88,9 @@ class GeneralReminderAcknowledgement {
 
   factory GeneralReminderAcknowledgement.fromJson(Map<String, dynamic> json) {
     return GeneralReminderAcknowledgement(
-      occurrenceKey: _stringValue(json['occurrenceKey']),
-      isHandled: _boolValue(json['isHandled']) ?? true,
-      updatedAtIso: _stringValue(json['updatedAt']),
+      occurrenceKey: appDataStringValue(json['occurrenceKey']),
+      isHandled: appDataBoolValue(json['isHandled']) ?? true,
+      updatedAtIso: appDataStringValue(json['updatedAt']),
     );
   }
 
@@ -484,7 +415,11 @@ class GeneralScheduleData {
     Map<String, dynamic> json, {
     String? localeCode,
   }) {
-    final schemaVersion = _readSchemaVersion(json);
+    final schemaVersion = readOptionalAppDataVersion(
+      json,
+      'schemaVersion',
+      errorMessage: 'General schedule schemaVersion is invalid.',
+    );
     if (schemaVersion != null && schemaVersion > generalScheduleSchemaVersion) {
       throw const UnsupportedSchemaVersionException(
         'General schedule schemaVersion is unsupported.',
@@ -493,9 +428,9 @@ class GeneralScheduleData {
     final viewSwitchBehavior = _decodeGeneralViewSwitchBehavior(json);
     final toolbarWidthPolicy = _decodeGeneralToolbarWidthPolicy(json);
     final dateLabelFormat = _decodeGeneralDateLabelFormat(json);
-    final showAddEventFab = _boolValue(json['showAddEventFab']) ?? true;
+    final showAddEventFab = appDataBoolValue(json['showAddEventFab']) ?? true;
     final enableLongPressAddEvent =
-        _boolValue(json['enableLongPressAddEvent']) ?? true;
+        appDataBoolValue(json['enableLongPressAddEvent']) ?? true;
     final allDayTimelineCollapsed = _decodeGeneralAllDayTimelineCollapsed(json);
     final toolbarNavigationOrder = decodeToolbarNavigationStringList(
       json,
@@ -520,9 +455,9 @@ class GeneralScheduleData {
         toolbarWidthPolicy: toolbarWidthPolicy,
         dateLabelFormat: dateLabelFormat,
         fitWeekColumnsToWidth:
-            _boolValue(json['fitWeekColumnsToWidth']) ?? true,
+            appDataBoolValue(json['fitWeekColumnsToWidth']) ?? true,
         customDayMinWidth: normalizeGeneralCustomDayMinWidth(
-          _intValue(json['customDayMinWidth']),
+          appDataIntValue(json['customDayMinWidth']),
         ),
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
@@ -531,14 +466,14 @@ class GeneralScheduleData {
         hiddenToolbarNavigationIds: hiddenToolbarNavigationIds,
         toolbarHiddenItemsBehavior: toolbarHiddenItemsBehavior,
         timeGridHourHeight: _normalizeTimeGridHourHeight(
-          _intValue(json['timeGridHourHeight']),
+          appDataIntValue(json['timeGridHourHeight']),
         ),
       );
     }
 
     final schedules =
-        _listValue(json['schedules'])
-            .map(_asStringKeyedMap)
+        appDataListValue(json['schedules'])
+            .map(appDataStringKeyedMap)
             .whereType<Map<String, dynamic>>()
             .map(
               (json) => GeneralSchedule.fromJson(json, localeCode: localeCode),
@@ -555,7 +490,7 @@ class GeneralScheduleData {
             ),
           ]
         : schedules;
-    final activeId = _stringValue(json['activeScheduleId']);
+    final activeId = appDataStringValue(json['activeScheduleId']);
     final resolvedActiveId = withDefaults.any((s) => s.id == activeId)
         ? activeId
         : withDefaults.first.id;
@@ -567,33 +502,38 @@ class GeneralScheduleData {
           withDefaults[i].copyWith(sortOrder: i),
       ],
       selectedDateIso: _normalizeDateIso(
-        _nullableStringValue(json['selectedDateIso']),
+        appDataNullableStringValue(json['selectedDateIso']),
       ),
       customDateRange: json['customDateRange'] == null
           ? null
           : GeneralDateRange.fromJson(json['customDateRange']),
       defaultView: normalizeGeneralView(
-        _nullableStringValue(json['defaultView']),
+        appDataNullableStringValue(json['defaultView']),
       ),
       viewSwitchBehavior: viewSwitchBehavior,
       toolbarWidthPolicy: toolbarWidthPolicy,
       dateLabelFormat: dateLabelFormat,
-      fitWeekColumnsToWidth: _boolValue(json['fitWeekColumnsToWidth']) ?? true,
+      fitWeekColumnsToWidth:
+          appDataBoolValue(json['fitWeekColumnsToWidth']) ?? true,
       customDayMinWidth: normalizeGeneralCustomDayMinWidth(
-        _intValue(json['customDayMinWidth']),
+        appDataIntValue(json['customDayMinWidth']),
       ),
-      showWeekends: _boolValue(json['showWeekends']) ?? true,
-      showLunarCalendar: _boolValue(json['showLunarCalendar']) ?? true,
-      dayStartHour: (_intValue(json['dayStartHour']) ?? 6).clamp(0, 23).toInt(),
-      dayEndHour: (_intValue(json['dayEndHour']) ?? 23).clamp(1, 24).toInt(),
+      showWeekends: appDataBoolValue(json['showWeekends']) ?? true,
+      showLunarCalendar: appDataBoolValue(json['showLunarCalendar']) ?? true,
+      dayStartHour: (appDataIntValue(json['dayStartHour']) ?? 6)
+          .clamp(0, 23)
+          .toInt(),
+      dayEndHour: (appDataIntValue(json['dayEndHour']) ?? 23)
+          .clamp(1, 24)
+          .toInt(),
       timeGridMinutes: _normalizeGridMinutes(
-        _intValue(json['timeGridMinutes']),
+        appDataIntValue(json['timeGridMinutes']),
       ),
       timeGridHourHeight: _normalizeTimeGridHourHeight(
-        _intValue(json['timeGridHourHeight']),
+        appDataIntValue(json['timeGridHourHeight']),
       ),
       closeEventPopupOnOutsideTap:
-          _boolValue(json['closeEventPopupOnOutsideTap']) ?? true,
+          appDataBoolValue(json['closeEventPopupOnOutsideTap']) ?? true,
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
       allDayTimelineCollapsed: allDayTimelineCollapsed,
@@ -601,20 +541,22 @@ class GeneralScheduleData {
       hiddenToolbarNavigationIds: hiddenToolbarNavigationIds,
       toolbarHiddenItemsBehavior: toolbarHiddenItemsBehavior,
       themeMode: normalizeThemeMode(
-        _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
+        appDataNullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
       themeColorMode: normalizeThemeColorMode(
-        _nullableStringValue(json['themeColorMode']) ?? defaultThemeColorMode,
+        appDataNullableStringValue(json['themeColorMode']) ??
+            defaultThemeColorMode,
       ),
       themeSeedColorValue:
-          _tryDecodeInt(json['themeSeedColorValue']) ??
+          appDataParsedIntValue(json['themeSeedColorValue']) ??
           defaultThemeSeedColorValue,
       colorfulUiColorValues: decodeColorValueMap(json['colorfulUiColorValues']),
-      reminderAcknowledgements: _listValue(json['reminderAcknowledgements'])
-          .map(_asStringKeyedMap)
-          .whereType<Map<String, dynamic>>()
-          .map(GeneralReminderAcknowledgement.fromJson)
-          .toList(),
+      reminderAcknowledgements:
+          appDataListValue(json['reminderAcknowledgements'])
+              .map(appDataStringKeyedMap)
+              .whereType<Map<String, dynamic>>()
+              .map(GeneralReminderAcknowledgement.fromJson)
+              .toList(),
     ).normalized(
       migrateLegacyElapsedExceptions: (schemaVersion ?? 1) < 4,
       localeCode: localeCode ?? defaultLocaleCode,

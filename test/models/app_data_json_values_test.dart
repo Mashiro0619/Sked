@@ -2,6 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/app_data_json_values.dart';
 
 void main() {
+  test('legacy integer reader retains numeric and string policies', () {
+    expect(appDataParsedIntValue(' 42 '), 42);
+    expect(appDataParsedIntValue('-2'), -2);
+    expect(appDataParsedIntValue('2.9'), isNull);
+    expect(appDataParsedIntValue(2.9), 2);
+    expect(appDataParsedIntValue(false), isNull);
+    expect(
+      () => appDataParsedIntValue(double.infinity),
+      throwsUnsupportedError,
+    );
+  });
+
   test('lenient finite-number readers keep their existing fallback policy', () {
     expect(appDataFiniteIntValue(3.9), 3);
     expect(appDataFiniteDoubleValue(3), 3.0);

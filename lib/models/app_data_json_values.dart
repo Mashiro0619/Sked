@@ -21,6 +21,12 @@ int? appDataIntValue(Object? value, {String? nonFiniteMessage}) {
   return value.toInt();
 }
 
+/// Legacy preferences accept both numeric values and trimmed integer strings.
+int? appDataParsedIntValue(Object? value) {
+  if (value is String) return int.tryParse(value.trim());
+  return appDataIntValue(value);
+}
+
 /// Lenient model fields omit non-finite values and keep their field defaults.
 int? appDataFiniteIntValue(Object? value) =>
     value is num && value.isFinite ? value.toInt() : null;
