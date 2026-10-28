@@ -18,8 +18,12 @@ change the feed, installed version, saved preferences or backup format.
 ## User-visible behavior
 
 Settings → About → **Receive prerelease updates** is an app-wide, saved preference.
-New installations default to **on**, regardless of whether the installed app is
-a stable, Alpha, Beta, or RC release. Existing saved choices are preserved.
+New installations of stable releases default to **off**; Alpha, Beta, RC, and
+other valid prerelease versions default to **on**. The installed version is read
+from local application metadata using the same full-version resolver as update
+checks. If the version is unavailable or malformed, a new installation defaults
+to **off**. This choice makes no network request. Existing saved choices are
+preserved and are not recalculated when the application version changes.
 
 Older versions omitted this field when it was off, so an existing snapshot
 without it still loads as **off**; it cannot be distinguished from a deliberate
