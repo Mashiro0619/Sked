@@ -299,8 +299,10 @@ Future<AppRuntime> _createProvider(
   _MemoryTimetableStorage? storage,
   SchoolSiteService? schoolSiteService,
   DataTransferCodec codec = inlineDataTransferCodec,
+  Future<String> Function()? appVersionLoader,
 }) async {
   final provider = AppRuntime(
+    appVersionLoader: appVersionLoader,
     dataTransferCodec: codec,
     workspaceMutationLock: (action) => action(),
     storage:
@@ -860,36 +862,52 @@ void main() {
     },
   );
 
-  testWidgets(
-    'a fresh install includes prereleases and an explicit opt-out survives reload',
-    (tester) async {
-      final storage = _MemoryTimetableStorage(null);
-      final provider = await _createProvider(null, storage: storage);
-      addTearDown(provider.dispose);
-      expect(provider.settingsView.includePrereleaseUpdates, isTrue);
-      expect(storage.data!.includePrereleaseUpdates, isTrue);
-      await _pumpSettingsPage(
-        tester,
-        provider,
-        destination: SettingsDestination.about,
-      );
-      final toggle = find.byKey(
-        const ValueKey('settings-include-prerelease-updates'),
-      );
-      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
-      await tester.pumpAndSettle();
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isTrue);
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
-      expect(storage.data!.toJson()['includePrereleaseUpdates'], isFalse);
-      final reloaded = await _createProvider(
-        AppData.decodeStorageSnapshot(storage.data!.encode()),
-      );
-      addTearDown(reloaded.dispose);
-      expect(reloaded.settingsView.includePrereleaseUpdates, isFalse);
-    },
-  );
+  for (final (version, expected) in [('2.3.0', false), ('2.3.0-rc.4', true)]) {
+    testWidgets(
+      '$version fresh install follows its channel and an explicit choice survives reload',
+      (tester) async {
+        mockDefaultPeriodTimeAsset();
+        var versionLoads = 0;
+        Future<String> loadVersion() async {
+          versionLoads++;
+          return version;
+        }
+
+        final storage = _MemoryTimetableStorage(null);
+        final provider = await _createProvider(
+          null,
+          storage: storage,
+          appVersionLoader: loadVersion,
+        );
+        addTearDown(provider.dispose);
+        expect(provider.settingsView.includePrereleaseUpdates, expected);
+        expect(storage.data!.includePrereleaseUpdates, expected);
+        expect(versionLoads, 1);
+        await _pumpSettingsPage(
+          tester,
+          provider,
+          destination: SettingsDestination.about,
+        );
+        final toggle = find.byKey(
+          const ValueKey('settings-include-prerelease-updates'),
+        );
+        await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SettingsSwitchTile>(toggle).value, expected);
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SettingsSwitchTile>(toggle).value, !expected);
+        expect(storage.data!.toJson()['includePrereleaseUpdates'], !expected);
+        final reloaded = await _createProvider(
+          AppData.decodeStorageSnapshot(storage.data!.encode()),
+          appVersionLoader: loadVersion,
+        );
+        addTearDown(reloaded.dispose);
+        expect(reloaded.settingsView.includePrereleaseUpdates, !expected);
+        expect(versionLoads, 1);
+      },
+    );
+  }
 
   testWidgets(
     'prerelease opt-in persists and changing channel clears the old update badge',
