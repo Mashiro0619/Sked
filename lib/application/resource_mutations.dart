@@ -2,11 +2,14 @@ import 'dart:convert';
 
 import '../models/timetable_models.dart';
 import '../services/general_calendar_service.dart';
+import '../services/student_timetable_service.dart';
 import 'mutation_draft.dart';
 import 'operation_contracts.dart';
 import 'resource_contracts.dart';
 
 export 'mutation_draft.dart';
+
+part 'resource_mutations_student.dart';
 
 /// Compiles strict commands into one candidate without storage or UI effects.
 /// General-mode commands address hidden and disabled data explicitly.
@@ -26,6 +29,7 @@ class ResourceMutationCompiler {
       _invalid('The preparation clock is outside supported years.', 'now');
     }
     _validateGeneralIdentities(base.generalMode);
+    _validateStudentIdentities(base.studentMode);
     final prepared = <ResourceMutation>[];
     var inputBytes = 0;
     for (final operation in operations) {
@@ -43,14 +47,27 @@ class ResourceMutationCompiler {
       prepared.add(operation);
     }
     var general = base.generalMode;
+    var student = base.studentMode;
     final calendarChanges = <String>{};
+    final timetableChanges = <String>{};
     final allocatedIds = <String>{};
     String nextId(ResourceKind kind) {
       final id = context.idGenerator(kind);
       _id(id, 'generatedId');
-      final exists = kind == ResourceKind.calendar
-          ? general.schedules.any((item) => item.id == id)
-          : general.eventLocationsById(id).isNotEmpty;
+      final exists = switch (kind) {
+        ResourceKind.calendar => general.schedules.any((item) => item.id == id),
+        ResourceKind.event => general.eventLocationsById(id).isNotEmpty,
+        ResourceKind.timetable => student.timetables.any(
+          (item) => item.id == id,
+        ),
+        ResourceKind.course => student.timetables.any(
+          (table) => table.courses.any((item) => item.id == id),
+        ),
+        ResourceKind.periodTimeSet => student.periodTimeSets.any(
+          (item) => item.id == id,
+        ),
+        ResourceKind.occurrence => false,
+      };
       if (exists || !allocatedIds.add('${kind.name}:$id')) {
         throw const OperationProblem(
           OperationErrorCode.conflict,
@@ -62,31 +79,44 @@ class ResourceMutationCompiler {
     }
 
     for (final operation in prepared) {
-      general = switch (operation.kind) {
-        ResourceKind.calendar => _calendarMutation(
-          general,
-          operation,
-          context,
-          nextId,
-          calendarChanges,
-          base.localeCode,
-        ),
-        ResourceKind.event => _eventMutation(
-          general,
-          operation,
-          context,
-          nextId,
-        ),
-        _ => throw const OperationProblem(
-          OperationErrorCode.unsupported,
-          'This resource kind does not yet support strict mutations.',
-        ),
-      };
+      switch (operation.kind) {
+        case ResourceKind.calendar:
+          general = _calendarMutation(
+            general,
+            operation,
+            context,
+            nextId,
+            calendarChanges,
+            base.localeCode,
+          );
+        case ResourceKind.event:
+          general = _eventMutation(general, operation, context, nextId);
+        case ResourceKind.timetable ||
+            ResourceKind.course ||
+            ResourceKind.periodTimeSet:
+          student = _studentMutation(
+            student,
+            operation,
+            nextId,
+            timetableChanges,
+          );
+        case ResourceKind.occurrence:
+          throw const OperationProblem(
+            OperationErrorCode.unsupported,
+            'This resource kind does not yet support strict mutations.',
+          );
+      }
     }
     _assertGeneralSettingsPreserved(base.generalMode, general);
-    final changes = _diffGeneral(base.generalMode, general, calendarChanges);
+    _assertStudentSettingsPreserved(base.studentMode, student);
+    final changes = [
+      ..._diffGeneral(base.generalMode, general, calendarChanges),
+      ..._diffStudent(base.studentMode, student, timetableChanges),
+    ];
     return MutationDraft(
-      candidate: changes.isEmpty ? base : base.copyWith(generalMode: general),
+      candidate: changes.isEmpty
+          ? base
+          : base.copyWith(generalMode: general, studentMode: student),
       changes: changes,
     );
   }

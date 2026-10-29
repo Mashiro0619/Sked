@@ -853,7 +853,7 @@ void main() {
     expect(
       () => Host().compile(base, [
         ResourceMutation(
-          kind: ResourceKind.course,
+          kind: ResourceKind.occurrence,
           action: ResourceMutationAction.create,
         ),
       ]),
