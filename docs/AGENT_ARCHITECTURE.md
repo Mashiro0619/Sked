@@ -190,6 +190,8 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 这套设计提供可核验的领域幂等，不承诺跨模型服务、操作系统和文件系统的全局 exactly-once。现有文件提交机制也不能被表述为已经完成断电硬件验证。
 
+`MutationCoordinator` 已实现主库 prepare/commit/status：宿主计划固定候选、参数摘要、数据世代/序号、作用域和内存基线；提交再次检查当前模式、确认与候选指纹，通过共享保存入口将业务状态和回执一起落盘。同一已提交操作 ID 在重启后返回原回执，不同参数拒绝；淘汰序号与维护前计划返回过期。询问确认只消费一次，停止发生在已接受保存之后仍报告实际提交。存储结果未知时查询也返回 outcomeUnknown，不把旧快照没有回执当作未执行。计划最多保留 32 个、30 分钟；撤销材料已随回执保存，撤销执行器随后接入。
+
 ### 6.3 跨存储及平台副作用
 
 学校站点、凭据、设备偏好、学校网页会话、系统通知有各自存储与生命周期。普通主库批事务不覆盖它们。复用现有备份恢复 journal、维护预约和 quiescence；新增步骤状态及可恢复 effect 记录，按实际结果标记 `dataCommitted`、`effectsPending`、`partial` 或 `outcomeUnknown`。
