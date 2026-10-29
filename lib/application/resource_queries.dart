@@ -169,6 +169,47 @@ class ResourceQueries {
     nextCursor: next < total ? _cursor(next, fingerprint) : null,
   );
 
+  /// Host-side input for deterministic agenda aggregates. It expands a bounded
+  /// window once instead of repeating the same expansion for every result page.
+  /// Callers must return their own bounded aggregate, not serialize this list as
+  /// an unrestricted tool result.
+  List<ResourceRecord> readOccurrenceWindow(
+    ResourceQuery query, {
+    int maxItems = 2000,
+  }) {
+    _validate(query);
+    if (query.kind != ResourceKind.occurrence ||
+        query.cursor != null ||
+        maxItems < 1 ||
+        maxItems > ResourceQueryLimits.maxMatches) {
+      throw const ResourceQueryException(
+        ResourceQueryErrorCode.invalidArgument,
+        'An aggregate requires an initial bounded occurrence window.',
+      );
+    }
+    final fields = query.fields ?? _viewFields(query.kind, query.view);
+    final matches = <_Match>[];
+    for (final match in _matches(query)) {
+      if (query.ids != null && !query.ids!.contains(match.ref.id)) continue;
+      matches.add(match);
+      if (matches.length > maxItems) {
+        throw const ResourceQueryException(
+          ResourceQueryErrorCode.queryTooLarge,
+          'Narrow the aggregate window or resource filters.',
+        );
+      }
+    }
+    matches.sort(_compareMatches);
+    return List.unmodifiable([
+      for (final match in matches)
+        ResourceRecord(
+          ref: match.ref,
+          view: query.view,
+          values: {for (final field in fields) field: match.read(field)},
+        ),
+    ]);
+  }
+
   Iterable<_Match> _matches(ResourceQuery query) sync* {
     final search = query.search.trim().toLowerCase();
     final studentEnabled = _snapshot.isWorkspaceEnabled(AppMode.student);

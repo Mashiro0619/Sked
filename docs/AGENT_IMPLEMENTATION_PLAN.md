@@ -87,7 +87,7 @@ flowchart LR
 ### 实施项
 
 - [x] 新建 ResourceQueries：课表/课程、分类/日程、实例、时间集六类查询；明确分页、世代/快照绑定和结果完整性。设置描述与平台状态分别由后续注册表、适配器负责。
-- [ ] 精确条件先过滤再展开，复用已有日历索引；加入 count/freeSlots/conflicts 聚合和按需字段视图。用展开器调用范围验证不展开无关系列，避免先生成全库再分页。
+- [x] 精确条件先过滤再展开，复用已有日历索引；加入 count/freeSlots/conflicts 聚合和按需字段视图。聚合只展开一次，专项核验来源过滤和结果/候选预算；五时区验收仍在 P8 执行。
 - [ ] 查询非当前课表、隐藏分类、停用域不切换 UI，不改变可见性或提醒状态。
 - [ ] 从编辑器抽取 CourseDraft、TimetablePatch、PeriodSetDraft、EventPatch 等校验，保留旧时间和旧空周次兼容表示。
 - [ ] 抽取 DraftCompiler 及统一 Clock/ID 上下文；字段未出现保持原值，严格新命令不借兼容 normalized 将坏时间修成 now。OperationScope 与 RouteScope 分离，保存结果不依赖 mounted。
