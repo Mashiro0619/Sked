@@ -119,6 +119,7 @@ void main() {
             find.byKey(const ValueKey('settings-page-app-bar')),
           );
           expect(bar.primary, isFalse);
+          expect(t.getSize(actualBar).height, 48);
           expect(expanded, findsNothing);
           expect(find.byType(DesktopDragRegion), findsWidgets);
           expect(find.byType(DesktopCaptionSpacer), findsOneWidget);
@@ -129,6 +130,141 @@ void main() {
         TargetPlatform.android,
         TargetPlatform.windows,
       }),
+    );
+  }
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'desktop destination headers align with window controls at $scale text scale',
+      (t) async {
+        _viewport(t, const Size(1600, 900));
+        DesktopWindowBridge.instance.available = true;
+        addTearDown(() => DesktopWindowBridge.instance.available = false);
+        final p = await workspaceProvider();
+        addTearDown(p.dispose);
+        for (final destination in SettingsDestination.values) {
+          await t.pumpWidget(
+            WorkspaceHarness(
+              provider: p,
+              textScale: scale,
+              home: SettingsPage(
+                key: ValueKey(destination),
+                initialDestination: destination,
+              ),
+            ),
+          );
+          await t.pumpAndSettle();
+          final bar = find.byKey(const ValueKey('settings-page-app-bar'));
+          final rect = t.getRect(bar);
+          final divider = find.byKey(const ValueKey('desktop-window-divider'));
+          expect(rect.top, 0, reason: destination.name);
+          expect(rect.height, scale == 1 ? 48 : 64, reason: destination.name);
+          expect(
+            rect.bottom,
+            t.getRect(divider).bottom,
+            reason: '${destination.name} aligns with native window controls',
+          );
+          final drag = find.descendant(
+            of: bar,
+            matching: find.byType(DesktopDragRegion),
+          );
+          expect(t.getRect(drag), rect, reason: destination.name);
+          final caption = find.descendant(
+            of: bar,
+            matching: find.byType(DesktopCaptionSpacer),
+          );
+          expect(
+            t.getRect(caption).right,
+            rect.right,
+            reason: destination.name,
+          );
+          expect(t.getSize(caption).width, 138, reason: destination.name);
+          expect(t.takeException(), isNull, reason: destination.name);
+        }
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
+    testWidgets(
+      'desktop language search stays outside the title bar across resizing at $scale text scale',
+      (t) async {
+        _viewport(t, const Size(1600, 900));
+        DesktopWindowBridge.instance.available = true;
+        addTearDown(() => DesktopWindowBridge.instance.available = false);
+        final p = await workspaceProvider();
+        addTearDown(p.dispose);
+        await t.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            textScale: scale,
+            home: const SettingsPage(),
+          ),
+        );
+        await t.pumpAndSettle();
+        final languageEntry = find.byKey(const ValueKey('settings-language'));
+        await t.ensureVisible(languageEntry);
+        await t.pumpAndSettle();
+        await t.tap(languageEntry);
+        await t.pumpAndSettle();
+        final bar = find.byKey(const ValueKey('settings-page-app-bar'));
+        final search = find.byKey(const ValueKey('language-search'));
+        await t.enterText(search, 'English');
+        await t.pumpAndSettle();
+        for (final width in [1600.0, 393.0, 1600.0]) {
+          t.view.physicalSize = Size(width, 900);
+          await t.pumpAndSettle();
+          final rect = t.getRect(bar);
+          expect(rect.height, scale == 1 ? 48 : 64);
+          expect(
+            rect.bottom,
+            t
+                .getRect(find.byKey(const ValueKey('desktop-window-divider')))
+                .bottom,
+          );
+          if (width == 1600) {
+            final sidebar = find
+                .byWidgetPredicate(
+                  (widget) =>
+                      widget is WorkbenchAppBar &&
+                      widget.key != const ValueKey('settings-page-app-bar'),
+                )
+                .hitTestable();
+            expect(sidebar, findsOneWidget);
+            expect(t.getRect(sidebar).bottom, rect.bottom);
+          }
+          expect(search.hitTestable(), findsOneWidget);
+          expect(t.getRect(search).top, greaterThanOrEqualTo(rect.bottom));
+          final drag = find.descendant(
+            of: bar,
+            matching: find.byType(DesktopDragRegion),
+          );
+          expect(t.getRect(drag).overlaps(t.getRect(search)), isFalse);
+          expect(t.widget<TextField>(search).controller!.text, 'English');
+          expect(
+            find.byKey(const ValueKey('language-option-en')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const ValueKey('language-option-de')),
+            findsNothing,
+          );
+          expect(t.takeException(), isNull);
+        }
+        await t.tap(find.byKey(const ValueKey('language-search-clear')));
+        await t.pumpAndSettle();
+        expect(t.widget<TextField>(search).controller!.text, isEmpty);
+        final searchRect = t.getRect(search);
+        await t.drag(
+          find.byKey(const PageStorageKey('language-settings-scroll')),
+          const Offset(0, -300),
+        );
+        await t.pumpAndSettle();
+        expect(t.getRect(search), searchRect);
+        expect(search.hitTestable(), findsOneWidget);
+        expect(p.settingsView.localeCode, 'en');
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
     );
   }
 
@@ -328,7 +464,14 @@ void main() {
         findsNothing,
       );
       expect(find.byType(BackButton), findsNothing);
-      expect(find.byKey(const ValueKey('language-search')), findsOneWidget);
+      final bar = find.byKey(const ValueKey('settings-page-app-bar'));
+      final search = find.byKey(const ValueKey('language-search'));
+      expect(t.getRect(bar).height, 64);
+      expect(search.hitTestable(), findsOneWidget);
+      expect(
+        t.getRect(search).top,
+        greaterThanOrEqualTo(t.getRect(bar).bottom),
+      );
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
@@ -350,14 +493,24 @@ void main() {
       );
       await t.pumpAndSettle();
       final list = find.byKey(const PageStorageKey('language-settings-scroll'));
+      final bar = find.descendant(
+        of: find.byKey(const ValueKey('settings-page-app-bar')),
+        matching: find.byWidgetPredicate((widget) => widget is AppBar),
+      );
+      final expandedHeight = t.getRect(bar).height;
       await t.drag(list, const Offset(0, -400));
       await t.pumpAndSettle();
       final search = find.byKey(const ValueKey('language-search'));
+      expect(t.getRect(bar).height, lessThan(expandedHeight));
       expect(search.hitTestable(), findsOneWidget);
       expect(
         t.getRect(search).top,
         greaterThanOrEqualTo(t.getRect(find.byType(BackButton)).bottom),
       );
+      final collapsedSearchRect = t.getRect(search);
+      await t.drag(list, const Offset(0, -200));
+      await t.pumpAndSettle();
+      expect(t.getRect(search), collapsedSearchRect);
       await t.enterText(search, 'English');
       await t.pumpAndSettle();
       expect(t.widget<TextField>(search).controller!.text, 'English');

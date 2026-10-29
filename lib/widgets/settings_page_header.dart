@@ -29,6 +29,9 @@ class SettingsPageScaffold extends StatelessWidget {
 
   final String title;
   final SettingsPageBodyBuilder bodyBuilder;
+
+  /// Stays below the fixed toolbar on compact pages and within the collapsing
+  /// header on phones, without extending desktop window chrome.
   final PreferredSizeWidget? headerBottom;
   final Widget? statusIndicator;
   final List<Widget> actions;
@@ -82,7 +85,7 @@ class SettingsPageScaffold extends StatelessWidget {
           );
     final header = SettingsPageHeader(
       title: title,
-      bottom: compact ? headerBottom : mobileBottom,
+      bottom: compact ? null : mobileBottom,
       toolbar: compact,
       actions: actions,
     );
@@ -94,11 +97,14 @@ class SettingsPageScaffold extends StatelessWidget {
             child: Column(
               children: [
                 SizedBox(
-                  height: compact
-                      ? metrics.toolbarHeight +
-                            (headerBottom?.preferredSize.height ?? 0)
-                      : 0,
+                  height: compact ? metrics.toolbarHeight : 0,
                   child: compact ? header : null,
+                ),
+                SizedBox(
+                  height: compact
+                      ? (headerBottom?.preferredSize.height ?? 0)
+                      : 0,
+                  child: compact ? headerBottom : null,
                 ),
                 if (compact && statusIndicator != null)
                   statusIndicator!
