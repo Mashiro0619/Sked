@@ -1011,7 +1011,10 @@ void main() {
         find.byKey(const ValueKey('data-recovery-show-artifacts')),
         findsOneWidget,
       );
-      expect(find.text('Choose your starting mode'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('first-launch-onboarding')),
+        findsNothing,
+      );
       expect(find.byType(HomeScreen), findsNothing);
       expect(storage.saveCount, 0);
     },
@@ -1135,7 +1138,10 @@ void main() {
     expect(storage.saveCount, 1);
     expect(storage.data, same(provider.session.committedData));
     expect(find.byKey(const ValueKey('data-recovery-screen')), findsNothing);
-    expect(find.text('Choose your starting mode'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('first-launch-onboarding')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('successful recovery retry removes the write gate', (
@@ -1156,7 +1162,10 @@ void main() {
     expect(storage.loadCount, 2);
     expect(provider.session.canWrite, isTrue);
     expect(find.byKey(const ValueKey('data-recovery-screen')), findsNothing);
-    expect(find.text('Choose your starting mode'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('first-launch-onboarding')),
+      findsOneWidget,
+    );
     expect(storage.saveCount, 0);
   });
 
@@ -1262,7 +1271,17 @@ void main() {
     expect(storage.data?.activeMode, AppMode.student);
     expect(provider.lifecycle.acceptedPrivacyPolicyVersion, isNull);
     expect(find.byType(HomeScreen), findsNothing);
-    expect(find.text('Choose your starting mode'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('first-launch-onboarding')),
+      findsOneWidget,
+    );
+    expect(find.text('Choose workspaces to enable'), findsOneWidget);
+    expect(
+      find.text(
+        'Use the timetable, schedule, or both. You can change this later in Settings.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Timetable only'), findsOneWidget);
     expect(find.text('Schedule only'), findsOneWidget);
     expect(find.text('Start with timetable'), findsNothing);
@@ -1447,7 +1466,10 @@ void main() {
         await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
         await tester.pump();
 
-        expect(find.text('Choose your starting mode'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('first-launch-onboarding')),
+          findsOneWidget,
+        );
         expect(find.byType(AlertDialog), findsNothing);
 
         await tester.tap(find.byKey(scenario.card));
@@ -1455,6 +1477,7 @@ void main() {
 
         expect(storage.saveCount, 1);
         expect(storage.data?.activeMode, scenario.mode);
+        expect(storage.data?.enabledWorkspaces, {scenario.mode});
         expect(storage.data?.hideHomeWorkspaceNavigation, isFalse);
         expect(storage.data?.homeWorkspaceNavigationCollapsed, isFalse);
         expect(
@@ -1466,6 +1489,7 @@ void main() {
           isNotNull,
         );
         expect(provider.workspaceView.activeMode, scenario.mode);
+        expect(provider.workspaceView.enabledWorkspaces, {scenario.mode});
         expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
         expect(provider.settingsView.homeWorkspaceNavigationCollapsed, isFalse);
         expect(
@@ -1576,7 +1600,7 @@ void main() {
     await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Choose your starting mode'), findsNothing);
+    expect(find.byKey(const ValueKey('first-launch-onboarding')), findsNothing);
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.byType(HomeScreen), findsNothing);
   });
@@ -1751,6 +1775,7 @@ void main() {
         const ValueKey('first-launch-privacy-consent'),
       );
       expect(privacyConsent, findsOneWidget);
+      final l10n = AppLocalizations.of(tester.element(privacyConsent));
       await tester.ensureVisible(privacyConsent);
       await tester.pumpAndSettle();
       final consentText = tester.widget<Text>(privacyConsent);
@@ -1760,7 +1785,7 @@ void main() {
       expect(privacyLinkSpan.style?.decoration, isNull);
       SemanticsNode? findPrivacyLinkNode(SemanticsNode node) {
         final data = node.getSemanticsData();
-        if (data.label == 'Privacy Policy') {
+        if (data.label == l10n.firstLaunchPrivacyConsentLink) {
           return node;
         }
         SemanticsNode? result;
@@ -1795,12 +1820,16 @@ void main() {
       await _tapInlineText(
         tester,
         privacyConsent,
-        'By choosing a starting workspace',
+        l10n.firstLaunchPrivacyConsentBefore.trim(),
       );
       await tester.pumpAndSettle();
       expect(calls, isEmpty);
 
-      await _tapInlineText(tester, privacyConsent, 'Privacy Policy');
+      await _tapInlineText(
+        tester,
+        privacyConsent,
+        l10n.firstLaunchPrivacyConsentLink,
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -1821,7 +1850,11 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_urlLauncherChannel, (_) async => false);
-      await _tapInlineText(tester, privacyConsent, 'Privacy Policy');
+      await _tapInlineText(
+        tester,
+        privacyConsent,
+        l10n.firstLaunchPrivacyConsentLink,
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -1856,7 +1889,7 @@ void main() {
     expect(privacyConsent, findsOneWidget);
     final paragraph = tester.renderObject<RenderParagraph>(privacyConsent);
     final plainText = paragraph.text.toPlainText();
-    expect(plainText, '选择起始工作区，即表示你已阅读并同意《隐私政策》。');
+    expect(plainText, '选择工作区，即表示你已阅读并同意《隐私政策》。');
 
     final boxes = paragraph.getBoxesForSelection(
       TextSelection(baseOffset: 0, extentOffset: plainText.length),
