@@ -9,6 +9,8 @@ const appDataWebRecoveryKeyPrefix = 'sked.app_data.recovery.';
 const schoolSitesWebStorageKey = 'sked.school_sites';
 const schoolSitesWebRecoveryKeyPrefix = 'sked.school_sites.recovery.';
 
+const agentConversationsWebStorageKeyPrefix = 'sked.agent_conversations.';
+
 const appBackupRestoreJournalWebStorageKey = 'sked.backup_restore_journal';
 const appBackupRestoreJournalWebRecoveryKeyPrefix =
     'sked.backup_restore_journal.recovery.';
