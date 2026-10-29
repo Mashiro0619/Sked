@@ -13,14 +13,18 @@ WorkspaceMemoryStorage desktopPanelStorage({
   String locale = 'en',
   int count = 1,
   bool longNotes = false,
+  DateTime? now,
 }) {
   final zh = locale == 'zh';
+  final date = now ?? desktopPanelNow;
+  final start = DateTime(date.year, date.month, date.day, 19);
+  final end = DateTime(date.year, date.month, date.day, 20, 30);
   return WorkspaceMemoryStorage(
     buildInitialAppData(buildDefaultPeriodTimes(), localeCode: locale).copyWith(
       activeMode: AppMode.general,
       generalMode: GeneralScheduleData(
         defaultView: generalViewMonth,
-        selectedDateIso: '2026-09-28',
+        selectedDateIso: start.toIso8601String().split('T').first,
         activeScheduleId: 'panel-calendar',
         schedules: [
           GeneralSchedule(
@@ -33,8 +37,8 @@ WorkspaceMemoryStorage desktopPanelStorage({
                 id: 'panel-event-$i',
                 calendarId: 'panel-calendar',
                 title: i == 0 ? (zh ? '复习计划' : 'Review session') : 'Event $i',
-                startDateTimeIso: '2026-09-28T19:00:00.000',
-                endDateTimeIso: '2026-09-28T20:30:00.000',
+                startDateTimeIso: start.toIso8601String(),
+                endDateTimeIso: end.toIso8601String(),
                 location: zh ? '图书馆' : 'Library',
                 notes: List.filled(
                   longNotes ? 80 : 1,
@@ -55,13 +59,14 @@ Widget desktopPanelHarness(
   String locale = 'en',
   double scale = 1,
   Brightness brightness = Brightness.light,
+  DateTime? now,
 }) => WorkspaceHarness(
   provider: provider,
   locale: Locale(locale),
   textScale: scale,
   brightness: brightness,
   home: GeneralReminderTimeScope(
-    now: () => desktopPanelNow,
+    now: () => now ?? desktopPanelNow,
     createTimer: (delay, callback) => Timer(delay, callback),
     child: const GeneralScheduleHomeScreen(),
   ),

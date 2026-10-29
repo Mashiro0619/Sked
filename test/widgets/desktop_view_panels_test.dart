@@ -180,13 +180,17 @@ void main() {
     'reminder failures retain rows and successful handling shrinks immediately',
     (t) async {
       _viewport(t);
-      final storage = desktopPanelStorage(count: 3);
+      // Reminder acknowledgements use the real command clock and retain only
+      // recent occurrences. Keep the fixture and displayed day in that window.
+      final today = DateTime.now();
+      final now = DateTime(today.year, today.month, today.day, 19);
+      final storage = desktopPanelStorage(count: 3, now: now);
       final p = await workspaceProvider(
         mode: AppMode.general,
         storage: storage,
       );
       addTearDown(p.dispose);
-      await t.pumpWidget(desktopPanelHarness(p));
+      await t.pumpWidget(desktopPanelHarness(p, now: now));
       await t.pumpAndSettle();
       await t.tap(_key('general-reminders-action'));
       await t.pumpAndSettle();
@@ -197,18 +201,26 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('Reminder · 3'), findsOneWidget);
       expect(_key('ui-command-failure-notice'), findsOneWidget);
+      expect(storage.data.generalMode.reminderAcknowledgements, isEmpty);
       await t.tap(find.byTooltip('Mark handled').last);
       await t.pumpAndSettle();
       expect(find.text('Reminder · 2'), findsOneWidget);
+      expect(storage.data.generalMode.reminderAcknowledgements, hasLength(1));
       expect(
         t.getSize(_key('workspace-detail-surface')).height,
         lessThan(original),
       );
       await t.tap(find.byTooltip('Mark handled').last);
       await t.pumpAndSettle();
+      expect(find.text('Reminder · 1'), findsOneWidget);
+      expect(storage.data.generalMode.reminderAcknowledgements, hasLength(2));
       await t.tap(find.byTooltip('Mark handled').last);
       await t.pumpAndSettle();
       expect(find.text('Reminder · 0'), findsOneWidget);
+      expect(p.generalView.reminderItems(now: now), isEmpty);
+      expect(storage.data.generalMode.reminderAcknowledgements, hasLength(3));
+      expect(storage.data.generalMode.schedules.single.events, hasLength(3));
+      expect(find.text('No pending reminders.'), findsOneWidget);
       expect(_key('workspace-inspector-close'), findsOneWidget);
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());
