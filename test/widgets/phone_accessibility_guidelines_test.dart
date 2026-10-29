@@ -166,9 +166,12 @@ const _samplingLabels = <_AccessibilityPage, Set<String>>{
 
 // Keep phone evidence separate from desktop captions. The additional Linux
 // captions measured 8.45-16.27:1 using actual text paint and local backgrounds.
+// The 1x timeline's All-day sample includes the adjacent rail divider; its
+// actual foreground/background measured 16.27:1. Recheck it on every host.
 // Verify every visible occurrence again on each host.
 const _phoneSamplingLabels = <_AccessibilityPage, Set<String>>{
   _AccessibilityPage.studentWeek: {'Today', '1', '11:40', '21:40', 'Sep'},
+  _AccessibilityPage.timeline: {'All-day'},
   _AccessibilityPage.courseEditor: {'Day', 'Weeks', 'End time'},
   _AccessibilityPage.eventEditor: {'End time', 'Repeat'},
 };
