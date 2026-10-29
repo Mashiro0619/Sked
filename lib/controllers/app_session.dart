@@ -10,6 +10,16 @@ import 'app_session_readiness.dart';
 
 export 'app_session_readiness.dart';
 
+class AppMutationBusyException implements Exception {
+  const AppMutationBusyException();
+}
+
+class AppMutationConflictException implements Exception {
+  const AppMutationConflictException({required this.hasUnpersistedChanges});
+
+  final bool hasUnpersistedChanges;
+}
+
 /// Owns the application's current snapshot and its single durable write path.
 ///
 /// Domain commands, navigation, editors and maintenance workflows do not own
@@ -39,6 +49,8 @@ class AppSession {
   AppData? _lastPublishedSnapshot;
   var _versions = const AppDataVersions();
   var _committedSessionRevision = 0;
+  static final _mutationZoneKey = Object();
+  Object? _mutationOwner;
 
   AppData get data => _data;
   AppData get committedData => repository.persisted ?? _data;
@@ -53,7 +65,56 @@ class AppSession {
 
   /// Side-store commands share the session's maintenance gate even when their
   /// runtime overlay already equals the requested value.
-  void ensureMutationAllowed() => _requireMutationAllowed();
+  void ensureMutationAllowed() {
+    _requireMutationAllowed();
+    if (_mutationOwner != null &&
+        !identical(Zone.current[_mutationZoneKey], _mutationOwner)) {
+      throw const AppMutationBusyException();
+    }
+    if (isClosed) throw StateError('The application session is closed.');
+  }
+
+  /// Commits a synchronous reducer against a settled, current snapshot.
+  ///
+  /// Legacy editors still replace memory before scheduling their save. Their
+  /// pending work must settle before acquiring this lease, and a dirty snapshot
+  /// is rejected rather than silently persisted or replaced by an Agent plan.
+  /// The short lease rejects new legacy mutations while storage is in flight.
+  /// It never uses a widget's mounted state to decide whether a save succeeded.
+  Future<AppData> commitMutation(
+    AppData Function(AppData current) transform, {
+    required int expectedEpoch,
+    Future<void> Function()? settlePendingChanges,
+    void Function()? beforeCommit,
+    int dataSessionRevision = 0,
+  }) async {
+    ensureMutationAllowed();
+    await settlePendingChanges?.call();
+    await repository.waitForPendingWrites(propagateErrors: true);
+    ensureMutationAllowed();
+    final persisted = repository.persisted;
+    final dirty =
+        persisted == null ||
+        !_sameStorageValue(_data.toJson(), persisted.toJson());
+    if (expectedEpoch != _mutationEpoch || dirty) {
+      throw AppMutationConflictException(hasUnpersistedChanges: dirty);
+    }
+    final owner = Object();
+    _mutationOwner = owner;
+    try {
+      return await runZoned<Future<AppData>>(() async {
+        final candidate = transform(_data);
+        beforeCommit?.call();
+        // The reducer and final authorization check cannot yield between
+        // rereading the baseline and accepting the exact candidate for storage.
+        replaceData(candidate);
+        await persist(candidate, dataSessionRevision: dataSessionRevision);
+        return candidate;
+      }, zoneValues: {_mutationZoneKey: owner});
+    } finally {
+      if (identical(_mutationOwner, owner)) _mutationOwner = null;
+    }
+  }
 
   void updateLoadState({bool? isLoaded, bool? isLoading}) {
     if (isClosed) return;
@@ -74,7 +135,7 @@ class AppSession {
   }
 
   void replaceData(AppData value) {
-    _requireMutationAllowed();
+    ensureMutationAllowed();
     restoreData(value);
   }
 
@@ -88,7 +149,7 @@ class AppSession {
   /// The existing runtime-only overlay is independent of AppData mutations.
   /// Updating it must not prevent a concurrent failed save from rolling back.
   void replaceRuntimeSnapshot(AppData value) {
-    _requireMutationAllowed();
+    ensureMutationAllowed();
     restoreRuntimeSnapshot(value);
   }
 
@@ -104,7 +165,7 @@ class AppSession {
     AppPreferenceWrite? preferenceWrite,
     RepositoryWriteContext? writeContext,
   }) async {
-    _requireMutationAllowed();
+    ensureMutationAllowed();
     final attemptEpoch = _mutationEpoch;
     _lastPublishedSnapshot ??= repository.persisted;
     try {
@@ -176,4 +237,24 @@ class AppSession {
   }
 
   static AppData _persistedSnapshot(AppData persisted, AppData _) => persisted;
+}
+
+bool _sameStorageValue(Object? left, Object? right) {
+  if (identical(left, right)) return true;
+  if (left is Map && right is Map) {
+    return left.length == right.length &&
+        left.keys.every(
+          (key) =>
+              right.containsKey(key) &&
+              _sameStorageValue(left[key], right[key]),
+        );
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (!_sameStorageValue(left[i], right[i])) return false;
+    }
+    return true;
+  }
+  return left == right;
 }
