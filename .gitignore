@@ -85,14 +85,21 @@ Sked_backup_restore_recovery_*/
 # Local agent state, accidental shell output directories and raw captures
 /.claude/
 /.codex/
+/.playwright-mcp/
 /.exe/
 /-c/
 /flutter test --no-pub test/
 /codex-clipboard-*
 
-# Local release checklists and acceptance records are not user-facing notes.
-# Keep shared test plans and published release notes versioned.
+# Local handoffs, publishing forms, generated inventories and historical reports.
+# Keep current behavior guides, reusable test protocols and release notes versioned.
 /docs/internal/
+/docs/HANDOFF.md
+/docs/store/
+/docs/engineering/
+/docs/LOCALIZATION_STATUS.md
+/docs/WEBVIEW_MIRROR_PREPARATION.md
+/benchmark/STARTUP_PREVIEW_2026-10-28.md
 /docs/releases/*-acceptance.md
 /docs/releases/*-checklist.md
 

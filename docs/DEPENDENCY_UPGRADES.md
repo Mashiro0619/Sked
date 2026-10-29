@@ -17,7 +17,9 @@
 
 移除 override 前，确认 pub.dev 发布版本确实包含对应修复，并分别验证 Android 与 Apple 构建和网页导入。不要将不可变提交换成浮动分支，或仅凭 Dart 分析通过就移除原生补丁。Linux 构建还依赖兼容的 WPE WebKit 系统库，版本检查以 CI 为准。
 
-固定提交、许可证、本地完整历史 bundle 与自有镜像的切换验收见 [WebView 镜像准备](WEBVIEW_MIRROR_PREPARATION.md)。本地资料已准备不表示远端仓库已经创建，也不改变现有 override 来源。
+迁移到自有镜像时，先从目标地址的独立空目录取回 `pubspec.yaml` 锁定的提交，比较根目录及平台包的 Git tree，并保留原始历史、许可证与作者信息。现有缓存或本地 bundle 不能代替目标远端可用性的证明。
+
+只修改三个 override 的 Git URL，保持 `ref`、`path` 和包版本不变。先在应用与内部 Android 插件中分别运行 `flutter pub get` 重新解析，审查两份锁文件只发生预期的 URL 变化，`resolved-ref`、版本及其他依赖保持不变，再分别执行 `flutter pub get --enforce-lockfile`。随后验证分析、平台安全配置、学校网页会话，以及 Android／Apple 构建和网页导入。URL 切换独立提交，失败时回退该次 URL 与锁文件变更。
 
 ### 安全存储大版本迁移
 

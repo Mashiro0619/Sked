@@ -50,7 +50,7 @@ on the native process CWD, and rebuild when changing the compiled probe path.
 ```powershell
 $nativeRevision = (git rev-parse --short=12 HEAD).Trim()
 $nativeProbe = (Resolve-Path -LiteralPath 'tool/probe_native_accessibility.ps1').ProviderPath
-$nativeRun = Join-Path (Get-Location).Path ('build/native-accessibility/' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$nativeRun = Join-Path ([IO.Path]::GetTempPath()) ('sked-native-accessibility-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $nativeRun -ErrorAction Stop | Out-Null
 $previousNativeOutputs = $env:FLUTTER_TEST_OUTPUTS_DIR
 $previousNativeNoProxy = $env:NO_PROXY

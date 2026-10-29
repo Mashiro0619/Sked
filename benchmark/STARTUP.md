@@ -345,10 +345,11 @@ timed-out child.
 
 ## Results and maintenance
 
-The [2026-10-28 preview experiment](STARTUP_PREVIEW_2026-10-28.md) records the
-complete 36-process comparison, twelve targeted follow-up processes, and the
-decision not to adopt the candidate. Its earlier readable content did not
-justify the repeated initial-input delay. Shipping startup is unchanged.
+The preview candidate was not adopted. Earlier readable content did not
+consistently improve complete readiness or memory, and initial-input delay
+recurred. Production retains the complete storage load and original startup
+UI; the unused preview API was removed. Historical measurements remain local
+and are not current-release acceptance.
 
 Use `--dart-define=SKED_F5_BUILD_DIAGNOSTIC=true` only in separate diagnostic
 builds when investigating unexpected rebuilds. It records build-scheduling
