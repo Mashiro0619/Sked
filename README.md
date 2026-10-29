@@ -123,6 +123,8 @@ Sked 通过 `/models` 获取模型列表，通过 `/chat/completions` 解析课�
 
 环境准备、原子提交、本地化和验证流程见 [贡献指南](CONTRIBUTING.md)。
 
+全软件 Agent 的后续设计见 [架构提案](docs/AGENT_ARCHITECTURE.md)、[能力全集](docs/AGENT_CAPABILITIES.md)、[数据与应用重构](docs/AGENT_DATA_REFACTOR.md)、[共享 Skills](docs/AGENT_SKILLS.md)、[开源 harness 研究](docs/AGENT_HARNESS_RESEARCH.md)和[实施计划](docs/AGENT_IMPLEMENTATION_PLAN.md)。方案为单 Agent、多会话，统一现有 AI 解析业务；这些文档是待实施方案，不是当前版本的功能说明。
+
 学校站点配置位于 [`assets/school_sites.json`](assets/school_sites.json)，也欢迎补充尚未收录的学校。
 
 ## 许可证与相关链接
