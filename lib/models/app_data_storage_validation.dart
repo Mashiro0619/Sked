@@ -9,6 +9,8 @@ import 'general_date_range.dart';
 import 'workspace_panel_display_mode.dart';
 
 import 'app_data_json_values.dart';
+import 'agent_settings.dart';
+import 'application_ledger.dart';
 
 List<Map<String, dynamic>> _storageObjectListField(
   Map<String, dynamic> json,
@@ -1481,7 +1483,19 @@ void _validateStorageGeneralMode(Map<String, dynamic> json) {
   }
 }
 
+void validateAppDataAgentState(Map<String, dynamic> json) {
+  if (!json.containsKey('agentSettings') ||
+      !json.containsKey('applicationLedger')) {
+    throw const FormatException('Stored Agent state is incomplete.');
+  }
+  AgentSettings.fromJson(json['agentSettings']);
+  if (json['applicationLedger'] != null) {
+    ApplicationLedger.fromJson(json['applicationLedger']);
+  }
+}
+
 void validateAppDataStorageSnapshot(Map<String, dynamic> json) {
+  validateAppDataAgentState(json);
   _validateStorageStringField(
     json,
     'localeCode',

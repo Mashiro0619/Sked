@@ -138,6 +138,14 @@ class DataTransferCodec {
     debugLabel: 'sked.export.backup',
   );
 
+  Future<String> encodeBackupForRecovery(
+    AppData data,
+    List<SchoolSite> sites,
+  ) => _run(_encodeBackupForRecovery, (
+    data,
+    List<SchoolSite>.of(sites),
+  ), debugLabel: 'sked.recovery.backup');
+
   Future<AppBackupData> decodeBackup(
     String source, {
     required String localeCode,
@@ -232,6 +240,9 @@ String _encodeSchedules(
 
 String _encodeBackup((AppData, List<SchoolSite>) input) =>
     encodeAppBackup(input.$1, input.$2);
+
+String _encodeBackupForRecovery((AppData, List<SchoolSite>) input) =>
+    encodeAppBackupForRecovery(input.$1, input.$2);
 
 AppBackupData _decodeBackup((String, String) input) {
   final backup = decodeAppBackup(input.$1, localeCode: input.$2);

@@ -43,6 +43,18 @@ class DeviceTransferSanitizerTest {
     }
 
     @Test
+    fun agentAuthorityAndReceiptsAreLocalEvenWithEscapedOrDuplicateNames() {
+        val source = """{"schemaVersion":5,"agentSettings":{"enabled":true,"permissionMode":"full","endpoint":"PRIVATE_ENDPOINT","credentialRef":"PRIVATE_REF"},"agent\u0053ettings":{"model":"PRIVATE_MODEL"},"applicationLedger":{"receipts":[{"result":"PRIVATE_RESULT"}]},"metadata":{"agentSettings":{"name":"ordinary"},"applicationLedger":"ordinary"}}"""
+        val defaults = """{"enabled":false,"permissionMode":"ask","protocol":"chatCompletions","endpoint":"","model":"","credentialRef":null}"""
+        val result = sanitize(source)
+        assertFalse(result.contains("PRIVATE_"))
+        assertEquals(
+            """{"schemaVersion":5,"agentSettings":$defaults,"agentSettings":$defaults,"applicationLedger":null,"metadata":{"agentSettings":{"name":"ordinary"},"applicationLedger":"ordinary"}}""",
+            result,
+        )
+    }
+
+    @Test
     fun ordinaryValuesAndNumericLexemesArePreserved() {
         val source = """{"text":"中文🌸\nquote\"","id":9007199254740993,"decimal":1.234567890123456789,"exponent":1e+99,"negativeZero":-0,"array":[true,false,null,{},[]],"metadata":{"customApiKey":"ordinary user content"},"studentMode":{"ordinary":{"schoolImportParserSettings":{"customApiKey":"content"}}}}"""
         assertEquals(source, sanitize(source))
@@ -62,6 +74,7 @@ class DeviceTransferSanitizerTest {
             "{\"a\":\"raw\nnewline\"}", "{\"aiApiSettings\":{\"customApiKey\":\"bad\\x\"}}",
             "{\"aiApiSettings\":[]}", "{\"studentMode\":null}",
             "{\"schoolImportParserSettings\":\"key\"}",
+            "{\"agentSettings\":[]}", "{\"applicationLedger\":[]}",
             "{\"studentMode\":{\"schoolImportParserSettings\":[{\"customApiKey\":\"key\"}]}}",
         )
         for (source in inputs) {

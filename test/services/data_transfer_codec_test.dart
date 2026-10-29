@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/models/agent_settings.dart';
+import 'package:sked/models/application_ledger.dart';
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 import 'package:sked/services/general_calendar_ics_service.dart';
@@ -18,6 +20,34 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const codec = DataTransferCodec();
   const service = ImportExportService();
+
+  test('compute recovery encoding retains local Agent identity and normalization preserves it', () async {
+    final data = _data().copyWith(
+      agentSettings: const AgentSettings(
+        enabled: true,
+        credentialRef: 'local-ref',
+      ),
+      applicationLedger: ApplicationLedger(
+        generation: '87df3167-9e4d-485f-adbd-975c8bca12ca',
+      ),
+    );
+    final source = await codec.encodeBackupForRecovery(data, const []);
+    final restored = decodeAppBackupForRecovery(source).appData;
+    expect(restored.agentSettings, data.agentSettings);
+    expect(restored.applicationLedger, data.applicationLedger);
+    final normalized = await codec.normalizeForLoad(data, localeCode: 'en');
+    expect(normalized.data.agentSettings, data.agentSettings);
+    expect(normalized.data.applicationLedger, data.applicationLedger);
+    final portable = await codec.encodeBackup(data, const []);
+    expect(portable, isNot(contains('applicationLedger')));
+    expect(
+      (await codec.decodeBackup(
+        source,
+        localeCode: 'en',
+      )).appData.agentSettings,
+      const AgentSettings(),
+    );
+  });
 
   test(
     'loaded canonical archives do not need a redundant durable write',

@@ -280,7 +280,7 @@ void main() {
       AppBackupRestoreJournalLoadStatus.missing,
     );
 
-    await journal.write(encodeAppBackup(_appData(), const []));
+    await journal.write(encodeAppBackupForRecovery(_appData(), const []));
     final valid = await journal.load();
     expect(valid.status, AppBackupRestoreJournalLoadStatus.valid);
     expect(valid.backup, isNotNull);
@@ -339,7 +339,7 @@ void main() {
       );
 
       await journal.writeReconciliation(
-        encodeAppBackup(_appData(), const []),
+        encodeAppBackupForRecovery(_appData(), const []),
         recoveryArtifact: artifact,
       );
       final reconciled = await journal.load();
@@ -357,7 +357,7 @@ void main() {
   test('decodes a version-one envelope as a prepared restore', () async {
     final journal = SharedPreferencesAppBackupRestoreJournal();
     const artifact = 'shared-preferences://sked/legacy-artifact';
-    final backupSource = encodeAppBackup(_appData(), const []);
+    final backupSource = encodeAppBackupForRecovery(_appData(), const []);
     await journal.write(
       ImportExportEnvelope(
         schema: 'app-backup-restore-journal',
@@ -381,7 +381,7 @@ void main() {
 
   test('persists and confirms every version-two restore phase', () async {
     final journal = SharedPreferencesAppBackupRestoreJournal();
-    final backupSource = encodeAppBackup(_appData(), const []);
+    final backupSource = encodeAppBackupForRecovery(_appData(), const []);
 
     final prepared = await journal.writePrepared(backupSource);
     final dataCommitted = await journal.advancePhase(
@@ -405,7 +405,7 @@ void main() {
 
   test('phase advancement rejects invalid or skipped states', () async {
     final journal = SharedPreferencesAppBackupRestoreJournal();
-    final backupSource = encodeAppBackup(_appData(), const []);
+    final backupSource = encodeAppBackupForRecovery(_appData(), const []);
 
     expect(
       () => journal.advancePhase(
@@ -442,7 +442,7 @@ void main() {
     );
 
     await expectLater(
-      journal.writePrepared(encodeAppBackup(_appData(), const [])),
+      journal.writePrepared(encodeAppBackupForRecovery(_appData(), const [])),
       throwsA(
         isA<AppBackupRestoreJournalStateUnknownException>().having(
           (error) => error.stateUnknown,
@@ -460,7 +460,7 @@ void main() {
 
   test('future journal versions and phases remain upgrade-blocked', () async {
     final journal = SharedPreferencesAppBackupRestoreJournal();
-    final backupSource = encodeAppBackup(_appData(), const []);
+    final backupSource = encodeAppBackupForRecovery(_appData(), const []);
 
     for (final source in [
       ImportExportEnvelope(

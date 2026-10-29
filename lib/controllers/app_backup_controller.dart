@@ -4,12 +4,14 @@ import 'package:flutter/foundation.dart' show VoidCallback, debugPrint;
 
 import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
+import '../models/application_ledger.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../services/app_backup_restore_journal.dart';
 import '../services/data_transfer_codec.dart';
 import '../services/school_site_service.dart';
 import '../services/school_site_store.dart';
+import '../utils/unique_id.dart';
 import 'app_data_defaults.dart';
 import 'app_data_maintenance.dart';
 import 'app_persistence.dart';
@@ -212,6 +214,8 @@ class AppBackupController {
     final previousAppData = _data;
     final localParser = previousAppData.aiApiSettings;
     imported = imported.copyWith(
+      agentSettings: previousAppData.agentSettings,
+      applicationLedger: ApplicationLedger(generation: generateUuidV4()),
       aiApiSettings: imported.aiApiSettings.copyWith(
         customBaseUrl: localParser.customBaseUrl,
         customModel: localParser.customModel,
@@ -245,7 +249,10 @@ class AppBackupController {
     // stores and the dataCommitted marker are durable, then apply its policy.
     try {
       pendingRestore = await _journal.writePrepared(
-        await _codec.encodeBackup(journalAppData, restoredSchoolSites),
+        await _codec.encodeBackupForRecovery(
+          journalAppData,
+          restoredSchoolSites,
+        ),
         localeCode: imported.localeCode,
       );
     } on AppBackupRestoreJournalException catch (error) {
@@ -523,7 +530,10 @@ class AppBackupController {
       final currentAppData = _repository.current;
       if (currentAppData != null) {
         final currentBackupArtifact = await _journal.preserveForRecovery(
-          await _codec.encodeBackup(currentAppData, siteResult.sites),
+          await _codec.encodeBackupForRecovery(
+            currentAppData,
+            siteResult.sites,
+          ),
         );
         _trackAppBackupRestoreJournal(artifacts: [currentBackupArtifact]);
       }
@@ -531,7 +541,7 @@ class AppBackupController {
       var fresh = await _defaults.build();
       fresh = withRuntimeSchoolImportApiKey(fresh, runtimeApiKey);
       await _journal.writeReconciliation(
-        await _codec.encodeBackup(fresh, siteResult.sites),
+        await _codec.encodeBackupForRecovery(fresh, siteResult.sites),
         recoveryArtifact: recoveryArtifact,
         localeCode: fresh.localeCode,
       );

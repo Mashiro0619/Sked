@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
 import 'package:sked/data/migrations/migration.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/models/agent_settings.dart';
+import 'package:sked/models/application_ledger.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/app_backup_restore_journal_factory_io.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
@@ -16,7 +18,7 @@ AppData _appData(String localeCode) {
 }
 
 String _backupSource(String localeCode) {
-  return encodeAppBackup(_appData(localeCode), const []);
+  return encodeAppBackupForRecovery(_appData(localeCode), const []);
 }
 
 Map<String, String> _futureRestorePayloads(String localeCode) {
@@ -165,6 +167,47 @@ void main() {
       expect(
         result.recoveryArtifacts,
         containsAll([instance.pendingArtifactPath, historicalArtifact]),
+      );
+    },
+  );
+
+  test(
+    'prepared recovery retains Agent configuration and receipts across restart',
+    () async {
+      final original = _appData('en').copyWith(
+        agentSettings: const AgentSettings(
+          enabled: true,
+          credentialRef: 'local-reference',
+        ),
+        applicationLedger:
+            ApplicationLedger(
+              generation: '5c184353-508c-44a1-8c64-b9616c9e2b27',
+            ).append(
+              OperationReceipt(
+                operationId: 'operation-1',
+                sequence: 1,
+                commandDigest: '1' * 64,
+                completedAtIso: '2026-10-30T00:00:00Z',
+                result: {'updated': 'calendar'},
+                undo: {'previousName': 'Old name'},
+              ),
+            ),
+      );
+      final first = journal();
+      final prepared = await first.writePrepared(
+        encodeAppBackupForRecovery(original, const []),
+      );
+      await first.advancePhase(
+        prepared,
+        AppBackupRestoreJournalPhase.dataCommitted,
+      );
+      final loaded = await journal().load();
+      expect(loaded.status, AppBackupRestoreJournalLoadStatus.valid);
+      expect(loaded.phase, AppBackupRestoreJournalPhase.dataCommitted);
+      expect(loaded.backup!.appData.agentSettings, original.agentSettings);
+      expect(
+        loaded.backup!.appData.applicationLedger,
+        original.applicationLedger,
       );
     },
   );

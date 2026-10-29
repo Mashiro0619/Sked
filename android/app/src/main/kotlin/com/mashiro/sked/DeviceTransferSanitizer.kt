@@ -12,8 +12,10 @@ import java.io.OutputStreamWriter
 import java.nio.charset.CodingErrorAction
 import java.util.ArrayDeque
 
-/** Copies a complete storage object, dropping only managed legacy API-key fields. */
+/** Copies business data while removing device-local credentials and Agent authority. */
 internal object DeviceTransferSanitizer {
+    // Schema-5 migration defaults; raw credentials never enter this object.
+    private const val DEFAULT_AGENT_SETTINGS = """{"enabled":false,"permissionMode":"ask","protocol":"chatCompletions","endpoint":"","model":"","credentialRef":null}"""
     private enum class Scope { ROOT, STUDENT, SETTINGS, OTHER }
     private data class Frame(val objectValue: Boolean, val scope: Scope)
 
@@ -60,6 +62,22 @@ internal object DeviceTransferSanitizer {
                     // nextName decodes escapes; skip each occurrence, including
                     // duplicate keys and non-string values in corrupt snapshots.
                     reader.skipValue()
+                    continue
+                }
+                if (frame.scope == Scope.ROOT && name == "agentSettings") {
+                    if (reader.peek() != JsonToken.BEGIN_OBJECT) {
+                        throw IOException("Device transfer contains invalid Agent settings.")
+                    }
+                    reader.skipValue()
+                    writer.name(name).jsonValue(DEFAULT_AGENT_SETTINGS)
+                    continue
+                }
+                if (frame.scope == Scope.ROOT && name == "applicationLedger") {
+                    if (reader.peek() != JsonToken.BEGIN_OBJECT && reader.peek() != JsonToken.NULL) {
+                        throw IOException("Device transfer contains an invalid application ledger.")
+                    }
+                    reader.skipValue()
+                    writer.name(name).nullValue()
                     continue
                 }
                 childScope = when {

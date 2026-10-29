@@ -7,6 +7,8 @@ import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/school_import_models.dart';
+import 'package:sked/models/agent_settings.dart';
+import 'package:sked/models/application_ledger.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/controllers/app_backup_controller.dart'
@@ -224,6 +226,75 @@ Future<AppRuntime> _provider({
 }
 
 void main() {
+  test('full restore preserves local Agent configuration and starts one new data generation', () async {
+    const config = AgentSettings(
+      enabled: true,
+      endpoint: 'https://model.example.test/v1',
+      model: 'test',
+      credentialRef: 'local-credential',
+    );
+    final originalLedger = ApplicationLedger(
+      generation: '8215b660-b784-4c0a-9c9d-9acee313f7f5',
+    );
+    final storage = _MemoryTimetableStorage(
+      _appData('en')
+          .copyWith(agentSettings: config, applicationLedger: originalLedger),
+    );
+    final provider = await _provider(
+      appStorage: storage,
+      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+      secrets: _MemorySecretStore(''),
+    );
+    addTearDown(provider.dispose);
+    await provider.backups.importJson(
+      encodeAppBackupForRecovery(
+        _appData('zh').copyWith(
+          agentSettings: const AgentSettings(
+            endpoint: 'https://foreign.example.test',
+          ),
+          applicationLedger: originalLedger,
+        ),
+        const [],
+      ),
+      mode: AppImportMode.replaceAll,
+    );
+    expect(storage.data!.agentSettings, config);
+    expect(
+      storage.data!.applicationLedger!.generation,
+      isNot(originalLedger.generation),
+    );
+    expect(storage.data!.applicationLedger!.nextSequence, 1);
+    expect(storage.data!.applicationLedger!.receipts, isEmpty);
+    final exported = decodeAppBackup(await provider.backups.exportJson());
+    expect(exported.appData.agentSettings, const AgentSettings());
+    expect(exported.appData.applicationLedger, isNull);
+  });
+
+  test('startup journal replay reuses the prepared Agent configuration and generation', () async {
+    const config = AgentSettings(
+      endpoint: 'https://model.example.test/v1',
+      model: 'test',
+    );
+    final target = _appData('zh').copyWith(
+      agentSettings: config,
+      applicationLedger: ApplicationLedger(
+        generation: '8215b660-b784-4c0a-9c9d-9acee313f7f5',
+      ),
+    );
+    final storage = _MemoryTimetableStorage(_appData('en'));
+    final provider = await _provider(
+      appStorage: storage,
+      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+      secrets: _MemorySecretStore(''),
+      journal: _MemoryBackupRestoreJournal(
+        source: encodeAppBackupForRecovery(target, const []),
+      ),
+    );
+    addTearDown(provider.dispose);
+    expect(storage.data!.agentSettings, config);
+    expect(storage.data!.applicationLedger, target.applicationLedger);
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const oldSites = [
@@ -935,7 +1006,7 @@ void main() {
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal();
       final prepared = await journal.writePrepared(
-        encodeAppBackup(_appData('zh'), newSites),
+        encodeAppBackupForRecovery(_appData('zh'), newSites),
       );
       await journal.advancePhase(
         prepared,
@@ -1231,7 +1302,7 @@ void main() {
       final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal(
-        source: encodeAppBackup(_appData('zh'), newSites),
+        source: encodeAppBackupForRecovery(_appData('zh'), newSites),
       );
 
       final provider = await _provider(
@@ -1267,7 +1338,7 @@ void main() {
         );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal(
-        source: encodeAppBackup(_appData('zh'), newSites),
+        source: encodeAppBackupForRecovery(_appData('zh'), newSites),
       );
       final provider = await _provider(
         appStorage: appStorage,
@@ -1577,7 +1648,7 @@ void main() {
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal();
       final stalePreflight = await journal.writePrepared(
-        encodeAppBackup(_appData('zh'), newSites),
+        encodeAppBackupForRecovery(_appData('zh'), newSites),
       );
       journal
         ..source = null

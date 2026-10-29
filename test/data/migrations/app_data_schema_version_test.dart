@@ -9,8 +9,8 @@ import 'package:sked/utils/constants.dart';
 
 void main() {
   group('AppData schemaVersion', () {
-    test('current schema is version 4', () {
-      expect(appDataCurrentSchemaVersion, 4);
+    test('current schema is version 5', () {
+      expect(appDataCurrentSchemaVersion, 5);
     });
 
     test('v1 moves legacy top-level themes into unthemed modes', () {
@@ -29,7 +29,7 @@ void main() {
 
       final migrated = appDataMigrationRunner.run(input);
 
-      expect(migrated['schemaVersion'], 4);
+      expect(migrated['schemaVersion'], 5);
       for (final modeKey in const ['studentMode', 'generalMode']) {
         final mode = migrated[modeKey] as Map<String, dynamic>;
         expect(mode['themeMode'], 'dark');
@@ -172,9 +172,9 @@ void main() {
     });
 
     test('decode runs migrations before constructing AppData', () {
-      // Synthesize a JSON document at the current schemaVersion.
+      // Synthesize a v4 document requiring migration before construction.
       final source = jsonEncode({
-        'schemaVersion': appDataCurrentSchemaVersion,
+        'schemaVersion': 4,
         'enabledWorkspaces': ['student', 'general'],
         'activeMode': 'student',
       });

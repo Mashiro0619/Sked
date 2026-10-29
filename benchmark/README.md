@@ -435,3 +435,12 @@ non-serialization checksums and workload record counts remain unchanged.
 The fixture regression test removes the schema/display/update-preference
 additions and still checks the original workload checksums. The timing results
 above remain historical measurements, not new measurements of this dataset.
+
+## Dataset version 6: local Agent state
+
+AppData schema 5 adds disabled Agent defaults and a nullable operation ledger.
+Portable backup serialization omits both local fields. Dataset version 6 updates
+the four serialization checksums; record counts and the seven other workload
+checksums stay unchanged. The historical normalization regression also removes
+these two fields before comparing its original checksums. This is a fixture
+contract update, not a new performance measurement.

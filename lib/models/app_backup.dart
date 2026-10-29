@@ -21,12 +21,25 @@ class AppBackupData {
   final bool includesSchoolSites;
 }
 
-String encodeAppBackup(AppData appData, List<SchoolSite> schoolSites) {
+String encodeAppBackup(AppData appData, List<SchoolSite> schoolSites) =>
+    _encodeAppBackup(appData, schoolSites, recovery: false);
+
+/// Local journal payload retaining the configured Agent and application ledger.
+String encodeAppBackupForRecovery(
+  AppData appData,
+  List<SchoolSite> schoolSites,
+) => _encodeAppBackup(appData, schoolSites, recovery: true);
+
+String _encodeAppBackup(
+  AppData appData,
+  List<SchoolSite> schoolSites, {
+  required bool recovery,
+}) {
   return ImportExportEnvelope(
     schema: appBackupSchema,
     version: appBackupVersion,
     data: {
-      'appData': appData.toJson(),
+      'appData': recovery ? appData.toJson() : appData.toPortableJson(),
       'schoolSites': schoolSites.map((site) => site.toJson()).toList(),
     },
   ).encode();
@@ -69,7 +82,13 @@ AppBackupData _decodeAppBackup(
       throw const FormatException('App backup format is invalid.');
     }
     return AppBackupData(
-      appData: AppData.decodeStorageSnapshot(jsonEncode(rawAppData)),
+      appData: AppData.decodeStorageSnapshot(
+        jsonEncode(
+          externalImport
+              ? appDataJsonForExternalImport(rawAppData)
+              : rawAppData,
+        ),
+      ),
       schoolSites: decodeSchoolSitesStrict(jsonEncode(rawSchoolSites)),
       includesSchoolSites: true,
     );
@@ -89,7 +108,13 @@ AppBackupData _decodeAppBackup(
       );
     }
     return AppBackupData(
-      appData: AppData.decodeStorageSnapshot(jsonEncode(envelope.data)),
+      appData: AppData.decodeStorageSnapshot(
+        jsonEncode(
+          externalImport
+              ? appDataJsonForExternalImport(envelope.data)
+              : envelope.data,
+        ),
+      ),
       schoolSites: const [],
       includesSchoolSites: false,
     );

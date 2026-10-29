@@ -5,7 +5,7 @@ import 'timetable_models.dart';
 /// [agenda] describes the built-in reminder sources, not every change to the
 /// student/general models. Display preferences and edit timestamps do not
 /// change a notification plan.
-enum AppDataDomain { student, general, settings, agenda, dataSession }
+enum AppDataDomain { student, general, settings, agenda, dataSession, ledger }
 
 const _allDomains = <AppDataDomain>{
   AppDataDomain.student,
@@ -13,6 +13,7 @@ const _allDomains = <AppDataDomain>{
   AppDataDomain.settings,
   AppDataDomain.agenda,
   AppDataDomain.dataSession,
+  AppDataDomain.ledger,
 };
 
 class AppDataVersions {
@@ -22,6 +23,7 @@ class AppDataVersions {
     this.settings = 0,
     this.agenda = 0,
     this.dataSession = 0,
+    this.ledger = 0,
   });
 
   final int student;
@@ -29,6 +31,7 @@ class AppDataVersions {
   final int settings;
   final int agenda;
   final int dataSession;
+  final int ledger;
 
   AppDataVersions advance(Set<AppDataDomain> domains) => AppDataVersions(
     student: student + (domains.contains(AppDataDomain.student) ? 1 : 0),
@@ -37,6 +40,7 @@ class AppDataVersions {
     agenda: agenda + (domains.contains(AppDataDomain.agenda) ? 1 : 0),
     dataSession:
         dataSession + (domains.contains(AppDataDomain.dataSession) ? 1 : 0),
+    ledger: ledger + (domains.contains(AppDataDomain.ledger) ? 1 : 0),
   );
 }
 
@@ -92,6 +96,8 @@ Set<AppDataDomain> changedAppDataDomains(
     if (settingsChanged) AppDataDomain.settings,
     if (agendaChanged) AppDataDomain.agenda,
     if (dataSessionChanged) AppDataDomain.dataSession,
+    if (previous.applicationLedger != current.applicationLedger)
+      AppDataDomain.ledger,
   });
 }
 
@@ -103,6 +109,7 @@ bool _sameSettings(AppData a, AppData b) =>
     a.homeWorkspaceNavigationCollapsed == b.homeWorkspaceNavigationCollapsed &&
     a.workspacePanelDisplayMode == b.workspacePanelDisplayMode &&
     a.notificationSettings == b.notificationSettings &&
+    a.agentSettings == b.agentSettings &&
     a.privacyPolicyAcceptedVersion == b.privacyPolicyAcceptedVersion &&
     a.privacyPolicyAcceptedAtIso == b.privacyPolicyAcceptedAtIso &&
     a.includePrereleaseUpdates == b.includePrereleaseUpdates &&

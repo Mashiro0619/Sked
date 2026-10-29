@@ -65,7 +65,7 @@ void main() {
       migrated.generalMode.toJson()['schemaVersion'],
       generalScheduleSchemaVersion,
     );
-    expect(migrated.toJson()['schemaVersion'], 4);
+    expect(migrated.toJson()['schemaVersion'], 5);
     final range = GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13));
     final data = migrated.copyWith(
       generalMode: migrated.generalMode.copyWith(customDateRange: range),

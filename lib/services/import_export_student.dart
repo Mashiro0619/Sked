@@ -98,7 +98,12 @@ mixin _StudentTimetableImportExport on _ImportExportServiceCore {
       );
       _ensureStudentImportAppDataShape(envelope.data);
       final appData = normalizeAppData(
-        AppData.fromJson({...envelope.data, 'localeCode': localeCode}),
+        AppData.fromJson(
+          appDataJsonForExternalImport({
+            ...envelope.data,
+            'localeCode': localeCode,
+          }),
+        ),
         localeCode: localeCode,
       );
       return TimetableExportData(

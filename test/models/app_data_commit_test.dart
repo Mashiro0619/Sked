@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/app_data_commit.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/models/agent_settings.dart';
+import 'package:sked/models/application_ledger.dart';
 
 AppData _data() {
   final base = buildInitialAppData(buildDefaultPeriodTimes());
@@ -72,6 +74,44 @@ AppData _withEvent(AppData data, GeneralEvent event) => data.copyWith(
 );
 
 void main() {
+  test(
+    'Agent settings and ledger version independently without agenda work',
+    () {
+      final before = _data();
+      final configured = before.copyWith(
+        agentSettings: const AgentSettings(enabled: true),
+      );
+      expect(changedAppDataDomains(before, configured), {
+        AppDataDomain.settings,
+      });
+      final ledger =
+          ApplicationLedger(generation: '797b806b-bb3e-42cb-bbc7-6b7732d3df45')
+              .append(
+                OperationReceipt(
+                  operationId: 'settings-1',
+                  sequence: 1,
+                  commandDigest: '1' * 64,
+                  completedAtIso: '2026-10-30T00:00:00Z',
+                  result: {'changed': true},
+                ),
+              );
+      final committed = configured.copyWith(applicationLedger: ledger);
+      final domains = changedAppDataDomains(configured, committed);
+      expect(domains, {AppDataDomain.ledger});
+      final versions = const AppDataVersions().advance(domains);
+      expect(versions.ledger, 1);
+      expect(versions.agenda, 0);
+      expect(versions.settings, 0);
+      expect(
+        changedAppDataDomains(
+          committed,
+          AppData.decodeStorageSnapshot(committed.encode()),
+        ),
+        isEmpty,
+      );
+    },
+  );
+
   test('presentation and calendar navigation do not change agenda inputs', () {
     final before = _data();
     final after = before.copyWith(

@@ -121,6 +121,8 @@ void main() {
         // Compare the historical workload after removing only new navigation
         // preferences and restoring its old AppData schema envelope.
         app['schemaVersion'] = 3;
+        app.remove('agentSettings');
+        app.remove('applicationLedger');
         for (final key in ['studentMode', 'generalMode']) {
           final mode = app[key] as Map<String, dynamic>;
           mode['toolbarNavigationOrder'] = key == 'studentMode'

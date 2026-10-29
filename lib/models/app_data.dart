@@ -12,6 +12,8 @@ import '../utils/localized_names.dart';
 import '../utils/time_utils.dart';
 import 'app_mode.dart';
 import 'ai_api_settings.dart';
+import 'agent_settings.dart';
+import 'application_ledger.dart';
 import 'course_item.dart';
 import 'general_schedule.dart';
 import 'general_schedule_data.dart';
@@ -137,6 +139,8 @@ class AppData {
     WorkspacePanelDisplayMode workspacePanelDisplayMode =
         WorkspacePanelDisplayMode.overlay,
     AiApiSettings aiApiSettings = const AiApiSettings(),
+    AgentSettings agentSettings = const AgentSettings(),
+    ApplicationLedger? applicationLedger,
     NotificationSettings notificationSettings = const NotificationSettings(),
     String? themeMode,
     String? themeColorMode,
@@ -148,6 +152,7 @@ class AppData {
     String? ignoredUpdateVersion,
     String? availableUpdateVersion,
   }) {
+    agentSettings.validate();
     if (enabledWorkspaces.isEmpty || !enabledWorkspaces.contains(activeMode)) {
       throw const FormatException('Active workspace must be enabled.');
     }
@@ -194,6 +199,8 @@ class AppData {
       homeWorkspaceNavigationCollapsed: homeWorkspaceNavigationCollapsed,
       workspacePanelDisplayMode: workspacePanelDisplayMode,
       aiApiSettings: aiApiSettings,
+      agentSettings: agentSettings,
+      applicationLedger: applicationLedger,
       notificationSettings: notificationSettings,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
       privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
@@ -214,6 +221,8 @@ class AppData {
     this.homeWorkspaceNavigationCollapsed = false,
     this.workspacePanelDisplayMode = WorkspacePanelDisplayMode.overlay,
     this.aiApiSettings = const AiApiSettings(),
+    this.agentSettings = const AgentSettings(),
+    this.applicationLedger,
     this.notificationSettings = const NotificationSettings(),
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
@@ -235,6 +244,8 @@ class AppData {
   final bool homeWorkspaceNavigationCollapsed;
   final WorkspacePanelDisplayMode workspacePanelDisplayMode;
   final AiApiSettings aiApiSettings;
+  final AgentSettings agentSettings;
+  final ApplicationLedger? applicationLedger;
   final NotificationSettings notificationSettings;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
@@ -273,6 +284,8 @@ class AppData {
     if (workspacePanelDisplayMode != WorkspacePanelDisplayMode.overlay)
       'workspacePanelDisplayMode': workspacePanelDisplayMode.value,
     'aiApiSettings': aiApiSettings.toJson(),
+    'agentSettings': agentSettings.toJson(),
+    'applicationLedger': applicationLedger?.toJson(),
     // Keep the default snapshot byte-for-byte compatible with pre-notification
     // data.  The optional object is written as soon as the user changes one
     // of its values, and older readers can safely ignore it.
@@ -290,6 +303,11 @@ class AppData {
   };
 
   factory AppData.fromJson(Map<String, dynamic> json) {
+    // Inspect v5 state before the generic migration runner copies maps, so
+    // non-string JSON keys cannot acquire valid meaning through coercion.
+    if (tryDecodeAppDataVersion(json['schemaVersion']) == 5) {
+      validateAppDataAgentState(json);
+    }
     if ((tryDecodeAppDataVersion(json['schemaVersion']) ?? 0) >= 3 &&
         (tryDecodeAppDataVersion(json['schemaVersion']) ?? 0) <=
             appDataCurrentSchemaVersion &&
@@ -386,6 +404,10 @@ class AppData {
       aiApiSettings: AiApiSettings.fromJson(
         _decodeAiApiSettingsJson(migrated, studentModeJson),
       ),
+      agentSettings: AgentSettings.fromJson(migrated['agentSettings']),
+      applicationLedger: migrated['applicationLedger'] == null
+          ? null
+          : ApplicationLedger.fromJson(migrated['applicationLedger']),
       notificationSettings: NotificationSettings.fromJson(
         _decodeNotificationSettingsJson(migrated),
       ),
@@ -418,6 +440,8 @@ class AppData {
     bool? homeWorkspaceNavigationCollapsed,
     WorkspacePanelDisplayMode? workspacePanelDisplayMode,
     AiApiSettings? aiApiSettings,
+    AgentSettings? agentSettings,
+    Object? applicationLedger = _keepNullable,
     NotificationSettings? notificationSettings,
     String? themeMode,
     String? themeColorMode,
@@ -479,6 +503,10 @@ class AppData {
       workspacePanelDisplayMode:
           workspacePanelDisplayMode ?? this.workspacePanelDisplayMode,
       aiApiSettings: nextAiApiSettings,
+      agentSettings: agentSettings ?? this.agentSettings,
+      applicationLedger: identical(applicationLedger, _keepNullable)
+          ? this.applicationLedger
+          : applicationLedger as ApplicationLedger?,
       notificationSettings: notificationSettings ?? this.notificationSettings,
       privacyPolicyAcceptedVersion:
           identical(privacyPolicyAcceptedVersion, _keepNullable)
@@ -501,17 +529,34 @@ class AppData {
 
   String encode() => jsonEncode(toJson());
 
+  /// Portable data never carries local Agent authority, credentials or receipts.
+  Map<String, dynamic> toPortableJson() => toJson()
+    ..remove('agentSettings')
+    ..remove('applicationLedger');
+
   factory AppData.decode(String source) {
     return AppData.fromJson(decodeAppDataJsonObject(source));
   }
 
   factory AppData.decodeStorageSnapshot(String source) {
     final json = decodeAppDataJsonObject(source);
+    if (tryDecodeAppDataVersion(json['schemaVersion']) == 5) {
+      validateAppDataAgentState(json);
+    }
     final migrated = appDataMigrationRunner.run(json);
     validateAppDataStorageSnapshot(migrated);
     return AppData.fromJson(migrated);
   }
 }
+
+/// Explicit trust boundary for external backups, including crafted files that
+/// contain local-only state. Local storage and recovery must not call this.
+Map<String, dynamic> appDataJsonForExternalImport(Map<String, dynamic> json) =>
+    {
+      ...json,
+      'agentSettings': const AgentSettings().toJson(),
+      'applicationLedger': null,
+    };
 
 Set<AppMode> _decodeEnabledWorkspaces(Map<String, dynamic> json) {
   final raw = json['enabledWorkspaces'];
@@ -723,7 +768,7 @@ String encodeAppDataEnvelope(AppData data) {
   return ImportExportEnvelope(
     schema: appDataSchema,
     version: importExportVersion,
-    data: data.toJson(),
+    data: data.toPortableJson(),
   ).encode();
 }
 
@@ -785,7 +830,9 @@ AppData decodeAppDataEnvelope(
     kind: ImportCountKind.appData,
     localeCode: localeCode,
   );
-  return AppData.fromJson({...envelope.data, 'localeCode': localeCode});
+  return AppData.fromJson(
+    appDataJsonForExternalImport({...envelope.data, 'localeCode': localeCode}),
+  );
 }
 
 TimetableExportData decodeTimetableDataEnvelope(
