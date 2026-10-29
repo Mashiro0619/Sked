@@ -375,8 +375,13 @@ void main() {
         find.byKey(const ValueKey('school-import-parse-period-time-set')),
         findsOneWidget,
       );
+      final l10n = AppLocalizations.of(
+        tester.element(
+          find.byKey(const ValueKey('school-import-parse-timetable-name')),
+        ),
+      );
       expect(
-        find.widgetWithText(OutlinedButton, 'Edit parsed result'),
+        find.widgetWithText(OutlinedButton, l10n.schoolImportResultEditorTitle),
         findsOneWidget,
       );
       expect(find.text('Continue import'), findsNothing);

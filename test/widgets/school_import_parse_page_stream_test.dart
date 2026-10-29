@@ -152,100 +152,114 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets(
-    'stream preview is bounded while full-screen edit keeps content',
-    (tester) async {
-      final controller = StreamController<SchoolImportStreamEvent>();
-      final fullContent = 'BEGIN-${'x' * 10000}-TAIL';
-      final results = <SchoolImportParseOutcome?>[];
+  testWidgets('stream preview is bounded while full-screen edit keeps content', (
+    tester,
+  ) async {
+    final controller = StreamController<SchoolImportStreamEvent>();
+    final fullContent = 'BEGIN-${'x' * 10000}-TAIL';
+    final results = <SchoolImportParseOutcome?>[];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () {
-                  unawaited(
-                    _openParsePage(
-                      context,
-                      controller.stream,
-                    ).then(results.add),
-                  );
-                },
-                child: const Text('Open'),
-              ),
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () {
+                unawaited(
+                  _openParsePage(context, controller.stream).then(results.add),
+                );
+              },
+              child: const Text('Open'),
             ),
           ),
         ),
-      );
+      ),
+    );
 
-      await tester.tap(find.text('Open'));
+    await tester.tap(find.text('Open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final details = find.byKey(const ValueKey('school-import-parser-details'));
+    final l10n = AppLocalizations.of(tester.element(details));
+    final detailsHeader = find.descendant(
+      of: details,
+      matching: find.text(l10n.schoolWebImportParserDetails),
+    );
+    final previewText = find.descendant(
+      of: details,
+      matching: find.byType(SelectableText),
+    );
+    expect(previewText, findsNothing);
+    await tester.ensureVisible(detailsHeader);
+    expect(detailsHeader.hitTestable(), findsOneWidget);
+    await tester.tap(detailsHeader);
+    await tester.pump();
+    // The live parse spinner does not settle; finish the disclosure animation.
+    await tester.pump(const Duration(milliseconds: 400));
+    for (final chunk in [
+      fullContent.substring(0, 3500),
+      fullContent.substring(3500, 7000),
+      fullContent.substring(7000),
+    ]) {
+      controller.add(ParseDelta(chunk));
       await tester.pump();
-      for (final chunk in [
-        fullContent.substring(0, 3500),
-        fullContent.substring(3500, 7000),
-        fullContent.substring(7000),
-      ]) {
-        controller.add(ParseDelta(chunk));
-        await tester.pump();
-        final currentPreview = tester.widget<SelectableText>(
-          find.byType(SelectableText),
-        );
-        expect(
-          currentPreview.data!.length,
-          lessThanOrEqualTo(SchoolImportParsePage.defaultMaxPreviewCodeUnits),
-        );
-      }
-
-      final preview = tester.widget<SelectableText>(
-        find.byType(SelectableText),
-      );
-      expect(preview.data, endsWith('-TAIL'));
-      expect(preview.data, isNot(contains('BEGIN-')));
-
-      controller.add(ParseDone(response: _buildResponse()));
-      await tester.pumpAndSettle();
-      final editButton = find.byType(OutlinedButton);
-      expect(editButton.hitTestable(), findsOneWidget);
-      await tester.tap(editButton);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SchoolImportResultEditorPage), findsOneWidget);
-      final editor = tester.widget<TextField>(find.byType(TextField));
-      expect(editor.controller!.text, fullContent);
-
-      await tester.enterText(
-        find.byType(TextField),
-        '\u{1f600}' *
-            (SchoolImportParsePage.defaultMaxEditableCodeUnits ~/ 2 + 1),
-      );
+      final currentPreview = tester.widget<SelectableText>(previewText);
       expect(
-        editor.controller!.text.length,
-        SchoolImportParsePage.defaultMaxEditableCodeUnits,
+        currentPreview.data!.length,
+        lessThanOrEqualTo(SchoolImportParsePage.defaultMaxPreviewCodeUnits),
       );
-      expect(
-        editor.controller!.text.runes.length,
-        SchoolImportParsePage.defaultMaxEditableCodeUnits ~/ 2,
-      );
+    }
 
-      await tester.enterText(find.byType(TextField), _validEditableJson);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.check));
-      await tester.pumpAndSettle();
+    final preview = tester.widget<SelectableText>(previewText);
+    expect(preview.data, endsWith('-TAIL'));
+    expect(preview.data, isNot(contains('BEGIN-')));
 
-      expect(results, isEmpty);
-      expect(find.byType(SchoolImportParsePage), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Continue import'));
-      await tester.pumpAndSettle();
-      expect(results, hasLength(1));
-      expect(results.single?.response.timetable.name, 'Sample');
+    controller.add(ParseDone(response: _buildResponse()));
+    await tester.pumpAndSettle();
+    final editButton = find.widgetWithText(
+      OutlinedButton,
+      l10n.schoolImportResultEditorTitle,
+    );
+    expect(editButton.hitTestable(), findsOneWidget);
+    await tester.tap(editButton);
+    await tester.pumpAndSettle();
 
-      unawaited(controller.close());
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-  );
+    expect(find.byType(SchoolImportResultEditorPage), findsOneWidget);
+    final editor = tester.widget<TextField>(find.byType(TextField));
+    expect(editor.controller!.text, fullContent);
+
+    await tester.enterText(
+      find.byType(TextField),
+      '\u{1f600}' *
+          (SchoolImportParsePage.defaultMaxEditableCodeUnits ~/ 2 + 1),
+    );
+    expect(
+      editor.controller!.text.length,
+      SchoolImportParsePage.defaultMaxEditableCodeUnits,
+    );
+    expect(
+      editor.controller!.text.runes.length,
+      SchoolImportParsePage.defaultMaxEditableCodeUnits ~/ 2,
+    );
+
+    await tester.enterText(find.byType(TextField), _validEditableJson);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    expect(results, isEmpty);
+    expect(find.byType(SchoolImportParsePage), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue import'));
+    await tester.pumpAndSettle();
+    expect(results, hasLength(1));
+    expect(results.single?.response.timetable.name, 'Sample');
+    expect(results.single?.rawText, _validEditableJson);
+
+    unawaited(controller.close());
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('full-screen result editor keeps draft when validation fails', (
     tester,

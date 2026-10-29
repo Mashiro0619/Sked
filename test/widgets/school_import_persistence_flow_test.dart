@@ -740,6 +740,9 @@ void main() {
           addTearDown(provider.dispose);
           final api = _Api();
           await _openHtmlReview(tester, provider, api, platform: platform);
+          final l10n = AppLocalizations.of(
+            tester.element(find.byType(SchoolImportParsePage)),
+          );
           await tester.enterText(_name, 'Corrected timetable');
           await tester.enterText(_weeks, '22');
           final date = find.byKey(
@@ -752,7 +755,10 @@ void main() {
           await tester.tap(find.byKey(const ValueKey('sked-date-confirm')));
           await tester.pumpAndSettle();
           await tester.tap(
-            find.widgetWithText(OutlinedButton, 'Edit parsed result'),
+            find.widgetWithText(
+              OutlinedButton,
+              l10n.schoolImportResultEditorTitle,
+            ),
           );
           await tester.pumpAndSettle();
           final field = find.byType(TextField);
