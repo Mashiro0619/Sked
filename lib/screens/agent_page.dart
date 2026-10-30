@@ -139,6 +139,8 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
     return AgentConversationView(
       repository: application.conversations,
       showTitle: false,
+      operationChanges: application.tools.notificationEffectChanges,
+      describeOperation: application.tools.describeCommitResult,
       delegate: _RoutedAgentDelegate(
         application.runtime,
         () => unawaited(_openSettings()),

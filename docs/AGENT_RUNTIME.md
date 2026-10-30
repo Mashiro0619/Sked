@@ -72,6 +72,8 @@ conversation.get、conversations.get、runs.status 和会话导出提供已记�
 
 这些通知观察最多保留 256 次，属于当前协调器实例。重启、未绑定宿主或记录已淘汰时，持久业务回执仍可核对，通知效果返回 unknown，不重发通知来猜测旧结果。applied 仅说明排程已更新，不表示系统实际投递。界面在“修改已保存”之下单独显示提醒排程结果，见[提交效果回归](../test/services/agenda_commit_effect_test.dart)与[操作卡](../test/agent/ui/agent_operation_card_test.dart)。
 
+操作卡按 operationId 读取当前宿主的观察，仅在对应票据变化时刷新卡片；原始消息和业务回执不改写。重新打开会话也重新核对，宿主解绑后立即显示 unknown，不永久沿用历史 pending 或 applied，也不发起轮询或重复排程。见[会话内通知结果回归](../test/agent/ui/agent_notification_effect_view_test.dart)。
+
 外部适配器共用先记录计划、执行并读回的协调器。设备布局与偏好写入等待实际 flush；窗口、通知、系统设置入口按平台能力返回支持情况。打开自启动设置页只证明入口已打开，无法观测授权时保留 unknown。未绑定应用服务或平台不支持时返回明确错误。
 
 学校站点使用稳定的版本句柄及共享写队列；预览期间发生其他读写不能改变该预览的版本前提。通知动作只操作当前设备拥有的真实提醒，外部核对使用原操作身份，不重复系统动作。

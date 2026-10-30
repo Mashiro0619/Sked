@@ -10,6 +10,7 @@ import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
+import 'package:sked/agent/tools/application_tool_host.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/controllers/workspace_view_state.dart';
@@ -60,12 +61,29 @@ class _Provider extends ProviderClient {
   }
 }
 
+/// Navigation fixtures do not execute tools or observe notification scheduling.
+class _ReadOnlyToolHost extends ChangeNotifier implements ApplicationToolHost {
+  @override
+  Listenable get notificationEffectChanges => this;
+
+  @override
+  Map<String, Object?> describeCommitResult(Map<String, Object?> result) => {
+    ...result,
+    'notificationEffect': const {'state': 'unknown', 'deliveryObserved': false},
+  };
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 /// Only application composition and storage are substituted. User messages,
 /// run state, mode changes and cancellation use the real runtime controller.
 class _Application extends ChangeNotifier implements AgentApplication {
   _Application();
   final storage = UiMemoryStorage();
   final provider = _Provider();
+  @override
+  final ApplicationToolHost tools = _ReadOnlyToolHost();
   @override
   late final ConversationRepository conversations;
   @override
@@ -147,6 +165,7 @@ class _Application extends ChangeNotifier implements AgentApplication {
   @override
   void dispose() {
     runtime.dispose();
+    tools.dispose();
     provider.close();
     conversations.dispose();
     super.dispose();

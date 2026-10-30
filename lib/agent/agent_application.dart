@@ -547,6 +547,7 @@ class AgentApplication extends ChangeNotifier {
     _maintenance.removeListener(_maintenanceChanged);
     unawaited(_commits.cancel());
     runtime.dispose();
+    tools.dispose();
     controlTools.dispose();
     diagnostics.close();
     // A view disposal cannot race an already accepted conversation write.

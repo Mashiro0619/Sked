@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -32,6 +33,8 @@ class AgentConversationView extends StatefulWidget {
     required this.repository,
     required this.delegate,
     this.showTitle = true,
+    this.operationChanges,
+    this.describeOperation,
     this.onUndoOperation,
     this.onOpenResource,
     this.onExportConversation,
@@ -42,6 +45,9 @@ class AgentConversationView extends StatefulWidget {
   final ConversationRepository repository;
   final AgentUiDelegate delegate;
   final bool showTitle;
+  final Listenable? operationChanges;
+  final Map<String, Object?> Function(Map<String, Object?> receipt)?
+  describeOperation;
   final Future<void> Function(String conversationId, String operationId)?
   onUndoOperation;
   final Future<void> Function(Map<String, Object?> ref)? onOpenResource;
@@ -839,33 +845,38 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           )
         else if (message.role == ConversationRole.tool &&
             AgentOperationCard.parse(message.text) != null)
-          AgentOperationCard(
-            key: ValueKey('agent-message-${message.id}'),
+          _ObservedOperationReceipt(
+            key: ValueKey('agent-receipt-${message.id}'),
             receipt: AgentOperationCard.parse(message.text)!,
-            onUndo:
-                widget.onUndoOperation != null &&
-                    !_runtime.runFor(conversation.id).isActive &&
-                    !_runtime.runFor(conversation.id).recoveryRequired &&
-                    !_busy.contains('undo-${message.id}') &&
-                    _repository.canWrite &&
-                    _runtime.enabled &&
-                    !conversation.archived &&
-                    !_runtime.maintenance
-                ? () => _perform(
-                    'undo-${message.id}',
-                    () => widget.onUndoOperation!(
-                      conversation.id,
-                      AgentOperationCard.parse(message.text)!['operationId']
-                          as String,
+            changes: widget.operationChanges,
+            describe: widget.describeOperation,
+            builder: (receipt) => AgentOperationCard(
+              key: ValueKey('agent-message-${message.id}'),
+              receipt: receipt,
+              onUndo:
+                  widget.onUndoOperation != null &&
+                      !_runtime.runFor(conversation.id).isActive &&
+                      !_runtime.runFor(conversation.id).recoveryRequired &&
+                      !_busy.contains('undo-${message.id}') &&
+                      _repository.canWrite &&
+                      _runtime.enabled &&
+                      !conversation.archived &&
+                      !_runtime.maintenance
+                  ? () => _perform(
+                      'undo-${message.id}',
+                      () => widget.onUndoOperation!(
+                        conversation.id,
+                        receipt['operationId'] as String,
+                      ),
+                    )
+                  : null,
+              onOpenResource: widget.onOpenResource == null
+                  ? null
+                  : (ref) => _perform(
+                      'view-${message.id}',
+                      () => widget.onOpenResource!(ref),
                     ),
-                  )
-                : null,
-            onOpenResource: widget.onOpenResource == null
-                ? null
-                : (ref) => _perform(
-                    'view-${message.id}',
-                    () => widget.onOpenResource!(ref),
-                  ),
+            ),
           )
         else if (message.role == ConversationRole.tool)
           ExpansionTile(
@@ -1227,6 +1238,79 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
       ],
     );
   }
+}
+
+/// Only the operation's live observation can rebuild this card. Conversation
+/// input, scroll ownership, and persisted tool messages stay outside the update.
+class _ObservedOperationReceipt extends StatefulWidget {
+  const _ObservedOperationReceipt({
+    super.key,
+    required this.receipt,
+    required this.builder,
+    this.changes,
+    this.describe,
+  });
+
+  final Map<String, Object?> receipt;
+  final Widget Function(Map<String, Object?> receipt) builder;
+  final Listenable? changes;
+  final Map<String, Object?> Function(Map<String, Object?> receipt)? describe;
+
+  Listenable? get source =>
+      describe != null &&
+          receipt['status'] == 'committed' &&
+          receipt['kind'] != 'external'
+      ? changes
+      : null;
+
+  @override
+  State<_ObservedOperationReceipt> createState() =>
+      _ObservedOperationReceiptState();
+}
+
+class _ObservedOperationReceiptState extends State<_ObservedOperationReceipt> {
+  late Map<String, Object?> _receipt;
+
+  Map<String, Object?> _read() =>
+      widget.describe?.call(widget.receipt) ?? widget.receipt;
+
+  @override
+  void initState() {
+    super.initState();
+    _receipt = _read();
+    widget.source?.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(_ObservedOperationReceipt oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.source, widget.source)) {
+      oldWidget.source?.removeListener(_changed);
+      widget.source?.addListener(_changed);
+    }
+    _receipt = _read();
+  }
+
+  void _changed() {
+    final next = _read();
+    final before = _receipt['notificationEffect'];
+    final after = next['notificationEffect'];
+    if (before is Map && after is Map
+        ? mapEquals(before, after)
+        : before == after) {
+      return;
+    }
+    if (mounted) setState(() => _receipt = next);
+  }
+
+  @override
+  void dispose() {
+    widget.source?.removeListener(_changed);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(_receipt);
 }
 
 String _prettyJson(String text) {

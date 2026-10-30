@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show Listenable;
+
 import '../models/timetable_models.dart';
 import '../models/app_data_commit.dart';
 import '../models/workspace_availability.dart';
@@ -111,6 +113,9 @@ class AgendaCoordinator {
 
   Map<String, Object?>? effectForOperation(String operationId) =>
       _effects.forOperation(operationId);
+
+  /// Changes to observations only; listening never triggers reconciliation.
+  Listenable get effectChanges => _effects;
 
   /// Waits for already observed commits and queued projections. Future retry
   /// timers and OS delivery are separate from this completion signal.

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/app_data.dart';
 import '../models/app_data_commit.dart';
 import '../models/application_ledger.dart';
@@ -64,7 +66,7 @@ class AgendaEffectTicket {
 /// Bounded observations owned by one foreground coordinator. Durable business
 /// receipts survive this tracker; missing or evicted observations are unknown,
 /// never inferred from the service's most recent global status.
-class AgendaEffectTracker {
+class AgendaEffectTracker extends ChangeNotifier {
   static const maxTickets = 256;
 
   final String _sessionId = generateUuidV4();
@@ -110,6 +112,7 @@ class AgendaEffectTracker {
       _tickets.remove(removed);
       _operations.removeWhere((_, revision) => revision == removed);
     }
+    notifyListeners();
     return ticket;
   }
 
@@ -137,26 +140,36 @@ class AgendaEffectTracker {
         previous.state == AgendaEffectState.notRequired) {
       return;
     }
+    if (previous.state == state && mapEquals(previous.details, details)) return;
     _tickets[revision!] = previous.withState(state, details: details);
+    notifyListeners();
   }
 
   void supersedePending() {
+    if (_closed) return;
+    var changed = false;
     for (final entry in _tickets.entries.toList()) {
       if (entry.value.state == AgendaEffectState.pending ||
           entry.value.state == AgendaEffectState.failed) {
         _tickets[entry.key] = entry.value.withState(
           AgendaEffectState.superseded,
         );
+        changed = true;
       }
     }
+    if (changed) notifyListeners();
   }
 
   void close() {
+    if (_closed) return;
     _closed = true;
+    var changed = false;
     for (final entry in _tickets.entries.toList()) {
       if (entry.value.state == AgendaEffectState.pending) {
         _tickets[entry.key] = entry.value.withState(AgendaEffectState.unknown);
+        changed = true;
       }
     }
+    if (changed) notifyListeners();
   }
 }

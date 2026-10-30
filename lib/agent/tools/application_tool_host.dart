@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../application/agenda_queries.dart';
@@ -50,7 +51,48 @@ class ApplicationToolHost {
   final _selections = ResourceSelectionRegistry();
   AppData? _querySnapshot;
   ResourceQueries? _reader;
-  Map<String, Object?>? Function(String operationId)? readNotificationEffect;
+  Map<String, Object?>? Function(String operationId)? _readNotificationEffect;
+  Listenable? _notificationEffectSource;
+  final _notificationEffectChanges = ValueNotifier<int>(0);
+  bool _effectsDisposed = false;
+
+  Listenable get notificationEffectChanges => _notificationEffectChanges;
+
+  Map<String, Object?>? Function(String operationId)?
+  get readNotificationEffect => _readNotificationEffect;
+
+  set readNotificationEffect(
+    Map<String, Object?>? Function(String operationId)? read,
+  ) => bindNotificationEffects(read: read);
+
+  /// The stable UI source follows the current coordinator. Unbinding publishes
+  /// once so previously rendered observations fall back to unknown immediately.
+  void bindNotificationEffects({
+    Map<String, Object?>? Function(String operationId)? read,
+    Listenable? changes,
+  }) {
+    if (_effectsDisposed ||
+        (_readNotificationEffect == read &&
+            identical(_notificationEffectSource, changes))) {
+      return;
+    }
+    _notificationEffectSource?.removeListener(_notifyNotificationEffects);
+    _readNotificationEffect = read;
+    _notificationEffectSource = changes;
+    changes?.addListener(_notifyNotificationEffects);
+    _notifyNotificationEffects();
+  }
+
+  void _notifyNotificationEffects() {
+    if (!_effectsDisposed) _notificationEffectChanges.value++;
+  }
+
+  void dispose() {
+    if (_effectsDisposed) return;
+    bindNotificationEffects();
+    _effectsDisposed = true;
+    _notificationEffectChanges.dispose();
+  }
 
   /// The durable save remains committed even when a platform projection is
   /// pending, unavailable, or was superseded by another commit.
