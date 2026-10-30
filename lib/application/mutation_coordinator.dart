@@ -9,11 +9,13 @@ import '../models/app_data.dart';
 import '../models/application_ledger.dart';
 import '../utils/unique_id.dart';
 import 'operation_contracts.dart';
+import 'approval_plan.dart';
+import 'mutation_undo.dart';
 import 'resource_contracts.dart';
 import 'resource_mutations.dart';
 import 'setting_registry.dart';
 
-class PreparedMutation {
+class PreparedMutation implements ApprovalPlan {
   PreparedMutation._({
     required this.id,
     required this.operationId,
@@ -32,12 +34,14 @@ class PreparedMutation {
     this.alreadyCommitted = false,
   });
 
+  @override
   final String id;
   final String operationId;
   final String generation;
   final int sequence;
   final String commandDigest;
   final DateTime createdAt;
+  @override
   final List<ResourceChange> changes;
   final bool alreadyCommitted;
   final OperationScope _scope;
@@ -48,6 +52,7 @@ class PreparedMutation {
   final String _candidateDigest;
   final OperationReceipt _receipt;
 
+  @override
   Map<String, Object?> summary() => {
     'planId': id,
     'operationId': operationId,
@@ -123,31 +128,76 @@ class MutationCoordinator {
     Iterable<SettingEdit> settings = const [],
     String? operationId,
   }) {
-    scope.checkActive();
-    _requireKnownStorage();
     final commands = List<ResourceMutation>.of(resources);
     final edits = List<SettingEdit>.of(settings);
-    final commandDigest = mutationDigest({
-      'resources': [
-        for (final command in commands)
-          {
-            'kind': command.kind.name,
-            'action': command.action.name,
-            'target': command.target?.toJson(),
-            'destinationParentId': command.destinationParentId,
-            'scope': command.scope?.name,
-            'values': command.values,
-          },
-      ],
-      'settings': [
-        for (final edit in edits)
-          {
-            'key': edit.key,
-            'kind': edit.kind.name,
-            if (edit.kind == SettingEditKind.set) 'value': edit.value,
-          },
-      ],
-    });
+    return prepareDraft(
+      scope: scope,
+      operationId: operationId,
+      command: {
+        'resources': [
+          for (final command in commands)
+            {
+              'kind': command.kind.name,
+              'action': command.action.name,
+              'target': command.target?.toJson(),
+              'destinationParentId': command.destinationParentId,
+              'scope': command.scope?.name,
+              'values': command.values,
+            },
+        ],
+        'settings': [
+          for (final edit in edits)
+            {
+              'key': edit.key,
+              'kind': edit.kind.name,
+              if (edit.kind == SettingEditKind.set) 'value': edit.value,
+            },
+        ],
+      },
+      compile: (baseline, context) {
+        final resourceDraft = const ResourceMutationCompiler().compile(
+          baseline,
+          commands,
+          context: context,
+        );
+        final settingsDraft = _settings.prepare(resourceDraft.candidate, edits);
+        return MutationDraft(
+          candidate: settingsDraft.candidate,
+          changes: [
+            ...resourceDraft.changes,
+            for (final change in settingsDraft.changes)
+              ResourceChange(
+                key: change.key,
+                before: change.before,
+                after: change.after,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Prepares a compound, host-compiled command through the same durable gate.
+  /// The descriptor contains source, target and canonical values; no model can
+  /// supply a candidate snapshot. Replay is checked before IDs are allocated.
+  PreparedMutation prepareDraft({
+    required OperationScope scope,
+    required Map<String, Object?> command,
+    required MutationDraft Function(AppData baseline, MutationContext context)
+    compile,
+    String? operationId,
+  }) {
+    scope.checkActive();
+    _requireKnownStorage();
+    final immutableCommand = immutableMutationJson(command);
+    if (utf8.encode(jsonEncode(immutableCommand)).length >
+        ResourceMutationCompiler.maxInputBytes) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidArgument,
+        'Mutation arguments exceed the byte budget.',
+      );
+    }
+    final commandDigest = mutationDigest(immutableCommand);
     final baseline = _session.data;
     final ledger = baseline.applicationLedger;
     final sequence = ledger?.nextSequence ?? 1;
@@ -169,21 +219,12 @@ class MutationCoordinator {
     }
     if (identity.sequence != sequence) _expired();
     final now = _clock().toUtc();
-    final resourceDraft = const ResourceMutationCompiler().compile(
+    final draft = compile(
       baseline,
-      commands,
-      context: MutationContext(now: now, idGenerator: (_) => _id()),
+      MutationContext(now: now, idGenerator: (_) => _id()),
     );
-    final settingsDraft = _settings.prepare(resourceDraft.candidate, edits);
-    final changes = _mergeChanges([
-      ...resourceDraft.changes,
-      for (final change in settingsDraft.changes)
-        ResourceChange(
-          key: change.key,
-          before: change.before,
-          after: change.after,
-        ),
-    ]);
+    scope.checkActive();
+    final changes = _mergeChanges(draft.changes);
     final receipt = OperationReceipt(
       operationId: resolvedId,
       sequence: sequence,
@@ -208,13 +249,73 @@ class MutationCoordinator {
         ],
       },
     );
-    return _register(
-      scope,
-      settingsDraft.candidate,
-      changes,
-      commandDigest,
-      receipt,
+    return _register(scope, draft.candidate, changes, commandDigest, receipt);
+  }
+
+  /// Prepares one inverse per original receipt. Repeating Undo returns that
+  /// inverse's durable receipt, even after unrelated later edits.
+  PreparedMutation prepareUndo({
+    required OperationScope scope,
+    required String operationId,
+  }) {
+    scope.checkActive();
+    _requireKnownStorage();
+    final identity = _operationIdentity(operationId);
+    if (identity.generation != generation) _expired();
+    final baseline = _session.data;
+    final ledger = _session.committedData.applicationLedger;
+    final digest = mutationDigest({'undoOf': operationId});
+    final previous = ledger?.receipts
+        .where((receipt) => receipt.result['undoOf'] == operationId)
+        .firstOrNull;
+    if (previous != null) {
+      return _register(
+        scope,
+        baseline,
+        const [],
+        digest,
+        previous,
+        replay: true,
+      );
+    }
+    final original = status(operationId);
+    if (original == null) {
+      throw const OperationProblem(
+        OperationErrorCode.notFound,
+        'The operation has no committed changes to undo.',
+      );
+    }
+    final draft = MutationUndoCompiler(settings: _settings)
+        .prepare(baseline, original);
+    final sequence = ledger!.nextSequence;
+    final inverseId = '$generation/$sequence/${_id()}';
+    final now = _clock().toUtc();
+    final receipt = OperationReceipt(
+      operationId: inverseId,
+      sequence: sequence,
+      commandDigest: digest,
+      completedAtIso: now.toIso8601String(),
+      result: {
+        'status': 'committed',
+        'operationId': inverseId,
+        'generation': generation,
+        'sequence': sequence,
+        'undoOf': operationId,
+        'changeCount': draft.changes.length,
+        'changes': [for (final change in draft.changes) _changeSummary(change)],
+      },
+      undo: {
+        'changes': [
+          for (final change in draft.changes)
+            {
+              ...change.toJson(),
+              if (change.ref != null)
+                'beforeIndex': _resourceIndex(baseline, change.ref!),
+            },
+        ],
+      },
     );
+    return _register(scope, draft.candidate, draft.changes, digest, receipt);
   }
 
   PreparedMutation _register(
@@ -332,6 +433,11 @@ class MutationCoordinator {
         OperationErrorCode.conflict,
         'Finish or save the current editor, then prepare this change again.',
       );
+    } on ApplicationLedgerRecoveryRequiredException {
+      throw const OperationProblem(
+        OperationErrorCode.busy,
+        'Resolve pending external operations before adding more receipts.',
+      );
     } on AppMutationBusyException {
       throw const OperationProblem(
         OperationErrorCode.busy,
@@ -375,6 +481,9 @@ class MutationCoordinator {
 
   void discard(String planId) => _plans.remove(planId);
 
+  void discardScope(OperationScope scope) =>
+      _plans.removeWhere((_, plan) => identical(plan._scope, scope));
+
   void _requireKnownStorage() {
     if (_session.repository.isWriteStateUnknown) {
       throw const OperationProblem(
@@ -388,12 +497,27 @@ class MutationCoordinator {
 Map<String, Object?> _changeSummary(ResourceChange change) => {
   'key': change.key,
   if (change.ref != null) 'ref': change.ref!.toJson(),
+  'label': ?_changeLabel(change),
   'action': change.before == null
       ? 'created'
       : change.after == null
       ? 'deleted'
       : 'updated',
 };
+
+String? _changeLabel(ResourceChange change) {
+  final value = change.after ?? change.before;
+  if (value is! Map) return null;
+  final config = value['config'];
+  final name =
+      value['title'] ??
+      value['name'] ??
+      (config is Map ? config['name'] : null);
+  if (name is! String || name.trim().isEmpty) return null;
+  // Names are display labels, not another copy of a potentially large object.
+  final runes = name.runes.take(160).toList();
+  return String.fromCharCodes(runes);
+}
 
 List<ResourceChange> _mergeChanges(List<ResourceChange> changes) {
   final merged = <String, ResourceChange>{};

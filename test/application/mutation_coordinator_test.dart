@@ -124,6 +124,47 @@ void main() {
   });
 
   test(
+    'undo uses the same permission and durable idempotency boundary',
+    () async {
+      final plan = coordinator.prepare(
+        scope: scope,
+        resources: [createEvent()],
+      );
+      await coordinator.commit(planId: plan.id, scope: scope);
+      scope.policy.update(mode: AgentPermissionMode.plan);
+      final inverse = coordinator.prepareUndo(
+        scope: scope,
+        operationId: plan.operationId,
+      );
+      await expectLater(
+        coordinator.commit(planId: inverse.id, scope: scope),
+        throwsA(problem(OperationErrorCode.readOnly)),
+      );
+      scope.policy.update(mode: AgentPermissionMode.ask);
+      await expectLater(
+        coordinator.commit(planId: inverse.id, scope: scope),
+        throwsA(problem(OperationErrorCode.approvalRequired)),
+      );
+      final applied = await coordinator.commit(
+        planId: inverse.id,
+        scope: scope,
+        approval: scope.approve(inverse.id),
+      );
+      expect(applied.receipt.result['undoOf'], plan.operationId);
+      expect(storage.data.generalMode.schedules.single.events, isEmpty);
+      final restarted = newCoordinator(await newSession());
+      final retry = restarted.prepareUndo(
+        scope: scope,
+        operationId: plan.operationId,
+      );
+      expect(retry.alreadyCommitted, isTrue);
+      final replay = await restarted.commit(planId: retry.id, scope: scope);
+      expect(replay.replayed, isTrue);
+      expect(storage.saves, 2);
+    },
+  );
+
+  test(
     'preparation writes nothing; a batch and its receipt persist together',
     () async {
       final plan = coordinator.prepare(
