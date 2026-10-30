@@ -1,0 +1,595 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "1.0.0",
+  "runtimeContractVersion": 1,
+  "toolApiCompatibility": ">=1.0.0 <2.0.0",
+  "skills": [
+    {
+      "id": "locate-and-navigate",
+      "version": "1.0.0",
+      "title": "定位对象与页面",
+      "summary": "根据用户指定范围定位稳定对象并打开相应页面。",
+      "triggers": [
+        "打开这门课",
+        "找课表",
+        "带我去设置",
+        "定位对象"
+      ],
+      "asset": "locate-and-navigate/SKILL.md",
+      "contentSha256": "44270de9d899af163c93590451f534672f1cde66dda4974492d68e0451cb5797",
+      "sourceKinds": [],
+      "requiredTools": [
+        "capabilities.describe",
+        "timetables.list",
+        "courses.list",
+        "calendars.list",
+        "events.list",
+        "settings.describe",
+        "navigation.open"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "read-agenda",
+      "version": "1.0.0",
+      "title": "查看全部安排",
+      "summary": "在明确时间与来源范围内读取课程和日程安排。",
+      "triggers": [
+        "查看安排",
+        "本周安排",
+        "今天的安排",
+        "查询日程"
+      ],
+      "asset": "read-agenda/SKILL.md",
+      "contentSha256": "4b13ddf827ecfc09338c84bb2f15534f5bf885142f835558611be029b2ecf2e2",
+      "sourceKinds": [],
+      "requiredTools": [
+        "agenda.query",
+        "occurrences.list",
+        "courses.get",
+        "events.get"
+      ],
+      "optionalTools": [
+        "navigation.open"
+      ]
+    },
+    {
+      "id": "find-free-time",
+      "version": "1.0.0",
+      "title": "查空闲并安排时间",
+      "summary": "结合课程与日程约束查找空闲并准备明确的安排。",
+      "triggers": [
+        "查空闲",
+        "空闲时间",
+        "安排复习",
+        "避开课程"
+      ],
+      "asset": "find-free-time/SKILL.md",
+      "contentSha256": "395699ffa8ec24145bf95b6ac9d5979702fdfb102a2d8104fc87c964c547e924",
+      "sourceKinds": [],
+      "requiredTools": [
+        "agenda.query",
+        "agenda.free_slots",
+        "events.get",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "manage-semester",
+      "version": "1.0.0",
+      "title": "建立或调整学期课表",
+      "summary": "创建、复制或调整显式课表的学期属性与时间集。",
+      "triggers": [
+        "新学期",
+        "开学日",
+        "总周数",
+        "复制课表"
+      ],
+      "asset": "manage-semester/SKILL.md",
+      "contentSha256": "199c3b42b0dc6cd506f9a82426133d1ab0dc1f4c994315ee36813346be4d5088",
+      "sourceKinds": [],
+      "requiredTools": [
+        "timetables.list",
+        "timetables.get",
+        "period_sets.list",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "edit-courses",
+      "version": "1.0.0",
+      "title": "整理课程",
+      "summary": "对明确课表中的课程执行最小字段修改、移动或复制。",
+      "triggers": [
+        "新增课程",
+        "修改教师",
+        "课程地点",
+        "移动课程",
+        "复制课程"
+      ],
+      "asset": "edit-courses/SKILL.md",
+      "contentSha256": "f99a451f2a7575661c77583b9382f167b63238a068449db0ded96bb9fbfbbcee",
+      "sourceKinds": [],
+      "requiredTools": [
+        "courses.list",
+        "courses.get",
+        "timetables.get",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "manage-period-times",
+      "version": "1.0.0",
+      "title": "管理共享作息",
+      "summary": "核对全部引用后创建、调整、重绑或删除共享节次时间集。",
+      "triggers": [
+        "节次时间",
+        "时间集",
+        "共享作息",
+        "调整作息"
+      ],
+      "asset": "manage-period-times/SKILL.md",
+      "contentSha256": "da9658d9ecc868ae4550e2607791c7d6e749e48a3d5253845e352e5353460286",
+      "sourceKinds": [],
+      "requiredTools": [
+        "period_sets.list",
+        "period_sets.get",
+        "period_sets.references",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "resolve-course-conflicts",
+      "version": "1.0.0",
+      "title": "处理课程冲突",
+      "summary": "区分显示选择与真实调课并准备准确的冲突解决操作。",
+      "triggers": [
+        "课程冲突",
+        "重叠课程",
+        "选择显示课程"
+      ],
+      "asset": "resolve-course-conflicts/SKILL.md",
+      "contentSha256": "f906e872f05290b4eb4bc2f4b94788778383124db61c68b3e88f6956cdfb1080",
+      "sourceKinds": [],
+      "requiredTools": [
+        "courses.conflicts",
+        "courses.get",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "organize-calendars",
+      "version": "1.0.0",
+      "title": "整理日历分类",
+      "summary": "管理分类属性、显示顺序及明确的数据迁移或删除。",
+      "triggers": [
+        "日历分类",
+        "分类颜色",
+        "隐藏分类",
+        "删除分类",
+        "分类排序"
+      ],
+      "asset": "organize-calendars/SKILL.md",
+      "contentSha256": "e4a6e1db4b406d1899c708a1a81f32eb14f05bfba113cba6af145a1edc5455e4",
+      "sourceKinds": [],
+      "requiredTools": [
+        "calendars.list",
+        "calendars.get",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "edit-events",
+      "version": "1.0.0",
+      "title": "新建和修改日程",
+      "summary": "明确时间、分类与对象后建立或修改普通日程。",
+      "triggers": [
+        "新建日程",
+        "创建活动",
+        "修改会议",
+        "考试安排",
+        "移动日程"
+      ],
+      "asset": "edit-events/SKILL.md",
+      "contentSha256": "c91149a03a944299fbdbd782f589e2c4c3f445fce2351f0299c6ff1602155c18",
+      "sourceKinds": [],
+      "requiredTools": [
+        "events.list",
+        "events.get",
+        "calendars.get",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "edit-recurring-events",
+      "version": "1.0.0",
+      "title": "编辑重复实例",
+      "summary": "用宿主重复规则服务处理本次、以后或全系列修改。",
+      "triggers": [
+        "只改本次",
+        "本次及以后",
+        "整个系列",
+        "重复日程"
+      ],
+      "asset": "edit-recurring-events/SKILL.md",
+      "contentSha256": "4d3c6ec29decb94e66b8e702d76b351729c3cf9aaaa85f270e11d0574827a071",
+      "sourceKinds": [],
+      "requiredTools": [
+        "occurrences.list",
+        "occurrences.get",
+        "events.get",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "manage-reminders",
+      "version": "1.0.0",
+      "title": "调整和处理提醒",
+      "summary": "区分提醒策略、实例处理状态和真实通知效果。",
+      "triggers": [
+        "提前提醒",
+        "关闭提醒",
+        "稍后提醒",
+        "恢复提醒"
+      ],
+      "asset": "manage-reminders/SKILL.md",
+      "contentSha256": "3b7d36445b211d493a54d530497c0e6832691cf17db2f43181c3bb17717c94fa",
+      "sourceKinds": [],
+      "requiredTools": [
+        "notifications.status",
+        "notifications.prepare",
+        "occurrences.get",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "batch-change",
+      "version": "1.0.0",
+      "title": "跨对象批量修改",
+      "summary": "固定对象与版本集合后执行可预检的批量变更。",
+      "triggers": [
+        "批量修改",
+        "批量删除",
+        "整体挪时间",
+        "多个课表"
+      ],
+      "asset": "batch-change/SKILL.md",
+      "contentSha256": "be79352f8bafb8684097cd297f35408acd99ca12e65fd161458b184f51eb4ea7",
+      "sourceKinds": [],
+      "requiredTools": [
+        "timetables.list",
+        "courses.list",
+        "calendars.list",
+        "events.list",
+        "mutation.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "import-school-web",
+      "version": "1.0.0",
+      "title": "从学校网页整理课表",
+      "summary": "从用户校对过的网页来源提取课程并准备可核验的导入。",
+      "triggers": [
+        "导入学校网页课表",
+        "整理网页中的课程",
+        "网页课表"
+      ],
+      "asset": "import-school-web/SKILL.md",
+      "contentSha256": "c297df6475401f8769d19bad011baba8a0f94db033cf22350458faf123b9241c",
+      "sourceKinds": [
+        "reviewed_school_web"
+      ],
+      "requiredTools": [
+        "sources.describe",
+        "sources.read",
+        "timetables.list",
+        "period_sets.list",
+        "imports.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": [
+        "navigation.open"
+      ]
+    },
+    {
+      "id": "import-pasted-content",
+      "version": "1.0.0",
+      "title": "从会话文字整理数据",
+      "summary": "把会话中用户指定的课程或活动资料整理为有来源的候选。",
+      "triggers": [
+        "粘贴课表",
+        "课程通知",
+        "文字导入",
+        "整理这段文字"
+      ],
+      "asset": "import-pasted-content/SKILL.md",
+      "contentSha256": "b46f667decf13fda73eb5c42f6b75051bad222e8be6ee3893e6f3ecfad59aedd",
+      "sourceKinds": [
+        "pasted_text"
+      ],
+      "requiredTools": [
+        "sources.describe",
+        "sources.read",
+        "timetables.list",
+        "calendars.list",
+        "events.list",
+        "imports.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "import-structured-files",
+      "version": "1.0.0",
+      "title": "导入结构化文件",
+      "summary": "优先用确定性解码处理JSON、ICS和节次文件。",
+      "triggers": [
+        "导入JSON",
+        "导入ICS",
+        "导入节次文件",
+        "结构化文件"
+      ],
+      "asset": "import-structured-files/SKILL.md",
+      "contentSha256": "52b1d076bd892e341b3afce0941d0d9f32edcdbc77b0973dec565fc3f05a7739",
+      "sourceKinds": [
+        "structured_file"
+      ],
+      "requiredTools": [
+        "sources.describe",
+        "sources.read",
+        "imports.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "export-and-backup",
+      "version": "1.0.0",
+      "title": "导出和备份",
+      "summary": "按明确范围生成并核对可保存或分享的导出产物。",
+      "triggers": [
+        "导出课表",
+        "导出分类",
+        "完整备份",
+        "备份数据"
+      ],
+      "asset": "export-and-backup/SKILL.md",
+      "contentSha256": "78161ffc87063fac9b3cb28d3b28403e4c5bbda5ea32f59bea225dd117a7523a",
+      "sourceKinds": [],
+      "requiredTools": [
+        "timetables.list",
+        "calendars.list",
+        "exports.prepare",
+        "exports.write",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "restore-and-clear",
+      "version": "1.0.0",
+      "title": "恢复或清除数据",
+      "summary": "通过维护工作流恢复或清除明确数据并核对新世代和外部效果。",
+      "triggers": [
+        "恢复备份",
+        "清除数据",
+        "重置数据",
+        "清空后退出"
+      ],
+      "asset": "restore-and-clear/SKILL.md",
+      "contentSha256": "a9881e673457efc58da7cdc94dc10b0800adcaabab8ea665741b2abf80d7648c",
+      "sourceKinds": [
+        "structured_file"
+      ],
+      "requiredTools": [
+        "backups.prepare_restore",
+        "maintenance.prepare_clear",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "configure-appearance",
+      "version": "1.0.0",
+      "title": "外观与设备布局",
+      "summary": "在明确工作区与设备范围内调整主题、颜色和面板布局。",
+      "triggers": [
+        "主题",
+        "精确颜色",
+        "面板尺寸",
+        "外观设置"
+      ],
+      "asset": "configure-appearance/SKILL.md",
+      "contentSha256": "5cf8c97bca9ce0ee95b5dfb0fe18b55e547ed86095dc5b28659b0e3048a56a3b",
+      "sourceKinds": [],
+      "requiredTools": [
+        "settings.describe",
+        "settings.get",
+        "settings.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "configure-display",
+      "version": "1.0.0",
+      "title": "显示和交互设置",
+      "summary": "从注册表选择显示与交互项并保留未请求的配置。",
+      "triggers": [
+        "工具栏",
+        "周末显示",
+        "农历",
+        "网格",
+        "恢复显示"
+      ],
+      "asset": "configure-display/SKILL.md",
+      "contentSha256": "9c4406d3c5259011338499ec19fb36a8ae1cbdea2e03a5088f69951cd174b237",
+      "sourceKinds": [],
+      "requiredTools": [
+        "settings.describe",
+        "settings.get",
+        "settings.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "configure-workspaces",
+      "version": "1.0.0",
+      "title": "工作区和全局偏好",
+      "summary": "区分启用、显示和活动状态并调整合法的全局偏好。",
+      "triggers": [
+        "停用课表",
+        "启用日程",
+        "工作区设置",
+        "更改语言",
+        "更新偏好"
+      ],
+      "asset": "configure-workspaces/SKILL.md",
+      "contentSha256": "de33ec3629b122dac6543f53fb75c69e4f19586650ede773a52f98e20d4650cd",
+      "sourceKinds": [],
+      "requiredTools": [
+        "workspaces.describe",
+        "workspaces.prepare",
+        "settings.describe",
+        "settings.get",
+        "settings.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "troubleshoot-notifications",
+      "version": "1.0.0",
+      "title": "通知诊断",
+      "summary": "检查真实平台状态并通过受权限约束的系统动作定位通知问题。",
+      "triggers": [
+        "提醒不响",
+        "通知权限",
+        "电池优化",
+        "自启动"
+      ],
+      "asset": "troubleshoot-notifications/SKILL.md",
+      "contentSha256": "115493990cfa42372725eb67292db790a6ce424680ca5cea3267602004de4f5b",
+      "sourceKinds": [],
+      "requiredTools": [
+        "notifications.status",
+        "notifications.reconcile",
+        "platform.request_action",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "manage-school-access",
+      "version": "1.0.0",
+      "title": "学校站点与网页登录",
+      "summary": "管理学校入口和本机网页登录清理并说明实际退出范围。",
+      "triggers": [
+        "新增学校站点",
+        "学校地址",
+        "退出学校网页",
+        "学校登录"
+      ],
+      "asset": "manage-school-access/SKILL.md",
+      "contentSha256": "a779d3e47a1d9d2cc6c8c196fa81c3f60dd59ed67ac28900078ff4e2fe5590f2",
+      "sourceKinds": [],
+      "requiredTools": [
+        "school_sites.list",
+        "school_sites.get",
+        "school_sites.prepare",
+        "school_sessions.prepare_sign_out",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "configure-agent-connection",
+      "version": "1.0.0",
+      "title": "配置内置Agent",
+      "summary": "管理共享连接与预算并由宿主安全处理凭据和执行模式。",
+      "triggers": [
+        "API连接",
+        "选择模型",
+        "Agent预算",
+        "模型密钥",
+        "配置Agent"
+      ],
+      "asset": "configure-agent-connection/SKILL.md",
+      "contentSha256": "0bb6021dbecf744633217739aa56693f3bcfeadaf3141c1ecd8c7acba3830b5b",
+      "sourceKinds": [],
+      "requiredTools": [
+        "connection.describe",
+        "connection.prepare",
+        "credentials.request_input",
+        "agent_settings.describe",
+        "agent_settings.prepare",
+        "mutation.commit",
+        "operations.status"
+      ],
+      "optionalTools": []
+    },
+    {
+      "id": "recover-and-undo",
+      "version": "1.0.0",
+      "title": "核对运行与撤销",
+      "summary": "先查询真实操作回执再继续未提交步骤或准备受版本保护的撤销。",
+      "triggers": [
+        "刚才成功了吗",
+        "撤销上一批",
+        "继续运行",
+        "停止运行"
+      ],
+      "asset": "recover-and-undo/SKILL.md",
+      "contentSha256": "88c5921f419671b459954800efe72e77c532e308e29efe33fe10314611bdd8e2",
+      "sourceKinds": [],
+      "requiredTools": [
+        "runs.status",
+        "runs.stop",
+        "runs.resume",
+        "operations.status",
+        "undo.prepare",
+        "mutation.commit",
+        "conversation.get"
+      ],
+      "optionalTools": []
+    }
+  ]
+}

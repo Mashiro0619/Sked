@@ -88,6 +88,31 @@ flutter:
   assets:
     - assets/default_period_times.json
     - assets/school_sites.json
+    - assets/agent/skills/
+    - assets/agent/skills/locate-and-navigate/
+    - assets/agent/skills/read-agenda/
+    - assets/agent/skills/find-free-time/
+    - assets/agent/skills/manage-semester/
+    - assets/agent/skills/edit-courses/
+    - assets/agent/skills/manage-period-times/
+    - assets/agent/skills/resolve-course-conflicts/
+    - assets/agent/skills/organize-calendars/
+    - assets/agent/skills/edit-events/
+    - assets/agent/skills/edit-recurring-events/
+    - assets/agent/skills/manage-reminders/
+    - assets/agent/skills/batch-change/
+    - assets/agent/skills/import-school-web/
+    - assets/agent/skills/import-pasted-content/
+    - assets/agent/skills/import-structured-files/
+    - assets/agent/skills/export-and-backup/
+    - assets/agent/skills/restore-and-clear/
+    - assets/agent/skills/configure-appearance/
+    - assets/agent/skills/configure-display/
+    - assets/agent/skills/configure-workspaces/
+    - assets/agent/skills/troubleshoot-notifications/
+    - assets/agent/skills/manage-school-access/
+    - assets/agent/skills/configure-agent-connection/
+    - assets/agent/skills/recover-and-undo/
     - NOTICE
 
 flutter_launcher_icons:
