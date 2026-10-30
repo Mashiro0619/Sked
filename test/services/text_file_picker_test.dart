@@ -107,6 +107,28 @@ void _expectBoundedRead(_TrackedFile file, {int lengthChecks = 2}) {
 }
 
 void main() {
+  test(
+    'named text attachments may lower the reader budget before streaming',
+    () async {
+      final previous = FileSelectorPlatform.instance;
+      addTearDown(() => FileSelectorPlatform.instance = previous);
+      final file = _TrackedFile(
+        reportedLength: 1025,
+        chunks: [
+          _bytes([1, 2, 3]),
+        ],
+      );
+      _select(file);
+      await expectLater(
+        TextFilePicker.pickDocument(
+          allowedExtensions: ['json'],
+          byteLimit: 1024,
+        ),
+        throwsA(isA<TextFileTooLargeException>()),
+      );
+      expect(file.readRequests, isEmpty);
+    },
+  );
   TestWidgetsFlutterBinding.ensureInitialized();
   late FileSelectorPlatform previousPicker;
 
