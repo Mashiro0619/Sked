@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as path;
 
+import '../agent/connection/agent_credential_store.dart';
 import 'app_data_clear_service.dart';
 import 'app_storage_layout_io.dart';
 import 'secret_store.dart';
@@ -11,14 +12,17 @@ class PlatformAppDataClearService implements AppDataClearService {
   PlatformAppDataClearService({
     AppStorageLayout? layout,
     SecretStore? secretStore,
+    AgentCredentialStore? agentCredentialStore,
     SchoolWebSessionCleaner? schoolWebSessionCleaner,
   }) : _layout = layout ?? AppStorageLayout(),
        _secretStore = secretStore ?? SecretStore(),
+       _agentCredentialStore = agentCredentialStore ?? AgentCredentialStore(),
        _schoolWebSessionCleaner =
            schoolWebSessionCleaner ?? SchoolWebSessionService.instance;
 
   final AppStorageLayout _layout;
   final SecretStore _secretStore;
+  final AgentCredentialStore _agentCredentialStore;
   final SchoolWebSessionCleaner _schoolWebSessionCleaner;
 
   @override
@@ -53,6 +57,16 @@ class PlatformAppDataClearService implements AppDataClearService {
     }
 
     await _secretStore.writeCustomSchoolImportApiKey('');
+    // Keychain entries are outside the managed data directory. Clear both
+    // verified connection slots before removing the final recoverable archive.
+    for (final slot in AgentCredentialSlot.values) {
+      await _agentCredentialStore.write(slot, null);
+    }
+    for (final slot in AgentCredentialSlot.values) {
+      if (await _agentCredentialStore.read(slot) != null) {
+        throw StateError('Agent credential cleanup could not be verified.');
+      }
+    }
 
     if (mainData != null) {
       await _deleteEntity(mainData);

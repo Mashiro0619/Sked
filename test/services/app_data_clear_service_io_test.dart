@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:path/path.dart' as path;
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/services/app_data_clear_service_io.dart';
@@ -31,6 +32,13 @@ class _FakeSecretStore implements SecretStore {
   @override
   Future<void> writeCustomSchoolImportApiKey(String value) async {
     this.value = value;
+  }
+}
+
+class _UnclearedAgentCredentialStore extends MemoryAgentCredentialStore {
+  @override
+  Future<void> write(AgentCredentialSlot slot, String? value) async {
+    if (value != null) await super.write(slot, value);
   }
 }
 
@@ -131,15 +139,18 @@ void main() {
   late Directory root;
   late _FakeSecretStore secrets;
   late _FakeSchoolWebSessionCleaner schoolSession;
+  late MemoryAgentCredentialStore agentCredentials;
   late PlatformAppDataClearService service;
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('sked-clear-test-');
     secrets = _FakeSecretStore();
     schoolSession = _FakeSchoolWebSessionCleaner();
+    agentCredentials = MemoryAgentCredentialStore();
     service = PlatformAppDataClearService(
       layout: AppStorageLayout(directoryProvider: () async => root),
       secretStore: secrets,
+      agentCredentialStore: agentCredentials,
       schoolWebSessionCleaner: schoolSession,
     );
   });
@@ -147,6 +158,37 @@ void main() {
   tearDown(() async {
     if (await root.exists()) await root.delete(recursive: true);
   });
+
+  test(
+    'clear removes both Agent credential slots outside the data folder',
+    () async {
+      for (final slot in AgentCredentialSlot.values) {
+        await agentCredentials.write(slot, 'synthetic-${slot.name}');
+      }
+      await service.clear();
+      for (final slot in AgentCredentialSlot.values) {
+        expect(await agentCredentials.read(slot), isNull);
+      }
+    },
+  );
+
+  test(
+    'unverified Agent credential removal preserves the main archive',
+    () async {
+      final main = File(path.join(root.path, AppStorageLayout.appDataFileName));
+      await main.writeAsString('recoverable data');
+      final store = _UnclearedAgentCredentialStore();
+      await store.write(AgentCredentialSlot.pending, 'synthetic-pending');
+      final failing = PlatformAppDataClearService(
+        layout: AppStorageLayout(directoryProvider: () async => root),
+        secretStore: secrets,
+        agentCredentialStore: store,
+        schoolWebSessionCleaner: schoolSession,
+      );
+      await expectLater(failing.clear(), throwsStateError);
+      expect(await main.readAsString(), 'recoverable data');
+    },
+  );
 
   test(
     'clears managed files and recovery directories but keeps the lock',
@@ -583,6 +625,7 @@ void main() {
     await File(path.join(target.path, 'Sked_data.json')).writeAsString('new');
     await File(path.join(legacy.path, 'Sked_data.json')).writeAsString('old');
     final windowsService = PlatformAppDataClearService(
+      agentCredentialStore: agentCredentials,
       schoolWebSessionCleaner: schoolSession,
       layout: AppStorageLayout(
         isWindows: true,
@@ -611,6 +654,7 @@ void main() {
     await File(path.join(roaming.path, 'Mashiro', 'Sked'))
         .create(recursive: true);
     final windowsService = PlatformAppDataClearService(
+      agentCredentialStore: agentCredentials,
       schoolWebSessionCleaner: schoolSession,
       layout: AppStorageLayout(
         isWindows: true,
