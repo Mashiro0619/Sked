@@ -83,7 +83,7 @@ Map<String, Object?> _patch(
 }) => {
   'kind': kind,
   'action': 'patch',
-  'target': {'id': id, if (parent != null) 'parentId': parent},
+  'target': {'id': id, 'parentId': ?parent},
   'values': values,
 };
 

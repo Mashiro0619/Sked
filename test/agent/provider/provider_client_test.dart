@@ -523,7 +523,7 @@ void main() {
       expect(failure, null);
       expect(response, null);
       pending.complete(
-        _sse(_chat({'content': 'Done'}, finish: 'stop') + 'data: [DONE]\n\n'),
+        _sse('${_chat({'content': 'Done'}, finish: 'stop')}data: [DONE]\n\n'),
       );
       await tester.pump();
       await completion;
@@ -564,7 +564,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 45));
       expect(failure, null);
-      bytes.add(utf8.encode(_chat({}, finish: 'stop') + 'data: [DONE]\n\n'));
+      bytes.add(utf8.encode('${_chat({}, finish: 'stop')}data: [DONE]\n\n'));
       final closed = bytes.close();
       await tester.pump();
       await completion;
