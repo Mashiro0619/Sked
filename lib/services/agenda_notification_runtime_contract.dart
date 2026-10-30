@@ -612,7 +612,7 @@ int? _decodeNullableNonNegativeInt(Object? value) {
 /// acknowledgements are device/runtime concerns and must not be copied into a
 /// user backup or exported agenda file.
 abstract interface class AgendaNotificationRuntimeStore {
-  Future<Map<String, DateTime>> readSnoozes();
+  Future<Map<String, DateTime>> readSnoozes({bool pruneExpired = true});
 
   Future<Set<String>> readHandledOccurrenceIds();
 

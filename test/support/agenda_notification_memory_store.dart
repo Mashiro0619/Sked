@@ -52,7 +52,7 @@ class MemoryAgendaNotificationRuntimeStore
       projectionFence.blocked ? null : projectionFence.generation;
 
   @override
-  Future<Map<String, DateTime>> readSnoozes() async {
+  Future<Map<String, DateTime>> readSnoozes({bool pruneExpired = true}) async {
     final generation = _activeGeneration;
     if (generation == null) return const {};
     return Map.unmodifiable(_snoozesFor(generation));

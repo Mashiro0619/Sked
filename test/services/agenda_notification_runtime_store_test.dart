@@ -205,6 +205,38 @@ void main() {
   );
 
   test(
+    'read-only snooze inspection filters stale values without pruning storage',
+    () async {
+      final now = DateTime(2026, 8, 3, 12);
+      final raw = jsonEncode({
+        'expired': now.subtract(const Duration(minutes: 1)).toIso8601String(),
+        'valid': now.add(const Duration(minutes: 5)).toIso8601String(),
+      });
+      SharedPreferences.setMockInitialValues({
+        SharedPreferencesAgendaNotificationRuntimeStore.snoozeKey: raw,
+      });
+      final store = SharedPreferencesAgendaNotificationRuntimeStore(
+        clock: () => now,
+      );
+      expect((await store.readSnoozes(pruneExpired: false)).keys, ['valid']);
+      final preferences = await SharedPreferences.getInstance();
+      expect(
+        preferences.getString(
+          SharedPreferencesAgendaNotificationRuntimeStore.snoozeKey,
+        ),
+        raw,
+      );
+      await store.readSnoozes();
+      expect(
+        preferences.getString(
+          SharedPreferencesAgendaNotificationRuntimeStore.snoozeKey,
+        ),
+        isNot(contains('expired')),
+      );
+    },
+  );
+
+  test(
     'shared runtime mutations from separate store instances preserve records',
     () async {
       final now = DateTime(2026, 8, 3, 12);

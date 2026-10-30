@@ -2250,6 +2250,86 @@ class AgendaNotificationService extends ChangeNotifier {
     return operation;
   }
 
+  /// Read-only discovery of locally owned reminder keys. A key still needs
+  /// [readActionableReminder] validation before it is shown or acted on.
+  Future<Set<String>> reminderActionKeys() async {
+    final store = _runtimeStore;
+    if (!isSupported || store is! AgendaNotificationBackgroundRequestIndex) {
+      return const {};
+    }
+    return (store as AgendaNotificationBackgroundRequestIndex)
+        .backgroundRequestKeys();
+  }
+
+  /// Reads a previously scheduled reminder under the current projection fence.
+  /// This never invents a notification payload from model-supplied fields.
+  Future<AgendaNotificationBackgroundRequest?> readActionableReminder(
+    String key,
+    AppData data,
+  ) async {
+    if (!isSupported || _runtimeClearing) return null;
+    final store = _runtimeStore;
+    if (store is! AgendaNotificationBackgroundRequestIndex) return null;
+    final fence = await readProjectionFence();
+    if (fence.blocked) return null;
+    // Ownership lookup is non-mutating. The normal background lookup prunes
+    // expired/corrupt records and therefore is unsuitable for a read tool.
+    final request = await (store as AgendaNotificationBackgroundRequestIndex)
+        .readBackgroundRequestForOwnership(key);
+    final payload = AgendaNotificationPayload.tryDecode(request?.payload);
+    if (request == null ||
+        now().difference(request.fireAt) > _snoozeLookback ||
+        payload == null ||
+        !agendaNotificationPayloadHasRuntimeIdentity(payload) ||
+        !agendaNotificationPayloadMatchesProjection(
+          payload: payload,
+          data: data,
+          projection: projection,
+        ) ||
+        !await isProjectionFenceCurrent(fence)) {
+      return null;
+    }
+    return request;
+  }
+
+  /// Applies the same fixed ten-minute action as a notification card and reads
+  /// back its saved runtime state. A stale card returns null, not success.
+  Future<DateTime?> snoozeReminder(
+    AgendaNotificationBackgroundRequest expected,
+    AppData data,
+  ) {
+    final operation = _actionTail.then(
+      (_) => withAgendaRuntimeMutationLock(() async {
+        final request = await readActionableReminder(
+          expected.key,
+          committedDataReader?.call() ?? _lastData ?? data,
+        );
+        if (request == null || request.payload != expected.payload) return null;
+        if (!await _handleActionNow(request.payload, 'snooze_10m')) return null;
+        return readReminderSnooze(request.payload);
+      }),
+    );
+    _actionTail = operation.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return operation;
+  }
+
+  /// Observes the persisted snooze for an already accepted payload; no action
+  /// is repeated when an external-operation receipt is being reconciled.
+  Future<DateTime?> readReminderSnooze(String payloadText) async {
+    final payload = AgendaNotificationPayload.tryDecode(payloadText);
+    if (payload == null) return null;
+    final occurrence = agendaRuntimeKeyForPayload(payload);
+    if (occurrence == null) return null;
+    final fence = await readProjectionFence();
+    if (fence.blocked) return null;
+    final snoozes = await _runtimeStore.readSnoozes(pruneExpired: false);
+    if (!await isProjectionFenceCurrent(fence)) return null;
+    return snoozes[agendaSnoozeRuntimeKey(occurrence, payload.key)];
+  }
+
   Future<bool> _handleActionNow(
     String? payload,
     String? actionId, {

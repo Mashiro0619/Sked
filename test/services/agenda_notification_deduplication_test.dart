@@ -52,7 +52,8 @@ class FailingRegistrationStore extends MemoryAgendaNotificationRuntimeStore {
 class MinimalRuntimeStore implements AgendaNotificationRuntimeStore {
   final delegate = MemoryAgendaNotificationRuntimeStore();
   @override
-  Future<Map<String, DateTime>> readSnoozes() => delegate.readSnoozes();
+  Future<Map<String, DateTime>> readSnoozes({bool pruneExpired = true}) =>
+      delegate.readSnoozes(pruneExpired: pruneExpired);
   @override
   Future<Set<String>> readHandledOccurrenceIds() =>
       delegate.readHandledOccurrenceIds();

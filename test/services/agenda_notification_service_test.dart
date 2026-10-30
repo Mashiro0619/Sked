@@ -2004,6 +2004,35 @@ void main() {
     },
   );
 
+  test('host snooze validates stored payload and reads durable state without replay', () async {
+    final runtime = MemoryAgendaNotificationRuntimeStore();
+    final gateway = MemoryAgendaNotificationGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: runtime,
+      now: () => DateTime(2026, 8, 3, 7, 55),
+    );
+    addTearDown(service.dispose);
+    final data = _data();
+    await service.reconcile(data, anchor: DateTime(2026, 8, 3, 7));
+    final keys = await service.reminderActionKeys();
+    expect(keys, contains(gateway.scheduled.keys.single));
+    final request = await service.readActionableReminder(keys.single, data);
+    expect(request, isNotNull);
+    expect(await service.readReminderSnooze(request!.payload), isNull);
+    final until = await service.snoozeReminder(request, data);
+    expect(until, DateTime(2026, 8, 3, 8, 5));
+    expect(await service.readReminderSnooze(request.payload), until);
+    expect(gateway.scheduled[request.key]!.fireAt, until);
+    // Scheduling the snooze replaces the stored card payload. The earlier
+    // version cannot silently create a second snooze from the same plan.
+    expect(await service.snoozeReminder(request, data), isNull);
+    await service.blockProjectionForDataClear();
+    expect(await service.readActionableReminder(request.key, data), isNull);
+    expect(await service.readReminderSnooze(request.payload), isNull);
+  });
+
   test(
     'snoozing one of two reminders preserves the other original fire time',
     () async {

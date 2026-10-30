@@ -89,7 +89,7 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   }
 
   @override
-  Future<Map<String, DateTime>> readSnoozes() async {
+  Future<Map<String, DateTime>> readSnoozes({bool pruneExpired = true}) async {
     final preferences = await _preferences;
     await _reload(preferences);
     final fence = _readProjectionFence(preferences);
@@ -120,7 +120,7 @@ class SharedPreferencesAgendaNotificationRuntimeStore
           dirty = true;
         }
       }
-      if (dirty) {
+      if (dirty && pruneExpired) {
         // Cleanup is itself a read-modify-write. Queue it with the other
         // mutations and reread the latest value so an action from another
         // Flutter isolate cannot be overwritten by this stale snapshot.
