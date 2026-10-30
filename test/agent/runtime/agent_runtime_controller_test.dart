@@ -1,0 +1,2004 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/runtime/agent_runtime_controller.dart';
+import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/application/mutation_coordinator.dart';
+import 'package:sked/application/operation_contracts.dart';
+import 'package:sked/application/mutation_draft.dart';
+import 'package:sked/application/external_operation_coordinator.dart';
+import 'package:sked/models/agent_settings.dart';
+
+import 'package:sked/controllers/app_session.dart';
+import 'package:sked/data/app_repository.dart';
+import 'package:sked/models/timetable_models.dart';
+
+import '../../support/timetable_storage_fakes.dart';
+
+class _OperationHarness {
+  late final AppSession session;
+  late final MutationCoordinator mutations;
+  late final ExternalOperationCoordinator external;
+
+  Future<void> initialize() async {
+    final repository = AppRepository(
+      storage: MemoryTimetableStorage(
+        initialData: buildInitialAppData(buildDefaultPeriodTimes()),
+      ),
+    );
+    session = AppSession(
+      repository: repository,
+      initialData: (await repository.load())!,
+      requireMutationAllowed: () {},
+    );
+    mutations = MutationCoordinator(
+      session: session,
+      settlePendingChanges: () async {},
+      dataSessionRevision: () => 0,
+    );
+    external = ExternalOperationCoordinator(
+      session: session,
+      settlePendingChanges: () async {},
+      dataSessionRevision: () => 0,
+      fallbackGeneration: () => mutations.generation,
+    );
+  }
+
+  Future<void> close() async {
+    await external.waitForPendingWrites();
+    await mutations.waitForPendingWrites();
+    await session.close();
+  }
+}
+
+void main() {
+  registerRecoveryTests();
+  test(
+    'persists accepted message and run before request, tokens only update UI',
+    () async {
+      final stream = StreamController<ProviderEvent>();
+      final entered = Completer<void>();
+      late _Harness h;
+      h = await _Harness.create(
+        handler: (request, _) {
+          final saved = ConversationArchive.decode(h.storage.source!)
+              .conversations
+              .single;
+          expect(saved.messages.single.text, 'hello');
+          expect(saved.runId, isNotNull);
+          expect(saved.status, ConversationStatus.running);
+          expect(saved.draft, '');
+          entered.complete();
+          return stream.stream;
+        },
+      );
+      addTearDown(h.dispose);
+      await h.repository.update(h.id, (item) => item.copyWith(draft: 'hello'));
+      final send = h.runtime.send(h.id, 'hello');
+      await entered.future;
+      final writes = h.storage.saves;
+      stream.add(const ProviderTextDelta('one'));
+      stream.add(const ProviderTextDelta(' two'));
+      await pumpEventQueue();
+      expect(h.runtime.state.value.runFor(h.id).streamingText, 'one two');
+      expect(h.storage.saves, writes);
+      stream.add(ProviderCompleted(_response('one two')));
+      await stream.close();
+      await send;
+      expect(h.repository.find(h.id)!.messages.map((m) => m.text), [
+        'hello',
+        'one two',
+      ]);
+      expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+    },
+  );
+
+  test('complete tool calls execute sequentially and real results reach next round', () async {
+    var round = 0;
+    final executed = <String>[];
+    final h = await _Harness.create(
+      handler: (request, _) {
+        if (round++ == 0) {
+          return _events(
+            _response('reading', calls: [_call('one'), _call('two')]),
+          );
+        }
+        expect(request.messages.map((message) => message.role), [
+          ProviderRole.system,
+          ProviderRole.user,
+          ProviderRole.assistant,
+          ProviderRole.tool,
+          ProviderRole.tool,
+        ]);
+        expect(request.messages[3].toolCallId, 'one');
+        expect(jsonDecode(request.messages[4].text), {
+          'status': 'read',
+          'id': 'two',
+        });
+        return _events(_response('finished'));
+      },
+      execute: (call, scope, approval) async {
+        scope.checkActive();
+        executed.add(call.id);
+        return {'status': 'read', 'id': call.id};
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'read events');
+    expect(executed, ['one', 'two']);
+    expect(h.repository.find(h.id)!.messages, hasLength(5));
+    expect(h.repository.find(h.id)!.status, ConversationStatus.idle);
+  });
+
+  test('full mode writes without an approval wait', () async {
+    var commits = 0;
+    var round = 0;
+    final h = await _Harness.create(
+      mode: AgentPermissionMode.full,
+      handler: (_, _) => _events(
+        round++ == 0
+            ? _response('', calls: [_call('write')])
+            : _response('committed'),
+      ),
+      execute: (_, scope, _) async {
+        scope.checkMutation(planId: 'plan', consumeApproval: true);
+        commits++;
+        return {'status': 'committed', 'operationId': 'operation-1'};
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'change this');
+    expect(commits, 1);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+  });
+
+  test(
+    'ask mode displays concrete differences and only matching approval writes',
+    () async {
+      var commits = 0;
+      var round = 0;
+      final h = await _Harness.create(
+        handler: (_, _) => _events(
+          round++ == 0
+              ? _response('', calls: [_call('write')])
+              : _response('done'),
+        ),
+        execute: (_, scope, requestApproval) async {
+          final approval = await requestApproval(_Plan('plan-1'));
+          scope.checkMutation(
+            planId: 'plan-1',
+            approval: approval,
+            consumeApproval: true,
+          );
+          commits++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'change this');
+      await _waitPhase(h, AgentUiPhase.waitingApproval);
+      final pending = h.runtime.state.value.runFor(h.id).pendingApproval!;
+      expect(pending.id, 'plan-1');
+      expect(pending.details['changes'], [
+        {'key': 'event.name', 'before': 'before', 'after': 'after'},
+      ]);
+      expect(
+        h.repository.find(h.id)!.status,
+        ConversationStatus.waitingApproval,
+      );
+      await expectLater(
+        h.runtime.approve(h.id, 'model-invented-plan'),
+        throwsA(isA<OperationProblem>()),
+      );
+      expect(commits, 0);
+      await h.runtime.approve(h.id, 'plan-1');
+      await send;
+      expect(commits, 1);
+      await expectLater(
+        h.runtime.approve(h.id, 'plan-1'),
+        throwsA(isA<OperationProblem>()),
+      );
+    },
+  );
+
+  test('reject wakes pending host and never grants approval', () async {
+    var commits = 0;
+    var round = 0;
+    final h = await _Harness.create(
+      handler: (_, _) => _events(
+        round++ == 0
+            ? _response('', calls: [_call('write')])
+            : _response('not changed'),
+      ),
+      execute: (_, scope, requestApproval) async {
+        final approval = await requestApproval(_Plan('plan-reject'));
+        scope.checkMutation(
+          planId: 'plan-reject',
+          approval: approval,
+          consumeApproval: true,
+        );
+        commits++;
+        return {'status': 'committed'};
+      },
+    );
+    addTearDown(h.dispose);
+    final send = h.runtime.send(h.id, 'change this');
+    await _waitPhase(h, AgentUiPhase.waitingApproval);
+    await h.runtime.reject(h.id, 'plan-reject');
+    await send;
+    expect(commits, 0);
+    final result = jsonDecode(
+      h.repository
+          .find(h.id)!
+          .messages
+          .where((m) => m.role == ConversationRole.tool)
+          .single
+          .text,
+    ) as Map;
+    expect(result['error']['code'], 'approvalRequired');
+  });
+
+  test(
+    'plan mode keeps zero writes and records read-only host result',
+    () async {
+      var commits = 0;
+      var round = 0;
+      final h = await _Harness.create(
+        mode: AgentPermissionMode.plan,
+        handler: (_, _) => _events(
+          round++ == 0
+              ? _response('', calls: [_call('write')])
+              : _response('plan only'),
+        ),
+        execute: (_, scope, _) async {
+          scope.checkMutation(planId: 'plan', consumeApproval: true);
+          commits++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      await h.runtime.send(h.id, 'prepare a change');
+      expect(commits, 0);
+      expect(h.repository.find(h.id)!.messages[2].text, contains('readOnly'));
+    },
+  );
+
+  test(
+    'tightening mode immediately blocks a delayed commit and persists choice',
+    () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      var commits = 0;
+      var round = 0;
+      final h = await _Harness.create(
+        mode: AgentPermissionMode.full,
+        handler: (_, _) => _events(
+          round++ == 0
+              ? _response('', calls: [_call('write')])
+              : _response('plan only'),
+        ),
+        execute: (_, scope, _) async {
+          entered.complete();
+          await release.future;
+          scope.checkMutation(planId: 'plan', consumeApproval: true);
+          commits++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'change');
+      await entered.future;
+      final modeWrite = h.runtime.setMode(h.id, AgentPermissionMode.plan);
+      release.complete();
+      await modeWrite;
+      await send;
+      expect(commits, 0);
+      expect(h.repository.find(h.id)!.mode, AgentPermissionMode.plan);
+    },
+  );
+
+  test(
+    'full mode selection wakes an existing approval without a fake proof',
+    () async {
+      var commits = 0;
+      var round = 0;
+      final h = await _Harness.create(
+        handler: (_, _) => _events(
+          round++ == 0
+              ? _response('', calls: [_call('write')])
+              : _response('done'),
+        ),
+        execute: (_, scope, requestApproval) async {
+          final approval = await requestApproval(_Plan('plan'));
+          expect(approval, null);
+          scope.checkMutation(
+            planId: 'plan',
+            approval: approval,
+            consumeApproval: true,
+          );
+          commits++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'change');
+      await _waitPhase(h, AgentUiPhase.waitingApproval);
+      await h.runtime.setMode(h.id, AgentPermissionMode.full);
+      await send;
+      expect(commits, 1);
+    },
+  );
+
+  test(
+    'stop ignores late provider output and does not execute its tools',
+    () async {
+      final entered = Completer<void>();
+      var executions = 0;
+      final h = await _Harness.create(
+        handler: (_, token) async* {
+          entered.complete();
+          await token!.whenCancelled;
+          yield ProviderCompleted(_response('late', calls: [_call('late')]));
+        },
+        execute: (_, _, _) async {
+          executions++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'start');
+      await entered.future;
+      await h.runtime.stop(h.id);
+      await send;
+      expect(executions, 0);
+      expect(h.repository.find(h.id)!.messages, hasLength(1));
+      expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.stopped);
+    },
+  );
+
+  test(
+    'stop reconciles accepted write and records not-started tool results',
+    () async {
+      final accepted = Completer<void>();
+      final durable = Completer<void>();
+      var executions = 0;
+      final h = await _Harness.create(
+        mode: AgentPermissionMode.full,
+        handler: (_, _) => _events(
+          _response('', calls: [_call('accepted'), _call('pending')]),
+        ),
+        execute: (_, scope, _) async {
+          scope.checkMutation(planId: 'plan', consumeApproval: true);
+          executions++;
+          accepted.complete();
+          await durable.future;
+          return {'status': 'committed', 'operationId': 'op-real'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'write twice');
+      await accepted.future;
+      await h.runtime.stop(h.id);
+      durable.complete();
+      await send;
+      final results = h.repository
+          .find(h.id)!
+          .messages
+          .where((m) => m.role == ConversationRole.tool)
+          .toList();
+      expect(executions, 1);
+      expect(results, hasLength(2));
+      expect(jsonDecode(results.first.text), {
+        'status': 'committed',
+        'operationId': 'op-real',
+      });
+      expect(jsonDecode(results.last.text)['status'], 'not_executed');
+      expect(h.provider.requests, hasLength(1));
+      expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.stopped);
+    },
+  );
+
+  test('disable revokes a delayed unaccepted write', () async {
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    var commits = 0;
+    final h = await _Harness.create(
+      mode: AgentPermissionMode.full,
+      handler: (_, _) => _events(_response('', calls: [_call('write')])),
+      execute: (_, scope, _) async {
+        entered.complete();
+        await release.future;
+        scope.checkMutation(planId: 'plan');
+        commits++;
+        return {'status': 'committed'};
+      },
+    );
+    addTearDown(h.dispose);
+    final send = h.runtime.send(h.id, 'change');
+    await entered.future;
+    h.settings = h.settings.copyWith(enabled: false);
+    h.runtime.refreshSettings();
+    release.complete();
+    await send;
+    expect(commits, 0);
+    expect(h.runtime.state.value.enabled, false);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.stopped);
+  });
+
+  test('deleted conversation cannot be resurrected by late output', () async {
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    final h = await _Harness.create(
+      handler: (_, _) async* {
+        entered.complete();
+        await release.future;
+        yield ProviderCompleted(_response('late'));
+      },
+    );
+    addTearDown(h.dispose);
+    final send = h.runtime.send(h.id, 'start');
+    await entered.future;
+    await h.runtime.deleteConversation(h.id);
+    release.complete();
+    await send;
+    expect(h.repository.find(h.id), null);
+    expect(
+      ConversationArchive.decode(h.storage.source!).conversations,
+      isEmpty,
+    );
+    expect(h.runtime.state.value.runs.containsKey(h.id), false);
+  });
+
+  test(
+    'handoff starts once without duplicating its durable user message',
+    () async {
+      final h = await _Harness.create();
+      addTearDown(h.dispose);
+      final handoff = await h.repository.handoff(
+        handoffId: 'handoff-1',
+        source: const ConversationSource(
+          id: 'source',
+          text: 'synthetic',
+          kind: 'schoolWeb',
+        ),
+        title: 'import',
+        prompt: 'import source',
+      );
+      await Future.wait([
+        h.runtime.startHandoff(handoff.conversation.id),
+        h.runtime.startHandoff(handoff.conversation.id),
+      ]);
+      await h.runtime.startHandoff(handoff.conversation.id);
+      expect(h.provider.requests, hasLength(1));
+      expect(
+        h.repository
+            .find(handoff.conversation.id)!
+            .messages
+            .where((m) => m.role == ConversationRole.user),
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'restart never automatically replays interrupted runs or handoffs',
+    () async {
+      final h = await _Harness.create();
+      addTearDown(h.dispose);
+      await h.repository.update(
+        h.id,
+        (item) => item.copyWith(
+          status: ConversationStatus.running,
+          runId: 'old-run',
+          messages: [
+            ConversationMessage(
+              id: 'user',
+              role: ConversationRole.user,
+              text: 'previous task',
+              createdAt: DateTime.utc(2026),
+            ),
+          ],
+        ),
+      );
+      await h.repository.load();
+      expect(h.repository.find(h.id)!.status, ConversationStatus.interrupted);
+      await h.runtime.startHandoff(h.id);
+      expect(h.provider.requests, isEmpty);
+    },
+  );
+
+  test('destination changes refuse to send existing history', () async {
+    final h = await _Harness.create();
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'first');
+    final count = h.repository.find(h.id)!.messages.length;
+    h.settings = h.settings.copyWith(endpoint: 'https://other.example/v1');
+    h.runtime.refreshSettings();
+    await expectLater(
+      h.runtime.send(h.id, 'second'),
+      throwsA(_runtimeError(AgentRuntimeError.connectionChanged)),
+    );
+    expect(h.provider.requests, hasLength(1));
+    expect(h.repository.find(h.id)!.messages, hasLength(count));
+  });
+
+  test(
+    'duplicate sends are rejected while another conversation remains isolated',
+    () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final h = await _Harness.create(
+        handler: (request, _) async* {
+          if (request.messages.last.text == 'first-private') {
+            entered.complete();
+            await release.future;
+          }
+          expect(
+            request.messages.where((m) => m.role == ProviderRole.user),
+            hasLength(1),
+          );
+          yield ProviderCompleted(_response('done'));
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'first-private');
+      await entered.future;
+      await expectLater(
+        h.runtime.send(h.id, 'duplicate'),
+        throwsA(_runtimeError(AgentRuntimeError.busy)),
+      );
+      final other = await h.repository.create(title: 'other');
+      await h.runtime.send(other.id, 'second-private');
+      release.complete();
+      await send;
+      expect(h.repository.find(h.id)!.messages.first.text, 'first-private');
+      expect(
+        h.repository.find(other.id)!.messages.first.text,
+        'second-private',
+      );
+    },
+  );
+
+  test('context budget fails explicitly without truncating messages', () async {
+    final h = await _Harness.create(
+      limits: const AgentRuntimeLimits(maxContextCharacters: 10),
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'long message that remains intact');
+    expect(h.provider.requests, isEmpty);
+    expect(
+      h.repository.find(h.id)!.messages.single.text,
+      'long message that remains intact',
+    );
+    expect(
+      h.runtime.state.value.runFor(h.id).errorMessage,
+      'contextBudgetExceeded',
+    );
+  });
+
+  test('missing historical query reply is marked unexecuted without replay or a write barrier', () async {
+    final h = await _Harness.create();
+    addTearDown(h.dispose);
+    await h.repository.update(
+      h.id,
+      (item) => item.copyWith(
+        messages: [
+          ConversationMessage(
+            id: 'old',
+            role: ConversationRole.assistant,
+            text: '',
+            createdAt: DateTime.utc(2026),
+            toolCalls: [
+              const ConversationToolCall(
+                id: 'pending',
+                name: 'events.list',
+                arguments: '{}',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    await h.runtime.send(h.id, 'continue');
+    expect(h.provider.requests, hasLength(1));
+    expect(h.runtime.state.value.runFor(h.id).recoveryRequired, false);
+    expect(h.repository.find(h.id)!.messages[1].text, contains('not_executed'));
+  });
+
+  test('tool and round budgets preserve complete call-result pairs', () async {
+    var executions = 0;
+    final h = await _Harness.create(
+      limits: const AgentRuntimeLimits(maxToolCalls: 1),
+      handler: (_, _) =>
+          _events(_response('', calls: [_call('one'), _call('two')])),
+      execute: (_, _, _) async {
+        executions++;
+        return {'status': 'read'};
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'query');
+    expect(executions, 1);
+    expect(
+      h.repository
+          .find(h.id)!
+          .messages
+          .where((m) => m.role == ConversationRole.tool),
+      hasLength(2),
+    );
+    expect(
+      h.runtime.state.value.runFor(h.id).errorMessage,
+      'toolBudgetExceeded',
+    );
+    final rounds = await _Harness.create(
+      limits: const AgentRuntimeLimits(maxModelRounds: 1),
+      handler: (_, _) => _events(_response('', calls: [_call('one')])),
+    );
+    addTearDown(rounds.dispose);
+    await rounds.runtime.send(rounds.id, 'query');
+    expect(rounds.provider.requests, hasLength(1));
+    expect(
+      rounds.runtime.state.value.runFor(rounds.id).errorMessage,
+      'roundBudgetExceeded',
+    );
+  });
+
+  test(
+    'token budget does not execute completed but over-budget calls',
+    () async {
+      var executions = 0;
+      final h = await _Harness.create(
+        limits: const AgentRuntimeLimits(maxTotalTokens: 1),
+        handler: (_, _) => _events(
+          ProviderResponse(
+            text: '',
+            toolCalls: [_call('one')],
+            finishReason: 'tool_calls',
+            usage: const ProviderUsage(
+              inputTokens: 3,
+              outputTokens: 2,
+              totalTokens: 5,
+            ),
+          ),
+        ),
+        execute: (_, _, _) async {
+          executions++;
+          return {'status': 'read'};
+        },
+      );
+      addTearDown(h.dispose);
+      await h.runtime.send(h.id, 'query');
+      expect(executions, 0);
+      expect(
+        h.repository.find(h.id)!.messages.last.text,
+        contains('token_budget_exceeded'),
+      );
+      expect(
+        h.runtime.state.value.runFor(h.id).errorMessage,
+        'tokenBudgetExceeded',
+      );
+    },
+  );
+
+  test('duplicate call IDs across model rounds cannot execute twice', () async {
+    var executions = 0;
+    final h = await _Harness.create(
+      handler: (_, _) => _events(_response('', calls: [_call('same')])),
+      execute: (_, _, _) async {
+        executions++;
+        return {'status': 'read'};
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'query');
+    expect(executions, 1);
+    expect(
+      h.runtime.state.value.runFor(h.id).errorMessage,
+      'duplicateToolCall',
+    );
+  });
+
+  test('credentials never enter tool records, UI errors, or user message persistence', () async {
+    final h = await _Harness.create(
+      handler: (_, _) => _events(_response('', calls: [_call('one')])),
+      execute: (_, _, _) async => {'status': 'committed', 'bad': _key},
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'query');
+    expect(h.storage.source, isNot(contains(_key)));
+    expect(
+      h.repository.find(h.id)!.messages.last.text,
+      contains('outcome_unknown'),
+    );
+    expect(h.runtime.state.value.runFor(h.id).errorMessage, 'sensitiveContent');
+    await expectLater(
+      h.runtime.send(h.id, 'please save $_key'),
+      throwsA(_runtimeError(AgentRuntimeError.sensitiveContent)),
+    );
+    expect(h.storage.source, isNot(contains(_key)));
+  });
+
+  test(
+    'stopping credential retrieval finishes without accepting or sending text',
+    () async {
+      final key = Completer<String>();
+      final entered = Completer<void>();
+      final h = await _Harness.create(
+        readKey: (_) {
+          entered.complete();
+          return key.future;
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'query');
+      final assertion = expectLater(
+        send,
+        throwsA(_runtimeError(AgentRuntimeError.cancelled)),
+      );
+      await entered.future;
+      await h.runtime.stop(h.id);
+      await assertion;
+      expect(h.repository.find(h.id)!.messages, isEmpty);
+      expect(h.provider.requests, isEmpty);
+      expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.stopped);
+      key.complete(_key);
+    },
+  );
+
+  test('failed acceptance keeps draft and never requests model', () async {
+    final h = await _Harness.create();
+    addTearDown(h.dispose);
+    await h.repository.update(h.id, (item) => item.copyWith(draft: 'draft'));
+    h.storage.failure = StateError('disk unavailable');
+    await expectLater(
+      h.runtime.send(h.id, 'draft'),
+      throwsA(isA<StateError>()),
+    );
+    expect(h.provider.requests, isEmpty);
+    expect(h.repository.find(h.id)!.draft, 'draft');
+  });
+
+  for (final protocol in AgentModelProtocol.values) {
+    test(
+      '${protocol.name} context preserves provider continuation and tool result',
+      () async {
+        var round = 0;
+        final continuation = [
+          {
+            'type': 'reasoning',
+            'id': 'reason',
+            'encrypted_content': 'opaque',
+            'summary': [],
+          },
+          {
+            'type': 'function_call',
+            'call_id': 'one',
+            'name': 'events__list',
+            'arguments': '{}',
+          },
+        ];
+        final h = await _Harness.create(
+          protocol: protocol,
+          handler: (request, _) {
+            if (round++ == 0) {
+              return _events(
+                ProviderResponse(
+                  text: '',
+                  toolCalls: [_call('one')],
+                  finishReason: 'tool_calls',
+                  responseItems: protocol == AgentModelProtocol.responses
+                      ? continuation
+                      : [],
+                ),
+              );
+            }
+            expect(request.protocol.name, protocol.name);
+            expect(
+              request.messages[2].responseItems,
+              protocol == AgentModelProtocol.responses ? continuation : isEmpty,
+            );
+            expect(request.messages[3].toolCallId, 'one');
+            return _events(_response('done'));
+          },
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'query');
+        final archive = ConversationArchive.decode(h.storage.source!);
+        expect(
+          archive.conversations.single.messages[1].responseItems,
+          protocol == AgentModelProtocol.responses ? continuation : isEmpty,
+        );
+      },
+    );
+  }
+
+  test(
+    'endpoint resolver handles base URL and preserves explicit endpoint',
+    () {
+      expect(
+        resolveAgentEndpoint(
+          const AgentSettings(endpoint: 'https://a.example/v1/'),
+        ).path,
+        '/v1/chat/completions',
+      );
+      expect(
+        resolveAgentEndpoint(
+          const AgentSettings(
+            endpoint: 'https://a.example',
+            protocol: AgentModelProtocol.responses,
+          ),
+        ).path,
+        '/v1/responses',
+      );
+      expect(
+        resolveAgentEndpoint(
+          const AgentSettings(
+            endpoint: 'https://a.example/custom/responses',
+            protocol: AgentModelProtocol.responses,
+          ),
+        ).path,
+        '/custom/responses',
+      );
+      expect(
+        () => resolveAgentEndpoint(
+          const AgentSettings(endpoint: 'https://a.example/v1?key=x'),
+        ),
+        throwsA(isA<AgentRuntimeException>()),
+      );
+    },
+  );
+  test('schema discovery is scoped, refreshed each round and released after settling', () async {
+    final enabled = <OperationScope, Set<String>>{};
+    final settled = <OperationScope>[];
+    final rounds = <String, int>{};
+    final h = await _Harness.create(
+      readTools: (scope) => [
+        for (final name in enabled.putIfAbsent(
+          scope,
+          () => {'capabilities.describe'},
+        ))
+          ToolDefinition(
+            name: name,
+            description: name,
+            parameters: {'type': 'object', 'properties': <String, Object?>{}},
+          ),
+      ],
+      onRunSettled: (scope) {
+        expect(scope.isCancelled, true);
+        settled.add(scope);
+        enabled.remove(scope);
+      },
+      handler: (request, _) {
+        final user = request.messages
+            .firstWhere((message) => message.role == ProviderRole.user)
+            .text;
+        final round = rounds.update(
+          user,
+          (count) => count + 1,
+          ifAbsent: () => 0,
+        );
+        if (round == 0) {
+          expect(request.tools.map((tool) => tool.name), [
+            'capabilities.describe',
+          ]);
+          return _events(
+            _response(
+              '',
+              calls: [
+                ProviderToolCall(
+                  id: 'discover-$user',
+                  name: 'capabilities.describe',
+                  arguments: '{}',
+                ),
+              ],
+            ),
+          );
+        }
+        expect(request.tools.map((tool) => tool.name).toSet(), {
+          'capabilities.describe',
+          'events.list',
+        });
+        return _events(_response('done'));
+      },
+      execute: (_, scope, _) async {
+        enabled[scope]!.add('events.list');
+        return {'status': 'available'};
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'first');
+    final second = await h.repository.create(title: 'second');
+    await h.runtime.send(second.id, 'second');
+    expect(settled, hasLength(2));
+    expect(identical(settled[0], settled[1]), false);
+    expect(enabled, isEmpty);
+  });
+
+  test(
+    'tool deadline cancels future work but still records accepted commit',
+    () async {
+      final entered = Completer<void>();
+      final durable = Completer<void>();
+      final h = await _Harness.create(
+        mode: AgentPermissionMode.full,
+        limits: const AgentRuntimeLimits(
+          toolTimeout: Duration(milliseconds: 10),
+        ),
+        handler: (_, _) => _events(_response('', calls: [_call('slow')])),
+        execute: (_, scope, _) async {
+          scope.checkMutation(planId: 'slow', consumeApproval: true);
+          entered.complete();
+          await durable.future;
+          return {'status': 'committed', 'operationId': 'slow-operation'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'slow change');
+      await entered.future;
+      await _waitPhase(h, AgentUiPhase.stopped);
+      durable.complete();
+      await send;
+      expect(
+        h.repository.find(h.id)!.messages.last.text,
+        contains('slow-operation'),
+      );
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, 'toolTimeout');
+      expect(h.provider.requests, hasLength(1));
+    },
+  );
+
+  test('total deadline includes credential retrieval and waitForIdle includes acceptance', () async {
+    final key = Completer<String>();
+    final entered = Completer<void>();
+    final h = await _Harness.create(
+      limits: const AgentRuntimeLimits(
+        totalTimeout: Duration(milliseconds: 10),
+      ),
+      readKey: (_) {
+        entered.complete();
+        return key.future;
+      },
+    );
+    addTearDown(h.dispose);
+    final send = h.runtime.send(h.id, 'query');
+    final assertion = expectLater(
+      send,
+      throwsA(_runtimeError(AgentRuntimeError.timeout)),
+    );
+    await entered.future;
+    var idle = false;
+    final settled = h.runtime.waitForIdle().then((_) {
+      idle = true;
+    });
+    expect(idle, false);
+    await assertion;
+    await settled;
+    expect(h.provider.requests, isEmpty);
+    expect(h.repository.find(h.id)!.messages, isEmpty);
+    key.complete(_key);
+  });
+}
+
+void registerRecoveryTests() {
+  test('known host operation identity is durable before an effect and repairs a lost reply', () async {
+    final owner = _OperationHarness();
+    await owner.initialize();
+    addTearDown(owner.close);
+    var effects = 0;
+    final h = await _Harness.create(
+      mode: AgentPermissionMode.full,
+      readOperationReceipt: (name, id) async {
+        expect(name, 'external.commit');
+        return owner.external.status(id)?.result;
+      },
+    );
+    addTearDown(h.dispose);
+    await expectLater(
+      h.runtime.runHostAction(h.id, (scope, _) async {
+        final prepared = owner.external.prepare(
+          scope: scope,
+          action: 'host.fixture',
+          arguments: const {},
+          version: 1,
+          changes: [
+            ResourceChange(key: 'host.fixture', before: null, after: true),
+          ],
+          validate: () {},
+          execute: (_) async {
+            effects++;
+            return ExternalEffectResult(state: ExternalEffectState.applied);
+          },
+        );
+        await h.runtime.recordHostOperation(scope, prepared);
+        expect(h.storage.source, contains('agent_host_operation'));
+        final result = await owner.external.commit(
+          planId: prepared.id,
+          scope: scope,
+        );
+        h.storage.failure = StateError('lost host tool reply');
+        return result.toJson();
+      }),
+      throwsStateError,
+    );
+    expect(effects, 1);
+    h.storage.failure = null;
+    await h.repository.load();
+    await h.runtime.continueConversation(h.id);
+    expect(effects, 1);
+    expect(h.runtime.state.value.runFor(h.id).recoveryRequired, false);
+    final result = h.repository
+        .find(h.id)!
+        .messages
+        .singleWhere((m) => m.role == ConversationRole.tool);
+    expect(jsonDecode(result.text)['recoveredFromOperationReceipt'], true);
+    expect(jsonDecode(result.text)['status'], 'applied');
+  });
+
+  test(
+    'failed host operation identity persistence prevents starting the effect',
+    () async {
+      final owner = _OperationHarness();
+      await owner.initialize();
+      addTearDown(owner.close);
+      var effects = 0;
+      final h = await _Harness.create(mode: AgentPermissionMode.full);
+      addTearDown(h.dispose);
+      h.storage.beforeSave = (value) async {
+        if (value.contains('agent_host_operation')) {
+          throw StateError('identity save failed');
+        }
+      };
+      await expectLater(
+        h.runtime.runHostAction(h.id, (scope, _) async {
+          final prepared = owner.external.prepare(
+            scope: scope,
+            action: 'host.fixture',
+            arguments: const {},
+            version: 1,
+            changes: [
+              ResourceChange(key: 'host.fixture', before: null, after: true),
+            ],
+            validate: () {},
+            execute: (_) async {
+              effects++;
+              return ExternalEffectResult(state: ExternalEffectState.applied);
+            },
+          );
+          await h.runtime.recordHostOperation(scope, prepared);
+          return (await owner.external.commit(
+            planId: prepared.id,
+            scope: scope,
+          )).toJson();
+        }),
+        throwsA(isA<ConversationStorageException>()),
+      );
+      expect(effects, 0);
+      expect(owner.session.committedData.applicationLedger, isNull);
+    },
+  );
+
+  test(
+    'HTTP ask approval is transport-only and reused for the same connection',
+    () async {
+      final h = await _Harness.create(
+        handler: (request, _) {
+          expect(request.allowInsecureHttp, true);
+          return _events(_response('done'));
+        },
+      );
+      addTearDown(h.dispose);
+      h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
+      h.runtime.refreshSettings();
+      final first = h.runtime.send(h.id, 'hello');
+      await _waitPhase(h, AgentUiPhase.waitingApproval);
+      final approval = h.runtime.state.value.runFor(h.id).pendingApproval!;
+      expect(approval.details, {
+        'kind': 'httpTransport',
+        'endpoint': 'http://model.example/v1/chat/completions',
+      });
+      expect(h.provider.requests, isEmpty);
+      await h.runtime.approve(h.id, approval.id);
+      await first;
+      await h.runtime.send(h.id, 'another message');
+      expect(h.provider.requests, hasLength(2));
+      expect(h.repository.find(h.id)!.mode, AgentPermissionMode.ask);
+      h.settings = h.settings.copyWith(enabled: false);
+      h.runtime.refreshSettings();
+      h.settings = h.settings.copyWith(enabled: true);
+      h.runtime.refreshSettings();
+      final third = h.runtime.send(h.id, 'after re-enabling');
+      await _waitPhase(h, AgentUiPhase.waitingApproval);
+      await h.runtime.reject(
+        h.id,
+        h.runtime.state.value.runFor(h.id).pendingApproval!.id,
+      );
+      await third;
+      expect(h.provider.requests, hasLength(2));
+    },
+  );
+
+  test('HTTP full mode is direct but does not forge an approval for later ask mode', () async {
+    final h = await _Harness.create(mode: AgentPermissionMode.full);
+    addTearDown(h.dispose);
+    h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
+    h.runtime.refreshSettings();
+    await h.runtime.send(h.id, 'first');
+    expect(h.provider.requests.single.allowInsecureHttp, true);
+    await h.runtime.setMode(h.id, AgentPermissionMode.ask);
+    final second = h.runtime.send(h.id, 'ask now');
+    await _waitPhase(h, AgentUiPhase.waitingApproval);
+    expect(h.provider.requests, hasLength(1));
+    await h.runtime.reject(
+      h.id,
+      h.runtime.state.value.runFor(h.id).pendingApproval!.id,
+    );
+    await second;
+    expect(h.provider.requests, hasLength(1));
+  });
+
+  test('plan mode HTTP approval never authorizes a business write', () async {
+    var rounds = 0, writes = 0;
+    final h = await _Harness.create(
+      mode: AgentPermissionMode.plan,
+      handler: (_, _) => _events(
+        rounds++ == 0
+            ? _response('', calls: [_call('write')])
+            : _response('read only'),
+      ),
+      execute: (_, scope, _) async {
+        scope.checkMutation(planId: 'business', consumeApproval: true);
+        writes++;
+        return {'status': 'committed'};
+      },
+    );
+    addTearDown(h.dispose);
+    h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
+    h.runtime.refreshSettings();
+    final send = h.runtime.send(h.id, 'plan');
+    await _waitPhase(h, AgentUiPhase.waitingApproval);
+    expect(h.provider.requests, isEmpty);
+    await h.runtime.approve(
+      h.id,
+      h.runtime.state.value.runFor(h.id).pendingApproval!.id,
+    );
+    await send;
+    expect(writes, 0);
+    expect(h.repository.find(h.id)!.mode, AgentPermissionMode.plan);
+    expect(
+      h.repository.find(h.id)!.messages.any((m) => m.text.contains('readOnly')),
+      true,
+    );
+  });
+
+  test(
+    'ask mode requires a separate business approval after HTTP approval',
+    () async {
+      var rounds = 0, writes = 0;
+      final h = await _Harness.create(
+        handler: (_, _) => _events(
+          rounds++ == 0
+              ? _response('', calls: [_call('write')])
+              : _response('saved'),
+        ),
+        execute: (_, scope, request) async {
+          final approval = await request(_Plan('business'));
+          scope.checkMutation(
+            planId: 'business',
+            approval: approval,
+            consumeApproval: true,
+          );
+          writes++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
+      h.runtime.refreshSettings();
+      final send = h.runtime.send(h.id, 'change');
+      await _waitPhase(h, AgentUiPhase.waitingApproval);
+      final httpId = h.runtime.state.value.runFor(h.id).pendingApproval!.id;
+      final business = Completer<void>();
+      void watch() {
+        if (h.runtime.state.value.runFor(h.id).pendingApproval?.id ==
+                'business' &&
+            !business.isCompleted) {
+          business.complete();
+        }
+      }
+
+      h.runtime.state.addListener(watch);
+      await h.runtime.approve(h.id, httpId);
+      await business.future;
+      h.runtime.state.removeListener(watch);
+      expect(writes, 0);
+      await h.runtime.approve(h.id, 'business');
+      await send;
+      expect(writes, 1);
+    },
+  );
+
+  for (final change in ['stop', 'disable', 'endpoint', 'credential']) {
+    test(
+      '$change while waiting for HTTP consent sends no credential or history',
+      () async {
+        final h = await _Harness.create();
+        addTearDown(h.dispose);
+        h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
+        h.runtime.refreshSettings();
+        final send = h.runtime.send(h.id, 'private history');
+        await _waitPhase(h, AgentUiPhase.waitingApproval);
+        final id = h.runtime.state.value.runFor(h.id).pendingApproval!.id;
+        switch (change) {
+          case 'stop':
+            await h.runtime.stop(h.id);
+          case 'disable':
+            h.settings = h.settings.copyWith(enabled: false);
+          case 'endpoint':
+            h.settings = h.settings.copyWith(
+              endpoint: 'http://other.example/v1',
+            );
+          case 'credential':
+            h.settings = h.settings.copyWith(credentialRef: 'new-reference');
+        }
+        h.runtime.refreshSettings();
+        await send;
+        expect(h.provider.requests, isEmpty);
+        await expectLater(
+          h.runtime.approve(h.id, id),
+          throwsA(isA<OperationProblem>()),
+        );
+      },
+    );
+  }
+
+  test('switching a pending HTTP request to full proceeds without forging transport consent', () async {
+    final h = await _Harness.create();
+    addTearDown(h.dispose);
+    h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
+    h.runtime.refreshSettings();
+    final first = h.runtime.send(h.id, 'hello');
+    await _waitPhase(h, AgentUiPhase.waitingApproval);
+    await h.runtime.setMode(h.id, AgentPermissionMode.full);
+    await first;
+    expect(h.provider.requests, hasLength(1));
+    await h.runtime.setMode(h.id, AgentPermissionMode.plan);
+    final second = h.runtime.send(h.id, 'plan now');
+    await _waitPhase(h, AgentUiPhase.waitingApproval);
+    expect(h.provider.requests, hasLength(1));
+    await h.runtime.reject(
+      h.id,
+      h.runtime.state.value.runFor(h.id).pendingApproval!.id,
+    );
+    await second;
+    expect(h.provider.requests, hasLength(1));
+  });
+
+  for (final verified in [false, true]) {
+    test(
+      'a new send ${verified ? 'uses the host-verified receipt' : 'cannot bypass an unresolved prior write'}',
+      () async {
+        var executions = 0, requests = 0, lookups = 0;
+        final h = await _Harness.create(
+          mode: AgentPermissionMode.full,
+          readOperationReceipt: (toolName, operationId) async {
+            lookups++;
+            expect(toolName, 'mutation.commit');
+            expect(operationId, 'previous-operation');
+            return verified
+                ? {'status': 'committed', 'operationId': operationId}
+                : null;
+          },
+          readTools: (_) => [
+            ToolDefinition(
+              name: 'mutation.prepare',
+              description: 'prepare',
+              parameters: {'type': 'object', 'properties': <String, Object?>{}},
+            ),
+          ],
+          handler: (_, _) => _events(
+            requests++ == 0
+                ? _response(
+                    '',
+                    calls: [
+                      ProviderToolCall(
+                        id: 'new-plan',
+                        name: 'mutation.prepare',
+                        arguments: '{}',
+                      ),
+                    ],
+                  )
+                : _response('finished'),
+          ),
+          execute: (_, _, _) async {
+            executions++;
+            return {'status': 'prepared'};
+          },
+        );
+        addTearDown(h.dispose);
+        await h.repository.update(
+          h.id,
+          (c) => c.copyWith(
+            messages: [
+              ConversationMessage(
+                id: 'prepare-message',
+                role: ConversationRole.assistant,
+                text: '',
+                createdAt: DateTime.utc(2026),
+                toolCalls: const [
+                  ConversationToolCall(
+                    id: 'old-prepare',
+                    name: 'mutation.prepare',
+                    arguments: '{}',
+                  ),
+                ],
+              ),
+              ConversationMessage(
+                id: 'prepare-result',
+                role: ConversationRole.tool,
+                text: '{"planId":"old-plan","operationId":"previous-operation","alreadyCommitted":false}',
+                toolCallId: 'old-prepare',
+                createdAt: DateTime.utc(2026),
+              ),
+              ConversationMessage(
+                id: 'write-message',
+                role: ConversationRole.assistant,
+                text: '',
+                createdAt: DateTime.utc(2026),
+                toolCalls: const [
+                  ConversationToolCall(
+                    id: 'old-write',
+                    name: 'mutation.commit',
+                    arguments: '{"planId":"old-plan"}',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        await h.runtime.send(h.id, 'Start a new task');
+        expect(lookups, greaterThan(0));
+        expect(executions, verified ? 1 : 0);
+        expect(h.runtime.state.value.runFor(h.id).recoveryRequired, !verified);
+        final recovered = h.repository
+            .find(h.id)!
+            .messages
+            .singleWhere((m) => m.toolCallId == 'old-write');
+        expect(
+          jsonDecode(recovered.text)['status'],
+          verified ? 'committed' : 'outcome_unknown',
+        );
+        if (!verified) {
+          expect(
+            h.repository.find(h.id)!.messages.last.text,
+            contains('operationRecoveryRequired'),
+          );
+          await expectLater(
+            h.runtime.runHostAction(h.id, (_, _) async {
+              fail('A host action must not bypass unresolved write recovery.');
+            }),
+            throwsA(_runtimeError(AgentRuntimeError.interruptedRunNeedsReview)),
+          );
+        }
+      },
+    );
+  }
+
+  test('actual external unknown receipts stop later tools and preserve durable identity', () async {
+    final owner = _OperationHarness();
+    await owner.initialize();
+    addTearDown(owner.close);
+    var executions = 0;
+    final h = await _Harness.create(
+      mode: AgentPermissionMode.full,
+      handler: (_, _) => _events(
+        _response('', calls: [_call('external-effect'), _call('must-not-run')]),
+      ),
+      execute: (_, scope, _) async {
+        executions++;
+        final prepared = owner.external.prepare(
+          scope: scope,
+          action: 'fixture.external',
+          arguments: const {},
+          version: 1,
+          changes: [ResourceChange(key: 'fixture', before: false, after: true)],
+          validate: () {},
+          execute: (_) async =>
+              ExternalEffectResult(state: ExternalEffectState.unknown),
+        );
+        return (await owner.external.commit(
+          planId: prepared.id,
+          scope: scope,
+        )).toJson();
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'Perform the external operation');
+    expect(executions, 1);
+    expect(h.provider.requests, hasLength(1));
+    final results = h.repository
+        .find(h.id)!
+        .messages
+        .where((m) => m.role == ConversationRole.tool)
+        .toList();
+    final actual = jsonDecode(results.first.text) as Map;
+    expect(actual['kind'], 'external');
+    expect(actual['status'], 'outcomeUnknown');
+    expect(actual['recoveryRequired'], true);
+    expect(owner.external.status(actual['operationId'] as String), isNotNull);
+    expect(jsonDecode(results.last.text)['status'], 'not_executed');
+    expect(
+      h.runtime.state.value.runFor(h.id).errorMessage,
+      'interruptedRunNeedsReview',
+    );
+  });
+
+  for (final pending in [
+    {'kind': 'external', 'status': 'effectsPending', 'effectStatus': 'pending'},
+    {
+      'kind': 'external',
+      'status': 'partial',
+      'effectStatus': 'applied',
+      'receiptFinalized': false,
+    },
+  ]) {
+    test(
+      'unresolved external ${pending['status']} blocks automatic continuation',
+      () async {
+        var requests = 0;
+        final h = await _Harness.create(
+          handler: (_, _) {
+            requests++;
+            return _events(_response('', calls: [_call('pending')]));
+          },
+          execute: (_, _, _) async => {
+            ...pending,
+            'operationId': 'pending-operation',
+          },
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'Run operation');
+        expect(requests, 1);
+        expect(
+          h.runtime.state.value.runFor(h.id).errorMessage,
+          'interruptedRunNeedsReview',
+        );
+      },
+    );
+  }
+
+  test('committed business data with notification delivery pending can finish normally', () async {
+    var requests = 0;
+    final h = await _Harness.create(
+      handler: (_, _) => _events(
+        requests++ == 0
+            ? _response('', calls: [_call('saved')])
+            : _response('Saved; notifications are pending.'),
+      ),
+      execute: (_, _, _) async => {
+        'status': 'committed',
+        'operationId': 'saved-business',
+        'effectsPending': true,
+        'effectStatus': 'pending',
+        'notificationStatus': 'pending',
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'Save it');
+    expect(requests, 2);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+  });
+
+  test(
+    'Stop during a pending queue save wins over late automatic scheduling',
+    () async {
+      final entered = Completer<void>();
+      final requestRelease = Completer<void>();
+      final queueSaving = Completer<void>();
+      final queueRelease = Completer<void>();
+      final h = await _Harness.create(
+        handler: (_, _) async* {
+          entered.complete();
+          await requestRelease.future;
+          yield ProviderCompleted(_response('done'));
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'first');
+      await entered.future;
+      h.storage.beforeSave = (value) async {
+        if (!queueSaving.isCompleted && value.contains('agent_pending_input')) {
+          queueSaving.complete();
+          await queueRelease.future;
+        }
+      };
+      final queued = h.runtime.queueFollowUp(h.id, 'later');
+      await queueSaving.future;
+      await h.runtime.stop(h.id);
+      queueRelease.complete();
+      await queued;
+      requestRelease.complete();
+      await send;
+      await h.runtime.waitForIdle();
+      expect(h.provider.requests, hasLength(1));
+      expect(h.runtime.pendingInputCount(h.id), 1);
+    },
+  );
+
+  test(
+    'steering cannot automatically continue past an unknown accepted outcome',
+    () async {
+      final entered = Completer<void>();
+      final resultReady = Completer<void>();
+      final h = await _Harness.create(
+        handler: (_, _) => _events(_response('', calls: [_call('uncertain')])),
+        execute: (_, _, _) async {
+          entered.complete();
+          await resultReady.future;
+          return {'status': 'outcome_unknown', 'operationId': 'verify-first'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'change something');
+      await entered.future;
+      await h.runtime.steer(h.id, 'Use a different target');
+      resultReady.complete();
+      await send;
+      await h.runtime.waitForIdle();
+      expect(h.provider.requests, hasLength(1));
+      expect(h.runtime.pendingInputCount(h.id), 1);
+      expect(
+        h.repository.find(h.id)!.messages.last.text,
+        contains('verify-first'),
+      );
+    },
+  );
+
+  test(
+    'explicit resume records missing outcomes without replaying old tools',
+    () async {
+      var executions = 0;
+      final h = await _Harness.create(
+        handler: (request, _) {
+          final unknown = jsonDecode(request.messages.last.text) as Map;
+          expect(unknown['status'], 'outcome_unknown');
+          expect(unknown['operationId'], 'old-operation');
+          expect(unknown['error']['code'], 'operationRecoveryRequired');
+          return _events(_response('Inspect the durable receipt.'));
+        },
+        execute: (_, _, _) async {
+          executions++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      await h.repository.update(
+        h.id,
+        (item) => item.copyWith(
+          runId: 'old-run',
+          status: ConversationStatus.interrupted,
+          messages: [
+            ConversationMessage(
+              id: 'old-message',
+              role: ConversationRole.assistant,
+              text: '',
+              createdAt: DateTime.utc(2026),
+              toolCalls: const [
+                ConversationToolCall(
+                  id: 'missing-result',
+                  name: 'mutation.commit',
+                  arguments: '{"operationId":"old-operation"}',
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      await h.runtime.continueConversation(h.id);
+      expect(executions, 0);
+      expect(h.provider.requests, hasLength(1));
+      final archive = ConversationArchive.decode(h.storage.source!);
+      expect(
+        archive.conversations.single.messages[1].toolCallId,
+        'missing-result',
+      );
+      expect(
+        archive.conversations.single.status,
+        ConversationStatus.interrupted,
+      );
+      expect(h.runtime.state.value.runFor(h.id).recoveryRequired, true);
+    },
+  );
+
+  test(
+    'follow-ups are durable, ordered and consumed after the current result',
+    () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final observed = <String>[];
+      final h = await _Harness.create(
+        handler: (request, _) async* {
+          final latest = request.messages
+              .lastWhere((m) => m.role == ProviderRole.user)
+              .text;
+          observed.add(latest);
+          if (observed.length == 1) {
+            entered.complete();
+            await release.future;
+          }
+          yield ProviderCompleted(_response('done-$latest'));
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'first');
+      await entered.future;
+      await h.runtime.queueFollowUp(h.id, 'second');
+      await h.runtime.queueFollowUp(h.id, 'third');
+      expect(h.runtime.pendingInputCount(h.id), 2);
+      expect(
+        ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single
+            .messages
+            .where((m) => m.role == ConversationRole.notice),
+        hasLength(2),
+      );
+      release.complete();
+      await send;
+      await h.runtime.waitForIdle();
+      expect(observed, ['first', 'second', 'third']);
+      expect(h.runtime.pendingInputCount(h.id), 0);
+      expect(h.repository.find(h.id)!.messages.map((m) => m.text), [
+        'first',
+        'done-first',
+        'second',
+        'done-second',
+        'third',
+        'done-third',
+      ]);
+    },
+  );
+
+  test(
+    'steering drains an accepted write and revokes remaining old actions',
+    () async {
+      final entered = Completer<void>();
+      final durable = Completer<void>();
+      final calls = <String>[];
+      final scopes = <String>[];
+      var requestCount = 0;
+      final h = await _Harness.create(
+        mode: AgentPermissionMode.full,
+        handler: (request, _) {
+          if (requestCount++ == 0) {
+            return _events(
+              _response('', calls: [_call('accepted'), _call('old-next')]),
+            );
+          }
+          expect(request.messages.last.text, 'Use the new target');
+          expect(
+            request.messages.any((m) => m.text.contains('saved-operation')),
+            true,
+          );
+          return _events(_response('new target considered'));
+        },
+        execute: (call, scope, _) async {
+          calls.add(call.id);
+          scopes.add(scope.id);
+          scope.checkMutation(planId: 'current', consumeApproval: true);
+          entered.complete();
+          await durable.future;
+          return {'status': 'committed', 'operationId': 'saved-operation'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'Use the old target');
+      await entered.future;
+      await h.runtime.steer(h.id, 'Use the new target');
+      expect(requestCount, 1);
+      durable.complete();
+      await send;
+      await h.runtime.waitForIdle();
+      expect(calls, ['accepted']);
+      expect(requestCount, 2);
+      expect(h.repository.find(h.id)!.runId, isNot(scopes.single));
+      final oldNext = h.repository
+          .find(h.id)!
+          .messages
+          .singleWhere((m) => m.toolCallId == 'old-next');
+      expect(jsonDecode(oldNext.text)['status'], 'not_executed');
+    },
+  );
+
+  test('stop preserves queued inputs and explicit resume consumes them after reload', () async {
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    var count = 0;
+    final h = await _Harness.create(
+      handler: (_, _) async* {
+        if (count++ == 0) {
+          entered.complete();
+          await release.future;
+        }
+        yield ProviderCompleted(_response('done'));
+      },
+    );
+    addTearDown(h.dispose);
+    final send = h.runtime.send(h.id, 'first');
+    await entered.future;
+    await h.runtime.queueFollowUp(h.id, 'later');
+    await h.runtime.stop(h.id);
+    release.complete();
+    await send;
+    await h.runtime.waitForIdle();
+    await h.repository.load();
+    expect(count, 1);
+    expect(h.runtime.pendingInputCount(h.id), 1);
+    await h.runtime.continueConversation(h.id);
+    expect(count, 2);
+    expect(h.runtime.pendingInputCount(h.id), 0);
+    expect(
+      h.repository
+          .find(h.id)!
+          .messages
+          .where((m) => m.role == ConversationRole.user)
+          .map((m) => m.text),
+      ['first', 'later'],
+    );
+  });
+
+  test(
+    'host actions work without a model connection and exclude their own drain',
+    () async {
+      final h = await _Harness.create(mode: AgentPermissionMode.full);
+      addTearDown(h.dispose);
+      h.settings = const AgentSettings(
+        enabled: true,
+        permissionMode: AgentPermissionMode.full,
+      );
+      final result = await h.runtime.runHostAction(h.id, (scope, _) async {
+        scope.checkMutation(planId: 'host-plan', consumeApproval: true);
+        await h.runtime.waitForIdle(except: scope);
+        return {'status': 'committed', 'operationId': 'host-operation'};
+      });
+      expect(result['operationId'], 'host-operation');
+      expect(h.provider.requests, isEmpty);
+      final messages = ConversationArchive.decode(h.storage.source!)
+          .conversations
+          .single
+          .messages;
+      expect(messages, hasLength(2));
+      expect(messages.first.toolCalls.single.name, 'host.action');
+      expect(messages.last.toolCallId, messages.first.toolCalls.single.id);
+      expect(jsonDecode(messages.last.text)['status'], 'committed');
+    },
+  );
+
+  test(
+    'host actions use the real ask approval and persist cancellation results',
+    () async {
+      final h = await _Harness.create();
+      addTearDown(h.dispose);
+      final action = h.runtime.runHostAction(h.id, (scope, request) async {
+        final approval = await request(_Plan('host-plan'));
+        scope.checkMutation(
+          planId: 'host-plan',
+          approval: approval,
+          consumeApproval: true,
+        );
+        return {'status': 'committed'};
+      });
+      await _waitPhase(h, AgentUiPhase.waitingApproval);
+      await h.runtime.stop(h.id);
+      final result = await action;
+      expect(result['status'], 'not_executed');
+      expect(
+        h.repository.find(h.id)!.messages.last.text,
+        contains('cancelled'),
+      );
+      expect(h.provider.requests, isEmpty);
+    },
+  );
+
+  test(
+    'shared user instructions and run budgets use the saved settings snapshot',
+    () async {
+      final h = await _Harness.create(
+        handler: (request, _) {
+          expect(
+            request.messages.first.text,
+            contains('Prefer morning appointments.'),
+          );
+          return _events(_response('', calls: [_call('budget-call')]));
+        },
+      );
+      addTearDown(h.dispose);
+      h.settings = h.settings.copyWith(
+        systemInstructions: 'Prefer morning appointments.',
+        maxModelRounds: 1,
+      );
+      await h.runtime.send(h.id, 'check the agenda');
+      expect(h.provider.requests, hasLength(1));
+      expect(
+        h.runtime.state.value.runFor(h.id).errorMessage,
+        'roundBudgetExceeded',
+      );
+      expect(
+        h.repository.find(h.id)!.messages.last.role,
+        ConversationRole.tool,
+      );
+    },
+  );
+}
+
+const _key = 'sk-runtime-fixture-key';
+ProviderToolCall _call(String id) =>
+    ProviderToolCall(id: id, name: 'events.list', arguments: '{}');
+ProviderResponse _response(
+  String text, {
+  List<ProviderToolCall> calls = const [],
+}) => ProviderResponse(
+  text: text,
+  toolCalls: calls,
+  finishReason: calls.isEmpty ? 'stop' : 'tool_calls',
+);
+Stream<ProviderEvent> _events(ProviderResponse response) =>
+    Stream.value(ProviderCompleted(response));
+Matcher _runtimeError(AgentRuntimeError code) =>
+    isA<AgentRuntimeException>().having((error) => error.code, 'code', code);
+
+Future<void> _waitPhase(_Harness harness, AgentUiPhase phase) {
+  if (harness.runtime.state.value.runFor(harness.id).phase == phase) {
+    return Future.value();
+  }
+  final ready = Completer<void>();
+  void changed() {
+    if (harness.runtime.state.value.runFor(harness.id).phase != phase) return;
+    harness.runtime.state.removeListener(changed);
+    ready.complete();
+  }
+
+  harness.runtime.state.addListener(changed);
+  return ready.future;
+}
+
+typedef _Handler = Stream<ProviderEvent> Function(
+  ProviderRequest,
+  ProviderCancellationToken?,
+);
+
+class _FakeProvider extends ProviderClient {
+  _FakeProvider(this.handler);
+  final _Handler handler;
+  final requests = <ProviderRequest>[];
+  @override
+  Stream<ProviderEvent> stream(
+    ProviderRequest request, {
+    required String apiKey,
+    ProviderCancellationToken? cancellation,
+  }) {
+    expect(apiKey, _key);
+    requests.add(request);
+    return handler(request, cancellation);
+  }
+}
+
+class _Storage extends ConversationStorage {
+  _Storage() : super.base();
+  String? source;
+  int saves = 0;
+  Object? failure;
+  Future<void> Function(String value)? beforeSave;
+  @override
+  Future<ConversationStorageLoad> load() async =>
+      ConversationStorageLoad(source: source);
+  @override
+  Future<void> save(String value, {required int revision}) async {
+    saves++;
+    if (failure != null) throw failure!;
+    await beforeSave?.call(value);
+    source = value;
+  }
+}
+
+class _Harness {
+  _Harness(
+    this.storage,
+    this.repository,
+    this.provider,
+    this.id,
+    this.settings,
+  );
+  final _Storage storage;
+  final ConversationRepository repository;
+  final _FakeProvider provider;
+  final String id;
+  AgentSettings settings;
+  late AgentRuntimeController runtime;
+  static Future<_Harness> create({
+    AgentPermissionMode mode = AgentPermissionMode.ask,
+    AgentModelProtocol protocol = AgentModelProtocol.chatCompletions,
+    _Handler? handler,
+    AgentToolExecutor? execute,
+    AgentRuntimeLimits limits = const AgentRuntimeLimits(),
+    Future<String> Function(AgentSettings)? readKey,
+    List<ToolDefinition> Function(OperationScope)? readTools,
+    void Function(OperationScope)? onRunSettled,
+    Future<Map<String, Object?>?> Function(String, String)?
+    readOperationReceipt,
+  }) async {
+    final storage = _Storage();
+    var id = 0;
+    final repository = ConversationRepository(
+      storage: storage,
+      idGenerator: () => 'id-${id++}',
+    );
+    await repository.load();
+    final conversation = await repository.create(title: 'test', mode: mode);
+    final provider = _FakeProvider(
+      handler ?? (_, _) => _events(_response('done')),
+    );
+    final harness = _Harness(
+      storage,
+      repository,
+      provider,
+      conversation.id,
+      AgentSettings(
+        enabled: true,
+        endpoint: 'https://model.example/v1',
+        model: 'fixture-model',
+        protocol: protocol,
+        permissionMode: mode,
+      ),
+    );
+    harness.runtime = AgentRuntimeController(
+      repository: repository,
+      provider: provider,
+      readSettings: () => harness.settings,
+      readApiKey: readKey ?? (_) async => _key,
+      readTools:
+          readTools ??
+          (_) => [
+            ToolDefinition(
+              name: 'events.list',
+              description: 'query',
+              parameters: {'type': 'object', 'properties': <String, Object?>{}},
+            ),
+          ],
+      executeTool:
+          execute ??
+          (_, scope, _) async {
+            scope.checkActive();
+            return {'status': 'read'};
+          },
+      onOpenSettings: () {},
+      onRunSettled: onRunSettled,
+      readOperationReceipt: readOperationReceipt,
+      limits: limits,
+      idGenerator: () => 'run-or-message-${id++}',
+    );
+    return harness;
+  }
+
+  void dispose() {
+    runtime.dispose();
+    provider.close();
+    repository.dispose();
+  }
+}
+
+class _Plan implements PreparedMutation {
+  _Plan(this.id);
+  @override
+  final String id;
+  @override
+  List<ResourceChange> get changes => [
+    ResourceChange(key: 'event.name', before: 'before', after: 'after'),
+  ];
+  @override
+  Map<String, Object?> summary() => {'planId': id, 'changeCount': 1};
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}

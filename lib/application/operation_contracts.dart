@@ -50,6 +50,7 @@ class OperationPolicy {
 
   bool get enabled => _enabled;
   AgentPermissionMode get mode => _mode;
+  int get revision => _revision;
 
   void update({bool? enabled, AgentPermissionMode? mode}) {
     final nextEnabled = enabled ?? _enabled;
