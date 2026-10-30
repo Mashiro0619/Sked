@@ -99,3 +99,9 @@ AppRuntime 持有一个 AgentApplication，手机完整页面与桌面并排/覆
 旧独立文字解析、解析设置、专用结果页和网络执行链路随新入口切换退役。网页仍先压缩校对，然后创建一次 Agent 会话并进入可见页面；直接粘贴文字使用普通会话。确定性 JSON、ICS 和节次导入入口继续使用各自领域解码。
 
 清空前先排空写入并冻结会话存储。清空成功后，即使退出回调返回也保持冻结；失败后需要显式恢复读取真实侧存储，旧内存不能自动重建文件。测试覆盖两个会话并发维护、迟到回复、关闭与恢复，原生权限和物理设备结果另验。
+
+## 能力与任务验证
+
+[验收场景](../test/agent/acceptance/shared_skill_tasks_test.dart)先装载实际共享 Skill，再通过真实 AppRuntime 工具执行每项任务，核对业务存档、平台替身读回或导出产物；默认 provider 拒绝网络。学校来源、同名课程、隐藏分类和重复事件使用固定合成资料。这些场景证明工具链可执行，真实模型是否能正确选择工具仍单独评测。
+
+[配置清单](../test/agent/acceptance/capability_inventory_test.dart)以实际 SettingsDestination、设备布局角色与学校站点字段为来源，要求新入口分类并验证全部布局角色的保存/reset。[写入口目录](../test/agent/acceptance/write_tool_coverage.dart)将实际注册工具映射到领域回归和共享提交边界；[入口测试](../test/agent/acceptance/write_tool_coverage_test.dart)拒绝未知字段并核对主库、会话、凭据、平台替身和文件产物无变化。共享权限、保存失败、取消与回执恢复由真实协调器专项覆盖，适配器独有的参数和平台失败仍在各自 suite 中验证，不以文件存在或清单登记替代执行结果。
