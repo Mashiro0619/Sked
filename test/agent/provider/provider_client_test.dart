@@ -501,6 +501,117 @@ void main() {
     expect(sent, false);
   });
 
+  testWidgets(
+    'reasoning delay before headers can complete without extending Stop',
+    (tester) async {
+      final pending = Completer<http.StreamedResponse>();
+      ProviderResponse? response;
+      Object? failure;
+      final client = ProviderClient(client: _Client((_) => pending.future));
+      final completion = client
+          .collect(request(), apiKey: '')
+          .then<void>(
+            (value) {
+              response = value;
+            },
+            onError: (Object error) {
+              failure = error;
+            },
+          );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 45));
+      expect(failure, null);
+      expect(response, null);
+      pending.complete(
+        _sse(_chat({'content': 'Done'}, finish: 'stop') + 'data: [DONE]\n\n'),
+      );
+      await tester.pump();
+      await completion;
+      expect(response!.text, 'Done');
+      expect(failure, null);
+    },
+  );
+
+  testWidgets(
+    'reasoning delay before a first frame and between frames stays bounded',
+    (tester) async {
+      final bytes = StreamController<List<int>>();
+      ProviderResponse? response;
+      Object? failure;
+      final client = ProviderClient(
+        client: _Client(
+          (_) async => http.StreamedResponse(
+            bytes.stream,
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          ),
+        ),
+      );
+      final completion = client
+          .collect(request(), apiKey: '')
+          .then<void>(
+            (value) {
+              response = value;
+            },
+            onError: (Object error) {
+              failure = error;
+            },
+          );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 45));
+      expect(failure, null);
+      bytes.add(utf8.encode(_chat({'content': 'Still thinking'})));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 45));
+      expect(failure, null);
+      bytes.add(utf8.encode(_chat({}, finish: 'stop') + 'data: [DONE]\n\n'));
+      final closed = bytes.close();
+      await tester.pump();
+      await completion;
+      await closed;
+      expect(response!.text, 'Still thinking');
+      expect(failure, null);
+    },
+  );
+
+  testWidgets(
+    'Stop aborts a slow first response immediately under default limits',
+    (tester) async {
+      final pending = Completer<http.StreamedResponse>();
+      final token = ProviderCancellationToken();
+      var aborted = false;
+      Object? failure;
+      final client = ProviderClient(
+        client: _Client((request) {
+          unawaited(
+            (request as http.AbortableRequest).abortTrigger!.then((_) {
+              aborted = true;
+            }),
+          );
+          return pending.future;
+        }),
+      );
+      final completion = client
+          .collect(request(), apiKey: '', cancellation: token)
+          .then<void>(
+            (_) => fail('A stopped request must not complete.'),
+            onError: (Object error) {
+              failure = error;
+            },
+          );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 45));
+      expect(failure, null);
+      token.cancel();
+      await tester.pump();
+      await completion;
+      expect(failure, _error(ProviderError.cancelled));
+      expect(aborted, true);
+      pending.complete(_sse(''));
+      await tester.pump();
+    },
+  );
+
   test('idle timeout cancels an open response stream', () async {
     final bytes = StreamController<List<int>>();
     var cancelled = false;

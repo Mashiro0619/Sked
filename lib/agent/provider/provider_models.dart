@@ -30,8 +30,8 @@ class ProviderRequest {
 
 class ProviderLimits {
   const ProviderLimits({
-    this.totalTimeout = const Duration(minutes: 2),
-    this.idleTimeout = const Duration(seconds: 30),
+    this.totalTimeout = const Duration(minutes: 5),
+    this.idleTimeout = const Duration(minutes: 2),
     this.maxRequestBytes = 1024 * 1024,
     this.maxResponseBytes = 8 * 1024 * 1024,
     this.maxEventBytes = 512 * 1024,
