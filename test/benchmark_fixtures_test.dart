@@ -102,6 +102,50 @@ void main() {
 
     expect(actual, expectedPerformanceFixtureChecksums);
   });
+
+  test('Agent preference defaults account for the entire dataset 7 change', () {
+    String asDataset6(String source) {
+      final app = jsonDecode(source) as Map<String, dynamic>;
+      expect(app['schemaVersion'], 5);
+      expect(app['applicationLedger'], isNull);
+      final agent = app['agentSettings'] as Map<String, dynamic>;
+      const preferences = {
+        'systemInstructions': '',
+        'maxModelRounds': 24,
+        'maxToolCalls': 128,
+        'maxTotalTokens': 100000,
+        'historyRetentionDays': 0,
+      };
+      for (final entry in preferences.entries) {
+        expect(agent.remove(entry.key), entry.value, reason: entry.key);
+      }
+      expect(agent, {
+        'enabled': false,
+        'permissionMode': 'ask',
+        'protocol': 'chatCompletions',
+        'endpoint': '',
+        'model': '',
+        'credentialRef': null,
+      });
+      // Keep the schema, original Agent fields and every workload byte. Only
+      // the five newly serialized local preferences may explain the new hash.
+      return jsonEncode(app);
+    }
+
+    expect(
+      checksumString(asDataset6(fixtures.appData.encode())),
+      'fnv1a64-utf16le:a71d5570d44903ea',
+    );
+    expect(
+      checksumString(
+        asDataset6(
+          AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+        ),
+      ),
+      'fnv1a64-utf16le:f4e6665006565eab',
+    );
+  });
+
   test(
     'schema and preference additions do not change fixture workload data',
     () {

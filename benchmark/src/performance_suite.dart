@@ -9,8 +9,8 @@ import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'benchmark_fixtures.dart';
 import 'benchmark_runner.dart';
 
-// AppData schema 5 adds local Agent state and separates portable backup data.
-// Only serialization checksums change; event, cache and sanitizer contracts do not.
+// Dataset 7 adds the five declared Agent preference defaults to local AppData.
+// Portable backup, event, cache and sanitizer contracts remain unchanged.
 const _expectedChecksums = <String, String>{
   'occurrence.1000_7d_cold': 'fnv1a64-utf16le:cf98943344242498',
   'occurrence.5000_42d_cold': 'fnv1a64-utf16le:de23b67a384a1d3e',
@@ -19,8 +19,8 @@ const _expectedChecksums = <String, String>{
   'cache.1000_churn': 'fnv1a64-utf16le:41afccfcf48cf9ee',
   'sanitizer.table_full': 'fnv1a64-utf16le:e8d76fa6544f75cd',
   'sanitizer.table_240k': 'fnv1a64-utf16le:3f7220f07decc524',
-  'app_data.5000_encode': 'fnv1a64-utf16le:a71d5570d44903ea',
-  'app_data.5000_decode_storage': 'fnv1a64-utf16le:f4e6665006565eab',
+  'app_data.5000_encode': 'fnv1a64-utf16le:400c59aa8aa32636',
+  'app_data.5000_decode_storage': 'fnv1a64-utf16le:2a92e1e31fa7a902',
   'app_backup.5000_encode': 'fnv1a64-utf16le:d3ef07ee399f46bd',
   'app_backup.5000_decode': 'fnv1a64-utf16le:a54d89150e360202',
 };

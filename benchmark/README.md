@@ -444,3 +444,19 @@ the four serialization checksums; record counts and the seven other workload
 checksums stay unchanged. The historical normalization regression also removes
 these two fields before comparing its original checksums. This is a fixture
 contract update, not a new performance measurement.
+
+## Dataset version 7: local Agent preferences
+
+The disabled Agent now serializes five local defaults: empty shared instructions,
+24 model rounds, 128 tool calls, 100,000 tokens per run, and unlimited history
+retention. Dataset version 7 updates only the two local AppData encode/decode
+checksums. The schema remains 5; portable backup checksums, the seven other
+workload checksums, and record counts remain unchanged.
+
+The regression verifies those five exact values and removes only those fields
+before requiring both dataset 6 local checksums. It retains the schema, ledger,
+original six Agent fields and complete course/event data, so a workload change
+cannot be accepted merely by replacing the expected hashes. The older schema
+normalization regression remains separate. Existing timing reports retain their
+original dataset versions; this contract update adds no performance evidence
+and does not make samples from different dataset versions directly comparable.
