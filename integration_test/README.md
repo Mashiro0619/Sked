@@ -1,5 +1,18 @@
 # 原生场景与截图采集
 
+## Agent 原生页面冒烟
+
+`agent_platform_smoke_test.dart` 在原生 Flutter 界面运行真实 Agent 页面、运行时和工具注册表。使用专用模拟器或测试设备，先以 `flutter devices` 确认目标，再运行：
+
+```powershell
+flutter test --no-pub -d <device-id> --reporter expanded `
+  integration_test/agent_platform_smoke_test.dart
+```
+
+入口核对发送、通过实际询问按钮批准后保存一条日程及提醒配置、主库操作回执、关闭/重开页面与切换会话后的独立草稿，以及停止后取消 provider、保持业务数据和显示继续入口。测试等待运行、存储和按钮状态，不用固定延时推断保存完成。
+
+存储、凭据、模型传输和原生副作用网关均为合成实现；文本使用测试键盘，点击由框架注入。这只证明该原生 Flutter 页面上的业务闭环，不证明真实输入法、系统手势、读屏、进程重启持久化、真实模型或系统通知投递。Android 模拟器与实体设备结果分别记录。
+
 ## Agent 浏览器协议与存储
 
 `agent_web_probe.dart` 是独立浏览器验收入口，通过正常 Flutter Web 构建注册真实插件。它只接受 localhost、127.0.0.1 和映射到回环地址的 `sked-insecure.test`，请求使用固定合成凭据；不要在正式站点或个人浏览器配置中运行。
