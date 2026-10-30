@@ -12,6 +12,14 @@ const applicationLedgerMaxReceipts = 128;
 const applicationLedgerMaxBytes = 4 * 1024 * 1024;
 const _maxSafeSequence = 9007199254740991;
 
+class ApplicationLedgerRecoveryRequiredException implements Exception {
+  const ApplicationLedgerRecoveryRequiredException();
+
+  @override
+  String toString() =>
+      'Application ledger capacity requires recovery of an unresolved external operation.';
+}
+
 class OperationReceipt {
   factory OperationReceipt({
     required String operationId,
@@ -200,12 +208,39 @@ class ApplicationLedger {
     final next = [...receipts, receipt];
     while (next.length > applicationLedgerMaxReceipts ||
         _receiptsByteLength(next) > applicationLedgerMaxBytes) {
+      final oldest = next.first.result;
+      if (oldest['kind'] == 'external' &&
+          (oldest['effectStatus'] == 'pending' ||
+              oldest['effectStatus'] == 'unknown')) {
+        throw const ApplicationLedgerRecoveryRequiredException();
+      }
       next.removeAt(0);
     }
     return ApplicationLedger(
       generation: generation,
       nextSequence: nextSequence + 1,
       receipts: next,
+    );
+  }
+
+  /// Finalizes an existing operation without allocating another sequence or
+  /// changing its identity. Admission limits still apply to the whole ledger.
+  ApplicationLedger updateReceipt(OperationReceipt receipt) {
+    final index = receipts.indexWhere(
+      (existing) => existing.operationId == receipt.operationId,
+    );
+    if (index < 0 ||
+        receipts[index].sequence != receipt.sequence ||
+        receipts[index].commandDigest != receipt.commandDigest) {
+      throw const FormatException('Operation receipt identity cannot change.');
+    }
+    return ApplicationLedger(
+      generation: generation,
+      nextSequence: nextSequence,
+      receipts: [
+        for (var i = 0; i < receipts.length; i++)
+          if (i == index) receipt else receipts[i],
+      ],
     );
   }
 

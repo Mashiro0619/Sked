@@ -20,6 +20,79 @@ OperationReceipt _receipt(
 );
 
 void main() {
+  test('receipt updates preserve identity, order and next sequence', () {
+    final ledger = ApplicationLedger(generation: _generation)
+        .append(_receipt(1))
+        .append(_receipt(2));
+    final updated = _receipt(1, result: {'effectStatus': 'applied'});
+    final finalized = ledger.updateReceipt(updated);
+    expect(finalized.generation, ledger.generation);
+    expect(finalized.nextSequence, ledger.nextSequence);
+    expect(finalized.receipts, [updated, ledger.receipts.last]);
+    expect(ledger.receipts.first.result, {'changed': true});
+    expect(() => ledger.updateReceipt(_receipt(3)), throwsFormatException);
+    expect(
+      () => ledger.updateReceipt(_receipt(2, id: 'op-1')),
+      throwsFormatException,
+    );
+    final changedDigest = OperationReceipt.fromJson({
+      ...updated.toJson(),
+      'commandDigest': 'b' * 64,
+    });
+    expect(() => ledger.updateReceipt(changedDigest), throwsFormatException);
+  });
+
+  for (final state in ['pending', 'unknown']) {
+    test(
+      'unresolved external $state receipt blocks capacity eviction until recovered',
+      () {
+        var ledger = ApplicationLedger(generation: _generation).append(
+          _receipt(1, result: {'kind': 'external', 'effectStatus': state}),
+        );
+        for (var i = 2; i <= 128; i++) {
+          ledger = ledger.append(_receipt(i));
+        }
+        expect(
+          () => ledger.append(_receipt(129)),
+          throwsA(isA<ApplicationLedgerRecoveryRequiredException>()),
+        );
+        final recovered = ledger.updateReceipt(
+          _receipt(1, result: {'kind': 'external', 'effectStatus': 'applied'}),
+        );
+        final appended = recovered.append(_receipt(129));
+        expect(appended.receipts.first.sequence, 2);
+        expect(appended.nextSequence, 130);
+        expect(ledger.receipts.first.result['effectStatus'], state);
+      },
+    );
+  }
+
+  test('byte budget cannot evict an unresolved external receipt', () {
+    var ledger = ApplicationLedger(generation: _generation).append(
+      _receipt(1, result: {'kind': 'external', 'effectStatus': 'pending'}),
+    );
+    final payload = 'x' * (900 * 1024);
+    for (var i = 2; i <= 5; i++) {
+      ledger = ledger.append(_receipt(i, result: {'payload': payload}));
+    }
+    expect(
+      () => ledger.append(_receipt(6, result: {'payload': payload})),
+      throwsA(isA<ApplicationLedgerRecoveryRequiredException>()),
+    );
+    expect(
+      () => ledger.updateReceipt(_receipt(1, result: {'payload': payload})),
+      throwsFormatException,
+    );
+    final recovered = ledger.updateReceipt(
+      _receipt(1, result: {'kind': 'external', 'effectStatus': 'failed'}),
+    );
+    final appended = recovered.append(
+      _receipt(6, result: {'payload': payload}),
+    );
+    expect(appended.receipts.first.sequence, 3);
+    expect(appended.nextSequence, 7);
+  });
+
   test('receipt history also obeys a byte budget without truncating retained records', () {
     final payload = 'x' * (900 * 1024);
     var ledger = ApplicationLedger(generation: _generation);
