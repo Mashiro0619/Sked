@@ -196,7 +196,7 @@ P3 仅是可用纵切，UI 和文档必须标明尚未覆盖的工具。
 - [ ] 把凭据更换、端点变化、HTTP 发送范围与权限政策接通；通过安全输入 handle 管理原始密钥。
 - [ ] 提取通知配置 workflow：保存、必要系统申请、状态读回和重排分别返回；处理 unsupported/unknown/denied。
 - [ ] 为通知/导出副作用返回关联具体数据世代和提交版本的 EffectTicket，区分 pending/applied/superseded/failed/unknown，不读取全局 lastError 代替某次操作结果。
-- [ ] 接入文件/文本 JSON、ICS 和节次导入导出，保留大小与模型条数预算、跳过/降级/时区报告和目标确认语义。
+- [ ] 接入文件/文本 JSON、ICS 和节次导入导出，保留大小与模型条数预算、跳过/降级/时区报告和目标确认语义。宿主资源候选的范围校验与完整顺序差异已实现；文件工具和系统文件选择继续接入。
 - [ ] 拆分 SchoolHtmlImportPage：网页压缩/校对能力保留为来源准备页；删除独立文字 AI 解析入口，文字由普通 Agent 会话处理。保留确定性 JSON 文本/文件、ICS 和节次直导。
 - [ ] 来源 SourceAsset、解析 DecodedCandidate 与 PreparedMutation 分离：纯材料解析可独立进行；应用计划才绑定实时业务基线和写权限，不将只读分析绑在原页面或 mutationAllowed 上。
 - [ ] 网页准备完成后按 handoffId 创建一次新会话和解析请求，携带不可变来源附件、截断状态和目标上下文，自动加载 `import-school-web`；无需再手动粘贴。未开启/未配置时保留来源并进入统一设置。

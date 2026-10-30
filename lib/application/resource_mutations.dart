@@ -22,6 +22,72 @@ class ResourceMutationCompiler {
   static const maxInputBytes = 1024 * 1024;
   static const _service = GeneralCalendarService();
 
+  /// Describes a candidate produced by an existing deterministic import codec.
+  /// It may change domain resources and their supported auxiliary state, but
+  /// cannot smuggle unrelated settings or operation-ledger changes into a plan.
+  MutationDraft diffResources(AppData base, AppData candidate) {
+    final resourceCandidate = base.copyWith(
+      studentMode: candidate.studentMode,
+      generalMode: candidate.generalMode,
+    );
+    if (!_same(resourceCandidate.toJson(), candidate.toJson())) {
+      throw const OperationProblem(
+        OperationErrorCode.conflict,
+        'A resource candidate cannot change application settings.',
+      );
+    }
+    _validateGeneralIdentities(base.generalMode);
+    _validateStudentIdentities(base.studentMode);
+    _validateGeneralIdentities(candidate.generalMode);
+    _validateStudentIdentities(candidate.studentMode);
+    _assertGeneralSettingsPreserved(base.generalMode, candidate.generalMode);
+    _assertStudentSettingsPreserved(base.studentMode, candidate.studentMode);
+    void preserveOrder(Iterable<String> before, Iterable<String> after) {
+      final beforeIds = before.toList(), afterIds = after.toList();
+      final shared = beforeIds.toSet().intersection(afterIds.toSet());
+      if (!_same(
+        beforeIds.where(shared.contains).toList(),
+        afterIds.where(shared.contains).toList(),
+      )) {
+        throw const OperationProblem(
+          OperationErrorCode.conflict,
+          'An imported candidate cannot reorder existing resource containers.',
+        );
+      }
+    }
+
+    preserveOrder(
+      base.generalMode.schedules.map((c) => c.id),
+      candidate.generalMode.schedules.map((c) => c.id),
+    );
+    preserveOrder(
+      base.studentMode.timetables.map((t) => t.id),
+      candidate.studentMode.timetables.map((t) => t.id),
+    );
+    preserveOrder(
+      base.studentMode.periodTimeSets.map((s) => s.id),
+      candidate.studentMode.periodTimeSets.map((s) => s.id),
+    );
+    final changes = [
+      // Imported owners preserve full child order in their reverse receipt,
+      // including replacement files whose metadata stayed the same.
+      ..._diffGeneral(
+        base.generalMode,
+        candidate.generalMode,
+        candidate.generalMode.schedules.map((c) => c.id).toSet(),
+      ),
+      ..._diffStudent(
+        base.studentMode,
+        candidate.studentMode,
+        candidate.studentMode.timetables.map((t) => t.id).toSet(),
+      ),
+    ];
+    return MutationDraft(
+      candidate: changes.isEmpty ? base : candidate,
+      changes: changes,
+    );
+  }
+
   MutationDraft compile(
     AppData base,
     Iterable<ResourceMutation> operations, {

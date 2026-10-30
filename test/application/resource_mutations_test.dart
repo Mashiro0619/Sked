@@ -16,6 +16,56 @@ Matcher problem(OperationErrorCode code, [String? field]) =>
         );
 
 void main() {
+  test('resource import differences preserve complete owner child order', () {
+    final base = fixture(events: [event('a'), event('b')]);
+    final calendar = base.generalMode.schedules.first;
+    final candidate = base.copyWith(
+      generalMode: base.generalMode.copyWith(
+        schedules: [
+          calendar.copyWith(events: calendar.events.reversed.toList()),
+          ...base.generalMode.schedules.skip(1),
+        ],
+      ),
+    );
+    final draft = const ResourceMutationCompiler().diffResources(
+      base,
+      candidate,
+    );
+    expect(
+      draft.changes.single.ref,
+      const ResourceRef(kind: ResourceKind.calendar, id: 'active'),
+    );
+    expect(draft.changes.single.before, calendar.toJson());
+    expect(
+      draft.changes.single.after,
+      candidate.generalMode.schedules.first.toJson(),
+    );
+    expect(draft.candidate.toJson(), candidate.toJson());
+  });
+
+  test(
+    'resource import differences cannot carry settings or container reordering',
+    () {
+      final base = fixture();
+      for (final candidate in [
+        base.copyWith(localeCode: 'zh'),
+        base.copyWith(
+          generalMode: base.generalMode.copyWith(selectedDateIso: '2026-10-06'),
+        ),
+        base.copyWith(
+          generalMode: base.generalMode.copyWith(
+            schedules: base.generalMode.schedules.reversed.toList(),
+          ),
+        ),
+      ]) {
+        expect(
+          () => const ResourceMutationCompiler().diffResources(base, candidate),
+          throwsA(problem(OperationErrorCode.conflict)),
+        );
+      }
+    },
+  );
+
   test(
     'creates an event in a hidden disabled owner without changing selection',
     () {
