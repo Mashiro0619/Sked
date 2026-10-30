@@ -1,6 +1,6 @@
 # 全软件 Agent 架构提案
 
-状态：研究与设计提案，尚未实现。源码研究日期：2026-10-29；产品范围修订：2026-10-30。源码基线：`ea784f3a16e5d4a23aedae410544492fb6fa0f6f`（Sked 2.3.0）。本文中的新类型、工具名和存储结构均为拟议契约，不代表当前 API。
+状态：按实施计划逐项实现中。源码研究日期：2026-10-29；产品范围修订：2026-10-30。源码研究基线：`ea784f3a16e5d4a23aedae410544492fb6fa0f6f`（Sked 2.3.0）。查询、严格主库命令、持久回执及会话底座已经落地；尚未完成的工具、界面与平台路径仍按计划验收，不能把设计覆盖视为产品完成。
 
 相关文档：[能力全集](AGENT_CAPABILITIES.md)、[数据与应用重构](AGENT_DATA_REFACTOR.md)、[共享 Skills](AGENT_SKILLS.md)、[开源 harness 研究](AGENT_HARNESS_RESEARCH.md)、[实施计划](AGENT_IMPLEMENTATION_PLAN.md)。当前已发布行为仍见[使用逻辑](USAGE_LOGIC.md)、[可靠性约束](RELIABILITY_BASELINE.md)和[工作台规范](ADAPTIVE_WORKSPACES.md)。
 
@@ -231,6 +231,8 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 运行中补充消息区分：当前下一安全步骤生效的 steering，和当前运行结束后开始的 follow-up。变更执行目标前作废尚未提交的旧计划。排队消息与执行检查点持久化，UI 重建不会让同一消息执行两次。
 
 ### 7.3 Provider 可替换
+
+已实现的 Dart Provider 适配层支持 Chat Completions 和 Responses 的 JSON/SSE 响应，聚合完整工具参数后才向宿主交付；Responses 保留续接所需的原始 assistant items。应用工具名通过可逆编码适配线路名称。请求、响应、事件、工具和 token 均有预算；取消会中止 HTTP，请求不自动重放，重定向不会携带凭据继续发送。API Key 只作为单次调用参数进入 Authorization，不进入工具、消息或异常正文。协议回归使用替身 HTTP 响应验证，不代表真实服务商或原生设备联调已通过。
 
 第一批协议为 OpenAI-compatible Chat Completions 和 Responses；用适配器屏蔽请求、流式工具参数、tool result、usage、错误及取消差异。后续增加 Anthropic 原生协议或本地模型端点时，沿用同一运行事件和工具契约。
 
