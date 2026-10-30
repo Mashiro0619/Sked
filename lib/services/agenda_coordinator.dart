@@ -12,6 +12,7 @@ import '../controllers/settings_view_state.dart';
 import 'agenda_action_router.dart';
 import 'notification_occurrence_resolver.dart';
 import 'agenda_notification_service.dart';
+import 'agenda_effect_ticket.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_projection_service.dart';
 import 'android_productivity_bridge.dart';
@@ -60,6 +61,7 @@ class AgendaCoordinator {
   final AndroidProductivityBridge _productivityBridge;
   final DateTime Function() _clock;
   final Duration startupTimeout;
+  final _effects = AgendaEffectTracker();
 
   /// Receives errors without allowing a platform integration failure to take
   /// down the application shell. The last successful notification plan remains
@@ -70,6 +72,7 @@ class AgendaCoordinator {
   StreamSubscription<String>? _intentSubscription;
   Future<void>? _startOperation;
   Future<void>? _reconcileOperation;
+  Future<void>? _commitDrain;
   Timer? _readinessTimeout;
   void Function()? _removeReadinessListeners;
   final Completer<void> _disposeSignal = Completer<void>();
@@ -100,6 +103,21 @@ class AgendaCoordinator {
   /// constructing another plugin-backed service. That keeps callbacks,
   /// pending-plan ownership, and runtime diagnostics in one place.
   AgendaNotificationService get notificationService => _notificationService;
+
+  /// Observations are tied to the commit that requested projection, rather
+  /// than whichever reconciliation happened most recently.
+  AgendaEffectTicket? effectForRevision(int revision) =>
+      _effects.forRevision(revision);
+
+  Map<String, Object?>? effectForOperation(String operationId) =>
+      _effects.forOperation(operationId);
+
+  /// Waits for already observed commits and queued projections. Future retry
+  /// timers and OS delivery are separate from this completion signal.
+  Future<void> waitForPendingProjections() async {
+    await _commitDrain;
+    await _reconcileOperation;
+  }
 
   /// Starts listeners and performs one initial projection after application data
   /// has loaded. Calling this method more than once is harmless.
@@ -196,6 +214,7 @@ class AgendaCoordinator {
       await _awaitReadiness();
       if (_disposed) return;
       _started = true;
+      _effects.seed(_session.committedData);
       _commitSubscription = _session.commits.listen(_onCommit);
       if (_productivityBridge.isSupported) {
         _intentSubscription = _productivityBridge.agendaIntents.listen(
@@ -277,19 +296,38 @@ class AgendaCoordinator {
     _AgendaProjectionWork work, {
     bool isRetry = false,
   }) async {
-    if (_disposed) return;
+    if (_disposed) {
+      _effects.complete(work.revision, AgendaEffectState.unknown);
+      return;
+    }
+    if (isRetry) _effects.complete(work.revision, AgendaEffectState.pending);
     try {
       await _enqueueReconcile(
         () => withAgendaRuntimeMutationLock(() async {
           bool mayProject() =>
               !_disposed && work.epoch == _projectionEpoch && _canProjectData;
-          if (!mayProject()) return;
+          bool abandonIfUnavailable() {
+            if (mayProject()) return false;
+            _effects.complete(
+              work.revision,
+              work.epoch == _projectionEpoch
+                  ? AgendaEffectState.unknown
+                  : AgendaEffectState.superseded,
+            );
+            return true;
+          }
+
+          if (abandonIfUnavailable()) return;
           if (work.activateFence) {
             await _notificationService.activateProjectionAfterDurableData();
-            if (!mayProject()) return;
+            if (abandonIfUnavailable()) return;
           }
           final fence = await _notificationService.readProjectionFence();
-          if (fence.blocked || !mayProject()) return;
+          if (abandonIfUnavailable()) return;
+          if (fence.blocked) {
+            _effects.complete(work.revision, AgendaEffectState.unknown);
+            return;
+          }
           final committed = _session.committedData;
           final snapshot = work.data.sameWorkspaceAvailability(committed)
               ? work.data
@@ -302,8 +340,9 @@ class AgendaCoordinator {
             onPayload: _onNotificationTap,
             onAction: _onNotificationAction,
           );
-          if (!mayProject() ||
-              !(await _notificationService.isProjectionFenceCurrent(fence))) {
+          if (abandonIfUnavailable()) return;
+          if (!(await _notificationService.isProjectionFenceCurrent(fence))) {
+            _effects.complete(work.revision, AgendaEffectState.superseded);
             return;
           }
           if (_productivityBridge.isSupported) {
@@ -311,12 +350,39 @@ class AgendaCoordinator {
               status.nextRenewalAt,
             );
           }
-          if (!mayProject()) return;
+          if (abandonIfUnavailable()) return;
           _lastPublishedRevision = work.revision ?? _lastPublishedRevision;
+          final effectState = !_notificationService.isSupported
+              ? AgendaEffectState.unsupported
+              : switch (status.coverage) {
+                  AgendaNotificationCoverage.blocked =>
+                    AgendaEffectState.blocked,
+                  AgendaNotificationCoverage.failed => AgendaEffectState.failed,
+                  _ =>
+                    status.healthy
+                        ? AgendaEffectState.applied
+                        : AgendaEffectState.unknown,
+                };
+          _effects.complete(
+            work.revision,
+            effectState,
+            details: {
+              'coverage': status.coverage.name,
+              'notificationsEnabled': status.notificationsEnabled,
+              'exactAlarmsAllowed': status.exactAlarmsAllowed,
+              'directScheduledCount': status.directScheduledCount,
+              if (effectState == AgendaEffectState.applied)
+                'appliedRevision': work.revision,
+            },
+          );
           _clearNotificationRetry();
         }),
       );
     } catch (error, stackTrace) {
+      _effects.complete(
+        work.revision,
+        _disposed ? AgendaEffectState.unknown : AgendaEffectState.failed,
+      );
       if (_disposed) return;
       onError?.call(error, stackTrace);
       if (!isRetry && work.epoch == _projectionEpoch) {
@@ -421,6 +487,7 @@ class AgendaCoordinator {
   Future<void> clearRuntime() async {
     if (_disposed) return;
     _projectionEpoch += 1;
+    _effects.supersedePending();
     _clearNotificationRetry();
     // Drop unconsumed commits immediately. A commit already being drained is
     // still harmless because reconcileNow checks the data-clear gate.
@@ -459,17 +526,38 @@ class AgendaCoordinator {
               source.runtimeType == StudentAgendaSource ||
               source.runtimeType == GeneralAgendaSource,
         );
-    if (!commit.affectsAgenda && builtInSources) return;
+    final requiresProjection = commit.affectsAgenda || !builtInSources;
+    if (!requiresProjection) {
+      _effects.observe(
+        commit,
+        projectionEpoch: _projectionEpoch,
+        requiresProjection: false,
+      );
+      return;
+    }
     _projectionEpoch += 1;
+    _effects.supersedePending();
+    _effects.observe(
+      commit,
+      projectionEpoch: _projectionEpoch,
+      requiresProjection: true,
+    );
     _clearNotificationRetry();
     _pendingCommit = commit;
     if (_reconcileQueued) return;
     _reconcileQueued = true;
+    final drain = Completer<void>();
+    _commitDrain = drain.future;
     scheduleMicrotask(() {
       unawaited(
-        _drainCommits().catchError((Object error, StackTrace stackTrace) {
-          onError?.call(error, stackTrace);
-        }),
+        _drainCommits()
+            .catchError((Object error, StackTrace stackTrace) {
+              onError?.call(error, stackTrace);
+            })
+            .whenComplete(() {
+              drain.complete();
+              if (identical(_commitDrain, drain.future)) _commitDrain = null;
+            }),
       );
     });
   }
@@ -584,6 +672,7 @@ class AgendaCoordinator {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _effects.close();
     _notificationService.committedDataReader = null;
     _readinessTimeout?.cancel();
     _readinessTimeout = null;

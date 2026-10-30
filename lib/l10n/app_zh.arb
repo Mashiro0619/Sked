@@ -2294,6 +2294,8 @@
   "@schoolWebAgentHandoff": {},
   "agentChangesSaved": "更改已保存",
   "@agentChangesSaved": {},
+  "agentNotificationEffect": "{state, select, pending{正在等待提醒排程。} applied{提醒排程已更新。} superseded{此提醒计划已被较新的修改替代。} failed{提醒排程失败，应用数据已保存。} blocked{设备权限或通知设置阻止了提醒排程。} unsupported{当前平台不支持提醒排程。} notRequired{此次修改无需重排提醒。} other{提醒排程结果待核对。}}",
+  "@agentNotificationEffect": {"placeholders": {"state": {"type": "String"}}},
   "agentActionApplied": "操作已完成",
   "@agentActionApplied": {},
   "agentActionUncertain": "需要核对操作结果",

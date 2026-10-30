@@ -3258,6 +3258,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentChangesSaved => '更改已保存';
 
   @override
+  String agentNotificationEffect(String state) {
+    String _temp0 = intl.Intl.selectLogic(state, {
+      'pending': '正在等待提醒排程。',
+      'applied': '提醒排程已更新。',
+      'superseded': '此提醒计划已被较新的修改替代。',
+      'failed': '提醒排程失败，应用数据已保存。',
+      'blocked': '设备权限或通知设置阻止了提醒排程。',
+      'unsupported': '当前平台不支持提醒排程。',
+      'notRequired': '此次修改无需重排提醒。',
+      'other': '提醒排程结果待核对。',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get agentActionApplied => '操作已完成';
 
   @override
@@ -6676,6 +6691,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentChangesSaved => '變更已儲存';
+
+  @override
+  String agentNotificationEffect(String state) {
+    String _temp0 = intl.Intl.selectLogic(state, {
+      'pending': '正在等待提醒排程。',
+      'applied': '提醒排程已更新。',
+      'superseded': '此提醒計畫已被較新的修改取代。',
+      'failed': '提醒排程失敗，應用程式資料已儲存。',
+      'blocked': '裝置權限或通知設定阻止了提醒排程。',
+      'unsupported': '目前平台不支援提醒排程。',
+      'notRequired': '此次修改無需重新排程提醒。',
+      'other': '提醒排程結果待確認。',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get agentActionApplied => '操作已完成';

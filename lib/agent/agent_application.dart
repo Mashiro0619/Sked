@@ -112,8 +112,9 @@ class AgentApplication extends ChangeNotifier {
         final receipt = toolName == 'mutation.commit'
             ? mutations.status(operationId)
             : external.status(operationId);
-        return receipt?.result ??
-            {'status': 'notRecorded', 'operationId': operationId};
+        return receipt == null
+            ? {'status': 'notRecorded', 'operationId': operationId}
+            : tools.describeCommitResult(receipt.result);
       },
       onOpenSettings: () => onOpenSettings?.call(),
       readMaintenance: () => maintenance.isReserved || !_session.canWrite,

@@ -98,4 +98,23 @@ void main() {
     expect(AgentOperationCard.parse('Everything was saved.'), isNull);
     expect(AgentOperationCard.parse('{"text":"Saved"}'), isNull);
   });
+
+  testWidgets('pending reminders do not hide a confirmed business save', (
+    tester,
+  ) async {
+    await mountAgentUi(
+      tester,
+      const AgentOperationCard(
+        receipt: {
+          'status': 'committed',
+          'operationId': 'data/1/action',
+          'changeCount': 1,
+          'notificationEffect': {'state': 'pending'},
+        },
+      ),
+    );
+    expect(find.text('Changes saved'), findsOneWidget);
+    expect(find.text('Reminder scheduling is pending.'), findsOneWidget);
+    expect(find.text('Result needs checking'), findsNothing);
+  });
 }

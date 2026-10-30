@@ -3469,6 +3469,22 @@ class AppLocalizationsHi extends AppLocalizations {
   String get agentChangesSaved => 'Changes saved';
 
   @override
+  String agentNotificationEffect(String state) {
+    String _temp0 = intl.Intl.selectLogic(state, {
+      'pending': 'Reminder scheduling is pending.',
+      'applied': 'The reminder schedule was updated.',
+      'superseded': 'A newer change replaced this reminder plan.',
+      'failed': 'Reminder scheduling failed. Your changes are saved.',
+      'blocked':
+          'Device permissions or notification settings blocked scheduling.',
+      'unsupported': 'Reminder scheduling is unavailable on this platform.',
+      'notRequired': 'This change does not require rescheduling reminders.',
+      'other': 'The reminder scheduling result needs checking.',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get agentActionApplied => 'Action completed';
 
   @override

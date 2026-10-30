@@ -140,6 +140,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     _boundLayout = layout;
     _boundDeveloperUi = developerUi;
     _agentHostOwners[application] = this;
+    application.tools.readNotificationEffect = agenda?.effectForOperation;
     application.controlTools.bindCredentialInput((endpoint) async {
       if (!mounted) return null;
       final key = await requestAgentCredential(context, endpoint);
@@ -242,6 +243,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     final previous = _boundAgent;
     if (previous != null && identical(_agentHostOwners[previous], this)) {
       previous.platformTools.bindServices();
+      previous.tools.readNotificationEffect = null;
       previous.workflowTools.bindServices();
       previous.conversationTools.bindServices();
       previous.controlTools.bindCredentialInput(null);

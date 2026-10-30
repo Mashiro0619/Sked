@@ -89,6 +89,11 @@ class AgentOperationCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(l.agentChangeCount(count)),
               ],
+              if (receipt['notificationEffect'] case final Map effect)
+                if (effect['state'] != 'notRequired') ...[
+                  const SizedBox(height: 6),
+                  Text(l.agentNotificationEffect('${effect['state']}')),
+                ],
               for (final change in changes) ...[
                 const SizedBox(height: 6),
                 Row(

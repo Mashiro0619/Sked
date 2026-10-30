@@ -32,7 +32,7 @@
 
 会话存储 v2 按运行和请求身份保存实际用量、工具尝试及结果，兼容读取 v1；旧应用拒绝读取新格式，避免写回时丢失记录。模型请求发送前先保存 pending，收到结果后将回复与用量一起保存；重复 usage 流事件覆盖同一请求，不重复累加。中断、取消或重启未取得结果时保留 unknown；缺失缓存/推理用量为 null，不能报告为零。显式继续创建关联旧运行的新记录，当前实现没有自动模型重试。
 
-conversation.get、run.status 和会话导出提供已记录运行的统计；历史 v1 会话没有过去的用量证据。工具尝试区分未开始、完成、失败和未知，费用没有可信单价时保持 unknown。记录沿用会话保留、删除和大小上限，不进入正常模型上下文或完整业务备份。相关恢复与迁移见[用量存储回归](../test/agent/conversations/conversation_usage_test.dart)。
+conversation.get、conversations.get、runs.status 和会话导出提供已记录运行的统计；历史 v1 会话没有过去的用量证据。工具尝试区分未开始、完成、失败和未知，费用没有可信单价时保持 unknown。记录沿用会话保留、删除和大小上限，不进入正常模型上下文或完整业务备份。相关恢复与迁移见[用量存储回归](../test/agent/conversations/conversation_usage_test.dart)。
 
 实现与回归：[运行控制器](../lib/agent/runtime/agent_runtime_controller.dart)、[上下文](../lib/agent/runtime/conversation_context.dart)、[运行回归](../test/agent/runtime/agent_runtime_controller_test.dart)、[恢复回归](../test/agent/runtime/operation_recovery_test.dart)。
 
@@ -65,6 +65,10 @@ conversation.get、run.status 和会话导出提供已记录运行的统计；�
 恢复测试分别验证便携备份和本机 journal：便携文件排除 Agent 本机配置与账本，journal 使用恢复专用编码保留这些状态，两者均不得包含密钥。每次恢复采用独立数据世代并发布 ledger 变更；学校站点保留自身格式版本，不能跟随主库版本升级。
 
 ## 设备、站点和系统动作
+
+主库提交和通知效果分别报告。现有 AgendaCoordinator 为观察到的每次持久提交生成通知票据，绑定数据世代、提交 revision、agenda 版本和投影 epoch；操作查询另携带持久 operationId 与 sequence。排程等待中为 pending，较新提交替代尚未完成的工作时为 superseded；完成、权限阻断、失败、不支持和无需重排分别报告。状态取自该次投影返回值，不借用全局 lastError；已保存数据始终保持 committed。
+
+这些通知观察最多保留 256 次，属于当前协调器实例。重启、未绑定宿主或记录已淘汰时，持久业务回执仍可核对，通知效果返回 unknown，不重发通知来猜测旧结果。applied 仅说明排程已更新，不表示系统实际投递。界面在“修改已保存”之下单独显示提醒排程结果，见[提交效果回归](../test/services/agenda_commit_effect_test.dart)与[操作卡](../test/agent/ui/agent_operation_card_test.dart)。
 
 外部适配器共用先记录计划、执行并读回的协调器。设备布局与偏好写入等待实际 flush；窗口、通知、系统设置入口按平台能力返回支持情况。打开自启动设置页只证明入口已打开，无法观测授权时保留 unknown。未绑定应用服务或平台不支持时返回明确错误。
 

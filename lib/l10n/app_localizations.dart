@@ -6198,6 +6198,12 @@ abstract class AppLocalizations {
   /// **'Changes saved'**
   String get agentChangesSaved;
 
+  /// No description provided for @agentNotificationEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'{state, select, pending{Reminder scheduling is pending.} applied{The reminder schedule was updated.} superseded{A newer change replaced this reminder plan.} failed{Reminder scheduling failed. Your changes are saved.} blocked{Device permissions or notification settings blocked scheduling.} unsupported{Reminder scheduling is unavailable on this platform.} notRequired{This change does not require rescheduling reminders.} other{The reminder scheduling result needs checking.}}'**
+  String agentNotificationEffect(String state);
+
   /// No description provided for @agentActionApplied.
   ///
   /// In en, this message translates to:

@@ -122,6 +122,7 @@ const commonEnglishFallbacks = <String>{
   'schoolWebAgentReviewHint',
   'schoolWebAgentHandoff',
   'agentChangesSaved',
+  'agentNotificationEffect',
   'agentActionApplied',
   'agentActionUncertain',
   'agentPlanReady',

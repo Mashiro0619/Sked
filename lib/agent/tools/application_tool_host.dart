@@ -50,6 +50,31 @@ class ApplicationToolHost {
   final _selections = ResourceSelectionRegistry();
   AppData? _querySnapshot;
   ResourceQueries? _reader;
+  Map<String, Object?>? Function(String operationId)? readNotificationEffect;
+
+  /// The durable save remains committed even when a platform projection is
+  /// pending, unavailable, or was superseded by another commit.
+  Map<String, Object?> describeCommitResult(Map<String, Object?> result) {
+    final operationId = result['operationId'];
+    if (result['status'] != 'committed' ||
+        result['kind'] == 'external' ||
+        operationId is! String) {
+      return result;
+    }
+    return {
+      ...result,
+      'notificationEffect': {
+        'id': '$operationId/notifications',
+        'operationId': operationId,
+        'kind': 'notifications',
+        'generation': result['generation'],
+        'commitSequence': result['sequence'],
+        'state': 'unknown',
+        'deliveryObserved': false,
+        ...?readNotificationEffect?.call(operationId),
+      },
+    };
+  }
 
   static const maxResultBytes = 64 * 1024;
   static const _bootstrap = {
@@ -761,7 +786,7 @@ class ApplicationToolHost {
           scope: scope,
           approval: approval,
         );
-        return _boundedCommit(committed.toJson());
+        return _boundedCommit(describeCommitResult(committed.toJson()));
       },
       required: ['planId'],
     );
@@ -785,7 +810,7 @@ class ApplicationToolHost {
             limit = _limit(args);
         return boundedToolReceipt(
           {
-            ...receipt.result,
+            ...describeCommitResult(receipt.result),
             'changes': all.skip(offset).take(limit).toList(),
             'hasMore': offset + limit < all.length,
             'completedAt': receipt.completedAtIso,
