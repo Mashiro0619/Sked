@@ -142,6 +142,11 @@ void main() {
       SettingEdit.reset('agent.historyRetentionDays'),
     ]);
     expect(reset.candidate.agentSettings, before.agentSettings);
+    final enabled = registry.prepare(before, const [
+      SettingEdit.set('agent.enabled', true),
+    ]);
+    expect(enabled.changes.single.key, 'agent.enabled');
+    expect(enabled.candidate.agentSettings.enabled, isTrue);
     expect(
       () => registry.prepare(before, const [
         SettingEdit.set('agent.historyRetentionDays', 2),
@@ -625,6 +630,7 @@ void main() {
       'app.privacyPolicyAcceptedAtIso',
       'app.availableUpdateVersion',
       'platform.notifications',
+      'legacy.parser.customBaseUrl',
     ]) {
       expect(
         () => registry.prepare(data, [SettingEdit.reset(key)]),
@@ -634,7 +640,6 @@ void main() {
     for (final key in [
       'app.enabledWorkspaces',
       'device.layout.assistant.width',
-      'legacy.parser.customBaseUrl',
       'device.schoolSites',
     ]) {
       expect(registry.descriptor(key).requiresAdapter, isTrue);

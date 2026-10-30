@@ -31,3 +31,13 @@
 长会话上下文按完整工具调用/结果组压缩，保留用户原文、操作身份与已加载技能引用；超过预算时要求缩小查询。原始历史保持可读，不将摘要当作执行回执。宿主动作先保存实际计划/操作身份，再开始执行，因此“已执行但回复丢失”可从主库账本核对，不重复动作。运行内 usage 用于预算，不代表已经具备完整任务费用统计。
 
 实现与回归：[运行控制器](../lib/agent/runtime/agent_runtime_controller.dart)、[上下文](../lib/agent/runtime/conversation_context.dart)、[运行回归](../test/agent/runtime/agent_runtime_controller_test.dart)、[恢复回归](../test/agent/runtime/operation_recovery_test.dart)。
+
+## 全域工具宿主
+
+工具宿主按运行按需发现 schema 和共享 Skills，所有工具参数通过严格字段校验。六类资源查询覆盖非当前、隐藏及停用域，分页结果明确是否完整；查询不切换或启用工作区。固定选择集合保留实际 ID，公共 patch 只作用于准备时完整选中的对象，数据世代或版本变化后旧选择失效。
+
+主库修改通过 prepare/commit 和持久操作回执执行，支持查看完整差异及有条件撤销。当前采用整库快照/版本的保守冲突检查，无关 UI 编辑也可能要求重新准备；不能声称已实现细粒度 readSet/writeSet 并发合并。工具结果超出预算会要求缩小分页或字段，不把截断解释为数据不存在。
+
+设置描述通过 adapterTool 指向拥有该语义的入口。Agent 开关属于可准备的普通设置，权限模式仍只能由用户切换；旧解析配置只读保留用于迁移，不再提供第二套连接写入口。
+
+实现与回归：[工具宿主](../lib/agent/tools/application_tool_host.dart)、[选择集合工具测试](../test/agent/tools/selection_tool_test.dart)、[资源字段覆盖](../test/agent/resource_field_coverage_test.dart)。后续适配器在应用组合层注册后才向正式会话提供完整能力。

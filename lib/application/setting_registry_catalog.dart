@@ -41,6 +41,7 @@ Map<String, _SettingBinding> _buildSettingBindings(
         minimumExclusive: minExclusive,
         readOnly: readOnly,
         requiresAdapter: adapter,
+        adapterTool: adapter ? _settingAdapterTool(key) : null,
         sensitive: sensitive,
         platform: platform,
         defaultSource: defaultSource,
@@ -166,13 +167,24 @@ Map<String, _SettingBinding> _buildSettingBindings(
   const notificationDefaults = NotificationSettings();
   const agentDefaults = AgentSettings();
   final agentPreferences = {
+    'enabled': (SettingValueType.boolean, null, null),
     'systemInstructions': (SettingValueType.string, null, null),
     'maxModelRounds': (SettingValueType.integer, 1, 100),
     'maxToolCalls': (SettingValueType.integer, 1, 500),
     'maxTotalTokens': (SettingValueType.integer, 1024, 1000000),
     'historyRetentionDays': (SettingValueType.integer, 0, 3650),
   };
-  for (final entry in agentDefaults.toJson().entries) {
+  final agentFields = {
+    'enabled',
+    'permissionMode',
+    'protocol',
+    'endpoint',
+    'model',
+    'credentialRef',
+    ...agentPreferences.keys,
+  };
+  for (final field in agentFields) {
+    final entry = MapEntry(field, agentDefaults.toJson()[field]);
     final preference = agentPreferences[entry.key];
     add(
       'agent.${entry.key}',
@@ -763,6 +775,7 @@ Map<String, _SettingBinding> _buildSettingBindings(
       null,
       null,
       adapter: true,
+      readOnly: true,
       sensitive: field == 'customBaseUrl' || field == 'customPrompt',
       defaultSource: SettingDefaultSource.adapter,
     );
@@ -826,4 +839,24 @@ Map<String, _SettingBinding> _buildSettingBindings(
     );
   }
   return Map.unmodifiable(bindings);
+}
+
+String? _settingAdapterTool(String key) {
+  if (key.startsWith('device.layout.')) return 'device.layout.prepare';
+  return switch (key) {
+    'app.activeMode' || 'app.enabledWorkspaces' => 'workspaces.prepare',
+    'app.agentSettings' => 'agent_settings.prepare',
+    'agent.protocol' ||
+    'agent.endpoint' ||
+    'agent.model' ||
+    'agent.credentialRef' => 'connection.prepare',
+    'student.activeTimetableId' ||
+    'general.activeScheduleId' ||
+    'general.selectedDateIso' => 'navigation.open',
+    'student.conflictDisplayCourseIds' => 'courses.display.prepare',
+    'general.customDateRange' => 'navigation.range.prepare',
+    'device.assistantPreviewEnabled' => 'device.preferences.prepare',
+    'device.schoolSites' => 'school_sites.prepare',
+    _ => null,
+  };
 }

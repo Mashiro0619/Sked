@@ -85,6 +85,7 @@ class SettingDescriptor {
     this.sensitive = false,
     this.readOnly = false,
     this.requiresAdapter = false,
+    this.adapterTool,
     this.resetMeaning = 'Restore the declared default value.',
   }) : defaultValue = _freezeSettingValue(defaultValue),
        allowedValues = List.unmodifiable(allowedValues);
@@ -104,6 +105,7 @@ class SettingDescriptor {
   final bool sensitive;
   final bool readOnly;
   final bool requiresAdapter;
+  final String? adapterTool;
   final String resetMeaning;
 
   bool get canPrepare => !readOnly && !requiresAdapter;
@@ -124,6 +126,7 @@ class SettingDescriptor {
     'sensitive': sensitive,
     'readOnly': readOnly,
     'requiresAdapter': requiresAdapter,
+    if (adapterTool != null) 'adapterTool': adapterTool,
     'resetMeaning': resetMeaning,
   };
 }
@@ -293,6 +296,9 @@ class SettingRegistry {
     candidate = _applyGeneral(candidate, values);
     final changes = <PreparedSettingChange>[];
     for (final entry in _bindings.entries) {
+      // This aggregate is discovery metadata; individual Agent fields own
+      // their changes and reverse receipts.
+      if (entry.key == 'app.agentSettings') continue;
       final reader = entry.value.read;
       if (reader == null || entry.value.descriptor.sensitive) continue;
       final before = reader(baseline);
