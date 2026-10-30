@@ -98,6 +98,44 @@ void main() {
     },
   );
 
+  test('a self-validating reducer sees the settled UI snapshot', () async {
+    final result = await session.commitMutation(
+      (current) {
+        expect(current.localeCode, 'zh');
+        return current.copyWith(hideHomeWorkspaceNavigation: true);
+      },
+      expectedEpoch: null,
+      settlePendingChanges: () async {
+        session.replaceData(session.data.copyWith(localeCode: 'zh'));
+        await session.persist(session.data);
+      },
+    );
+    expect(result.localeCode, 'zh');
+    expect(result.hideHomeWorkspaceNavigation, isTrue);
+    expect(storage.saves, 2);
+  });
+
+  test('self-validation cannot bypass unsaved UI state', () async {
+    session.replaceData(session.data.copyWith(localeCode: 'zh'));
+    var reduced = false;
+    await expectLater(
+      session.commitMutation((current) {
+        reduced = true;
+        return current.copyWith(hideHomeWorkspaceNavigation: true);
+      }, expectedEpoch: null),
+      throwsA(
+        isA<AppMutationConflictException>().having(
+          (error) => error.hasUnpersistedChanges,
+          'dirty editor',
+          isTrue,
+        ),
+      ),
+    );
+    expect(reduced, isFalse);
+    expect(storage.saves, 0);
+    expect(session.data.localeCode, 'zh');
+  });
+
   test(
     'blocks competing UI writes only while the accepted save is pending',
     () async {

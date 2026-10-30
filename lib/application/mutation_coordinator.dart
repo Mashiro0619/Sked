@@ -13,6 +13,7 @@ import 'approval_plan.dart';
 import 'mutation_undo.dart';
 import 'resource_contracts.dart';
 import 'resource_mutations.dart';
+import 'mutation_read_set.dart';
 import 'setting_registry.dart';
 
 class PreparedMutation implements ApprovalPlan {
@@ -31,6 +32,7 @@ class PreparedMutation implements ApprovalPlan {
     required this._candidate,
     required this._candidateDigest,
     required this._receipt,
+    required this._rebase,
     this.alreadyCommitted = false,
   });
 
@@ -51,6 +53,13 @@ class PreparedMutation implements ApprovalPlan {
   final AppData _candidate;
   final String _candidateDigest;
   final OperationReceipt _receipt;
+  final _MutationRebase? _rebase;
+
+  /// Standard commands name their semantic dependencies. Host-specific drafts
+  /// retain the complete-snapshot check until their compilers opt in explicitly.
+  List<String> get readSet => _rebase?.reads.keys ?? const ['snapshot'];
+  List<String> get writeSet =>
+      List.unmodifiable(changes.map((item) => item.key));
 
   @override
   Map<String, Object?> summary() => {
@@ -128,11 +137,26 @@ class MutationCoordinator {
     Iterable<SettingEdit> settings = const [],
     String? operationId,
   }) {
-    final commands = List<ResourceMutation>.of(resources);
-    final edits = List<SettingEdit>.of(settings);
-    return prepareDraft(
+    final commands = List<ResourceMutation>.unmodifiable(resources);
+    final edits = List<SettingEdit>.unmodifiable([
+      for (final edit in settings)
+        switch (edit.kind) {
+          SettingEditKind.keep => SettingEdit.keep(edit.key),
+          SettingEditKind.reset => SettingEdit.reset(edit.key),
+          SettingEditKind.set => SettingEdit.set(
+            edit.key,
+            immutableMutationJson(edit.value),
+          ),
+        },
+    ]);
+    return _prepareDraft(
       scope: scope,
       operationId: operationId,
+      reads: MutationReadSet(
+        resources: commands,
+        edits: edits,
+        settings: _settings,
+      ),
       command: {
         'resources': [
           for (final command in commands)
@@ -186,6 +210,20 @@ class MutationCoordinator {
     required MutationDraft Function(AppData baseline, MutationContext context)
     compile,
     String? operationId,
+  }) => _prepareDraft(
+    scope: scope,
+    command: command,
+    compile: compile,
+    operationId: operationId,
+  );
+
+  PreparedMutation _prepareDraft({
+    required OperationScope scope,
+    required Map<String, Object?> command,
+    required MutationDraft Function(AppData baseline, MutationContext context)
+    compile,
+    String? operationId,
+    MutationReadSet? reads,
   }) {
     scope.checkActive();
     _requireKnownStorage();
@@ -219,9 +257,17 @@ class MutationCoordinator {
     }
     if (identity.sequence != sequence) _expired();
     final now = _clock().toUtc();
+    final allocatedIds = <({ResourceKind kind, String id})>[];
     final draft = compile(
       baseline,
-      MutationContext(now: now, idGenerator: (_) => _id()),
+      MutationContext(
+        now: now,
+        idGenerator: (kind) {
+          final id = _id();
+          allocatedIds.add((kind: kind, id: id));
+          return id;
+        },
+      ),
     );
     scope.checkActive();
     final changes = _mergeChanges(draft.changes);
@@ -249,7 +295,22 @@ class MutationCoordinator {
         ],
       },
     );
-    return _register(scope, draft.candidate, changes, commandDigest, receipt);
+    return _register(
+      scope,
+      draft.candidate,
+      changes,
+      commandDigest,
+      receipt,
+      rebase: reads == null
+          ? null
+          : _MutationRebase(
+              reads: reads,
+              readDigest: mutationDigest(reads.snapshot(baseline)),
+              compile: compile,
+              now: now,
+              allocatedIds: allocatedIds,
+            ),
+    );
   }
 
   /// Prepares one inverse per original receipt. Repeating Undo returns that
@@ -325,6 +386,7 @@ class MutationCoordinator {
     String digest,
     OperationReceipt receipt, {
     bool replay = false,
+    _MutationRebase? rebase,
   }) {
     final now = _clock().toUtc();
     _plans.removeWhere(
@@ -352,6 +414,7 @@ class MutationCoordinator {
       candidate: candidate,
       candidateDigest: mutationDigest(candidate.toJson()),
       receipt: receipt,
+      rebase: rebase,
       alreadyCommitted: replay,
     );
     _plans[plan.id] = plan;
@@ -394,7 +457,9 @@ class MutationCoordinator {
           _dataSessionRevision() != prepared._sessionRevision) {
         _expired();
       }
-      if (mutationDigest(_session.data.toJson()) != prepared._baselineDigest ||
+      if ((prepared._rebase == null &&
+              mutationDigest(_session.data.toJson()) !=
+                  prepared._baselineDigest) ||
           mutationDigest(prepared._candidate.toJson()) !=
               prepared._candidateDigest) {
         throw const OperationProblem(
@@ -405,19 +470,56 @@ class MutationCoordinator {
     }
 
     checkPlan();
+    var committedReceipt = prepared._receipt;
     try {
       await _session.commitMutation(
         (current) {
           checkPlan();
+          final rebased = prepared._rebase?.compileOn(current);
+          if (rebased != null &&
+              mutationDigest([
+                    for (final change in _mergeChanges(rebased.changes))
+                      change.toJson(),
+                  ]) !=
+                  mutationDigest([
+                    for (final change in prepared.changes) change.toJson(),
+                  ])) {
+            throw const OperationProblem(
+              OperationErrorCode.conflict,
+              'The complete prepared changes are no longer the same. Prepare a new plan.',
+            );
+          }
           final ledger =
               current.applicationLedger ??
               ApplicationLedger(generation: prepared.generation);
           if (ledger.nextSequence != prepared.sequence) _expired();
-          return prepared._candidate.copyWith(
-            applicationLedger: ledger.append(prepared._receipt),
+          if (rebased != null) {
+            // Object order may change independently of the edited object.
+            // Reverse receipts must restore its position at the actual commit,
+            // not the position captured while the model was preparing it.
+            committedReceipt = OperationReceipt(
+              operationId: prepared.operationId,
+              sequence: prepared.sequence,
+              commandDigest: prepared.commandDigest,
+              completedAtIso: _clock().toUtc().toIso8601String(),
+              result: prepared._receipt.result,
+              undo: {
+                'changes': [
+                  for (final change in prepared.changes)
+                    {
+                      ...change.toJson(),
+                      if (change.ref != null)
+                        'beforeIndex': _resourceIndex(current, change.ref!),
+                    },
+                ],
+              },
+            );
+          }
+          return (rebased?.candidate ?? prepared._candidate).copyWith(
+            applicationLedger: ledger.append(committedReceipt),
           );
         },
-        expectedEpoch: prepared._epoch,
+        expectedEpoch: prepared._rebase == null ? prepared._epoch : null,
         settlePendingChanges: _settlePendingChanges,
         dataSessionRevision: prepared._sessionRevision,
         beforeCommit: () => scope.checkMutation(
@@ -461,7 +563,7 @@ class MutationCoordinator {
       );
     }
     return MutationCommitResult(
-      receipt: prepared._receipt,
+      receipt: committedReceipt,
       replayed: false,
       stoppedAfterCommit: scope.isCancelled || !scope.policy.enabled,
     );
@@ -492,6 +594,55 @@ class MutationCoordinator {
       );
     }
   }
+}
+
+/// Only standard, deterministic command compilers use this path. Source-file
+/// imports and other host drafts retain their complete-snapshot admission gate.
+class _MutationRebase {
+  _MutationRebase({
+    required this.reads,
+    required this.readDigest,
+    required this.compile,
+    required this.now,
+    required List<({ResourceKind kind, String id})> allocatedIds,
+  }) : allocatedIds = List.unmodifiable(allocatedIds);
+
+  final MutationReadSet reads;
+  final String readDigest;
+  final MutationDraft Function(AppData, MutationContext) compile;
+  final DateTime now;
+  final List<({ResourceKind kind, String id})> allocatedIds;
+
+  MutationDraft compileOn(AppData current) {
+    if (mutationDigest(reads.snapshot(current)) != readDigest) _conflict();
+    var index = 0;
+    try {
+      final result = compile(
+        current,
+        MutationContext(
+          now: now,
+          idGenerator: (kind) {
+            if (index >= allocatedIds.length ||
+                allocatedIds[index].kind != kind) {
+              _conflict();
+            }
+            return allocatedIds[index++].id;
+          },
+        ),
+      );
+      if (index != allocatedIds.length) _conflict();
+      return result;
+    } on OperationProblem {
+      _conflict();
+    } on SettingValidationException {
+      _conflict();
+    }
+  }
+
+  Never _conflict() => throw const OperationProblem(
+    OperationErrorCode.conflict,
+    'A target or a dependency changed. Prepare a new plan.',
+  );
 }
 
 Map<String, Object?> _changeSummary(ResourceChange change) => {

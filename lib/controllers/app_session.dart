@@ -81,9 +81,12 @@ class AppSession {
   /// is rejected rather than silently persisted or replaced by an Agent plan.
   /// The short lease rejects new legacy mutations while storage is in flight.
   /// It never uses a widget's mounted state to decide whether a save succeeded.
+  /// A null [expectedEpoch] is reserved for reducers that validate their own
+  /// resource dependencies and rebuild against this settled snapshot. Dirty
+  /// editor state is rejected in either mode.
   Future<AppData> commitMutation(
     AppData Function(AppData current) transform, {
-    required int expectedEpoch,
+    required int? expectedEpoch,
     Future<void> Function()? settlePendingChanges,
     void Function()? beforeCommit,
     int dataSessionRevision = 0,
@@ -96,7 +99,7 @@ class AppSession {
     final dirty =
         persisted == null ||
         !_sameStorageValue(_data.toJson(), persisted.toJson());
-    if (expectedEpoch != _mutationEpoch || dirty) {
+    if ((expectedEpoch != null && expectedEpoch != _mutationEpoch) || dirty) {
       throw AppMutationConflictException(hasUnpersistedChanges: dirty);
     }
     final owner = Object();
