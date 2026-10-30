@@ -26,12 +26,10 @@ StudentModeData _timetableMutation(
   String Function(ResourceKind) nextId,
   Set<String> touched,
 ) {
-  _fields(command.values, const {
-    'name',
-    'startDate',
-    'totalWeeks',
-    'periodTimeSetId',
-  });
+  _fields(
+    command.values,
+    ResourceMutationSchema.fields(ResourceKind.timetable),
+  );
   if (command.destinationParentId != null ||
       command.action == ResourceMutationAction.move) {
     _invalid('Timetables do not have a parent.', 'destinationParentId');
@@ -115,20 +113,7 @@ StudentModeData _courseMutation(
   ResourceMutation command,
   String Function(ResourceKind) nextId,
 ) {
-  _fields(command.values, const {
-    'name',
-    'teacher',
-    'location',
-    'dayOfWeek',
-    'semesterWeeks',
-    'periods',
-    'startMinutes',
-    'endMinutes',
-    'credit',
-    'remarks',
-    'customFields',
-    'reminderSettings',
-  });
+  _fields(command.values, ResourceMutationSchema.fields(ResourceKind.course));
   final original = command.action == ResourceMutationAction.create
       ? null
       : _courseByRef(data, command.target!);
@@ -341,7 +326,10 @@ StudentModeData _periodSetMutation(
   ResourceMutation command,
   String Function(ResourceKind) nextId,
 ) {
-  _fields(command.values, const {'name', 'periodTimes'});
+  _fields(
+    command.values,
+    ResourceMutationSchema.fields(ResourceKind.periodTimeSet),
+  );
   if (command.destinationParentId != null ||
       command.action == ResourceMutationAction.move) {
     _invalid('Period time sets do not have a parent.', 'destinationParentId');

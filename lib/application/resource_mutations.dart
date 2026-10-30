@@ -6,6 +6,7 @@ import '../services/student_timetable_service.dart';
 import 'mutation_draft.dart';
 import 'operation_contracts.dart';
 import 'resource_contracts.dart';
+import 'resource_mutation_schema.dart';
 
 export 'mutation_draft.dart';
 
@@ -133,12 +134,10 @@ class ResourceMutationCompiler {
     Set<String> touched,
     String localeCode,
   ) {
-    _fields(command.values, const {
-      'name',
-      'colorValue',
-      'isVisible',
-      'sortOrder',
-    });
+    _fields(
+      command.values,
+      ResourceMutationSchema.fields(ResourceKind.calendar),
+    );
     if (command.destinationParentId != null ||
         command.action == ResourceMutationAction.move) {
       _invalid('Calendars do not have a parent.', 'destinationParentId');
@@ -234,19 +233,7 @@ class ResourceMutationCompiler {
     MutationContext context,
     String Function(ResourceKind) nextId,
   ) {
-    _fields(command.values, const {
-      'title',
-      'start',
-      'end',
-      'isAllDay',
-      'recurrenceRule',
-      'recurrenceExceptionDates',
-      'location',
-      'notes',
-      'colorValue',
-      'reminderBehavior',
-      'reminders',
-    });
+    _fields(command.values, ResourceMutationSchema.fields(ResourceKind.event));
     final original = command.action == ResourceMutationAction.create
         ? null
         : _event(data, command.target!);

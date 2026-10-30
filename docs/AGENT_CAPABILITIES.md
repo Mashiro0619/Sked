@@ -103,6 +103,8 @@ Agent 纳入现有功能管理，使用一个开关控制启用与入口显示�
 
 ## 业务规则必须下沉到共享应用层
 
+`ResourceMutationSchema` 与严格编译器共用六类资源的允许字段集合，提供类型、创建必填项、动作和语义约束；查询投影仍独立按 summary/detail/edit 装载。调用方先查字段目录，再提交显式字段，不能把磁盘兼容解码当成新命令校验。重复实例的三种范围和提醒动作在同一目录中说明，课程与事件保持各自模型。
+
 Agent 参数校验不能依赖 Flutter 表单是否打开。需从 [CourseEditorSheet](../lib/widgets/course_editor_sheet.dart)、[GeneralEventEditorSheet](../lib/widgets/general_event_editor_sheet.dart)及[课表管理界面](../lib/screens/home_screen_timetable_management.dart)抽出可复用规则与影响计算。
 
 - 课程新建要求有效名称、至少一周及有效时间；历史空周次表示每周的兼容含义应保留。只修改文字时，旧课程依靠节次推导时间的表示不得被固化。

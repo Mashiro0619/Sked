@@ -62,7 +62,7 @@ flowchart LR
 ### 实施项
 
 - [ ] 把能力矩阵转为机器可读的 `CapabilityDescriptor` / `SettingDescriptor`；字段包含 scope、schema、操作、存储归属、平台、默认值/reset、结果、授权分类。
-- [ ] 建立 FieldSpec 同源约束和独立 AgentProjectionCodec：明确 summary/detail/edit、未返回/null/reset、旧默认解释、查询范围/完整性与 token 计量；不要求先改变磁盘格式。
+- [ ] 建立 FieldSpec 同源约束和独立 AgentProjectionCodec：明确 summary/detail/edit、未返回/null/reset、旧默认解释、查询范围/完整性与 token 计量；不要求先改变磁盘格式。资源命令字段目录与编译器白名单已同源，查询投影和设置描述已有独立契约；完整任务 token 评测仍需验收。
 - [ ] 定义 ResourceRef、OccurrenceRef、CommandEnvelope、PreparedMutation、CommandResult、错误码、数据世代和资源版本规则。
 - [ ] 固定三种权限模式及其版本：只读计划不提交；每次修改前询问仅批准当前明确变更；完全权限无应用级逐次审批。不设计额外模式或用户权限档案系统。
 - [ ] 固定设置工具为 settings.prepare(action: set/reset) 只返回计划，mutation.commit 才返回生效回执；专用平台/文件工具同样受三模式和操作作用域约束。
