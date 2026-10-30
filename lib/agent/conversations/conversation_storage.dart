@@ -1,5 +1,18 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'conversation_storage_stub.dart'
     if (dart.library.io) 'conversation_storage_io.dart';
+
+typedef ConversationStorageFactory = ConversationStorage Function();
+
+ConversationStorageFactory? _debugConversationStorageFactory;
+
+/// Isolates default application storage in tests. Explicit platform storage
+/// constructors still exercise their real IO or browser implementation.
+@visibleForTesting
+void debugSetConversationStorageFactory(ConversationStorageFactory? factory) {
+  _debugConversationStorageFactory = factory;
+}
 
 class ConversationStorageLoad {
   const ConversationStorageLoad({this.source, this.recovered = false});
@@ -19,7 +32,8 @@ class ConversationStorageException implements Exception {
 }
 
 abstract class ConversationStorage {
-  factory ConversationStorage() = PlatformConversationStorage;
+  factory ConversationStorage() =>
+      _debugConversationStorageFactory?.call() ?? PlatformConversationStorage();
   ConversationStorage.base();
 
   Future<ConversationStorageLoad> load();

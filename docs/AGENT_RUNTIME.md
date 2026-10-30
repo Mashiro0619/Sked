@@ -49,3 +49,7 @@
 候选解码是有界纯计算，与模型请求和主库写入分离。imports.prepare 要求明确创建或替换目标，并校验实际开学日期、周次、时间、作息引用及来源所属会话；缺失事实不得静默填写为当前日期。准备后仍需 mutation.commit 按会话模式执行，最终回执决定是否导入成功。
 
 实现与回归：[交接](../lib/agent/imports/school_web_handoff.dart)、[候选工具](../lib/agent/imports/school_import_tool_adapter.dart)、[导入专项](../test/agent/imports/school_import_tool_adapter_test.dart)、[交接去重](../test/agent/imports/school_web_handoff_test.dart)。
+
+## 测试存储边界
+
+默认会话存储在 test/flutter_test_config.dart 中替换为每项独立的内存实例，覆盖直接构造 AppRuntime 的历史测试。一个测试内的重启共享同一实例；后续测试换新实例，迟到回调只持有旧实例。显式构造原生会话存储的专项继续使用系统临时目录验证真实 IO，不由默认替身替代。
