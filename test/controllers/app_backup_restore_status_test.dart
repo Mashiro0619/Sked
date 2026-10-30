@@ -197,6 +197,7 @@ void main() {
       expect(commits, hasLength(1));
       expect(commits.single.affectsAgenda, isFalse);
       expect(commits.single.versions.dataSession, 0);
+      expect(commits.single.versions.ledger, 0);
 
       firstRestore.release.complete();
       await first;
@@ -205,8 +206,13 @@ void main() {
       expect(commits.last.changedDomains, {
         AppDataDomain.agenda,
         AppDataDomain.dataSession,
+        AppDataDomain.ledger,
       });
       expect(commits.last.versions.dataSession, 1);
+      expect(commits.last.versions.ledger, 1);
+      final firstGeneration =
+          commits.last.snapshot.applicationLedger!.generation;
+      expect(firstGeneration, isNotEmpty);
 
       secondRestore.release.complete();
       await second;
@@ -215,9 +221,15 @@ void main() {
       expect(commits.last.changedDomains, {
         AppDataDomain.agenda,
         AppDataDomain.dataSession,
+        AppDataDomain.ledger,
       });
       expect(commits.last.versions.dataSession, 2);
       expect(commits.last.versions.agenda, 2);
+      expect(commits.last.versions.ledger, 2);
+      expect(
+        commits.last.snapshot.applicationLedger!.generation,
+        isNot(firstGeneration),
+      );
     },
   );
 }

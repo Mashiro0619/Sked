@@ -106,8 +106,18 @@ void main() {
     );
 
     final backupSource = encodeAppBackup(data, const []);
+    final recoverySource = encodeAppBackupForRecovery(data, const []);
+    final portableData =
+        ImportExportEnvelope.decode(backupSource).data['appData'] as Map;
+    final recoveryData =
+        ImportExportEnvelope.decode(recoverySource).data['appData'] as Map;
+    expect(portableData.containsKey('agentSettings'), isFalse);
+    expect(portableData.containsKey('applicationLedger'), isFalse);
+    expect(recoveryData['agentSettings'], data.agentSettings.toJson());
+    expect(recoveryData.containsKey('applicationLedger'), isTrue);
+    expect(recoverySource, isNot(contains(sentinel)));
     final journal = FileAppBackupRestoreJournal(layout: layout);
-    final prepared = await journal.writePrepared(backupSource);
+    final prepared = await journal.writePrepared(recoverySource);
     expect(prepared.backupSource, isNot(contains(sentinel)));
     expect(prepared.source, isNot(contains(sentinel)));
     final dataCommitted = await journal.advancePhase(
@@ -138,7 +148,7 @@ void main() {
       },
     );
     await expectLater(
-      interruptedJournal.writePrepared(backupSource),
+      interruptedJournal.writePrepared(recoverySource),
       throwsA(isA<AppBackupRestoreJournalStateUnknownException>()),
     );
     await _expectFileExcludes(
