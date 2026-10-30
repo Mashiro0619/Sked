@@ -33,6 +33,16 @@ class ConversationRepository extends ChangeNotifier {
 
   bool get isLoaded => _loaded;
   bool get canWrite => _loaded && !_blocked && !_frozen && !_disposed;
+
+  /// A failed clear may have removed some files. Explicit load/recovery must
+  /// establish the surviving archive before any in-memory content can be saved.
+  void resumeAfterFailedDataClear() {
+    if (_disposed) return;
+    _frozen = false;
+    _blocked = true;
+    _notify();
+  }
+
   String? get selectedId => _archive.selectedId;
   List<AgentConversation> get conversations => _archive.conversations;
   AgentConversation? get selected => find(selectedId);
@@ -77,9 +87,12 @@ class ConversationRepository extends ChangeNotifier {
   Future<AgentConversation> create({
     required String title,
     AgentPermissionMode mode = AgentPermissionMode.ask,
+    String? id,
+    void Function()? validate,
   }) => _enqueue(() async {
     _checkWritable();
-    final conversation = _newConversation(title, mode);
+    validate?.call();
+    final conversation = _newConversation(title, mode, id: id);
     await _save(
       _next(
         conversations: [...conversations, conversation],
@@ -93,6 +106,48 @@ class ConversationRepository extends ChangeNotifier {
     _checkWritable();
     _requireConversation(id);
     if (selectedId != id) await _save(_next(selectedId: id));
+  });
+
+  /// Retention removes only completed, inactive conversations. Tombstones keep
+  /// old handoffs and late callbacks from recreating their content.
+  Future<int> pruneHistory({
+    required int days,
+    required bool Function(String id) canRemove,
+  }) => _enqueue(() async {
+    _checkWritable();
+    if (days == 0) return 0;
+    if (days < 7 || days > 3650) {
+      throw const FormatException(
+        'History retention must be 0 or 7–3650 days.',
+      );
+    }
+    final cutoff = _clock().toUtc().subtract(Duration(days: days));
+    final removed = conversations
+        .where(
+          (item) =>
+              item.status == ConversationStatus.idle &&
+              item.draft.isEmpty &&
+              item.updatedAt.isBefore(cutoff) &&
+              canRemove(item.id),
+        )
+        .map((item) => item.id)
+        .toSet();
+    if (removed.isEmpty) return 0;
+    final remaining = conversations
+        .where((item) => !removed.contains(item.id))
+        .toList();
+    await _save(
+      ConversationArchive(
+        revision: _archive.revision + 1,
+        selectedId: removed.contains(selectedId)
+            ? remaining.lastOrNull?.id
+            : selectedId,
+        conversations: remaining,
+        handoffs: _archive.handoffs,
+        terminatedIds: {..._archive.terminatedIds, ...removed},
+      ),
+    );
+    return removed.length;
   });
 
   Future<AgentConversation> update(
@@ -128,7 +183,7 @@ class ConversationRepository extends ChangeNotifier {
 
   /// Callers cancel network/operation scopes as soon as deletion is requested.
   /// The tombstone and removal of all owned content are one persisted update.
-  Future<void> delete(String id) {
+  Future<void> delete(String id, {void Function(AgentConversation)? validate}) {
     _deleting.add(id);
     return _enqueue(() async {
       try {
@@ -140,6 +195,7 @@ class ConversationRepository extends ChangeNotifier {
             'Conversation does not exist.',
           );
         }
+        validate?.call(find(id)!);
         final remaining = conversations.where((item) => item.id != id).toList();
         await _save(
           ConversationArchive(
@@ -221,9 +277,20 @@ class ConversationRepository extends ChangeNotifier {
   /// Used before app-wide clear/shutdown; late callbacks cannot recreate files.
   void freeze() => _frozen = true;
 
-  AgentConversation _newConversation(String title, AgentPermissionMode mode) {
-    final id = _id();
-    if (find(id) != null || _archive.terminatedIds.contains(id)) {
+  AgentConversation _newConversation(
+    String title,
+    AgentPermissionMode mode, {
+    String? id,
+  }) {
+    final resolvedId = id ?? _id();
+    if (resolvedId.isEmpty || resolvedId.length > 256) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidArgument,
+        'Conversation ID is invalid.',
+      );
+    }
+    if (find(resolvedId) != null ||
+        _archive.terminatedIds.contains(resolvedId)) {
       throw const OperationProblem(
         OperationErrorCode.conflict,
         'Conversation ID has already been used.',
@@ -231,7 +298,7 @@ class ConversationRepository extends ChangeNotifier {
     }
     final now = _clock().toUtc();
     return AgentConversation(
-      id: id,
+      id: resolvedId,
       title: title,
       mode: mode,
       createdAt: now,

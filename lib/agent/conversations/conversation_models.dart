@@ -41,7 +41,15 @@ class ConversationMessage {
     required this.createdAt,
     Iterable<ConversationToolCall> toolCalls = const [],
     this.toolCallId,
-  }) : toolCalls = List.unmodifiable(toolCalls);
+    Iterable<Map<String, Object?>> responseItems = const [],
+  }) : toolCalls = List.unmodifiable(toolCalls),
+       responseItems = _freezeResponseItems(responseItems) {
+    if (this.responseItems.isNotEmpty && role != ConversationRole.assistant) {
+      throw const FormatException(
+        'Only assistant messages have provider items.',
+      );
+    }
+  }
 
   final String id;
   final ConversationRole role;
@@ -49,6 +57,10 @@ class ConversationMessage {
   final DateTime createdAt;
   final List<ConversationToolCall> toolCalls;
   final String? toolCallId;
+
+  /// Bounded, immutable Responses continuation data; never request headers or
+  /// credentials. The model endpoint remains bound at conversation level.
+  final List<Map<String, Object?>> responseItems;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -58,6 +70,7 @@ class ConversationMessage {
     if (toolCalls.isNotEmpty)
       'toolCalls': toolCalls.map((call) => call.toJson()).toList(),
     if (toolCallId != null) 'toolCallId': toolCallId,
+    if (responseItems.isNotEmpty) 'responseItems': responseItems,
   };
 
   factory ConversationMessage.fromJson(Map<String, dynamic> json) {
@@ -80,8 +93,70 @@ class ConversationMessage {
       createdAt: _date(json, 'createdAt'),
       toolCalls: calls,
       toolCallId: toolCallId,
+      responseItems: _objects(json, 'responseItems', max: 64),
     );
   }
+}
+
+List<Map<String, Object?>> _freezeResponseItems(
+  Iterable<Map<String, Object?>> source,
+) {
+  final items = source.toList();
+  if (items.length > 64) {
+    throw const FormatException('Provider continuation has too many items.');
+  }
+  var nodes = 0;
+  Object? freeze(Object? value, int depth) {
+    if (depth > 20 || ++nodes > 20000) {
+      throw const FormatException('Provider continuation is too complex.');
+    }
+    if (value is Map) {
+      final result = <String, Object?>{};
+      for (final entry in value.entries) {
+        final key = entry.key;
+        if (key is! String ||
+            key.length > 128 ||
+            const {
+              'authorization',
+              'api_key',
+              'apikey',
+              'access_token',
+              'cookie',
+              'set-cookie',
+              'password',
+            }.contains(key.toLowerCase())) {
+          throw const FormatException('Invalid provider continuation field.');
+        }
+        result[key] = freeze(entry.value, depth + 1);
+      }
+      return Map<String, Object?>.unmodifiable(result);
+    }
+    if (value is List) {
+      return List<Object?>.unmodifiable(
+        value.map((item) => freeze(item, depth + 1)),
+      );
+    }
+    if (value is String && value.length > 512 * 1024) {
+      throw const FormatException('Provider continuation text is too large.');
+    }
+    if (value == null ||
+        value is String ||
+        value is bool ||
+        (value is num && value.isFinite)) {
+      return value;
+    }
+    throw const FormatException('Invalid provider continuation value.');
+  }
+
+  final result = List<Map<String, Object?>>.unmodifiable(
+    items.map((item) => freeze(item, 0)! as Map<String, Object?>),
+  );
+  if (utf8.encode(jsonEncode(result)).length > 512 * 1024) {
+    throw const FormatException(
+      'Provider continuation exceeds its byte budget.',
+    );
+  }
+  return result;
 }
 
 /// Immutable user-selected material. It contains no browser session state.
@@ -93,6 +168,9 @@ class ConversationSource {
     this.url,
     this.targetId,
     this.truncated = false,
+    this.provenance,
+    this.attachedAfterRunId,
+    this.attachedAfterMessageId,
   });
 
   final String id;
@@ -101,6 +179,9 @@ class ConversationSource {
   final String? url;
   final String? targetId;
   final bool truncated;
+  final ConversationSourceProvenance? provenance;
+  final String? attachedAfterRunId;
+  final String? attachedAfterMessageId;
 
   String get digest =>
       sha256.convert(utf8.encode(jsonEncode(toJson()))).toString();
@@ -112,6 +193,10 @@ class ConversationSource {
     if (url != null) 'url': url,
     if (targetId != null) 'targetId': targetId,
     'truncated': truncated,
+    if (provenance != null) 'provenance': provenance!.toJson(),
+    if (attachedAfterRunId != null) 'attachedAfterRunId': attachedAfterRunId,
+    if (attachedAfterMessageId != null)
+      'attachedAfterMessageId': attachedAfterMessageId,
   };
 
   factory ConversationSource.fromJson(Map<String, dynamic> json) {
@@ -128,6 +213,13 @@ class ConversationSource {
     if (json['truncated'] is! bool) {
       throw const FormatException('Invalid source truncation state.');
     }
+    if ((json['attachedAfterRunId'] != null ||
+            json['attachedAfterMessageId'] != null) &&
+        json['kind'] != 'structured_file') {
+      throw const FormatException(
+        'Only structured file attachments carry unused-source markers.',
+      );
+    }
     return ConversationSource(
       id: _string(json, 'id', max: 256),
       kind: _string(json, 'kind', max: 64),
@@ -135,6 +227,69 @@ class ConversationSource {
       url: url,
       targetId: _optionalString(json, 'targetId', max: 256),
       truncated: json['truncated'] as bool,
+      attachedAfterRunId: _optionalString(json, 'attachedAfterRunId', max: 256),
+      attachedAfterMessageId: _optionalString(
+        json,
+        'attachedAfterMessageId',
+        max: 256,
+      ),
+      provenance: json['provenance'] == null
+          ? null
+          : ConversationSourceProvenance.fromJson(_object(json['provenance'])),
+    );
+  }
+}
+
+/// Bounded provenance for a reviewed source, separate from its data body.
+/// Its absence preserves the exact JSON and digest of historical sources.
+class ConversationSourceProvenance {
+  const ConversationSourceProvenance({
+    required this.title,
+    required this.capturedAt,
+    required this.reviewedAt,
+    required this.datasetGeneration,
+    required this.localeCode,
+    this.revision = 1,
+  });
+
+  final String title;
+  final DateTime capturedAt;
+  final DateTime reviewedAt;
+  final String datasetGeneration;
+  final String localeCode;
+  final int revision;
+
+  Map<String, Object?> toJson() => {
+    'title': title,
+    'capturedAt': capturedAt.toUtc().toIso8601String(),
+    'reviewedAt': reviewedAt.toUtc().toIso8601String(),
+    'datasetGeneration': datasetGeneration,
+    'localeCode': localeCode,
+    'revision': revision,
+  };
+
+  factory ConversationSourceProvenance.fromJson(Map<String, dynamic> json) {
+    const keys = {
+      'title',
+      'capturedAt',
+      'reviewedAt',
+      'datasetGeneration',
+      'localeCode',
+      'revision',
+    };
+    if (json.keys.any((key) => !keys.contains(key)) ||
+        json['revision'] is! int ||
+        (json['revision'] as int) < 1 ||
+        (json['revision'] as int) > 2147483647) {
+      throw const FormatException('Invalid source provenance.');
+    }
+    return ConversationSourceProvenance(
+      title: _string(json, 'title', max: 256, empty: true),
+      capturedAt: _date(json, 'capturedAt'),
+      reviewedAt: _date(json, 'reviewedAt'),
+      datasetGeneration: _string(json, 'datasetGeneration', max: 256),
+      localeCode: _string(json, 'localeCode', max: 32),
+      revision: json['revision'] as int,
     );
   }
 }
@@ -147,6 +302,7 @@ class AgentConversation {
     required this.updatedAt,
     this.mode = AgentPermissionMode.ask,
     this.status = ConversationStatus.idle,
+    this.archived = false,
     this.draft = '',
     this.connectionFingerprint,
     this.runId,
@@ -161,6 +317,7 @@ class AgentConversation {
   final DateTime updatedAt;
   final AgentPermissionMode mode;
   final ConversationStatus status;
+  final bool archived;
   final String draft;
   final String? connectionFingerprint;
   final String? runId;
@@ -172,6 +329,7 @@ class AgentConversation {
     DateTime? updatedAt,
     AgentPermissionMode? mode,
     ConversationStatus? status,
+    bool? archived,
     String? draft,
     String? connectionFingerprint,
     String? runId,
@@ -184,6 +342,7 @@ class AgentConversation {
     updatedAt: updatedAt ?? this.updatedAt,
     mode: mode ?? this.mode,
     status: status ?? this.status,
+    archived: archived ?? this.archived,
     draft: draft ?? this.draft,
     connectionFingerprint: connectionFingerprint ?? this.connectionFingerprint,
     runId: runId ?? this.runId,
@@ -198,6 +357,7 @@ class AgentConversation {
     'updatedAt': updatedAt.toUtc().toIso8601String(),
     'mode': mode.name,
     'status': status.name,
+    'archived': archived,
     'draft': draft,
     if (connectionFingerprint != null)
       'connectionFingerprint': connectionFingerprint,
@@ -207,6 +367,9 @@ class AgentConversation {
   };
 
   factory AgentConversation.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('archived') && json['archived'] is! bool) {
+      throw const FormatException('Invalid archived conversation state.');
+    }
     final messages = _objects(
       json,
       'messages',
@@ -229,6 +392,7 @@ class AgentConversation {
       updatedAt: _date(json, 'updatedAt'),
       mode: _enumValue(AgentPermissionMode.values, json['mode']),
       status: _enumValue(ConversationStatus.values, json['status']),
+      archived: json['archived'] as bool? ?? false,
       draft: _string(json, 'draft', max: 128 * 1024, empty: true),
       connectionFingerprint: _optionalString(
         json,

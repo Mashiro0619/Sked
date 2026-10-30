@@ -29,6 +29,67 @@ Matcher operationError(OperationErrorCode code) =>
     isA<OperationProblem>().having((error) => error.code, 'code', code);
 
 void main() {
+  test('retention preserves unfinished, drafted and queued conversations and persists tombstones', () async {
+    var date = DateTime.utc(2026, 1, 1);
+    final memory = MemoryConversationStorage();
+    var sequence = 0;
+    final history = ConversationRepository(
+      storage: memory,
+      clock: () => date,
+      idGenerator: () => 'retention-${sequence++}',
+    );
+    addTearDown(history.dispose);
+    await history.load();
+    final expired = await history.create(title: 'Finished');
+    final drafted = await history.create(title: 'Draft');
+    await history.update(
+      drafted.id,
+      (item) => item.copyWith(draft: 'Keep this'),
+    );
+    final unfinished = await history.create(title: 'Interrupted');
+    await history.update(
+      unfinished.id,
+      (item) => item.copyWith(status: ConversationStatus.interrupted),
+    );
+    final queued = await history.create(title: 'Queued');
+    date = DateTime.utc(2026, 3, 1);
+    expect(await history.pruneHistory(days: 0, canRemove: (_) => true), 0);
+    expect(
+      await history.pruneHistory(days: 30, canRemove: (id) => id != queued.id),
+      1,
+    );
+    expect(history.find(expired.id), isNull);
+    expect(history.conversations.map((item) => item.id), [
+      drafted.id,
+      unfinished.id,
+      queued.id,
+    ]);
+    final restored = ConversationArchive.decode(memory.source!);
+    expect(restored.terminatedIds, contains(expired.id));
+    await expectLater(
+      history.update(expired.id, (item) => item),
+      throwsA(operationError(OperationErrorCode.expired)),
+    );
+  });
+
+  test('failed retention keeps the previous conversation archive', () async {
+    var date = DateTime.utc(2026, 1, 1);
+    final memory = MemoryConversationStorage();
+    final history = ConversationRepository(storage: memory, clock: () => date);
+    addTearDown(history.dispose);
+    await history.load();
+    final original = await history.create(title: 'Keep on failure');
+    final saved = memory.source;
+    date = DateTime.utc(2026, 3, 1);
+    memory.failure = StateError('synthetic failure');
+    await expectLater(
+      history.pruneHistory(days: 30, canRemove: (_) => true),
+      throwsStateError,
+    );
+    expect(memory.source, saved);
+    expect(history.find(original.id), isNotNull);
+  });
+
   late MemoryConversationStorage storage;
   late ConversationRepository repository;
   var nextId = 0;
