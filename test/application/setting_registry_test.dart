@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/application/setting_registry.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/models/agent_settings.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/student_timetable_service.dart';
 
@@ -99,6 +100,61 @@ AppData sample({bool studentEnabled = true, bool generalEnabled = true}) {
 void main() {
   late SettingRegistry registry;
   setUp(() => registry = SettingRegistry());
+
+  test('every Agent configuration field is classified and authority stays host-owned', () {
+    expect(
+      registry
+          .describe(scope: SettingScope.agent)
+          .map((entry) => entry.key.substring('agent.'.length))
+          .toSet(),
+      const AgentSettings().toJson().keys.toSet(),
+    );
+    expect(registry.descriptor('agent.permissionMode').readOnly, isTrue);
+    expect(registry.descriptor('agent.endpoint').requiresAdapter, isTrue);
+    expect(registry.descriptor('agent.credentialRef').sensitive, isTrue);
+    final before = sample();
+    final edited = registry.prepare(before, const [
+      SettingEdit.set('agent.systemInstructions', '  Preserve user wording.  '),
+      SettingEdit.set('agent.maxModelRounds', 8),
+      SettingEdit.set('agent.historyRetentionDays', 30),
+    ]);
+    expect(
+      edited.candidate.agentSettings.systemInstructions,
+      '  Preserve user wording.  ',
+    );
+    expect(edited.candidate.agentSettings.maxModelRounds, 8);
+    expect(edited.candidate.agentSettings.historyRetentionDays, 30);
+    expect(
+      edited.candidate.agentSettings.permissionMode,
+      before.agentSettings.permissionMode,
+    );
+    expect(
+      edited.changes.map((change) => change.key),
+      unorderedEquals([
+        'agent.systemInstructions',
+        'agent.maxModelRounds',
+        'agent.historyRetentionDays',
+      ]),
+    );
+    final reset = registry.prepare(edited.candidate, const [
+      SettingEdit.reset('agent.systemInstructions'),
+      SettingEdit.reset('agent.maxModelRounds'),
+      SettingEdit.reset('agent.historyRetentionDays'),
+    ]);
+    expect(reset.candidate.agentSettings, before.agentSettings);
+    expect(
+      () => registry.prepare(before, const [
+        SettingEdit.set('agent.historyRetentionDays', 2),
+      ]),
+      rejectsSetting(SettingValidationCode.invalidValue),
+    );
+    expect(
+      () => registry.prepare(before, const [
+        SettingEdit.set('agent.permissionMode', 'full'),
+      ]),
+      rejectsSetting(SettingValidationCode.readOnly),
+    );
+  });
 
   test('every current workspace preference has an explicit descriptor', () {
     final data = sample();

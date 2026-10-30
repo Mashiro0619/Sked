@@ -1,13 +1,14 @@
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../models/agent_settings.dart';
 import '../services/desktop_layout_preferences.dart';
 import '../services/general_calendar_service.dart';
 import '../services/settings_service.dart';
 import '../services/student_timetable_service.dart';
 part 'setting_registry_catalog.dart';
 
-enum SettingScope { app, student, general, device, platform, legacy }
+enum SettingScope { app, student, general, agent, device, platform, legacy }
 
 enum SettingValueType {
   boolean,
@@ -420,6 +421,15 @@ class SettingRegistry {
       );
     }
     if (descriptor.type == SettingValueType.string) {
+      if (descriptor.key == 'agent.systemInstructions') {
+        if ((value as String).length > 16000) {
+          fail(
+            SettingValidationCode.invalidValue,
+            'Agent instructions exceed the supported length.',
+          );
+        }
+        return value;
+      }
       final normalized = (value as String).trim();
       if (normalized.isEmpty) {
         fail(

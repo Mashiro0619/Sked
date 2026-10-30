@@ -14,6 +14,11 @@ class AgentSettings {
     this.endpoint = '',
     this.model = '',
     this.credentialRef,
+    this.systemInstructions = '',
+    this.maxModelRounds = 24,
+    this.maxToolCalls = 128,
+    this.maxTotalTokens = 100000,
+    this.historyRetentionDays = 0,
   });
 
   final bool enabled;
@@ -22,6 +27,13 @@ class AgentSettings {
   final String endpoint;
   final String model;
   final String? credentialRef;
+  final String systemInstructions;
+  final int maxModelRounds;
+  final int maxToolCalls;
+  final int maxTotalTokens;
+
+  /// Zero retains conversations until the user deletes them explicitly.
+  final int historyRetentionDays;
 
   AgentSettings copyWith({
     bool? enabled,
@@ -30,6 +42,11 @@ class AgentSettings {
     String? endpoint,
     String? model,
     Object? credentialRef = _keepCredential,
+    String? systemInstructions,
+    int? maxModelRounds,
+    int? maxToolCalls,
+    int? maxTotalTokens,
+    int? historyRetentionDays,
   }) {
     final result = AgentSettings(
       enabled: enabled ?? this.enabled,
@@ -40,12 +57,31 @@ class AgentSettings {
       credentialRef: identical(credentialRef, _keepCredential)
           ? this.credentialRef
           : credentialRef as String?,
+      systemInstructions: systemInstructions ?? this.systemInstructions,
+      maxModelRounds: maxModelRounds ?? this.maxModelRounds,
+      maxToolCalls: maxToolCalls ?? this.maxToolCalls,
+      maxTotalTokens: maxTotalTokens ?? this.maxTotalTokens,
+      historyRetentionDays: historyRetentionDays ?? this.historyRetentionDays,
     );
     result.validate();
     return result;
   }
 
   void validate() {
+    if (systemInstructions.length > 16000 ||
+        maxModelRounds < 1 ||
+        maxModelRounds > 100 ||
+        maxToolCalls < 1 ||
+        maxToolCalls > 500 ||
+        maxTotalTokens < 1024 ||
+        maxTotalTokens > 1000000 ||
+        historyRetentionDays < 0 ||
+        historyRetentionDays > 3650 ||
+        (historyRetentionDays > 0 && historyRetentionDays < 7)) {
+      throw const FormatException(
+        'Agent preferences are outside their supported limits.',
+      );
+    }
     if (endpoint.length > 4096 ||
         model.length > 256 ||
         (credentialRef?.length ?? 0) > 256) {
@@ -78,10 +114,22 @@ class AgentSettings {
       'endpoint': endpoint,
       'model': model,
       'credentialRef': credentialRef,
+      'systemInstructions': systemInstructions,
+      'maxModelRounds': maxModelRounds,
+      'maxToolCalls': maxToolCalls,
+      'maxTotalTokens': maxTotalTokens,
+      'historyRetentionDays': historyRetentionDays,
     };
   }
 
   factory AgentSettings.fromJson(Object? value) {
+    const preferenceKeys = {
+      'systemInstructions',
+      'maxModelRounds',
+      'maxToolCalls',
+      'maxTotalTokens',
+      'historyRetentionDays',
+    };
     const keys = {
       'enabled',
       'permissionMode',
@@ -91,13 +139,24 @@ class AgentSettings {
       'credentialRef',
     };
     if (value is! Map ||
-        value.length != keys.length ||
-        value.keys.any((key) => key is! String || !keys.contains(key)) ||
+        !keys.every(value.containsKey) ||
+        value.keys.any(
+          (key) =>
+              key is! String ||
+              (!keys.contains(key) && !preferenceKeys.contains(key)),
+        ) ||
         value['enabled'] is! bool ||
         value['endpoint'] is! String ||
         value['model'] is! String ||
         (value['credentialRef'] != null && value['credentialRef'] is! String)) {
       throw const FormatException('Agent settings are invalid.');
+    }
+    if ((value.containsKey('systemInstructions') &&
+            value['systemInstructions'] is! String) ||
+        preferenceKeys
+            .where((key) => key != 'systemInstructions')
+            .any((key) => value.containsKey(key) && value[key] is! int)) {
+      throw const FormatException('Agent preference types are invalid.');
     }
     final permissions = AgentPermissionMode.values.where(
       (entry) => entry.name == value['permissionMode'],
@@ -117,6 +176,11 @@ class AgentSettings {
       endpoint: value['endpoint'] as String,
       model: value['model'] as String,
       credentialRef: value['credentialRef'] as String?,
+      systemInstructions: value['systemInstructions'] as String? ?? '',
+      maxModelRounds: value['maxModelRounds'] as int? ?? 24,
+      maxToolCalls: value['maxToolCalls'] as int? ?? 128,
+      maxTotalTokens: value['maxTotalTokens'] as int? ?? 100000,
+      historyRetentionDays: value['historyRetentionDays'] as int? ?? 0,
     );
     result.validate();
     return result;
@@ -130,7 +194,12 @@ class AgentSettings {
       protocol == other.protocol &&
       endpoint == other.endpoint &&
       model == other.model &&
-      credentialRef == other.credentialRef;
+      credentialRef == other.credentialRef &&
+      systemInstructions == other.systemInstructions &&
+      maxModelRounds == other.maxModelRounds &&
+      maxToolCalls == other.maxToolCalls &&
+      maxTotalTokens == other.maxTotalTokens &&
+      historyRetentionDays == other.historyRetentionDays;
 
   @override
   int get hashCode => Object.hash(
@@ -140,5 +209,10 @@ class AgentSettings {
     endpoint,
     model,
     credentialRef,
+    systemInstructions,
+    maxModelRounds,
+    maxToolCalls,
+    maxTotalTokens,
+    historyRetentionDays,
   );
 }

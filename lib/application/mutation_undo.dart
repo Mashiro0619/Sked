@@ -450,6 +450,9 @@ void _restoreResources(
 }
 
 ({String? container, String field}) _settingStorageField(String key) {
+  if (key.startsWith('agent.')) {
+    return (container: 'agentSettings', field: key.substring('agent.'.length));
+  }
   if (key.startsWith('student.')) {
     return (container: 'studentMode', field: key.substring('student.'.length));
   }

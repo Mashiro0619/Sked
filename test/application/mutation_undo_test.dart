@@ -11,6 +11,43 @@ import 'package:sked/models/timetable_models.dart';
 
 void main() {
   test(
+    'Agent preference changes and reset reverse without changing authority',
+    () {
+      final base = fixture();
+      final applied = apply(
+        base,
+        [],
+        settings: [
+          const SettingEdit.set(
+            'agent.systemInstructions',
+            'Use concise replies',
+          ),
+          const SettingEdit.set('agent.maxModelRounds', 10),
+        ],
+      );
+      final reversed = MutationUndoCompiler().prepare(
+        applied.data,
+        applied.receipt,
+      );
+      expect(reversed.candidate.toJson(), base.toJson());
+      final reset = apply(
+        applied.data,
+        [],
+        settings: [
+          const SettingEdit.reset('agent.systemInstructions'),
+          const SettingEdit.reset('agent.maxModelRounds'),
+        ],
+      );
+      expect(
+        MutationUndoCompiler()
+            .prepare(reset.data, reset.receipt)
+            .candidate
+            .toJson(),
+        applied.data.toJson(),
+      );
+    },
+  );
+  test(
     'undoing creation retains later changes to other events and settings',
     () {
       final base = fixture();

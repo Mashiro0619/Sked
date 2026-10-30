@@ -164,6 +164,61 @@ Map<String, _SettingBinding> _buildSettingBindings(
     defaultSource: SettingDefaultSource.adapter,
   );
   const notificationDefaults = NotificationSettings();
+  const agentDefaults = AgentSettings();
+  final agentPreferences = {
+    'systemInstructions': (SettingValueType.string, null, null),
+    'maxModelRounds': (SettingValueType.integer, 1, 100),
+    'maxToolCalls': (SettingValueType.integer, 1, 500),
+    'maxTotalTokens': (SettingValueType.integer, 1024, 1000000),
+    'historyRetentionDays': (SettingValueType.integer, 0, 3650),
+  };
+  for (final entry in agentDefaults.toJson().entries) {
+    final preference = agentPreferences[entry.key];
+    add(
+      'agent.${entry.key}',
+      SettingScope.agent,
+      preference?.$1 ??
+          switch (entry.key) {
+            'enabled' => SettingValueType.boolean,
+            'permissionMode' || 'protocol' => SettingValueType.enumeration,
+            _ => SettingValueType.string,
+          },
+      entry.value,
+      (d) => d.agentSettings.toJson()[entry.key],
+      nullable: entry.value == null,
+      allowed: switch (entry.key) {
+        'permissionMode' => const ['plan', 'ask', 'full'],
+        'protocol' => AgentModelProtocol.values.map((value) => value.name),
+        _ => const [],
+      },
+      readOnly: entry.key == 'permissionMode',
+      adapter: preference == null,
+      sensitive: entry.key == 'credentialRef' || entry.key == 'endpoint',
+      min: preference?.$2,
+      max: preference?.$3,
+      write: preference == null
+          ? null
+          : (d, v) {
+              final values = d.agentSettings.toJson()..[entry.key] = v;
+              try {
+                return d.copyWith(
+                  agentSettings: AgentSettings.fromJson(values),
+                );
+              } on FormatException {
+                throw SettingValidationException(
+                  SettingValidationCode.invalidValue,
+                  'agent.${entry.key}',
+                  'The Agent preference is outside its supported limits.',
+                );
+              }
+            },
+      resetMeaning: entry.key == 'historyRetentionDays'
+          ? 'Keep history until explicitly deleted; finite retention accepts 7–3650 days and excludes unfinished conversations.'
+          : preference == null
+          ? 'Use the owning Agent connection or host control.'
+          : 'Restore the declared default for future runs.',
+    );
+  }
   add(
     'app.agentSettings',
     SettingScope.app,
