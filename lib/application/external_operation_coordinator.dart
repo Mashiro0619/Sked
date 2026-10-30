@@ -334,7 +334,7 @@ class ExternalOperationCoordinator {
     required String planId,
     required OperationScope scope,
     MutationApproval? approval,
-  }) => _serialize(() => _commit(planId, scope, approval));
+  }) => _serialize(() => _commit(planId, scope, approval), scope: scope);
 
   Future<ExternalMutationCommitResult> _commit(
     String planId,
@@ -462,6 +462,7 @@ class ExternalOperationCoordinator {
   Future<ExternalMutationCommitResult> reconcile({
     required String operationId,
     required ExternalEffect readBack,
+    OperationScope? scope,
   }) => _serialize(() async {
     final receipt = status(operationId);
     if (receipt == null) {
@@ -470,8 +471,8 @@ class ExternalOperationCoordinator {
         'There is no durable external operation to reconcile.',
       );
     }
-    return _readBackOrReplay(receipt, readBack);
-  });
+    return _readBackOrReplay(receipt, readBack, scope: scope);
+  }, scope: scope);
 
   Future<ExternalMutationCommitResult> _readBackOrReplay(
     OperationReceipt receipt,
@@ -605,10 +606,33 @@ class ExternalOperationCoordinator {
     return receipt;
   }
 
-  Future<T> _serialize<T>(Future<T> Function() action) {
-    final result = _tail.then((_) => action());
+  Future<T> _serialize<T>(
+    Future<T> Function() action, {
+    OperationScope? scope,
+  }) {
+    var started = false;
+    final result = _tail.then((_) {
+      started = true;
+      // A cancelled caller may already have received its result while this
+      // queue slot was waiting. It must never start the abandoned operation.
+      scope?.checkActive();
+      return action();
+    });
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
-    return result;
+    if (scope == null) return result;
+    return Future.any([
+      result,
+      scope.whenCancelled.then<T>((_) {
+        // Once started, the operation owns its outcome and must still settle.
+        // Before then, returning promptly lets maintenance drain a run queued
+        // behind the very effect that is performing that maintenance.
+        if (started) return result;
+        throw const OperationProblem(
+          OperationErrorCode.cancelled,
+          'The queued external operation was cancelled before it started.',
+        );
+      }),
+    ]);
   }
 
   ExternalMutationCommitResult _result(

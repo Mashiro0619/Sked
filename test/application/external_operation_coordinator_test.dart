@@ -163,6 +163,75 @@ void main() {
     },
   );
 
+  for (final action in ['commit', 'reconcile']) {
+    test(
+      'cancelling queued $action returns before the preceding effect completes',
+      () async {
+        final entered = Completer<void>(), release = Completer<void>();
+        final initial = h.prepare(
+          execute: (_) async {
+            entered.complete();
+            await release.future;
+            return ExternalEffectResult(state: ExternalEffectState.applied);
+          },
+        );
+        var firstCompleted = false;
+        final first = h.commit(initial).then((value) {
+          firstCompleted = true;
+          return value;
+        });
+        await entered.future;
+        final scope = OperationScope(
+          id: 'queued',
+          policy: OperationPolicy(
+            enabled: true,
+            mode: AgentPermissionMode.full,
+          ),
+        );
+        var calls = 0;
+        Future<ExternalEffectResult> effect(ExternalOperationContext _) async {
+          calls++;
+          return ExternalEffectResult(state: ExternalEffectState.applied);
+        }
+
+        final Future<ExternalMutationCommitResult> queued;
+        if (action == 'commit') {
+          final plan = h.coordinator.prepare(
+            scope: scope,
+            action: 'queued.action',
+            arguments: const {},
+            version: null,
+            changes: [
+              ResourceChange(key: 'queued', before: false, after: true),
+            ],
+            validate: () {},
+            execute: effect,
+          );
+          queued = h.coordinator.commit(planId: plan.id, scope: scope);
+        } else {
+          queued = h.coordinator.reconcile(
+            operationId: initial.operationId,
+            readBack: effect,
+            scope: scope,
+          );
+        }
+        scope.cancel();
+        try {
+          await expectLater(
+            queued.timeout(const Duration(seconds: 2)),
+            throwsA(_problem(OperationErrorCode.cancelled)),
+          );
+          expect(firstCompleted, isFalse);
+        } finally {
+          release.complete();
+          await first;
+        }
+        await h.coordinator.waitForPendingWrites();
+        expect(calls, 0);
+      },
+    );
+  }
+
   test('recorded requests reuse the original version after restart', () async {
     const request = {'action': 'set', 'value': true};
     final plan = h.prepare(arguments: {'request': request, 'enabled': true});
