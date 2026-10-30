@@ -3802,6 +3802,11 @@ void main() {
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
+    // This fixture tests long text, not today's weekday or automatic reveal.
+    // A different valid week opens on Monday throughout the year.
+    await provider.studentCommands.setSelectedWeek(
+      provider.studentView.currentWeek() == 1 ? 2 : 1,
+    );
 
     await _pumpHomeScreenWithProvider(tester, provider);
     await switchStudentToDayView(tester);
