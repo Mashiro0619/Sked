@@ -135,6 +135,7 @@ class MutationCoordinator {
             'action': command.action.name,
             'target': command.target?.toJson(),
             'destinationParentId': command.destinationParentId,
+            'scope': command.scope?.name,
             'values': command.values,
           },
       ],

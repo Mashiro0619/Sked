@@ -2,7 +2,15 @@ import '../models/timetable_models.dart';
 import 'operation_contracts.dart';
 import 'resource_contracts.dart';
 
-enum ResourceMutationAction { create, patch, delete, copy, move }
+enum ResourceMutationAction {
+  create,
+  patch,
+  delete,
+  copy,
+  move,
+  dismissReminder,
+  restoreReminder,
+}
 
 /// A strict application command, independent of UI state and model providers.
 class ResourceMutation {
@@ -11,6 +19,7 @@ class ResourceMutation {
     required this.action,
     this.target,
     this.destinationParentId,
+    this.scope,
     Map<String, Object?> values = const {},
   }) : values = immutableMutationJson(values) as Map<String, Object?>;
 
@@ -20,6 +29,9 @@ class ResourceMutation {
 
   /// Required for child creation/movement; copying defaults to its old owner.
   final String? destinationParentId;
+
+  /// Required for occurrence patch/delete/copy. Other commands reject a scope.
+  final GeneralEventEditScope? scope;
 
   /// Missing fields stay unchanged in a patch. Null is accepted only for
   /// nullable fields. Nested objects are complete replacements, not deep patches.

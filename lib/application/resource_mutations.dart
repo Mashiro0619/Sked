@@ -10,6 +10,7 @@ import 'resource_contracts.dart';
 export 'mutation_draft.dart';
 
 part 'resource_mutations_student.dart';
+part 'resource_mutations_occurrence.dart';
 
 /// Compiles strict commands into one candidate without storage or UI effects.
 /// General-mode commands address hidden and disabled data explicitly.
@@ -101,9 +102,12 @@ class ResourceMutationCompiler {
             timetableChanges,
           );
         case ResourceKind.occurrence:
-          throw const OperationProblem(
-            OperationErrorCode.unsupported,
-            'This resource kind does not yet support strict mutations.',
+          general = _occurrenceMutation(
+            general,
+            operation,
+            context,
+            nextId,
+            base.notificationSettings.generalDefaultMinutesBefore,
           );
       }
     }
@@ -289,8 +293,9 @@ class ResourceMutationCompiler {
   GeneralEvent _eventValues(
     Map<String, Object?> values,
     GeneralEvent? original,
-    String parentId,
-  ) {
+    String parentId, {
+    bool preserveMonthlyAnchor = false,
+  }) {
     final title = values.containsKey('title')
         ? _string(values['title'], 'title', nonEmpty: true).trim()
         : original?.title ?? _missing('title');
@@ -325,6 +330,19 @@ class ResourceMutationCompiler {
     final explicitAnchor =
         values['recurrenceRule'] is Map &&
         (values['recurrenceRule'] as Map).containsKey('monthlyAnchorDay');
+    if (preserveMonthlyAnchor &&
+        !explicitAnchor &&
+        original != null &&
+        original.recurrenceRule.isRepeating &&
+        rule.isRepeating &&
+        effectiveGeneralRecurrenceUnit(original.recurrenceRule) ==
+            GeneralEventRecurrenceUnit.month &&
+        effectiveGeneralRecurrenceUnit(rule) ==
+            GeneralEventRecurrenceUnit.month) {
+      rule = rule.copyWith(
+        monthlyAnchorDay: original.recurrenceRule.monthlyAnchorDay,
+      );
+    }
     if (original != null &&
         !explicitAnchor &&
         calendarDaysBetween(
@@ -407,6 +425,15 @@ class ResourceMutationCompiler {
 }
 
 void _validateEnvelope(ResourceMutation command) {
+  if (command.kind != ResourceKind.occurrence) {
+    if (command.scope != null) {
+      _invalid('Only occurrence commands accept a scope.', 'scope');
+    }
+    if (command.action == ResourceMutationAction.dismissReminder ||
+        command.action == ResourceMutationAction.restoreReminder) {
+      _invalid('Reminder commands require an occurrence.', 'action');
+    }
+  }
   final target = command.target;
   if (command.action == ResourceMutationAction.create) {
     if (target != null) {

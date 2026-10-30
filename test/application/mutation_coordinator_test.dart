@@ -101,6 +101,28 @@ void main() {
     );
   });
 
+  test('a retry cannot change the recurring instance scope', () async {
+    final command = createEvent();
+    final plan = coordinator.prepare(scope: scope, resources: [command]);
+    await coordinator.commit(planId: plan.id, scope: scope);
+    expect(
+      () => coordinator.prepare(
+        scope: scope,
+        operationId: plan.operationId,
+        resources: [
+          ResourceMutation(
+            kind: command.kind,
+            action: command.action,
+            destinationParentId: command.destinationParentId,
+            values: command.values,
+            scope: GeneralEventEditScope.thisOccurrence,
+          ),
+        ],
+      ),
+      throwsA(problem(OperationErrorCode.duplicateMismatch)),
+    );
+  });
+
   test(
     'preparation writes nothing; a batch and its receipt persist together',
     () async {

@@ -395,6 +395,7 @@ class GeneralCalendarService {
     GeneralEvent draft,
     GeneralEventEditScope scope, {
     DateTime? now,
+    String? newEventId,
   }) {
     final current = _matchingOccurrenceInData(data, source);
     if (current == null ||
@@ -451,7 +452,9 @@ class GeneralCalendarService {
     final timestamp = (now ?? DateTime.now()).toIso8601String();
     var edited = draft
         .copyWith(
-          id: entireSeries ? current.event.id : _nextEventId(data),
+          id: entireSeries
+              ? current.event.id
+              : _nextEventId(data, requestedId: newEventId),
           calendarId: calendarId,
           recurrenceRule: rule,
           recurrenceExceptionDateIso: const [],
@@ -504,6 +507,7 @@ class GeneralCalendarService {
     GeneralScheduleData data,
     GeneralEventOccurrence occurrence, {
     DateTime? now,
+    String? newEventId,
   }) {
     final currentOccurrence = _matchingOccurrenceInData(data, occurrence);
     if (currentOccurrence == null) {
@@ -511,7 +515,7 @@ class GeneralCalendarService {
     }
     final timestamp = (now ?? DateTime.now()).toIso8601String();
     final duplicated = currentOccurrence.event.copyWith(
-      id: _nextEventId(data),
+      id: _nextEventId(data, requestedId: newEventId),
       calendarId: currentOccurrence.calendar.id,
       startDateTimeIso: currentOccurrence.start.toIso8601String(),
       endDateTimeIso: currentOccurrence.end.toIso8601String(),
@@ -746,11 +750,19 @@ bool _remindersEqual(
   return true;
 }
 
-String _nextEventId(GeneralScheduleData data) {
+String _nextEventId(GeneralScheduleData data, {String? requestedId}) {
   final existingIds = data.schedules
       .expand((schedule) => schedule.events)
       .map((event) => event.id)
       .toSet();
+  if (requestedId != null) {
+    if (requestedId.trim().isEmpty ||
+        requestedId != requestedId.trim() ||
+        existingIds.contains(requestedId)) {
+      throw ArgumentError.value(requestedId, 'newEventId', 'Invalid new ID.');
+    }
+    return requestedId;
+  }
   var stamp = DateTime.now().microsecondsSinceEpoch;
   var candidate = 'evt_$stamp';
   while (existingIds.contains(candidate)) {
@@ -829,18 +841,7 @@ GeneralEventOccurrence? _matchingOccurrenceInData(
   if (currentEvent == null) {
     return null;
   }
-  final queryEnd = occurrence.start.add(const Duration(microseconds: 1));
-  for (final currentOccurrence in expandGeneralEventOccurrences(
-    calendar: schedule,
-    event: currentEvent,
-    startInclusive: occurrence.start,
-    endExclusive: queryEnd,
-  )) {
-    if (currentOccurrence.start.isAtSameMomentAs(occurrence.start)) {
-      return currentOccurrence;
-    }
-  }
-  return null;
+  return _eventOccurrenceAtStart(schedule, currentEvent, occurrence.start);
 }
 
 GeneralEventOccurrence? _occurrenceForAcknowledgement(
@@ -873,17 +874,35 @@ GeneralEventOccurrence? _occurrenceForAcknowledgement(
   if (event == null || start == null) {
     return null;
   }
-  for (final occurrence in expandGeneralEventOccurrences(
-    calendar: schedule,
+  return _eventOccurrenceAtStart(schedule, event, start);
+}
+
+GeneralEventOccurrence? _eventOccurrenceAtStart(
+  GeneralSchedule calendar,
+  GeneralEvent event,
+  DateTime start,
+) {
+  final candidates = GeneralEventOccurrenceRange(
+    calendar: calendar,
     event: event,
     startInclusive: start,
     endExclusive: start.add(const Duration(microseconds: 1)),
-  )) {
-    if (occurrence.start.isAtSameMomentAs(start)) {
-      return occurrence;
+  );
+  // Long-running events may overlap millions of previous instances. Seek the
+  // exact start in the lazy ordinal range without materializing those rows.
+  var lower = 0;
+  var upper = candidates.length;
+  while (lower < upper) {
+    final middle = lower + ((upper - lower) ~/ 2);
+    if (candidates[middle].start.isBefore(start)) {
+      lower = middle + 1;
+    } else {
+      upper = middle;
     }
   }
-  return null;
+  if (lower == candidates.length) return null;
+  final candidate = candidates[lower];
+  return candidate.start.isAtSameMomentAs(start) ? candidate : null;
 }
 
 DateTime? _legacyReminderKeyStart(
