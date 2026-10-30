@@ -1,6 +1,6 @@
 ---
 id: resolve-course-conflicts
-version: 1.0.0
+version: 1.0.1
 summary: 区分显示选择与真实调课并准备准确的冲突解决操作。
 ---
 
@@ -20,13 +20,13 @@ summary: 区分显示选择与真实调课并准备准确的冲突解决操作�
 
 ## 依赖工具
 
-必需：courses.conflicts、courses.get、mutation.prepare、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：courses.conflicts、courses.get、courses.display.list、courses.display.prepare、mutation.prepare、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
 1. 调用冲突查询取得确切课程与时段，读取相关课程详情。
 2. 确认用户是选择显示项还是改变真实安排；这两种意图使用不同操作。
-3. 准备最小目标动作，核对冲突变化后按宿主规则提交。
+3. 选择展示项时，按 timetableId 和 week 调用 courses.display.list 取得真实 conflictKey 与候选课程；用 courses.display.prepare 的 set 或 reset 准备，再通过 mutation.commit 保存。reset 不提供 courseId。真正调课仍使用 mutation.prepare；展示选择不会消除课程重叠。
 4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 
 ## 业务注意事项

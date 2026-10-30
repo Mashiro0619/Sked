@@ -1,6 +1,6 @@
 ---
 id: configure-appearance
-version: 1.0.0
+version: 1.0.1
 summary: 在明确工作区与设备范围内调整主题、颜色和面板布局。
 ---
 
@@ -20,7 +20,7 @@ summary: 在明确工作区与设备范围内调整主题、颜色和面板布�
 
 ## 依赖工具
 
-必需：settings.describe、settings.get、settings.prepare、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：settings.describe、settings.get、settings.prepare、device.layout.describe、device.layout.prepare、mutation.commit、external.commit、external.status、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
@@ -40,3 +40,7 @@ summary: 在明确工作区与设备范围内调整主题、颜色和面板布�
 ## 失败处理
 
 平台暂不使用的偏好说明保存与生效范围；reset失败保留现值，不冻结后续存储。 取消停止未开始步骤并核对已提交结果。业务冲突重新读取；结果未知先查询原操作，不重复执行写入。未注册工具与不支持的平台能力必须如实说明。
+
+## 执行入口
+
+主库外观偏好通过 mutation.commit；本机面板尺寸先 device.layout.describe，再 device.layout.prepare 与 external.commit，等待设备存储 flush 后核对回执。

@@ -1,6 +1,6 @@
 ---
 id: import-structured-files
-version: 1.0.0
+version: 1.0.1
 summary: 优先用确定性解码处理JSON、ICS和节次文件。
 ---
 
@@ -20,13 +20,13 @@ summary: 优先用确定性解码处理JSON、ICS和节次文件。
 
 ## 依赖工具
 
-必需：sources.describe、sources.read、imports.prepare、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：sources.describe、sources.read、file_imports.inspect、file_imports.prepare、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
 1. 核对文件来源、版本、格式与完整性；遵守文件字节和条目限制。
 2. 把原有结构交给确定性解码和领域校验，读取时区、条数与字段诊断，不让模型重造已可解析的数据。
-3. 明确追加或替换及目标，通过imports.prepare后按宿主模式提交并核对实际接收项。
+3. 明确追加或替换及目标，通过 file_imports.prepare 后按宿主模式提交并核对实际接收项。
 4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 
 ## 业务注意事项
@@ -40,3 +40,7 @@ summary: 优先用确定性解码处理JSON、ICS和节次文件。
 ## 失败处理
 
 来源失效重新读取；写入未知按操作ID核对，不再次导入同一批。 取消停止未开始步骤并核对已提交结果。业务冲突重新读取；结果未知先查询原操作，不重复执行写入。未注册工具与不支持的平台能力必须如实说明。
+
+## 执行入口
+
+确定性 JSON、ICS、节次文件使用 file_imports.inspect 读取完整诊断，再用 file_imports.prepare 准备并由 mutation.commit 保存；imports.prepare 专供提取后的学校课表候选，不用于重写已可确定解码的文件。

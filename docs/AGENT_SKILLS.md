@@ -1,6 +1,6 @@
 # 内置 Agent 的共享 Skills 设计
 
-状态：24 个共享技能资产、manifest、按需装载和 Flutter 打包已实现；各技能依赖的工具随实施计划逐项接入。源码调查基线为 `ea784f3a16e5d4a23aedae410544492fb6fa0f6f`。资产存在不等于能力可用，装载器只在宿主已登记全部必需工具时返回技能正文。
+状态：24 个共享技能资产、manifest、按需装载、Flutter 打包及应用宿主工具依赖已接通。源码调查基线为 `ea784f3a16e5d4a23aedae410544492fb6fa0f6f`。装载器只在宿主已登记全部必需工具时返回技能正文；资产/依赖回归不等于每个 Skill 的真实模型任务质量、成本或所有平台均已验收。
 
 相关文档：[架构](AGENT_ARCHITECTURE.md)、[能力全集](AGENT_CAPABILITIES.md)、[数据与应用重构](AGENT_DATA_REFACTOR.md)、[实施计划](AGENT_IMPLEMENTATION_PLAN.md)。现行数据语义见[使用逻辑](USAGE_LOGIC.md)，持久化与导入约束见[可靠性指南](RELIABILITY_BASELINE.md)。旧 AI 解析链路的退役及配置迁移由实施计划统一安排，本文只规定迁移后技能如何工作。
 
@@ -33,7 +33,7 @@ Skills 教 Agent 如何完成任务：怎样找准对象、理解课表和重复
 
 ## 内置资产与 Manifest
 
-建议采用以下应用资产目录；目录名是设计约定，本轮不生成实际资产。
+应用已经使用以下资产目录；完整目录及当前版本以[实际 manifest](../assets/agent/skills/manifest.json)为准。
 
 ```text
 assets/agent/skills/
@@ -52,7 +52,7 @@ assets/agent/skills/
 
 Manifest 至少记录整包版本、运行时契约版本、工具契约兼容范围，以及每项技能的 ID、内容版本、名称、用途、触发提示、资源路径、内容摘要、必需工具、可选工具和适用来源类型。它是随应用构建的静态目录，发布时验证内容摘要；摘要校验只能发现不匹配，不能给任意外部文件授予信任。
 
-以下为拟议结构；版本、摘要及工具契约均为示例：
+以下保留 manifest 的结构示例；示例版本和摘要不是当前发布值，实际内容与精确依赖以仓库中的 manifest 为准：
 
 ```json
 {
@@ -95,7 +95,7 @@ Manifest 至少记录整包版本、运行时契约版本、工具契约兼容�
 
 装载器从 Flutter asset bundle 读取 manifest，验证兼容版本、严格相对路径、内容 SHA-256 与工具依赖；同一运行冻结目录并顺序装载。默认最多 8 个技能、合计 64 KiB，单项不超过 24 KiB；缺依赖、校验失败或超预算返回结构化状态，不用示例正文伪装可用。所有 24 个包均有源文件及实际 bundle 读取回归。用户会话和凭据不写入共享资产。
 
-启动模型上下文只提供能力概述和技能目录的短摘要。拟议 `skills.search` 根据当前任务返回少量候选及缺失依赖，`skills.load` 返回指定兼容技能正文和工具依赖。关键词只帮助发现，不能仅因页面里出现某词就自动决定执行任务。
+启动模型上下文只提供能力概述和技能目录的短摘要。已注册的 `skills.search` 根据当前任务返回少量候选及缺失依赖，`skills.load` 返回指定兼容技能正文和工具依赖。关键词只帮助发现，不能仅因页面里出现某词就自动决定执行任务。
 
 推荐流程如下：
 
@@ -113,29 +113,29 @@ Manifest 至少记录整包版本、运行时契约版本、工具契约兼容�
 
 ## 共用工具词汇
 
-下面名称用于本设计中的技能依赖和示例，均为**拟议 typed tools**。最终名称在应用能力契约实现时统一；不得把这些名称误认为当前 controllers 已提供的远程 API。
+下表对应应用内已注册工具族，精确参数以运行时 schema 和打包 manifest 为准；这些工具由内置宿主执行，不是可任意远程调用 controller 的 API。
 
 | 工具族 | 用途 |
 | --- | --- |
 | `capabilities.describe`、`skills.search/load` | 查询能力与兼容技能；不授予权限 |
 | `timetables.*`、`courses.*`、`period_sets.*` | 显式目标的课表、课程、共享时间集查询与准备 |
 | `calendars.*`、`events.*`、`occurrences.*`、`agenda.query/free_slots` | 分类、日程、重复实例及跨工作区安排查询 |
-| `settings.describe/get/prepare`、`workspaces.describe/prepare` | 设置注册表、恢复默认和工作区变更准备；settings.prepare 用 action 区分 set/reset，实际生效统一经 mutation.commit |
-| `sources.describe/read`、`imports.prepare` | 读取会话来源句柄；验证结构化候选、返回导入计划 |
+| `settings.describe/get/prepare`、`workspaces.describe/prepare` | 设置的 edits[].action 区分 keep/set/reset，经 mutation.commit 保存；工作区切换计划经 external.commit 执行 |
+| `sources.describe/read`、`imports.prepare`、`file_imports.inspect/prepare` | 读取会话来源；学校候选与确定性文件解码分别准备，主库导入经 mutation.commit 保存 |
 | `mutation.prepare/commit`、`operations.status`、`undo.prepare` | 固定变更集合、实际提交、未知结果核对和受版本保护的撤销 |
-| `notifications.status/prepare/reconcile`、`platform.request_action` | 通知偏好和运行状态、系统授权/设置动作 |
-| `school_sites.*`、`school_sessions.prepare_sign_out` | 学校站点管理和本机网页登录清理 |
+| `notifications.status`、通知 `*.prepare`、`platform.request_action` | 通知与系统状态读取、具体动作准备，外部计划经 external.commit 执行/核对 |
+| `school_sites.*`、`school_session.clear.prepare` | 学校站点管理和本机网页登录清理，经 external.commit 执行 |
 | `exports.prepare/write`、`backups.prepare_restore`、`maintenance.prepare_clear` | 有明确产物及副作用的导出、恢复和清除 |
 | `connection.describe/prepare`、`credentials.request_input`、`agent_settings.describe/prepare` | 单个内置 Agent 的连接和共享设置；密钥仅经宿主安全输入 handle |
-| `conversation.*`、`runs.status/stop/resume`、`navigation.open` | 会话管理、运行结果和展示对象；不创建另一个 Agent |
+| `conversation.get/history/read`、`conversations.*`、`runs.status/stop/resume`、`navigation.open` | 会话管理、运行结果和展示对象；会话/运行变更计划经 external.commit，不创建另一个 Agent |
 
 表中的 `.*` 表示工具族，不是允许调用任意方法的通配权限。实际 manifest 必须列出精确工具名；每个参数使用注册表中的有类型对象、枚举和限制，不能通过 `payload: any` 接受整份任意 AppData。
 
-`settings.prepare` 始终只产计划；`mutation.commit` 才返回设置生效回执。通知重排、导出写入和系统动作等专用工具同样进入公共模式判断与 OperationScope，不能因名称不同绕过只读/询问控制。以下模板中的执行步骤只用于非只读模式；只读任务在可检视计划处结束。
+`settings.prepare` 始终只产计划；`mutation.commit` 才返回主库设置生效回执。通知重排、文件保存、维护和系统动作使用 `external.commit`，同样受公共模式和 OperationScope 控制。纯读取与计划不会写业务数据；不能因为不同工具名绕过只读或询问模式。技能源文件固定使用 LF，使 Windows 与其他平台检出后校验相同内容摘要。
 
-## 初始共享任务目录
+## 当前共享任务目录
 
-初始建议 24 项。每行都是可复用任务指导，其实现应有独立样例和验收；目录并不表示本轮已实现这些能力。
+当前包含以下 24 项任务包，其正文和必需工具已接入应用。表内是任务步骤概览，精确工具名以实际 manifest/schema 为准；独立模型样例的质量、费用和平台验收仍须按下文门禁记录。
 
 | Skill ID / 任务 | 触发场景 | 主要工具依赖 | 关键步骤 | 验收重点 |
 | --- | --- | --- | --- | --- |
@@ -145,30 +145,30 @@ Manifest 至少记录整包版本、运行时契约版本、工具契约兼容�
 | `manage-semester` 建立或调整学期课表 | 新学期、改开学日/周数、复制课表 | `timetables.list/get`、`period_sets.list`、`mutation.prepare/commit` | 选择显式目标，分析学期变化与绑定，准备整体修改 | 不隐式切活动课表；缩短学期说明受影响课程 |
 | `edit-courses` 整理课程 | 新增、改教师地点、移动或复制课程 | `courses.list/get`、`timetables.get`、`mutation.prepare/commit` | 解析课表归属、字段 patch、周次和时间表示，核对结果 | 不覆盖未涉及字段；保留旧节次推导时间 |
 | `manage-period-times` 管理共享作息 | 改节次时间、建立时间集、重绑后删除 | `period_sets.list/get/references`、`mutation.prepare/commit` | 查所有引用、验证有序时间、联合准备重绑和删除 | 使用中不能直接删；时间不越界或重叠 |
-| `resolve-course-conflicts` 处理课程冲突 | 重叠课程、选择显示项、挪动冲突课程 | `courses.conflicts`、`courses.get`、`mutation.prepare/commit` | 区分显示冲突与真实调课，返回方案后执行目标动作 | 选择显示项不删除或移动其他课程 |
+| `resolve-course-conflicts` 处理课程冲突 | 重叠课程、选择显示项、挪动冲突课程 | `courses.conflicts`、`courses.display.list/prepare`、`courses.get`、`mutation.prepare/commit` | 区分显示冲突与真实调课，返回方案后执行目标动作 | 选择显示项不删除或移动其他课程 |
 | `organize-calendars` 整理日历分类 | 分类增删、改名颜色、显隐、重排 | `calendars.list/get`、`mutation.prepare/commit` | 查询分类及内容影响，字段化修改，处理最后分类语义 | 隐藏不丢事件；删最后分类回报实际替代结果 |
 | `edit-events` 新建和修改日程 | 会议、考试、活动、跨分类移动 | `events.list/get`、`calendars.get`、`mutation.prepare/commit` | 解析时区/全天/提醒/目标分类，识别重复系列并转专门技能 | 无效分类不回退；跨日与全天结束语义正确 |
 | `edit-recurring-events` 编辑重复实例 | 只改本次、本次及以后、整个系列 | `occurrences.list/get`、`events.get`、`mutation.prepare/commit` | 固定实例与范围，计算拆分/例外变化，提交统一计划 | 月末锚点、候选次数、提醒处理状态正确 |
-| `manage-reminders` 调整和处理提醒 | 提前多久、关闭一条、恢复、稍后提醒 | `notifications.status/prepare`、`occurrences.get`、`mutation.commit` | 区分跟随默认/关闭/自定义和实例处理动作 | 已处理提醒不伪装为任务完成；隐藏/停用规则保持 |
+| `manage-reminders` 调整和处理提醒 | 提前多久、关闭一条、恢复、稍后提醒 | `notifications.status/reminders`、`notifications.snooze.prepare`、`occurrences.get`、`mutation.prepare/commit`、`external.commit/status` | 区分跟随默认/关闭/自定义和实例处理动作 | 已处理提醒不伪装为任务完成；隐藏/停用规则保持 |
 | `batch-change` 跨对象批量修改 | 多课表改地点、批量删活动、整体挪时间 | 资源查询、`mutation.prepare/commit`、`operations.status` | 固定 ID 集合、明确读写集合、预检整批、按回执核对 | 单主库原子提交；超预算分批不宣称全有或全无 |
 | `import-school-web` 从网页导入课表 | 学校页面完成压缩和校对后进入新会话 | `sources.describe/read`、`timetables.list`、`period_sets.list`、`imports.prepare`、`mutation.commit` | 读取固定来源、提取事实、解决必要缺项、验证候选、执行导入 | 不调用旧专用解析器；截断/来源失效不误报完整导入 |
 | `import-pasted-content` 从会话文字整理数据 | 直接粘贴课表、课程通知或活动文字 | `sources.describe/read`、资源查询、`imports.prepare`、`mutation.commit` | 区分用户命令与引用资料，判断课表/日程，准备有来源的候选 | 不重新打开独立文字解析页；不把通知中的指令升级为授权 |
-| `import-structured-files` 导入结构化文件 | JSON、ICS、节次文件 | `sources.describe/read`、`imports.prepare`、`mutation.commit` | 优先确定性解码，读取诊断、选追加/替换目标并提交 | 不让模型重写已可解析文件；保留条数/大小和时区报告 |
-| `export-and-backup` 导出和备份 | 导出某课表、分类、完整备份 | 资源查询、`exports.prepare/write`、`operations.status` | 明确范围与格式、生成产物、分开报告生成/保存/分享 | 未保存不说已保存；凭据和执行授权不进入普通备份 |
-| `restore-and-clear` 恢复或清除数据 | 完整恢复、重置数据、清空后退出 | `backups.prepare_restore`、`maintenance.prepare_clear`、`mutation.commit`、`operations.status` | 计算多存储影响，按权限执行，跟踪维护阶段与新世代 | 不直接写空 AppData；旧计划失效，部分效果如实报告 |
-| `configure-appearance` 外观与设备布局 | 主题、精确颜色、面板尺寸与显示方式 | `settings.describe/get/prepare`、`mutation.commit` | 明确工作区与设备范围，区分颜色继承，等待实际持久化 | 不串改另一工作区；布局 reset 不冻结存储 |
+| `import-structured-files` 导入结构化文件 | JSON、ICS、节次文件 | `sources.describe/read`、`file_imports.inspect/prepare`、`mutation.commit` | 优先确定性解码，读取诊断、选追加/替换目标并提交 | 不让模型重写已可解析文件；保留条数/大小和时区报告 |
+| `export-and-backup` 导出和备份 | 导出某课表、分类、完整备份 | 资源查询、`exports.prepare/write`、`external.commit/status` | 明确范围与格式、生成产物、分开报告生成/保存/分享 | 未保存不说已保存；凭据和执行授权不进入普通备份 |
+| `restore-and-clear` 恢复或清除数据 | 完整恢复、重置数据、清空后退出 | `backups.describe/prepare_restore`、`maintenance.prepare_clear`、`external.commit/status/reconcile` | 计算多存储影响，按权限执行，跟踪维护阶段与新世代 | 不直接写空 AppData；旧计划失效，部分效果如实报告 |
+| `configure-appearance` 外观与设备布局 | 主题、精确颜色、面板尺寸与显示方式 | `settings.describe/get/prepare`、`device.layout.describe/prepare`、`mutation.commit`、`external.commit/status` | 明确工作区与设备范围，区分颜色继承，等待实际持久化 | 不串改另一工作区；布局 reset 不冻结存储 |
 | `configure-display` 显示和交互设置 | 工具栏、周末、农历、网格、交互恢复默认 | `settings.describe/get/prepare`、`mutation.commit` | 从注册表检索目标、组合校验、只改选定项 | 覆盖平台隐藏选项并说明生效范围；null/reset语义正确 |
 | `configure-workspaces` 工作区和全局偏好 | 启停课表/日程、语言、导航、更新偏好 | `workspaces.describe/prepare`、`settings.*`、`mutation.commit` | 区分启用/显示/活动状态，保留至少一个工作区，计算联动 | 不伪造隐私接受或更新缓存；停用不删除数据 |
-| `troubleshoot-notifications` 通知诊断 | 提醒不响、权限、电池或自启动设置 | `notifications.status/reconcile`、`platform.request_action` | 查真实诊断、请求可用系统动作、回到前台复查 | unknown/unsupported/denied分开；打开设置不等于授权 |
-| `manage-school-access` 学校站点与网页登录 | 新增站点、改地址、退出学校网页 | `school_sites.*`、`school_sessions.prepare_sign_out`、`mutation.commit` | 用稳定句柄修改，检测并发，按网页登录工作流清理 | URL变化不删错对象；本机退出不声称注销远端所有会话 |
+| `troubleshoot-notifications` 通知诊断 | 提醒不响、权限、电池或自启动设置 | `notifications.status`、`notifications.reconcile.prepare`、`external.commit`、`platform.request_action` | 查真实诊断、请求可用系统动作、回到前台复查 | unknown/unsupported/denied分开；打开设置不等于授权 |
+| `manage-school-access` 学校站点与网页登录 | 新增站点、改地址、退出学校网页 | `school_sites.*`、`school_session.clear.prepare`、`external.commit` | 用稳定句柄修改，检测并发，按网页登录工作流清理 | URL变化不删错对象；本机退出不声称注销远端所有会话 |
 | `configure-agent-connection` 配置内置 Agent | API、模型、凭据、预算、功能开关 | `connection.describe/prepare`、`credentials.request_input`、`agent_settings.describe/prepare` | 读取共享配置，绑定目的地与凭据引用，在运行边界生效 | 无多Agent定义；密钥不进模型；模型不能自行提权 |
 | `recover-and-undo` 核对运行、继续或撤销 | “刚才成功了吗”“继续”“撤销上一批” | `runs.status/stop/resume`、`operations.status`、`undo.prepare`、`mutation.commit`、`conversation.*` | 先核对回执，再恢复未提交步骤或准备逆变更 | 回复丢失不重复创建；删除会话不撤销业务；新编辑不被旧撤销覆盖 |
 
 ## 网页入口：保留压缩校对，改由新会话处理
 
-现有学校网页流程在 [SchoolWebImportPage](../lib/screens/school_web_import_page.dart) 的 `_importCurrentPage` 中核对活动 pane、load generation 和 document revision，然后取得页面来源并打开内容页。现有 [SchoolHtmlImportPage](../lib/screens/school_html_import_page.dart) 同时承担内容压缩、校对、专用 API 提交和结果应用。新方案保留前半段的网页来源处理，移除后半段独立 AI 解析职责。
+学校网页流程在 [SchoolWebImportPage](../lib/screens/school_web_import_page.dart) 的 `_importCurrentPage` 中核对活动 pane、load generation 和 document revision，然后取得页面来源并打开内容页。[SchoolHtmlImportPage](../lib/screens/school_html_import_page.dart) 已保留为本地压缩、校对和来源交接页面；提交通过 `SchoolWebHandoffController` 创建或复用一次 Agent 会话，不再调用旧专用解析 API。
 
-目标路径为：学校网页 → 提取当前有效文档 → 本地压缩 → 用户校对来源 → **创建新 Agent 会话** → 共享 `import-school-web` skill → 通用模型运行时和 typed import tools。手机进入独立 Agent 页面；无需经过旧解析设置页或旧流式解析结果页。
+当前路径为：学校网页 → 提取当前有效文档 → 本地压缩 → 用户校对来源 → **创建新 Agent 会话** → 共享 `import-school-web` skill → 通用模型运行时和 typed import tools。手机进入独立 Agent 页面；无需经过旧解析设置页或旧流式解析结果页。
 
 网页访问、压缩和校对本身不发起模型请求。用户把校对内容交给会话时，宿主按当前 Agent 连接和权限处理；连接缺失或功能未启用时保留来源草稿，并提供对应功能/连接入口，不悄悄启用 Agent 或发送到旧解析端点。来源交接使用固定 handoff ID，重复点击或路由恢复复用同一次会话与初始请求，不重复入队。远端请求结果未知时按 provider 实际支持的状态/幂等协议核对，不以本地去重保证推理或计费只发生一次。
 
@@ -182,7 +182,7 @@ Manifest 至少记录整包版本、运行时契约版本、工具契约兼容�
 
 ### `import-school-web/SKILL.md` 示例
 
-以下为未来资产正文样例，尚未打包。工具的 `SourceRef`、`TimetableDraft`、`ImportOptions` 和计划句柄均由应用 schema 定义。
+以下是设计阶段保留的步骤示例，不是当前逐字打包的正文或完整工具 schema；发布内容见[实际网页导入 Skill](../assets/agent/skills/import-school-web/SKILL.md)。本文其余正文模板同样用于解释任务边界，调用时必须使用运行时返回的精确参数。
 
 ```markdown
 ---
@@ -368,7 +368,7 @@ summary: 管理显示、交互、工具栏和默认值，保留用户未要求�
 
 工具回执至少区分准备完成、等待用户、实际提交、部分效果未完成、取消、冲突、数据失效、平台未支持和结果未知。操作卡由宿主回执渲染；skill 只组织说明，不输出自造的成功卡。
 
-拟议回执示例：
+以下为设计阶段的说明性回执，字段并非当前所有工具共用的返回 schema；实际以 `mutation.commit`、`external.commit` 及查询工具返回值为准。普通业务提交的通知排程仍沿用应用管线，不保证每次提交均带有独立通知 EffectTicket。
 
 ```json
 {
@@ -389,7 +389,7 @@ summary: 管理显示、交互、工具栏和默认值，保留用户未要求�
 
 ## 实施与验收门禁
 
-共享 Skills 跟随应用命令实现逐步交付，但目录应先覆盖全部既有能力。某技能可以先处于“待依赖实现”，不能因为已写 Markdown 就在产品中宣称可完成该任务。
+共享 Skills 已随应用命令接通，目录覆盖 24 项既有任务。装载器仍保留缺依赖、不兼容和超预算状态；新增能力或不同宿主缺少依赖时，不能因为已有 Markdown 就宣称该任务可执行。现有资产与工具依赖回归之外，真实模型和各平台任务结果按下表分别验收。
 
 | 验证层 | 必须验证的内容 |
 | --- | --- |
@@ -406,6 +406,6 @@ summary: 管理显示、交互、工具栏和默认值，保留用户未要求�
 
 每个目录项准备最少一条正常任务、一条业务边界任务和一条失败/中断任务；按风险增加重复日期、隐私和存储用例，不做只检查模型输出包含某句话的“通过”测试。确定性 fake provider 验证工具顺序、输入和存档；真实模型评测验证任务完成与不确定项表达，两类证据分别记录。
 
-可迁移的既有回归包括 [网页导入页面](../test/widgets/school_web_import_page_test.dart)、[内容准备](../test/services/school_import_content_sanitizer_test.dart)、[解析工作流](../test/services/school_import_workflow_test.dart)、[数据传输](../test/controllers/data_transfer_controller_test.dart)、[重复范围](../test/services/general_event_scope_edit_test.dart)和[设置持久化](../test/controllers/school_import_secret_persistence_test.dart)。迁移时保留仍有效的来源、取消、存储和凭据断言，把旧专用解析链路断言改为新的会话交接与通用工具回执；不能简单删除测试后把旧行为当作已被等价覆盖。
+可迁移的既有回归包括 [网页导入页面](../test/widgets/school_web_import_page_test.dart)、[内容准备](../test/services/school_import_content_sanitizer_test.dart)、[来源交接](../test/agent/imports/school_web_handoff_test.dart)、[数据传输](../test/controllers/data_transfer_controller_test.dart)、[重复范围](../test/services/general_event_scope_edit_test.dart)和[设置持久化](../test/controllers/school_import_secret_persistence_test.dart)。迁移时保留仍有效的来源、取消、存储和凭据断言，把旧专用解析链路断言改为新的会话交接与通用工具回执；不能简单删除测试后把旧行为当作已被等价覆盖。
 
-技能内容、工具契约及使用逻辑在同一功能变更中保持一致。完成一个任务技能意味着：资源已进入发布包、依赖工具已实现、三个权限模式和关键失败路径通过，并有能检查实际结果的产品入口。本文中的目录和模板只是这项工作的设计起点。
+技能内容、工具契约及使用逻辑在同一功能变更中保持一致。当前资源、依赖工具和结果入口已接通；三个权限模式、关键失败路径及真实模型任务结果仍按实际回归范围记录，不能将静态装载通过写成所有任务样例均已验收。本文保留的模板说明设计边界，发布正文以资产目录为准。

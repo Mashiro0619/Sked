@@ -1,6 +1,6 @@
 ---
 id: configure-workspaces
-version: 1.0.0
+version: 1.0.1
 summary: 区分启用、显示和活动状态并调整合法的全局偏好。
 ---
 
@@ -20,7 +20,7 @@ summary: 区分启用、显示和活动状态并调整合法的全局偏好。
 
 ## 依赖工具
 
-必需：workspaces.describe、workspaces.prepare、settings.describe、settings.get、settings.prepare、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：workspaces.describe、workspaces.prepare、settings.describe、settings.get、settings.prepare、navigation.range.prepare、mutation.commit、external.commit、external.status、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
@@ -40,3 +40,9 @@ summary: 区分启用、显示和活动状态并调整合法的全局偏好。
 ## 失败处理
 
 不得通过设置伪造用户同意事实、系统授权或内部缓存标记。 取消停止未开始步骤并核对已提交结果。业务冲突重新读取；结果未知先查询原操作，不重复执行写入。未注册工具与不支持的平台能力必须如实说明。
+
+## 执行入口
+
+工作区 enable/disable/switch 计划由 external.commit 执行；纯偏好计划仍由 mutation.commit 保存。不能把两个已分别保存的动作称为同一原子批。
+
+设置描述中的 adapterTool 给出专用入口；日程自定义显示范围使用 navigation.range.prepare 的 set/reset，再由 mutation.commit 生效，不通过通用字段写入跳过范围和焦点约束。

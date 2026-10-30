@@ -1,6 +1,6 @@
 ---
 id: manage-reminders
-version: 1.0.0
+version: 1.0.1
 summary: 区分提醒策略、实例处理状态和真实通知效果。
 ---
 
@@ -20,12 +20,12 @@ summary: 区分提醒策略、实例处理状态和真实通知效果。
 
 ## 依赖工具
 
-必需：notifications.status、notifications.prepare、occurrences.get、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：notifications.status、notifications.reminders、notifications.snooze.prepare、occurrences.get、mutation.prepare、settings.prepare、mutation.commit、external.commit、external.status、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
 1. 读取对象、实例与通知状态，区分跟随默认、关闭与自定义提前量。
-2. 准备提醒策略或实例处理动作，不绕过隐藏分类与停用域约束。
+2. 用 mutation.prepare 修改对象提醒或实例处理状态，用 settings.prepare 修改默认提醒策略。稍后提醒先读取 notifications.reminders 的当前句柄，再用 notifications.snooze.prepare 准备十分钟稍后提醒，并经 external.commit 执行；不绕过隐藏分类与停用域约束。
 3. 按模式执行后核对保存回执和通知效果，单独说明待重排或系统限制。
 4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 

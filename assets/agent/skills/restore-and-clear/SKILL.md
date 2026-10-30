@@ -1,6 +1,6 @@
 ---
 id: restore-and-clear
-version: 1.0.0
+version: 1.0.1
 summary: 通过维护工作流恢复或清除明确数据并核对新世代和外部效果。
 ---
 
@@ -20,7 +20,7 @@ summary: 通过维护工作流恢复或清除明确数据并核对新世代和�
 
 ## 依赖工具
 
-必需：backups.prepare_restore、maintenance.prepare_clear、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：backups.describe、backups.prepare_restore、maintenance.prepare_clear、external.commit、external.status、external.reconcile。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
@@ -40,3 +40,7 @@ summary: 通过维护工作流恢复或清除明确数据并核对新世代和�
 ## 失败处理
 
 完全权限仍服从业务、存储与系统约束；未知结果先核对，不笼统称全部成功或完全没改。 取消停止未开始步骤并核对已提交结果。业务冲突重新读取；结果未知先查询原操作，不重复执行写入。未注册工具与不支持的平台能力必须如实说明。
+
+## 执行入口
+
+维护计划由 external.commit 执行；完成恢复后旧世代操作不可重放。外部未决结果先 external.reconcile 只读核对，不能重复恢复或清空。

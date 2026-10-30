@@ -1,6 +1,6 @@
 ---
 id: troubleshoot-notifications
-version: 1.0.0
+version: 1.0.1
 summary: 检查真实平台状态并通过受权限约束的系统动作定位通知问题。
 ---
 
@@ -20,12 +20,12 @@ summary: 检查真实平台状态并通过受权限约束的系统动作定位�
 
 ## 依赖工具
 
-必需：notifications.status、notifications.reconcile、platform.request_action、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：notifications.status、notifications.reconcile.prepare、notifications.permission.prepare、notifications.exact_alarm.prepare、notifications.settings.prepare、notifications.test.prepare、platform.request_action、external.commit、external.status、external.reconcile。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
 1. 读取通知配置、排程结果及平台权限与后台限制诊断。
-2. 区分unknown、unsupported、denied和正常状态，按用户目标使用可用系统动作或通知重排。
+2. 区分unknown、unsupported、denied和正常状态，按用户目标准备系统动作、通知重排或诊断通知，再用 external.commit 执行。notifications.test.prepare 支持立即、三十秒后以及仅清理诊断通知；这些动作不证明系统实际投递。
 3. 返回前台后重新读取真实状态，分开报告设置已打开、权限已授权、排程已生效和通知已显示。
 4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 

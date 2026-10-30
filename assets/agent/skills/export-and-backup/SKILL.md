@@ -1,6 +1,6 @@
 ---
 id: export-and-backup
-version: 1.0.0
+version: 1.0.1
 summary: 按明确范围生成并核对可保存或分享的导出产物。
 ---
 
@@ -20,7 +20,7 @@ summary: 按明确范围生成并核对可保存或分享的导出产物。
 
 ## 依赖工具
 
-必需：timetables.list、calendars.list、exports.prepare、exports.write、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：timetables.list、calendars.list、exports.prepare、exports.write、external.commit、external.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
@@ -40,3 +40,7 @@ summary: 按明确范围生成并核对可保存或分享的导出产物。
 ## 失败处理
 
 仅生成内存内容不等于磁盘写入；结果未知查询原操作，不重复分享或写入。 取消停止未开始步骤并核对已提交结果。业务冲突重新读取；结果未知先查询原操作，不重复执行写入。未注册工具与不支持的平台能力必须如实说明。
+
+## 执行入口
+
+exports.prepare 只生成不可变内存产物，exports.write 只准备目标选择计划；external.commit 执行宿主保存。没有 saved 回执不能宣称已有文件。

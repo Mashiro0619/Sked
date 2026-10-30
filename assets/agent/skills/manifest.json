@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.0.0",
+  "packVersion": "1.0.1",
   "runtimeContractVersion": 1,
   "toolApiCompatibility": ">=1.0.0 <2.0.0",
   "skills": [
     {
       "id": "locate-and-navigate",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "定位对象与页面",
       "summary": "根据用户指定范围定位稳定对象并打开相应页面。",
       "triggers": [
@@ -16,7 +16,7 @@
         "定位对象"
       ],
       "asset": "locate-and-navigate/SKILL.md",
-      "contentSha256": "44270de9d899af163c93590451f534672f1cde66dda4974492d68e0451cb5797",
+      "contentSha256": "e03d0c73621b8d9a486ac0c1d075626884e1f9569aa58b7e2cf90051fd2ac36d",
       "sourceKinds": [],
       "requiredTools": [
         "capabilities.describe",
@@ -25,7 +25,12 @@
         "calendars.list",
         "events.list",
         "settings.describe",
-        "navigation.open"
+        "navigation.open",
+        "external.commit",
+        "external.status",
+        "navigation.range.prepare",
+        "mutation.commit",
+        "operations.status"
       ],
       "optionalTools": []
     },
@@ -152,7 +157,7 @@
     },
     {
       "id": "resolve-course-conflicts",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "处理课程冲突",
       "summary": "区分显示选择与真实调课并准备准确的冲突解决操作。",
       "triggers": [
@@ -161,14 +166,16 @@
         "选择显示课程"
       ],
       "asset": "resolve-course-conflicts/SKILL.md",
-      "contentSha256": "f906e872f05290b4eb4bc2f4b94788778383124db61c68b3e88f6956cdfb1080",
+      "contentSha256": "4f2f0a0f1c367c42603bad64496067f1db0503700c1f891073fe569b3bd16464",
       "sourceKinds": [],
       "requiredTools": [
         "courses.conflicts",
         "courses.get",
         "mutation.prepare",
         "mutation.commit",
-        "operations.status"
+        "operations.status",
+        "courses.display.list",
+        "courses.display.prepare"
       ],
       "optionalTools": []
     },
@@ -247,7 +254,7 @@
     },
     {
       "id": "manage-reminders",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "调整和处理提醒",
       "summary": "区分提醒策略、实例处理状态和真实通知效果。",
       "triggers": [
@@ -257,13 +264,18 @@
         "恢复提醒"
       ],
       "asset": "manage-reminders/SKILL.md",
-      "contentSha256": "3b7d36445b211d493a54d530497c0e6832691cf17db2f43181c3bb17717c94fa",
+      "contentSha256": "3cf3286a1a0a5343de72aab51cdfd33534c6fb0b29d52638a18ff2f35054f2ea",
       "sourceKinds": [],
       "requiredTools": [
         "notifications.status",
-        "notifications.prepare",
+        "notifications.reminders",
+        "notifications.snooze.prepare",
         "occurrences.get",
+        "mutation.prepare",
+        "settings.prepare",
         "mutation.commit",
+        "external.commit",
+        "external.status",
         "operations.status"
       ],
       "optionalTools": []
@@ -351,7 +363,7 @@
     },
     {
       "id": "import-structured-files",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "导入结构化文件",
       "summary": "优先用确定性解码处理JSON、ICS和节次文件。",
       "triggers": [
@@ -361,14 +373,15 @@
         "结构化文件"
       ],
       "asset": "import-structured-files/SKILL.md",
-      "contentSha256": "52b1d076bd892e341b3afce0941d0d9f32edcdbc77b0973dec565fc3f05a7739",
+      "contentSha256": "c2d3a2b7bacfef8a8d6bc7545d8cff1be4165ef7910efed05db038d84e85dc81",
       "sourceKinds": [
         "structured_file"
       ],
       "requiredTools": [
         "sources.describe",
         "sources.read",
-        "imports.prepare",
+        "file_imports.inspect",
+        "file_imports.prepare",
         "mutation.commit",
         "operations.status"
       ],
@@ -376,7 +389,7 @@
     },
     {
       "id": "export-and-backup",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "导出和备份",
       "summary": "按明确范围生成并核对可保存或分享的导出产物。",
       "triggers": [
@@ -386,20 +399,21 @@
         "备份数据"
       ],
       "asset": "export-and-backup/SKILL.md",
-      "contentSha256": "78161ffc87063fac9b3cb28d3b28403e4c5bbda5ea32f59bea225dd117a7523a",
+      "contentSha256": "05299c0c8f4f2d178595a9a8bb0386681d2638c98682868ced9456a25dab6c6e",
       "sourceKinds": [],
       "requiredTools": [
         "timetables.list",
         "calendars.list",
         "exports.prepare",
         "exports.write",
-        "operations.status"
+        "external.commit",
+        "external.status"
       ],
       "optionalTools": []
     },
     {
       "id": "restore-and-clear",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "恢复或清除数据",
       "summary": "通过维护工作流恢复或清除明确数据并核对新世代和外部效果。",
       "triggers": [
@@ -409,21 +423,23 @@
         "清空后退出"
       ],
       "asset": "restore-and-clear/SKILL.md",
-      "contentSha256": "a9881e673457efc58da7cdc94dc10b0800adcaabab8ea665741b2abf80d7648c",
+      "contentSha256": "5ae036766aea56fd767a12dd7a7624e030664edcd341c95e724ffa9ec8ffecb4",
       "sourceKinds": [
         "structured_file"
       ],
       "requiredTools": [
+        "backups.describe",
         "backups.prepare_restore",
         "maintenance.prepare_clear",
-        "mutation.commit",
-        "operations.status"
+        "external.commit",
+        "external.status",
+        "external.reconcile"
       ],
       "optionalTools": []
     },
     {
       "id": "configure-appearance",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "外观与设备布局",
       "summary": "在明确工作区与设备范围内调整主题、颜色和面板布局。",
       "triggers": [
@@ -433,13 +449,17 @@
         "外观设置"
       ],
       "asset": "configure-appearance/SKILL.md",
-      "contentSha256": "5cf8c97bca9ce0ee95b5dfb0fe18b55e547ed86095dc5b28659b0e3048a56a3b",
+      "contentSha256": "76d4ebb6723de662f23eb4450495f9d2b5bbef1f08d439be37dfaf43d4936899",
       "sourceKinds": [],
       "requiredTools": [
         "settings.describe",
         "settings.get",
         "settings.prepare",
+        "device.layout.describe",
+        "device.layout.prepare",
         "mutation.commit",
+        "external.commit",
+        "external.status",
         "operations.status"
       ],
       "optionalTools": []
@@ -470,7 +490,7 @@
     },
     {
       "id": "configure-workspaces",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "工作区和全局偏好",
       "summary": "区分启用、显示和活动状态并调整合法的全局偏好。",
       "triggers": [
@@ -481,7 +501,7 @@
         "更新偏好"
       ],
       "asset": "configure-workspaces/SKILL.md",
-      "contentSha256": "de33ec3629b122dac6543f53fb75c69e4f19586650ede773a52f98e20d4650cd",
+      "contentSha256": "5570274977a508890e7f053056a8fb20f7d4bbfce233ffc232237c2901604309",
       "sourceKinds": [],
       "requiredTools": [
         "workspaces.describe",
@@ -490,13 +510,16 @@
         "settings.get",
         "settings.prepare",
         "mutation.commit",
-        "operations.status"
+        "external.commit",
+        "external.status",
+        "operations.status",
+        "navigation.range.prepare"
       ],
       "optionalTools": []
     },
     {
       "id": "troubleshoot-notifications",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "通知诊断",
       "summary": "检查真实平台状态并通过受权限约束的系统动作定位通知问题。",
       "triggers": [
@@ -506,19 +529,25 @@
         "自启动"
       ],
       "asset": "troubleshoot-notifications/SKILL.md",
-      "contentSha256": "115493990cfa42372725eb67292db790a6ce424680ca5cea3267602004de4f5b",
+      "contentSha256": "c667e38c4f7c58c2878190adc55a7d490a6cd35df51645f94e1076748604e4bc",
       "sourceKinds": [],
       "requiredTools": [
         "notifications.status",
-        "notifications.reconcile",
+        "notifications.reconcile.prepare",
+        "notifications.permission.prepare",
+        "notifications.exact_alarm.prepare",
+        "notifications.settings.prepare",
+        "notifications.test.prepare",
         "platform.request_action",
-        "operations.status"
+        "external.commit",
+        "external.status",
+        "external.reconcile"
       ],
       "optionalTools": []
     },
     {
       "id": "manage-school-access",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "学校站点与网页登录",
       "summary": "管理学校入口和本机网页登录清理并说明实际退出范围。",
       "triggers": [
@@ -528,21 +557,23 @@
         "学校登录"
       ],
       "asset": "manage-school-access/SKILL.md",
-      "contentSha256": "a779d3e47a1d9d2cc6c8c196fa81c3f60dd59ed67ac28900078ff4e2fe5590f2",
+      "contentSha256": "61c5f72830632ba70e7fc8638e49470414109ac689ae65dd558988f963eb807f",
       "sourceKinds": [],
       "requiredTools": [
         "school_sites.list",
         "school_sites.get",
         "school_sites.prepare",
-        "school_sessions.prepare_sign_out",
-        "mutation.commit",
-        "operations.status"
+        "school_session.status",
+        "school_session.clear.prepare",
+        "external.commit",
+        "external.status",
+        "external.reconcile"
       ],
       "optionalTools": []
     },
     {
       "id": "configure-agent-connection",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "配置内置Agent",
       "summary": "管理共享连接与预算并由宿主安全处理凭据和执行模式。",
       "triggers": [
@@ -553,22 +584,27 @@
         "配置Agent"
       ],
       "asset": "configure-agent-connection/SKILL.md",
-      "contentSha256": "0bb6021dbecf744633217739aa56693f3bcfeadaf3141c1ecd8c7acba3830b5b",
+      "contentSha256": "5544df6f09397f3047c3a41f96c5941371ad52ae1730fe205c806f869edc30d1",
       "sourceKinds": [],
       "requiredTools": [
         "connection.describe",
         "connection.prepare",
+        "connection.test.prepare",
+        "connection.models.prepare",
+        "connection.models.get",
         "credentials.request_input",
         "agent_settings.describe",
         "agent_settings.prepare",
         "mutation.commit",
+        "external.commit",
+        "external.status",
         "operations.status"
       ],
       "optionalTools": []
     },
     {
       "id": "recover-and-undo",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "核对运行与撤销",
       "summary": "先查询真实操作回执再继续未提交步骤或准备受版本保护的撤销。",
       "triggers": [
@@ -578,7 +614,7 @@
         "停止运行"
       ],
       "asset": "recover-and-undo/SKILL.md",
-      "contentSha256": "88c5921f419671b459954800efe72e77c532e308e29efe33fe10314611bdd8e2",
+      "contentSha256": "9e37edc6547db503fcca3858be784e8148d92607d9db14dc5a45e905b01678ec",
       "sourceKinds": [],
       "requiredTools": [
         "runs.status",
@@ -587,7 +623,12 @@
         "operations.status",
         "undo.prepare",
         "mutation.commit",
-        "conversation.get"
+        "external.commit",
+        "external.status",
+        "external.reconcile",
+        "conversation.get",
+        "conversation.history",
+        "conversation.read"
       ],
       "optionalTools": []
     }

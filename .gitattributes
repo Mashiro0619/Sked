@@ -1,0 +1,2 @@
+# Skill manifests hash exact UTF-8 source bytes across checkout platforms.
+assets/agent/skills/** text eol=lf

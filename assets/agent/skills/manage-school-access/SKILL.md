@@ -1,6 +1,6 @@
 ---
 id: manage-school-access
-version: 1.0.0
+version: 1.0.1
 summary: 管理学校入口和本机网页登录清理并说明实际退出范围。
 ---
 
@@ -20,12 +20,12 @@ summary: 管理学校入口和本机网页登录清理并说明实际退出范�
 
 ## 依赖工具
 
-必需：school_sites.list、school_sites.get、school_sites.prepare、school_sessions.prepare_sign_out、mutation.commit、operations.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：school_sites.list、school_sites.get、school_sites.prepare、school_session.status、school_session.clear.prepare、external.commit、external.status、external.reconcile。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
 1. 查询站点稳定ID、地址与版本，说明用户要修改入口还是清理本机登录会话。
-2. 用typed站点或sign-out计划处理并发和平台限制，不按旧URL猜对象。
+2. 用 school_sites.prepare 或 school_session.clear.prepare 生成固定计划并经 external.commit 执行，处理并发和平台限制；不按旧URL猜对象。
 3. 按宿主模式执行并核对本机清理效果；保留未完成的工作流阶段供查询恢复。
 4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 

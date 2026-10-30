@@ -1,6 +1,6 @@
 ---
 id: locate-and-navigate
-version: 1.0.0
+version: 1.0.1
 summary: 根据用户指定范围定位稳定对象并打开相应页面。
 ---
 
@@ -20,7 +20,7 @@ summary: 根据用户指定范围定位稳定对象并打开相应页面。
 
 ## 依赖工具
 
-必需：capabilities.describe、timetables.list、courses.list、calendars.list、events.list、settings.describe、navigation.open。无额外可选工具。 参数以宿主注册表schema为准。
+必需：capabilities.describe、timetables.list、courses.list、calendars.list、events.list、settings.describe、navigation.open、navigation.range.prepare、mutation.commit、operations.status、external.commit、external.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
@@ -40,3 +40,9 @@ summary: 根据用户指定范围定位稳定对象并打开相应页面。
 ## 失败处理
 
 导航失败保留查询到的对象引用，说明页面没有成功打开。 取消停止未开始步骤并核对已提交结果。业务冲突重新读取；结果未知先查询原操作，不重复执行写入。未注册工具与不支持的平台能力必须如实说明。
+
+## 执行入口
+
+navigation.open 只返回固定导航计划；经 external.commit 才改变界面，完成后用 external.status 核对。
+
+日程显示日期范围通过 navigation.range.prepare 的 set（明确 start/end）或 reset 准备，再用 mutation.commit 保存并支持撤销；设置范围不启用日程工作区或切换当前页面，原有焦点与隐藏周末规则由宿主处理。

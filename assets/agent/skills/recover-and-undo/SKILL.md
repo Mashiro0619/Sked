@@ -1,6 +1,6 @@
 ---
 id: recover-and-undo
-version: 1.0.0
+version: 1.0.1
 summary: 先查询真实操作回执再继续未提交步骤或准备受版本保护的撤销。
 ---
 
@@ -20,7 +20,7 @@ summary: 先查询真实操作回执再继续未提交步骤或准备受版本�
 
 ## 依赖工具
 
-必需：runs.status、runs.stop、runs.resume、operations.status、undo.prepare、mutation.commit、conversation.get。无额外可选工具。 参数以宿主注册表schema为准。
+必需：runs.status、runs.stop、runs.resume、operations.status、undo.prepare、mutation.commit、external.commit、external.status、external.reconcile、conversation.get、conversation.history、conversation.read。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
@@ -40,3 +40,7 @@ summary: 先查询真实操作回执再继续未提交步骤或准备受版本�
 ## 失败处理
 
 取消只阻止后续动作；列出已提交变更。已分享文件或已发生通知不能通过还原数据抹除。 取消停止未开始步骤并核对已提交结果。业务冲突重新读取；结果未知先查询原操作，不重复执行写入。未注册工具与不支持的平台能力必须如实说明。
+
+## 执行入口
+
+runs.stop/resume 返回受宿主权限约束的外部计划，经 external.commit 接收；undo.prepare 返回主库逆变更，由 mutation.commit 执行。缺失写回复先核对原 operationId；未核对结果不能新建另一操作重试。历史省略正文可通过 conversation.history/read 分页找回。
