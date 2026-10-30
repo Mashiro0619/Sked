@@ -71,3 +71,11 @@
 courses.display.list 返回真实周投影中的冲突组；courses.display.prepare 的 set/reset 只选择展示课程，复用 UI 服务并清理等价旧键，不改变课程时间。navigation.range.prepare 复用显示范围 reducer，保存范围及必要焦点调整。两者均支持停用域管理、完整差异、模式门禁与撤销，不隐式切换或启用工作区。
 
 实现与回归：[工作流适配器](../lib/agent/tools/workflow_tool_adapters.dart)、[工作流测试](../test/agent/tools/workflow_tool_adapters_test.dart)、[显示范围测试](../test/agent/tools/display_range_tool_adapters_test.dart)。
+
+## 会话管理与统一连接
+
+会话管理支持查看历史、归档/恢复、重命名、删除、保留设置和导出；写动作绑定真实会话版本及运行作用域，不能复活已删除会话。导出产物只包含获准的对话内容与结果，不包含安全凭据。
+
+连接工具使用宿主安全输入句柄，原始密钥不经过模型参数。配置替换、清除、连接诊断和模型列表均绑定已保存的目的地与版本。诊断明确区分传输可达和实际工具调用能力；模型列表有边界，后续分页读取同一回执，不再次发出网络请求。共享偏好可准备修改，权限模式仍由用户控制。
+
+实现与回归：[连接控制工具](../lib/agent/tools/agent_control_tool_adapters.dart)、[会话工具](../lib/agent/tools/conversation_tool_adapters.dart)、[连接控制测试](../test/agent/tools/agent_control_tool_adapters_test.dart)、[会话工具测试](../test/agent/tools/conversation_tool_adapters_test.dart)。
