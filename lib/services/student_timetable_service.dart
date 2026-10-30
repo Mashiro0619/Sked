@@ -341,10 +341,26 @@ class StudentTimetableService {
   StudentModeData setDisplayedCourseForConflict(
     StudentModeData data,
     String conflictKey,
-    String courseId,
+    String? courseId,
   ) {
-    final updated = Map<String, String>.from(data.conflictDisplayCourseIds)
-      ..[conflictKey] = courseId;
+    final updated = Map<String, String>.from(data.conflictDisplayCourseIds);
+    if (courseId == null) {
+      final target = parseConflictKey(conflictKey);
+      updated.removeWhere((key, _) {
+        if (key == conflictKey) return true;
+        final candidate = parseConflictKey(key);
+        return target != null &&
+            candidate != null &&
+            candidate.timetableId == target.timetableId &&
+            candidate.weekday == target.weekday &&
+            candidate.startMinutes == target.startMinutes &&
+            candidate.endMinutes == target.endMinutes &&
+            candidate.courseIds.length == target.courseIds.length &&
+            candidate.courseIds.containsAll(target.courseIds);
+      });
+    } else {
+      updated[conflictKey] = courseId;
+    }
     return data.copyWith(
       conflictDisplayCourseIds: filterStudentConflictDisplayCourseIds(
         updated,

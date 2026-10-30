@@ -63,3 +63,11 @@
 学校站点使用稳定的版本句柄及共享写队列；预览期间发生其他读写不能改变该预览的版本前提。通知动作只操作当前设备拥有的真实提醒，外部核对使用原操作身份，不重复系统动作。
 
 实现与回归：[平台适配器](../lib/agent/tools/platform_tool_adapters.dart)、[设备适配器](../lib/agent/tools/device_tool_adapters.dart)、[平台回归](../test/agent/tools/platform_tool_adapters_test.dart)、[设备回归](../test/agent/tools/device_tool_adapters_test.dart)。
+
+## 文件、维护和显示工作流
+
+确定性文件检查与准备支持课表/日程 JSON、ICS、节次和备份，保留大小、目标、缺失日期与兼容报告。导出、工作区切换、页面导航、恢复和清空使用 external.commit；纯主库计划使用 mutation.commit。维护先暂停旧运行并排空已接受写入，恢复后数据世代使旧计划失效。
+
+courses.display.list 返回真实周投影中的冲突组；courses.display.prepare 的 set/reset 只选择展示课程，复用 UI 服务并清理等价旧键，不改变课程时间。navigation.range.prepare 复用显示范围 reducer，保存范围及必要焦点调整。两者均支持停用域管理、完整差异、模式门禁与撤销，不隐式切换或启用工作区。
+
+实现与回归：[工作流适配器](../lib/agent/tools/workflow_tool_adapters.dart)、[工作流测试](../test/agent/tools/workflow_tool_adapters_test.dart)、[显示范围测试](../test/agent/tools/display_range_tool_adapters_test.dart)。

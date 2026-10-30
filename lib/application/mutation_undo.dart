@@ -266,6 +266,8 @@ class MutationUndoCompiler {
 }
 
 const _undoAuxiliaryKeys = {
+  'general.customDateRange',
+  'general.selectedDateIso',
   'general.activeScheduleId',
   'general.reminderAcknowledgements',
   'student.activeTimetableId',

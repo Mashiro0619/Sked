@@ -229,7 +229,7 @@ class StudentCommands {
 
   Future<void> setDisplayedCourseForConflict(
     String conflictKey,
-    String courseId,
+    String? courseId,
   ) async {
     _requireEnabled();
     _replace(

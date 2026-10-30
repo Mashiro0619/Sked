@@ -34,21 +34,31 @@ class GeneralNavigationController {
     bool Function()? isCurrent,
     bool revealFocus = true,
   }) => _commit(
-    (data) {
-      final focus = focusedDate ?? data.selectedDate;
-      return data.copyWith(
-        customDateRange: range,
-        selectedDateIso: (range.contains(focus) ? focus : range.start)
-            .toIso8601String()
-            .split('T')
-            .first,
-      );
-    },
+    (data) => withDateRange(data, range, focusedDate: focusedDate),
     isCurrent: isCurrent,
     revealFocus: revealFocus,
   );
 
-  Future<void> clearDateRange() => _commit((data) {
+  Future<void> clearDateRange() => _commit(withoutDateRange);
+
+  /// The same pure date/focus transformation is used by strict Agent plans,
+  /// including saved settings in a disabled workspace.
+  static GeneralScheduleData withDateRange(
+    GeneralScheduleData data,
+    GeneralDateRange range, {
+    DateTime? focusedDate,
+  }) {
+    final focus = focusedDate ?? data.selectedDate;
+    return data.copyWith(
+      customDateRange: range,
+      selectedDateIso: (range.contains(focus) ? focus : range.start)
+          .toIso8601String()
+          .split('T')
+          .first,
+    );
+  }
+
+  static GeneralScheduleData withoutDateRange(GeneralScheduleData data) {
     final date = data.selectedDate;
     final focus = !data.showWeekends && date.weekday > DateTime.friday
         ? DateTime(
@@ -60,7 +70,7 @@ class GeneralNavigationController {
     return _calendar
         .setSelectedDate(data, focus)
         .copyWith(customDateRange: null);
-  });
+  }
 
   Future<void> setSelectedDate(
     DateTime date, {
