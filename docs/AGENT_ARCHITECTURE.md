@@ -1,6 +1,6 @@
 # 全软件 Agent 架构提案
 
-状态：按实施计划逐项实现中。源码研究日期：2026-10-29；产品范围修订：2026-10-30。源码研究基线：`ea784f3a16e5d4a23aedae410544492fb6fa0f6f`（Sked 2.3.0）。查询、严格主库命令、持久回执及会话底座已经落地；尚未完成的工具、界面与平台路径仍按计划验收，不能把设计覆盖视为产品完成。
+状态：内置运行时、全域工具、双端会话界面、共享 Skills 和旧 AI 入口替换已接通；本轮收尾后暂停，P8 尚未通过。源码研究日期：2026-10-29；产品范围修订：2026-10-30。源码研究基线：`ea784f3a16e5d4a23aedae410544492fb6fa0f6f`（Sked 2.3.0）。本文区分当前实现与后续设计：真实 API 已观测到成功和未完成任务，浏览器协议/存储及 Android 模拟器页面已有隔离验收入口；完整模型任务质量、成本、性能与实体设备验收仍待完成，不能由局部通过推导发布就绪。
 
 相关文档：[能力全集](AGENT_CAPABILITIES.md)、[数据与应用重构](AGENT_DATA_REFACTOR.md)、[共享 Skills](AGENT_SKILLS.md)、[开源 harness 研究](AGENT_HARNESS_RESEARCH.md)、[实施计划](AGENT_IMPLEMENTATION_PLAN.md)。当前已发布行为仍见[使用逻辑](USAGE_LOGIC.md)、[可靠性约束](RELIABILITY_BASELINE.md)和[工作台规范](ADAPTIVE_WORKSPACES.md)。
 
@@ -29,15 +29,15 @@ Sked 内置一个 Agent，用户可以新建多个会话。所有会话使用同
 | [StudentCommands](../lib/controllers/student_commands.dart)、[GeneralCommands](../lib/controllers/general_commands.dart)、[SettingsCommands](../lib/controllers/settings_commands.dart) | 已有业务入口及纯领域服务 | 显式目标、严格输入、结构化结果、统一预览和冲突检查 |
 | [AppSession](../lib/controllers/app_session.dart)、[AppRepository](../lib/data/app_repository.dart) | 唯一可写快照、排队保存、实际保存回执、已提交事件 | 命令幂等、跨重启版本、纯数据批事务、审计和撤销 |
 | [GeneralCalendarService](../lib/services/general_calendar_service.dart) | 重复实例的本次／以后／全系列变换及一次保存 | 工具协议直接复用这些语义，覆盖普通修改和删除的版本前提 |
-| [AssistantPreviewPane](../lib/widgets/assistant_pane.dart) | 桌面助手布局、草稿、宽度、上下文提示 | 目前发送禁用，无模型调用、聊天保存或数据执行 |
-| [SchoolImportApi](../lib/services/school_import_api.dart) | 有界网络读取、取消、端点和敏感请求经验；纯解析校验函数 | 专用 AI 请求链路退役；通用网络保护抽入 Agent provider，纯候选解码抽入应用导入层 |
-| [SecretStore](../lib/services/secret_store.dart) | 平台安全存储与已有密钥迁移路径 | 多 provider 凭据引用、端点绑定、撤销及读取结果脱敏 |
+| [助手宿主](../lib/widgets/assistant_pane.dart) | 桌面布局、宽度与焦点约束 | 已改为访问应用持有的真实会话；关闭面板不结束运行 |
+| [ProviderClient](../lib/agent/provider/provider_client.dart) | 承接旧 SchoolImportApi 的有界网络、取消和敏感请求保护 | 旧专用 AI 请求链路已退役；纯候选解码位于 Agent 导入层 |
+| [SecretStore](../lib/services/secret_store.dart) | 平台安全存储与已有密钥迁移路径 | 当前活动连接的凭据引用、端点绑定、替换/清除及读取结果脱敏 |
 
 不能把现有命令直接全部注册为工具：部分入口对不存在的对象静默返回；保存日程可能回退到当前分类；部分校验仅在编辑器中。现有 agenda 投影也默认使用当前课表或筛掉隐藏/停用来源，不能承担“查询所有”。完整差异见[能力全集](AGENT_CAPABILITIES.md)。
 
 当前 `AppDataVersions`、仓储 batch revision 是进程内版本，不是跨重启幂等凭证。保存队列已有的少数偏好合并也不等于通用批事务。
 
-## 3. 推荐结构
+## 3. 实现结构与后续边界
 
 ```mermaid
 flowchart TB
@@ -62,25 +62,29 @@ flowchart TB
 
 应用命令层是软件行为的稳定底座，AgentRuntime 负责理解任务、调用模型、选择工具和推进会话。模型不修改存档文件，不持有另一份可写 AppData，也不通过切换界面选中对象完成寻址。
 
-进一步区分磁盘 StorageCodec、领域模型、便携导出和 AgentProjectionCodec。模型使用摘要/详情/编辑视图、按需字段和语义 patch；磁盘仍可采用完整、可恢复的领域表示。先从接口减少无关 token，再独立评估稀疏存储、课程身份拆分或 SQLite。[数据与应用重构](AGENT_DATA_REFACTOR.md)记录具体字段、兼容陷阱、全软件重构点及合成表示对照，不把省字节、省 token 和运行正确性合为一个指标。
+当前通过存档/便携备份编码、领域模型和 `ResourceQueries` 投影区分存储与模型输入；提案中的 AgentProjectionCodec、FieldSpec 等名称并非均被采用。模型使用摘要/详情/编辑视图、按需字段和语义 patch；磁盘保留完整、可恢复的领域表示。接口已减少不相关字段的传递，真实任务 token 收益仍需测量；稀疏存储、课程身份拆分或 SQLite 分别评估。[数据与应用重构](AGENT_DATA_REFACTOR.md)记录具体字段、兼容陷阱及历史合成表示对照，不把省字节、省 token 和运行正确性合为一个指标。
 
-推荐新增代码边界：
+当前主要代码边界：
 
 ```text
 lib/application/
   resource_queries.dart          # 全域、有界、可分页的查询
-  command_bus.dart               # UI 与 Agent 共用入口
-  command_contracts.dart         # DTO、结果、版本、错误
-  mutation_plan.dart             # 纯数据计划与影响集合
+  resource_contracts.dart        # 查询 DTO、引用与错误
+  resource_mutations.dart        # 严格资源命令与纯候选编译
+  mutation_coordinator.dart      # 计划、提交、持久回执与撤销
+  operation_contracts.dart       # 三模式、授权与执行作用域
   setting_registry.dart          # 所有偏好及 reset 语义
-  workflows/                    # 通知配置、导入恢复、站点、凭据
+  external_operation_coordinator.dart # 跨存储与平台回执
 lib/agent/
-  models/                       # AgentSettings、Connection、Conversation、Run
+  agent_application.dart        # AppRuntime 持有的组合与生命周期
+  connection/                   # 当前连接、凭据、迁移和诊断
+  conversations/                # 会话、来源、保留与删除
   runtime/                      # 循环、队列、取消、上下文、预算
-  providers/                    # API 协议适配，不依赖 Widget
+  provider/                     # API 协议适配，不依赖 Widget
   tools/                        # 领域工具 schema 与映射
-  policy/                       # 宿主授权决策
-  persistence/                  # 会话、检查点、保留与删除
+  imports/                      # 不可变来源、候选解码与网页交接
+  skills/                       # 共享技能目录和按需装载
+  ui/                           # 双端共用会话与连接配置界面
 ```
 
 先用明确模块边界实现，不为拆包而迁移全部现有代码。已有 controllers 和 services 逐步适配，纯重构与行为变化分开。数据库整体替换、UI 重写不是该方案的前置条件。
@@ -90,14 +94,14 @@ lib/agent/
 | 对象 | 主要字段 | 生命周期 |
 | --- | --- | --- |
 | `AgentSettings`（单例） | 功能启用、默认模型连接、默认执行模式、共享指令、预算、历史保留偏好、配置版本 | 修改/reset；启用开关位于功能管理，无 Agent 身份 CRUD |
-| `ModelConnection` | API 协议、规范化 endpoint、model、credentialRef、能力、超时和参数 | 编辑、测试、选择；可保存不同连接供同一 Agent 使用，不产生新 Agent 或私有技能 |
-| `AgentConversation` | ID、标题、消息、摘要、来源附件、关联对象、当前执行模式、创建时间 | 新建、切换、重命名、归档、删除；不需要 agentId 外键 |
+| 当前模型连接 | `AgentSettings` 中的协议、规范化 endpoint、model、credentialRef 与配置版本 | 配置、替换、清除、诊断和模型列表；当前提供一个活动连接，不提供多个连接 profile 列表 |
+| `AgentConversation` | ID、标题、消息、来源附件、当前执行模式和运行引用；上下文摘要从历史重建 | 新建、切换、重命名、归档、导出、删除；不需要 agentId 外键 |
 | `AgentRun` | conversationId、用户请求、状态、连接/配置/模式版本、数据世代、预算、工具回执、检查点 | 支持停止、继续、失败恢复；完成依赖真实工具结果 |
 | `SharedSkillPack` | 清单、技能 ID/版本/正文、工具依赖、兼容范围 | 应用统一发布、按需加载；不是每个会话安装一套 Skills |
 
 单例 Agent 设置可通过统一设置能力管理，执行模式提升必须来自用户在宿主中的明确选择，不能由模型修改自身配置提权。各会话互不混入消息、附件和未完成计划；共享配置、应用数据和 Skills 只有一套。长期记忆不作为本期必需的独立产品系统；会话历史和摘要足以支撑首期任务连续性。
 
-会话基础现由 `ConversationRepository` 提供独立于主库的顺序持久化：会话/草稿/模式相互隔离，网页 handoff 映射、来源和首条消息原子保存，同 ID 的不同材料/目标/请求拒绝重用。原生存储使用应用支持目录内两个交替、校验和校验的文件，浏览器适配器使用两个本机键并读回确认；保存失败关闭继续写入，重启中的运行统一标记 interrupted，不自动重发模型请求或工具。删除正文/附件与终止 ID 同次保存，迟到运行结果不能复活会话。存档上限为 16 MiB、200 会话、每会话 1,000 消息/20 来源，超限明确拒绝；新库尚未接入公开 UI/模型循环。原生文件与浏览器内存适配测试不替代浏览器或实体设备验收。
+会话基础现由 `ConversationRepository` 提供独立于主库的顺序持久化，已接入应用持有的模型循环及手机/桌面共用界面：会话/草稿/模式相互隔离，网页 handoff 映射、来源和首条消息原子保存，同 ID 的不同材料/目标/请求拒绝重用。原生存储使用应用支持目录内两个交替、校验和校验的文件，浏览器适配器使用两个本机键并读回确认；保存失败关闭继续写入，重启中的运行统一标记 interrupted，不自动重发模型请求或工具。删除正文/附件与终止 ID 同次保存，迟到运行结果不能复活会话。存档上限为 16 MiB、200 会话、每会话 1,000 消息/20 来源，超限明确拒绝。原生文件与浏览器内存适配测试不替代浏览器或实体设备验收。
 
 运行开始冻结模型端点、凭据引用和设置版本。运行中改连接默认影响下一次运行；要在当前运行切换，先建立明确边界并记录事件。执行模式的收紧立即作用于后续未提交动作；不能因运行初始快照仍是完全权限而忽略用户切换到只读。避免改 URL 后把同一密钥或旧上下文自动发送到另一服务。
 
@@ -111,7 +115,7 @@ lib/agent/
 
 已实现的实例命令沿用查询返回的 canonical occurrence Ref；修改、删除和复制必须指定本次、此后或整个系列。新分支 ID 在准备时由宿主固定；COUNT、UNTIL、月锚点、例外及提醒处理沿用现有服务语义，辅助记录变化纳入完整预览。实例定位采用有界 lazy 范围，避免长持续事件为定位一个实例先展开全部重叠历史。只管理隐藏或停用日程不切换当前 UI 工作区。
 
-`ResourceQueryService` 从已提交状态提供只读 DTO，不输出包含运行时密钥的完整对象。查询明确 resource scope、includeHidden、includeDisabled、日期范围、排序与分页，返回版本和完整性信息。
+`ResourceQueries` 从调用方固定的数据快照提供只读 DTO，不输出包含运行时密钥的完整对象。查询明确资源/父资源范围、includeHidden、includeDisabled、日期范围与分页，返回世代、快照版本和完整性信息；宿主在快照变化后更换查询器。
 
 先按课表/分类/事件 ID 与可前置的条件筛选，再展开相关实例。默认 summary 不含无关正文，detail/edit 按需补齐；省略字段不表示为空。数量、空闲和冲突由确定性聚合计算。批量操作可使用宿主持久保存的 selectionRef，绑定完整 ID 集合、数据世代和版本；短引用不等于行号或授权。
 
@@ -168,7 +172,7 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 ### 6.1 同一主库的批事务
 
-共享写入入口已提供 `AppSession.commitMutation`：先完成传入的延后保存并等待已接受写入，再检查准备时的内存 epoch 与实际持久快照。尚未落盘的 UI 草稿和过期计划返回冲突；取得短期写入所有权后重新授权、同步生成候选并保存。落盘期间其他旧 UI 写入口返回忙碌，保存失败遵循原仓库回滚/恢复门禁。此过渡边界采用保守的整快照冲突检查，尚不代表所有领域已具备对象级并发合并或重启幂等；后续应用命令在其上提供资源版本、持久回执与重试。
+共享写入入口已提供 `AppSession.commitMutation`：先完成传入的延后保存并等待已接受写入，始终拒绝未保存 UI 草稿。标准资源/设置计划记录目标和语义读取依赖，固定 ID/时钟后在当前持久快照重编译，完整差异仍须与已审批内容一致；无关已保存编辑被保留，同对象或依赖变化仍冲突。宿主 prepareDraft、待提交撤销及跨 Agent 回执序列保留较严格的重新准备边界。取得短期写入所有权后重新授权并保存，其他旧 UI 写入口在落盘期间返回忙碌；保存失败遵循原回滚/恢复门禁。旧 UI 继续使用既有 commands 和共享纯服务，不宣称全部入口已迁为同一种 typed 返回协议。细节及回归见[运行行为](AGENT_RUNTIME.md)。
 
 例如“把三张课表里周五下午的课程移到周四，同时调整默认提醒”应先固定课程 ID，计算所有变更和冲突，再生成一个候选 AppData 并单次提交。任一规则不满足则不写入。循环调用现有 `saveCourse` 不能达到这个契约。
 
@@ -192,7 +196,7 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 这套设计提供可核验的领域幂等，不承诺跨模型服务、操作系统和文件系统的全局 exactly-once。现有文件提交机制也不能被表述为已经完成断电硬件验证。
 
-`MutationCoordinator` 已实现主库 prepare/commit/status：宿主计划固定候选、参数摘要、数据世代/序号、作用域和内存基线；提交再次检查当前模式、确认与候选指纹，通过共享保存入口将业务状态和回执一起落盘。同一已提交操作 ID 在重启后返回原回执，不同参数拒绝；淘汰序号与维护前计划返回过期。询问确认只消费一次，停止发生在已接受保存之后仍报告实际提交。存储结果未知时查询也返回 outcomeUnknown，不把旧快照没有回执当作未执行。计划最多保留 32 个、30 分钟；撤销材料已随回执保存，撤销执行器随后接入。
+`MutationCoordinator` 已实现主库 prepare/commit/status：宿主计划固定候选、参数摘要、数据世代/序号、作用域和内存基线；提交再次检查当前模式、确认与候选指纹，通过共享保存入口将业务状态和回执一起落盘。同一已提交操作 ID 在重启后返回原回执，不同参数拒绝；淘汰序号与维护前计划返回过期。询问确认只消费一次，停止发生在已接受保存之后仍报告实际提交。存储结果未知时查询也返回 outcomeUnknown，不把旧快照没有回执当作未执行。计划最多保留 32 个、30 分钟；`prepareUndo`、`undo.prepare` 和界面撤销入口已接入，撤销先核对受影响对象，重复请求沿用已有逆操作回执。
 
 ### 6.3 跨存储及平台副作用
 
@@ -222,7 +226,7 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 独立读取可并行；默认串行写入和平台副作用。即使某个外部 harness 宣称工具可并行，Sked 执行层仍负责协调同一数据的写入。
 
-预算包括模型往返次数、tool call 数量、总 token、单工具时间、整体运行时间和上下文大小；用户可配置，在 UI 显示消耗。限流采用有上限的退避；身份错误和业务冲突不盲重试。超限保存检查点并反馈，不无限自我对话。
+当前可配置预算包括模型请求次数、工具调用次数和 provider 报告的总 token；请求/响应、工具参数及上下文另有固定边界。运行时用返回的 usage 执行本次运行预算，并在会话 v2 持久记录各请求、工具尝试及显式继续关系。输入/输出及服务提供的推理/缓存用量可查询和导出，未返回字段保持未知；没有可信单价时不推算费用。限流和身份错误返回可核对状态，不自动无限重放；超限结束当前步骤并保留会话记录。
 
 ### 7.2 运行状态
 
@@ -238,7 +242,7 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 第一批协议为 OpenAI-compatible Chat Completions 和 Responses；用适配器屏蔽请求、流式工具参数、tool result、usage、错误及取消差异。后续增加 Anthropic 原生协议或本地模型端点时，沿用同一运行事件和工具契约。
 
-“自选 API”不是声称任意兼容接口行为完全一致。ModelConnection 记录实际支持的工具调用、流式、工具并发、schema 子集、上下文长度和 provider 要求的续传状态。保留协议必需的数据，不能把不同协议直接套用同一个请求体。列出模型只证明目录可读，执行工具能力需独立验证。
+“自选 API”不是声称任意兼容接口行为完全一致。当前配置保存所选协议、端点与模型；合成诊断分别检查连接和工具调用能力，适配器保留协议必需的续传数据，不能把不同协议直接套用同一个请求体。当前没有针对任意服务自动探测工具并发、schema 子集和上下文长度的通用能力档案。列出模型只证明目录可读，真实任务执行能力需独立验证。
 
 不支持可靠工具调用的模型可以聊天或解释，但不能仅凭自然语言“已修改”更新业务状态。协议适配测试采用真实格式的脱敏响应夹具；付费联网测试需要测试账户和独立数据，不拿个人存档做实验。
 
@@ -288,7 +292,7 @@ Skills 是这个 Agent 共用的按任务操作指导，不承担权限执行，
 
 桌面与手机属于同一批可用功能：桌面工作台必须具备会话列表/新建/切换、完整消息与工具结果、输入、模型配置、三模式切换、停止和恢复；支持与课表/日程并排工作，窄窗自动采用可用的覆盖布局。双端共用应用级会话与运行时，功能管理开关同时生效。首条可执行闭环必须在两种界面验证，不能把桌面留作后续适配或仅保留开发者预览。
 
-当前 [WorkspaceFeaturesPage](../lib/screens/workspace_features_page.dart) 的功能管理循环来自只含课表/日程的 `AppMode`，并联动提醒。新增单独 `AgentSettings.enabled` 功能偏好及应用导航 destination；不要把 Agent 硬塞为第三个课程/日程数据域。它不参与“至少保留一个业务工作区”的计数，也不产生新的 agenda source。关闭 Agent 不改变课表/日程的启用、可见性和提醒。入口显示、普通页面返回和功能停用遵循第 4 节各自语义。
+当前 [WorkspaceFeaturesPage](../lib/screens/workspace_features_page.dart) 已在课表/日程功能之外接入单独的 `AgentSettings.enabled` 开关和 Agent 配置入口；手机使用独立导航页面，桌面使用共享会话面板。Agent 不属于 `AppMode`，不参与“至少保留一个业务工作区”的计数，也不产生新的 agenda source。关闭 Agent 不改变课表/日程的启用、可见性和提醒。入口显示、普通页面返回和功能停用遵循第 4 节各自语义。
 
 操作卡从宿主回执生成：展示影响对象、日期/实例范围、变更摘要、保存状态、查看对象和可用的撤销入口。模型最终回复用于解释，不是成功状态的唯一来源。需要确认时展示一批实际变化，允许修改计划或取消。
 
@@ -302,7 +306,7 @@ AgentRuntime 由 AppRuntime 管理。退出停止接收新操作、取消模型�
 
 拟议最终流程：**学校网页选择导入 → 当前网页内容提取 → 压缩与校对页面 → 新建 Agent 会话 → 加载网页导入 Skill → 结构化候选 → 校验与按模式应用 → 返回真实课表结果**。
 
-当前 [SchoolWebImportPage](../lib/screens/school_web_import_page.dart) 的 `_importCurrentPage` 提取内容/URL/标题/截断标记，再进入 [SchoolHtmlImportPage](../lib/screens/school_html_import_page.dart)。后者既负责 `_prepareContent` 压缩校对，也负责 `_submit` 调专用 `SchoolImportWorkflow.parse` 并打开 `SchoolImportParsePage`。因此需要拆分这两个职责，不能删除整个共用页面来移除文字入口。
+当前 [SchoolWebImportPage](../lib/screens/school_web_import_page.dart) 的 `_importCurrentPage` 提取内容/URL/标题/截断标记，再进入 [SchoolHtmlImportPage](../lib/screens/school_html_import_page.dart) 完成本地压缩校对。该页的 `_submit` 已通过 `SchoolWebHandoffController` 将不可变来源交给应用持有的 Agent 会话并打开 Agent 页面；原 `SchoolImportWorkflow.parse` 与 `SchoolImportParsePage` 链路已移除。
 
 保留/抽取 `SchoolImportContentSanitizer` 的本地确定性压缩、编辑草稿、截断提示、返回网页和文档世代检查，形成只服务网页来源准备的页面。压缩清除无关结构并限制内容，不是新的模型请求，也不保证消除正文中的所有敏感数据。用户完成校对并继续时，创建一次新的会话及初始解析请求，随后由 Agent 连续处理，无需用户再手动粘贴。
 
@@ -320,17 +324,17 @@ AgentRuntime 由 AppRuntime 管理。退出停止接收新操作、取消模型�
 
 删除独立的“文字/粘贴内容 AI 解析”导航入口，用户直接在普通 Agent 会话中输入或粘贴文字，由 `import-pasted-content` Skill 处理。JSON 文本、JSON 文件、ICS 和节次文件的确定性直接导入继续保留，不能因同样使用文本输入而一起删除。
 
-专用 `SchoolImportParsePage`、解析结果编辑路由、`SchoolImportParserSettingsPage`、独立请求/流展示与配置检查 UI 退役；其结构化预览、错误反馈、导入目标、作息/日期选择和保存校验抽为 Agent 工具卡与应用服务。尤其 `SchoolImportApi` 内还承载候选 JSON 解码等纯函数，先迁出这些函数及其测试，再删除专用网络类，避免导入契约跟着消失。
+专用 `SchoolImportParsePage`、解析结果编辑路由、`SchoolImportParserSettingsPage`、独立请求/流展示与配置检查 UI 已退役。原 `SchoolImportApi` 的纯候选解码与预算校验已迁入 `agent/imports`，来源读取、目标/日期/作息校验、计划预览及提交由 Agent 工具和应用服务承担；确定性 JSON/ICS 导入契约继续保留。
 
-`SchoolImportWorkflow` 的内容准备可抽出保留，专用 parse/session 生命周期由 AgentRuntime 接管。逐项清理设置页、学校列表、导入菜单、模型目录和翻译引用；不保留新旧两套面向用户的 AI 解析执行路径。文件名含 school_import 不表示都可删除，领域模型、sanitizer、网站来源和确定性应用规则仍有用途。
+`SchoolImportWorkflow` 专用网络生命周期已移除，由 AgentRuntime 接管模型请求；本地内容准备、sanitizer、网站来源和确定性领域规则继续使用。设置页、学校列表和导入菜单已指向统一会话/连接流程，不保留第二条面向用户的 AI 解析请求链路。
 
 ### 11.3 连接、密钥和旧备份迁移
 
-推荐一次性迁移本机旧解析 Base URL/model 到统一 Agent 连接；新配置已存在时不覆盖。旧密钥仅在同一规范化端点下转为新安全存储引用，写入并读回成功后才退役旧 key；失败保留迁移恢复状态且不发请求，不把密钥写入 AppData 或聊天。迁移连接不会自动开启 Agent、发送数据或提升执行模式。
+统一连接管理器已接入应用初始化中的旧配置迁移：本机旧解析 Base URL/model 转入尚未配置的 Agent 连接，新连接字段已存在时不覆盖。旧密钥仅在同一规范化端点下转为新安全存储引用，写入并读回成功后才退役旧 key；失败保留迁移恢复状态且不发请求，不把密钥写入 AppData 或聊天。迁移连接不会自动开启 Agent、发送数据或提升执行模式。
 
 旧解析专用 customPrompt 不自动成为 Agent 系统指令或修改内置 Skill。保留为一次性的可查看/导出迁移材料，允许用户自行取用；完成兼容迁移后不继续显示旧解析设置页。旧 `AiApiSettings` 仅在兼容解码/迁移边界读取，不继续作为活动 AI 配置模型。
 
-旧备份可能包含旧解析字段，继续支持读取；恢复时不由备份覆盖本机 Agent 端点、注入凭据或恢复完全权限。原恢复流程“保留本机解析地址/模型/提示词、清除本机密钥”的规则需要显式迁移到统一连接与凭据恢复契约，并同步可靠性文档/测试；不能既删掉旧字段又继续引用旧配置策略。本机旧密钥升级迁移与用户执行完整备份恢复是不同动作。
+旧备份可能包含旧解析字段，继续支持兼容读取。当前完整恢复保留事务实际开始时的本机 Agent 连接、权限和偏好，并把该配置与新数据世代固定到恢复 journal；重试沿用固定目标。便携备份不包含本机 Agent 配置、聊天、操作回执或原始密钥，也不从旧字段补入连接或提升模式。统一 Agent 凭据与兼容存留的旧解析密钥分别处理，不能把旧密钥的清除策略写成所有 Agent 凭据都会清除，见[可靠性指南](RELIABILITY_BASELINE.md)。
 
 ## 12. 备份、迁移与外部接入
 

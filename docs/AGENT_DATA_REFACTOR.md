@@ -2,11 +2,11 @@
 
 ## 状态与结论
 
-源码调查基线：`ea784f3a16e5d4a23aedae410544492fb6fa0f6f`，研究与表示实验日期：2026-10-30。查询投影、严格变更编译与共享保存边界已开始实现，AppData v5 已增加本机 Agent 配置和有界回执并分离便携/恢复编码；其余未标记的数据模型与紧凑格式仍是研究方案。合成数据表示对照单独记录在本文末尾；它不构成生产 token、任务正确率或运行性能的验收。
+源码调查基线：`ea784f3a16e5d4a23aedae410544492fb6fa0f6f`，研究与表示实验日期：2026-10-30。查询投影、严格变更编译、批量准备/提交、条件撤销及共享保存边界已接入内置 Agent；AppData v5 已增加本机 Agent 配置和有界回执并分离便携/恢复编码。标准资源/设置命令现已按对象和语义依赖在当前快照重编译，保留无关已保存编辑；宿主 draft/待提交撤销等仍采用保守后备。其余数据模型、复杂索引与紧凑格式仍按本文研究建议独立决策。末尾合成表示实验保留原基线与范围，不构成当前版本的生产 token、任务正确率或运行性能验收。
 
-相关文档：[架构提案](AGENT_ARCHITECTURE.md)、[能力全集](AGENT_CAPABILITIES.md)、[共享 Skills](AGENT_SKILLS.md)、[实施计划](AGENT_IMPLEMENTATION_PLAN.md)、[harness 研究](AGENT_HARNESS_RESEARCH.md)。产品范围保持一个内置 Agent、多个会话、功能管理单开关、手机完整页面、共享 Skills，以及只读计划、每次修改前询问、完全权限三种模式。独立 AI 解析按既定方案退役；文字直接进入会话，网页保留压缩校对后新建会话，规范 JSON 文本及 JSON/ICS/节次文件继续支持确定性直接导入。
+相关文档：[架构提案](AGENT_ARCHITECTURE.md)、[能力全集](AGENT_CAPABILITIES.md)、[共享 Skills](AGENT_SKILLS.md)、[实施计划](AGENT_IMPLEMENTATION_PLAN.md)、[harness 研究](AGENT_HARNESS_RESEARCH.md)。产品范围保持一个内置 Agent、多个会话、功能管理单开关、手机完整页面、共享 Skills，以及只读计划、每次修改前询问、完全权限三种模式。独立 AI 解析已退役；文字直接进入会话，网页保留压缩校对后新建会话，规范 JSON 文本及 JSON/ICS/节次文件继续支持确定性直接导入。
 
-最先值得做的是**让模型只读取任务相关的投影，并用明确的语义 patch 修改数据**。这不需要先更换现有存档。随后补齐严格命令、索引、批事务和持久版本；紧凑磁盘格式、Course/Meeting 拆分及数据库替换分别按收益与迁移风险决策。
+已落实的主要方向是**让模型只读取任务相关的投影，并用明确的语义 patch 修改数据**，同时接通严格命令、主库批事务与持久操作回执。实现复用现有存档和日历索引；进一步的课程索引、紧凑磁盘格式、Course/Meeting 拆分及数据库替换仍分别按收益与迁移风险决策，不能把接口已接通写成这些优化已完成。
 
 | 顺序 | 建议 | 主要收益 | 前提 |
 | --- | --- | --- | --- |
@@ -22,9 +22,9 @@
 | --- | --- | --- | --- |
 | 磁盘格式 | [AppData.encode](../lib/models/app_data.dart#L502) 使用 `jsonEncode(toJson())`；[AppDataCodec](../lib/data/app_data_codec.dart#L12) 编码完整快照 | 可恢复、可迁移、合理空间与写放大 | 压缩文件变小，不代表模型 token 同比例减少；当前存档已经是无缩进 JSON |
 | 内存领域模型 | 两个工作区分别持有课表/课程和分类/日程；纯服务产生新分支 | 身份、关系、不变量、结构共享、索引和持久提交 | List 改 Map 不天然更省内存或磁盘；当前日历已有索引 |
-| 模型工具 DTO | 新 Agent 工具尚待实现，可以独立设计 | 任务相关字段、有界结果、稳定引用、明确变更、可纠正错误 | 模型不需要看懂或回吐整份磁盘格式 |
+| 模型工具 DTO | `ResourceQueries`、工具注册表和严格命令已提供独立投影与语义 patch | 任务相关字段、有界结果、稳定引用、明确变更、可纠正错误 | 模型不需要看懂或回吐整份磁盘格式；DTO 字节数不是完整任务费用 |
 
-建议明确三个转换边界：`StorageCodec`、`PortableExportCodec`、`AgentProjectionCodec`。完整恢复 journal 与便携备份还应使用不同编码契约：前者保留本机恢复操作和目标数据世代，后者不携带旧运行许可。
+原方案把三个转换边界称为 `StorageCodec`、`PortableExportCodec`、`AgentProjectionCodec`；当前分别由既有存档编码、便携备份编码和 `ResourceQueries`/工具投影承担，并未统一采用这些类名。完整恢复 journal 与便携备份已使用不同编码契约：前者保留本机恢复操作和目标数据世代，后者不携带旧运行许可。
 
 一个日程实例在内存中持有 `GeneralEvent` 与 `GeneralSchedule` 引用，分类又含事件列表，见 [GeneralEventOccurrence](../lib/models/general_event_occurrence.dart#L11)。这对 UI 不等于复制了整分类；若直接序列化这个对象图给模型，才可能反复发送无关事件。应增加专门投影，不能为解决传输问题盲目重写内存对象图。
 
@@ -35,8 +35,8 @@
 先提供少量明确的 `summary`、`detail`、`edit` 视图，必要时增加受 schema 限制的字段选择。列表通常只返回 ID/ref、名称、所属资源、相关时间、必要状态和版本；备注、自定义字段、完整重复规则、审计和诊断按需读取。这个方向参考 [Google AIP-157 的部分响应设计](https://google.aip.dev/157)与 [Anthropic 的工具结果设计](https://www.anthropic.com/research/writing-tools-for-agents)，具体视图仍由 Sked 任务与评测决定。
 
 - `timetables.list`：名称、开学日期、总周数、课程数、时间集引用，默认不展开所有课程。
-- `courses.query`：按课表、名称、教师、周次或日期筛选；只返回任务所需课程字段。
-- `events.query`：明确查询系列记录还是实际实例，不把无限重复全部展开。
+- `courses.list`：按当前 schema 的资源范围和搜索条件读取课程；实例日期范围使用 `occurrences.list`，只返回任务所需字段。
+- `events.list`：读取系列记录，实际实例使用 `occurrences.list`；不把无限重复全部展开。
 - `agenda.free_slots/conflicts/count`：由确定性代码计算空闲、冲突和数量，不让模型阅读全库后心算。
 - `settings.describe/get`：只返回指定 key/设置组的类型、值、默认与 reset 语义。
 - `operations.status`：返回实际变更数量、对象引用、提交版本与效果状态；完整 before/after 供 UI 或后续工具展开。
@@ -45,7 +45,7 @@
 
 ### 2.2 先过滤，再展开和分页
 
-当前 [GeneralOccurrenceService.occurrencesForQuery](../lib/services/general_occurrence_service.dart#L39) 先展开，再按文字/颜色匹配；[GeneralOccurrenceQuery](../lib/models/general_event_occurrence.dart#L157) 尚无精确分类/事件 ID 过滤。新工具查询应先限定资源集合和可前置的 metadata 条件，再展开相关系列；依赖实际实例的条件保留在展开后。
+研究基线中的 [GeneralOccurrenceService.occurrencesForQuery](../lib/services/general_occurrence_service.dart) 先展开，再按文字/颜色匹配。当前 Agent 的 `ResourceQueries` 已先按资源/父资源和可前置条件限定集合，再展开相关系列；`AgendaQueries` 复用该读取完成计数、空闲及冲突聚合，不要求先改造全部旧 UI 查询入口。
 
 分页不能简单 `take(20)` 后隐藏剩余结果。游标绑定查询条件、排序和数据基线，数据变化导致失效时明确返回 stale。优先返回可继续读取的有界结果，避免先建立全量巨大 List 再截断。[MCP 分页规范](https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/pagination)提供 opaque cursor 的参考，但不会自动为 Sked 的业务工具实现分页。
 
@@ -171,11 +171,13 @@
 
 进一步的全文索引、区间树、worker 池、共享大缓存或 SQLite 索引必须有实际工作量证据。精确过滤下推可先用 spy expander 验证“不展开无关系列”，不依赖机器速度断言。
 
-## 7. 全软件还需要哪些应用层重构
+## 7. 应用层重构的实现与保留设计
 
-这些改动与存储编码分开，直接决定 Agent 是否能正确操作现有软件。
+这些边界与存储编码分开。当前已接通独立 Agent 功能/导航、`OperationScope`、来源—候选—计划分层、设置/资源契约、平台适配、独立聊天发布，以及 `AppRuntime`/`AppQuiescence` 的运行和维护协调。字段约束由 `ResourceMutationSchema`、`ResourceQueries`、`SettingRegistry` 和覆盖断言承担，没有统一替换为提案中的 FieldSpec 类。
 
-| 重构点 | 具体问题与源码 | 建议边界 |
+下表保留研究基线问题及设计动机，不是当前待实现清单。旧 UI 继续使用既有 commands 和共享纯服务，尚未全部迁为统一 typed outcome。通知排程复用原协调器，当前对观察到的提交记录绑定世代/revision/epoch 的有界票据并区分 superseded；它是当前进程的排程观察，重启或淘汰后保留 unknown，不冒充系统投递证明。显式外部动作继续使用可恢复持久回执，见[运行行为](AGENT_RUNTIME.md)。
+
+| 重构点 | 研究基线问题与源码 | 设计边界 |
 | --- | --- | --- |
 | 数据工作区、功能、导航分离 | [功能页](../lib/screens/workspace_features_page.dart#L149)遍历 AppMode；[导航映射](../lib/screens/adaptive_sked_shell.dart#L113)围绕两个域 | Agent 用功能注册/单开关与独立 destination，不加入第三 AppMode，不影响至少一个数据域启用或提醒计数 |
 | 草稿编译与时钟/ID | [课程提交](../lib/widgets/course_editor_sheet.dart#L971)包含保留旧时间的意图；[日程提交](../lib/widgets/general_event_editor_sheet.dart#L368)构造时间戳 | `DraftCompiler(baseline,intent,context)` 返回严格命令/字段问题；Clock、ID allocator、locale、时间基准显式注入 |
@@ -187,7 +189,7 @@
 | 平台动作能力状态 | [通知网关](../lib/services/agenda_notification_flutter_gateway.dart#L1025)、[Android 桥接](../lib/services/android_productivity_bridge.dart)的能力与授权不同 | `CapabilityState` 区分 implemented、availableNow、observableState、requiredAction；unknown/unsupported/denied 不互换 |
 | 分享与保存结果 | [ExportService](../lib/services/export_service.dart#L51)包含不同平台路径和分享返回 | 文件生成、保存、打开分享面板和实际送达分别回报；不把 Future 完成描述成已送给某个人 |
 | 发布与聊天流分离 | [ObservableViewState](../lib/controllers/observable_view_state.dart#L19)、[AppScope](../lib/providers/app_scope.dart#L43)已有分域发布 | 单独 ConversationViewState/RunProgress/TokenBuffer，显示节流不吞工具提交事件；token 不进入 AppData 保存或提醒链 |
-| 多会话调度与退出 | [AppQuiescence](../lib/controllers/app_quiescence.dart#L26)尚需认识运行队列 | 每会话有序、应用共享写协调和模型预算；长任务在显式批边界让出执行，不能持主数据锁等待模型 |
+| 多会话调度与退出 | 原 [AppQuiescence](../lib/controllers/app_quiescence.dart)未包含 Agent 运行队列，当前已接入 | 每会话有序、应用共享写协调和模型预算；不能持主数据锁等待模型 |
 
 关闭功能与离开页面保持不同语义：离开页面只移除观察者；关闭 Agent 隐藏入口、拒绝新请求、取消未提交步骤并核对已接受写入，保留会话和配置。以上不需要多 Agent 系统，也不要求全面更换当前状态管理框架。
 
@@ -214,13 +216,15 @@ UI 与工具可以选择性共用合成 `ScenarioSpec`：初始数据、意图�
 
 ## 9. 大量共享 Skills 与上下文预算
 
-丰富共享 Skills 与小常驻上下文可以同时存在。先提供技能目录摘要，命中任务时加载正文，复杂规则附录再按需读取；这符合 [Agent Skills 的 progressive disclosure](https://agentskills.io/specification)。具体 Sked 的 24 项任务包、manifest、版本和回归见[共享 Skills 设计](AGENT_SKILLS.md)，不在这里另建一套私有技能模型。
+当前 24 项共享 Skills 已采用目录摘要与按需正文装载，宿主按任务暴露实际注册的工具 schema；单次运行默认最多加载 8 个技能、正文合计 64 KiB。复杂规则附录的进一步拆分可独立评估。这符合 [Agent Skills 的 progressive disclosure](https://agentskills.io/specification)。具体任务包、manifest、版本和回归见[共享 Skills 设计](AGENT_SKILLS.md)，不在这里另建一套私有技能模型。
 
 工具 schema 也按任务包加载。宿主必须把后续将使用的工具真正注册到 provider 请求，而不是只把 schema 文本写进工具结果就假定模型能调用。对不支持原生工具搜索的自选 API，可由宿主选包或在下一请求重建工具集；简单任务不必为了发现工具强制多走一轮。
 
-Schema、结果投影、Skill 和当前执行模式分别记录版本。历史压缩保留意图、来源引用、未决问题、计划和 operationId；业务状态重新查询，不能把模型摘要当新的数据库真相或确认凭证。完整诊断和来源可在宿主持有，不每轮重复回传。
+当前上下文压缩从完整会话历史构建检查点，保留原始用户请求、操作结果引用和已加载 Skill ID，工具调用与结果成组保留；它不是另存一个有损长期记忆。重启不会自动恢复旧计划的可执行资格，业务状态需重新查询，不能把检查点当数据库真相或确认凭证。完整来源由会话存储持有，按需分块读取。
 
 ## 10. Token、缓存与格式指标分开
+
+当前 provider 解析返回的 usage，运行时据此约束预算；会话 v2 按请求保存输入/输出、服务提供的推理/缓存统计、工具尝试及显式继续关系，查询和导出标明实际覆盖范围。未返回用量保持未知，缺乏可信单价时费用也未知。以下评测口径仍要求完整任务正确率、额外查询与失败记录，不能只由已记录 token 数推导费用改善。
 
 | 指标 | 能说明什么 | 不能说明什么 |
 | --- | --- | --- |
@@ -237,7 +241,9 @@ Schema、结果投影、Skill 和当前执行模式分别记录版本。历史�
 
 不同 provider 的缓存参数、usage 字段、计费口径分别适配；不能向所有“兼容 API”发送同一套缓存选项。原始输入、cache read/write、输出/推理、总轮数分别记录，避免 input 已包含 cached 时重复相加。权限收紧和实时事实必须正确更新，不能为了缓存命中继续使用旧模式或旧目标。
 
-## 11. 对齐 P0–P8 的实施优先级
+## 11. P0–P8 的设计对应关系
+
+下表保留研究阶段的落点与验收判据。实际实现/待验状态以[实施计划](AGENT_IMPLEMENTATION_PLAN.md)为准；真实 API、浏览器、实体设备及性能证据分别取得，不把本文历史表示实验替代当前源码验收。
 
 | 既有阶段 | 本文补充的落地点 | 阶段判据 |
 | --- | --- | --- |
