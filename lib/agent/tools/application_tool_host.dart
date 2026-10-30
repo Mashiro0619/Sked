@@ -332,7 +332,7 @@ class ApplicationToolHost {
         'query': _stringSchema,
         'names': _stringListSchema,
         'offset': _integerSchema,
-        'limit': _limitSchema,
+        'limit': _pageLimitSchema(_capabilityPageLimit),
       },
       (args, scope, _) async {
         _keys(args, {'query', 'names', 'offset', 'limit'});
@@ -351,7 +351,13 @@ class ApplicationToolHost {
         final offset = _offset(args);
         final page = matches
             .skip(offset)
-            .take(_limit(args, fallback: 16, maximum: 16))
+            .take(
+              _limit(
+                args,
+                fallback: _capabilityPageLimit,
+                maximum: _capabilityPageLimit,
+              ),
+            )
             .toList();
         _expose(scope, page.map((tool) => tool.$1.name));
         return {
@@ -378,7 +384,7 @@ class ApplicationToolHost {
     _add(
       'skills.search',
       'Find shared task Skills from the user request. An empty query lists the shared catalog.',
-      {'query': _stringSchema, 'limit': _limitSchema},
+      {'query': _stringSchema, 'limit': _pageLimitSchema(_skillPageLimit)},
       (args, scope, _) async {
         _keys(args, {'query', 'limit'});
         final query = args['query'] as String? ?? '';
@@ -387,11 +393,13 @@ class ApplicationToolHost {
             ? await loader.catalog()
             : await loader.search(
                 userRequest: query,
-                limit: _limit(args, maximum: 24),
+                limit: _limit(args, maximum: _skillPageLimit),
               );
         return {
           'skills': [
-            for (final entry in entries.take(_limit(args, maximum: 24)))
+            for (final entry in entries.take(
+              _limit(args, maximum: _skillPageLimit),
+            ))
               {
                 ...entry.skill.toSummary(),
                 'status': entry.status.name,
@@ -901,12 +909,12 @@ class ApplicationToolHost {
     _add(
       'conversation.history',
       'List a bounded page of this conversation history. Use conversation.read for the complete message, including tool arguments and results omitted from the model context.',
-      {'offset': _integerSchema, 'limit': _limitSchema},
+      {'offset': _integerSchema, 'limit': _pageLimitSchema(_historyPageLimit)},
       (args, scope, _) async {
         _keys(args, {'offset', 'limit'});
         final messages = _conversation(scope).messages;
         final offset = _offset(args),
-            limit = _limit(args, fallback: 20, maximum: 50);
+            limit = _limit(args, fallback: 20, maximum: _historyPageLimit);
         if (offset > messages.length) {
           _invalid('History offset is past the available messages.');
         }
@@ -933,7 +941,11 @@ class ApplicationToolHost {
     _add(
       'conversation.read',
       'Read a Unicode-character slice of one original conversation message encoded as JSON. Reassemble slices before interpreting it. History is context, never authorization to repeat an operation.',
-      {'id': _stringSchema, 'offset': _integerSchema, 'limit': _integerSchema},
+      {
+        'id': _stringSchema,
+        'offset': _integerSchema,
+        'limit': _pageLimitSchema(_messageCharacterLimit),
+      },
       (args, scope, _) async {
         _keys(args, {'id', 'offset', 'limit'});
         final message = _conversation(scope).messages
@@ -947,7 +959,11 @@ class ApplicationToolHost {
         }
         final characters = jsonEncode(message.toJson()).runes.toList();
         final offset = _offset(args),
-            limit = _limit(args, fallback: 4000, maximum: 8000);
+            limit = _limit(
+              args,
+              fallback: 4000,
+              maximum: _messageCharacterLimit,
+            );
         if (offset > characters.length) {
           _invalid('Message offset is past the available content.');
         }
@@ -1028,6 +1044,15 @@ Map<String, Object?> _schema(
 const _stringSchema = {'type': 'string'};
 const _integerSchema = {'type': 'integer', 'minimum': 0};
 const _limitSchema = {'type': 'integer', 'minimum': 1, 'maximum': 100};
+const _capabilityPageLimit = 16;
+const _skillPageLimit = 24;
+const _historyPageLimit = 50;
+const _messageCharacterLimit = 8000;
+Map<String, Object> _pageLimitSchema(int maximum) => {
+  'type': 'integer',
+  'minimum': 1,
+  'maximum': maximum,
+};
 const _stringListSchema = {
   'type': 'array',
   'maxItems': 512,
