@@ -225,6 +225,11 @@ class SchoolSiteService {
 
   bool get canWrite => _canWrite;
 
+  /// Shared storage revision for previews held across UI reads or writes.
+  /// A load on this service may advance its implicit write baseline; callers
+  /// holding a concrete preview should retain this value and pass it to save.
+  int get generation => _coordinator._currentGeneration;
+
   Future<List<SchoolSite>> loadSites() async {
     final result = await loadSitesResult();
     if (!result.canWrite) {
@@ -427,8 +432,8 @@ class SchoolSiteService {
     );
   }
 
-  Future<void> saveSites(List<SchoolSite> sites) async {
-    final expectedGeneration = _observedGeneration;
+  Future<void> saveSites(List<SchoolSite> sites, {int? expectedVersion}) async {
+    final expectedGeneration = expectedVersion ?? _observedGeneration;
     if (!_canWrite || expectedGeneration == null) {
       throw const SchoolSiteWriteBlockedException();
     }

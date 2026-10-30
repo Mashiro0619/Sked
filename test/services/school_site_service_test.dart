@@ -130,6 +130,29 @@ class _ControlledSchoolSiteStore extends SchoolSiteStore {
 }
 
 void main() {
+  test('explicit preview version survives an intervening reload on the same service', () async {
+    final store = _ControlledSchoolSiteStore('[]');
+    final service = SchoolSiteService(store: store);
+    await service.loadSitesResult();
+    final version = service.generation;
+    await service.saveSites(const [
+      SchoolSite(name: 'UI edit', loginUrl: 'https://ui.test'),
+    ]);
+    await service.loadSitesResult();
+    await expectLater(
+      service.saveSites(const [
+        SchoolSite(name: 'Old preview', loginUrl: 'https://old.test'),
+      ], expectedVersion: version),
+      throwsA(isA<SchoolSiteStaleWriteException>()),
+    );
+    expect(decodeSchoolSitesStrict(store.source).single.name, 'UI edit');
+    await service.loadSitesResult();
+    await service.saveSites(const [
+      SchoolSite(name: 'Current UI', loginUrl: 'https://current.test'),
+    ]);
+    expect(decodeSchoolSitesStrict(store.source).single.name, 'Current UI');
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   void mockSchoolSitesAsset(String source) {

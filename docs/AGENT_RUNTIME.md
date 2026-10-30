@@ -55,3 +55,11 @@
 默认会话存储在 test/flutter_test_config.dart 中替换为每项独立的内存实例，覆盖直接构造 AppRuntime 的历史测试。一个测试内的重启共享同一实例；后续测试换新实例，迟到回调只持有旧实例。显式构造原生会话存储的专项继续使用系统临时目录验证真实 IO，不由默认替身替代。
 
 恢复测试分别验证便携备份和本机 journal：便携文件排除 Agent 本机配置与账本，journal 使用恢复专用编码保留这些状态，两者均不得包含密钥。每次恢复采用独立数据世代并发布 ledger 变更；学校站点保留自身格式版本，不能跟随主库版本升级。
+
+## 设备、站点和系统动作
+
+外部适配器共用先记录计划、执行并读回的协调器。设备布局与偏好写入等待实际 flush；窗口、通知、系统设置入口按平台能力返回支持情况。打开自启动设置页只证明入口已打开，无法观测授权时保留 unknown。未绑定应用服务或平台不支持时返回明确错误。
+
+学校站点使用稳定的版本句柄及共享写队列；预览期间发生其他读写不能改变该预览的版本前提。通知动作只操作当前设备拥有的真实提醒，外部核对使用原操作身份，不重复系统动作。
+
+实现与回归：[平台适配器](../lib/agent/tools/platform_tool_adapters.dart)、[设备适配器](../lib/agent/tools/device_tool_adapters.dart)、[平台回归](../test/agent/tools/platform_tool_adapters_test.dart)、[设备回归](../test/agent/tools/device_tool_adapters_test.dart)。
