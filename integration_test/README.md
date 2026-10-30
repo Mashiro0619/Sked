@@ -1,5 +1,21 @@
 # 原生场景与截图采集
 
+## Agent 浏览器协议与存储
+
+`agent_web_probe.dart` 是独立浏览器验收入口，通过正常 Flutter Web 构建注册真实插件。它只接受 localhost、127.0.0.1 和映射到回环地址的 `sked-insecure.test`，请求使用固定合成凭据；不要在正式站点或个人浏览器配置中运行。
+
+```powershell
+$agentProbeOutput = Join-Path ([IO.Path]::GetTempPath()) ('sked-agent-web-' + [guid]::NewGuid().ToString('N'))
+flutter build web --release --no-web-resources-cdn `
+  --target integration_test/agent_web_probe.dart --output $agentProbeOutput
+```
+
+在全新浏览器上下文中，以本地 HTTPS 服务加载产物，并用另一源的合成 JSON/SSE 服务调用 `window.skedAgentWebProbe`；入口中的调用示例和 operation 列表定义探针协议。分别验证允许/拒绝 Authorization 预检、没有 CORS 许可时 POST 未发出、HTTPS 到非可信 HTTP 的混合内容拦截、token/订阅取消后服务端观察到流中止，以及重定向未转发敏感请求。
+
+`seedStorage` 后真实刷新页面，再调用 `readStorage`，应看到内存密钥消失而会话双槽保留；随后验证单槽损坏恢复、删除后不复活和较新格式拒读。HTTP 非可信别名用于单独验证安全上下文差异，不能用浏览器将 loopback 视为可信来源的例外假充混合内容检查。临时证书只可在该隔离上下文接受，不关闭 Web 安全策略或修改系统信任库。服务器、驱动脚本、日志和证书放在系统临时目录；浏览器 API 测试不证明任意第三方端点都提供相同 CORS 配置。
+
+## 界面采集
+
 当前界面采集统一从 `capture_scenarios_test.dart` 选择场景组。场景模块按
 功能命名，保留原有交互、数据检查及原生指针保护，不再以历史改版脚本
 作为独立入口。每次原生进程只运行一个组，避免不同组注册时的 binding、

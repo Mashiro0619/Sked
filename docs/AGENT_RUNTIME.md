@@ -104,6 +104,8 @@ AppRuntime 持有一个 AgentApplication，手机完整页面与桌面并排/覆
 
 ## 能力与任务验证
 
+浏览器协议通过[专用 Web 探针](../integration_test/agent_web_probe.dart)使用真实 BrowserClient 和正常插件注册，分别核对 CORS 预检、混合内容、安全上下文、流取消及真实刷新后的存储。Web 凭据仅保留在进程内存，会话使用真实 SharedPreferences 双槽；测试需核对本机浏览器实际行为，不能用 MockClient 或 Web 构建成功替代，执行协议见[集成验证说明](../integration_test/README.md)。
+
 [验收场景](../test/agent/acceptance/shared_skill_tasks_test.dart)先装载实际共享 Skill，再通过真实 AppRuntime 工具执行每项任务，核对业务存档、平台替身读回或导出产物；默认 provider 拒绝网络。学校来源、同名课程、隐藏分类和重复事件使用固定合成资料。这些场景证明工具链可执行，真实模型是否能正确选择工具仍单独评测。
 
 [配置清单](../test/agent/acceptance/capability_inventory_test.dart)以实际 SettingsDestination、设备布局角色与学校站点字段为来源，要求新入口分类并验证全部布局角色的保存/reset。[写入口目录](../test/agent/acceptance/write_tool_coverage.dart)将实际注册工具映射到领域回归和共享提交边界；[入口测试](../test/agent/acceptance/write_tool_coverage_test.dart)拒绝未知字段并核对主库、会话、凭据、平台替身和文件产物无变化。共享权限、保存失败、取消与回执恢复由真实协调器专项覆盖，适配器独有的参数和平台失败仍在各自 suite 中验证，不以文件存在或清单登记替代执行结果。
